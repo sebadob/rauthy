@@ -1,14 +1,14 @@
 use crate::database::DB;
 use crate::events::{
-    EVENT_LEVEL_FAILED_LOGIN, EVENT_LEVEL_FAILED_LOGINS_10, EVENT_LEVEL_FAILED_LOGINS_15,
-    EVENT_LEVEL_FAILED_LOGINS_20, EVENT_LEVEL_FAILED_LOGINS_25, EVENT_LEVEL_FAILED_LOGINS_7,
+    EVENT_LEVEL_FAILED_LOGIN, EVENT_LEVEL_FAILED_LOGINS_7, EVENT_LEVEL_FAILED_LOGINS_10,
+    EVENT_LEVEL_FAILED_LOGINS_15, EVENT_LEVEL_FAILED_LOGINS_20, EVENT_LEVEL_FAILED_LOGINS_25,
     EVENT_LEVEL_IP_BLACKLISTED, EVENT_LEVEL_JWKS_ROTATE, EVENT_LEVEL_NEW_RAUTHY_ADMIN,
     EVENT_LEVEL_NEW_RAUTHY_VERSION, EVENT_LEVEL_NEW_USER, EVENT_LEVEL_RAUTHY_HEALTHY,
     EVENT_LEVEL_RAUTHY_START, EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED,
     EVENT_LEVEL_USER_EMAIL_CHANGE, EVENT_LEVEL_USER_PASSWORD_RESET,
 };
 use chrono::{DateTime, Timelike, Utc};
-use hiqlite::{params, Param, Row};
+use hiqlite::{Param, Row, params};
 use rauthy_api_types::events::EventResponse;
 use rauthy_common::constants::EMAIL_SUB_PREFIX;
 use rauthy_common::is_hiqlite;
@@ -17,7 +17,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
-use sqlx::{query, query_as, Error, FromRow, Row as SqlxRow};
+use sqlx::{Error, FromRow, Row as SqlxRow, query, query_as};
 use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::str::FromStr;

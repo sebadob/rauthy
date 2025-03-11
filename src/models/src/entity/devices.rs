@@ -1,7 +1,7 @@
 use crate::database::{Cache, DB};
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use chrono::{DateTime, Utc};
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_api_types::users::DeviceResponse;
 use rauthy_common::constants::{
     CACHE_TTL_DEVICE_CODE, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_USER_CODE_LENGTH,
@@ -11,7 +11,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
-use sqlx::{query, query_as, FromRow};
+use sqlx::{FromRow, query, query_as};
 use std::ops::{Add, Sub};
 use tracing::info;
 

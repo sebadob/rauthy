@@ -83,7 +83,9 @@ rinja_actix = "0.3.5"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rsa = { version = "0.9.3", features = ["serde", "sha2"] }
-ruma = { version = "0.12.0", features = ["client-api-c", "client-ext-client-api", "client-reqwest", "markdown", "rand"] }
+ruma = { version = "0.12.0", features = [
+    "client-api-c", "client-ext-client-api", "client-reqwest", "markdown", "rand"
+] }
 # blocked by sqlx
 rusqlite = "0.32.0"
 rust-embed = "8.5.0"

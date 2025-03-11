@@ -1,4 +1,4 @@
-use actix_web::{cookie, web, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse, cookie, web};
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_api_types::users::{

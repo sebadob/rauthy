@@ -1,13 +1,13 @@
 use actix_web::http::Method;
 use actix_web::{
-    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     Error,
+    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
 };
 use futures::future::LocalBoxFuture;
 use rauthy_common::constants::SEC_HEADER_BLOCK;
 use rauthy_common::utils::real_ip_from_svc_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use std::future::{ready, Ready};
+use std::future::{Ready, ready};
 use std::rc::Rc;
 use tracing::{debug, warn};
 

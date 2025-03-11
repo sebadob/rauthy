@@ -1,5 +1,5 @@
 use crate::database::DB;
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;

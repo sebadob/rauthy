@@ -34,8 +34,8 @@ pub async fn dyn_client_cleanup() {
 
         if !DB::client().is_leader_cache().await {
             debug!(
-                    "Running HA mode without being the leader - skipping dynamic_client_cleanup scheduler"
-                );
+                "Running HA mode without being the leader - skipping dynamic_client_cleanup scheduler"
+            );
             continue;
         }
         debug!("Running dynamic_client_cleanup scheduler");
@@ -80,8 +80,11 @@ pub async fn dyn_client_cleanup() {
                         cleaned_up += 1;
                     }
                     Err(err) => {
-                        error!("Client does not exist for ClientDyn when it should. This should never happen.\
-                        Please report this issue: {:?}", err);
+                        error!(
+                            "Client does not exist for ClientDyn when it should. This should never happen.\
+                        Please report this issue: {:?}",
+                            err
+                        );
                         continue;
                     }
                 }

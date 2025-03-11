@@ -5,7 +5,7 @@ use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
 use cryptr::{EncKeys, EncValue};
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };

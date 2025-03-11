@@ -1,5 +1,5 @@
 use crate::oidc::{helpers, validation};
-use actix_web::{web, HttpRequest};
+use actix_web::{HttpRequest, web};
 use rauthy_api_types::users::Userinfo;
 use rauthy_common::constants::{ENABLE_WEB_ID, USERINFO_STRICT};
 use rauthy_error::{ErrorResponse, ErrorResponseType};

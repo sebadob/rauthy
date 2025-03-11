@@ -1,7 +1,7 @@
 use crate::database::{Cache, DB};
 use chrono::Utc;
 use cryptr::{EncKeys, EncValue};
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_api_types::api_keys::ApiKeyResponse;
 use rauthy_common::constants::{API_KEY_LENGTH, CACHE_TTL_APP};
 use rauthy_common::is_hiqlite;
@@ -9,7 +9,7 @@ use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use ring::digest;
 use serde::{Deserialize, Serialize};
-use sqlx::{query, query_as, FromRow};
+use sqlx::{FromRow, query, query_as};
 use std::fmt::{Debug, Formatter};
 
 #[derive(Clone, Serialize, Deserialize, FromRow)]

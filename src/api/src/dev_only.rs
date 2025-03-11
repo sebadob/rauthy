@@ -1,4 +1,4 @@
-use actix_web::{get, post, web, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse, get, post, web};
 use rauthy_error::ErrorResponse;
 
 #[cfg(debug_assertions)]

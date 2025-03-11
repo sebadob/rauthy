@@ -2,7 +2,7 @@ use actix_web::web;
 use chrono::Utc;
 use jwt_simple::algorithms::{EdDSAKeyPairLike, RSAKeyPairLike};
 use jwt_simple::claims::Claims;
-use jwt_simple::prelude::{coarsetime, UnixTimeStamp};
+use jwt_simple::prelude::{UnixTimeStamp, coarsetime};
 use rauthy_api_types::oidc::JktClaim;
 use rauthy_common::constants::{
     DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, DISABLE_REFRESH_TOKEN_NBF, ENABLE_SOLID_AUD,
@@ -21,8 +21,8 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webids::WebId;
 use rauthy_models::{
-    sign_jwt, AddressClaim, JwtAccessClaims, JwtAmrValue, JwtIdClaims, JwtRefreshClaims,
-    JwtTokenType,
+    AddressClaim, JwtAccessClaims, JwtAmrValue, JwtIdClaims, JwtRefreshClaims, JwtTokenType,
+    sign_jwt,
 };
 use ring::digest;
 use serde::{Deserialize, Serialize};
@@ -556,11 +556,7 @@ impl TokenSet {
             }
 
             let client_lt = client.access_token_lifetime.unsigned_abs() as i64;
-            if client_lt < diff {
-                client_lt
-            } else {
-                diff
-            }
+            if client_lt < diff { client_lt } else { diff }
         } else {
             client.access_token_lifetime.unsigned_abs() as i64
         };

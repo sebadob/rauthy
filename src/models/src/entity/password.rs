@@ -2,7 +2,7 @@ use crate::database::{Cache, DB};
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rand_core::OsRng;
 use rauthy_api_types::generic::{
     PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse,

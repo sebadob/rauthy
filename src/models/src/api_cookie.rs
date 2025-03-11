@@ -1,8 +1,8 @@
 use actix_web::cookie::{Cookie, SameSite};
 use actix_web::dev::ServiceRequest;
-use actix_web::{cookie, HttpRequest};
+use actix_web::{HttpRequest, cookie};
 use cryptr::EncValue;
-use rauthy_common::constants::{CookieMode, COOKIE_MODE, COOKIE_SET_PATH};
+use rauthy_common::constants::{COOKIE_MODE, COOKIE_SET_PATH, CookieMode};
 use rauthy_common::utils::{base64_decode, base64_encode};
 use std::borrow::Cow;
 use std::fmt::Display;

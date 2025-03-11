@@ -1,6 +1,6 @@
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{web, HttpRequest};
+use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use rauthy_api_types::oidc::{LoginRefreshRequest, LoginRequest};
 use rauthy_common::constants::{COOKIE_MFA, SESSION_RENEW_MFA, WEBAUTHN_REQ_EXP};

@@ -1,6 +1,6 @@
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
-use hiqlite::{params, Param, Params};
+use hiqlite::{Param, Params, params};
 use rauthy_api_types::roles::RoleRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_ROLES};
 use rauthy_common::is_hiqlite;

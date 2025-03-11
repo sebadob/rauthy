@@ -1,8 +1,8 @@
 use crate::cust_validation::validate_vec_scopes;
 use crate::generic::PasswordPolicyResponse;
 use crate::sessions::SessionState;
-use actix_web::http::header;
 use actix_web::HttpRequest;
+use actix_web::http::header;
 use rauthy_common::constants::{
     RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER, RE_GRANT_TYPES,
     RE_LOWERCASE, RE_SCOPE_SPACE, RE_URI,

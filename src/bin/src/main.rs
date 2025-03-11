@@ -2,7 +2,7 @@
 
 use crate::logging::setup_logging;
 use actix_web::rt::System;
-use actix_web::{middleware, web, App, HttpServer};
+use actix_web::{App, HttpServer, middleware, web};
 use actix_web_prom::PrometheusMetricsBuilder;
 use cryptr::EncKeys;
 use prometheus::Registry;
@@ -29,7 +29,7 @@ use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
-use rauthy_models::{email, ListenScheme};
+use rauthy_models::{ListenScheme, email};
 use spow::pow::Pow;
 use std::error::Error;
 use std::net::Ipv4Addr;

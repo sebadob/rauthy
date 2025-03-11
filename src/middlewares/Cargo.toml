@@ -14,6 +14,8 @@ actix-web = { workspace = true }
 chrono = { workspace = true }
 futures = { workspace = true }
 lazy_static = { workspace = true }
+openssl = { workspace = true }
+openssl-sys = { workspace = true }
 time = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }

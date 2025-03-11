@@ -1,11 +1,11 @@
 use crate::constants::{PEER_IP_HEADER_NAME, PROXY_MODE, TRUSTED_PROXIES};
+use actix_web::HttpRequest;
 use actix_web::dev::ServiceRequest;
 use actix_web::http::header::HeaderMap;
-use actix_web::HttpRequest;
-use base64::{engine, engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine, engine::general_purpose};
 use gethostname::gethostname;
-use rand::distributions::Alphanumeric;
 use rand::Rng;
+use rand::distributions::Alphanumeric;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::net::IpAddr;
 use std::str::FromStr;

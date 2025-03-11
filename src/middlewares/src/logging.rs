@@ -1,15 +1,15 @@
-use actix_web::http::header::HeaderValue;
 use actix_web::http::Method;
+use actix_web::http::header::HeaderValue;
 use actix_web::{
-    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     Error,
+    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
 };
 use futures::future::LocalBoxFuture;
 use lazy_static::lazy_static;
 use rauthy_common::utils::real_ip_from_svc_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::env;
-use std::future::{ready, Ready};
+use std::future::{Ready, ready};
 use std::rc::Rc;
 use std::str::FromStr;
 use tracing::{debug, info};

@@ -1,7 +1,7 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::DB;
 use actix_web::HttpRequest;
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_common::constants::{PASSWORD_RESET_COOKIE_BINDING, PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
@@ -53,7 +53,7 @@ impl TryFrom<&str> for MagicLinkUsage {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "Invalid string for MagicLinkUsage parsing",
-                ))
+                ));
             }
         };
 
@@ -98,14 +98,16 @@ pub struct MagicLink {
 
 impl Debug for MagicLink {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "id: {}(...), user_id: {}, csrf_token: {}(...), cookie: {:?}, exp: {}, used: {}, usage: {}",
-               &self.id[..5],
-               self.user_id,
-               &self.csrf_token[..5],
-               self.cookie,
-               self.exp,
-               self.used,
-               self.usage
+        write!(
+            f,
+            "id: {}(...), user_id: {}, csrf_token: {}(...), cookie: {:?}, exp: {}, used: {}, usage: {}",
+            &self.id[..5],
+            self.user_id,
+            &self.csrf_token[..5],
+            self.cookie,
+            self.exp,
+            self.used,
+            self.usage
         )
     }
 }
@@ -290,14 +292,20 @@ impl MagicLink {
                         return Err(err);
                     } else {
                         let ip = real_ip_from_req(req)?;
-                        warn!("PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie from {}", ip);
+                        warn!(
+                            "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie from {}",
+                            ip
+                        );
                     }
                 }
             } else if *PASSWORD_RESET_COOKIE_BINDING {
                 return Err(err);
             } else {
                 let ip = real_ip_from_req(req)?;
-                warn!("PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie from {}", ip);
+                warn!(
+                    "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie from {}",
+                    ip
+                );
             }
         }
 

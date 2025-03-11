@@ -1,5 +1,5 @@
 use crate::oidc::validation;
-use actix_web::{web, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse, web};
 use rauthy_api_types::oidc::LogoutRequest;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;

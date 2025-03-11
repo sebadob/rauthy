@@ -1,45 +1,8 @@
 ARG IMAGE
 
-FROM $IMAGE AS openssl
-
-ENV DEBIAN_FRONTEND=noninteractive
-ENV LD_LIBRARY_PATH="${PATH}:/usr/local/lib64"
-ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"
-ENV MAKEFLAGS="-j32"
-
-WORKDIR /root
-
-RUN <<EOF
-set -e
-
-apt update
-apt install -y build-essential checkinstall curl zlib1g-dev vim
-rm -rf /var/lib/apt/lists/*
-
-curl -LO https://github.com/openssl/openssl/releases/download/openssl-3.4.1/openssl-3.4.1.tar.gz
-tar xvf openssl-3.4.1.tar.gz
-
-cd openssl-3.4.1
-./config
-make
-make test
-make install
-echo '/usr/local/lib64' > /etc/ld.so.conf.d/lib64.conf
-ldconfig
-
-cd ..
-rm -rf openssl*
-EOF
-
-############################################
-############################################
-
 FROM $IMAGE
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig
-ENV LD_LIBRARY_PATH="${PATH}:/usr/local/lib64"
-ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"
 
 ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
@@ -49,23 +12,16 @@ RUN <<EOF
 set -e
 
 rustup target add aarch64-unknown-linux-gnu
+rustup target add x86_64-unknown-linux-gnu
 rustup component add rustfmt
 
 apt update
-apt install -y clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+apt install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
 apt-get clean
+rm -rf /var/lib/apt/lists/*
+
 EOF
-
-COPY --from=openssl /etc/ld.so.conf.d/lib64.conf /etc/ld.so.conf.d/lib64.conf
-COPY --from=openssl /usr/local/lib64 /usr/local/lib64
-COPY --from=openssl /usr/local/include/openssl /usr/local/include/openssl
-COPY --from=openssl /usr/local/bin/openssl /usr/local/bin/openssl
-COPY --from=openssl /usr/local/bin/c_rehash /usr/local/bin/c_rehash
-COPY --from=openssl /usr/local/ssl /usr/local/ssl
-COPY --from=openssl /usr/local/share/man /usr/local/share/man
-COPY --from=openssl /usr/local/share/doc/openssl /usr/local/share/doc/openssl
-
-RUN ldconfig
 
 WORKDIR /work
 

@@ -2,7 +2,7 @@ use crate::app_state::DbTxn;
 use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
-use hiqlite::{params, Param, Params};
+use hiqlite::{Param, Params, params};
 use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigValueResponse, UserAttrValueResponse,
     UserAttrValuesUpdateRequest,
@@ -90,11 +90,7 @@ impl UserAttrConfigEntity {
                 if access.contains(&name) {
                     needs_update = true;
                     let a = access.replace(&format!("{},", name), "").replace(&name, "");
-                    if a.is_empty() {
-                        None
-                    } else {
-                        Some(a)
-                    }
+                    if a.is_empty() { None } else { Some(a) }
                 } else {
                     Some(access)
                 }
@@ -106,11 +102,7 @@ impl UserAttrConfigEntity {
                 if id.contains(&name) {
                     needs_update = true;
                     let i = id.replace(&format!("{},", name), "").replace(&name, "");
-                    if i.is_empty() {
-                        None
-                    } else {
-                        Some(i)
-                    }
+                    if i.is_empty() { None } else { Some(i) }
                 } else {
                     Some(id)
                 }

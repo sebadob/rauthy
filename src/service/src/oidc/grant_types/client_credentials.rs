@@ -1,6 +1,6 @@
 use crate::token_set::{DpopFingerprint, TokenSet};
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{web, HttpRequest};
+use actix_web::{HttpRequest, web};
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_error::{ErrorResponse, ErrorResponseType};

@@ -4,8 +4,8 @@ use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
 use rauthy_api_types::groups::GroupRequest;
 use rauthy_models::entity::groups::Group;
-use reqwest::header::AUTHORIZATION;
 use reqwest::StatusCode;
+use reqwest::header::AUTHORIZATION;
 use std::error::Error;
 use std::ops::Sub;
 

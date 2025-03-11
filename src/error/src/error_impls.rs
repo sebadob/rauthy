@@ -2,11 +2,11 @@ use crate::{ErrorResponse, ErrorResponseType};
 use actix_multipart::MultipartError;
 use actix_web::error::BlockingError;
 use actix_web::http::header::{
-    InvalidHeaderValue, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS,
+    ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, InvalidHeaderValue,
     WWW_AUTHENTICATE,
 };
-use actix_web::http::{header, StatusCode};
-use actix_web::{error, HttpResponse, HttpResponseBuilder, ResponseError};
+use actix_web::http::{StatusCode, header};
+use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError, error};
 use cryptr::CryptrError;
 use css_color::ParseColorError;
 use image::ImageError;

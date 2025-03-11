@@ -16,6 +16,8 @@ css-color = { workspace = true }
 cryptr = { workspace = true }
 hiqlite = { workspace = true }
 image = { workspace = true }
+openssl = { workspace = true }
+openssl-sys = { workspace = true }
 reqwest = { workspace = true }
 rio_turtle = { workspace = true }
 rusqlite = { workspace = true }

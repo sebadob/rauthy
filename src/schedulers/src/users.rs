@@ -45,12 +45,16 @@ pub async fn user_expiry_checker() {
 
                     let exp_ts = if let Some(ts) = user.user_expires {
                         if now < ts {
-                            error!("Got not yet expired user in user_expiry_checker - this should never happen");
+                            error!(
+                                "Got not yet expired user in user_expiry_checker - this should never happen"
+                            );
                             continue;
                         }
                         ts
                     } else {
-                        error!("Got non-expiring user in user_expiry_checker - this should never happen");
+                        error!(
+                            "Got non-expiring user in user_expiry_checker - this should never happen"
+                        );
                         continue;
                     };
 

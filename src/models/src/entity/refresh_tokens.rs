@@ -1,6 +1,6 @@
 use crate::database::DB;
 use chrono::{DateTime, Utc};
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};

@@ -1,5 +1,5 @@
-use crate::utils::build_trusted_proxies;
 use crate::DbType;
+use crate::utils::build_trusted_proxies;
 use actix_web::http::Uri;
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;

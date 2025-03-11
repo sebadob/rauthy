@@ -1,5 +1,5 @@
 use chrono::Utc;
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_models::database::DB;
 use std::time::Duration;
@@ -12,7 +12,9 @@ pub async fn refresh_tokens_cleanup() {
         interval.tick().await;
 
         if !DB::client().is_leader_cache().await {
-            debug!("Running HA mode without being the leader - skipping refresh_tokens_cleanup scheduler");
+            debug!(
+                "Running HA mode without being the leader - skipping refresh_tokens_cleanup scheduler"
+            );
             continue;
         }
 

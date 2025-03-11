@@ -1,4 +1,4 @@
-use crate::common::{check_status, get_backend_url, CLIENT_ID, CLIENT_SECRET};
+use crate::common::{CLIENT_ID, CLIENT_SECRET, check_status, get_backend_url};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_api_types::users::PasswordResetRequest;

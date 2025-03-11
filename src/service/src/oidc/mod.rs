@@ -4,7 +4,7 @@ use crate::oidc::grant_types::password::grant_type_password;
 use crate::oidc::grant_types::refresh_token::grant_type_refresh;
 use crate::token_set::TokenSet;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{web, HttpRequest};
+use actix_web::{HttpRequest, web};
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;

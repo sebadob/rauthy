@@ -2,11 +2,11 @@ use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
-use actix_web::cookie::{time, SameSite};
+use actix_web::cookie::{SameSite, time};
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{cookie, web, HttpRequest};
+use actix_web::{HttpRequest, cookie, web};
 use chrono::Utc;
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_common::constants::{
     CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER, SESSION_LIFETIME_FED_CM,
@@ -15,7 +15,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::{query_as, FromRow, Row};
+use sqlx::{FromRow, Row, query_as};
 use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
@@ -571,7 +571,7 @@ remote_ip = $10"#,
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "supported search idx for users: id / session_id, user_id, ip",
-                ))
+                ));
             }
         };
 
@@ -627,11 +627,7 @@ impl Session {
                 let target = now
                     .add(time::Duration::seconds(exp_in as i64))
                     .unix_timestamp();
-                if ts < target {
-                    ts
-                } else {
-                    target
-                }
+                if ts < target { ts } else { target }
             }
         } else {
             now.add(time::Duration::seconds(exp_in as i64))

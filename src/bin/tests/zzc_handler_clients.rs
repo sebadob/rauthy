@@ -1,4 +1,4 @@
-use crate::common::{get_auth_headers, get_backend_url, CLIENT_SECRET};
+use crate::common::{CLIENT_SECRET, get_auth_headers, get_backend_url};
 use pretty_assertions::{assert_eq, assert_ne};
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,

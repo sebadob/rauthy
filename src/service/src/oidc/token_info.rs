@@ -1,7 +1,7 @@
 use crate::oidc::validation;
 use crate::oidc::validation::validate_token;
 use actix_web::http::header::AUTHORIZATION;
-use actix_web::{web, HttpRequest};
+use actix_web::{HttpRequest, web};
 use rauthy_api_types::oidc::TokenInfo;
 use rauthy_common::constants::DANGER_DISABLE_INTROSPECT_AUTH;
 use rauthy_common::utils::base64_decode;

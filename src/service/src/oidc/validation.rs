@@ -2,7 +2,7 @@ use crate::token_set::{
     AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenScopes, TokenSet,
 };
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{web, HttpRequest};
+use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use jwt_simple::claims;
 use jwt_simple::claims::JWTClaims;
@@ -16,7 +16,7 @@ use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_models::entity::users::User;
-use rauthy_models::{validate_jwt, JwtRefreshClaims, JwtTokenType};
+use rauthy_models::{JwtRefreshClaims, JwtTokenType, validate_jwt};
 use std::collections::HashSet;
 use tracing::debug;
 

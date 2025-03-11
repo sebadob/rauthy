@@ -1,10 +1,10 @@
-use crate::{map_auth_step, ReqPrincipal};
-use actix_web::cookie::time::OffsetDateTime;
+use crate::{ReqPrincipal, map_auth_step};
 use actix_web::cookie::SameSite;
-use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
-use actix_web::http::{header, StatusCode};
+use actix_web::cookie::time::OffsetDateTime;
+use actix_web::http::header::{CONTENT_TYPE, HeaderValue};
+use actix_web::http::{StatusCode, header};
 use actix_web::web::{Form, Json, Query};
-use actix_web::{get, post, web, HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError};
+use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError, get, post, web};
 use chrono::Utc;
 use rauthy_api_types::oidc::{
     AuthRequest, DeviceAcceptedRequest, DeviceCodeResponse, DeviceGrantRequest,
@@ -16,15 +16,16 @@ use rauthy_api_types::sessions::SessionState;
 use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
 use rauthy_common::compression::{compress_br_dyn, compress_gzip};
 use rauthy_common::constants::{
-    APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
-    AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
-    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, COOKIE_SESSION, COOKIE_SESSION_FED_CM,
+    APPLICATION_JSON, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED, AUTH_HEADER_FAMILY_NAME,
+    AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA, AUTH_HEADER_ROLES,
+    AUTH_HEADER_USER, AUTH_HEADERS_ENABLE, COOKIE_MFA, COOKIE_SESSION, COOKIE_SESSION_FED_CM,
     DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT,
     EXPERIMENTAL_FED_CM_ENABLE, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
     OPEN_USER_REG, SESSION_LIFETIME,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_models::JwtCommonClaims;
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
@@ -33,7 +34,7 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::devices::DeviceAuthCode;
 use rauthy_models::entity::fed_cm::FedCMLoginStatus;
 use rauthy_models::entity::ip_rate_limit::DeviceIpRateLimit;
-use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
+use rauthy_models::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPair};
 use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::sessions::Session;
@@ -45,7 +46,6 @@ use rauthy_models::html::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
 };
 use rauthy_models::language::Language;
-use rauthy_models::JwtCommonClaims;
 use rauthy_service::oidc::{authorize, logout, token_info, userinfo, validation};
 use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};

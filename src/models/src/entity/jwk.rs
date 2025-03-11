@@ -3,13 +3,13 @@ use crate::database::{Cache, DB};
 use crate::events::event::Event;
 use actix_web::web;
 use cryptr::{EncKeys, EncValue};
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use jwt_simple::algorithms;
 use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };
 use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
-use rauthy_common::constants::{CACHE_TTL_APP, IDX_JWKS, IDX_JWK_KID, IDX_JWK_LATEST};
+use rauthy_common::constants::{CACHE_TTL_APP, IDX_JWK_KID, IDX_JWK_LATEST, IDX_JWKS};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};

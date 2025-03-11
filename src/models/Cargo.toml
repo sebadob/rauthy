@@ -42,6 +42,8 @@ mime = { workspace = true }
 num_cpus = { workspace = true }
 num-traits = { workspace = true }
 once_cell = { workspace = true }
+openssl = { workspace = true }
+openssl-sys = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
 reqwest = { workspace = true }

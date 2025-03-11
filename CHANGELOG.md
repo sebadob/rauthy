@@ -100,7 +100,7 @@ will end up somewhere in the range of ~25 - 40kB each.
 For single instance deployments, you can use local `file` storage, while for HA deployments, you should probably use
 an S3 bucket to do so.
 
-Uploading user pictures can be disabled completely by setting PICTURE_STORAGE_TYPE=disabled
+Uploading user pictures can be disabled completely by setting `PICTURE_STORAGE_TYPE=disabled`
 
 The following new config variables are available:
 
@@ -157,22 +157,6 @@ The following new config variables are available:
 #
 # default: false
 #PICTURE_PUBLIC=false
-
-# By default, user pictures can only be fetched with a valid
-# session, an API Key with access to Users + Read, or with a
-# valid token for this user. However, depending on where and
-# how you are using Rauthy for your user management, you may
-# want to make user pictures available publicly without any
-# authentication.
-#
-# User Picture URLs are "safe" in a way that you cannot guess
-# a valid URL. You will need to know the User ID + the Picture
-# ID. Both values are generated cryptographically secure in the
-# backend during creation. The Picture ID will also change
-# with every new upload.
-#
-# default: false
-#PICTURE_PUBLIC=false
 ```
 
 [#743](https://github.com/sebadob/rauthy/pull/743)
@@ -180,7 +164,7 @@ The following new config variables are available:
 #### Static HTML + prepared queries added to version control
 
 To make it possible to build Rauthy from source in environments like e.g. FreeBSD, all pre-built static HTML files have
-been added to version control, even though they are built dynamically each time in release pipelines. In additional, all
+been added to version control, even though they are built dynamically each time in release pipelines. Additionally, all
 DB queries used by `sqlx` are added to version control as well.
 
 The reason is that the UI cannot be built in certain environments. With these files checked-in, you can build from

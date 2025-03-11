@@ -1,9 +1,9 @@
-use crate::{content_len_limit, ReqPrincipal};
+use crate::{ReqPrincipal, content_len_limit};
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, WWW_AUTHENTICATE,
 };
 use actix_web::web::{Json, Query};
-use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse, delete, get, post, put, web};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, DynamicClientRequest, DynamicClientResponse,
