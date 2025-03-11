@@ -40,7 +40,7 @@ impl OidcCookieState {
     ) -> Result<Self, RauthyError> {
         let enc = b64_decode(state_cookie_value)?;
         let dec = Self::decrypt(&enc, enc_key)?;
-        let slf = bincode::deserialize::<Self>(&dec)?;
+        let (slf, _) = bincode::serde::decode_from_slice(&dec, bincode::config::standard())?;
         Ok(slf)
     }
 
@@ -76,7 +76,7 @@ impl OidcCookieState {
 
     #[inline]
     pub fn to_encrypted_cookie_value(&self, key: &[u8]) -> String {
-        let ser = bincode::serialize(self).unwrap();
+        let ser = bincode::serde::encode_to_vec(self, bincode::config::standard()).unwrap();
         let enc = Self::encrypt(&ser, key).unwrap();
         b64_encode(&enc)
     }

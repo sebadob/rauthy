@@ -1,5 +1,4 @@
 use base64::DecodeError;
-use bincode::ErrorKind;
 use chacha20poly1305::Error;
 use std::borrow::Cow;
 use thiserror::Error;
@@ -46,9 +45,9 @@ impl From<chacha20poly1305::Error> for RauthyError {
     }
 }
 
-impl From<Box<bincode::ErrorKind>> for RauthyError {
-    fn from(value: Box<ErrorKind>) -> Self {
-        Self::Serde(value.to_string())
+impl From<bincode::error::DecodeError> for RauthyError {
+    fn from(value: bincode::error::DecodeError) -> Self {
+        Self::Internal(Cow::from(value.to_string()))
     }
 }
 
