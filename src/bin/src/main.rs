@@ -9,7 +9,7 @@ use prometheus::Registry;
 use rauthy_common::constants::{
     BUILD_TIME, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
 };
-use rauthy_common::utils::{UseDummyAddress, is_ha_deployment};
+use rauthy_common::utils::UseDummyAddress;
 use rauthy_common::{is_sqlite, password_hasher};
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
@@ -224,15 +224,6 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
             100_000
         };
         tokio::spawn(dummy_data::insert_dummy_data(amount));
-    }
-
-    if is_ha_deployment() {
-        // This sleep is necessary for HA deployments to fix rolling releases inside K8s
-        // when running a stateless, cache-only Raft layer.
-        // Newer versions of hiqlite handle these situations automatically, but we
-        // are currently blocked and cannot upgrade because of lacking behind `sqlx`
-        // which depends on sqlite even without the feature enabled.
-        time::sleep(Duration::from_secs(2)).await;
     }
 
     actix.join().unwrap().unwrap();
