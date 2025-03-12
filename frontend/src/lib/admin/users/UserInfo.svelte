@@ -160,7 +160,7 @@
             success = true;
             user = res.body;
             onSave();
-            
+
             setTimeout(() => {
                 success = false;
             }, 3000);
@@ -342,7 +342,7 @@
             </div>
         </div>
 
-        <div class="flex gap-05">
+        <div class="btn">
             <Button type="submit">
                 {t.common.save}
             </Button>
@@ -361,6 +361,13 @@
 {/if}
 
 <style>
+    .btn {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        margin-bottom: 1rem;
+    }
+
     .picture {
         margin: 1rem 0;
     }
