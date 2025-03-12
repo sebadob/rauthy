@@ -1644,7 +1644,7 @@ mod tests {
 
     #[test]
     fn test_auth_provider_link_cookie() {
-        dotenvy::from_filename("rauthy.test.cfg").ok();
+        dotenvy::from_filename("rauthy-test.cfg").ok();
         let _ = EncKeys::from_env().unwrap().init();
 
         let value = AuthProviderLinkCookie {

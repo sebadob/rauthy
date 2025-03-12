@@ -18,6 +18,6 @@ COPY --chown=$TARGET_USER ./tls/ca-chain.pem ./tls/ca-chain.pem
 COPY --chown=$TARGET_USER ./tls/cert-chain.pem ./tls/cert-chain.pem
 COPY --chown=$TARGET_USER ./tls/key.pem ./tls/key.pem
 
-COPY --chown=$TARGET_USER ./rauthy.deploy.cfg ./rauthy.cfg
+COPY --chown=$TARGET_USER ./rauthy-local_test.cfg ./rauthy-local_test.cfg
 
 CMD ["/app/rauthy"]

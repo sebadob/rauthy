@@ -38,7 +38,7 @@ use std::time::Duration;
 use std::{env, thread};
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use utoipa_swagger_ui::SwaggerUi;
 
 mod dummy_data;
@@ -52,9 +52,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && args[1] == "test" {
         test_mode = true;
-        dotenvy::from_filename_override("rauthy.test.cfg").ok();
+        dotenvy::from_filename_override("rauthy-test.cfg").ok();
     } else {
-        dotenvy::from_filename("rauthy.cfg").expect("'rauthy.cfg' error");
+        let local_test = env::var("LOCAL_TEST")
+            .unwrap_or_else(|_| "false".to_string())
+            .parse::<bool>()
+            .expect("Cannot parse LOCAL_TEST as bool");
+
+        if local_test {
+            eprintln!(
+                "Using insecure config for testing - DO NOT USE IN PRODUCTION or on remote machines"
+            );
+            dotenvy::from_filename("rauthy-local_test.cfg")
+                .expect("'rauthy-local_test.cfg' not found");
+        } else if dotenvy::from_filename("rauthy.cfg").is_err() {
+            let cwd = env::current_dir()
+                .map(|pb| pb.to_str().unwrap_or_default().to_string())
+                .unwrap_or_default();
+            warn!(
+                "'{}/rauthy.cfg' not found, using environment variables only for configuration",
+                cwd
+            );
+        }
+
         dotenvy::dotenv_override().ok();
     }
 
