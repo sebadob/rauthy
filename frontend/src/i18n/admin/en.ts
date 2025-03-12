@@ -272,7 +272,7 @@ export let I18nAdminEn: I18nAdmin = {
         },
     },
     roles: {
-        adminNoMod: "The <code>rauthy_admin</code> is immutable.",
+        adminNoMod: "The <code>rauthy_admin</code> role is immutable.",
         delete1: "Are you sure you want to delete this role?",
         name: "Role Name",
     },
