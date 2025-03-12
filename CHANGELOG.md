@@ -4,6 +4,27 @@
 
 ### Breaking
 
+#### Environment Variable Only Config
+
+If you configured Rauthy via environment variables only, you might have breaking changes with this update.
+
+If a configuration is being made purely via env vars, and a proper `rauthy.cfg` (at least an empty file) is not being
+created and mounted inside the container, the application would actually use demo values as long as they are not
+overwritten by env vars manually.
+
+To improve the security out of the box, the container setup has been changed and the demo config has a separate
+filename, which will only be parsed when `LOCAL_TEST=true` is passed in as an env var before app startup.
+Setting this value inside the usual `rauthy.cfg` has no effect.
+
+The insecure local testing values that have been set before (again, with an env vars only setup), can be found here
+https://github.com/sebadob/rauthy/blob/v0.27.3/rauthy.deploy.cfg for reference, so you can check, if you would have
+breaking changes.
+
+If no `rauthy.cfg` is ever being created, default values will be used, and you can configure the application safely
+with env vars only.
+
+[#763](https://github.com/sebadob/rauthy/pull/763)
+
 #### Changed header names for session CSRF and password reset tokens
 
 This may concern you, if you have built custom UI parts in front of Rauthy.
