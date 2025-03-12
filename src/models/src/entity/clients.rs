@@ -28,6 +28,7 @@ use reqwest::header::CONTENT_TYPE;
 use reqwest::{Url, tls};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
+use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
 use std::sync::OnceLock;
@@ -120,7 +121,7 @@ impl Client {
         } else {
             None
         };
-        let mut client = Client::from(client_req);
+        let mut client = Client::try_from(client_req)?;
         client.secret_kid = kid;
 
         if is_hiqlite() {
@@ -458,6 +459,13 @@ VALUES ($1, $2, $3, $4)"#,
     }
 
     pub fn save_txn_append(&self, txn: &mut Vec<(&str, Params)>) {
+        let allowed_origins = self.allowed_origins.clone().filter(|o| !o.is_empty());
+        let contacts = self.contacts.clone().filter(|c| !c.is_empty());
+        let post_logout_redirect_uris = self
+            .post_logout_redirect_uris
+            .clone()
+            .filter(|uris| !uris.is_empty());
+
         txn.push((
             r#"
 UPDATE clients
@@ -473,8 +481,8 @@ WHERE id = $20"#,
                 &self.secret,
                 &self.secret_kid,
                 &self.redirect_uris,
-                &self.post_logout_redirect_uris,
-                &self.allowed_origins,
+                post_logout_redirect_uris,
+                allowed_origins,
                 &self.flows_enabled,
                 &self.access_token_alg,
                 &self.id_token_alg,
@@ -485,13 +493,20 @@ WHERE id = $20"#,
                 &self.challenge,
                 self.force_mfa,
                 &self.client_uri,
-                &self.contacts,
+                contacts,
                 &self.id
             ),
         ));
     }
 
     pub async fn save_txn(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
+        let allowed_origins = self.allowed_origins.clone().filter(|o| !o.is_empty());
+        let contacts = self.contacts.clone().filter(|c| !c.is_empty());
+        let post_logout_redirect_uris = self
+            .post_logout_redirect_uris
+            .clone()
+            .filter(|uris| !uris.is_empty());
+
         sqlx::query!(
             r#"
 UPDATE clients
@@ -506,8 +521,8 @@ WHERE id = $20"#,
             self.secret,
             self.secret_kid,
             self.redirect_uris,
-            self.post_logout_redirect_uris,
-            self.allowed_origins,
+            post_logout_redirect_uris,
+            allowed_origins,
             self.flows_enabled,
             self.access_token_alg,
             self.id_token_alg,
@@ -518,7 +533,7 @@ WHERE id = $20"#,
             self.challenge,
             self.force_mfa,
             self.client_uri,
-            self.contacts,
+            contacts,
             self.id,
         )
         .execute(&mut **txn)
@@ -535,6 +550,13 @@ WHERE id = $20"#,
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
+        let allowed_origins = self.allowed_origins.clone().filter(|o| !o.is_empty());
+        let contacts = self.contacts.clone().filter(|c| !c.is_empty());
+        let post_logout_redirect_uris = self
+            .post_logout_redirect_uris
+            .clone()
+            .filter(|uris| !uris.is_empty());
+
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -552,8 +574,8 @@ WHERE id = $20"#,
                         self.secret.clone(),
                         self.secret_kid.clone(),
                         self.redirect_uris.clone(),
-                        self.post_logout_redirect_uris.clone(),
-                        self.allowed_origins.clone(),
+                        post_logout_redirect_uris,
+                        allowed_origins,
                         self.flows_enabled.clone(),
                         self.access_token_alg.clone(),
                         self.id_token_alg.clone(),
@@ -564,7 +586,7 @@ WHERE id = $20"#,
                         self.challenge.clone(),
                         self.force_mfa,
                         self.client_uri.clone(),
-                        self.contacts.clone(),
+                        contacts,
                         self.id.clone()
                     ),
                 )
@@ -584,8 +606,8 @@ WHERE id = $20"#,
                 self.secret,
                 self.secret_kid,
                 self.redirect_uris,
-                self.post_logout_redirect_uris,
-                self.allowed_origins,
+                post_logout_redirect_uris,
+                allowed_origins,
                 self.flows_enabled,
                 self.access_token_alg,
                 self.id_token_alg,
@@ -596,7 +618,7 @@ WHERE id = $20"#,
                 self.challenge,
                 self.force_mfa,
                 self.client_uri,
-                self.contacts,
+                contacts,
                 self.id,
             )
             .execute(DB::conn())
@@ -766,14 +788,17 @@ impl Client {
 
     #[inline]
     pub fn get_allowed_origins(&self) -> Option<Vec<String>> {
-        self.allowed_origins.as_ref()?;
-        let mut origins = Vec::new();
-        self.allowed_origins
-            .as_ref()
-            .unwrap()
-            .split(',')
-            .for_each(|o| origins.push(o.trim().to_owned()));
-        Some(origins)
+        if let Some(origins) = &self.allowed_origins {
+            let mut res = Vec::with_capacity(1);
+            for o in origins.split(',') {
+                if !o.is_empty() {
+                    res.push(o.to_string());
+                }
+            }
+            Some(res)
+        } else {
+            None
+        }
     }
 
     #[inline]
@@ -792,9 +817,11 @@ impl Client {
     #[inline]
     pub fn get_contacts(&self) -> Option<Vec<String>> {
         if let Some(contacts) = &self.contacts {
-            let mut res = Vec::new();
+            let mut res = Vec::with_capacity(1);
             for c in contacts.split(',') {
-                res.push(c.to_string());
+                if !c.is_empty() {
+                    res.push(c.to_string());
+                }
             }
             Some(res)
         } else {
@@ -839,15 +866,17 @@ impl Client {
 
     #[inline]
     pub fn get_post_logout_uris(&self) -> Option<Vec<String>> {
-        self.post_logout_redirect_uris.as_ref()?;
-        Some(
-            self.post_logout_redirect_uris
-                .as_ref()
-                .unwrap()
-                .split(',')
-                .map(|i| i.trim().to_string())
-                .collect(),
-        )
+        if let Some(uris) = &self.post_logout_redirect_uris {
+            let mut res = Vec::with_capacity(1);
+            for uri in uris.split(',') {
+                if !uri.is_empty() {
+                    res.push(uri.to_string());
+                }
+            }
+            Some(res)
+        } else {
+            None
+        }
     }
 
     #[inline]
@@ -883,6 +912,7 @@ impl Client {
 
     #[inline]
     pub fn is_ephemeral(&self) -> bool {
+        // A non-dynamic client_id can never be a valid URL because of payload validation
         Url::from_str(&self.id).is_ok()
     }
 
@@ -1014,7 +1044,7 @@ impl Client {
 
         Ok(Some((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
-            HeaderValue::from_str(origin).unwrap(),
+            HeaderValue::from_str(origin)?,
         )))
     }
 
@@ -1331,12 +1361,35 @@ impl Default for Client {
     }
 }
 
-impl From<NewClientRequest> for Client {
-    fn from(client: NewClientRequest) -> Self {
-        let redirect_uris = client.redirect_uris.join(",");
-        let post_logout_redirect_uris = client.post_logout_redirect_uris.map(|u| u.join(","));
+impl TryFrom<NewClientRequest> for Client {
+    type Error = ErrorResponse;
 
-        Self {
+    fn try_from(client: NewClientRequest) -> Result<Self, Self::Error> {
+        let mut redirect_uris = String::with_capacity(24);
+        for uri in client.redirect_uris {
+            let trimmed = uri.trim();
+            if !trimmed.is_empty() {
+                write!(redirect_uris, "{},", trimmed)?;
+            }
+        }
+        redirect_uris.pop();
+
+        let post_logout_redirect_uris =
+            if let Some(post_logout_redirect_uris) = client.post_logout_redirect_uris {
+                let mut uris = String::with_capacity(24);
+                for uri in post_logout_redirect_uris {
+                    let trimmed = uri.trim();
+                    if !trimmed.is_empty() {
+                        write!(uris, "{},", trimmed)?;
+                    }
+                }
+                uris.pop();
+                if uris.is_empty() { None } else { Some(uris) }
+            } else {
+                None
+            };
+
+        Ok(Self {
             id: client.id,
             secret: client.secret,
             name: client.name,
@@ -1344,7 +1397,7 @@ impl From<NewClientRequest> for Client {
             redirect_uris,
             post_logout_redirect_uris,
             ..Default::default()
-        }
+        })
     }
 }
 
@@ -1381,7 +1434,7 @@ impl Client {
             secret,
             secret_kid,
             redirect_uris: req.redirect_uris.join(","),
-            post_logout_redirect_uris: req.post_logout_redirect_uri,
+            post_logout_redirect_uris: req.post_logout_redirect_uri.filter(|uri| !uri.is_empty()),
             allowed_origins: None,
             flows_enabled: req.grant_types.join(","),
             access_token_alg,
@@ -1390,7 +1443,7 @@ impl Client {
             challenge: confidential.then_some("S256".to_string()),
             force_mfa: false,
             client_uri: req.client_uri,
-            contacts: req.contacts.map(|c| c.join(",")),
+            contacts: req.contacts.map(|c| c.join(",")).filter(|c| !c.is_empty()),
             ..Default::default()
         })
     }
