@@ -21,7 +21,8 @@ https://github.com/sebadob/rauthy/blob/v0.27.3/rauthy.deploy.cfg for reference, 
 breaking changes.
 
 If no `rauthy.cfg` is ever being created, default values will be used, and you can configure the application safely
-with env vars only.
+with env vars only. If you decide to use both, env vars will keep on having the higher priority over values set inside
+the config file, just like it has been before.
 
 [#763](https://github.com/sebadob/rauthy/pull/763)
 
