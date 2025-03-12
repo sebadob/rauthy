@@ -115,7 +115,7 @@
 
 <style>
     nav {
-        background: hsl(var(--bg));
+        /*background: hsl(var(--bg));*/
         border-left: 1px solid hsla(var(--bg-high) / .35);
         border-right: 1px solid hsla(var(--bg-high) / .23);
         border-radius: 0 var(--border-radius) var(--border-radius) 0;
@@ -130,7 +130,7 @@
 
     nav > div {
         height: 100dvh;
-        background: hsla(var(--bg-high) / .07);
+        background: hsla(var(--bg-high) / .1);
         padding: 1rem 0;
         line-height: 1.6rem;
     }

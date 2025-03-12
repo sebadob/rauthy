@@ -169,7 +169,7 @@
             <div style:height=".3rem"></div>
             <p>{t.account.federatedConvertPassword2}</p>
             {#if success}
-                <CheckIcon check/>
+                <CheckIcon checked/>
             {:else}
                 <Button level={2} onclick={requestPasswordReset}>
                     {t.account.passwordReset}

@@ -268,7 +268,7 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        background: hsla(var(--bg-high) / .15);
+        background: hsla(var(--bg-high) / .25);
         transition: all 150ms;
     }
 

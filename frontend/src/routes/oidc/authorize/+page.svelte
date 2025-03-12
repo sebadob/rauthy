@@ -549,9 +549,8 @@
         justify-content: center;
         max-width: 21rem;
         padding: 20px;
-        border: 1px solid hsl(var(--bg-high));
         border-radius: 5px;
-        box-shadow: .1rem .1rem .1rem rgba(128, 128, 128, .1);
+        background: hsla(var(--bg-high) / .25);
     }
 
     .emailMinHeight {
@@ -623,12 +622,5 @@
     .success {
         margin: 0 5px;
         color: hsl(var(--action));
-    }
-
-    @media (max-width: 30rem) {
-        .container {
-            border: none;
-            box-shadow: none;
-        }
     }
 </style>
