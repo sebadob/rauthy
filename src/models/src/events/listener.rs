@@ -7,11 +7,11 @@ use actix_web_lab::sse;
 use chrono::DateTime;
 use rauthy_common::constants::EVENTS_LATEST_LIMIT;
 use rauthy_error::ErrorResponse;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 #[derive(Debug, Clone)]
 pub enum EventRouterMsg {
@@ -149,8 +149,15 @@ impl EventListener {
         debug!("EventListener::router has been started");
 
         let mut clients: HashMap<String, (i16, mpsc::Sender<sse::Event>)> =
-            HashMap::with_capacity(4);
+            HashMap::with_capacity(1);
         let mut ips_to_remove = Vec::with_capacity(1);
+
+        // TODO in HA deployments (currently only seen with Postgres), we may have duplicate
+        // event ids after startup, as soon as the first ever client subscribes to the events stream.
+        // The HashSet makes sure we don't send out duplicate data, when we receive a duplicate
+        // via `EventRouterMsg::Event(event)`.
+        // -> investigate the reason to ultimately get rid of the additional HashSet checks.
+        let mut event_ids: HashSet<String> = HashSet::with_capacity(EVENTS_LATEST_LIMIT as usize);
         // Event::find_latest returns the latest events ordered by timestamp desc
         let mut events = Event::find_latest(EVENTS_LATEST_LIMIT as i64)
             .await
@@ -158,17 +165,24 @@ impl EventListener {
             .into_iter()
             .rev()
             .map(|e| {
+                event_ids.insert(e.id.clone());
                 (
                     e.level.value(),
+                    e.id.clone(),
                     sse::Event::Data(sse::Data::new(e.as_json())),
                 )
             })
-            .collect::<VecDeque<(i16, sse::Event)>>();
+            .collect::<VecDeque<(i16, String, sse::Event)>>();
 
         while let Ok(msg) = rx.recv_async().await {
             match msg {
                 EventRouterMsg::Event(event) => {
                     debug!("received new event in EventListener::router: {:?}", event);
+
+                    if event_ids.contains(&event.id) {
+                        warn!("Duplicate event ID in router: {}", event.id);
+                        continue;
+                    }
 
                     let sse_payload =
                         sse::Event::Data(sse::Data::new(serde_json::to_string(&event).unwrap()));
@@ -251,9 +265,12 @@ impl EventListener {
 
                     // keep current events max size and push payload
                     if events.len() > EVENTS_LATEST_LIMIT as usize {
-                        events.pop_front();
+                        if let Some((_, id, _)) = events.pop_front() {
+                            event_ids.remove(&id);
+                        }
                     }
-                    events.push_back((event_level_value, sse_payload));
+                    events.push_back((event_level_value, event.id.clone(), sse_payload));
+                    event_ids.insert(event.id);
 
                     while let Some(ip) = ips_to_remove.pop() {
                         clients.remove(&ip);
@@ -275,8 +292,8 @@ impl EventListener {
 
                         let events_filtered = events
                             .iter()
-                            .filter(|(level, _payload)| *level >= client_level_val)
-                            .map(|(_level, payload)| payload)
+                            .filter(|(level, _id, _payload)| *level >= client_level_val)
+                            .map(|(_level, _id, payload)| payload)
                             .collect::<Vec<&sse::Event>>();
 
                         let evt_len = events_filtered.len();

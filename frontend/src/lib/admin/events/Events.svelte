@@ -75,8 +75,8 @@
     function stream() {
         localStorage.setItem('eventLevel', level)
 
-        if (es?.readyState !== 2) {
-            es?.close();
+        if (es && es.readyState !== 2) {
+            es.close();
         }
 
         es = new EventSource(`/auth/v1/events/stream?latest=${latest}&level=${level.toLowerCase()}`);

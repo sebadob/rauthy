@@ -62,20 +62,6 @@
 
 </script>
 
-{#snippet ip(v: undefined | string)}
-    {#if v}
-        <div>
-            <Button invisible onclick={() => copyToClip(v)}>
-                <Tooltip text={tooltip} yOffset={20}>
-                    <div class="ip font-mono">
-                        {v}
-                    </div>
-                </Tooltip>
-            </Button>
-        </div>
-    {/if}
-{/snippet}
-
 <div
         role="contentinfo"
         class="event"
@@ -96,19 +82,28 @@
 
     {#if event.typ === 'InvalidLogins'}
         {`: ${event.data}`}
-        {@render ip(event.ip)}
 
     {:else if event.typ === 'NewRauthyVersion'}
-        <A href={event.text || ''} target="_blank">NewRauthyVersion</A>
+        <A href={event.text || ''} target="_blank">New Version</A>
 
     {:else if event.typ === 'IpBlacklisted'}
         {ta.common.until}
         {event.data && formatDateFromTs(event.data)}
-        {@render ip(event.ip)}
 
     {:else}
         {event.text || ''}
-        {@render ip(event.ip)}
+    {/if}
+
+    {#if event.ip !== undefined}
+        <div>
+            <Button invisible onclick={() => copyToClip(event.ip || '')}>
+                <Tooltip text={tooltip} yOffset={20}>
+                    <div class="ip font-mono">
+                        {event.ip}
+                    </div>
+                </Tooltip>
+            </Button>
+        </div>
     {/if}
 </div>
 

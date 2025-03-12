@@ -47,19 +47,11 @@
             return;
         }
         let to_collapse = page.url && innerWidth < 600 || innerWidth < 800;
+        let be_compact = innerWidth < 1280;
+
         // we wait for an animation frame to avoid display errors in some browsers
         requestAnimationFrame(() => {
             collapsed = to_collapse;
-        });
-    });
-
-    $effect(() => {
-        if (!innerWidth) {
-            return;
-        }
-        let be_compact = innerWidth < 1280;
-        // we wait for an animation frame to avoid display errors in some browsers
-        requestAnimationFrame(() => {
             compact = be_compact;
         });
     });
