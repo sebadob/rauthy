@@ -4,6 +4,7 @@ use crate::database::{Cache, DB};
 use crate::entity::auth_codes::AuthCode;
 use crate::entity::auth_provider_cust_impl;
 use crate::entity::clients::Client;
+use crate::entity::logos::{Logo, LogoType};
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
@@ -1141,27 +1142,20 @@ impl AuthProviderTemplate {
             return Ok(slf);
         }
 
-        let slf = if is_hiqlite() {
-            DB::client()
-                .query_as(
-                    r#"
-SELECT id, name, updated FROM auth_providers p
-JOIN auth_provider_logos l ON p.id = l.auth_provider_id
-WHERE res = 'small'"#,
-                    params!(),
-                )
-                .await?
-        } else {
-            sqlx::query_as!(
-                Self,
-                r#"
-SELECT id, name, updated FROM auth_providers p
-JOIN auth_provider_logos l ON p.id = l.auth_provider_id
-WHERE res = 'small'"#
-            )
-            .fetch_all(DB::conn())
-            .await?
-        };
+        let providers = AuthProvider::find_all().await?;
+        let mut slf = Vec::with_capacity(providers.len());
+        for provider in providers {
+            let updated = Logo::find_cached(&provider.id, &LogoType::AuthProvider)
+                .await
+                .map(|l| l.updated)
+                .unwrap_or(0);
+
+            slf.push(Self {
+                id: provider.id,
+                name: provider.name,
+                updated,
+            });
+        }
         let json = serde_json::to_string(&slf)?;
 
         client
