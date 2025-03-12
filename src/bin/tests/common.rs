@@ -49,7 +49,7 @@ pub async fn get_auth_headers() -> Result<HeaderMap, Box<dyn Error>> {
 }
 
 pub fn get_backend_url() -> String {
-    dotenvy::from_filename_override("rauthy.test.cfg").ok();
+    dotenvy::from_filename_override("rauthy-test.cfg").ok();
     let scheme = match env::var("LISTEN_SCHEME")
         .unwrap_or_else(|_| String::from("http"))
         .to_lowercase()

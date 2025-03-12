@@ -361,7 +361,7 @@ mod tests {
     #[test]
     fn test_dpop_validation_eddsa() {
         // mandatory to read the PUB_URL for the request validation
-        dotenvy::from_filename("rauthy.test.cfg").ok();
+        dotenvy::from_filename("rauthy-test.cfg").ok();
 
         // manually build up a dpop token
         let kp = ed25519_compact::KeyPair::generate();

@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_api_cookie() {
-        dotenvy::from_filename("rauthy.test.cfg").ok();
+        dotenvy::from_filename("rauthy-test.cfg").ok();
         let _ = EncKeys::from_env().unwrap().init();
 
         let val = "my_cookie_val_1337";
