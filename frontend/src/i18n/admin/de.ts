@@ -112,6 +112,7 @@ export let I18nAdminDe: I18nAdmin = {
             existieren können.`,
             p3: `Das Migrieren aller verschlüsselten Werte an dieser Stelle kann, je nach System, einige Zeit in 
             Anspruch nehmen.`,
+            pNotPossible: 'Zur Migration müssen mindestens 2 Encryption Keys vorhanden sein.',
         },
         hashing: {
             calculate: "Berechnen",

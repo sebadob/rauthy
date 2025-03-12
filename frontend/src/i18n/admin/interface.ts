@@ -93,6 +93,7 @@ export interface I18nAdmin {
             p1: string,
             p2: string,
             p3: string,
+            pNotPossible: string,
         },
         hashing: {
             calculate: string,

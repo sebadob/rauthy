@@ -75,23 +75,28 @@
 </ul>
 
 <p>{ta.docs.encKeys.p3}</p>
-<p>{ta.docs.encKeys.migrateToKey}:</p>
 
-<Options
-        ariaLabel={ta.docs.encKeys.migrateToKey}
-        options={keys}
-        bind:value={migrateKey}
-/>
+{#if keys.length > 1}
+    <p>{ta.docs.encKeys.migrateToKey}:</p>
 
-<div class="btn flex gap-05">
-    <Button onclick={migrate} {isLoading}>
-        {ta.docs.encKeys.migrate}
-    </Button>
+    <Options
+            ariaLabel={ta.docs.encKeys.migrateToKey}
+            options={keys}
+            bind:value={migrateKey}
+    />
 
-    {#if success}
-        <IconCheck/>
-    {/if}
-</div>
+    <div class="btn flex gap-05">
+        <Button onclick={migrate} {isLoading}>
+            {ta.docs.encKeys.migrate}
+        </Button>
+
+        {#if success}
+            <IconCheck/>
+        {/if}
+    </div>
+{:else}
+    <p class="err">{ta.docs.encKeys.pNotPossible}</p>
+{/if}
 
 {#if err}
     <div class="err">
