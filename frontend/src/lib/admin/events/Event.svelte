@@ -107,7 +107,7 @@
         {@render ip(event.ip)}
 
     {:else}
-        {event.text}
+        {event.text || ''}
         {@render ip(event.ip)}
     {/if}
 </div>
