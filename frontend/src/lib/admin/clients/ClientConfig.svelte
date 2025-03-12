@@ -16,7 +16,6 @@
     import type {SelectItem} from "$lib5/select_list/props.ts";
     import {slide} from "svelte/transition";
     import Options from "$lib5/Options.svelte";
-    import {untrack} from "svelte";
 
     let {
         client,
@@ -196,7 +195,7 @@
     <Form action={`/auth/v1/clients/${client.id}`} {onSubmit}>
         <h5>{ta.common.information}</h5>
 
-        <LabeledValue label="ID" mono>
+        <LabeledValue label="ID" mono copyToClip={client.id}>
             {client.id}
         </LabeledValue>
 

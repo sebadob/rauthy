@@ -33,7 +33,7 @@
     let optsButtons = $state(false);
     let params = $state('')
     let compact = $state(false);
-    let collapsed = $state(true);
+    let collapsed = $state(false);
 
     let innerWidth: undefined | number = $state();
 
@@ -43,22 +43,18 @@
     })
 
     $effect(() => {
-        if (innerWidth && innerWidth < 600 && page.url) {
-            collapsed = true;
+        if (!innerWidth) {
+            return;
         }
-    })
+        let to_collapse = page.url && innerWidth < 600 || innerWidth < 800;
+        let be_compact = innerWidth < 1280;
 
-    $effect(() => {
-        collapsed = (innerWidth && innerWidth < 800) || false;
+        // we wait for an animation frame to avoid display errors in some browsers
+        requestAnimationFrame(() => {
+            collapsed = to_collapse;
+            compact = be_compact;
+        });
     });
-
-    $effect(() => {
-        compact = (innerWidth && innerWidth < 1280) || false;
-    });
-
-    // function login() {
-    //     fetchGet('/api/session/check');
-    // }
 
     function showOpts() {
         if (timeout) {
@@ -272,7 +268,7 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        background: hsla(var(--bg-high) / .15);
+        background: hsla(var(--bg-high) / .25);
         transition: all 150ms;
     }
 

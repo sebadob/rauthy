@@ -107,6 +107,7 @@ export let I18nAdminEn: I18nAdmin = {
             here dynamically. All new JWK encryption's will always use the currently active key.`,
             p3: `If you migrate all existing secrets, it might take a few seconds to finish, if you have a big 
             dataset.`,
+            pNotPossible: 'To be able to migrate, at least 2 encryption keys need to be available.',
         },
         hashing: {
             calculate: "Calculate",
@@ -272,7 +273,7 @@ export let I18nAdminEn: I18nAdmin = {
         },
     },
     roles: {
-        adminNoMod: "The <code>rauthy_admin</code> is immutable.",
+        adminNoMod: "The <code>rauthy_admin</code> role is immutable.",
         delete1: "Are you sure you want to delete this role?",
         name: "Role Name",
     },

@@ -150,9 +150,12 @@
     }
 
     .container {
+        padding: 1rem;
         display: flex;
         flex-direction: column;
         justify-content: center;
+        border-radius: var(--border-radius);
+        background: hsla(var(--bg-high) / .25);
     }
 
     .err {

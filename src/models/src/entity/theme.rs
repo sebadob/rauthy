@@ -56,7 +56,7 @@ impl From<hiqlite::Row<'_>> for ThemeCssFull {
 
 impl FromRow<'_, sqlx::postgres::PgRow> for ThemeCssFull {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, Error> {
-        let version: i64 = row.get("version");
+        let version: i32 = row.get("version");
         let (light, dark) = if version == 1 {
             let bytes: Vec<u8> = row.get("light");
             let light = ThemeCss::from(bytes.as_slice());
@@ -75,7 +75,7 @@ impl FromRow<'_, sqlx::postgres::PgRow> for ThemeCssFull {
         Ok(Self {
             client_id: row.get("client_id"),
             last_update: row.get("last_update"),
-            version,
+            version: version as i64,
             light,
             dark,
             border_radius: row.get("border_radius"),

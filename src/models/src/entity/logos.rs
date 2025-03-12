@@ -395,7 +395,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
         Ok(slf)
     }
 
-    // special fn because we only want to cache the small logos
+    /// special fn because we only want to cache the small logos
     pub async fn find_cached(id: &str, typ: &LogoType) -> Result<Self, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(typ, id)).await? {

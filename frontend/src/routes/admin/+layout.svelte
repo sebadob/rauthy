@@ -79,7 +79,6 @@
         </div>
         {#if innerWidth && innerWidth > 1024}
             <div class="events">
-                <!-- TODO make self-contained without state bindings -->
                 <Events/>
             </div>
         {/if}

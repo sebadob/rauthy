@@ -20,7 +20,11 @@
     let es: undefined | EventSource = $state();
     let events: EventResponse[] = $state([]);
     let eventsFiltered: EventResponse[] = $state([]);
-    let level: EventLevel = $state(isBrowser() ? localStorage.getItem('eventLevel') as EventLevel || 'info' : 'info');
+    let level: EventLevel = $state(
+        isBrowser()
+            ? localStorage.getItem('eventLevel')?.toLowerCase() as EventLevel || 'info'
+            : 'info'
+    );
     let levelBefore = '';
 
     onDestroy(() => {
@@ -71,8 +75,8 @@
     function stream() {
         localStorage.setItem('eventLevel', level)
 
-        if (es?.readyState !== 2) {
-            es?.close();
+        if (es && es.readyState !== 2) {
+            es.close();
         }
 
         es = new EventSource(`/auth/v1/events/stream?latest=${latest}&level=${level.toLowerCase()}`);
@@ -88,7 +92,6 @@
         es.onmessage = ev => {
             if (ev.data) {
                 let event: EventResponse = JSON.parse(ev.data);
-                console.log('event', event.id);
                 // keep max 500 events in the UI to not consume endless amounts of memory
                 events = [event, ...events.slice(-499)];
             }

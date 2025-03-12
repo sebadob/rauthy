@@ -21,7 +21,7 @@ use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::app_state::AppState;
-use rauthy_models::database::DB;
+use rauthy_models::database::{Cache, DB};
 use rauthy_models::email::EMail;
 use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::events::event::Event;
@@ -204,6 +204,10 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
 
     UserPicture::test_config().await.unwrap();
 
+    // We need to clear the HTML cache to make sure the correct static
+    // assets are referenced after an app upgrade with a newly built UI.
+    DB::client().clear_cache(Cache::Html).await.unwrap();
+
     // actix web
     let state = app_state.clone();
     let actix = thread::spawn(move || {
@@ -219,14 +223,10 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
         } else {
             100_000
         };
-        tokio::spawn(crate::dummy_data::insert_dummy_data(amount));
+        tokio::spawn(dummy_data::insert_dummy_data(amount));
     }
 
     actix.join().unwrap().unwrap();
-
-    // sleep 1 sec before shutting down the raft -> makes k8s rolling releases a bit smoother
-    // as we can't utilize readiness probes because of a chicken-and-egg problem
-    time::sleep(Duration::from_secs(2)).await;
     DB::client().shutdown().await.unwrap();
 
     Ok(())
