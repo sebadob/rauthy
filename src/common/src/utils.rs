@@ -78,6 +78,20 @@ pub fn base64_url_no_pad_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
         .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
 }
 
+/// Uses the `HQL_NODES` to determine if Rauthy is running in a HA deployment.
+#[inline]
+pub fn is_ha_deployment() -> bool {
+    env::var("HQL_NODES")
+        .unwrap_or_else(|_| "".to_string())
+        .lines()
+        .filter_map(|l| {
+            let trim = l.trim();
+            if trim.is_empty() { None } else { Some(trim) }
+        })
+        .count()
+        > 1
+}
+
 #[inline(always)]
 pub fn new_store_id() -> String {
     get_rand(24)

@@ -8,7 +8,7 @@ use hiqlite::{Param, params};
 use image::ImageFormat;
 use image::imageops::FilterType;
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::new_store_id;
+use rauthy_common::utils::{is_ha_deployment, new_store_id};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -385,15 +385,7 @@ impl UserPicture {
                 info!("Using Database as User Picture Storage");
             }
             PictureStorage::File => {
-                let nodes = env::var("HQL_NODES")
-                    .unwrap()
-                    .lines()
-                    .filter_map(|l| {
-                        let trim = l.trim();
-                        if trim.is_empty() { None } else { Some(trim) }
-                    })
-                    .count();
-                if nodes != 1 {
+                if is_ha_deployment() {
                     panic!(
                         "You can only use local file storage for User Pictures for a single instance"
                     );

@@ -9,7 +9,7 @@ use prometheus::Registry;
 use rauthy_common::constants::{
     BUILD_TIME, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
 };
-use rauthy_common::utils::UseDummyAddress;
+use rauthy_common::utils::{UseDummyAddress, is_ha_deployment};
 use rauthy_common::{is_sqlite, password_hasher};
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
@@ -21,7 +21,7 @@ use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::app_state::AppState;
-use rauthy_models::database::DB;
+use rauthy_models::database::{Cache, DB};
 use rauthy_models::email::EMail;
 use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::events::event::Event;
@@ -204,6 +204,10 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
 
     UserPicture::test_config().await.unwrap();
 
+    // We need to clear the HTML cache to make sure the correct static
+    // assets are referenced after an app upgrade with a newly built UI.
+    DB::client().clear_cache(Cache::Html).await.unwrap();
+
     // actix web
     let state = app_state.clone();
     let actix = thread::spawn(move || {
@@ -219,14 +223,19 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
         } else {
             100_000
         };
-        tokio::spawn(crate::dummy_data::insert_dummy_data(amount));
+        tokio::spawn(dummy_data::insert_dummy_data(amount));
+    }
+
+    if is_ha_deployment() {
+        // This sleep is necessary for HA deployments to fix rolling releases inside K8s
+        // when running a stateless, cache-only Raft layer.
+        // Newer versions of hiqlite handle these situations automatically, but we
+        // are currently blocked and cannot upgrade because of lacking behind `sqlx`
+        // which depends on sqlite even without the feature enabled.
+        time::sleep(Duration::from_secs(2)).await;
     }
 
     actix.join().unwrap().unwrap();
-
-    // sleep 1 sec before shutting down the raft -> makes k8s rolling releases a bit smoother
-    // as we can't utilize readiness probes because of a chicken-and-egg problem
-    time::sleep(Duration::from_secs(2)).await;
     DB::client().shutdown().await.unwrap();
 
     Ok(())
