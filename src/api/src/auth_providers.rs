@@ -152,7 +152,7 @@ pub async fn post_provider_login(
 
 #[get("/providers/callback")]
 pub async fn get_provider_callback_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    HtmlCached::Device
+    HtmlCached::AuthProviderCallback
         .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
         .await
 }
