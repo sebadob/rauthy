@@ -88,6 +88,7 @@
     function onkeydown(ev: KeyboardEvent) {
         switch (ev.code) {
             case 'Enter':
+                ev.preventDefault();
                 handleOnEnter();
                 onEnter?.();
                 break;
