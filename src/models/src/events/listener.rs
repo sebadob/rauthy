@@ -95,49 +95,6 @@ impl EventListener {
         info!("raft_events_listener exiting");
     }
 
-    // #[tracing::instrument(level = "debug", skip_all)]
-    // async fn pg_listener(tx: flume::Sender<EventRouterMsg>) {
-    //     debug!("EventListener::router_ha has been started");
-    //
-    //     loop {
-    //         let mut listener = match PgListener::connect(&DATABASE_URL).await {
-    //             Ok(l) => l,
-    //             Err(err) => {
-    //                 error!(
-    //                     "Error opening Postgres connection for PgListener: {:?}",
-    //                     err
-    //                 );
-    //                 time::sleep(Duration::from_secs(5)).await;
-    //                 continue;
-    //             }
-    //         };
-    //         if let Err(err) = listener.listen("events").await {
-    //             error!("Error listening to 'events' channel on Postgres: {:?}", err);
-    //             time::sleep(Duration::from_secs(5)).await;
-    //             continue;
-    //         }
-    //
-    //         while let Ok(msg) = listener.recv().await {
-    //             debug!("{:?}", msg);
-    //
-    //             // forward to event router -> payload is already an Event in JSON format
-    //             if let Err(err) = tx
-    //                 .send_async(EventRouterMsg::Event(msg.payload().to_string()))
-    //                 .await
-    //             {
-    //                 error!(
-    //                     "Error sending Event {:?} internally - this should never happen!",
-    //                     err
-    //                 );
-    //             }
-    //         }
-    //
-    //         // try to do an unlisten on all channels even if we had an error and should be
-    //         // disconnected anyway
-    //         let _ = listener.unlisten_all().await;
-    //     }
-    // }
-
     /// The router that will listen to Events coming in via Hiqlite and listen for Client
     /// Registrations via SSE endpoint. It will serialize incoming Events to SSE payload in JSON
     /// format and forward them to all registered clients.
@@ -157,6 +114,7 @@ impl EventListener {
         // The HashSet makes sure we don't send out duplicate data, when we receive a duplicate
         // via `EventRouterMsg::Event(event)`.
         // -> investigate the reason to ultimately get rid of the additional HashSet checks.
+        // -> does it maybe make sense to utilize the hiqlite cache here for unified data?
         let mut event_ids: HashSet<String> = HashSet::with_capacity(EVENTS_LATEST_LIMIT as usize);
         // Event::find_latest returns the latest events ordered by timestamp desc
         let mut events = Event::find_latest(EVENTS_LATEST_LIMIT as i64)
