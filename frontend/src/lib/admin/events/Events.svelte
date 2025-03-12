@@ -20,7 +20,11 @@
     let es: undefined | EventSource = $state();
     let events: EventResponse[] = $state([]);
     let eventsFiltered: EventResponse[] = $state([]);
-    let level: EventLevel = $state(isBrowser() ? localStorage.getItem('eventLevel') as EventLevel || 'info' : 'info');
+    let level: EventLevel = $state(
+        isBrowser()
+            ? localStorage.getItem('eventLevel')?.toLowerCase() as EventLevel || 'info'
+            : 'info'
+    );
     let levelBefore = '';
 
     onDestroy(() => {
