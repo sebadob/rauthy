@@ -90,11 +90,11 @@
         {ta.common.until}
         {event.data && formatDateFromTs(event.data)}
 
-    {:else}
-        {event.text || ''}
+    {:else if event.text}
+        {event.text}
     {/if}
 
-    {#if event.ip !== undefined}
+    {#if event.ip}
         <div>
             <Button invisible onclick={() => copyToClip(event.ip || '')}>
                 <Tooltip text={tooltip} yOffset={20}>
