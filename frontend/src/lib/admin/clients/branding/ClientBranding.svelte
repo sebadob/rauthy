@@ -41,10 +41,9 @@
     async function fetchTheme() {
         let res = await fetchPost<ThemeRequestResponse>(url);
         if (res.body) {
-            if (res.body.client_id === 'rauthy') {
-                console.log('using Rauthy default scheme');
-                // TODO maybe show an indicator that it's the default scheme?
-            }
+            // if (res.body.client_id === 'rauthy') {
+            //     // TODO maybe show an indicator that it's the default scheme?
+            // }
             theme = res.body;
         } else {
             err = res.error?.message || 'Error';

@@ -92,7 +92,6 @@
         es.onmessage = ev => {
             if (ev.data) {
                 let event: EventResponse = JSON.parse(ev.data);
-                console.log('event', event.id);
                 // keep max 500 events in the UI to not consume endless amounts of memory
                 events = [event, ...events.slice(-499)];
             }

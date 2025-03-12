@@ -42,7 +42,7 @@
     });
 
     async function login() {
-        console.log('using credentials get values: configUrl: ' + configUrl + ' / clientId: ' + clientId);
+        // console.log('using credentials get values: configUrl: ' + configUrl + ' / clientId: ' + clientId);
 
         try {
             let creds = await navigator.credentials.get({
