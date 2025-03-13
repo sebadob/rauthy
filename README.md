@@ -1,5 +1,7 @@
 # Rauthy
 
+![Rauthy Logo](https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/logo/rauthy_grey_small.png)
+
 **CAUTION:**  
 There has not been any third party security audit for this project.
 Use this software at your own risk!
@@ -61,7 +63,7 @@ Rauthy comes with two database options:
 - or you can optionally use a Postgres as your database, if you already have an instance running anyway.
 
 A deployment with the embedded [Hiqlite](https://github.com/sebadob/hiqlite), filled caches / buffers and a small set of
-clients and users configured typically settles around 61MB of memory. Using Postgres, it will end up at ~43MB, but then
+clients and users configured typically settles around 65MB of memory. Using Postgres, it will end up at ~45MB, but then
 you have of course your Postgres consuming additional resources. If a password from a login is hashed, the memory
 consumption will of course go up way higher than this, depending on your configured Argon2ID parameters.
 
@@ -81,6 +83,10 @@ Rauthy does have an Admin UI which can be used to basically do almost any operat
 whole application and its users. There is also an account dashboard for each individual user, where users will get a
 basic overview over their account and can self-manage som values, password, passkeys, and so on.  
 Some Screenshots and further introduction will follow in the future.
+
+![Admin UI](https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/users.png)
+
+![Account Dashboard](https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/account.png)
 
 ### Client Branding
 
@@ -182,23 +188,29 @@ open source project for quite some time.
 - [x] Can serve a basic `webid` document
 - [x] Experimental FedCM support
 
-### Features TODO
-
-This is a non-exhaustive list of currently open TODO's
-
-- [ ] UI overhaul to make it "prettier" in certain places
-- [ ] Maybe get a nicer Rauthy Logo
-- [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become quantum
-  safe
-
 ## Getting Started
 
 Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/), or start directly by taking a look at
-the application yourself with docker on your localhost. Rauthy has pretty strict cookie settings and not all
-browsers treat `localhost` as being secure, therefore you should allow insecure cookies for testing locally:
+the application yourself with docker on your localhost. Rauthy comes with a setting for very quick and easy local
+testing and taking a first look. By setting `LOCAL_TEST=true`, an (insecure) demo config is being loaded at startup.
 
 ```
-docker run --rm -e COOKIE_MODE=danger-insecure -p 8080:8080 ghcr.io/sebadob/rauthy:0.27.3
+docker run -it --rm -e LOCAL_TEST=true -p 8080:8080 ghcr.io/sebadob/rauthy:0.28.0
+```
+
+This config **will only work on localhost** though. If you want to use a remote machine for testing, you need to use TLS
+with at least self-signed certificates. The container image includes some, but you should really only use them for
+testing.
+
+To use and activate the testing TLS certificates, execute the following:
+
+```
+docker run -it --rm \
+  -e LOCAL_TEST=true \
+  -e LISTEN_SCHEME=https \
+  -e PUB_URL=example.com:8443 \
+  -p 8443:8443 \
+  ghcr.io/sebadob/rauthy:0.28.0
 ```
 
 ## Contributing
@@ -213,4 +225,4 @@ with financial support from the European Commission's [Next Generation Internet]
 the [NLnet project page](https://nlnet.nl/project/Rauthy).
 
 [<img src="https://nlnet.nl/logo/banner.png" alt="NLnet foundation logo" width="20%" />](https://nlnet.nl)  
-[<img src="https://nlnet.nl/image/logos/NGI0_tag.svg" alt="NGI Zero Logo" width="20%" />](https://nlnet.nl/core) 
+[<img src="https://nlnet.nl/image/logos/NGI0_tag.svg" alt="NGI Zero Logo" width="20%" />](https://nlnet.nl/core)
