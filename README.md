@@ -1,5 +1,7 @@
 # Rauthy
 
+![Rauthy Logo](https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/logo/rauthy_grey_small.png)
+
 **CAUTION:**  
 There has not been any third party security audit for this project.
 Use this software at your own risk!
@@ -81,6 +83,10 @@ Rauthy does have an Admin UI which can be used to basically do almost any operat
 whole application and its users. There is also an account dashboard for each individual user, where users will get a
 basic overview over their account and can self-manage som values, password, passkeys, and so on.  
 Some Screenshots and further introduction will follow in the future.
+
+![Admin UI](https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/users.png)
+
+![Account Dashboard](https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/account.png)
 
 ### Client Branding
 
@@ -182,15 +188,6 @@ open source project for quite some time.
 - [x] Can serve a basic `webid` document
 - [x] Experimental FedCM support
 
-### Features TODO
-
-This is a non-exhaustive list of currently open TODO's
-
-- [ ] UI overhaul to make it "prettier" in certain places
-- [ ] Maybe get a nicer Rauthy Logo
-- [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become quantum
-  safe
-
 ## Getting Started
 
 Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/), or start directly by taking a look at
@@ -198,7 +195,7 @@ the application yourself with docker on your localhost. Rauthy has pretty strict
 browsers treat `localhost` as being secure, therefore you should allow insecure cookies for testing locally:
 
 ```
-docker run --rm -e COOKIE_MODE=danger-insecure -p 8080:8080 ghcr.io/sebadob/rauthy:0.27.3
+docker run -it --rm LOCAL_TEST=false -p 8080:8080 ghcr.io/sebadob/rauthy:0.28.0
 ```
 
 ## Contributing
