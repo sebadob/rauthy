@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.28.0
 
 ### Breaking
 
@@ -57,8 +57,8 @@ need to add the `offset` yourself now while going `backwards`.
 
 #### CVE-2025-24898
 
-Even though the vulnerable code blocks have not been used, the `openssl` and `openssl-sys` dependencies have been bumped
-to fix [CVE-2025-24898](https://nvd.nist.gov/vuln/detail/CVE-2025-24898).
+Even though the vulnerable code blocks have not been used directly, the `openssl` and `openssl-sys` dependencies have
+been bumped to fix [CVE-2025-24898](https://nvd.nist.gov/vuln/detail/CVE-2025-24898).
 
 [#717](https://github.com/sebadob/rauthy/pull/717)
 
