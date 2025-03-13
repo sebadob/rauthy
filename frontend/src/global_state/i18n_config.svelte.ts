@@ -9,21 +9,16 @@ export function useI18nConfig() {
         fetchGet<I18nConfigResponse>('/auth/v1/i18n_config')
             .then(res => {
                 if (res.body) {
-                    res.body.common.map(l => {
+                    let cfg = res.body;
+                    cfg.common = res.body.common.map(l => {
+                        // @ts-ignore
                         if (l === 'zhhans') {
                             return 'zh';
                         } else {
                             return l;
                         }
                     });
-                    // res.body.admin.map(l => {
-                    //     if (l === 'zhhans') {
-                    //         return 'zh';
-                    //     } else {
-                    //         return l;
-                    //     }
-                    // });
-                    _config = res.body;
+                    _config = cfg;
                 }
             });
     }
