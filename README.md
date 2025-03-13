@@ -1,6 +1,6 @@
-# Rauthy
-
 ![Rauthy Logo](https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/logo/rauthy_grey_small.png)
+
+# Rauthy
 
 **CAUTION:**  
 There has not been any third party security audit for this project.
@@ -93,6 +93,8 @@ Some Screenshots and further introduction will follow in the future.
 You have a simple way to create a branding or stylized look for the Login page for each client. The whole color theme
 can be changed and each client can have its own custom logo. Additionally, if you modify the branding for the default
 `rauthy` client, it will not only change the look for the Login page, but also for the Account and Admin page.
+
+![Client Branding](https://github.com/sebadob/rauthy/blob/c10e9421e65f386718528b15e3d0ace37aff1158/frontend/screenshots/branding.png)
 
 ### Events and Auditing
 
