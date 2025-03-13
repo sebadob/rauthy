@@ -81,8 +81,7 @@ both [Hiqlite](https://github.com/sebadob/hiqlite) and Postgres.
 
 Rauthy does have an Admin UI which can be used to basically do almost any operation you might need to administrate the
 whole application and its users. There is also an account dashboard for each individual user, where users will get a
-basic overview over their account and can self-manage som values, password, passkeys, and so on.  
-Some Screenshots and further introduction will follow in the future.
+basic overview over their account and can self-manage som values, password, passkeys, and so on.
 
 ![Admin UI](https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/users.png)
 
