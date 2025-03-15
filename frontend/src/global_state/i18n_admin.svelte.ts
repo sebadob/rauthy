@@ -2,6 +2,7 @@ import {useLang} from "$state/language.svelte.ts";
 import type {I18nAdmin} from "../i18n/admin/interface.ts";
 import {I18nAdminDe} from "../i18n/admin/de.ts";
 import {I18nAdminEn} from "../i18n/admin/en.ts";
+import {I18nAdminKo} from "../i18n/admin/ko.ts";
 
 // This hack makes typescript happy and is fine as long as
 // we `initI18n()` as the very first thing in +layout
@@ -28,6 +29,9 @@ export function initI18nAdmin() {
     switch (lang) {
         case 'de':
             _i18n = I18nAdminDe;
+            break;
+        case 'ko':
+            _i18n = I18nAdminKo;
             break;
         default:
             _i18n = I18nAdminEn;
