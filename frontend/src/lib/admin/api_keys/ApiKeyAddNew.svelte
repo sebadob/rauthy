@@ -63,7 +63,7 @@
 
         if (doesExpire) {
             console.log()
-            
+
             if (!expDate || !expTime) {
                 err = 'Disable expiry or provide an valid date and time';
                 return;
@@ -104,7 +104,7 @@
         </InputCheckbox>
 
         {#if doesExpire}
-            <div transition:slide>
+            <div transition:slide={{duration: 150}}>
                 <InputDateTimeCombo
                         label={ta.api_key.expires}
                         bind:value={expDate}

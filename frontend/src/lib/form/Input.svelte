@@ -68,13 +68,18 @@
 
     let t = useI18n();
 
+    $effect(() => {
+        // this unused assignment is used only to trigger a re-validation on any input change
+        let v = value;
+        isValid();
+    });
+
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLInputElement }) {
         isValid();
         onBlur?.();
     }
 
     function oninput(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
-        isValid();
         onInput?.();
     }
 
@@ -154,7 +159,11 @@
             {label}
         </label>
         {#if isError}
-            <div class="error" class:errWithLabel={!!label} transition:slide>
+            <div
+                    class="error"
+                    class:errWithLabel={!!label}
+                    transition:slide={{duration: 150}}
+            >
                 {errMsg || t.common.invalidInput}
             </div>
         {/if}
