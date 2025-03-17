@@ -182,7 +182,7 @@
         {label}
     </label>
     {#if isError}
-        <div class="error" transition:slide>
+        <div class="error" transition:slide={{duration: 150}}>
             {#if !label}
                 <div class="nolabel"></div>
             {/if}

@@ -317,7 +317,7 @@
             {label}
         </label>
         {#if isErr}
-            <div class="error" transition:slide>
+            <div class="error" transition:slide={{duration: 150}}>
                 {errMsg}
             </div>
         {/if}

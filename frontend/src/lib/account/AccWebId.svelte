@@ -71,7 +71,7 @@
     </div>
 
     {#if expertMode}
-        <div transition:slide>
+        <div transition:slide={{duration: 150}}>
             <p>{t.account.webIdDescData}</p>
             <InputArea
                     placeholder="FOAF"
