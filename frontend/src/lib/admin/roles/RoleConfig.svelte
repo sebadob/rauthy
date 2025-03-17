@@ -68,8 +68,8 @@
     <Input
             bind:value={name}
             autocomplete="off"
-            label={ta.scopes.name}
-            placeholder={ta.scopes.name}
+            label={ta.roles.name}
+            placeholder={ta.roles.name}
             disabled={isRauthyAdmin}
             width="14.5rem"
             required
