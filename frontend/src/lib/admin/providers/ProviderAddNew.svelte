@@ -22,6 +22,9 @@
     import {slide} from "svelte/transition";
     import {PATTERN_CLIENT_NAME, PATTERN_PEM, PATTERN_SCOPE_SPACE, PATTERN_URI} from "$utils/patterns.ts";
     import Form from "$lib5/form/Form.svelte";
+    import ProviderConfigRootCA from "$lib/admin/providers/blocks/ProviderConfigRootCA.svelte";
+    import ProviderConfigURLs from "$lib/admin/providers/blocks/ProviderConfigURLs.svelte";
+    import ProviderConfigClientInfo from "$lib/admin/providers/blocks/ProviderConfigClientInfo.svelte";
 
     let {onSave}: { onSave: () => void } = $props();
 
@@ -124,6 +127,7 @@
                         mfa_claim_value: 'true',
                         // maybe additional ones in the future like client_logo
                     };
+                    lookupSuccess = true;
                     break;
                 case 'Google':
                     // Google supports oidc metadata lookup
@@ -319,39 +323,18 @@
     <div style:height=".5rem"></div>
 
     <Form action={formAction} {onSubmit}>
-        {#if !lookupSuccess}
-            <div class="checkbox">
-                <InputCheckbox ariaLabel={ta.providers.config.custRootCa} bind:checked={showRootPem}>
-                    {ta.providers.config.custRootCa}
-                </InputCheckbox>
-            </div>
-
-            {#if showRootPem}
-                <div transition:slide={{duration: 150}}>
-                    <InputArea
-                            rows={15}
-                            name="rootPem"
-                            label={ta.providers.config.rootPemCert}
-                            placeholder="-----BEGIN CERTIFICATE-----
-...
------END CERTIFICATE-----"
-                            bind:value={configLookup.root_pem}
-                            errMsg="-----BEGIN CERTIFICATE----- ..."
-                            width="min(40rem, calc(100dvw - 1.75rem))"
-                            fontMono
-                            pattern={PATTERN_PEM}
-                    />
-                </div>
-            {:else}
-                <div class="checkbox">
-                    <InputCheckbox
-                            ariaLabel={ta.providers.config.allowInsecureTls}
-                            bind:checked={configLookup.danger_allow_insecure}
-                    >
-                        {ta.providers.config.allowInsecureTls}
-                    </InputCheckbox>
-                </div>
-            {/if}
+        {#if isCustom}
+            <ProviderConfigRootCA
+                    bind:dangerAllowInsecure={config.danger_allow_insecure}
+                    bind:showRootPem
+                    bind:rootPemCert={config.root_pem}
+            />
+        {:else if !lookupSuccess}
+            <ProviderConfigRootCA
+                    bind:dangerAllowInsecure={configLookup.danger_allow_insecure}
+                    bind:showRootPem
+                    bind:rootPemCert={configLookup.root_pem}
+            />
         {/if}
 
         {#if isOidc && !lookupSuccess}
@@ -365,9 +348,6 @@
                     pattern={PATTERN_URI}
             />
 
-            <!--            <Button type="submit" {isLoading}>-->
-            <!--                {ta.providers.config.lookup}-->
-            <!--            </Button>-->
         {:else if isAuto && !lookupSuccess}
             <Input
                     typ="url"
@@ -380,90 +360,20 @@
                     pattern={PATTERN_URI}
             />
 
-            <!--            <Button type="submit" {isLoading}>-->
-            <!--                {ta.providers.config.lookup}-->
-            <!--            </Button>-->
         {:else if isSpecial || isCustom || lookupSuccess}
-            {#if showRootPem}
-                <InputArea
-                        rows={17}
-                        name="rootPem"
-                        label={ta.providers.config.rootPemCert}
-                        placeholder="-----BEGIN CERTIFICATE-----
-...
------END CERTIFICATE-----"
-                        bind:value={config.root_pem}
-                        disabled={lookupSuccess}
-                        errMsg="-----BEGIN CERTIFICATE----- ..."
-                        width="min(40rem, calc(100dvw - 1.75rem))"
-                        fontMono
-                        pattern={PATTERN_PEM}
-                />
-            {:else}
-                <div class="ml mb">
-                    {#if lookupSuccess}
-                        <LabeledValue label={ta.providers.config.allowInsecureTls}>
-                            <CheckIcon check={config.danger_allow_insecure}/>
-                        </LabeledValue>
-                    {:else}
-                        <InputCheckbox
-                                ariaLabel={ta.providers.config.allowInsecureTls}
-                                bind:checked={config.danger_allow_insecure}
-                        >
-                            {ta.providers.config.allowInsecureTls}
-                        </InputCheckbox>
-                    {/if}
-                </div>
-            {/if}
-
-            <Input
-                    name="issuer"
-                    bind:value={config.issuer}
-                    label="Issuer URL"
-                    placeholder="Issuer URL"
-                    width={inputWidth}
+            <ProviderConfigURLs
+                    bind:issuer={config.issuer}
+                    bind:authorizationEndpoint={config.authorization_endpoint}
+                    bind:tokenEndpoint={config.token_endpoint}
+                    bind:userinfoEndpoint={config.userinfo_endpoint}
+                    {inputWidth}
                     disabled={lookupSuccess}
-                    required
-                    pattern={PATTERN_URI}
-            />
-            <Input
-                    typ="url"
-                    name="auth_endpoint"
-                    bind:value={config.authorization_endpoint}
-                    label="Authorization Endpoint"
-                    placeholder="Authorization Endpoint"
-                    width={inputWidth}
-                    disabled={lookupSuccess}
-                    required
-                    pattern={PATTERN_URI}
-            />
-            <Input
-                    typ="url"
-                    name="token_endpoint"
-                    bind:value={config.token_endpoint}
-                    label="Token Endpoint"
-                    placeholder="Token Endpoint"
-                    width={inputWidth}
-                    disabled={lookupSuccess}
-                    required
-                    pattern={PATTERN_URI}
-            />
-            <Input
-                    typ="url"
-                    name="userinfo_endpoint"
-                    bind:value={config.userinfo_endpoint}
-                    label="Userinfo Endpoint"
-                    placeholder="Userinfo Endpoint"
-                    width={inputWidth}
-                    disabled={lookupSuccess}
-                    required
-                    pattern={PATTERN_URI}
             />
 
             <div class="checkbox">
                 {#if lookupSuccess}
                     <LabeledValue label="PKCE">
-                        <CheckIcon check={config.use_pkce}/>
+                        <CheckIcon checked={config.use_pkce}/>
                     </LabeledValue>
                 {:else}
                     <InputCheckbox
@@ -475,106 +385,22 @@
                 {/if}
             </div>
 
-            <p class="desc">{ta.providers.config.descScope}</p>
-            <Input
-                    name="scope"
-                    bind:value={config.scope}
-                    label="Scope"
-                    placeholder="openid profile email"
-                    width={inputWidth}
-                    required
-                    pattern={PATTERN_SCOPE_SPACE}
-            />
+            <ProviderConfigClientInfo
+                    bind:scope={config.scope}
+                    bind:name={config.name}
 
-            <p class="desc">{ta.providers.config.descClientName}</p>
-            <Input
-                    name="client_name"
-                    bind:value={config.name}
-                    label="Client Name"
-                    placeholder="Client Name"
-                    width={inputWidth}
-                    required
-                    pattern={PATTERN_CLIENT_NAME}
-            />
+                    bind:clientId={config.client_id}
+                    bind:clientSecret={config.client_secret}
+                    bind:clientSecretBasic={config.client_secret_basic}
+                    bind:clientSecretPost={config.client_secret_post}
 
-            <p class="desc">{ta.providers.config.descClientId}</p>
-            <Input
-                    name="client_id"
-                    bind:value={config.client_id}
-                    autocomplete="off"
-                    label="Client ID"
-                    placeholder="Client ID"
-                    width={inputWidth}
-                    required
-                    pattern={PATTERN_URI}
-            />
+                    bind:adminClaimPath={config.admin_claim_path}
+                    bind:adminClaimValue={config.admin_claim_value}
+                    bind:mfaClaimPath={config.mfa_claim_path}
+                    bind:mfaClaimValue={config.mfa_claim_value}
 
-            <p class="desc">{ta.providers.config.descClientId}</p>
-            <InputPassword
-                    name="client_secret"
-                    bind:value={config.client_secret}
-                    autocomplete="off"
-                    label="Client Secret"
-                    placeholder="Client Secret"
-                    width={inputWidth}
-                    errMsg={ta.providers.config.errConfidential}
-                    maxLength={256}
-                    required={!config.use_pkce}
-            />
-
-            <p>{@html ta.providers.config.descAuthMethod}</p>
-            <div class="checkbox">
-                <InputCheckbox ariaLabel="client_secret_basic" bind:checked={config.client_secret_basic}>
-                    client_secret_basic
-                </InputCheckbox>
-            </div>
-            <div class="checkbox">
-                <InputCheckbox ariaLabel="client_secret_post" bind:checked={config.client_secret_post}>
-                    client_secret_post
-                </InputCheckbox>
-            </div>
-            {#if !config.use_pkce && !config.client_secret_basic && !config.client_secret_post}
-                <div class="err" transition:slide={{duration: 150}}>
-                    {ta.providers.config.errNoAuthMethod}
-                </div>
-            {/if}
-
-            <JsonPathDesc/>
-
-            <p class="desc">{ta.providers.config.mapUser}</p>
-            <Input
-                    name="admin_claim_path"
-                    bind:value={config.admin_claim_path}
-                    label={ta.providers.config.pathAdminClaim}
-                    placeholder="$.roles.*"
-                    width={inputWidth}
-                    pattern={PATTERN_URI}
-            />
-            <Input
-                    name="admin_claim_value"
-                    bind:value={config.admin_claim_value}
-                    label={ta.providers.config.valueAdminClaim}
-                    placeholder="rauthy_admin"
-                    width={inputWidth}
-                    pattern={PATTERN_URI}
-            />
-
-            <p class="desc">{ta.providers.config.mapMfa}</p>
-            <Input
-                    name="mfa_claim_path"
-                    bind:value={config.mfa_claim_path}
-                    label={ta.providers.config.pathMfaClaim}
-                    placeholder="$.amr.*"
-                    width={inputWidth}
-                    pattern={PATTERN_URI}
-            />
-            <Input
-                    name="mfa_claim_value"
-                    bind:value={config.mfa_claim_value}
-                    label={ta.providers.config.valueMfaClaim}
-                    placeholder="mfa"
-                    width={inputWidth}
-                    pattern={PATTERN_URI}
+                    usePKCE={config.use_pkce}
+                    {inputWidth}
             />
 
         {/if}
@@ -612,9 +438,5 @@
         max-height: 90dvh;
         width: min(40rem, calc(100dvw - 1.75rem));
         overflow-y: auto;
-    }
-
-    .desc {
-        margin-bottom: -.5rem;
     }
 </style>

@@ -17,6 +17,9 @@
     import {slide} from "svelte/transition";
     import InputFile from "$lib5/form/InputFile.svelte";
     import {genKey} from "$utils/helpers.ts";
+    import ProviderConfigRootCA from "$lib/admin/providers/blocks/ProviderConfigRootCA.svelte";
+    import ProviderConfigURLs from "$lib/admin/providers/blocks/ProviderConfigURLs.svelte";
+    import ProviderConfigClientInfo from "$lib/admin/providers/blocks/ProviderConfigClientInfo.svelte";
 
     let {
         provider = $bindable(),
@@ -117,77 +120,19 @@
                 {ta.common.enabled}
             </InputCheckbox>
         </div>
-        <div class="checkbox">
-            <InputCheckbox ariaLabel={ta.providers.config.custRootCa} bind:checked={showRootPem}>
-                {ta.providers.config.custRootCa}
-            </InputCheckbox>
-        </div>
 
-        {#if showRootPem}
-            <div transition:slide={{duration: 150}}>
-                <InputArea
-                        rows={15}
-                        name="rootPem"
-                        label={ta.providers.config.rootPemCert}
-                        placeholder="-----BEGIN CERTIFICATE-----
-...
- -----END CERTIFICATE-----"
-                        bind:value={provider.root_pem}
-                        errMsg="-----BEGIN CERTIFICATE----- ..."
-                        width="min(40rem, calc(100dvw - .5rem))"
-                        fontMono
-                        pattern={PATTERN_PEM}
-                />
-            </div>
-        {:else}
-            <div class="checkbox">
-                <InputCheckbox
-                        ariaLabel={ta.providers.config.allowInsecureTls}
-                        bind:checked={provider.danger_allow_insecure}
-                >
-                    {ta.providers.config.allowInsecureTls}
-                </InputCheckbox>
-            </div>
-        {/if}
+        <ProviderConfigRootCA
+                bind:dangerAllowInsecure={provider.danger_allow_insecure}
+                bind:showRootPem
+                bind:rootPemCert={provider.root_pem}
+        />
 
-        <Input
-                bind:value={provider.issuer}
-                autocomplete="off"
-                label="Issuer URL"
-                placeholder="Issuer URL"
-                required
-                pattern={PATTERN_URI}
-                width={inputWidth}
-        />
-        <Input
-                typ="url"
-                bind:value={provider.authorization_endpoint}
-                autocomplete="off"
-                label="Authorization Endpoint"
-                placeholder="Authorization Endpoint"
-                required
-                pattern={PATTERN_URI}
-                width={inputWidth}
-        />
-        <Input
-                typ="url"
-                bind:value={provider.token_endpoint}
-                autocomplete="off"
-                label="Token Endpoint"
-                placeholder="Token Endpoint"
-                required
-                pattern={PATTERN_URI}
-                width={inputWidth}
-        />
-        <Input
-                typ="url"
-                bind:value={provider.userinfo_endpoint}
-                autocomplete="off"
-                label="Userinfo Endpoint"
-                placeholder="Userinfo Endpoint"
-                required
-                pattern={PATTERN_URI}
-                width={inputWidth}
+        <ProviderConfigURLs
+                bind:issuer={provider.issuer}
+                bind:authorizationEndpoint={provider.authorization_endpoint}
+                bind:tokenEndpoint={provider.token_endpoint}
+                bind:userinfoEndpoint={provider.userinfo_endpoint}
+                {inputWidth}
         />
 
         <div class="checkbox">
@@ -196,104 +141,22 @@
             </InputCheckbox>
         </div>
 
-        <p class="desc">{ta.providers.config.descScope}</p>
-        <Input
-                bind:value={provider.scope}
-                autocomplete="off"
-                label="Scope"
-                placeholder="openid profile email"
-                required
-                pattern={PATTERN_SCOPE_SPACE}
-                width={inputWidth}
-        />
+        <ProviderConfigClientInfo
+                bind:scope={provider.scope}
+                bind:name={provider.name}
 
-        <p class="desc">{ta.providers.config.descClientName}</p>
-        <Input
-                bind:value={provider.name}
-                autocomplete="off"
-                label={ta.providers.config.clientName}
-                placeholder={ta.providers.config.clientName}
-                required
-                pattern={PATTERN_CLIENT_NAME}
-                width={inputWidth}
-        />
+                bind:clientId={provider.client_id}
+                bind:clientSecret={provider.client_secret}
+                bind:clientSecretBasic={provider.client_secret_basic}
+                bind:clientSecretPost={provider.client_secret_post}
 
-        <p class="desc">{ta.providers.config.descClientId}</p>
-        <Input
-                bind:value={provider.client_id}
-                autocomplete="off"
-                label="Client ID"
-                placeholder="Client ID"
-                required
-                pattern={PATTERN_URI}
-                width={inputWidth}
-        />
+                bind:adminClaimPath={provider.admin_claim_path}
+                bind:adminClaimValue={provider.admin_claim_value}
+                bind:mfaClaimPath={provider.mfa_claim_path}
+                bind:mfaClaimValue={provider.mfa_claim_value}
 
-        <p class="desc">{ta.providers.config.descClientSecret}</p>
-        <InputPassword
-                bind:value={provider.client_secret}
-                autocomplete="off"
-                label="Client Secret"
-                placeholder="Client Secret"
-                maxLength={256}
-                errMsg={ta.providers.config.errConfidential}
-                required={!provider.use_pkce}
-                width={inputWidth}
-        />
-
-        <p>{@html ta.providers.config.descAuthMethod}</p>
-        <div class="checkbox">
-            <InputCheckbox ariaLabel="client_secret_basic" bind:checked={provider.client_secret_basic}>
-                client_secret_basic
-            </InputCheckbox>
-        </div>
-        <div class="checkbox">
-            <InputCheckbox ariaLabel="client_secret_post" bind:checked={provider.client_secret_post}>
-                client_secret_post
-            </InputCheckbox>
-        </div>
-        {#if !provider.use_pkce && !provider.client_secret_basic && !provider.client_secret_post}
-            <div class="err" transition:slide={{duration: 150}}>
-                {ta.providers.config.errNoAuthMethod}
-            </div>
-        {/if}
-
-        <JsonPathDesc/>
-
-        <p class="desc">{ta.providers.config.mapUser}</p>
-        <Input
-                bind:value={provider.admin_claim_path}
-                autocomplete="off"
-                label={ta.providers.config.pathAdminClaim}
-                placeholder="$.roles.*"
-                pattern={PATTERN_URI}
-                width={inputWidth}
-        />
-        <Input
-                bind:value={provider.admin_claim_value}
-                autocomplete="off"
-                label={ta.providers.config.valueAdminClaim}
-                placeholder="rauthy_admin"
-                pattern={PATTERN_URI}
-                width={inputWidth}
-        />
-
-        <p class="desc">{ta.providers.config.mapMfa}</p>
-        <Input
-                bind:value={provider.mfa_claim_path}
-                autocomplete="off"
-                label={ta.providers.config.pathMfaClaim}
-                placeholder="$.amr.*"
-                pattern={PATTERN_URI}
-                width={inputWidth}
-        />
-        <Input
-                bind:value={provider.mfa_claim_value}
-                autocomplete="off"
-                label={ta.providers.config.valueMfaClaim}
-                placeholder="mfa"
-                pattern={PATTERN_URI}
-                width={inputWidth}
+                usePKCE={provider.use_pkce}
+                {inputWidth}
         />
 
         <div class="logo">
@@ -335,10 +198,6 @@
 
     .container {
         margin-bottom: 1rem;
-    }
-
-    .desc {
-        margin-bottom: -.5rem;
     }
 
     .logo {
