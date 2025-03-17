@@ -135,7 +135,7 @@ export const I18nDe: I18n = {
         requestExpires: "Anfrage läuft ab",
         requestExpired: "Anfrage ist abgelaufen",
         signUp: "Benutzer Registrierung",
-        validEmail: "Gültige E-Mail Adresse",
+        validEmail: "Gültige E-Mail Adresse angeben",
     },
     device: {
         accept: "Akzeptieren",
