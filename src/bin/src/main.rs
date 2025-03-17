@@ -11,6 +11,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_common::{is_sqlite, password_hasher};
+use rauthy_handlers::generic::I18N_CONFIG;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, dev_only, events, fed_cm, generic, groups, html,
@@ -227,6 +228,11 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
     // We need to clear the HTML cache to make sure the correct static
     // assets are referenced after an app upgrade with a newly built UI.
     DB::client().clear_cache(Cache::Html).await.unwrap();
+
+    // trigger config builds to have them fast-failing on invalid config
+    {
+        debug!("I18n Config: {:?}", *I18N_CONFIG);
+    }
 
     // actix web
     let state = app_state.clone();

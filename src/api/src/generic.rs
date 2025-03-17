@@ -37,7 +37,7 @@ use std::sync::LazyLock;
 use tracing::{error, info, warn};
 use validator::Validate;
 
-static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
+pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
     let common = env::var("FILTER_LANG_COMMON")
         .unwrap_or_else(|_| "en de zhhans ko".to_string())
         .trim()
@@ -47,12 +47,15 @@ static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
             if tr.is_empty() {
                 None
             } else {
+                if !["en", "de", "zhhans", "ko"].contains(&tr) {
+                    panic!("Invalid config for FILTER_LANG_COMMON.\nAllowed values: en de zhhans ko\nfound: {}", tr);
+                }
                 Some(Language::from(tr).into())
             }
         })
         .collect::<Vec<_>>();
     let admin = env::var("FILTER_LANG_ADMIN")
-        .unwrap_or_else(|_| "en de".to_string())
+        .unwrap_or_else(|_| "en de ko".to_string())
         .trim()
         .split(" ")
         .filter_map(|v| {
@@ -60,6 +63,9 @@ static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
             if tr.is_empty() {
                 None
             } else {
+                if !["en", "de", "ko"].contains(&tr) {
+                    panic!("Invalid config for FILTER_LANG_ADMIN.\nAllowed values: en de ko\nfound: {}", tr);
+                }
                 Some(Language::from(tr).into())
             }
         })

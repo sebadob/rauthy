@@ -968,8 +968,8 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # Available Options: en de zhhans ko
 #FILTER_LANG_COMMON="en de zhhans ko"
 # Languages for the Admin UI.
-# Available Options: en de
-#FILTER_LANG_ADMIN="en de"
+# Available Options: en de ko
+#FILTER_LANG_ADMIN="en de ko"
 
 #####################################
 ####### LIFETIMES / TIMEOUTS ########
