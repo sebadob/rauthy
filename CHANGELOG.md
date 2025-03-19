@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.28.1
+
+### Security
+
+#### CVE-2025-29787
+
+Rauthy itself has not been vulnerable, but he `zip` dependency pulled in by the Swagger UI as a 3rd party dependency has
+been vulnerable when reading files. `zip` inside the Swagger UI has only been used at build time, never at runtime.
+However, the version has been bumped to a non-vulnerable one.
+
+[CVE-2025-29787](https://nvd.nist.gov/vuln/detail/CVE-2025-29787)
+
+[#785](https://github.com/sebadob/rauthy/pull/785)
+
+### Changes
+
+#### Updated Translations
+
+`zh` and `ko` translations have received updates. `ko` is now also available for the Admin UI and has been added to the
+`FILTER_LANG_ADMIN` value from the `0.28.0` release.
+
+[#769](https://github.com/sebadob/rauthy/pull/769)
+[#775](https://github.com/sebadob/rauthy/pull/775)
+
+### Bugfix
+
+- UI: Fixed and updated some translations to make them more clear
+  [#779](https://github.com/sebadob/rauthy/pull/779)
+  [#783](https://github.com/sebadob/rauthy/pull/783)
+- UI: The `Allow Insecure TLS` checkbox for upstream auth providers has been shown twice in some situations.
+  [#780](https://github.com/sebadob/rauthy/pull/780)
+- UI: The `Invalid Input` message has not been reset in some views and situations.
+  [#781](https://github.com/sebadob/rauthy/pull/781)
+
 ## v0.28.0
 
 ### Breaking
