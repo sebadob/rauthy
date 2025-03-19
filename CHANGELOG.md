@@ -7,8 +7,8 @@
 #### CVE-2025-29787
 
 Rauthy itself has not been vulnerable, but he `zip` dependency pulled in by the Swagger UI as a 3rd party dependency has
-been vulnerable when reading in files. `zip` inside the Swagger UI has only been used at build time, never at runtime.
-However, the dependency has been bumped to a non-vulnerable version.
+been vulnerable when reading files. `zip` inside the Swagger UI has only been used at build time, never at runtime.
+However, the version has been bumped to a non-vulnerable one.
 
 [CVE-2025-29787](https://nvd.nist.gov/vuln/detail/CVE-2025-29787)
 
