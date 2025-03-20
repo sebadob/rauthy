@@ -11,6 +11,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::dpop_proof::DPoPProof;
+use rauthy_models::entity::user_login_states::UserLoginState;
 use rauthy_models::entity::users::User;
 use std::str::FromStr;
 use tracing::{info, warn};
@@ -88,7 +89,6 @@ pub async fn grant_type_password(
 
             user.save(None).await?;
 
-            // update timestamp if it is a dynamic client
             if client.is_dynamic() {
                 ClientDyn::update_used(&client.id).await?;
             }
@@ -105,6 +105,9 @@ pub async fn grant_type_password(
                 DeviceCodeFlow::No,
             )
             .await?;
+
+            UserLoginState::insert(user.id, client.id, None).await?;
+
             Ok((ts, headers))
         }
         Err(err) => {
