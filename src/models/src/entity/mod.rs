@@ -33,6 +33,7 @@ pub mod scopes;
 pub mod sessions;
 pub mod theme;
 pub mod user_attr;
+pub mod user_login_states;
 pub mod users;
 pub mod users_values;
 pub mod webauthn;
