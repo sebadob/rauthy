@@ -35,6 +35,7 @@ pub enum Cache {
     ClientDynamic,
     ClientEphemeral,
     DPoPNonce,
+    JwksRemote,
     ThemeTs,
     Html,
     IPRateLimit,
