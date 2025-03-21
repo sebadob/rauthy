@@ -360,7 +360,7 @@ pub struct JWKSPublicKeyCerts {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub e: Option<String>, // RSA
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub x: Option<String>, // OCT
+    pub x: Option<String>, // OKP
 }
 
 #[derive(Debug, Default, Serialize, ToSchema)]

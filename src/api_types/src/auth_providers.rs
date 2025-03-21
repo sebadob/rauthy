@@ -36,6 +36,9 @@ pub struct ProviderRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
     pub userinfo_endpoint: String,
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    pub jwks_endpoint: Option<String>,
 
     pub danger_allow_insecure: Option<bool>,
     pub use_pkce: bool,
@@ -154,6 +157,7 @@ pub struct ProviderResponse {
     pub authorization_endpoint: String,
     pub token_endpoint: String,
     pub userinfo_endpoint: String,
+    pub jwks_endpoint: Option<String>,
 
     pub client_id: String,
     pub client_secret: Option<String>,
@@ -184,6 +188,7 @@ pub struct ProviderLookupResponse<'a> {
     pub authorization_endpoint: String,
     pub token_endpoint: String,
     pub userinfo_endpoint: String,
+    pub jwks_endpoint: Option<String>,
     pub scope: String,
     pub root_pem: &'a Option<String>,
     pub use_pkce: bool,
