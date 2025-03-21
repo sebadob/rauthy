@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE refresh_tokens SET exp = $1 WHERE exp > $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f7c2eba048c19f4f8c8fcb013739540dffae5cfbb54eaa2bf37b052d6274254c"
+}

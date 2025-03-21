@@ -1,0 +1,61 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id, email, given_name, family_name, created_at, last_login, picture_id\nFROM users\nWHERE created_at >= $1 AND id != $2\nORDER BY created_at ASC\nLIMIT $3\nOFFSET $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "given_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "family_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "last_login",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "picture_id",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "7916b1b3da76390f017e1664d96d17e8400934ded6784db226a0e70e60d8223c"
+}

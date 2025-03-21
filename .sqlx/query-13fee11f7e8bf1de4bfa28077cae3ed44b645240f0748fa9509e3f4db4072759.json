@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\nusers_values (id, birthdate, phone, street, zip, city, country)\nVALUES ($1, $2, $3, $4, $5, $6, $7)\nON CONFLICT(id) DO UPDATE\nSET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int4",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "13fee11f7e8bf1de4bfa28077cae3ed44b645240f0748fa9509e3f4db4072759"
+}

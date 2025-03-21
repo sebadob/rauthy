@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE clients_dyn\nSET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3\nWHERE id = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Varchar",
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d7fdb5fb0e3b6416997f6f1afeb2c8c06d9e10dce3d942fc881d5dab8577a71a"
+}

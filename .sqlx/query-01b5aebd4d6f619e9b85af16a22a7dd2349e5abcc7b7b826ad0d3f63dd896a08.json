@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO USERS\n(id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,\nlast_login, language, user_expires, auth_provider_id, federation_uid, picture_id)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bool",
+        "Bool",
+        "Int8",
+        "Int8",
+        "Varchar",
+        "Int8",
+        "Varchar",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "01b5aebd4d6f619e9b85af16a22a7dd2349e5abcc7b7b826ad0d3f63dd896a08"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM client_logos WHERE client_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2ce1507126d500d74d34e9e2fc66a941a1b47579be029f2bc6248e07e077ff14"
+}

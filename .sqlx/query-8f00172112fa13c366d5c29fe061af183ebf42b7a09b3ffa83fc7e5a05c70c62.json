@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT * FROM jwks\nWHERE signature = $1\nORDER BY created_at DESC\nLIMIT 1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kid",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "signature",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "enc_key_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "jwk",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "8f00172112fa13c366d5c29fe061af183ebf42b7a09b3ffa83fc7e5a05c70c62"
+}

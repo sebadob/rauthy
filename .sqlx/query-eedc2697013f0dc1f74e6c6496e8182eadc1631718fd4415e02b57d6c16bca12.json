@@ -1,0 +1,136 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM users WHERE groups LIKE $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "given_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "family_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "password",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "roles",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "groups",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "email_verified",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "password_expires",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 11,
+        "name": "last_login",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 12,
+        "name": "last_failed_login",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "failed_login_attempts",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 14,
+        "name": "language",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 15,
+        "name": "webauthn_user_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 16,
+        "name": "user_expires",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 17,
+        "name": "auth_provider_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 18,
+        "name": "federation_uid",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 19,
+        "name": "picture_id",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "eedc2697013f0dc1f74e6c6496e8182eadc1631718fd4415e02b57d6c16bca12"
+}

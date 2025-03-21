@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM refresh_tokens_devices WHERE id = $1 AND exp > $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "device_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "nbf",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "exp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "scope",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "a5fc3e20274c6c1ec5086e7f4fc50bc78a2bbe56c6b7d9b290a5783d17120c88"
+}

@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,\npost_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,\nauth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,\nclient_uri, contacts)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Bool",
+        "Bool",
+        "Bytea",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int4",
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bool",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6f1201e5eb2d42328104503c873eef0f4ecade1749323d7da2f5c58ed70e088f"
+}
