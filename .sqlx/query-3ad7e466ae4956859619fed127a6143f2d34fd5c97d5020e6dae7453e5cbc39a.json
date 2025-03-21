@@ -102,6 +102,11 @@
         "ordinal": 19,
         "name": "client_secret_post",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 20,
+        "name": "jwks_endpoint",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
@@ -127,7 +132,8 @@
       false,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
   "hash": "3ad7e466ae4956859619fed127a6143f2d34fd5c97d5020e6dae7453e5cbc39a"

@@ -235,6 +235,19 @@ pub struct JwtIdClaims {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JwtLogoutClaims {
+    pub typ: Option<JwtTokenType>,
+    pub iat: i64,
+    pub jti: String,
+    pub events: serde_json::Value,
+    pub sid: Option<String>,
+
+    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
+    // `.is_none()` validation.
+    pub nonce: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwtRefreshClaims {
     pub azp: String,
     pub typ: JwtTokenType,
@@ -252,16 +265,18 @@ pub enum JwtTokenType {
     Bearer,
     DPoP,
     Id,
+    Logout,
     Refresh,
 }
 
 impl JwtTokenType {
     pub fn as_str(&self) -> &str {
         match self {
-            JwtTokenType::Bearer => "Bearer",
-            JwtTokenType::DPoP => "DPoP",
-            JwtTokenType::Id => "Id",
-            JwtTokenType::Refresh => "Refresh",
+            Self::Bearer => "Bearer",
+            Self::DPoP => "DPoP",
+            Self::Id => "Id",
+            Self::Logout => "logout+jwt",
+            Self::Refresh => "Refresh",
         }
     }
 }

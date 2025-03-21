@@ -181,6 +181,7 @@ pub struct AuthProvider {
     pub authorization_endpoint: String,
     pub token_endpoint: String,
     pub userinfo_endpoint: String,
+    pub jwks_endpoint: Option<String>,
 
     pub client_id: String,
     pub secret: Option<Vec<u8>>,
@@ -212,6 +213,7 @@ impl<'r> From<hiqlite::Row<'r>> for AuthProvider {
             authorization_endpoint: row.get("authorization_endpoint"),
             token_endpoint: row.get("token_endpoint"),
             userinfo_endpoint: row.get("userinfo_endpoint"),
+            jwks_endpoint: row.get("jwks_endpoint"),
             client_id: row.get("client_id"),
             secret: row.get("secret"),
             scope: row.get("scope"),
@@ -239,11 +241,11 @@ impl AuthProvider {
                     r#"
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
-userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
+userinfo_endpoint, jwks_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
 mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic,
 client_secret_post)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 RETURNING *"#,
                     params!(
                         slf.id,
@@ -254,6 +256,7 @@ RETURNING *"#,
                         slf.authorization_endpoint,
                         slf.token_endpoint,
                         slf.userinfo_endpoint,
+                        slf.jwks_endpoint,
                         slf.client_id,
                         slf.secret,
                         slf.scope,
@@ -274,11 +277,11 @@ RETURNING *"#,
                 r#"
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
-userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
+userinfo_endpoint, jwks_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
 mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic,
 client_secret_post)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#,
                 slf.id,
                 slf.name,
                 slf.enabled,
@@ -287,6 +290,7 @@ VALUES
                 slf.authorization_endpoint,
                 slf.token_endpoint,
                 slf.userinfo_endpoint,
+                slf.jwks_endpoint,
                 slf.client_id,
                 slf.secret,
                 slf.scope,
@@ -334,6 +338,24 @@ VALUES
         client
             .put(Cache::App, Self::cache_idx(id), &slf, CACHE_TTL_APP)
             .await?;
+
+        Ok(slf)
+    }
+
+    /// Tries to find an Auth Provider by the given `iss`. This function does not use any caching.
+    pub async fn find_by_iss(iss: String) -> Result<Self, ErrorResponse> {
+        let slf = if is_hiqlite() {
+            DB::client()
+                .query_map_one(
+                    "SELECT * FROM auth_providers WHERE issuer = $1",
+                    params!(iss),
+                )
+                .await?
+        } else {
+            query_as!(Self, "SELECT * FROM auth_providers WHERE issuer = $1", iss)
+                .fetch_one(DB::conn())
+                .await?
+        };
 
         Ok(slf)
     }
@@ -415,11 +437,11 @@ VALUES
                     r#"
 UPDATE auth_providers
 SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
-token_endpoint = $6, userinfo_endpoint = $7, client_id = $8, secret = $9, scope = $10,
-admin_claim_path = $11, admin_claim_value = $12, mfa_claim_path = $13, mfa_claim_value = $14,
-allow_insecure_requests = $15, use_pkce = $16, root_pem = $17, client_secret_basic = $18,
-client_secret_post = $19
-WHERE id = $20"#,
+token_endpoint = $6, userinfo_endpoint = $7, jwks_endpoint = $8, client_id = $9, secret = $10,
+scope = $11, admin_claim_path = $12, admin_claim_value = $13, mfa_claim_path = $14,
+mfa_claim_value = $15, allow_insecure_requests = $16, use_pkce = $17, root_pem = $18,
+client_secret_basic = $19, client_secret_post = $20
+WHERE id = $21"#,
                     params!(
                         self.name.clone(),
                         self.enabled,
@@ -428,6 +450,7 @@ WHERE id = $20"#,
                         self.authorization_endpoint.clone(),
                         self.token_endpoint.clone(),
                         self.userinfo_endpoint.clone(),
+                        self.jwks_endpoint.clone(),
                         self.client_id.clone(),
                         self.secret.clone(),
                         self.scope.clone(),
@@ -449,11 +472,11 @@ WHERE id = $20"#,
                 r#"
 UPDATE auth_providers
 SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
-token_endpoint = $6, userinfo_endpoint = $7, client_id = $8, secret = $9, scope = $10,
-admin_claim_path = $11, admin_claim_value = $12, mfa_claim_path = $13, mfa_claim_value = $14,
-allow_insecure_requests = $15, use_pkce = $16, root_pem = $17, client_secret_basic = $18,
-client_secret_post = $19
-WHERE id = $20"#,
+token_endpoint = $6, userinfo_endpoint = $7, jwks_endpoint = $8, client_id = $9, secret = $10,
+scope = $11, admin_claim_path = $12, admin_claim_value = $13, mfa_claim_path = $14,
+mfa_claim_value = $15, allow_insecure_requests = $16, use_pkce = $17, root_pem = $18,
+client_secret_basic = $19, client_secret_post = $20
+WHERE id = $21"#,
                 self.name,
                 self.enabled,
                 self.issuer,
@@ -461,6 +484,7 @@ WHERE id = $20"#,
                 self.authorization_endpoint,
                 self.token_endpoint,
                 self.userinfo_endpoint,
+                self.jwks_endpoint,
                 self.client_id,
                 self.secret,
                 self.scope,
@@ -548,6 +572,7 @@ impl AuthProvider {
             authorization_endpoint: req.authorization_endpoint,
             token_endpoint: req.token_endpoint,
             userinfo_endpoint: req.userinfo_endpoint,
+            jwks_endpoint: req.jwks_endpoint,
 
             client_id: req.client_id,
             secret,
@@ -666,6 +691,7 @@ impl AuthProvider {
             authorization_endpoint: well_known.authorization_endpoint,
             token_endpoint: well_known.token_endpoint,
             userinfo_endpoint: well_known.userinfo_endpoint,
+            jwks_endpoint: Some(well_known.jwks_uri),
             root_pem: &payload.root_pem,
             use_pkce: well_known
                 .code_challenge_methods_supported
@@ -715,6 +741,7 @@ impl TryFrom<AuthProvider> for ProviderResponse {
             authorization_endpoint: value.authorization_endpoint,
             token_endpoint: value.token_endpoint,
             userinfo_endpoint: value.userinfo_endpoint,
+            jwks_endpoint: value.jwks_endpoint,
             client_id: value.client_id,
             client_secret: secret,
             scope: value.scope,

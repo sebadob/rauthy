@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE auth_providers\nSET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,\ntoken_endpoint = $6, userinfo_endpoint = $7, jwks_endpoint = $8, client_id = $9, secret = $10,\nscope = $11, admin_claim_path = $12, admin_claim_value = $13, mfa_claim_path = $14,\nmfa_claim_value = $15, allow_insecure_requests = $16, use_pkce = $17, root_pem = $18,\nclient_secret_basic = $19, client_secret_post = $20\nWHERE id = $21",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Bool",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bytea",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bool",
+        "Bool",
+        "Varchar",
+        "Bool",
+        "Bool",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7129c012a9c3dd79feeb0099a0ed9c6f42adee8ec87e4f4c627fc68345ba3bfb"
+}
