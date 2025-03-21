@@ -37,7 +37,6 @@
         onSave: () => void,
     } = $props();
 
-
     let t = useI18n();
     let ta = useI18nAdmin();
 
@@ -112,7 +111,7 @@
                 };
                 return i;
             });
-            groupsItems = roles.map(g => {
+            groupsItems = groups.map(g => {
                 let i: SelectItem = {
                     name: g.name,
                     selected: user?.groups?.includes(g.name) || false,

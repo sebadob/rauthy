@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.28.2
+
+### Important
+
+This is a pretty important bugfix update. The 0.28 versions before had an error where the `groups` config component in
+the Admin UI has been changed to contain `roles` after the first render. This means, if you have saved a user in the
+Admin UI (even without changing groups), the groups might have been changed depending on your setup.
+
+The backend sanitizes any submitted `roles` / `groups` on user updates, so only actually existing values can exist, but
+if you had a `roles` combination `groups` with the exact same naming, like e.g. an `admin` role and an `admin` groups,
+it could have been possible that a user ends up with a group assignment he should not have. At the same time, a user
+might have had some groups removed he had before.
+
+This situation can only occur on users you have updated via the Admin UI with either `0.28.0` or `0.28.1`. You should
+**update to `0.28.2` asap and double check group assignments** for your users you may have updated with an earlier
+`0.28` version via the Admin UI.
+
+### Bugfix
+
+- Fixes a bug in the Admin UI / Users view where the content of the `groups` config component contained `roles` instead
+  of groups.
+  [#790](https://github.com/sebadob/rauthy/pull/790)
+
 ## v0.28.1
 
 ### Security
