@@ -9,11 +9,6 @@ use rsa::{Pkcs1v15Sign, RsaPublicKey};
 use tracing::warn;
 
 impl JWKSPublicKey {
-    /// Currently, the SigningKey from the `rsa` crate makes my IDE fully crash.
-    /// There is a bug in the Rust plugin which makes coding basically impossible (unless I would
-    /// switch to another IDE).
-    /// Until this is solved, I will only have the RSA keys prepared, but actually only support
-    /// EdDSA for now.
     pub fn validate_token_signature(&self, token: &str) -> Result<(), ErrorResponse> {
         let (header, rest) = token
             .split_once('.')
@@ -23,7 +18,7 @@ impl JWKSPublicKey {
             .ok_or_else(|| ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed token"))?;
         // TODO this can be made more efficient without creating a new String -> only &[u8] needed
         let message = format!("{}.{}", header, claims);
-        let sig_bytes = base64_url_no_pad_decode(sig_str).unwrap();
+        let sig_bytes = base64_url_no_pad_decode(sig_str)?;
 
         match self.alg()? {
             JwkKeyPairAlg::RS256 => {
