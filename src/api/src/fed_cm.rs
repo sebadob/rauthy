@@ -177,6 +177,7 @@ pub async fn get_fed_client_config() -> HttpResponse {
         contacts: RAUTHY_ADMIN_EMAIL.clone().map(|e| vec![e]),
         redirect_uris: vec![format!("{}/auth/v1/*", *PUB_URL_WITH_SCHEME)],
         post_logout_redirect_uris: Some(vec![format!("{}/auth/v1/*", *PUB_URL_WITH_SCHEME)]),
+        backchannel_logout_uri: None,
         grant_types: Some(vec![
             "authorization_code".to_string(),
             "refresh_token".to_string(),

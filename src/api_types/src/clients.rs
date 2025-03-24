@@ -69,6 +69,8 @@ pub struct DynamicClientRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub post_logout_redirect_uri: Option<String>,
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub backchannel_logout_uri: Option<String>,
 }
 
 /// This request is used for ephemeral clients, which are needed for Solid OIDC for instance.
@@ -95,6 +97,9 @@ pub struct EphemeralClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub backchannel_logout_uri: Option<String>,
     /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
     #[validate(custom(function = "validate_vec_grant_type"))]
     pub grant_types: Option<Vec<String>>,
@@ -184,6 +189,8 @@ pub struct UpdateClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9\+.@/]{0,48}$>`
     #[validate(custom(function = "validate_vec_contact"))]
     pub contacts: Option<Vec<String>>,
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub backchannel_logout_uri: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -208,8 +215,12 @@ pub struct ClientResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub challenges: Option<Vec<String>>,
     pub force_mfa: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub client_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub contacts: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backchannel_logout_uri: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -228,6 +239,8 @@ pub struct DynamicClientResponse {
     pub client_uri: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub contacts: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backchannel_logout_uri: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_secret: Option<String>,
