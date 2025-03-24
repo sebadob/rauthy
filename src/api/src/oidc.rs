@@ -653,6 +653,12 @@ pub async fn get_logout(
     // as well. We could maybe parse the `accept` header or some other mechanism to check, if the
     // request is coming from a users browser or another backend.
     // If coming from a browser, serve HTML, otherwise validate the id token and do a direct logout.
+    // let is_backchannel = !(principal.session.is_some()
+    //     || req
+    //         .headers()
+    //         .get(ACCEPT)
+    //         .map(|v| v.to_str().unwrap_or_default().contains(APPLICATION_JSON))
+    //         .unwrap_or(false));
 
     // If we get any logout errors, maybe because there is no session anymore or whatever happens,
     // just redirect to rauthy's root page, since the user is not logged-in anyway anymore.
@@ -690,10 +696,11 @@ pub async fn post_logout(
     data: web::Data<AppState>,
     Form(params): Form<LogoutRequest>,
     principal: Option<ReqPrincipal>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     params.validate()?;
-    let session = principal.and_then(|p| p.get_session().ok().cloned());
-    logout::post_logout_handle(data, params, session).await
+    let session = principal.and_then(|p| p.into_inner().session);
+    logout::post_logout_handle(req, data, params, session).await
 }
 
 /// Rotate JWKs

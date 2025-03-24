@@ -1,10 +1,11 @@
 use crate::oidc::bcl_logout_token::LogoutToken;
 use crate::oidc::validation;
 use actix_web::cookie::SameSite;
+use actix_web::http::header::ACCEPT;
 use actix_web::http::{StatusCode, header};
 use actix_web::{HttpRequest, HttpResponse, web};
 use rauthy_api_types::oidc::LogoutRequest;
-use rauthy_common::constants::{COOKIE_SESSION, COOKIE_SESSION_FED_CM};
+use rauthy_common::constants::{APPLICATION_JSON, COOKIE_SESSION, COOKIE_SESSION_FED_CM};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
@@ -88,13 +89,17 @@ pub async fn get_logout_html(
 
 #[inline]
 pub async fn post_logout_handle(
+    req: HttpRequest,
     data: web::Data<AppState>,
     params: LogoutRequest,
     session: Option<Session>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // TODO better detection for backchannel logout - could also be rp initiated only
-    // without a logout token
-    let is_backchannel = params.logout_token.is_some();
+    let is_backchannel = session.is_none()
+        || req
+            .headers()
+            .get(ACCEPT)
+            .map(|v| v.to_str().unwrap_or_default() != APPLICATION_JSON)
+            .unwrap_or(true);
 
     let (session, user, post_logout_redirect_uri) =
         if let Some(id_token_hint) = params.id_token_hint {

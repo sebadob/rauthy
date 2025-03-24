@@ -107,10 +107,8 @@ pub async fn post_dev_only_endpoints(
                 let params = serde_urlencoded::from_bytes::<LogoutRequest>(bytes)?;
                 params.validate()?;
                 let principal = web::ReqData::<Option<Principal>>::extract(&req).await?;
-                let session = principal
-                    .into_inner()
-                    .and_then(|p| p.get_session().ok().cloned());
-                logout::post_logout_handle(data, params, session).await
+                let session = principal.into_inner().and_then(|p| p.session);
+                logout::post_logout_handle(req, data, params, session).await
             }
             "providers_callback" => {
                 let payload = serde_json::from_slice::<ProviderCallbackRequest>(bytes)?;
