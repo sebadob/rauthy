@@ -2,6 +2,8 @@
 
 ## CURRENT WORK
 
+- greatly reduce the allowed clock skew during token validation and make it configurable
+
 ## Stage 1 - essentials
 
 [x] finished

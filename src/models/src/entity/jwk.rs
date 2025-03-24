@@ -9,10 +9,15 @@ use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };
 use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
-use rauthy_common::constants::{CACHE_TTL_APP, IDX_JWK_KID, IDX_JWK_LATEST, IDX_JWKS};
+use rauthy_common::constants::{
+    APPLICATION_JSON, CACHE_TTL_APP, COOKIE_MODE, CookieMode, DEV_MODE, IDX_JWK_KID,
+    IDX_JWK_LATEST, IDX_JWKS,
+};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use reqwest::header::CONTENT_TYPE;
+use reqwest::tls;
 use rsa::BigUint;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
@@ -20,8 +25,9 @@ use sqlx::{Error, FromRow, Row};
 use std::default::Default;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
+use std::time::Duration;
 use time::OffsetDateTime;
-use tracing::info;
+use tracing::{error, info};
 
 #[macro_export]
 macro_rules! sign_jwt {
@@ -354,7 +360,7 @@ impl From<JWKS> for JWKSCerts {
 }
 
 // Note: do not add `serde(skip_serializing_if = "Option::is_none")` here.
-// This will lead to cache errors when deserializing the JWKS
+// This will lead to cache errors when deserializing the JWKS with bincode.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct JWKSPublicKey {
     pub kty: JwkKeyPairType,
@@ -458,6 +464,89 @@ impl JWKSPublicKey {
         }
     }
 
+    /// Tries to fetch a JWKS from a remote location, parses the whole content and caches it by
+    /// `kid`. If the given `kid` exists in the remote JWKS, it will be returned.
+    /// This function implements a way of caching that makes a DoS impossible, because it will
+    /// cache fetch / deserialization errors as well without making endless requests to invalid URLs.
+    /// A JWK will be cached for 1 hour.
+    pub async fn fetch_remote(jwks_uri: &str, kid: String) -> Result<Self, ErrorResponse> {
+        if let Some(res) = DB::client()
+            .get::<_, _, Result<Self, ErrorResponse>>(Cache::JwksRemote, kid.clone())
+            .await?
+        {
+            return res;
+        }
+
+        let client = reqwest::Client::builder()
+            // TODO add proper config variable
+            .https_only(!(*DEV_MODE || *COOKIE_MODE == CookieMode::DangerInsecure))
+            .timeout(Duration::from_secs(5))
+            .connect_timeout(Duration::from_secs(5))
+            .min_tls_version(tls::Version::TLS_1_2)
+            .user_agent("Rauthy OIDC JWKS Client")
+            // TODO add proper config variable
+            .danger_accept_invalid_certs(*DEV_MODE || *COOKIE_MODE == CookieMode::DangerInsecure)
+            .build()?;
+
+        let res = match client
+            .get(jwks_uri)
+            .header(CONTENT_TYPE, APPLICATION_JSON)
+            .send()
+            .await
+        {
+            Ok(res) => {
+                if res.status().is_success() {
+                    match res.json::<JWKS>().await {
+                        Ok(jwks) => {
+                            if let Some(key) = jwks
+                                .keys
+                                .into_iter()
+                                .find(|k| k.kid.as_deref() == Some(&kid))
+                            {
+                                if let Err(err) = key.validate_self() {
+                                    Err(err)
+                                } else {
+                                    Ok(key)
+                                }
+                            } else {
+                                Err(ErrorResponse::new(
+                                    ErrorResponseType::NotFound,
+                                    "cannot find given `kid` in JWKS",
+                                ))
+                            }
+                        }
+                        Err(err) => {
+                            error!("{}", err);
+                            Err(ErrorResponse::new(
+                                ErrorResponseType::Connection,
+                                "Error decoding JWKS from",
+                            ))
+                        }
+                    }
+                } else {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::Connection,
+                        format!("Error connecting to {}", jwks_uri),
+                    ))
+                }
+            }
+            Err(err) => {
+                error!("{}", err);
+                Err(ErrorResponse::new(
+                    ErrorResponseType::Connection,
+                    format!("Error connecting to {}", jwks_uri),
+                ))
+            }
+        };
+
+        DB::client()
+            // TODO make cache lifetime configurable as well
+            .put(Cache::JwksRemote, kid, &res, Some(3600))
+            .await?;
+
+        res
+    }
+
     /// Creates a JWK thumbprint by https://datatracker.ietf.org/doc/html/rfc7638
     pub fn fingerprint(&self) -> Result<String, ErrorResponse> {
         let s = match self.kty {
@@ -510,7 +599,7 @@ impl JWKSPublicKey {
         match &self.alg {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "No 'alg' for JWK".to_string(),
+                "No 'alg' for JWK",
             )),
             Some(alg) => {
                 match self.kty {
@@ -518,21 +607,21 @@ impl JWKSPublicKey {
                         if alg == &JwkKeyPairAlg::EdDSA {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "RSA kty cannot have EdDSA alg".to_string(),
+                                "RSA kty cannot have EdDSA alg",
                             ));
                         }
 
                         if self.n.is_none() || self.e.is_none() {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "No public key components for RSA key".to_string(),
+                                "No public key components for RSA key",
                             ));
                         }
 
                         if self.x.is_some() {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "RSA key cannot have 'x' public key component".to_string(),
+                                "RSA key cannot have 'x' public key component",
                             ));
                         }
                     }
@@ -541,21 +630,21 @@ impl JWKSPublicKey {
                         if alg != &JwkKeyPairAlg::EdDSA {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "OKP kty must have EdDSA alg".to_string(),
+                                "OKP kty must have EdDSA alg",
                             ));
                         }
 
                         if self.crv.is_none() {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "OKP kty must have 'crv'".to_string(),
+                                "OKP kty must have 'crv'",
                             ));
                         }
                         if let Some(crv) = &self.crv {
                             if crv != "Ed25519" {
                                 return Err(ErrorResponse::new(
                                     ErrorResponseType::BadRequest,
-                                    "Only 'Ed25519' for 'crv' is supported".to_string(),
+                                    "Only 'Ed25519' for 'crv' is supported",
                                 ));
                             }
                         }
@@ -563,15 +652,14 @@ impl JWKSPublicKey {
                         if self.n.is_some() || self.e.is_some() {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "EdDSA key cannot have 'n' or 'e' public key components"
-                                    .to_string(),
+                                "EdDSA key cannot have 'n' or 'e' public key components",
                             ));
                         }
 
                         if self.x.is_none() {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "OKP key must have 'x' public key component".to_string(),
+                                "OKP key must have 'x' public key component",
                             ));
                         }
                     }
@@ -839,7 +927,7 @@ impl FromStr for JwkKeyPairAlg {
             "EdDSA" => Ok(JwkKeyPairAlg::EdDSA),
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Invalid JWT Token algorithm".to_string(),
+                "Invalid JWT Token algorithm",
             )),
         }
     }

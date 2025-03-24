@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM auth_providers WHERE id = $1",
+  "query": "SELECT * FROM users WHERE password_expires <= $1 AND password_expires > $2",
   "describe": {
     "columns": [
       {
@@ -10,133 +10,128 @@
       },
       {
         "ordinal": 1,
-        "name": "enabled",
-        "type_info": "Bool"
+        "name": "email",
+        "type_info": "Varchar"
       },
       {
         "ordinal": 2,
-        "name": "name",
+        "name": "given_name",
         "type_info": "Varchar"
       },
       {
         "ordinal": 3,
-        "name": "typ",
+        "name": "family_name",
         "type_info": "Varchar"
       },
       {
         "ordinal": 4,
-        "name": "issuer",
+        "name": "password",
         "type_info": "Varchar"
       },
       {
         "ordinal": 5,
-        "name": "authorization_endpoint",
+        "name": "roles",
         "type_info": "Varchar"
       },
       {
         "ordinal": 6,
-        "name": "token_endpoint",
+        "name": "groups",
         "type_info": "Varchar"
       },
       {
         "ordinal": 7,
-        "name": "userinfo_endpoint",
-        "type_info": "Varchar"
+        "name": "enabled",
+        "type_info": "Bool"
       },
       {
         "ordinal": 8,
-        "name": "client_id",
-        "type_info": "Varchar"
+        "name": "email_verified",
+        "type_info": "Bool"
       },
       {
         "ordinal": 9,
-        "name": "secret",
-        "type_info": "Bytea"
+        "name": "password_expires",
+        "type_info": "Int8"
       },
       {
         "ordinal": 10,
-        "name": "scope",
-        "type_info": "Varchar"
+        "name": "created_at",
+        "type_info": "Int8"
       },
       {
         "ordinal": 11,
-        "name": "admin_claim_path",
-        "type_info": "Varchar"
+        "name": "last_login",
+        "type_info": "Int8"
       },
       {
         "ordinal": 12,
-        "name": "admin_claim_value",
-        "type_info": "Varchar"
+        "name": "last_failed_login",
+        "type_info": "Int8"
       },
       {
         "ordinal": 13,
-        "name": "mfa_claim_path",
-        "type_info": "Varchar"
+        "name": "failed_login_attempts",
+        "type_info": "Int8"
       },
       {
         "ordinal": 14,
-        "name": "mfa_claim_value",
+        "name": "language",
         "type_info": "Varchar"
       },
       {
         "ordinal": 15,
-        "name": "allow_insecure_requests",
-        "type_info": "Bool"
+        "name": "webauthn_user_id",
+        "type_info": "Varchar"
       },
       {
         "ordinal": 16,
-        "name": "use_pkce",
-        "type_info": "Bool"
+        "name": "user_expires",
+        "type_info": "Int8"
       },
       {
         "ordinal": 17,
-        "name": "root_pem",
+        "name": "auth_provider_id",
         "type_info": "Varchar"
       },
       {
         "ordinal": 18,
-        "name": "client_secret_basic",
-        "type_info": "Bool"
+        "name": "federation_uid",
+        "type_info": "Varchar"
       },
       {
         "ordinal": 19,
-        "name": "client_secret_post",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 20,
-        "name": "jwks_endpoint",
+        "name": "picture_id",
         "type_info": "Varchar"
       }
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
       false,
       false,
       false,
+      true,
+      true,
+      false,
+      true,
       false,
       false,
+      true,
       false,
-      false,
-      false,
-      false,
+      true,
+      true,
       true,
       false,
       true,
       true,
       true,
       true,
-      false,
-      false,
-      true,
-      false,
-      false,
       true
     ]
   },
-  "hash": "6b535da232b3d79333a537faf6746a02054b8660e4f9f7d9b0002dd12fffd743"
+  "hash": "989fa2b8dea449d84df8d3bd61f432697a24d29f338f9cc63386c49c8b258d92"
 }
