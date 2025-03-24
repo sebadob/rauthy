@@ -186,22 +186,21 @@ impl LogoutToken {
             ));
         }
 
-        // TODO configurable allowed clock skew
         let iat_limit = Utc::now().timestamp() - *LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as i64;
         let exp_limit = iat_limit + 2 * *LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as i64;
 
+        if slf.iat < iat_limit {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "`iat` is too long ago",
+            ));
+        }
         if slf.exp < exp_limit {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "token has expired",
             ));
         }
-        // if slf.iat > iat_limit {
-        //     return Err(ErrorResponse::new(
-        //         ErrorResponseType::BadRequest,
-        //         "`iat` must not be in the future",
-        //     ));
-        // }
         if slf.exp <= slf.iat {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
