@@ -21,11 +21,23 @@ use std::sync::LazyLock;
 
 static EVENT: &str = "http://schemas.openid.net/event/backchannel-logout";
 
-static LOGOUT_TOKEN_LIFETIME: LazyLock<u16> = LazyLock::new(|| {
+static LOGOUT_TOKEN_LIFETIME: LazyLock<u8> = LazyLock::new(|| {
     env::var("LOGOUT_TOKEN_LIFETIME")
         .unwrap_or_else(|_| "30".to_string())
+        .parse::<u8>()
+        .expect("Cannot parse LOGOUT_TOKEN_LIFETIME as u8")
+});
+static LOGOUT_TOKEN_ALLOW_CLOCK_SKEW: LazyLock<u8> = LazyLock::new(|| {
+    env::var("LOGOUT_TOKEN_ALLOW_CLOCK_SKEW")
+        .unwrap_or_else(|_| "5".to_string())
+        .parse::<u8>()
+        .expect("Cannot parse LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as u8")
+});
+static LOGOUT_TOKEN_ALLOWED_LIFETIME: LazyLock<u16> = LazyLock::new(|| {
+    env::var("LOGOUT_TOKEN_ALLOWED_LIFETIME")
+        .unwrap_or_else(|_| "120".to_string())
         .parse::<u16>()
-        .expect("Cannot parse LOGOUT_TOKEN_LIFETIME as u16")
+        .expect("Cannot parse LOGOUT_TOKEN_ALLOWED_LIFETIME as u16")
 });
 
 /// Logout Token for OIDC backchannel logout specified in
@@ -175,29 +187,34 @@ impl LogoutToken {
         }
 
         // TODO configurable allowed clock skew
-        let now = Utc::now().timestamp();
-        if slf.exp < now {
+        let iat_limit = Utc::now().timestamp() - *LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as i64;
+        let exp_limit = iat_limit + 2 * *LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as i64;
+
+        if slf.exp < exp_limit {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "token has expired",
             ));
         }
-        if slf.iat > now {
+        // if slf.iat > iat_limit {
+        //     return Err(ErrorResponse::new(
+        //         ErrorResponseType::BadRequest,
+        //         "`iat` must not be in the future",
+        //     ));
+        // }
+        if slf.exp <= slf.iat {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "`iat` must not be in the future",
+                "`exp` must be greater than `iat`",
             ));
         }
-        if slf.exp < slf.iat {
+        if slf.exp - slf.iat > *LOGOUT_TOKEN_ALLOWED_LIFETIME as i64 {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "`exp` must not come before `iat`",
-            ));
-        }
-        if slf.exp - slf.iat > 120 {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "logout token has a way too long validity - max 120 seconds allowed",
+                format!(
+                    "logout token has a way too long validity - max {} seconds allowed",
+                    *LOGOUT_TOKEN_ALLOWED_LIFETIME
+                ),
             ));
         }
 
