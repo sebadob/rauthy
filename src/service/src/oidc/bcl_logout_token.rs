@@ -86,7 +86,7 @@ impl LogoutToken {
             exp,
             typ: Some(JwtTokenType::Logout),
             iat,
-            jti: secure_random_alnum(12),
+            jti: secure_random_alnum(8),
             events,
             sub,
             sid,
@@ -186,8 +186,10 @@ impl LogoutToken {
             ));
         }
 
-        let iat_limit = Utc::now().timestamp() - *LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as i64;
-        let exp_limit = iat_limit + 2 * *LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as i64;
+        let now = Utc::now().timestamp();
+        let iat_limit =
+            now - *LOGOUT_TOKEN_ALLOWED_LIFETIME as i64 - *LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as i64;
+        let exp_limit = now + *LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as i64;
 
         if slf.iat < iat_limit {
             return Err(ErrorResponse::new(
@@ -205,15 +207,6 @@ impl LogoutToken {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "`exp` must be greater than `iat`",
-            ));
-        }
-        if slf.exp - slf.iat > *LOGOUT_TOKEN_ALLOWED_LIFETIME as i64 {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!(
-                    "logout token has a way too long validity - max {} seconds allowed",
-                    *LOGOUT_TOKEN_ALLOWED_LIFETIME
-                ),
             ));
         }
 
@@ -267,6 +260,7 @@ impl LogoutToken {
 
         // If we get here, the token we received seems to come from an actual configured upstream
         // auth provider, and we can try to fetch the public key and validate the signature.
+        // Caching tokens by `jti` would be a waste of resources at this point.
 
         // validates signature
         let jwk =
