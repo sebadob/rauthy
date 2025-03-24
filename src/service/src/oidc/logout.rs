@@ -64,16 +64,17 @@ pub async fn get_logout_html(
 
         let target = logout_request.post_logout_redirect_uri.unwrap();
         let uri_vec = client.get_post_logout_uris();
-        let valid_redirect = uri_vec.as_ref().unwrap().iter().filter(|uri| {
+
+        let valid_redirect = uri_vec.as_ref().unwrap().iter().any(|uri| {
             if uri.ends_with('*') && target.starts_with(uri.split_once('*').unwrap().0) {
                 return true;
             }
-            if target.eq(*uri) {
+            if target.eq(uri) {
                 return true;
             }
             false
         });
-        if valid_redirect.count() == 0 {
+        if valid_redirect {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Given 'post_logout_redirect_uri' is not allowed",
@@ -153,37 +154,36 @@ pub async fn post_logout_handle(
             ));
         };
 
-    let loc = if let Some(uri) = post_logout_redirect_uri {
-        let state = if let Some(st) = params.state {
-            Cow::from(format!("?state={}", st))
-        } else {
-            Cow::from("")
-        };
-        Some(format!("{}{}", uri, state))
-    } else if is_backchannel {
-        None
-    } else {
-        Some(data.issuer.to_string())
-    };
-
     if let Some(user) = user {
         // TODO backchannel logout for whole user
     }
 
+    let sid = session.as_ref().map(|s| s.id.clone());
     if let Some(session) = session {
-        let cookie_fed_cm = ApiCookie::build_with_same_site(
-            COOKIE_SESSION_FED_CM,
-            Cow::from(&session.id),
-            0,
-            SameSite::None,
-        );
-        let sid = session.id.clone();
-        let cookie_session = ApiCookie::build(COOKIE_SESSION, &sid, 0);
-        session.invalidate().await?;
-
         // TODO backchannel logout for session only
 
-        if let Some(loc) = loc {
+        session.invalidate().await?;
+    }
+
+    if is_backchannel {
+        Ok(HttpResponse::build(StatusCode::OK).finish())
+    } else {
+        let uri = post_logout_redirect_uri.as_ref().unwrap_or(&data.issuer);
+        let state = params
+            .state
+            .map(|st| format!("?state={}", st))
+            .unwrap_or_default();
+        let loc = format!("{}{}", uri, state);
+
+        if let Some(sid) = sid {
+            let cookie_fed_cm = ApiCookie::build_with_same_site(
+                COOKIE_SESSION_FED_CM,
+                Cow::from(&sid),
+                0,
+                SameSite::None,
+            );
+            let cookie_session = ApiCookie::build(COOKIE_SESSION, &sid, 0);
+
             Ok(HttpResponse::build(StatusCode::OK)
                 .append_header((header::LOCATION, loc))
                 .cookie(cookie_session)
@@ -191,15 +191,8 @@ pub async fn post_logout_handle(
                 .finish())
         } else {
             Ok(HttpResponse::build(StatusCode::OK)
-                .cookie(cookie_session)
-                .cookie(cookie_fed_cm)
+                .append_header((header::LOCATION, loc))
                 .finish())
         }
-    } else if let Some(loc) = loc {
-        Ok(HttpResponse::build(StatusCode::OK)
-            .append_header((header::LOCATION, loc))
-            .finish())
-    } else {
-        Ok(HttpResponse::build(StatusCode::OK).finish())
     }
 }
