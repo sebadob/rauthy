@@ -236,14 +236,16 @@ pub struct JwtIdClaims {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwtLogoutClaims {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub typ: Option<JwtTokenType>,
-    pub iat: i64,
     pub jti: String,
     pub events: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sid: Option<String>,
 
     // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
     // `.is_none()` validation.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<String>,
 }
 
@@ -265,6 +267,7 @@ pub enum JwtTokenType {
     Bearer,
     DPoP,
     Id,
+    #[serde(rename = "logout+jwt")]
     Logout,
     Refresh,
 }

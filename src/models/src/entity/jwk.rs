@@ -17,7 +17,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
-use reqwest::{Response, tls};
+use reqwest::tls;
 use rsa::BigUint;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
