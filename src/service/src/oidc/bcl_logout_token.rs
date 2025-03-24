@@ -14,10 +14,19 @@ use rauthy_models::entity::auth_providers::AuthProvider;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::sign_jwt;
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::str::FromStr;
 use std::string::ToString;
+use std::sync::LazyLock;
 
 static EVENT: &str = "http://schemas.openid.net/event/backchannel-logout";
+
+static LOGOUT_TOKEN_LIFETIME: LazyLock<u16> = LazyLock::new(|| {
+    env::var("LOGOUT_TOKEN_LIFETIME")
+        .unwrap_or_else(|_| "30".to_string())
+        .parse::<u16>()
+        .expect("Cannot parse LOGOUT_TOKEN_LIFETIME as u16")
+});
 
 /// Logout Token for OIDC backchannel logout specified in
 /// https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken
@@ -52,8 +61,7 @@ impl LogoutToken {
         sid: Option<String>,
     ) -> Self {
         let iat = Utc::now().timestamp();
-        // TODO make configurable
-        let exp = iat + 30;
+        let exp = iat + *LOGOUT_TOKEN_LIFETIME as i64;
 
         let events = serde_json::Value::Object(serde_json::Map::from_iter([(
             EVENT.to_string(),
@@ -140,16 +148,13 @@ impl LogoutToken {
         // Validate claims that need only inexpensive checks. When we do this before doing actual
         // DB lookups or even JWKS fetches, we can fail fast if something is wrong at this point
         // already.
-        let alg_str = header
-            .get("alg")
-            .map(|a| a.as_str().unwrap_or_default())
-            .unwrap_or_default();
-        let alg = JwkKeyPairAlg::from_str(alg_str).map_err(|_| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "unsupported token singing alg",
-            )
-        })?;
+        let alg = JwkKeyPairAlg::from_str(
+            header
+                .get("alg")
+                .map(|a| a.as_str().unwrap_or_default())
+                .unwrap_or_default(),
+        )?;
+
         let kid = header
             .get("kid")
             .map(|a| a.as_str().unwrap_or_default())
@@ -225,10 +230,9 @@ impl LogoutToken {
                 "`nonce` MUST NOT be given",
             ));
         }
-        // TODO cache and verify `jti` to mitigate replay attacks.
-        // These cannot happen over TLS, so it's probably not necessary, but it would be a
-        // prevention against duplicate logout requests with the same token and therefore spamming
-        // / DoSing all downstream clients.
+
+        // We don't really need to care about `jti` caching and validation. Replay attacks can only
+        // happen for unencrypted connections, which Rauthy will never work with anyway.
 
         let provider = AuthProvider::find_by_iss(slf.iss.clone()).await?;
         if provider.jwks_endpoint.is_none() {
