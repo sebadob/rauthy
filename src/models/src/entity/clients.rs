@@ -1083,22 +1083,44 @@ impl Client {
     }
 
     pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
-        let matching_uris = self
-            .get_redirect_uris()
-            .iter()
-            .filter(|uri| {
-                (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
-                    || uri.as_str().eq(redirect_uri)
-            })
-            .count();
-        if matching_uris == 0 {
+        let has_any = self.get_redirect_uris().iter().any(|uri| {
+            (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+                || uri.as_str().eq(redirect_uri)
+        });
+
+        if has_any {
+            Ok(())
+        } else {
             trace!("Invalid `redirect_uri`");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid redirect uri",
             ))
-        } else {
+        }
+    }
+
+    pub fn validate_post_logout_redirect_uri(
+        &self,
+        post_logout_redirect_uri: &str,
+    ) -> Result<(), ErrorResponse> {
+        let has_any = self
+            .get_post_logout_uris()
+            .unwrap_or_default()
+            .iter()
+            .any(|uri| {
+                (uri.ends_with('*')
+                    && post_logout_redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+                    || uri.as_str().eq(post_logout_redirect_uri)
+            });
+
+        if has_any {
             Ok(())
+        } else {
+            trace!("Invalid `post_logout_redirect_uri`");
+            Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid post_logout_redirect_uri",
+            ))
         }
     }
 

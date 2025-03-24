@@ -55,8 +55,8 @@ pub struct LogoutToken {
     // MUST always contain `"http://schemas.openid.net/event/backchannel-logout": {}`
     events: serde_json::Value,
 
-    sub: Option<String>,
-    sid: Option<String>,
+    pub sub: Option<String>,
+    pub sid: Option<String>,
 
     // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
     // `.is_none()` validation.

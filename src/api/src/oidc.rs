@@ -1,5 +1,4 @@
 use crate::{ReqPrincipal, map_auth_step};
-use actix_web::cookie::SameSite;
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::{CONTENT_TYPE, HeaderValue};
 use actix_web::http::{StatusCode, header};
@@ -18,10 +17,9 @@ use rauthy_common::compression::{compress_br_dyn, compress_gzip};
 use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED, AUTH_HEADER_FAMILY_NAME,
     AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA, AUTH_HEADER_ROLES,
-    AUTH_HEADER_USER, AUTH_HEADERS_ENABLE, COOKIE_MFA, COOKIE_SESSION, COOKIE_SESSION_FED_CM,
-    DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT,
-    EXPERIMENTAL_FED_CM_ENABLE, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
-    OPEN_USER_REG, SESSION_LIFETIME,
+    AUTH_HEADER_USER, AUTH_HEADERS_ENABLE, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
+    DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, EXPERIMENTAL_FED_CM_ENABLE,
+    GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -651,6 +649,11 @@ pub async fn get_logout(
         return ErrorResponse::from(err).error_response();
     }
 
+    // TODO to fully support RP Initiated Logout, we must be able to accept a direct logout here
+    // as well. We could maybe parse the `accept` header or some other mechanism to check, if the
+    // request is coming from a users browser or another backend.
+    // If coming from a browser, serve HTML, otherwise validate the id token and do a direct logout.
+
     // If we get any logout errors, maybe because there is no session anymore or whatever happens,
     // just redirect to rauthy's root page, since the user is not logged-in anyway anymore.
     if principal.validate_session_auth().is_err() {
@@ -684,54 +687,13 @@ pub async fn get_logout(
 )]
 #[post("/oidc/logout")]
 pub async fn post_logout(
+    data: web::Data<AppState>,
     Form(params): Form<LogoutRequest>,
-    principal: ReqPrincipal,
+    principal: Option<ReqPrincipal>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    post_logout_handle(params, principal).await
-}
-
-// Extracted only to make it accessible via DEV handler `post_dev_only_endpoints()`.
-// The actix_web macro convert it into a `struct` which is not easily callable.
-#[inline]
-pub async fn post_logout_handle(
-    params: LogoutRequest,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
-    let session = principal.get_session()?.clone();
     params.validate()?;
-
-    let cookie_fed_cm = ApiCookie::build_with_same_site(
-        COOKIE_SESSION_FED_CM,
-        Cow::from(&session.id),
-        0,
-        SameSite::None,
-    );
-    let sid = session.id.clone();
-    let cookie = ApiCookie::build(COOKIE_SESSION, &sid, 0);
-    session.invalidate().await?;
-
-    if params.post_logout_redirect_uri.is_some() {
-        let state = if params.state.is_some() {
-            params.state.as_ref().unwrap().as_str()
-        } else {
-            ""
-        };
-        let loc = format!(
-            "{}?state={}",
-            params.post_logout_redirect_uri.as_ref().unwrap(),
-            state
-        );
-        return Ok(HttpResponse::build(StatusCode::OK)
-            .append_header((header::LOCATION, loc))
-            .cookie(cookie)
-            .cookie(cookie_fed_cm)
-            .finish());
-    }
-
-    Ok(HttpResponse::build(StatusCode::OK)
-        .cookie(cookie)
-        .cookie(cookie_fed_cm)
-        .finish())
+    let session = principal.and_then(|p| p.get_session().ok().cloned());
+    logout::post_logout_handle(data, params, session).await
 }
 
 /// Rotate JWKs
@@ -1038,7 +1000,7 @@ pub async fn post_validate_token(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    validation::validate_token::<JwtCommonClaims>(&data, &payload.token)
+    validation::validate_token::<JwtCommonClaims>(&data, &payload.token, None)
         .await
         .map(|_| HttpResponse::Accepted().finish())
 }

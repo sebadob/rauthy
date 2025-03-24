@@ -103,7 +103,7 @@ pub enum DeviceCodeFlow {
 
 #[derive(Clone)]
 pub struct DpopFingerprint(pub String);
-
+pub struct SessionId(pub String);
 pub struct TokenNonce(pub String);
 
 /// Contains the scopes as a single String separated by `\s`
@@ -222,6 +222,7 @@ impl TokenSet {
         nonce: Option<TokenNonce>,
         scope: &str,
         scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
+        sid: Option<SessionId>,
         auth_code_flow: AuthCodeFlow,
     ) -> Result<String, ErrorResponse> {
         let amr = if user.has_webauthn_enabled() && auth_code_flow == AuthCodeFlow::Yes {
@@ -239,6 +240,7 @@ impl TokenSet {
             amr: vec![amr],
             auth_time: auth_time.get(),
             at_hash: at_hash.0,
+            sid: sid.map(|sid| sid.0),
             preferred_username: user.email.clone(),
             email: None,
             email_verified: None,
@@ -483,6 +485,7 @@ impl TokenSet {
         dpop_fingerprint: Option<DpopFingerprint>,
         nonce: Option<TokenNonce>,
         scopes: Option<TokenScopes>,
+        sid: Option<SessionId>,
         auth_code_flow: AuthCodeFlow,
         device_code_flow: DeviceCodeFlow,
     ) -> Result<Self, ErrorResponse> {
@@ -593,6 +596,7 @@ impl TokenSet {
             nonce,
             &scope,
             customs_id,
+            sid,
             auth_code_flow,
         )
         .await?;

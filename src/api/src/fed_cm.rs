@@ -302,6 +302,7 @@ pub async fn post_fed_cm_token(
         payload.nonce.map(TokenNonce),
         // TODO add something like `fedcm` to the scopes? Maybe depending on new allowed flow?
         None,
+        None,
         AuthCodeFlow::No,
         DeviceCodeFlow::No,
     )

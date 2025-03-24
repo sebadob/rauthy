@@ -1,8 +1,10 @@
 use actix_web::{HttpRequest, HttpResponse, get, post, web};
 use rauthy_error::ErrorResponse;
+use validator::Validate;
 
 #[cfg(debug_assertions)]
 use rauthy_models::entity::principal::Principal;
+use rauthy_service::oidc::logout;
 
 // dev-only endpoint - in prod, values will be inserted into the HTML directly.
 // Returns the inner template value, as it would be rendered during prod, inside the body,
@@ -103,8 +105,12 @@ pub async fn post_dev_only_endpoints(
             }
             "logout" => {
                 let params = serde_urlencoded::from_bytes::<LogoutRequest>(bytes)?;
-                let principal = web::ReqData::<Principal>::extract(&req).await?;
-                oidc::post_logout_handle(params, principal).await
+                params.validate()?;
+                let principal = web::ReqData::<Option<Principal>>::extract(&req).await?;
+                let session = principal
+                    .into_inner()
+                    .and_then(|p| p.get_session().ok().cloned());
+                logout::post_logout_handle(data, params, session).await
             }
             "providers_callback" => {
                 let payload = serde_json::from_slice::<ProviderCallbackRequest>(bytes)?;

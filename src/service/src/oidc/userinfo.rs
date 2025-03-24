@@ -18,7 +18,7 @@ pub async fn get_userinfo(
 ) -> Result<Userinfo, ErrorResponse> {
     let bearer = helpers::get_bearer_token_from_header(req.headers())?;
 
-    let claims = validation::validate_token::<JwtCommonClaims>(data, &bearer).await?;
+    let claims = validation::validate_token::<JwtCommonClaims>(data, &bearer, None).await?;
     if claims.custom.typ != JwtTokenType::Bearer {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,

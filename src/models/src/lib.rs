@@ -204,6 +204,8 @@ pub struct JwtIdClaims {
     pub amr: Vec<String>,
     pub auth_time: i64,
     pub at_hash: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sid: Option<String>,
     pub preferred_username: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,

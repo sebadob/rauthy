@@ -1,5 +1,6 @@
 use crate::token_set::{
-    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenNonce, TokenScopes, TokenSet,
+    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce, TokenScopes,
+    TokenSet,
 };
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, web};
@@ -151,6 +152,7 @@ pub async fn grant_type_authorization_code(
         dpop_fingerprint,
         code.nonce.clone().map(TokenNonce),
         Some(TokenScopes(code.scopes.join(" "))),
+        code.session_id.clone().map(SessionId),
         AuthCodeFlow::Yes,
         DeviceCodeFlow::No,
     )

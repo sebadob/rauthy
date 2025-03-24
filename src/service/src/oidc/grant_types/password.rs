@@ -101,6 +101,7 @@ pub async fn grant_type_password(
                 dpop_fingerprint,
                 None,
                 None,
+                None,
                 AuthCodeFlow::No,
                 DeviceCodeFlow::No,
             )

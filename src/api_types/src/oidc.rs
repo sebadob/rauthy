@@ -166,6 +166,9 @@ pub struct LoginRefreshRequest {
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct LogoutRequest {
+    /// Valid `id_token` issued by Rauthy to do an RP Initiated Logout.
+    /// https://openid.net/specs/openid-connect-rpinitiated-1_0.html
+    ///
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub id_token_hint: Option<String>,
@@ -175,6 +178,12 @@ pub struct LogoutRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub state: Option<String>,
+    /// Logout Token used for OIDC Backchannel Logout
+    /// https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub logout_token: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
