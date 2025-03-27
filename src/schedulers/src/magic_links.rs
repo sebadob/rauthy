@@ -5,7 +5,7 @@ use rauthy_error::ErrorResponse;
 use rauthy_models::database::DB;
 use std::ops::Sub;
 use std::time::Duration;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 /// Cleans up old / expired magic links and deletes users, that have never used their
 /// 'set first ever password' magic link to keep the database clean in case of an open user registration.
@@ -50,11 +50,11 @@ WHERE id IN (
     SELECT DISTINCT user_id
     FROM magic_links
     WHERE exp < $1 AND used = false)
-AND password IS NULL"#,
+AND password IS NULL AND webauthn_user_id IS NULL"#,
             params!(exp),
         )
         .await?;
-    debug!(
+    info!(
         "Cleaned up {} users which did not use their initial password reset magic link",
         rows_affected
     );
@@ -76,12 +76,12 @@ WHERE id IN (
     SELECT DISTINCT user_id
     FROM magic_links
     WHERE exp < $1 AND used = false)
-AND password IS NULL"#,
+AND password IS NULL AND webauthn_user_id IS NULL"#,
     )
     .bind(exp)
     .execute(DB::conn())
     .await?;
-    debug!(
+    info!(
         "Cleaned up {} users which did not use their initial password reset magic link",
         res.rows_affected()
     );
