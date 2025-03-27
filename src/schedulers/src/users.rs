@@ -58,7 +58,6 @@ pub async fn user_expiry_checker() {
                         continue;
                     };
 
-                    // invalidate all sessions
                     if let Err(err) = Session::invalidate_for_user(&user.id).await {
                         error!(
                             "Error invalidating sessions for user {}: {:?}",
@@ -66,7 +65,6 @@ pub async fn user_expiry_checker() {
                         );
                     }
 
-                    // invalidate all refresh tokens
                     if let Err(err) = RefreshToken::invalidate_for_user(&user.id).await {
                         error!(
                             "Error invalidating refresh tokens for user {}: {:?}",

@@ -12,10 +12,12 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::theme::ThemeCssFull;
+use rauthy_models::entity::user_login_states::UserLoginState;
 use rauthy_models::entity::users::User;
 use rauthy_models::html::HtmlCached;
 use rauthy_models::{JwtIdClaims, JwtTokenType};
 use std::borrow::Cow;
+use std::collections::HashSet;
 
 // We will allow more clock skew here for the token expiration validation to not be too
 // strict, as long as the signature of the token and all other things are valid.
@@ -155,14 +157,15 @@ pub async fn post_logout_handle(
         };
 
     if let Some(user) = user {
+        // TODO delete all existing sessions + refresh tokens for this user
+        // TODO what about possibly existing device code tokens?
         // TODO backchannel logout for whole user
     }
 
     let sid = session.as_ref().map(|s| s.id.clone());
     if let Some(session) = session {
-        // TODO backchannel logout for session only
-
         session.invalidate().await?;
+        // TODO backchannel logout for session only
     }
 
     if is_backchannel {
@@ -195,4 +198,48 @@ pub async fn post_logout_handle(
                 .finish())
         }
     }
+}
+
+/// Executes a backchannel logout for the given user / session.
+///
+/// Does NOT invalidate or delete any local sessions - only cares about remote clients with
+/// configured backchannel logout.
+pub async fn execute_backchannel_logout(
+    sid: Option<String>,
+    uid: String,
+) -> Result<(), ErrorResponse> {
+    // TODO
+    // - collect all clients for all user login states that have a configured backchannel logout uri
+    // - in parallel, start the logout token creation and send the request to each client for the
+    //   given uid / sid
+    // - if there were any failures, collect and persist them in a new DB table
+    // - cleanup all logged out user login states
+    // - all failures should be retried multiple times by an independent cron job
+    // - executing this function should be idempotent in regard to saved failures (no duplicate
+    //   inserts)
+
+    let (states, session_only) = if let Some(sid) = sid {
+        let states = UserLoginState::find_by_session(sid).await?;
+        // As a fallback, we will log out the whole user if we cannot find the session, just to
+        // be sure we never miss any logout. Better logging out some unindented ones than missing
+        // an important one.
+        if states.is_empty() {
+            (UserLoginState::find_by_user(uid).await?, false)
+        } else {
+            (states, true)
+        }
+    } else {
+        (UserLoginState::find_by_user(uid).await?, false)
+    };
+
+    if states.is_empty() {
+        return Ok(());
+    }
+
+    let client_ids = states
+        .iter()
+        .map(|st| st.client_id.as_str())
+        .collect::<HashSet<_>>();
+
+    todo!()
 }

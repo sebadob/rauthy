@@ -52,7 +52,7 @@ DO NOTHING"#,
         Ok(())
     }
 
-    pub async fn find_for_user(user_id: String) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_by_user(user_id: String) -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as(
@@ -73,10 +73,10 @@ DO NOTHING"#,
         Ok(res)
     }
 
-    pub async fn find_for_session(session_id: String) -> Result<Option<Self>, ErrorResponse> {
+    pub async fn find_by_session(session_id: String) -> Result<Vec<Self>, ErrorResponse> {
         let slf = if is_hiqlite() {
             DB::client()
-                .query_as_optional(
+                .query_as(
                     "SELECT * FROM user_login_states WHERE session_id = $1",
                     params!(session_id),
                 )
@@ -87,7 +87,7 @@ DO NOTHING"#,
                 "SELECT * FROM user_login_states WHERE session_id = $1",
                 session_id
             )
-            .fetch_optional(DB::conn())
+            .fetch_all(DB::conn())
             .await?
         };
 
