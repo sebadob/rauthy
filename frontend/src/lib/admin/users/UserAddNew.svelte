@@ -79,7 +79,7 @@
             language,
             groups: groupsItems.filter(i => i.selected).map(i => i.name),
             roles: rolesItems.filter(i => i.selected).map(i => i.name),
-            user_expires: unixTsFromLocalDateTime(expDate, expTime),
+            user_expires: expires ? unixTsFromLocalDateTime(expDate, expTime) : undefined,
         };
         if (payload.groups?.length === 0) {
             payload.groups = undefined;
