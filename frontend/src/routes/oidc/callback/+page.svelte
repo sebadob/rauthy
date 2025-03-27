@@ -20,14 +20,14 @@
     let pState = useParam('state');
 
     onMount(async () => {
-        let redirectUri = REDIRECT_URI_SUCCESS;
+        let redirectUri = window.location.origin + REDIRECT_URI_SUCCESS;
 
         let state = pState.get();
         if (state) {
             if (state === 'account') {
-                redirectUri = REDIRECT_URI_SUCCESS_ACC;
+                redirectUri = window.location.origin + REDIRECT_URI_SUCCESS_ACC;
             } else if (state.startsWith('device')) {
-                redirectUri = `/auth/v1/${state}`;
+                redirectUri = `${window.location.origin}/auth/v1/${state}`;
             }
         }
 
