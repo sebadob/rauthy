@@ -52,6 +52,7 @@ pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
         force_mfa: *ADMIN_FORCE_MFA,
         client_uri: Some(PUB_URL_WITH_SCHEME.to_string()),
         contacts: RAUTHY_ADMIN_EMAIL.clone(),
+        backchannel_logout_uri: None,
     };
 
     // MUST NOT use `insert or replace` syntax

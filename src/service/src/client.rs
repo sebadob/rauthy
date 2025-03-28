@@ -49,6 +49,7 @@ pub async fn update_client(
 
     client.contacts = client_req.contacts.map(|c| c.join(","));
     client.client_uri = client_req.client_uri;
+    client.backchannel_logout_uri = client_req.backchannel_logout_uri;
 
     client.save().await?;
     Ok(client)

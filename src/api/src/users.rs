@@ -610,7 +610,8 @@ async fn validate_user_picture_access(
     }
 
     if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
-        if let Ok(claims) = validation::validate_token::<JwtCommonClaims>(data, &bearer).await {
+        if let Ok(claims) = validation::validate_token::<JwtCommonClaims>(data, &bearer, None).await
+        {
             if (claims.custom.typ == JwtTokenType::Bearer || claims.custom.typ == JwtTokenType::Id)
                 && claims.subject.as_deref() == Some(user_id)
             {

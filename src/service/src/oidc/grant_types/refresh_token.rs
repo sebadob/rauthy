@@ -48,7 +48,7 @@ pub async fn grant_type_refresh(
     if let Some(nonce) = dpop_none {
         headers.push((
             HeaderName::from_str(HEADER_DPOP_NONCE).unwrap(),
-            HeaderValue::from_str(&nonce).unwrap(),
+            HeaderValue::from_str(&nonce)?,
         ));
     }
 

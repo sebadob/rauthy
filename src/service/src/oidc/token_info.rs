@@ -16,14 +16,14 @@ pub async fn get_token_info(
     req: &HttpRequest,
     token: &str,
 ) -> Result<TokenInfo, ErrorResponse> {
-    let claims_res = validation::validate_token::<JwtCommonClaims>(data, token).await;
+    let claims_res = validation::validate_token::<JwtCommonClaims>(data, token, None).await;
     if claims_res.is_err() {
         return Ok(TokenInfo {
             active: false,
             ..Default::default()
         });
     }
-    let claims = claims_res.unwrap();
+    let claims = claims_res?;
 
     if claims.audiences.is_none() {
         error!("'aud' claim does not exist when it always should");
@@ -88,7 +88,7 @@ async fn check_client_auth(
     }
 
     if let Some(token) = header.strip_prefix("Bearer ") {
-        validate_token::<JwtAccessClaims>(data, token).await?;
+        validate_token::<JwtAccessClaims>(data, token, None).await?;
         Ok(client.id)
     } else if let Some(basic) = header.strip_prefix("Basic ") {
         let bytes = base64_decode(basic)?;

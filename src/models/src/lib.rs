@@ -204,6 +204,8 @@ pub struct JwtIdClaims {
     pub amr: Vec<String>,
     pub auth_time: i64,
     pub at_hash: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sid: Option<String>,
     pub preferred_username: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
@@ -235,6 +237,21 @@ pub struct JwtIdClaims {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JwtLogoutClaims {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub typ: Option<JwtTokenType>,
+    pub jti: String,
+    pub events: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sid: Option<String>,
+
+    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
+    // `.is_none()` validation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwtRefreshClaims {
     pub azp: String,
     pub typ: JwtTokenType,
@@ -252,16 +269,19 @@ pub enum JwtTokenType {
     Bearer,
     DPoP,
     Id,
+    #[serde(rename = "logout+jwt")]
+    Logout,
     Refresh,
 }
 
 impl JwtTokenType {
     pub fn as_str(&self) -> &str {
         match self {
-            JwtTokenType::Bearer => "Bearer",
-            JwtTokenType::DPoP => "DPoP",
-            JwtTokenType::Id => "Id",
-            JwtTokenType::Refresh => "Refresh",
+            Self::Bearer => "Bearer",
+            Self::DPoP => "DPoP",
+            Self::Id => "Id",
+            Self::Logout => "logout+jwt",
+            Self::Refresh => "Refresh",
         }
     }
 }
