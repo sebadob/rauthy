@@ -266,8 +266,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 }
 
 impl MagicLink {
+    /// Sets the magic link as being expired and used.
     pub async fn invalidate(&mut self) -> Result<(), ErrorResponse> {
         self.exp = OffsetDateTime::now_utc().unix_timestamp() - 10;
+        self.used = true;
         self.save().await
     }
 
@@ -346,7 +348,7 @@ impl MagicLink {
         if self.used {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "The requested passwort reset link was already used",
+                "The requested link has been used already",
             ));
         }
 
