@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.28.3
+
+### Bugfix
+
+- The new Admin UI has always added an `expires` value during the creation of a new user, even if the checkbox was
+  unchecked.
+  [#797](https://github.com/sebadob/rauthy/pull/797)
+- It has been possible to construct a situation in which a housekeeping scheduler for expired magic links could have
+  been deleting newly registered users.
+  [#798](https://github.com/sebadob/rauthy/pull/798)
+  [#799](https://github.com/sebadob/rauthy/pull/799)
+
 ## v0.28.2
 
 ### Important
