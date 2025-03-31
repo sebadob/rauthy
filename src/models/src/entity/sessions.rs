@@ -446,7 +446,6 @@ OFFSET $2"#,
         Ok(sids)
     }
 
-    /// Saves a Session
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let state_str = &self.state;
 

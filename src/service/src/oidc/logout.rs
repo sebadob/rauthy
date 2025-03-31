@@ -31,17 +31,24 @@ use std::time::Duration;
 use tokio::task::JoinSet;
 use tracing::{debug, error};
 
-static BACKCHANNEL_DANGER_ALLOW_HTTP: LazyLock<bool> = LazyLock::new(|| {
-    env::var("BACKCHANNEL_DANGER_ALLOW_HTTP")
+static LOGOUT_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    let allow_http = env::var("BACKCHANNEL_DANGER_ALLOW_HTTP")
         .unwrap_or_else(|_| "false".to_string())
         .parse::<bool>()
-        .expect("Cannot parse BACKCHANNEL_DANGER_ALLOW_HTTP as bool")
-});
-static BACKCHANNEL_DANGER_ALLOW_INSECURE: LazyLock<bool> = LazyLock::new(|| {
-    env::var("BACKCHANNEL_DANGER_ALLOW_INSECURE")
+        .expect("Cannot parse BACKCHANNEL_DANGER_ALLOW_HTTP as bool");
+    let allow_insecure = env::var("BACKCHANNEL_DANGER_ALLOW_INSECURE")
         .unwrap_or_else(|_| "false".to_string())
         .parse::<bool>()
-        .expect("Cannot parse BACKCHANNEL_DANGER_ALLOW_INSECURE as bool")
+        .expect("Cannot parse BACKCHANNEL_DANGER_ALLOW_INSECURE as bool");
+
+    reqwest::Client::builder()
+        .timeout(Duration::from_secs(10))
+        .connect_timeout(Duration::from_secs(10))
+        .https_only(!allow_http)
+        .danger_accept_invalid_certs(allow_insecure)
+        .user_agent(format!("Rauthy OIDC Client v{}", RAUTHY_VERSION))
+        .build()
+        .unwrap()
 });
 
 // We will allow more clock skew here for the token expiration validation to not be too
@@ -338,7 +345,7 @@ pub async fn send_backchannel_logout(
         .into_token_with_kp(kp.unwrap())?;
 
     tasks.spawn(async move {
-        let res = http_client()
+        let res = LOGOUT_CLIENT
             .post(client.backchannel_logout_uri.unwrap_or_default())
             .form(&BackchannelLogoutRequest { logout_token })
             .send()
@@ -372,17 +379,4 @@ pub async fn send_backchannel_logout(
     });
 
     Ok(())
-}
-
-// TODO most probably move this into a LazyLock to make efficient use of connection pooling
-#[inline]
-fn http_client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .connect_timeout(Duration::from_secs(10))
-        .https_only(!*BACKCHANNEL_DANGER_ALLOW_HTTP)
-        .danger_accept_invalid_certs(*BACKCHANNEL_DANGER_ALLOW_INSECURE)
-        .user_agent(format!("Rauthy OIDC Client v{}", RAUTHY_VERSION))
-        .build()
-        .unwrap()
 }
