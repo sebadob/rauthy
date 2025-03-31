@@ -29,7 +29,7 @@ use std::string::ToString;
 use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::task::JoinSet;
-use tracing::error;
+use tracing::{debug, error};
 
 static BACKCHANNEL_DANGER_ALLOW_HTTP: LazyLock<bool> = LazyLock::new(|| {
     env::var("BACKCHANNEL_DANGER_ALLOW_HTTP")
@@ -146,34 +146,16 @@ pub async fn post_logout_handle(
                 None
             };
 
-            if let Some(sid) = claims.custom.sid {
-                (
-                    Some(Session::find(sid).await?),
-                    None,
-                    post_logout_redirect_uri,
-                )
-            } else if let Some(uid) = claims.subject {
-                (None, Some(User::find(uid).await?), post_logout_redirect_uri)
-            } else {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "invalid `id_token`",
-                ));
-            }
+            let (session, user) =
+                find_session_with_user_fallback(claims.custom.sid, claims.subject).await?;
+            (session, user, post_logout_redirect_uri)
         } else if let Some(s) = session {
-            (Some(s), None, None)
+            let (session, user) = find_session_with_user_fallback(Some(s.id), s.user_id).await?;
+            (session, user, None)
         } else if let Some(token) = params.logout_token {
             let lt = LogoutToken::from_str_validated(&token).await?;
-            if let Some(sid) = lt.sid {
-                (Some(Session::find(sid).await?), None, None)
-            } else if let Some(uid) = lt.sub {
-                (None, Some(User::find(uid).await?), None)
-            } else {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "invalid `logout_token`",
-                ));
-            }
+            let (session, user) = find_session_with_user_fallback(lt.sid, lt.sub).await?;
+            (session, user, None)
         } else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -183,10 +165,11 @@ pub async fn post_logout_handle(
 
     let sid = session.as_ref().map(|s| s.id.clone());
     if let Some(session) = session {
-        let sid = Some(session.id.clone());
         let uid = session.user_id.clone();
         session.invalidate().await?;
-        execute_backchannel_logout(&data, sid, uid).await?;
+        // TODO what about Refresh tokens in this case? We probably need a DB migration and add
+        // an optional `sid` column to `refresh_tokens` to handle this properly.
+        execute_backchannel_logout(&data, sid.clone(), uid).await?;
     }
 
     if let Some(user) = user {
@@ -224,6 +207,35 @@ pub async fn post_logout_handle(
                 .append_header((header::LOCATION, loc))
                 .finish())
         }
+    }
+}
+
+async fn find_session_with_user_fallback(
+    sid: Option<String>,
+    uid: Option<String>,
+) -> Result<(Option<Session>, Option<User>), ErrorResponse> {
+    if let Some(sid) = sid {
+        match Session::find(sid).await {
+            Ok(s) => Ok((Some(s), None)),
+            Err(err) => {
+                debug!("Could not find `sid` from LogoutToken: {}", err);
+                if let Some(uid) = uid {
+                    Ok((None, Some(User::find(uid).await?)))
+                } else {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "invalid `logout_token`",
+                    ))
+                }
+            }
+        }
+    } else if let Some(uid) = uid {
+        Ok((None, Some(User::find(uid).await?)))
+    } else {
+        Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "neither Session nor User found",
+        ))
     }
 }
 
@@ -294,7 +306,7 @@ pub async fn execute_backchannel_logout(
         }
     }
 
-    // We want to clean up login states even if they were failures.
+    // We want to clean up login states even if there were failures.
     // This makes sure that we would not clean up newly created login states later on with retries
     // and only retry the failed ones explicitly.
     if let Some(sid) = sid {
@@ -335,14 +347,16 @@ pub async fn send_backchannel_logout(
 
         let err = match res {
             Ok(resp) => {
-                if resp.status().is_success() {
+                let status = resp.status();
+                if status.is_success() {
                     return Ok(());
                 }
-
                 let text = resp.text().await.unwrap_or_default();
                 format!(
-                    "Error during Backchannel Logout for client {}: {}",
-                    client.id, text
+                    "Error during Backchannel Logout for client {}: HTTP {} - {}",
+                    client.id,
+                    status.as_u16(),
+                    text
                 )
             }
             Err(err) => {
@@ -353,7 +367,7 @@ pub async fn send_backchannel_logout(
             }
         };
 
-        FailedBackchannelLogout::upsert(client.id, sub, sid, 0).await?;
+        FailedBackchannelLogout::upsert(client.id, sub, sid).await?;
 
         Err(ErrorResponse::new(ErrorResponseType::BadRequest, err))
     });

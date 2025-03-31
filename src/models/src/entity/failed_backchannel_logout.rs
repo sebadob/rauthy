@@ -19,7 +19,6 @@ impl FailedBackchannelLogout {
         client_id: String,
         sub: Option<String>,
         sid: Option<String>,
-        retry_count: u16,
     ) -> Result<(), ErrorResponse> {
         let sub = sub.unwrap_or_default();
         let sid = sid.unwrap_or_default();
@@ -29,23 +28,22 @@ impl FailedBackchannelLogout {
                 .execute(
                     r#"
 INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
-VALUES ($1, $2, $3, $4)
+VALUES ($1, $2, $3, 0)
 ON CONFLICT (client_id, sub, sid)
 DO UPDATE SET retry_count = retry_count + 1"#,
-                    params!(client_id, sub, sid, retry_count),
+                    params!(client_id, sub, sid),
                 )
                 .await?;
         } else {
             sqlx::query!(
                 r#"
 INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
-VALUES ($1, $2, $3, $4)
+VALUES ($1, $2, $3, 0)
 ON CONFLICT (client_id, sub, sid)
 DO UPDATE SET retry_count = failed_backchannel_logouts.retry_count + 1"#,
                 client_id,
                 sub,
                 sid,
-                retry_count as i32
             )
             .execute(DB::conn())
             .await?;
