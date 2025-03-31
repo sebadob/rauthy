@@ -192,6 +192,7 @@ use utoipa::{OpenApi, openapi};
             ApiKeyRequest,
             AuthCodeRequest,
             AuthRequest,
+            BackchannelLogoutRequest,
             IpBlacklistRequest,
             DeviceRequest,
             DeviceGrantRequest,

@@ -4,8 +4,8 @@ use crate::sessions::SessionState;
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use rauthy_common::constants::{
-    RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER, RE_GRANT_TYPES,
-    RE_LOWERCASE, RE_SCOPE_SPACE, RE_URI,
+    RE_ALNUM, RE_BASE64, RE_CLIENT_ID_EPHEMERAL, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER,
+    RE_GRANT_TYPES, RE_LOWERCASE, RE_SCOPE_SPACE, RE_URI,
 };
 use rauthy_common::utils::base64_decode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -86,6 +86,12 @@ pub struct AuthCodeRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
     pub redirect_uri: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+pub struct BackchannelLogoutRequest {
+    #[validate(regex(path = "*RE_BASE64"))]
+    pub logout_token: String,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

@@ -119,4 +119,38 @@ WHERE user_id = $1 AND client_id = $2 AND session_id = $3"#,
 
         Ok(())
     }
+
+    pub async fn delete_all_by_uid(uid: String) -> Result<(), ErrorResponse> {
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "DELETE FROM user_login_states WHERE user_id = $1",
+                    params!(uid),
+                )
+                .await?;
+        } else {
+            sqlx::query!("DELETE FROM user_login_states WHERE user_id = $1", uid)
+                .execute(DB::conn())
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn delete_all_by_sid(sid: String) -> Result<(), ErrorResponse> {
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "DELETE FROM user_login_states WHERE session_id = $1",
+                    params!(sid),
+                )
+                .await?;
+        } else {
+            sqlx::query!("DELETE FROM user_login_states WHERE session_id = $1", sid)
+                .execute(DB::conn())
+                .await?;
+        }
+
+        Ok(())
+    }
 }

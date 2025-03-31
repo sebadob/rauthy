@@ -28,6 +28,7 @@ use reqwest::header::CONTENT_TYPE;
 use reqwest::{Url, tls};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
+use std::collections::HashSet;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
@@ -394,6 +395,34 @@ VALUES ($1, $2, $3, $4)"#,
             sqlx::query_as("SELECT * FROM clients")
                 .fetch_all(DB::conn())
                 .await?
+        };
+
+        Ok(clients)
+    }
+
+    /// Finds all clients that match an entry in `ids` and have a configured `backchannel_logout_uri`.
+    pub async fn find_all_bcl(ids: &HashSet<&str>) -> Result<Vec<Self>, ErrorResponse> {
+        let mut in_ids = String::with_capacity(2 + ids.len() * 12);
+        in_ids.push('(');
+        for id in ids {
+            write!(in_ids, "'{}',", id)?;
+        }
+        in_ids.pop();
+        in_ids.push(')');
+
+        let clients = if is_hiqlite() {
+            DB::client()
+                .query_as(
+                    "SELECT * FROM clients WHERE id IN $1 AND backchannel_logout_uri IS NOT NULL",
+                    params!(),
+                )
+                .await?
+        } else {
+            sqlx::query_as(
+                "SELECT * FROM clients WHERE id IN $1 AND backchannel_logout_uri IS NOT NULL",
+            )
+            .fetch_all(DB::conn())
+            .await?
         };
 
         Ok(clients)

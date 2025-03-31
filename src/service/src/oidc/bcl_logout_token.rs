@@ -89,11 +89,10 @@ impl LogoutToken {
 
     pub async fn into_token(self, alg: JwkKeyPairAlg) -> Result<String, ErrorResponse> {
         let kp = JwkKeyPair::find_latest(alg).await?;
-        self.into_token_with_kp(kp)
+        self.into_token_with_kp(&kp)
     }
 
-    #[inline]
-    fn into_token_with_kp(self, kp: JwkKeyPair) -> Result<String, ErrorResponse> {
+    pub fn into_token_with_kp(self, kp: &JwkKeyPair) -> Result<String, ErrorResponse> {
         let custom_claims = JwtLogoutClaims {
             typ: self.typ,
             jti: self.jti,
