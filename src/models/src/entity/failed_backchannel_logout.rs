@@ -54,6 +54,20 @@ DO UPDATE SET retry_count = failed_backchannel_logouts.retry_count + 1"#,
         Ok(())
     }
 
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as("SELECT * FROM failed_backchannel_logouts", params!())
+                .await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM failed_backchannel_logouts")
+                .fetch_all(DB::conn())
+                .await?
+        };
+
+        Ok(res)
+    }
+
     pub async fn delete(self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()

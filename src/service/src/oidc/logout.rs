@@ -23,10 +23,26 @@ use rauthy_models::html::HtmlCached;
 use rauthy_models::{JwtIdClaims, JwtTokenType};
 use std::borrow::Cow;
 use std::collections::HashSet;
+use std::env;
 use std::str::FromStr;
+use std::string::ToString;
+use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::task::JoinSet;
 use tracing::error;
+
+static BACKCHANNEL_DANGER_ALLOW_HTTP: LazyLock<bool> = LazyLock::new(|| {
+    env::var("BACKCHANNEL_DANGER_ALLOW_HTTP")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .expect("Cannot parse BACKCHANNEL_DANGER_ALLOW_HTTP as bool")
+});
+static BACKCHANNEL_DANGER_ALLOW_INSECURE: LazyLock<bool> = LazyLock::new(|| {
+    env::var("BACKCHANNEL_DANGER_ALLOW_INSECURE")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .expect("Cannot parse BACKCHANNEL_DANGER_ALLOW_INSECURE as bool")
+});
 
 // We will allow more clock skew here for the token expiration validation to not be too
 // strict, as long as the signature of the token and all other things are valid.
@@ -290,7 +306,7 @@ pub async fn execute_backchannel_logout(
     Ok(())
 }
 
-async fn send_backchannel_logout(
+pub async fn send_backchannel_logout(
     client: Client,
     issuer: String,
     sub: Option<String>,
@@ -351,9 +367,8 @@ fn http_client() -> reqwest::Client {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .connect_timeout(Duration::from_secs(10))
-        // TODO make HTTPS / invalid TLS an optional config var
-        // .https_only(https_only.bool())
-        // .danger_accept_invalid_certs(danger_insecure.bool())
+        .https_only(!*BACKCHANNEL_DANGER_ALLOW_HTTP)
+        .danger_accept_invalid_certs(*BACKCHANNEL_DANGER_ALLOW_INSECURE)
         .user_agent(format!("Rauthy OIDC Client v{}", RAUTHY_VERSION))
         .timeout(Duration::from_secs(10))
         .build()
