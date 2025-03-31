@@ -599,10 +599,7 @@ async fn connect_test_smtp(
             );
         }
         Err(err) => {
-            warn!(
-                "Could not connect to {} via TLS. Inner Error: {:?}",
-                smtp_url, err,
-            );
+            warn!("Could not connect to {} via TLS: {:?}", smtp_url, err,);
         }
     }
 
@@ -623,7 +620,7 @@ async fn connect_test_smtp(
         }
         Err(err) => {
             warn!(
-                "Could not connect to {} via STARTTLS either. Inner Error: {:?}",
+                "Could not connect to {} via STARTTLS either: {:?}",
                 smtp_url, err,
             );
         }
