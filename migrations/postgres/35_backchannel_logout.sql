@@ -19,3 +19,9 @@ CREATE TABLE failed_backchannel_logouts
 
 CREATE INDEX failed_backchannel_logouts_client_id_index
     ON failed_backchannel_logouts (client_id);
+
+ALTER TABLE refresh_tokens
+    ADD session_id VARCHAR;
+
+CREATE INDEX refresh_tokens_session_id_index
+    ON refresh_tokens (session_id);

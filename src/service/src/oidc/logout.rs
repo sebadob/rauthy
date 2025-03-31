@@ -166,15 +166,14 @@ pub async fn post_logout_handle(
     let sid = session.as_ref().map(|s| s.id.clone());
     if let Some(session) = session {
         let uid = session.user_id.clone();
+        RefreshToken::delete_by_sid(session.id.clone()).await?;
         session.invalidate().await?;
-        // TODO what about Refresh tokens in this case? We probably need a DB migration and add
-        // an optional `sid` column to `refresh_tokens` to handle this properly.
         execute_backchannel_logout(&data, sid.clone(), uid).await?;
     }
 
     if let Some(user) = user {
-        Session::invalidate_for_user(&user.id).await?;
         RefreshToken::invalidate_for_user(&user.id).await?;
+        Session::invalidate_for_user(&user.id).await?;
         execute_backchannel_logout(&data, None, Some(user.id)).await?;
     }
 
