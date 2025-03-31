@@ -590,39 +590,52 @@ async fn connect_test_smtp(
     match conn.test_connection().await {
         Ok(true) => {
             info!("Successfully connected to {} via TLS", smtp_url);
+            return Ok(conn);
         }
-        Ok(false) | Err(_) => {
+        Ok(false) => {
             warn!(
                 "Could not connect to {} via TLS. Trying downgrade to STARTTLS",
                 smtp_url,
             );
-
-            // only if full TLS fails, try STARTTLS
-            conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(smtp_url)
-                .expect("Connection Error with 'SMTP_URL'")
-                .credentials(creds)
-                .timeout(Some(Duration::from_secs(10)))
-                .build();
-
-            match conn.test_connection().await {
-                Ok(true) => {
-                    info!("Successfully connected to {} via STARTTLS", smtp_url);
-                }
-                Ok(false) | Err(_) => {
-                    error!("Could not connect to {} via STARTTLS either", smtp_url);
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::Internal,
-                        format!(
-                            "Could not connect to {} - neither TLS nor STARTTLS worked",
-                            smtp_url
-                        ),
-                    ));
-                }
-            }
+        }
+        Err(err) => {
+            warn!(
+                "Could not connect to {} via TLS. Inner Error: {:?}",
+                smtp_url, err,
+            );
         }
     }
 
-    Ok(conn)
+    // only if full TLS fails, try STARTTLS
+    conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(smtp_url)
+        .expect("Connection Error with 'SMTP_URL'")
+        .credentials(creds)
+        .timeout(Some(Duration::from_secs(10)))
+        .build();
+
+    match conn.test_connection().await {
+        Ok(true) => {
+            info!("Successfully connected to {} via STARTTLS", smtp_url);
+            return Ok(conn);
+        }
+        Ok(false) => {
+            error!("Could not connect to {} via STARTTLS either", smtp_url);
+        }
+        Err(err) => {
+            warn!(
+                "Could not connect to {} via STARTTLS either. Inner Error: {:?}",
+                smtp_url, err,
+            );
+        }
+    }
+
+    Err(ErrorResponse::new(
+        ErrorResponseType::Internal,
+        format!(
+            "Could not connect to {} - neither TLS nor STARTTLS worked",
+            smtp_url
+        ),
+    ))
 }
 
 async fn conn_test_smtp_insecure(
