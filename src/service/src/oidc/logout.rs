@@ -370,7 +370,6 @@ fn http_client() -> reqwest::Client {
         .https_only(!*BACKCHANNEL_DANGER_ALLOW_HTTP)
         .danger_accept_invalid_certs(*BACKCHANNEL_DANGER_ALLOW_INSECURE)
         .user_agent(format!("Rauthy OIDC Client v{}", RAUTHY_VERSION))
-        .timeout(Duration::from_secs(10))
         .build()
         .unwrap()
 }
