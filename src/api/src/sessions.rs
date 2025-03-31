@@ -142,8 +142,9 @@ pub async fn delete_sessions_for_user(
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let uid = path.into_inner();
-    Session::invalidate_for_user(&uid).await?;
-    RefreshToken::invalidate_for_user(&uid).await?;
+    for sid in Session::invalidate_for_user(&uid).await? {
+        RefreshToken::delete_by_sid(sid).await?;
+    }
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -173,9 +174,7 @@ pub async fn delete_session_by_id(
 
     let sid = path.into_inner();
     let session = Session::find(sid).await?;
-    if let Some(uid) = &session.user_id {
-        RefreshToken::invalidate_for_user(uid).await?;
-    }
+    RefreshToken::delete_by_sid(session.id.clone()).await?;
     session.delete().await?;
 
     Ok(HttpResponse::Ok().finish())

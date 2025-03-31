@@ -8,6 +8,7 @@ use actix_web::{HttpRequest, cookie, web};
 use chrono::Utc;
 use hiqlite::{Param, params};
 use rauthy_api_types::generic::SearchParamsIdx;
+use rauthy_api_types::generic::SearchParamsIdx::SessionId;
 use rauthy_common::constants::{
     CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER, SESSION_LIFETIME_FED_CM,
 };
@@ -410,8 +411,8 @@ OFFSET $2"#,
         Ok(())
     }
 
-    /// If any sessions have been deleted, `Vec<SessionId>` will be returned for cache invalidation.
-    pub async fn invalidate_for_user(uid: &str) -> Result<(), ErrorResponse> {
+    /// Returns `Vec<SessionId>`
+    pub async fn invalidate_for_user(uid: &str) -> Result<Vec<String>, ErrorResponse> {
         let sids: Vec<String> = if is_hiqlite() {
             let rows = DB::client()
                 .execute_returning(
@@ -439,11 +440,11 @@ OFFSET $2"#,
         };
 
         let client = DB::client();
-        for sid in sids {
+        for sid in &sids {
             client.delete(Cache::Session, sid).await?;
         }
 
-        Ok(())
+        Ok(sids)
     }
 
     /// Saves a Session
