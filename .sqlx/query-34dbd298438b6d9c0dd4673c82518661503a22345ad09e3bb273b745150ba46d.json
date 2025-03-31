@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)\nVALUES ($1, $2, $3, $4)\nON CONFLICT (client_id, sub, sid)\nDO UPDATE SET retry_count = failed_backchannel_logouts.retry_count + 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "34dbd298438b6d9c0dd4673c82518661503a22345ad09e3bb273b745150ba46d"
+}
