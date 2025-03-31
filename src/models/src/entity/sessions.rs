@@ -8,7 +8,6 @@ use actix_web::{HttpRequest, cookie, web};
 use chrono::Utc;
 use hiqlite::{Param, params};
 use rauthy_api_types::generic::SearchParamsIdx;
-use rauthy_api_types::generic::SearchParamsIdx::SessionId;
 use rauthy_common::constants::{
     CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER, SESSION_LIFETIME_FED_CM,
 };
@@ -441,7 +440,7 @@ OFFSET $2"#,
 
         let client = DB::client();
         for sid in &sids {
-            client.delete(Cache::Session, sid).await?;
+            client.delete(Cache::Session, sid.clone()).await?;
         }
 
         Ok(sids)
