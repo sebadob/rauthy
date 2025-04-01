@@ -1,13 +1,10 @@
 use crate::oidc::bcl_logout_token::LogoutToken;
 use crate::oidc::validation;
 use actix_web::cookie::SameSite;
-use actix_web::http::header::ACCEPT;
 use actix_web::http::{StatusCode, header};
 use actix_web::{HttpRequest, HttpResponse, web};
 use rauthy_api_types::oidc::{BackchannelLogoutRequest, LogoutRequest};
-use rauthy_common::constants::{
-    APPLICATION_JSON, COOKIE_SESSION, COOKIE_SESSION_FED_CM, RAUTHY_VERSION,
-};
+use rauthy_common::constants::{COOKIE_SESSION, COOKIE_SESSION_FED_CM, RAUTHY_VERSION};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
@@ -130,11 +127,9 @@ pub async fn post_logout_handle(
     session: Option<Session>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let is_backchannel = session.is_none()
-        || req
-            .headers()
-            .get(ACCEPT)
-            .map(|v| v.to_str().unwrap_or_default() != APPLICATION_JSON)
-            .unwrap_or(true);
+        || params.logout_token.is_some()
+        // should always exist in even barely modern browsers
+        || req.headers().get("sec-fetch-site").is_none();
 
     let (session, user, post_logout_redirect_uri) =
         if let Some(id_token_hint) = params.id_token_hint {

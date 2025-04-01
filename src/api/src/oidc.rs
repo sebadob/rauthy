@@ -694,13 +694,13 @@ pub async fn get_logout(
 #[post("/oidc/logout")]
 pub async fn post_logout(
     data: web::Data<AppState>,
-    Form(params): Form<LogoutRequest>,
+    Form(payload): Form<LogoutRequest>,
     principal: Option<ReqPrincipal>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    params.validate()?;
+    payload.validate()?;
     let session = principal.and_then(|p| p.into_inner().session);
-    logout::post_logout_handle(req, data, params, session).await
+    logout::post_logout_handle(req, data, payload, session).await
 }
 
 /// Rotate JWKs

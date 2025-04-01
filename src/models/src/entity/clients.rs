@@ -403,23 +403,23 @@ VALUES ($1, $2, $3, $4)"#,
     /// Finds all clients that match an entry in `ids` and have a configured `backchannel_logout_uri`.
     pub async fn find_all_bcl(ids: &HashSet<&str>) -> Result<Vec<Self>, ErrorResponse> {
         let mut in_ids = String::with_capacity(2 + ids.len() * 12);
-        in_ids.push('(');
         for id in ids {
             write!(in_ids, "'{}',", id)?;
         }
         in_ids.pop();
-        in_ids.push(')');
 
         let clients = if is_hiqlite() {
             DB::client()
                 .query_as(
-                    "SELECT * FROM clients WHERE id IN $1 AND backchannel_logout_uri IS NOT NULL",
-                    params!(),
+                    "SELECT * FROM clients WHERE id IN ($1) AND backchannel_logout_uri IS NOT NULL",
+                    params!(in_ids),
                 )
                 .await?
         } else {
-            sqlx::query_as(
-                "SELECT * FROM clients WHERE id IN $1 AND backchannel_logout_uri IS NOT NULL",
+            sqlx::query_as!(
+                Self,
+                "SELECT * FROM clients WHERE id IN ($1) AND backchannel_logout_uri IS NOT NULL",
+                in_ids,
             )
             .fetch_all(DB::conn())
             .await?

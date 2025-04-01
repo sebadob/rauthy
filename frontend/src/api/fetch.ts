@@ -137,18 +137,20 @@ async function fetchWithBody<T>(
 }
 
 export function formDataFromObj(obj: Object) {
-    let fd = new FormData();
+    let params = new URLSearchParams();
     for (let key of Object.keys(obj)) {
         // @ts-ignore
         let v = obj[key];
-        if (typeof v === 'object') {
-            fd.append(key, JSON.stringify(v));
-        } else {
-            // @ts-ignore
-            fd.append(key, obj[key]);
+        if (typeof v !== 'undefined') {
+            if (typeof v === 'object') {
+                params.append(key, JSON.stringify(v));
+            } else {
+                // @ts-ignore
+                params.append(key, v);
+            }
         }
     }
-    return fd;
+    return params;
 }
 
 export async function handleResponse<T>(res: Response, redirect: 'handle401' | 'noRedirect',): Promise<IResponse<T>> {
