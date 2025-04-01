@@ -290,9 +290,24 @@ pub async fn execute_backchannel_logout(
             };
             let sid = sid.clone();
 
-            if let Err(err) =
-                send_backchannel_logout(client, data.issuer.clone(), sub, sid, &mut kps, &mut tasks)
-                    .await
+            let mut kp = kps.iter().find(|kp| kp.typ.as_str() == client.id_token_alg);
+            if kp.is_none() {
+                let alg = JwkKeyPairAlg::from_str(client.id_token_alg.as_str())?;
+                kps.push(JwkKeyPair::find_latest(alg).await?);
+                kp = kps.last();
+            }
+            debug_assert!(kp.is_some());
+
+            if let Err(err) = send_backchannel_logout(
+                client.id.clone(),
+                client.backchannel_logout_uri.unwrap_or_default(),
+                data.issuer.clone(),
+                sub,
+                sid,
+                kp.as_ref().unwrap(),
+                &mut tasks,
+            )
+            .await
             {
                 error!("Error executing Backchannel Logout: {}", err);
             }
@@ -319,29 +334,71 @@ pub async fn execute_backchannel_logout(
     Ok(())
 }
 
+pub async fn execute_backchannel_logout_by_client(
+    data: &web::Data<AppState>,
+    client: &Client,
+) -> Result<(), ErrorResponse> {
+    if client.backchannel_logout_uri.is_none() {
+        return Ok(());
+    }
+    let uri = client.backchannel_logout_uri.as_ref().unwrap();
+
+    let states = UserLoginState::find_by_client(client.id.clone()).await?;
+
+    let alg = JwkKeyPairAlg::from_str(client.id_token_alg.as_str())?;
+    let kp = JwkKeyPair::find_latest(alg).await?;
+    let mut tasks = JoinSet::new();
+
+    for state in states {
+        let sub = if state.session_id.is_none() {
+            Some(state.user_id)
+        } else {
+            None
+        };
+
+        if let Err(err) = send_backchannel_logout(
+            client.id.clone(),
+            uri.to_string(),
+            data.issuer.clone(),
+            sub,
+            state.session_id,
+            &kp,
+            &mut tasks,
+        )
+        .await
+        {
+            error!("Error executing Backchannel Logout: {}", err);
+        }
+    }
+
+    while let Some(res) = tasks.join_next().await {
+        if let Err(err) =
+            res.map_err(|err| ErrorResponse::new(ErrorResponseType::Internal, err.to_string()))?
+        {
+            error!("{err}");
+        }
+    }
+
+    UserLoginState::delete_all_by_cid(client.id.clone()).await?;
+
+    Ok(())
+}
+
 pub async fn send_backchannel_logout(
-    client: Client,
+    client_id: String,
+    backchannel_logout_uri: String,
     issuer: String,
     sub: Option<String>,
     sid: Option<String>,
-    key_pairs: &mut Vec<JwkKeyPair>,
+    kp: &JwkKeyPair,
     tasks: &mut JoinSet<Result<(), ErrorResponse>>,
 ) -> Result<(), ErrorResponse> {
-    let mut kp = key_pairs
-        .iter()
-        .find(|kp| kp.typ.as_str() == client.id_token_alg);
-    if kp.is_none() {
-        let alg = JwkKeyPairAlg::from_str(client.id_token_alg.as_str())?;
-        key_pairs.push(JwkKeyPair::find_latest(alg).await?);
-        kp = key_pairs.last();
-    }
-
-    let logout_token = LogoutToken::new(issuer, client.id.clone(), sub.clone(), sid.clone())
-        .into_token_with_kp(kp.unwrap())?;
+    let logout_token = LogoutToken::new(issuer, client_id.to_string(), sub.clone(), sid.clone())
+        .into_token_with_kp(kp)?;
 
     tasks.spawn(async move {
         let res = LOGOUT_CLIENT
-            .post(client.backchannel_logout_uri.unwrap_or_default())
+            .post(backchannel_logout_uri)
             .form(&BackchannelLogoutRequest { logout_token })
             .send()
             .await;
@@ -355,7 +412,7 @@ pub async fn send_backchannel_logout(
                 let text = resp.text().await.unwrap_or_default();
                 format!(
                     "Error during Backchannel Logout for client {}: HTTP {} - {}",
-                    client.id,
+                    client_id,
                     status.as_u16(),
                     text
                 )
@@ -363,12 +420,12 @@ pub async fn send_backchannel_logout(
             Err(err) => {
                 format!(
                     "Error during Backchannel Logout for client {}: {}",
-                    client.id, err
+                    client_id, err
                 )
             }
         };
 
-        FailedBackchannelLogout::upsert(client.id, sub, sid).await?;
+        FailedBackchannelLogout::upsert(client_id, sub, sid).await?;
 
         Err(ErrorResponse::new(ErrorResponseType::BadRequest, err))
     });

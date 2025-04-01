@@ -19,7 +19,7 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_service::client;
-use rauthy_service::oidc::helpers;
+use rauthy_service::oidc::{helpers, logout};
 use tracing::debug;
 use validator::Validate;
 
@@ -464,6 +464,7 @@ pub async fn put_generate_client_secret(
 )]
 #[delete("/clients/{id}")]
 pub async fn delete_client(
+    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -471,14 +472,16 @@ pub async fn delete_client(
 
     let id = id.into_inner();
 
-    if &id == "rauthy" {
+    if id == "rauthy" {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "The `rauthy` client must not be deleted".to_string(),
+            "The `rauthy` client must not be deleted",
         ));
     }
 
     let client = Client::find(id).await?;
+    logout::execute_backchannel_logout_by_client(&data, &client).await?;
     client.delete().await?;
+
     Ok(HttpResponse::Ok().finish())
 }

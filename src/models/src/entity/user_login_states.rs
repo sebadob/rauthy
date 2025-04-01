@@ -80,6 +80,27 @@ DO NOTHING"#,
         Ok(())
     }
 
+    pub async fn find_by_client(client_id: String) -> Result<Vec<Self>, ErrorResponse> {
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as(
+                    "SELECT * FROM user_login_states WHERE client_id = $1",
+                    params!(client_id),
+                )
+                .await?
+        } else {
+            sqlx::query_as!(
+                Self,
+                "SELECT * FROM user_login_states WHERE client_id = $1",
+                client_id
+            )
+            .fetch_all(DB::conn())
+            .await?
+        };
+
+        Ok(res)
+    }
+
     pub async fn find_by_user(user_id: String) -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
@@ -138,6 +159,23 @@ DO NOTHING"#,
             )
             .execute(DB::conn())
             .await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn delete_all_by_cid(cid: String) -> Result<(), ErrorResponse> {
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "DELETE FROM user_login_states WHERE client_id = $1",
+                    params!(cid),
+                )
+                .await?;
+        } else {
+            sqlx::query!("DELETE FROM user_login_states WHERE client_id = $1", cid)
+                .execute(DB::conn())
+                .await?;
         }
 
         Ok(())

@@ -4,9 +4,10 @@ use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
-use rauthy_models::entity::jwk::JwkKeyPair;
+use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_service::oidc::logout;
 use std::env;
+use std::str::FromStr;
 use std::string::ToString;
 use std::sync::LazyLock;
 use std::time::Duration;
@@ -72,13 +73,29 @@ async fn execute_logout_retries(data: &web::Data<AppState>) -> Result<(), ErrorR
             }
             Some(c) => c.clone(),
         };
+        if client.backchannel_logout_uri.is_none() {
+            info!(
+                "Backchannel Logout URI for failed logout has been removed in the meantime - deleting the failure"
+            );
+            failure.delete().await?;
+            continue;
+        }
+
+        let mut kp = kps.iter().find(|kp| kp.typ.as_str() == client.id_token_alg);
+        if kp.is_none() {
+            let alg = JwkKeyPairAlg::from_str(client.id_token_alg.as_str())?;
+            kps.push(JwkKeyPair::find_latest(alg).await?);
+            kp = kps.last();
+        }
+        debug_assert!(kp.is_some());
 
         match logout::send_backchannel_logout(
-            client,
+            client.id.clone(),
+            client.backchannel_logout_uri.unwrap_or_default(),
             data.issuer.clone(),
             sub,
             sid,
-            &mut kps,
+            kp.unwrap(),
             &mut tasks,
         )
         .await

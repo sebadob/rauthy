@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO user_login_states(timestamp, user_id, client_id, session_id)\nVALUES ($1, $2, $3, $4)\nON CONFLICT (user_id, client_id, session_id)\nDO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Varchar",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "143c26abfe8ffc2a66f61529d2ef6a9c33eb2c6409b06487fe34439e4d5530db"
+}

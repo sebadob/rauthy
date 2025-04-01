@@ -14,8 +14,11 @@ CREATE TABLE user_login_states
         PRIMARY KEY (timestamp, user_id)
 );
 
+CREATE UNIQUE INDEX user_login_states_user_id_client_id_session_id_uindex
+    ON user_login_states (user_id, client_id, session_id);
+
 CREATE INDEX user_login_states_session_id_index
     ON user_login_states (session_id);
 
-CREATE UNIQUE INDEX user_login_states_user_id_client_id_session_id_uindex
-    ON user_login_states (user_id, client_id, session_id);
+CREATE INDEX user_login_states_client_id_index
+    ON user_login_states (client_id);

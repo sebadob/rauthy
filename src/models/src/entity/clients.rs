@@ -328,8 +328,6 @@ VALUES ($1, $2, $3, $4)"#,
 
     // Deletes a client
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        // TODO execute possibly existing backchannel logouts just to be safe
-
         if is_hiqlite() {
             DB::client()
                 .execute("DELETE FROM clients WHERE id = $1", params!(&self.id))

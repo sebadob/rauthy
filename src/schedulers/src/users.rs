@@ -58,6 +58,8 @@ pub async fn user_expiry_checker() {
                         continue;
                     };
 
+                    // TODO execute backchannel logout
+
                     if let Err(err) = Session::invalidate_for_user(&user.id).await {
                         error!(
                             "Error invalidating sessions for user {}: {:?}",

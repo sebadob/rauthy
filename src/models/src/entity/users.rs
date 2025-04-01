@@ -235,8 +235,6 @@ impl User {
     }
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        // TODO we must check login states and execute possible backchannel logouts
-        // TODO also delete all possibly existing refresh tokens in advance
         Session::delete_by_user(&self.id).await?;
 
         if let Some(picture_id) = &self.picture_id {

@@ -1,8 +1,7 @@
 use crate::ReqPrincipal;
 use actix_web::web::Query;
-use actix_web::{HttpRequest, HttpResponse, delete, get, web};
+use actix_web::{HttpResponse, delete, get, web};
 use rauthy_api_types::generic::PaginationParams;
-use rauthy_api_types::oidc::LogoutRequest;
 use rauthy_api_types::sessions::{SessionResponse, SessionState};
 use rauthy_common::constants::SSP_THRESHOLD;
 use rauthy_error::ErrorResponse;
@@ -173,13 +172,15 @@ pub async fn delete_session_by_id(
     data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
-    req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let sid = path.into_inner();
-    let session = Session::find(sid).await?;
-    logout::post_logout_handle(req, data, LogoutRequest::default(), Some(session)).await?;
+    let session = Session::find(sid.clone()).await?;
+    session.delete().await?;
+
+    RefreshToken::delete_by_sid(sid.clone()).await?;
+    logout::execute_backchannel_logout(&data, Some(sid), None).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
