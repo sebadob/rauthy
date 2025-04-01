@@ -91,4 +91,24 @@ WHERE client_id = $1 AND sub = $2 AND sid = $3"#,
 
         Ok(())
     }
+
+    pub async fn delete_all_by_client(client_id: String) -> Result<(), ErrorResponse> {
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "DELETE FROM failed_backchannel_logouts WHERE client_id = $1",
+                    params!(client_id),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                "DELETE FROM failed_backchannel_logouts WHERE client_id = $1",
+                client_id,
+            )
+            .execute(DB::conn())
+            .await?;
+        }
+
+        Ok(())
+    }
 }

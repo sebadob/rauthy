@@ -17,6 +17,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
+use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_service::client;
 use rauthy_service::oidc::{helpers, logout};
@@ -480,8 +481,13 @@ pub async fn delete_client(
     }
 
     let client = Client::find(id).await?;
+    let cid = client.id.clone();
     logout::execute_backchannel_logout_by_client(&data, &client).await?;
     client.delete().await?;
+
+    // If we had some failed backchannel logouts, we will not retry them.
+    // They would fail anyway, because the client is deleted from this point on.
+    FailedBackchannelLogout::delete_all_by_client(cid).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
