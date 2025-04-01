@@ -170,7 +170,7 @@ pub struct LoginRefreshRequest {
     pub code_challenge_method: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+#[derive(Debug, Default, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct LogoutRequest {
     /// Valid `id_token` issued by Rauthy to do an RP Initiated Logout.
     /// https://openid.net/specs/openid-connect-rpinitiated-1_0.html

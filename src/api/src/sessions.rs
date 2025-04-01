@@ -1,15 +1,18 @@
 use crate::ReqPrincipal;
 use actix_web::web::Query;
-use actix_web::{HttpResponse, delete, get, web};
+use actix_web::{HttpRequest, HttpResponse, delete, get, web};
 use rauthy_api_types::generic::PaginationParams;
+use rauthy_api_types::oidc::LogoutRequest;
 use rauthy_api_types::sessions::{SessionResponse, SessionState};
 use rauthy_common::constants::SSP_THRESHOLD;
 use rauthy_error::ErrorResponse;
+use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use rauthy_service::oidc::logout;
 use validator::Validate;
 
 /// Returns all existing sessions
@@ -167,15 +170,16 @@ pub async fn delete_sessions_for_user(
 )]
 #[delete("/sessions/id/{session_id}")]
 pub async fn delete_session_by_id(
+    data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
+    req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let sid = path.into_inner();
     let session = Session::find(sid).await?;
-    RefreshToken::delete_by_sid(session.id.clone()).await?;
-    session.delete().await?;
+    logout::post_logout_handle(req, data, LogoutRequest::default(), Some(session)).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

@@ -7,10 +7,11 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct UserLoginState {
+    // Unix Timestamp in Millis - used inside PK
+    pub timestamp: i64,
     pub user_id: String,
     pub client_id: String,
     pub session_id: Option<String>,
-    pub login_ts: i64,
 }
 
 /// CRUD
@@ -20,33 +21,60 @@ impl UserLoginState {
         client_id: String,
         session_id: Option<String>,
     ) -> Result<(), ErrorResponse> {
-        let now = Utc::now().timestamp();
+        let now = Utc::now().timestamp_millis();
 
         if is_hiqlite() {
             DB::client()
-                .execute(
-                    r#"
-INSERT INTO user_login_states(user_id, client_id, session_id, login_ts)
+                .txn([
+                    (
+                        r#"
+INSERT INTO user_login_states(timestamp, user_id, client_id)
+VALUES ($1, $2, $3)
+ON CONFLICT (user_id, client_id, session_id)
+DO NOTHING"#,
+                        params!(now - 1, user_id.clone(), client_id.clone()),
+                    ),
+                    (
+                        r#"
+INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT (user_id, client_id, session_id)
 DO NOTHING"#,
-                    params!(user_id, client_id, session_id, now),
-                )
+                        params!(now, user_id, client_id, session_id),
+                    ),
+                ])
                 .await?;
         } else {
+            let mut txn = DB::txn().await?;
+
             sqlx::query!(
                 r#"
-INSERT INTO user_login_states(user_id, client_id, session_id, login_ts)
+INSERT INTO user_login_states(timestamp, user_id, client_id)
+VALUES ($1, $2, $3)
+ON CONFLICT (user_id, client_id, session_id)
+DO NOTHING"#,
+                now - 1,
+                user_id,
+                client_id,
+            )
+            .execute(&mut *txn)
+            .await?;
+
+            sqlx::query!(
+                r#"
+INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT (user_id, client_id, session_id)
 DO NOTHING"#,
+                now,
                 user_id,
                 client_id,
                 session_id,
-                now
             )
-            .execute(DB::conn())
+            .execute(&mut *txn)
             .await?;
+
+            txn.commit().await?;
         }
 
         Ok(())
@@ -98,20 +126,15 @@ DO NOTHING"#,
         if is_hiqlite() {
             DB::client()
                 .execute(
-                    r#"
-DELETE FROM user_login_states
-WHERE user_id = $1 AND client_id = $2 AND session_id = $3"#,
-                    params!(self.client_id, self.user_id, self.session_id),
+                    "DELETE FROM user_login_states WHERE timestamp = $1 AND user_id = $2",
+                    params!(self.timestamp, self.user_id),
                 )
                 .await?;
         } else {
             sqlx::query!(
-                r#"
-DELETE FROM user_login_states
-WHERE user_id = $1 AND client_id = $2 AND session_id = $3"#,
-                self.client_id,
+                "DELETE FROM user_login_states WHERE timestamp = $1 AND user_id = $2",
+                self.timestamp,
                 self.user_id,
-                self.session_id
             )
             .execute(DB::conn())
             .await?;

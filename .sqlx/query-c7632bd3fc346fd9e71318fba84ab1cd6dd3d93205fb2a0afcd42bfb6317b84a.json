@@ -5,23 +5,23 @@
     "columns": [
       {
         "ordinal": 0,
+        "name": "timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
         "name": "user_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 1,
+        "ordinal": 2,
         "name": "client_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 2,
+        "ordinal": 3,
         "name": "session_id",
         "type_info": "Varchar"
-      },
-      {
-        "ordinal": 3,
-        "name": "login_ts",
-        "type_info": "Int8"
       }
     ],
     "parameters": {
@@ -33,7 +33,7 @@
       false,
       false,
       false,
-      false
+      true
     ]
   },
   "hash": "c7632bd3fc346fd9e71318fba84ab1cd6dd3d93205fb2a0afcd42bfb6317b84a"

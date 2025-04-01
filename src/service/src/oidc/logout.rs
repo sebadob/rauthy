@@ -169,7 +169,7 @@ pub async fn post_logout_handle(
     if let Some(session) = session {
         let uid = session.user_id.clone();
         RefreshToken::delete_by_sid(session.id.clone()).await?;
-        session.invalidate().await?;
+        session.delete().await?;
         execute_backchannel_logout(&data, sid.clone(), uid).await?;
     }
 
