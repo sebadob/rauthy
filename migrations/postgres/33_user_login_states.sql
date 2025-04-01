@@ -11,7 +11,7 @@ CREATE TABLE user_login_states
     session_id VARCHAR
         CONSTRAINT user_login_states_sessions_id_fk
             REFERENCES sessions
-            ON DELETE SET NULL,
+            ON DELETE CASCADE,
     login_ts   BIGINT  not null,
     CONSTRAINT user_login_states_pk
         PRIMARY KEY (user_id, client_id, session_id)
