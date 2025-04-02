@@ -33,8 +33,8 @@ pub async fn get_template(
 
         let data = web::Data::<AppState>::extract(&req).await?;
         let principal = web::ReqData::<Principal>::extract(&req).await?;
-        let (tpl, cookie) =
-            HtmlTemplate::build_from_str(data, id.as_str(), principal.into_inner().session).await?;
+        let session = principal.validate_session_auth().ok().cloned();
+        let (tpl, cookie) = HtmlTemplate::build_from_str(data, id.as_str(), session).await?;
 
         if let Some(cookie) = cookie {
             Ok(HttpResponse::Ok()
@@ -109,7 +109,7 @@ pub async fn post_dev_only_endpoints(
                 let params = serde_urlencoded::from_bytes::<LogoutRequest>(bytes)?;
                 params.validate()?;
                 let principal = web::ReqData::<Principal>::extract(&req).await.ok();
-                let session = principal.map(|p| p.into_inner()).and_then(|p| p.session);
+                let session = principal.and_then(|p| p.validate_session_auth().ok().cloned());
                 logout::post_logout_handle(req, data, params, session).await
             }
             "providers_callback" => {
