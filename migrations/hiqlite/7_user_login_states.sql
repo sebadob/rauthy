@@ -22,4 +22,3 @@ CREATE INDEX user_login_states_session_id_index
 
 CREATE INDEX user_login_states_client_id_index
     ON user_login_states (client_id);
-

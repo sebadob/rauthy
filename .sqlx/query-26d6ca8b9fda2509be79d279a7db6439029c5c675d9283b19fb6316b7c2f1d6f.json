@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM failed_backchannel_logouts WHERE client_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "26d6ca8b9fda2509be79d279a7db6439029c5c675d9283b19fb6316b7c2f1d6f"
+}
