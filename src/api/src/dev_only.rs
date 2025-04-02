@@ -1,10 +1,12 @@
 use actix_web::{HttpRequest, HttpResponse, get, post, web};
 use rauthy_error::ErrorResponse;
-use validator::Validate;
 
 #[cfg(debug_assertions)]
 use rauthy_models::entity::principal::Principal;
+#[cfg(debug_assertions)]
 use rauthy_service::oidc::logout;
+#[cfg(debug_assertions)]
+use validator::Validate;
 
 // dev-only endpoint - in prod, values will be inserted into the HTML directly.
 // Returns the inner template value, as it would be rendered during prod, inside the body,
