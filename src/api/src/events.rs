@@ -131,6 +131,9 @@ pub async fn post_event_test(
         // as a helper for UI development
         let ip = "0.0.0.0".parse::<IpAddr>().unwrap();
 
+        Event::backchannel_logout_failed("dummy_client", "dummy_user", 3)
+            .send(&data.tx_events)
+            .await?;
         Event::invalid_login(1, ip.to_string())
             .send(&data.tx_events)
             .await?;

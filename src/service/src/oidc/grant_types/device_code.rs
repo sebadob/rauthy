@@ -168,6 +168,7 @@ pub async fn grant_type_device_code(
             None,
             None,
             code.scopes.map(TokenScopes),
+            None,
             AuthCodeFlow::No,
             DeviceCodeFlow::Yes(id),
         )

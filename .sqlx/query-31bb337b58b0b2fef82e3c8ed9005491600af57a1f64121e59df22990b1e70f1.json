@@ -32,6 +32,11 @@
         "ordinal": 5,
         "name": "is_mfa",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "session_id",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
@@ -46,7 +51,8 @@
       false,
       false,
       true,
-      false
+      false,
+      true
     ]
   },
   "hash": "31bb337b58b0b2fef82e3c8ed9005491600af57a1f64121e59df22990b1e70f1"

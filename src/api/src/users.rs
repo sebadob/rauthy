@@ -44,7 +44,7 @@ use rauthy_models::html::templates::{Error3Html, ErrorHtml};
 use rauthy_models::language::Language;
 use rauthy_models::{JwtCommonClaims, JwtTokenType};
 use rauthy_service::oidc::helpers::get_bearer_token_from_header;
-use rauthy_service::oidc::validation;
+use rauthy_service::oidc::{logout, validation};
 use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::env;
@@ -610,7 +610,8 @@ async fn validate_user_picture_access(
     }
 
     if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
-        if let Ok(claims) = validation::validate_token::<JwtCommonClaims>(data, &bearer).await {
+        if let Ok(claims) = validation::validate_token::<JwtCommonClaims>(data, &bearer, None).await
+        {
             if (claims.custom.typ == JwtTokenType::Bearer || claims.custom.typ == JwtTokenType::Id)
                 && claims.subject.as_deref() == Some(user_id)
             {
@@ -1552,12 +1553,15 @@ pub async fn post_user_self_convert_passkey(
 )]
 #[delete("/users/{id}")]
 pub async fn delete_user_by_id(
+    data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)?;
 
     let user = User::find(path.into_inner()).await?;
+    logout::execute_backchannel_logout(&data, None, Some(user.id.clone())).await?;
     user.delete().await?;
+
     Ok(HttpResponse::NoContent().finish())
 }

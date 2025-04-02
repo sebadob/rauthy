@@ -51,6 +51,8 @@ export interface UpdateClientRequest {
     client_uri?: string,
     /// Validation: PATTERN_CONTACT
     contacts?: string[],
+    /// Validation: PATTERN_URI
+    backchannel_logout_uri?: string,
 }
 
 export interface ClientResponse {
@@ -72,6 +74,7 @@ export interface ClientResponse {
     force_mfa: boolean,
     client_uri?: string,
     contacts?: string[],
+    backchannel_logout_uri?: string,
 }
 
 export interface ClientSecretResponse {

@@ -241,9 +241,8 @@ impl User {
             UserPicture::remove(picture_id.clone(), self.id.clone()).await?;
         }
 
-        let client = DB::client();
         if is_hiqlite() {
-            client
+            DB::client()
                 .execute("DELETE FROM users WHERE id = $1", params!(&self.id))
                 .await?;
         } else {

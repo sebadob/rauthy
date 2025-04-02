@@ -28,6 +28,7 @@ pub enum EventType {
     UserEmailChange,
     UserPasswordReset,
     Test,
+    BackchannelLogoutFailed,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]

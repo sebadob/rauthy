@@ -121,8 +121,7 @@ impl DeviceCode {
             .connect_timeout(Duration::from_secs(10))
             .https_only(https_only.bool())
             .danger_accept_invalid_certs(danger_insecure.bool())
-            .user_agent(format!("Rauthy OIDC Client v{}", VERSION))
-            .timeout(Duration::from_secs(10));
+            .user_agent(format!("Rauthy OIDC Client v{}", VERSION));
         if let Some(root) = root_certificate {
             Ok(builder.add_root_certificate(root).build()?)
         } else {

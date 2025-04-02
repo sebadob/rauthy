@@ -77,6 +77,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         force_mfa: init_client.force_mfa,
         client_uri: init_client.client_uri,
         contacts: init_client.contacts,
+        backchannel_logout_uri: None,
     };
     let res = client
         .put(&url_client)

@@ -5,11 +5,15 @@ use rauthy_api_types::generic::PaginationParams;
 use rauthy_api_types::sessions::{SessionResponse, SessionState};
 use rauthy_common::constants::SSP_THRESHOLD;
 use rauthy_error::ErrorResponse;
+use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use rauthy_service::oidc::logout;
+use tokio::task;
+use tracing::error;
 use validator::Validate;
 
 /// Returns all existing sessions
@@ -109,11 +113,26 @@ pub async fn get_sessions(
     ),
 )]
 #[delete("/sessions")]
-pub async fn delete_sessions(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+pub async fn delete_sessions(
+    data: web::Data<AppState>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     Session::invalidate_all().await?;
     RefreshToken::invalidate_all().await?;
+
+    // This task should run async in the background, as it could take quite a long time to finish.
+    task::spawn(async move {
+        if let Err(err) = logout::execute_backchannel_logout_for_everything(data).await {
+            // TODO we should throw an error or critical event in this case maybe, because
+            // invalidations for everything usually come with a good reason.
+            error!(
+                "Error during backchannel logout for the whole application: {:?}",
+                err
+            );
+        }
+    });
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -142,8 +161,9 @@ pub async fn delete_sessions_for_user(
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let uid = path.into_inner();
-    Session::invalidate_for_user(&uid).await?;
-    RefreshToken::invalidate_for_user(&uid).await?;
+    for sid in Session::invalidate_for_user(&uid).await? {
+        RefreshToken::delete_by_sid(sid).await?;
+    }
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -166,17 +186,18 @@ pub async fn delete_sessions_for_user(
 )]
 #[delete("/sessions/id/{session_id}")]
 pub async fn delete_session_by_id(
+    data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let sid = path.into_inner();
-    let session = Session::find(sid).await?;
-    if let Some(uid) = &session.user_id {
-        RefreshToken::invalidate_for_user(uid).await?;
-    }
+    let session = Session::find(sid.clone()).await?;
     session.delete().await?;
+
+    RefreshToken::delete_by_sid(sid.clone()).await?;
+    logout::execute_backchannel_logout(&data, Some(sid), None).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

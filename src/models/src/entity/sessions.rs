@@ -410,8 +410,8 @@ OFFSET $2"#,
         Ok(())
     }
 
-    /// If any sessions have been deleted, `Vec<SessionId>` will be returned for cache invalidation.
-    pub async fn invalidate_for_user(uid: &str) -> Result<(), ErrorResponse> {
+    /// Returns `Vec<SessionId>`
+    pub async fn invalidate_for_user(uid: &str) -> Result<Vec<String>, ErrorResponse> {
         let sids: Vec<String> = if is_hiqlite() {
             let rows = DB::client()
                 .execute_returning(
@@ -439,14 +439,13 @@ OFFSET $2"#,
         };
 
         let client = DB::client();
-        for sid in sids {
-            client.delete(Cache::Session, sid).await?;
+        for sid in &sids {
+            client.delete(Cache::Session, sid.clone()).await?;
         }
 
-        Ok(())
+        Ok(sids)
     }
 
-    /// Saves a Session
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let state_str = &self.state;
 

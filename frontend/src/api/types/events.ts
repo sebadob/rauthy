@@ -13,7 +13,8 @@ export type EventType = 'InvalidLogins'
     | 'SecretsMigrated'
     | 'UserEmailChange'
     | 'UserPasswordReset'
-    | 'Test';
+    | 'Test'
+    | 'BackchannelLogoutFailed';
 
 export interface EventsRequest {
     /// Unix timestamp in seconds

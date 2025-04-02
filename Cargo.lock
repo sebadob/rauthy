@@ -4106,7 +4106,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.28.3"
+version = "0.28.4-20250402-oidc-bcl"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4148,7 +4148,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.28.3"
+version = "0.28.4-20250402-oidc-bcl"
 dependencies = [
  "actix-web",
  "openssl",
@@ -4165,7 +4165,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.28.3"
+version = "0.28.4-20250402-oidc-bcl"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4191,7 +4191,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.28.3"
+version = "0.28.4-20250402-oidc-bcl"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4226,7 +4226,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.28.3"
+version = "0.28.4-20250402-oidc-bcl"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4258,7 +4258,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.28.3"
+version = "0.28.4-20250402-oidc-bcl"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4276,7 +4276,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.28.3"
+version = "0.28.4-20250402-oidc-bcl"
 dependencies = [
  "accept-language",
  "actix",
@@ -4346,7 +4346,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.28.3"
+version = "0.28.4-20250402-oidc-bcl"
 dependencies = [
  "async-trait",
  "openssl",
@@ -4362,7 +4362,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.28.3"
+version = "0.28.4-20250402-oidc-bcl"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4370,9 +4370,11 @@ dependencies = [
  "hiqlite",
  "openssl",
  "openssl-sys",
+ "rand 0.8.5",
  "rauthy-common",
  "rauthy-error",
  "rauthy-models",
+ "rauthy-service",
  "semver",
  "sqlx",
  "tokio",
@@ -4381,7 +4383,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.28.3"
+version = "0.28.4-20250402-oidc-bcl"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4393,6 +4395,7 @@ dependencies = [
  "rauthy-common",
  "rauthy-error",
  "rauthy-models",
+ "reqwest",
  "ring",
  "serde",
  "serde_json",

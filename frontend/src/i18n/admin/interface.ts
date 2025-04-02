@@ -24,6 +24,7 @@ export interface I18nAdmin {
         name: string,
     },
     clients: {
+        backchannelLogout: string,
         branding: {
             descHsl: string,
             // inserted as html

@@ -155,8 +155,7 @@ impl OidcProvider {
             .https_only(https_only.bool())
             .danger_accept_invalid_certs(danger_accept_invalid_certs.bool())
             .user_agent(format!("Rauthy OIDC Client v{}", VERSION))
-            .brotli(true)
-            .timeout(Duration::from_secs(10));
+            .brotli(true);
 
         if let Some(root) = root_certificate {
             c = c.add_root_certificate(root);

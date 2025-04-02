@@ -164,6 +164,7 @@ pub enum EventType {
     UserEmailChange,
     UserPasswordReset,
     Test,
+    BackchannelLogoutFailed,
 }
 
 impl Default for EventType {
@@ -176,21 +177,22 @@ impl Default for EventType {
 impl Display for EventType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            EventType::InvalidLogins => write!(f, "Invalid logins"),
-            EventType::IpBlacklisted => write!(f, "IP blacklisted"),
-            EventType::IpBlacklistRemoved => write!(f, "IP blacklist removed"),
-            EventType::JwksRotated => write!(f, "JWKS has been rotated"),
-            EventType::NewUserRegistered => write!(f, "New user registered"),
-            EventType::NewRauthyAdmin => write!(f, "New rauthy_admin member"),
-            EventType::NewRauthyVersion => write!(f, "New Rauthy App Version available"),
-            EventType::PossibleBruteForce => write!(f, "Possible brute force"),
-            EventType::RauthyStarted => write!(f, "Rauthy has been restarted"),
-            EventType::RauthyHealthy => write!(f, "Rauthy is healthy"),
-            EventType::RauthyUnhealthy => write!(f, "Rauthy is unhealthy"),
-            EventType::SecretsMigrated => write!(f, "Secrets have been migrated"),
-            EventType::UserEmailChange => write!(f, "User's E-Mail has been changed"),
-            EventType::UserPasswordReset => write!(f, "User has reset its password"),
-            EventType::Test => write!(f, "TEST"),
+            Self::InvalidLogins => write!(f, "Invalid logins"),
+            Self::IpBlacklisted => write!(f, "IP blacklisted"),
+            Self::IpBlacklistRemoved => write!(f, "IP blacklist removed"),
+            Self::JwksRotated => write!(f, "JWKS has been rotated"),
+            Self::NewUserRegistered => write!(f, "New user registered"),
+            Self::NewRauthyAdmin => write!(f, "New rauthy_admin member"),
+            Self::NewRauthyVersion => write!(f, "New Rauthy App Version available"),
+            Self::PossibleBruteForce => write!(f, "Possible brute force"),
+            Self::RauthyStarted => write!(f, "Rauthy has been restarted"),
+            Self::RauthyHealthy => write!(f, "Rauthy is healthy"),
+            Self::RauthyUnhealthy => write!(f, "Rauthy is unhealthy"),
+            Self::SecretsMigrated => write!(f, "Secrets have been migrated"),
+            Self::UserEmailChange => write!(f, "User's E-Mail has been changed"),
+            Self::UserPasswordReset => write!(f, "User has reset its password"),
+            Self::Test => write!(f, "TEST"),
+            Self::BackchannelLogoutFailed => write!(f, "Backchannel logout failed"),
         }
     }
 }
@@ -213,6 +215,9 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             rauthy_api_types::events::EventType::UserEmailChange => Self::UserEmailChange,
             rauthy_api_types::events::EventType::UserPasswordReset => Self::UserPasswordReset,
             rauthy_api_types::events::EventType::Test => Self::Test,
+            rauthy_api_types::events::EventType::BackchannelLogoutFailed => {
+                Self::BackchannelLogoutFailed
+            }
         }
     }
 }
@@ -235,6 +240,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::UserEmailChange => Self::UserEmailChange,
             EventType::UserPasswordReset => Self::UserPasswordReset,
             EventType::Test => Self::Test,
+            EventType::BackchannelLogoutFailed => Self::BackchannelLogoutFailed,
         }
     }
 }
@@ -257,9 +263,13 @@ impl EventType {
             Self::UserEmailChange => "UserEmailChange",
             Self::UserPasswordReset => "UserPasswordReset",
             Self::Test => "TEST",
+            Self::BackchannelLogoutFailed => "BackchannelLogoutFailed",
         }
     }
 
+    // CAUTION: DO NOT change the order of these values! If new types should be added, always
+    // add them to the end! To save space in the DB, these are not saved as String's but
+    // as integers instead and deserialization of older events will fail, if the order is mixed up!
     pub fn value(&self) -> i16 {
         match self {
             EventType::InvalidLogins => 0,
@@ -277,6 +287,7 @@ impl EventType {
             EventType::UserEmailChange => 12,
             EventType::UserPasswordReset => 13,
             EventType::Test => 14,
+            EventType::BackchannelLogoutFailed => 15,
         }
     }
 }
@@ -299,6 +310,7 @@ impl From<String> for EventType {
             "UserEmailChange" => Self::UserEmailChange,
             "UserPasswordReset" => Self::UserPasswordReset,
             "TEST" => Self::Test,
+            "BackchannelLogoutFailed" => Self::BackchannelLogoutFailed,
             // just return test to never panic
             _ => Self::Test,
         }
@@ -329,6 +341,7 @@ impl From<i64> for EventType {
             12 => EventType::UserEmailChange,
             13 => EventType::UserPasswordReset,
             14 => EventType::Test,
+            15 => EventType::BackchannelLogoutFailed,
             _ => EventType::Test,
         }
     }
@@ -428,6 +441,11 @@ impl From<&Event> for Notification {
             EventType::UserEmailChange => value.text.clone(),
             EventType::UserPasswordReset => value.text.clone(),
             EventType::Test => value.text.clone(),
+            EventType::BackchannelLogoutFailed => Some(format!(
+                "Backchannel logout retries ({}) exceeded for: {}",
+                value.data.unwrap_or_default(),
+                value.text.as_deref().unwrap_or_default()
+            )),
         };
 
         Self {
@@ -634,6 +652,16 @@ impl Event {
         )
     }
 
+    pub fn backchannel_logout_failed(client_id: &str, user_id: &str, retries: i64) -> Self {
+        Self::new(
+            EventLevel::Critical,
+            EventType::BackchannelLogoutFailed,
+            None,
+            Some(retries),
+            Some(format!("{} / {}", client_id, user_id)),
+        )
+    }
+
     pub fn brute_force(ip: String) -> Self {
         Self::new(
             EventLevel::Critical,
@@ -829,6 +857,13 @@ impl Event {
             }
             EventType::Test => {
                 format!("Test Message: {}", self.text.as_deref().unwrap_or_default())
+            }
+            EventType::BackchannelLogoutFailed => {
+                format!(
+                    "Backchannel logout retries ({}) exceeded for: {}",
+                    self.data.unwrap_or_default(),
+                    self.text.as_deref().unwrap_or_default()
+                )
             }
         }
     }

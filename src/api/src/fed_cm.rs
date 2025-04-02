@@ -128,14 +128,10 @@ pub async fn get_fed_cm_config(
     req: HttpRequest,
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    debug!("1");
     is_fed_cm_enabled()?;
-    debug!("2");
     is_web_identity_fetch(&req)?;
 
-    debug!("3");
     let config = FedCMIdPConfig::get(&data).await?;
-    debug!("4 {:?}", config);
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_JSON)
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
@@ -300,6 +296,7 @@ pub async fn post_fed_cm_token(
         None,
         payload.nonce.map(TokenNonce),
         // TODO add something like `fedcm` to the scopes? Maybe depending on new allowed flow?
+        None,
         None,
         AuthCodeFlow::No,
         DeviceCodeFlow::No,

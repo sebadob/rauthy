@@ -22,6 +22,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         token_endpoint_auth_method: Some("none".to_string()),
         token_endpoint_auth_signing_alg: None,
         post_logout_redirect_uri: None,
+        backchannel_logout_uri: None,
     };
     let res = client.post(&url).json(&payload).send().await?;
     assert_eq!(res.status(), 201);

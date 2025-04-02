@@ -19,6 +19,7 @@ export let I18nAdminKo: I18nAdmin = {
         name: "속성 이름",
     },
     clients: {
+        backchannelLogout: "If this client supports {{ OIDC_BCL }}, you can provide the URI here.",
         branding: {
             descHsl: `HSL 값으로 입력해야 합니다. 기본 색상만 제공하면 알파 채널 및 기타 값은
                 테마에 의해 동적으로 설정됩니다.`,

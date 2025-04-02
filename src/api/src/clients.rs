@@ -17,10 +17,12 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
+use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_service::client;
-use rauthy_service::oidc::helpers;
-use tracing::debug;
+use rauthy_service::oidc::{helpers, logout};
+use tokio::task;
+use tracing::{debug, error};
 use validator::Validate;
 
 /// Returns all existing OIDC clients with all their information, except for the client secrets.
@@ -464,6 +466,7 @@ pub async fn put_generate_client_secret(
 )]
 #[delete("/clients/{id}")]
 pub async fn delete_client(
+    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -471,14 +474,34 @@ pub async fn delete_client(
 
     let id = id.into_inner();
 
-    if &id == "rauthy" {
+    if id == "rauthy" {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "The `rauthy` client must not be deleted".to_string(),
+            "The `rauthy` client must not be deleted",
         ));
     }
 
     let client = Client::find(id).await?;
+
+    // We want to start the backchannel logout async in the background. This can potentially run
+    // for a very long time, depending on the amount of the currently logged-in users to this client.
+    let client_clone = client.clone();
+    task::spawn(async move {
+        let cid = client_clone.id.clone();
+        if let Err(err) = logout::execute_backchannel_logout_by_client(&data, &client_clone).await {
+            error!(
+                "Error during async backchannel logout after client delete: {:?}",
+                err
+            );
+        }
+        // If we had some failed backchannel logouts, we will not retry them.
+        // They would fail anyway, because the client is deleted from this point on.
+        if let Err(err) = FailedBackchannelLogout::delete_all_by_client(cid).await {
+            error!("Error cleaning up FailedBackchannelLogouts: {:?}", err);
+        }
+    });
+
     client.delete().await?;
+
     Ok(HttpResponse::Ok().finish())
 }

@@ -1,5 +1,6 @@
 use crate::token_set::{
-    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenNonce, TokenScopes, TokenSet,
+    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce, TokenScopes,
+    TokenSet,
 };
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, web};
@@ -14,6 +15,7 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::dpop_proof::DPoPProof;
 use rauthy_models::entity::sessions::{Session, SessionState};
+use rauthy_models::entity::user_login_states::UserLoginState;
 use rauthy_models::entity::users::User;
 use ring::digest;
 use std::str::FromStr;
@@ -33,6 +35,13 @@ pub async fn grant_type_authorization_code(
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "'code' is missing",
+        ));
+    }
+    if req_data.redirect_uri.is_none() {
+        warn!("'redirect_uri' is missing");
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "'redirect_uri' is missing",
         ));
     }
 
@@ -55,6 +64,7 @@ pub async fn grant_type_authorization_code(
         client.validate_secret(&secret, &req)?;
     }
     client.validate_flow("authorization_code")?;
+    client.validate_redirect_uri(req_data.redirect_uri.as_deref().unwrap_or_default())?;
 
     // check for DPoP header
     let mut headers = Vec::new();
@@ -133,16 +143,6 @@ pub async fn grant_type_authorization_code(
         }
     }
 
-    // We will not perform another `redirect_uri` check at this point, like stated in the RFC.
-    // It is just unnecessary because of the way Rauthy handles the flow init during GET /authorize.
-    //
-    // It is impossible to trick a client to be redirected to another `redirect_uri` than the allowed ones,
-    // which are all in control by the original client. The `redirect_uri` for Rauthy in the client config
-    // is not optional like mentioned in the RFC, but actually mandatory. It is already checked and validated
-    // carefully before the user would even see the login prompt.
-    //
-    // An additional check at this point does not provide any security benefit but only uses resources.
-
     let user = User::find(code.user_id.clone()).await?;
     let token_set = TokenSet::from_user(
         &user,
@@ -152,6 +152,7 @@ pub async fn grant_type_authorization_code(
         dpop_fingerprint,
         code.nonce.clone().map(TokenNonce),
         Some(TokenScopes(code.scopes.join(" "))),
+        code.session_id.clone().map(SessionId),
         AuthCodeFlow::Yes,
         DeviceCodeFlow::No,
     )
@@ -169,16 +170,20 @@ pub async fn grant_type_authorization_code(
             return Err(err);
         }
         session.validate_user_expiry(&user)?;
-        session.user_id = Some(user.id);
+        session.user_id = Some(user.id.clone());
         session.roles = Some(user.roles);
         session.groups = user.groups;
         session.save().await?;
     }
     code.delete().await?;
 
-    // update timestamp if it is a dynamic client
     if client.is_dynamic() {
         ClientDyn::update_used(&client.id).await?;
+    }
+
+    // backchannel logout and login state tracking is not supported for ephemeral clients
+    if !client.is_ephemeral() {
+        UserLoginState::insert(user.id, client.id, code.session_id).await?;
     }
 
     Ok((token_set, headers))

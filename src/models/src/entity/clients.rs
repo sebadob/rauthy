@@ -28,6 +28,7 @@ use reqwest::header::CONTENT_TYPE;
 use reqwest::{Url, tls};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
+use std::collections::HashSet;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
@@ -72,6 +73,7 @@ pub struct Client {
     pub force_mfa: bool,
     pub client_uri: Option<String>,
     pub contacts: Option<String>,
+    pub backchannel_logout_uri: Option<String>,
 }
 
 impl Debug for Client {
@@ -82,7 +84,7 @@ impl Debug for Client {
         redirect_uris: {}, post_logout_redirect_uris: {:?}, allowed_origins: {:?}, \
         flows_enabled: {}, access_token_alg: {}, id_token_alg: {}, auth_code_lifetime: {}, \
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
-        client_uri: {:?}, contacts: {:?}",
+        client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}",
             self.id,
             self.name,
             self.enabled,
@@ -100,7 +102,8 @@ impl Debug for Client {
             self.challenge,
             self.force_mfa,
             self.client_uri,
-            self.contacts
+            self.contacts,
+            self.backchannel_logout_uri
         )
     }
 }
@@ -131,9 +134,9 @@ impl Client {
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts)
+client_uri, contacts, backchannel_logout_uri)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20)"#,
+$18, $19, $20, $21)"#,
                     params!(
                         &client.id,
                         &client.name,
@@ -154,19 +157,20 @@ $18, $19, $20)"#,
                         &client.challenge,
                         client.force_mfa,
                         &client.client_uri,
-                        &client.contacts
+                        &client.contacts,
+                        &client.backchannel_logout_uri
                     ),
                 )
                 .await?;
         } else {
             sqlx::query!(
                 r#"
-    INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
-    post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
-    auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-    client_uri, contacts)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-    $18, $19, $20)"#,
+INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
+post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
+auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
+client_uri, contacts, backchannel_logout_uri)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+$18, $19, $20, $21)"#,
                 client.id,
                 client.name,
                 client.enabled,
@@ -187,6 +191,7 @@ $18, $19, $20)"#,
                 client.force_mfa,
                 client.client_uri,
                 client.contacts,
+                client.backchannel_logout_uri,
             )
             .execute(DB::conn())
             .await?;
@@ -210,46 +215,54 @@ $18, $19, $20)"#,
         let (_secret_plain, registration_token) = Self::generate_new_secret()?;
 
         if is_hiqlite() {
-            DB::client().txn([
-                (r#"
+            DB::client()
+                .txn([
+                    (
+                        r#"
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
-                 params!(
-                    &client.id,
-                    &client.name,
-                    client.enabled,
-                    client.confidential,
-                    &client.secret,
-                    &client.secret_kid,
-                    &client.redirect_uris,
-                    &client.post_logout_redirect_uris,
-                    &client.allowed_origins,
-                    &client.flows_enabled,
-                    &client.access_token_alg,
-                    &client.id_token_alg,
-                    client.auth_code_lifetime,
-                    client.access_token_lifetime,
-                    &client.scopes,
-                    &client.default_scopes,
-                    &client.challenge,
-                    client.force_mfa,
-                    &client.client_uri,
-                    &client.contacts
-                )),
-                (r#"
+client_uri, contacts, backchannel_logout_uri)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+$21)"#,
+                        params!(
+                            &client.id,
+                            &client.name,
+                            client.enabled,
+                            client.confidential,
+                            &client.secret,
+                            &client.secret_kid,
+                            &client.redirect_uris,
+                            &client.post_logout_redirect_uris,
+                            &client.allowed_origins,
+                            &client.flows_enabled,
+                            &client.access_token_alg,
+                            &client.id_token_alg,
+                            client.auth_code_lifetime,
+                            client.access_token_lifetime,
+                            &client.scopes,
+                            &client.default_scopes,
+                            &client.challenge,
+                            client.force_mfa,
+                            &client.client_uri,
+                            &client.contacts,
+                            &client.backchannel_logout_uri
+                        ),
+                    ),
+                    (
+                        r#"
 INSERT INTO
 clients_dyn (id, created, registration_token, token_endpoint_auth_method)
 VALUES ($1, $2, $3, $4)"#,
-                 params!(
-                    client.id.clone(),
-                    created,
-                    registration_token.clone(),
-                    token_endpoint_auth_method.clone()
-                ))
-            ]).await?;
+                        params!(
+                            client.id.clone(),
+                            created,
+                            registration_token.clone(),
+                            token_endpoint_auth_method.clone()
+                        ),
+                    ),
+                ])
+                .await?;
         } else {
             let mut txn = DB::txn().await?;
 
@@ -258,8 +271,9 @@ VALUES ($1, $2, $3, $4)"#,
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
+client_uri, contacts, backchannel_logout_uri)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+        $21)"#,
                 client.id,
                 client.name,
                 client.enabled,
@@ -280,9 +294,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
                 client.force_mfa,
                 client.client_uri,
                 client.contacts,
+                client.backchannel_logout_uri,
             )
-                .execute(&mut *txn)
-                .await?;
+            .execute(&mut *txn)
+            .await?;
 
             sqlx::query!(
                 r#"
@@ -385,6 +400,34 @@ VALUES ($1, $2, $3, $4)"#,
         Ok(clients)
     }
 
+    /// Finds all clients that match an entry in `ids` and have a configured `backchannel_logout_uri`.
+    pub async fn find_all_bcl(ids: &HashSet<&str>) -> Result<Vec<Self>, ErrorResponse> {
+        let mut in_ids = String::with_capacity(2 + ids.len() * 12);
+        for id in ids {
+            write!(in_ids, "'{}',", id)?;
+        }
+        in_ids.pop();
+
+        let clients = if is_hiqlite() {
+            DB::client()
+                .query_as(
+                    "SELECT * FROM clients WHERE id IN ($1) AND backchannel_logout_uri IS NOT NULL",
+                    params!(in_ids),
+                )
+                .await?
+        } else {
+            sqlx::query_as!(
+                Self,
+                "SELECT * FROM clients WHERE id IN ($1) AND backchannel_logout_uri IS NOT NULL",
+                in_ids,
+            )
+            .fetch_all(DB::conn())
+            .await?
+        };
+
+        Ok(clients)
+    }
+
     /// Returns all registered `client_uri`s to be used during `USER_REG_OPEN_REDIRECT` checks.
     pub async fn find_all_client_uris() -> Result<Vec<String>, ErrorResponse> {
         let uris = if is_hiqlite() {
@@ -465,6 +508,10 @@ VALUES ($1, $2, $3, $4)"#,
             .post_logout_redirect_uris
             .clone()
             .filter(|uris| !uris.is_empty());
+        let backchannel_logout_uri = self
+            .backchannel_logout_uri
+            .clone()
+            .filter(|uri| !uri.is_empty());
 
         txn.push((
             r#"
@@ -472,8 +519,9 @@ UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
 post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
 id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
-default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19
-WHERE id = $20"#,
+default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
+backchannel_logout_uri = $20
+WHERE id = $21"#,
             params!(
                 &self.name,
                 self.enabled,
@@ -494,6 +542,7 @@ WHERE id = $20"#,
                 self.force_mfa,
                 &self.client_uri,
                 contacts,
+                backchannel_logout_uri,
                 &self.id
             ),
         ));
@@ -506,6 +555,10 @@ WHERE id = $20"#,
             .post_logout_redirect_uris
             .clone()
             .filter(|uris| !uris.is_empty());
+        let backchannel_logout_uri = self
+            .backchannel_logout_uri
+            .clone()
+            .filter(|uri| !uri.is_empty());
 
         sqlx::query!(
             r#"
@@ -513,8 +566,9 @@ UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
 post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
 id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
-default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19
-WHERE id = $20"#,
+default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
+backchannel_logout_uri = $20
+WHERE id = $21"#,
             self.name,
             self.enabled,
             self.confidential,
@@ -534,6 +588,7 @@ WHERE id = $20"#,
             self.force_mfa,
             self.client_uri,
             contacts,
+            backchannel_logout_uri,
             self.id,
         )
         .execute(&mut **txn)
@@ -556,6 +611,10 @@ WHERE id = $20"#,
             .post_logout_redirect_uris
             .clone()
             .filter(|uris| !uris.is_empty());
+        let backchannel_logout_uri = self
+            .backchannel_logout_uri
+            .clone()
+            .filter(|uri| !uri.is_empty());
 
         if is_hiqlite() {
             DB::client()
@@ -565,8 +624,9 @@ UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
 post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
 id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
-default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19
-WHERE id = $20"#,
+default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
+backchannel_logout_uri = $20
+WHERE id = $21"#,
                     params!(
                         self.name.clone(),
                         self.enabled,
@@ -587,6 +647,7 @@ WHERE id = $20"#,
                         self.force_mfa,
                         self.client_uri.clone(),
                         contacts,
+                        backchannel_logout_uri,
                         self.id.clone()
                     ),
                 )
@@ -598,8 +659,9 @@ UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
 post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
 id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
-default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19
-WHERE id = $20"#,
+default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
+backchannel_logout_uri = $20
+WHERE id = $21"#,
                 self.name,
                 self.enabled,
                 self.confidential,
@@ -619,6 +681,7 @@ WHERE id = $20"#,
                 self.force_mfa,
                 self.client_uri,
                 contacts,
+                backchannel_logout_uri,
                 self.id,
             )
             .execute(DB::conn())
@@ -1049,22 +1112,44 @@ impl Client {
     }
 
     pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
-        let matching_uris = self
-            .get_redirect_uris()
-            .iter()
-            .filter(|uri| {
-                (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
-                    || uri.as_str().eq(redirect_uri)
-            })
-            .count();
-        if matching_uris == 0 {
+        let has_any = self.get_redirect_uris().iter().any(|uri| {
+            (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+                || uri.as_str().eq(redirect_uri)
+        });
+
+        if has_any {
+            Ok(())
+        } else {
             trace!("Invalid `redirect_uri`");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid redirect uri",
             ))
-        } else {
+        }
+    }
+
+    pub fn validate_post_logout_redirect_uri(
+        &self,
+        post_logout_redirect_uri: &str,
+    ) -> Result<(), ErrorResponse> {
+        let has_any = self
+            .get_post_logout_uris()
+            .unwrap_or_default()
+            .iter()
+            .any(|uri| {
+                (uri.ends_with('*')
+                    && post_logout_redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+                    || uri.as_str().eq(post_logout_redirect_uri)
+            });
+
+        if has_any {
             Ok(())
+        } else {
+            trace!("Invalid `post_logout_redirect_uri`");
+            Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid post_logout_redirect_uri",
+            ))
         }
     }
 
@@ -1285,6 +1370,7 @@ impl From<Client> for ClientResponse {
             force_mfa: client.force_mfa,
             client_uri: client.client_uri,
             contacts,
+            backchannel_logout_uri: client.backchannel_logout_uri,
         }
     }
 }
@@ -1320,6 +1406,7 @@ impl From<EphemeralClientRequest> for Client {
             force_mfa: *EPHEMERAL_CLIENTS_FORCE_MFA,
             client_uri: value.client_uri,
             contacts: value.contacts.map(|c| c.join(",")),
+            backchannel_logout_uri: None,
         }
     }
 }
@@ -1357,6 +1444,7 @@ impl Default for Client {
             force_mfa: false,
             client_uri: None,
             contacts: None,
+            backchannel_logout_uri: None,
         }
     }
 }
@@ -1444,6 +1532,7 @@ impl Client {
             force_mfa: false,
             client_uri: req.client_uri,
             contacts: req.contacts.map(|c| c.join(",")).filter(|c| !c.is_empty()),
+            backchannel_logout_uri: req.backchannel_logout_uri,
             ..Default::default()
         })
     }
@@ -1480,6 +1569,7 @@ impl Client {
             client_secret_expires_at: 0,
             redirect_uris,
             post_logout_redirect_uri,
+            backchannel_logout_uri: self.backchannel_logout_uri,
             registration_access_token,
             registration_client_uri,
             grant_types,
@@ -1586,6 +1676,7 @@ mod tests {
             force_mfa: false,
             client_uri: Some("http://localhost:1337".to_string()),
             contacts: Some("batman@localhost.de,@alfred:matrix.org".to_string()),
+            backchannel_logout_uri: None,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
