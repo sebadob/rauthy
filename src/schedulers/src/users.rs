@@ -1,13 +1,16 @@
+use actix_web::web;
 use chrono::Utc;
+use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use rauthy_service::oidc::logout;
 use std::env;
 use std::time::Duration;
 use tracing::{debug, error, info};
 
-pub async fn user_expiry_checker() {
+pub async fn user_expiry_checker(data: web::Data<AppState>) {
     let secs = env::var("SCHED_USER_EXP_MINS")
         .unwrap_or_else(|_| "60".to_string())
         .parse::<u64>()
@@ -58,8 +61,6 @@ pub async fn user_expiry_checker() {
                         continue;
                     };
 
-                    // TODO execute backchannel logout
-
                     if let Err(err) = Session::invalidate_for_user(&user.id).await {
                         error!(
                             "Error invalidating sessions for user {}: {:?}",
@@ -70,6 +71,15 @@ pub async fn user_expiry_checker() {
                     if let Err(err) = RefreshToken::invalidate_for_user(&user.id).await {
                         error!(
                             "Error invalidating refresh tokens for user {}: {:?}",
+                            user.id, err
+                        );
+                    }
+
+                    if let Err(err) =
+                        logout::execute_backchannel_logout(&data, None, Some(user.id.clone())).await
+                    {
+                        error!(
+                            "Error during backchannel logout because of user {} expiry: {:?}",
                             user.id, err
                         );
                     }
