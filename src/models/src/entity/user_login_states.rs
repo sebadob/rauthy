@@ -80,18 +80,40 @@ DO NOTHING"#,
         Ok(())
     }
 
-    pub async fn find_by_client(client_id: String) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all_without_session() -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as(
-                    "SELECT * FROM user_login_states WHERE client_id = $1",
+                    "SELECT * FROM user_login_states WHERE session_id IS NULL",
+                    params!(),
+                )
+                .await?
+        } else {
+            sqlx::query_as!(
+                Self,
+                "SELECT * FROM user_login_states WHERE session_id IS NULL",
+            )
+            .fetch_all(DB::conn())
+            .await?
+        };
+
+        Ok(res)
+    }
+
+    pub async fn find_by_client_without_session(
+        client_id: String,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as(
+                    "SELECT * FROM user_login_states WHERE client_id = $1 AND session_id IS NULL",
                     params!(client_id),
                 )
                 .await?
         } else {
             sqlx::query_as!(
                 Self,
-                "SELECT * FROM user_login_states WHERE client_id = $1",
+                "SELECT * FROM user_login_states WHERE client_id = $1 AND session_id IS NULL",
                 client_id
             )
             .fetch_all(DB::conn())
@@ -159,6 +181,20 @@ DO NOTHING"#,
             )
             .execute(DB::conn())
             .await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn delete_all() -> Result<(), ErrorResponse> {
+        if is_hiqlite() {
+            DB::client()
+                .execute("DELETE FROM user_login_states", params!())
+                .await?;
+        } else {
+            sqlx::query!("DELETE FROM user_login_states")
+                .execute(DB::conn())
+                .await?;
         }
 
         Ok(())

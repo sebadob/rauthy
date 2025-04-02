@@ -334,6 +334,23 @@ pub async fn execute_backchannel_logout(
     Ok(())
 }
 
+/// Executes a backchannel logout for every user on every client in the background.
+pub async fn execute_backchannel_logout_for_everything(
+    data: web::Data<AppState>,
+) -> Result<(), ErrorResponse> {
+    let clients = Client::find_all()
+        .await?
+        .into_iter()
+        .filter(|c| c.backchannel_logout_uri.is_some())
+        .collect::<Vec<_>>();
+
+    for client in clients {
+        execute_backchannel_logout_by_client(&data, &client).await?;
+    }
+
+    Ok(())
+}
+
 pub async fn execute_backchannel_logout_by_client(
     data: &web::Data<AppState>,
     client: &Client,
@@ -343,25 +360,21 @@ pub async fn execute_backchannel_logout_by_client(
     }
     let uri = client.backchannel_logout_uri.as_ref().unwrap();
 
-    let states = UserLoginState::find_by_client(client.id.clone()).await?;
+    // We don't care about specific sessions here. Everything for this client should be logged out.
+    // Skipping sessions and logging out whole users reduces the load.
+    let states = UserLoginState::find_by_client_without_session(client.id.clone()).await?;
 
     let alg = JwkKeyPairAlg::from_str(client.id_token_alg.as_str())?;
     let kp = JwkKeyPair::find_latest(alg).await?;
     let mut tasks = JoinSet::new();
 
     for state in states {
-        let sub = if state.session_id.is_none() {
-            Some(state.user_id)
-        } else {
-            None
-        };
-
         if let Err(err) = send_backchannel_logout(
             client.id.clone(),
             uri.to_string(),
             data.issuer.clone(),
-            sub,
-            state.session_id,
+            Some(state.user_id),
+            None,
             &kp,
             &mut tasks,
         )

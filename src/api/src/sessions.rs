@@ -12,6 +12,8 @@ use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_service::oidc::logout;
+use tokio::task;
+use tracing::error;
 use validator::Validate;
 
 /// Returns all existing sessions
@@ -111,11 +113,26 @@ pub async fn get_sessions(
     ),
 )]
 #[delete("/sessions")]
-pub async fn delete_sessions(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+pub async fn delete_sessions(
+    data: web::Data<AppState>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     Session::invalidate_all().await?;
     RefreshToken::invalidate_all().await?;
+
+    // This task should run async in the background, as it could take quite a long time to finish.
+    task::spawn(async move {
+        if let Err(err) = logout::execute_backchannel_logout_for_everything(data).await {
+            // TODO we should throw an error or critical event in this case maybe, because
+            // invalidations for everything usually come with a good reason.
+            error!(
+                "Error during backchannel logout for the whole application: {:?}",
+                err
+            );
+        }
+    });
 
     Ok(HttpResponse::Ok().finish())
 }
