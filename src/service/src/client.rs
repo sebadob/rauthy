@@ -28,9 +28,7 @@ pub async fn update_client(
 
     client.redirect_uris = client_req.redirect_uris.join(",");
     client.post_logout_redirect_uris = client_req.post_logout_redirect_uris.map(|u| u.join(","));
-    if let Some(origins) = client_req.allowed_origins {
-        client.allowed_origins = Some(origins.join(","));
-    }
+    client.allowed_origins = client_req.allowed_origins.map(|o| o.join(","));
 
     client.enabled = client_req.enabled;
     client.flows_enabled = client_req.flows_enabled.join(",");
