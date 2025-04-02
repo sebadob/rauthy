@@ -21,6 +21,7 @@ export let I18nAdminDe: I18nAdmin = {
         name: "Attribut Name",
     },
     clients: {
+        backchannelLogout: "Sollte dieser client {{ OIDC_BCL }} unterstützen, kann die URI hier angegeben werden.",
         branding: {
             descHsl: `Die folgenden Werte müssen als HSL angegeben werden. Hier wird nur die Basis-Farbe
                 definiert. Alpha Kanäle und andere Werte werden vom Theme dynamisch angepasst.`,

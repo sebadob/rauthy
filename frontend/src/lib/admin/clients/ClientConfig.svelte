@@ -41,6 +41,7 @@
     let enabled = $state(client.enabled);
     let confidential = $state(client.confidential);
     let uri: string = $state(client.client_uri || '');
+    let backchannel_logout_uri: string = $state(client.backchannel_logout_uri || '');
     let contacts: string[] = $state(client.contacts ? Array.from(client.contacts) : []);
     let origins: string[] = $state(client.allowed_origins ? Array.from(client.allowed_origins) : []);
     let redirectURIs: string[] = $state(Array.from(client.redirect_uris));
@@ -89,6 +90,7 @@
             enabled = client.enabled;
             confidential = client.confidential;
             uri = client.client_uri || '';
+            backchannel_logout_uri = client.backchannel_logout_uri || '';
             contacts = client.contacts ? Array.from(client.contacts) : [];
             origins = client.allowed_origins ? Array.from(client.allowed_origins) : [];
             redirectURIs = Array.from(client.redirect_uris);
@@ -149,6 +151,7 @@
             force_mfa: forceMfa,
             client_uri: uri || undefined,
             contacts: contacts.length > 0 ? contacts : undefined,
+            backchannel_logout_uri: backchannel_logout_uri || undefined,
         }
 
         if (flows.authorizationCode) {
@@ -271,8 +274,24 @@
                 {ta.clients.errConfidentialPKCE}
             </div>
         {/if}
-
         <div style:height=".5rem"></div>
+
+        <p class="desc">
+            {@html ta
+                .clients.backchannelLogout
+                .replace('{{ OIDC_BCL }}', '<a href="https://openid.net/specs/openid-connect-backchannel-1_0.html" target="_blank">OpenID Connect Back-Channel Logout</a>')
+            }
+        </p>
+        <Input
+                typ="url"
+                bind:value={backchannel_logout_uri}
+                autocomplete="off"
+                label="Backchannel Logout URI"
+                placeholder="Backchannel Logout URI"
+                width={inputWidth}
+                pattern={PATTERN_URI}
+        />
+
         <p class="desc">{ta.clients.descOrigin}</p>
         <InputTags
                 typ="url"
