@@ -59,7 +59,6 @@ async fn execute_logout_retries(data: &web::Data<AppState>) -> Result<(), ErrorR
             .await?;
 
             failure.delete().await?;
-
             continue;
         }
 
