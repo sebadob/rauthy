@@ -12,6 +12,8 @@ use utoipa::ToSchema;
 pub struct WellKnown {
     pub issuer: String,
     pub authorization_endpoint: String,
+    pub backchannel_logout_supported: bool,
+    pub backchannel_logout_session_supported: bool,
     pub device_authorization_endpoint: String,
     pub token_endpoint: String,
     pub introspection_endpoint: String,
@@ -157,6 +159,8 @@ impl WellKnown {
         WellKnown {
             issuer: String::from(issuer),
             authorization_endpoint,
+            backchannel_logout_supported: true,
+            backchannel_logout_session_supported: true,
             device_authorization_endpoint,
             token_endpoint,
             introspection_endpoint,
