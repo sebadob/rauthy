@@ -5,6 +5,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
+use rauthy_models::events::event::Event;
 use rauthy_service::oidc::logout;
 use std::env;
 use std::str::FromStr;
@@ -49,8 +50,17 @@ async fn execute_logout_retries(data: &web::Data<AppState>) -> Result<(), ErrorR
         // TODO make configurable
         if failure.retry_count >= *BACKCHANNEL_LOGOUT_RETRY_COUNT as i32 {
             warn!("Retry count exceeded for backchannel logout {:?}", failure);
-            // TODO generate global event here?
+
+            Event::backchannel_logout_failed(
+                &failure.client_id,
+                &failure.sub,
+                *BACKCHANNEL_LOGOUT_RETRY_COUNT as i64,
+            )
+            .send(&data.tx_events)
+            .await?;
+
             failure.delete().await?;
+
             continue;
         }
 

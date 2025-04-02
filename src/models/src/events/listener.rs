@@ -186,6 +186,7 @@ impl EventListener {
                         EventType::UserEmailChange => {}
                         EventType::UserPasswordReset => {}
                         EventType::Test => {}
+                        EventType::BackchannelLogoutFailed => {}
                     }
 
                     // pre-compute the payload
