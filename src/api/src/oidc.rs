@@ -1,6 +1,6 @@
 use crate::{ReqPrincipal, map_auth_step};
 use actix_web::cookie::time::OffsetDateTime;
-use actix_web::http::header::{CONTENT_TYPE, HeaderValue};
+use actix_web::http::header::{ACCEPT, CONTENT_TYPE, HeaderValue};
 use actix_web::http::{StatusCode, header};
 use actix_web::web::{Form, Json, Query};
 use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError, get, post, web};
@@ -644,37 +644,44 @@ pub async fn get_logout(
     req: HttpRequest,
     Query(params): Query<LogoutRequest>,
     principal: ReqPrincipal,
-) -> HttpResponse {
+) -> Result<HttpResponse, ErrorResponse> {
     if let Err(err) = params.validate() {
-        return ErrorResponse::from(err).error_response();
+        return Ok(ErrorResponse::from(err).error_response());
     }
 
-    // TODO to fully support RP Initiated Logout, we must be able to accept a direct logout here
-    // as well. We could maybe parse the `accept` header or some other mechanism to check, if the
-    // request is coming from a users browser or another backend.
-    // If coming from a browser, serve HTML, otherwise validate the id token and do a direct logout.
-    // let is_backchannel = !(principal.session.is_some()
-    //     || req
-    //         .headers()
-    //         .get(ACCEPT)
-    //         .map(|v| v.to_str().unwrap_or_default().contains(APPLICATION_JSON))
-    //         .unwrap_or(false));
+    let is_backchannel = !req.headers().get(ACCEPT).map(|v| v.to_str().unwrap_or_default().contains("text/html")).unwrap_or(false)
+        || principal.session.is_none()
+        // should always exist in even barely modern browsers
+        || req.headers().get("sec-fetch-site").is_none();
 
-    // If we get any logout errors, maybe because there is no session anymore or whatever happens,
-    // just redirect to rauthy's root page, since the user is not logged-in anyway anymore.
-    if principal.validate_session_auth().is_err() {
-        return HttpResponse::build(StatusCode::from_u16(302).unwrap())
-            .insert_header(("location", "/auth/v1/"))
-            .finish();
-    }
+    if is_backchannel {
+        if params.id_token_hint.is_none() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "at least 'id_token_hint' must be given for an RP initiated logout",
+            ));
+        }
 
-    logout::get_logout_html(req, params, principal.into_inner().session.unwrap(), &data)
-        .await
-        .unwrap_or_else(|_| {
-            HttpResponse::build(StatusCode::from_u16(302).unwrap())
+        logout::post_logout_handle(req, data, params, None).await
+    } else {
+        // If we get any logout errors, maybe because there is no session anymore or whatever happens,
+        // just redirect to rauthy's root page, since the user is not logged-in anyway anymore.
+        if principal.validate_session_auth().is_err() {
+            return Ok(HttpResponse::build(StatusCode::from_u16(302).unwrap())
                 .insert_header(("location", "/auth/v1/"))
-                .finish()
-        })
+                .finish());
+        }
+
+        Ok(
+            logout::get_logout_html(req, params, principal.into_inner().session.unwrap(), &data)
+                .await
+                .unwrap_or_else(|_| {
+                    HttpResponse::build(StatusCode::from_u16(302).unwrap())
+                        .insert_header(("location", "/auth/v1/"))
+                        .finish()
+                }),
+        )
+    }
 }
 
 /// Send the logout confirmation
@@ -699,7 +706,7 @@ pub async fn post_logout(
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
-    let session = principal.and_then(|p| p.into_inner().session);
+    let session = principal.and_then(|p| p.validate_session_auth().ok().cloned());
     logout::post_logout_handle(req, data, payload, session).await
 }
 
