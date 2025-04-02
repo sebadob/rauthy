@@ -47,14 +47,13 @@ async fn execute_logout_retries(data: &web::Data<AppState>) -> Result<(), ErrorR
     let mut tasks = JoinSet::new();
 
     for failure in failures {
-        // TODO make configurable
         if failure.retry_count >= *BACKCHANNEL_LOGOUT_RETRY_COUNT as i32 {
             warn!("Retry count exceeded for backchannel logout {:?}", failure);
 
             Event::backchannel_logout_failed(
                 &failure.client_id,
                 &failure.sub,
-                *BACKCHANNEL_LOGOUT_RETRY_COUNT as i64,
+                failure.retry_count as i64,
             )
             .send(&data.tx_events)
             .await?;
