@@ -97,9 +97,6 @@ pub struct EphemeralClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-    pub backchannel_logout_uri: Option<String>,
     /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
     #[validate(custom(function = "validate_vec_grant_type"))]
     pub grant_types: Option<Vec<String>>,

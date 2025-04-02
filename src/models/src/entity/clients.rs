@@ -1406,7 +1406,7 @@ impl From<EphemeralClientRequest> for Client {
             force_mfa: *EPHEMERAL_CLIENTS_FORCE_MFA,
             client_uri: value.client_uri,
             contacts: value.contacts.map(|c| c.join(",")),
-            backchannel_logout_uri: value.backchannel_logout_uri,
+            backchannel_logout_uri: None,
         }
     }
 }
