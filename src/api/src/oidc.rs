@@ -643,14 +643,14 @@ pub async fn get_logout(
     data: web::Data<AppState>,
     req: HttpRequest,
     Query(params): Query<LogoutRequest>,
-    principal: ReqPrincipal,
+    principal: Option<ReqPrincipal>,
 ) -> Result<HttpResponse, ErrorResponse> {
     if let Err(err) = params.validate() {
         return Ok(ErrorResponse::from(err).error_response());
     }
 
     let is_backchannel = !req.headers().get(ACCEPT).map(|v| v.to_str().unwrap_or_default().contains("text/html")).unwrap_or(false)
-        || principal.session.is_none()
+        || principal.as_ref().map(|p| p.session.is_none()) == Some(true)
         // should always exist in even barely modern browsers
         || req.headers().get("sec-fetch-site").is_none();
 
@@ -663,7 +663,7 @@ pub async fn get_logout(
         }
 
         logout::post_logout_handle(req, data, params, None).await
-    } else {
+    } else if let Some(principal) = principal {
         // If we get any logout errors, maybe because there is no session anymore or whatever happens,
         // just redirect to rauthy's root page, since the user is not logged-in anyway anymore.
         if principal.validate_session_auth().is_err() {
@@ -681,6 +681,10 @@ pub async fn get_logout(
                         .finish()
                 }),
         )
+    } else {
+        Ok(HttpResponse::build(StatusCode::from_u16(302).unwrap())
+            .insert_header(("location", "/auth/v1/"))
+            .finish())
     }
 }
 
