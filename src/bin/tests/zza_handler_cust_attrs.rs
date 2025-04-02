@@ -127,6 +127,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         force_mfa: c.force_mfa,
         client_uri: None,
         contacts: None,
+        backchannel_logout_uri: None,
     };
     let res = client
         .put(&url_client)

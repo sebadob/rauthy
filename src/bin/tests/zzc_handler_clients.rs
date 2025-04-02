@@ -118,6 +118,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             "batman@localhost.de".to_string(),
             "@alfred:matrix.org".to_string(),
         ]),
+        backchannel_logout_uri: None,
     };
 
     let url_id = format!("{}/clients/{}", backend_url, client.id);

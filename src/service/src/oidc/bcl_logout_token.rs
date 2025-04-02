@@ -355,7 +355,7 @@ mod tests {
             Some(sub.to_string()),
             None,
         )
-        .into_token_with_kp(kp_25519.clone())
+        .into_token_with_kp(&kp_25519)
         .unwrap();
 
         let (header, lt) = LogoutToken::build_from_str(&token).unwrap();
@@ -372,7 +372,7 @@ mod tests {
             None,
             Some(sid.to_string()),
         )
-        .into_token_with_kp(kp_256.clone())
+        .into_token_with_kp(&kp_256)
         .unwrap();
 
         let (header, lt) = LogoutToken::build_from_str(&token).unwrap();
@@ -387,7 +387,7 @@ mod tests {
             None,
             Some(sid.to_string()),
         )
-        .into_token_with_kp(kp_384.clone())
+        .into_token_with_kp(&kp_384)
         .unwrap();
         let (header, lt) = LogoutToken::build_from_str(&token).unwrap();
         lt.validate_claims(header).unwrap();
@@ -398,14 +398,14 @@ mod tests {
             None,
             Some(sid.to_string()),
         )
-        .into_token_with_kp(kp_512.clone())
+        .into_token_with_kp(&kp_512)
         .unwrap();
         let (header, lt) = LogoutToken::build_from_str(&token).unwrap();
         lt.validate_claims(header).unwrap();
 
         // no sub + sid - expect failure
         let token = LogoutToken::new(iss.to_string(), aud.to_string(), None, None)
-            .into_token_with_kp(kp_25519.clone())
+            .into_token_with_kp(&kp_25519)
             .unwrap();
         let (header, lt) = LogoutToken::build_from_str(&token).unwrap();
         lt.validate_claims(header).expect_err("empty sub and sid");

@@ -128,14 +128,10 @@ pub async fn get_fed_cm_config(
     req: HttpRequest,
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    debug!("1");
     is_fed_cm_enabled()?;
-    debug!("2");
     is_web_identity_fetch(&req)?;
 
-    debug!("3");
     let config = FedCMIdPConfig::get(&data).await?;
-    debug!("4 {:?}", config);
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_JSON)
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
@@ -177,7 +173,6 @@ pub async fn get_fed_client_config() -> HttpResponse {
         contacts: RAUTHY_ADMIN_EMAIL.clone().map(|e| vec![e]),
         redirect_uris: vec![format!("{}/auth/v1/*", *PUB_URL_WITH_SCHEME)],
         post_logout_redirect_uris: Some(vec![format!("{}/auth/v1/*", *PUB_URL_WITH_SCHEME)]),
-        backchannel_logout_uri: None,
         grant_types: Some(vec![
             "authorization_code".to_string(),
             "refresh_token".to_string(),

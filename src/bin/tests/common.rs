@@ -123,7 +123,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let req_token = TokenRequest {
         grant_type: "authorization_code".to_string(),
         code: Some(code),
-        redirect_uri: None,
+        redirect_uri: Some(redirect_uri.to_owned()),
         client_id: Some("rauthy".to_string()),
         client_secret: None,
         code_verifier: Some(challenge_plain.to_string()),

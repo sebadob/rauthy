@@ -181,7 +181,10 @@ pub async fn grant_type_authorization_code(
         ClientDyn::update_used(&client.id).await?;
     }
 
-    UserLoginState::insert(user.id, client.id, code.session_id).await?;
+    // backchannel logout and login state tracking is not supported for ephemeral clients
+    if !client.is_ephemeral() {
+        UserLoginState::insert(user.id, client.id, code.session_id).await?;
+    }
 
     Ok((token_set, headers))
 }
