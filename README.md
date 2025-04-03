@@ -2,17 +2,9 @@
 
 # Rauthy
 
-**CAUTION:**  
-There has not been any third party security audit for this project.
-Use this software at your own risk!
-
-**INFO:**  
-This project is currently pre v1.0, which means, even though it is not expected, breaking changes might come
-with new versions.
+Rauthy - OpenID Connect Single Sign-On Identity & Access Management
 
 ## What it is
-
-Rauthy - OpenID Connect Single Sign-On Identity & Access Management
 
 Rauthy is a lightweight and easy to use OpenID Connect Identity Provider. It aims to be simple to both set up and
 operate, with very secure defaults and lots of config options, if you need the flexibility. It puts heavy emphasis on
@@ -115,7 +107,7 @@ run on a Raspberry Pi and all headless devices can be authenticated via the `dev
 has everything built-in and ready, if you want to use Rust on the IoT devices as well. It has not been checked in a
 `no_std` environment yet, but the client implementation is pretty simple.
 
-### Scales to millions of usersza9UxpH7XVxqrtpEbThoqvn2
+### Scales to millions of users
 
 Benchmarks for v1.0.0 have not been done yet, but after some first basic tests and generating a lot of dummy data, I
 can confirm that Rauthy has no issues handling millions of users. The first very basic tests have been done with SQLite
