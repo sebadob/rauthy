@@ -30,13 +30,23 @@ automatically. As a prerequisite though, you need at least to have
 
 - [just](https://github.com/casey/just)
 - a BASH shell
-- at least Rust v1.81
+- at least Rust v1.85
 - `npm`
 
-### Initial Setup
+### Building from source
+
+If you just want to build from source yourself without doing any development, all necessary files have been checked into
+version control to make this possible. This means a version of the pre-compiled static HTML, as well as prepared queries
+for compile-time checks do exists and you should be able to build directly after cloning with just:
+
+```
+cargo build --release
+```
+
+### Initial Development Setup
 
 The internal setup of this project is a bit more complex because of support for different databases and compile-time
-checked queries for each of these. This means you will not be able to easily do something like `cargo run`.
+checked queries for each of these. This means you will not be able to easily do something like `cargo run` (mostly).
 Instead, you will use [just](https://github.com/casey/just) for everything, which will handle all the additional
 stuff behind the scenes for you.
 
@@ -81,18 +91,30 @@ The default config file is the `rauthy.cfg`. This has reasonable defaults for lo
 Additionally, Rauthy will read from a `.env` file, which has been added to the `.gitignore`.
 This will prevent you from accidentally pushing sensitive information into git.
 
-You need to add at least one entry in a `.env` file, which points to the public IP of your build host.
+It's recommended to set custom values in a `.env` file only instead of modifying the `rauthy.cfg` to fit your needs.
+Values in `.env` always have a higher priority than the ones from the `rauthy.cfg`.
 
-To make getting into the project easier for new developers, all tooling needed is installed in a `rauthy-builder`
-container image, which is used internally by `just` to invoke all kinds of commands. This uses your hosts network
-layer for the most amount of compatibility and the least painful setup on different machines and environments.
-These commands and containers use the `PUB_URL` in lots of places for inter-container communication.
+#### CAUTION
+
+If you use a remote host, a dev container, or basically anything else than `localhost` for development, you need to
+enable TLS, especially in the browser to get access to the Web Crypto API.
+
+##### TLS for the backend
+
+Set in your `.env` file:
 
 ```
-PUB_URL=192.168.0.1:8443
+LISTEN_SCHEME=https
+PUB_URL=example.com:8443
 ```
 
-You can set additional variables here and even insert sensitive information. These will never be pushed into git.
+If you use a container for development, you need to expose port `8443` instead of the default `8080`.
+
+##### TLS for the UI
+
+If you need to work on the UI, you will later on start it via `npm`. On anything else than `localhost`, you need to
+enable TLS for the Web Crypto API. To do this, out-comment the `https` section in `frontend/vite.config.js` and you
+may need to update the `const backend` variable in the same file.
 
 ### Get it up and running
 
@@ -102,7 +124,7 @@ Once prerequisites are met, the rest should be really simple:
 just run
 ```
 
-will start Rauthy with a SQLite backend serving the statically built HTML UI, all on port `8443` by default.
+will start Rauthy with a Hiqlite backend serving the statically built HTML UI, all on port `8443` by default.
 If you want to work on the frontend too, execute in another terminal:
 
 ```
@@ -110,9 +132,6 @@ just run ui
 ```
 
 which will make the Svelte UI in dev mode available via port `5173` on your machine.
-There is only one thing about the UI in dev mode: The way the static file adapter from svelte is set up right now,
-you will not be able to access http://localhost:5173/auth/v1, you actually would need to append `/index` here once.
-The rest works just the same and as expected: http://localhost:5173/auth/v1/index
 
 If you want to test against Postgres, instead of the above `just run`, simply execute
 
@@ -120,8 +139,8 @@ If you want to test against Postgres, instead of the above `just run`, simply ex
 just run postgres
 ```
 
-If you don't use passkeys, it should work right away. If you however want to test passkeys with the local
-dev ui, you need to adjust the port for `RP_ORIGIN`.
+If you don't use passkeys, it should work right away. If you however want to test passkeys with the local dev ui, you
+need to adjust the port for `RP_ORIGIN`.
 
 If you want to work on Upstream Auth Providers in local dev, you need to change
 `DEV_MODE_PROVIDER_CALLBACK_URL="localhost:5173"`. This will adopt the `redirect_uri` for an upstream login call
@@ -147,7 +166,7 @@ admin@localhost.de
 
 ### Dev Backend
 
-Everything necessary for local dev is handled by the `just setup` step above. However, o start the test / dev backend
+Everything necessary for local dev is handled by the `just setup` step above. However, to start the test / dev backend
 after you have stopped it maybe, you can
 
 ```
@@ -186,6 +205,22 @@ just build-ui
 which will build the UI into static HTML files and populate the `templates/html` folder to make the `askama`
 templating engine happy.
 
+## Known Limitations
+
+Rauthys setup is a bit complex during local development, as mentioned already. It builds the UI into static HTML which
+will be used by a templating engine to inject `<template>` blocks for a better UX in production. However, since the
+DEV UI is being served by NodeJS, it comes with a few workarounds and limitations during local development.
+
+You mostly don't need to worry about anything of this, as the `<Template>` component that already exists handles
+everything for you. However, if you for instance want to use the password reset form during local development, it will
+not work as expected. It will require an already existing session (most probably for the default admin) and reset the
+password for the current session instead of for the user from the magic link. This is due to not being able to properly
+extract and inject some necessary values in that form during local dev.
+This is a compromise for improved DX actually, because the backend auto-creates a new magic link when working on that
+form during local development and uses information from the session to do this. Because of this, you don't need to send
+out a new magic link each time just because you want to test something. If you really want to use the password reset
+form properly, you need to disable `DEV_MODE` and use the static HTML served by Rauthy instead of the NodeJS one.
+
 ## Before Submitting a PR
 
 This project does not have any actions and automatic pipelines set up yet, but there is a `just` recipe to make sure
@@ -197,7 +232,7 @@ Before submitting any PR ready for merge, please execute
 just pre-pr-checks
 ```
 
-### FreeBSD
+## FreeBSD
 
 If you want to compile from source on FreeBSD, you may have a few limitations. Compiling the UI on FreeBSD seems to not
 work. That is why the `static/` html is checked into version control so it does not prevent you from building from
@@ -207,4 +242,4 @@ Since FreeBSD uses some cargo mechanism at build time differently, you may also 
 `openssl`, `sqlite` or `rocksdb`. In these situations, you should be able to fix it by installing the dependency on your
 build host.
 
-If you stumble about other limitations, please to not hesitate to submit a PR and update this section.
+If you stumble about other limitations, please do not hesitate to submit a PR and update this section.
