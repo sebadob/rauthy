@@ -21,6 +21,7 @@ use rinja_actix::Template;
 use serde::Serialize;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
+use tracing::warn;
 
 #[derive(Debug, Clone)]
 pub enum FrontendAction {
@@ -128,6 +129,23 @@ impl HtmlTemplate {
                 // To have a good DX when working on the password reset, we want to create a new,
                 // valid magic link automatically in DEV mode and return proper values directly.
                 // At a valid session should have been created before to make this work.
+                warn!(
+                    r#"
+
+    The password reset form during local development does not behave like you would expect it to in
+    production! To make working on this form less annoying and skip the magic link request / send
+    / fetch from mails each time, you need to have a valid session for this form (during local
+    development only of course).
+    The information from the session will be extracted and a fresh magic link will be generated with
+    each template fetch (reload of the page). This makes it possible to work on that form without
+    the whole annoy E-Mail flow.
+
+    This means it will always reset the password for the user with the current session, not any other
+    user from a possibly existing magic link, for development speed.
+
+                "#
+                );
+
                 let user_id = session
                     .expect("To make the tpl_password_reset work automatically in local dev, you need to be logged in")
                     .user_id
