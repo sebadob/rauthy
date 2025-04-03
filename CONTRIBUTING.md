@@ -196,3 +196,15 @@ Before submitting any PR ready for merge, please execute
 ```
 just pre-pr-checks
 ```
+
+### FreeBSD
+
+If you want to compile from source on FreeBSD, you may have a few limitations. Compiling the UI on FreeBSD seems to not
+work. That is why the `static/` html is checked into version control so it does not prevent you from building from
+source.
+
+Since FreeBSD uses some cargo mechanism at build time differently, you may also run into linking issues like e.g. for
+`openssl`, `sqlite` or `rocksdb`. In these situations, you should be able to fix it by installing the dependency on your
+build host.
+
+If you stumble about other limitations, please to not hesitate to submit a PR and update this section.
