@@ -5,7 +5,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, sqlx::FromRow)]
 pub struct UserLoginState {
     // Unix Timestamp in Millis - used inside PK
     pub timestamp: i64,

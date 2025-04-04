@@ -4,7 +4,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, sqlx::FromRow)]
 pub struct FailedBackchannelLogout {
     pub client_id: String,
     // both `sub` and `sid` may be empty but cannot be NULL because Postgres requires

@@ -5,11 +5,13 @@ use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::config::ConfigEntity;
 use crate::entity::devices::DeviceEntity;
+use crate::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use crate::entity::groups::Group;
 use crate::entity::jwk::Jwk;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::password::RecentPasswordsEntity;
+use crate::entity::pictures::UserPicture;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
@@ -17,6 +19,7 @@ use crate::entity::scopes::Scope;
 use crate::entity::sessions::Session;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use crate::entity::user_login_states::UserLoginState;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
@@ -82,11 +85,11 @@ pub async fn auth_provider_logos(data_before: Vec<Logo>) -> Result<(), ErrorResp
             DB::client()
                 .execute(
                     r#"
-INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)
-VALUES ($1, $2, $3, $4)
+INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data, updated)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT(auth_provider_id, res) DO UPDATE
-SET content_type = $3, data = $4"#,
-                    params!(b.id, b.res.as_str(), b.content_type, b.data),
+SET content_type = $3, data = $4, updated = $5"#,
+                    params!(b.id, b.res.as_str(), b.content_type, b.data, b.updated),
                 )
                 .await?;
         }
@@ -97,14 +100,15 @@ SET content_type = $3, data = $4"#,
         for b in data_before {
             sqlx::query!(
                 r#"
-INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)
-VALUES ($1, $2, $3, $4)
+INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data, updated)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT(auth_provider_id, res) DO UPDATE
-SET content_type = $3, data = $4"#,
+SET content_type = $3, data = $4, updated = $5"#,
                 b.id,
                 b.res.as_str(),
                 b.content_type,
                 b.data,
+                b.updated
             )
             .execute(DB::conn())
             .await?;
@@ -125,8 +129,9 @@ pub async fn auth_providers(data_before: Vec<AuthProvider>) -> Result<(), ErrorR
 INSERT INTO
 auth_providers (id, enabled, name, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value, mfa_claim_path,
-mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
+mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic, client_secret_post,
+jwks_endpoint)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#,
                     params!(
                         b.id,
                         b.enabled,
@@ -145,7 +150,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
                         b.mfa_claim_value,
                         b.allow_insecure_requests,
                         b.use_pkce,
-                        b.root_pem
+                        b.root_pem,
+                        b.client_secret_basic,
+                        b.client_secret_post,
+                        b.jwks_endpoint
                     ),
                 )
                 .await?;
@@ -160,8 +168,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
 INSERT INTO
 auth_providers (id, enabled, name, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value, mfa_claim_path,
-mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
+mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic, client_secret_post,
+jwks_endpoint)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#,
                 b.id,
                 b.enabled,
                 b.name,
@@ -179,7 +188,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
                 b.mfa_claim_value,
                 b.allow_insecure_requests,
                 b.use_pkce,
-                b.root_pem
+                b.root_pem,
+                b.client_secret_basic,
+                b.client_secret_post,
+                b.jwks_endpoint
             )
             .execute(DB::conn())
             .await?;
@@ -197,9 +209,9 @@ pub async fn client_logos(data_before: Vec<Logo>) -> Result<(), ErrorResponse> {
             DB::client()
                 .execute(
                     r#"
-INSERT INTO client_logos (client_id, res, content_type, data)
-VALUES ($1, $2, $3, $4)"#,
-                    params!(b.id, b.res.as_str(), b.content_type, b.data),
+INSERT INTO client_logos (client_id, res, content_type, data, updated)
+VALUES ($1, $2, $3, $4, $5)"#,
+                    params!(b.id, b.res.as_str(), b.content_type, b.data, b.updated),
                 )
                 .await?;
         }
@@ -210,12 +222,13 @@ VALUES ($1, $2, $3, $4)"#,
         for b in data_before {
             sqlx::query!(
                 r#"
-INSERT INTO client_logos (client_id, res, content_type, data)
-VALUES ($1, $2, $3, $4)"#,
+INSERT INTO client_logos (client_id, res, content_type, data, updated)
+VALUES ($1, $2, $3, $4, $5)"#,
                 b.id,
                 b.res.as_str(),
                 b.content_type,
-                b.data
+                b.data,
+                b.updated
             )
             .execute(DB::conn())
             .await?;
@@ -229,6 +242,7 @@ pub async fn clients(data_before: Vec<Client>) -> Result<(), ErrorResponse> {
         DB::client()
             .execute("DELETE FROM clients", params!())
             .await?;
+
         for b in data_before {
             DB::client()
                 .execute(
@@ -236,30 +250,33 @@ pub async fn clients(data_before: Vec<Client>) -> Result<(), ErrorResponse> {
 INSERT INTO clients
 (id, name, enabled, confidential, secret, secret_kid, redirect_uris, post_logout_redirect_uris,
 allowed_origins, flows_enabled, access_token_alg, id_token_alg, auth_code_lifetime,
-access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
+access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts,
+backchannel_logout_uri)
+VALUES
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#,
                     params!(
-            b.id,
-            b.name,
-            b.enabled,
-            b.confidential,
-            b.secret,
-            b.secret_kid,
-            b.redirect_uris,
-            b.post_logout_redirect_uris,
-            b.allowed_origins,
-            b.flows_enabled,
-            b.access_token_alg,
-            b.id_token_alg,
-            b.auth_code_lifetime,
-            b.access_token_lifetime,
-            b.scopes,
-            b.default_scopes,
-            b.challenge,
-            b.force_mfa,
-            b.client_uri,
-            b.contacts
-        )
+                        b.id,
+                        b.name,
+                        b.enabled,
+                        b.confidential,
+                        b.secret,
+                        b.secret_kid,
+                        b.redirect_uris,
+                        b.post_logout_redirect_uris,
+                        b.allowed_origins,
+                        b.flows_enabled,
+                        b.access_token_alg,
+                        b.id_token_alg,
+                        b.auth_code_lifetime,
+                        b.access_token_lifetime,
+                        b.scopes,
+                        b.default_scopes,
+                        b.challenge,
+                        b.force_mfa,
+                        b.client_uri,
+                        b.contacts,
+                        b.backchannel_logout_uri
+                    ),
                 )
                 .await?;
         }
@@ -267,37 +284,41 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
         sqlx::query("DELETE FROM clients")
             .execute(DB::conn())
             .await?;
+
         for b in data_before {
             sqlx::query!(
-              r#"
+                r#"
 INSERT INTO clients
 (id, name, enabled, confidential, secret, secret_kid, redirect_uris, post_logout_redirect_uris,
 allowed_origins, flows_enabled, access_token_alg, id_token_alg, auth_code_lifetime,
-access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
-            b.id,
-            b.name,
-            b.enabled,
-            b.confidential,
-            b.secret,
-            b.secret_kid,
-            b.redirect_uris,
-            b.post_logout_redirect_uris,
-            b.allowed_origins,
-            b.flows_enabled,
-            b.access_token_alg,
-            b.id_token_alg,
-            b.auth_code_lifetime,
-            b.access_token_lifetime,
-            b.scopes,
-            b.default_scopes,
-            b.challenge,
-            b.force_mfa,
-            b.client_uri,
-            b.contacts
+access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts,
+ backchannel_logout_uri)
+VALUES
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#,
+                b.id,
+                b.name,
+                b.enabled,
+                b.confidential,
+                b.secret,
+                b.secret_kid,
+                b.redirect_uris,
+                b.post_logout_redirect_uris,
+                b.allowed_origins,
+                b.flows_enabled,
+                b.access_token_alg,
+                b.id_token_alg,
+                b.auth_code_lifetime,
+                b.access_token_lifetime,
+                b.scopes,
+                b.default_scopes,
+                b.challenge,
+                b.force_mfa,
+                b.client_uri,
+                b.contacts,
+                b.backchannel_logout_uri
             )
-                .execute(DB::conn())
-                .await?;
+            .execute(DB::conn())
+            .await?;
         }
     }
     Ok(())
@@ -468,6 +489,46 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 b.ip,
                 b.data,
                 b.text
+            )
+            .execute(DB::conn())
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn failed_backchannel_logouts(
+    data_before: Vec<FailedBackchannelLogout>,
+) -> Result<(), ErrorResponse> {
+    if is_hiqlite() {
+        DB::client()
+            .execute("DELETE FROM failed_backchannel_logouts", params!())
+            .await?;
+
+        for b in data_before {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
+VALUES ($1, $2, $3, $4)"#,
+                    params!(b.client_id, b.sub, b.sid, b.retry_count),
+                )
+                .await?;
+        }
+    } else {
+        sqlx::query("DELETE FROM failed_backchannel_logouts")
+            .execute(DB::conn())
+            .await?;
+
+        for b in data_before {
+            sqlx::query!(
+                r#"
+INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
+VALUES ($1, $2, $3, $4)"#,
+                b.client_id,
+                b.sub,
+                b.sid,
+                b.retry_count
             )
             .execute(DB::conn())
             .await?;
@@ -664,6 +725,45 @@ pub async fn password_policy(bytes: Vec<u8>) -> Result<(), ErrorResponse> {
     Ok(())
 }
 
+pub async fn pictures(data_before: Vec<UserPicture>) -> Result<(), ErrorResponse> {
+    if is_hiqlite() {
+        DB::client()
+            .execute("DELETE FROM pictures", params!())
+            .await?;
+
+        for b in data_before {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO pictures (id, content_type, storage, data)
+VALUES ($1, $2, $3, $4)"#,
+                    params!(b.id, b.content_type, b.storage, b.data),
+                )
+                .await?;
+        }
+    } else {
+        sqlx::query("DELETE FROM pictures")
+            .execute(DB::conn())
+            .await?;
+
+        for b in data_before {
+            sqlx::query!(
+                r#"
+INSERT INTO pictures (id, content_type, storage, data)
+VALUES ($1, $2, $3, $4)"#,
+                b.id,
+                b.content_type,
+                b.storage,
+                b.data
+            )
+            .execute(DB::conn())
+            .await?;
+        }
+    }
+
+    Ok(())
+}
+
 pub async fn recent_passwords(
     data_before: Vec<RecentPasswordsEntity>,
 ) -> Result<(), ErrorResponse> {
@@ -705,9 +805,17 @@ pub async fn refresh_tokens(data_before: Vec<RefreshToken>) -> Result<(), ErrorR
             DB::client()
                 .execute(
                     r#"
-INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope)
-VALUES ($1, $2, $3, $4, $5)"#,
-                    params!(b.id, b.user_id, b.nbf, b.exp, b.scope),
+INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+                    params!(
+                        b.id,
+                        b.user_id,
+                        b.nbf,
+                        b.exp,
+                        b.scope,
+                        b.is_mfa,
+                        b.session_id
+                    ),
                 )
                 .await?;
         }
@@ -718,13 +826,15 @@ VALUES ($1, $2, $3, $4, $5)"#,
         for b in data_before {
             sqlx::query!(
                 r#"
-INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope)
-VALUES ($1, $2, $3, $4, $5)"#,
+INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 b.id,
                 b.user_id,
                 b.nbf,
                 b.exp,
                 b.scope,
+                b.is_mfa,
+                b.session_id
             )
             .execute(DB::conn())
             .await?;
@@ -992,9 +1102,57 @@ pub async fn user_attr_values(data_before: Vec<UserAttrValueEntity>) -> Result<(
     Ok(())
 }
 
+pub async fn user_login_states(data_before: Vec<UserLoginState>) -> Result<(), ErrorResponse> {
+    if is_hiqlite() {
+        DB::client()
+            .execute("DELETE FROM user_login_states", params!())
+            .await?;
+
+        for b in data_before {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (user_id, client_id, session_id)
+DO NOTHING"#,
+                    params!(b.timestamp, b.user_id, b.client_id, b.session_id),
+                )
+                .await?;
+        }
+    } else {
+        sqlx::query("DELETE FROM user_login_states")
+            .execute(DB::conn())
+            .await?;
+
+        for b in data_before {
+            sqlx::query!(
+                r#"
+INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (user_id, client_id, session_id)
+DO NOTHING"#,
+                b.timestamp,
+                b.user_id,
+                b.client_id,
+                b.session_id,
+            )
+            .execute(DB::conn())
+            .await?;
+        }
+    }
+    Ok(())
+}
+
 pub async fn users(data_before: Vec<User>) -> Result<(), ErrorResponse> {
     if is_hiqlite() {
+        // the user_login_states restrict a deletion to prevent logic errors, which we can ignore
+        // during a migration
+        DB::client()
+            .execute("DELETE FROM user_login_states", params!())
+            .await?;
         DB::client().execute("DELETE FROM users", params!()).await?;
+
         for b in data_before {
             DB::client()
                 .execute(
@@ -1002,8 +1160,8 @@ pub async fn users(data_before: Vec<User>) -> Result<(), ErrorResponse> {
 INSERT INTO users
 (id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
 password_expires, created_at, last_login, last_failed_login, failed_login_attempts, language,
-webauthn_user_id, user_expires, auth_provider_id, federation_uid)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
+webauthn_user_id, user_expires, auth_provider_id, federation_uid, picture_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
                     params!(
                         b.id,
                         b.email,
@@ -1023,21 +1181,28 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
                         b.webauthn_user_id,
                         b.user_expires,
                         b.auth_provider_id,
-                        b.federation_uid
+                        b.federation_uid,
+                        b.picture_id
                     ),
                 )
                 .await?;
         }
     } else {
+        // the user_login_states restrict a deletion to prevent logic errors, which we can ignore
+        // during a migration
+        sqlx::query("DELETE FROM user_login_states")
+            .execute(DB::conn())
+            .await?;
         sqlx::query("DELETE FROM users").execute(DB::conn()).await?;
+
         for b in data_before {
             sqlx::query!(
                 r#"
 INSERT INTO users
 (id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
 password_expires, created_at, last_login, last_failed_login, failed_login_attempts, language,
-webauthn_user_id, user_expires, auth_provider_id, federation_uid)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
+webauthn_user_id, user_expires, auth_provider_id, federation_uid, picture_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
                 b.id,
                 b.email,
                 b.given_name,
@@ -1056,7 +1221,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
                 b.webauthn_user_id,
                 b.user_expires,
                 b.auth_provider_id,
-                b.federation_uid
+                b.federation_uid,
+                b.picture_id
             )
             .execute(DB::conn())
             .await?;
