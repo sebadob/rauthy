@@ -78,7 +78,7 @@
 </script>
 
 <svelte:head>
-    <title>{t?.register || 'Register'}</title>
+    <title>{t?.register.register || 'Register'}</title>
 </svelte:head>
 
 <Template id={TPL_RESTRICTED_EMAIL_DOMAIN} bind:value={restrictedDomain}/>
