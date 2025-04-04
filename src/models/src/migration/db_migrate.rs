@@ -1,14 +1,18 @@
+use crate::database::DB;
 use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::auth_providers::AuthProvider;
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::config::ConfigEntity;
+use crate::entity::db_version::DbVersion;
 use crate::entity::devices::DeviceEntity;
+use crate::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use crate::entity::groups::Group;
 use crate::entity::jwk::Jwk;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::password::RecentPasswordsEntity;
+use crate::entity::pictures::UserPicture;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
@@ -16,17 +20,22 @@ use crate::entity::scopes::Scope;
 use crate::entity::sessions::Session;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use crate::entity::user_login_states::UserLoginState;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::migration::inserts;
+use hiqlite::params;
 use itertools::Itertools;
+use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_error::ErrorResponse;
+use semver::Version;
 use serde::Deserialize;
-use sqlx::{FromRow, Row};
+use sqlx::{FromRow, Row, query};
 use std::fmt::Debug;
+use std::str::FromStr;
 use tracing::{debug, info};
 
 async fn query_sqlite<T>(conn: &rusqlite::Connection, query: &str) -> Result<Vec<T>, ErrorResponse>
@@ -58,6 +67,14 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     conn.pragma_update(None, "journal_mode", "WAL")?;
     conn.pragma_update(None, "foreign_keys", "ON")?;
 
+    // before doing anything, make sure that we are on the same feature version
+    let mut res = DB::client()
+        .query_raw_one("SELECT data FROM config WHERE id = 'db_version'", params!())
+        .await?;
+    let bytes: Vec<u8> = res.get("data");
+    let version = bincode::deserialize::<DbVersion>(&bytes)?.version;
+    check_feature_version_migrate(version);
+
     // CONFIG
     debug!("Migrating table: config");
     let before =
@@ -84,6 +101,12 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     )
     .await?;
     inserts::auth_provider_logos(before).await?;
+
+    // users has an FK to pictures
+    // PICTURES
+    debug!("Migrating table: pictures");
+    let before = query_sqlite::<UserPicture>(&conn, "SELECT * FROM pictures").await?;
+    inserts::pictures(before).await?;
 
     // USERS
     debug!("Migrating table: users");
@@ -205,6 +228,18 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     let before = query_sqlite::<Session>(&conn, "SELECT * FROM sessions").await?;
     inserts::sessions(before).await?;
 
+    // USER LOGIN STATES
+    debug!("Migrating table: user_login_states");
+    let before = query_sqlite::<UserLoginState>(&conn, "SELECT * FROM user_login_states").await?;
+    inserts::user_login_states(before).await?;
+
+    // FAILED BACKCHANNEL LOGOUTS
+    debug!("Migrating table: failed_backchannel_logouts");
+    let before =
+        query_sqlite::<FailedBackchannelLogout>(&conn, "SELECT * FROM failed_backchannel_logouts")
+            .await?;
+    inserts::failed_backchannel_logouts(before).await?;
+
     // RECENT PASSWORDS
     debug!("Migrating table: recent_passwords");
     let before =
@@ -226,6 +261,16 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
 pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorResponse> {
     info!("Starting migration to another DB");
+
+    // before doing anything, make sure that we are on the same feature version
+    let res = query!("SELECT data FROM config WHERE id = 'db_version'")
+        .fetch_one(&db_from)
+        .await?;
+    let bytes = res
+        .data
+        .expect("to get 'data' back from the AppVersion query");
+    let version = bincode::deserialize::<DbVersion>(&bytes)?.version;
+    check_feature_version_migrate(version);
 
     // CONFIG
     debug!("Migrating table: config");
@@ -259,12 +304,21 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
     .await?;
     inserts::auth_provider_logos(before).await?;
 
+    // PICTURES
+    debug!("Migrating table: pictures");
+    let before = sqlx::query_as::<_, UserPicture>("SELECT * FROM pictures")
+        .fetch_all(&db_from)
+        .await?;
+    inserts::pictures(before).await?;
+
     // USERS
-    debug!("Migrating table: users");
+    debug!("Migrating table: users"); // TODO fails on FK??
     let before = sqlx::query_as::<_, User>("SELECT * FROM users")
         .fetch_all(&db_from)
         .await?;
+    debug!("before users insert");
     inserts::users(before).await?;
+    debug!("after users insert");
 
     // PASSKEYS
     debug!("Migrating table: passkeys");
@@ -399,6 +453,21 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
         .await?;
     inserts::sessions(before).await?;
 
+    // USER LOGIN STATES
+    debug!("Migrating table: user_login_states");
+    let before = sqlx::query_as::<_, UserLoginState>("SELECT * FROM user_login_states")
+        .fetch_all(&db_from)
+        .await?;
+    inserts::user_login_states(before).await?;
+
+    // FAILED BACKCHANNEL LOGOUTS
+    debug!("Migrating table: failed_backchannel_logouts");
+    let before =
+        sqlx::query_as::<_, FailedBackchannelLogout>("SELECT * FROM failed_backchannel_logouts")
+            .fetch_all(&db_from)
+            .await?;
+    inserts::failed_backchannel_logouts(before).await?;
+
     // RECENT PASSWORDS
     debug!("Migrating table: recent_passwords");
     let before = sqlx::query_as::<_, RecentPasswordsEntity>("SELECT * FROM recent_passwords")
@@ -421,4 +490,17 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
     inserts::webids(before).await?;
 
     Ok(())
+}
+
+/// Makes sure that the given version matches the current app version in major and feature level.
+/// Will panic if they don't match.
+fn check_feature_version_migrate(version: semver::Version) {
+    let rauthy_version = Version::from_str(RAUTHY_VERSION).unwrap();
+
+    if version.major != rauthy_version.major || version.minor != rauthy_version.minor {
+        panic!(
+            "MIGRATE_DB_FROM can only be used within the same major and minor version. \
+            Only a difference in patch level is allowed"
+        );
+    }
 }
