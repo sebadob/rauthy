@@ -19,10 +19,8 @@ echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 ```
 
 The first part until the first `/` is the key ID. This has to be between 2 and 20 characters and should not contain any
-special ones.
-The second part after the first `/` is the key itself, encoded as base64. This value **must** exactly 32 bytes long. If
-it is
-not, Rauthy will yell at startup and panic early.
+special ones. The second part after the first `/` is the key itself. This value **must** be exactly 32 bytes long and
+then be base64 encoded. If it is not, Rauthy will yell at startup and panic early.
 
 If you have generated a key, lets say the output was
 
@@ -31,7 +29,7 @@ If you have generated a key, lets say the output was
 90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI=
 ```
 
-Your config values should look like this:
+Your config value should look like this:
 
 ```
 ENC_KEYS="
@@ -42,6 +40,14 @@ ENC_KEY_ACTIVE=90eb6d69
 
 You can add more keys if you like, **separated by new lines**, which is needed for the key rotation described below.
 The `ENC_KEY_ACTIVE` will be the key being used for all new encryption's.
+
+```admonish note
+It seems that in some environments, the above `openssl` command does not output proper values, which will make Rauthy
+panic on startup, when it checks the given values. If you run into that situation, you can generate them without 
+`openssl` as well, with e.g:
+
+<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+```
 
 ## Key Rotation
 

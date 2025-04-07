@@ -191,6 +191,14 @@ openssl rand -base64 48
 If you plan on using S3 for backups, paste the proper values into `HQL_S3_KEY` and `HQL_S3_SECRET`, otherwise
 out-comment them.
 
+```admonish note
+It seems that in some environments, the above `openssl` command does not output proper values, which will make Rauthy
+panic on startup, when it checks the given values. If you run into that situation, you can generate them without 
+`openssl` as well, with e.g:
+
+<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+```
+
 ### Create and apply the stateful set
 
 ```

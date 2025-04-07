@@ -59,12 +59,6 @@ Rauthy can either be configured via environment variables only, or you can provi
 config first and any env var that is set will overwrite a possibly existing one from the config. You can add environment
 variables to the startup command with the `-e` option.
 
-```admonish caution
-Even if you don't want to use any config file at all, you need to make sure to set safe defaults. Usually you should
-always create a least an empty config just to overwrite the test-config inside the container, because it sets some 
-variables that should only be used for testing.
-```
-
 ```admonish note
 The following commands will work on Linux and Mac OS (even though not tested on Mac OS). Since I am no Windows user 
 myself, I cannot provide tested commands in this case.
@@ -123,6 +117,8 @@ example, be sure to not change `HQL_DATA_DIR`.
 
 For an in-depth guide on a production ready config, check the [Production Config](../config/production_config.md)
 section.
+
+A **mandatory step** will be to generate proper encryption keys. Take a look at [Encryption](../config/encryption.md).
 
 **5. Start the container with volume mounts**
 
