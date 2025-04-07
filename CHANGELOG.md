@@ -1,5 +1,51 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### OpenID Connect Backchannel Logout
+
+Rauthy now supports [OpenID Connect Backchannel Logout](https://openid.net/specs/openid-connect-backchannel-1_0.html).
+
+If downstream clients support it, you can now provide a `backchannel_logout_uri` in the config view via the Admin UI.
+Rauthy itself can act as a downstream client for an upstream as well. The default `/auth/v1/oidc/logout` endpoint now
+optionally accepts the `logout_token` and will propagate backchannel logouts, if the token is actually coming from a
+valid, configured upstream auth provider.  
+Backchannel Logouts will of course also be triggered in other situations like forced session invalidation by an admin,
+user expiration, or deletion, and so on.
+
+The feature can be seen as in beta state now. Everything has been implemented following the RFC and basic integration
+tests exist as well. However, to catch some weird edge cases, it needs testing in the real world as well. If you have
+any problems using it, please open an issue about it.
+
+[#794](https://github.com/sebadob/rauthy/pull/794)
+[#819](https://github.com/sebadob/rauthy/pull/819)
+
+#### RP Initiated Logout
+
+While implementing OpenID Connect Backchannel Logout, support
+for [RP Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) has been added as well to
+provide a complete package.
+
+[#794](https://github.com/sebadob/rauthy/pull/794)
+[#806](https://github.com/sebadob/rauthy/pull/806)
+
+#### Additional safeguards for `MIGRATE_DB_FROM`
+
+Rauthy can migrate between Hiqlite and Postgres on the fly. This feature is only supported as long as you do not bump
+the major or minor version at the same time. Additional safeguards and checks have been added that prevent you from
+doing trying this by accident.
+
+[#811](https://github.com/sebadob/rauthy/pull/811)
+
+### Bugfix
+
+- If wrong credentials for the SMTP server have been provided, the optional inner error has been masked.
+  [#803](https://github.com/sebadob/rauthy/pull/803)
+- The page title for the user registration page has been broken.
+  [#812](https://github.com/sebadob/rauthy/pull/812)
+
 ## v0.28.3
 
 ### Bugfix
