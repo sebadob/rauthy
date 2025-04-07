@@ -116,7 +116,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Err(err) => {
             error!(
                 r#"The `ENC_KEYS`are not correctly set up. Please take a look at the documentation:
-https://sebadob.github.io/rauthy/getting_started/main.html"#
+https://sebadob.github.io/rauthy/config/encryption.html"#
             );
             panic!("{}", err);
         }
