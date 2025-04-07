@@ -116,3 +116,13 @@ webauthn-rs = { version = "0.5", features = [
     "danger-allow-state-serialisation", "danger-credential-internals"
 ] }
 webauthn-rs-proto = "0.5"
+
+# Postgres -> integrate by alphabet when finished and sqlx as been finally removed
+deadpool = { version = "0.12", features = ["rt_tokio_1", "serde"] }
+deadpool-postgres = "0.14"
+postgres-types = { version = "0.2.6", features = ["derive"] }
+refinery = { version = "0.8.14", features = ["tokio-postgres"] }
+tokio-pg-mapper = "0.2.0"
+tokio-pg-mapper-derive = "0.2.0"
+tokio-postgres = { version = "0.7.10", features = ["with-chrono-0_4", "with-uuid-1"] }
+tokio-postgres-rustls = { version = "0.13", features = [] }

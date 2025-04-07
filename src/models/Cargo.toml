@@ -53,6 +53,7 @@ rinja_actix = { workspace = true }
 rio_api = { workspace = true }
 rio_turtle = { workspace = true }
 rusqlite = { workspace = true }
+rustls = { workspace = true }
 rust-embed = { workspace = true }
 rsa = { workspace = true }
 s3-simple = { workspace = true }
@@ -72,6 +73,16 @@ utoipa = { workspace = true }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
 webauthn-rs-proto = { workspace = true }
+
+# Postgres -> integrate by alphabet when finished and sqlx as been finally removed
+deadpool = { workspace = true }
+deadpool-postgres = { workspace = true }
+postgres-types = { workspace = true }
+refinery = { workspace = true }
+tokio-pg-mapper = { workspace = true }
+tokio-pg-mapper-derive = { workspace = true }
+tokio-postgres = { workspace = true }
+tokio-postgres-rustls = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1"

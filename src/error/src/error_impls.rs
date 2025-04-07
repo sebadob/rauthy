@@ -9,6 +9,7 @@ use actix_web::http::{StatusCode, header};
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError, error};
 use cryptr::CryptrError;
 use css_color::ParseColorError;
+use deadpool::managed::{BuildError, PoolError};
 use image::ImageError;
 use rio_turtle::TurtleError;
 use s3_simple::S3Error;
@@ -198,6 +199,27 @@ impl From<chacha20poly1305::Error> for ErrorResponse {
     fn from(e: chacha20poly1305::Error) -> Self {
         error!("{}", e);
         ErrorResponse::new(ErrorResponseType::Internal, "Internal Encryption Error")
+    }
+}
+
+impl From<deadpool::managed::BuildError> for ErrorResponse {
+    fn from(e: BuildError) -> Self {
+        error!("{}", e);
+        ErrorResponse::new(ErrorResponseType::DatabaseIo, e.to_string())
+    }
+}
+
+impl From<deadpool::managed::PoolError<tokio_postgres::Error>> for ErrorResponse {
+    fn from(e: PoolError<tokio_postgres::Error>) -> Self {
+        error!("{}", e);
+        ErrorResponse::new(ErrorResponseType::DatabaseIo, e.to_string())
+    }
+}
+
+impl From<tokio_postgres::Error> for ErrorResponse {
+    fn from(e: tokio_postgres::Error) -> Self {
+        error!("{}", e);
+        ErrorResponse::new(ErrorResponseType::Database, e.to_string())
     }
 }
 

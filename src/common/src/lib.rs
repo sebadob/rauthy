@@ -8,6 +8,7 @@ use std::env;
 
 pub mod compression;
 pub mod constants;
+mod params_iter;
 pub mod password_hasher;
 pub mod utils;
 
