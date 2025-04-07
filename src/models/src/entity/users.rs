@@ -1447,10 +1447,9 @@ impl User {
         }
 
         let i = i_opt.unwrap();
-        let len = group.bytes().len();
         if i == 0 {
-            // the role is the first entry
-            if old_groups.len() > len {
+            // the group is the first entry
+            if old_groups.len() > group.len() {
                 let g = format!("{},", group);
                 self.groups = Some(old_groups.replace(&g, ""));
             } else {
@@ -1475,10 +1474,9 @@ impl User {
         }
 
         let i = i_opt.unwrap();
-        let len = role.bytes().len();
         if i == 0 {
             // the role is the first entry
-            if self.roles.len() > len {
+            if self.roles.len() > role.len() {
                 let r = format!("{},", role);
                 self.roles = self.roles.replace(&r, "");
             } else {

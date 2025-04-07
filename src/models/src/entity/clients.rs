@@ -28,7 +28,6 @@ use reqwest::header::CONTENT_TYPE;
 use reqwest::{Url, tls};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
-use std::collections::HashSet;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
@@ -401,29 +400,33 @@ VALUES ($1, $2, $3, $4)"#,
     }
 
     /// Finds all clients that match an entry in `ids` and have a configured `backchannel_logout_uri`.
-    pub async fn find_all_bcl(ids: &HashSet<&str>) -> Result<Vec<Self>, ErrorResponse> {
-        let mut in_ids = String::with_capacity(2 + ids.len() * 12);
-        for id in ids {
-            write!(in_ids, "'{}',", id)?;
-        }
-        in_ids.pop();
-
+    pub async fn find_all_bcl(ids: &[&str]) -> Result<Vec<Self>, ErrorResponse> {
+        // Unfortunately, we cannot build the `IN` value upfront and use prepared statements,
+        // which is why we will filter on the client side for now.
+        // The
         let clients = if is_hiqlite() {
             DB::client()
                 .query_as(
-                    "SELECT * FROM clients WHERE id IN ($1) AND backchannel_logout_uri IS NOT NULL",
-                    params!(in_ids),
+                    "SELECT * FROM clients WHERE backchannel_logout_uri IS NOT NULL",
+                    params!(),
                 )
                 .await?
         } else {
             sqlx::query_as!(
                 Self,
-                "SELECT * FROM clients WHERE id IN ($1) AND backchannel_logout_uri IS NOT NULL",
-                in_ids,
+                "SELECT * FROM clients WHERE backchannel_logout_uri IS NOT NULL",
             )
             .fetch_all(DB::conn())
             .await?
-        };
+        }
+        .into_iter()
+        .filter(|c| ids.contains(&c.id.as_str()))
+        .collect::<Vec<_>>();
+
+        debug!(
+            "Found {} clients with configured backchannel_logout_uri",
+            clients.len()
+        );
 
         Ok(clients)
     }
@@ -786,8 +789,6 @@ impl Client {
 
     // TODO make a generic 'delete_from_csv' function out of this and re-use it in some other places
     pub fn delete_scope(&mut self, scope: &str) {
-        let len = scope.bytes().len();
-
         // find the scope via index in the string
         // first entry: delete scope + ',' if it exists
         // last entry: delete scope + ',' in front if it exists
@@ -796,7 +797,7 @@ impl Client {
         if let Some(i) = self.scopes.find(scope) {
             if i == 0 {
                 // the scope is the first entry
-                if self.scopes.len() > len {
+                if self.scopes.len() > scope.len() {
                     let s = format!("{},", scope);
                     self.scopes = self.scopes.replace(&s, "");
                 } else {
@@ -813,7 +814,7 @@ impl Client {
         if let Some(i) = self.default_scopes.find(scope) {
             if i == 0 {
                 // the scope is the first entry
-                if self.default_scopes.len() > len {
+                if self.default_scopes.len() > scope.len() {
                     let s = format!("{},", scope);
                     self.default_scopes = self.default_scopes.replace(&s, "");
                 } else {

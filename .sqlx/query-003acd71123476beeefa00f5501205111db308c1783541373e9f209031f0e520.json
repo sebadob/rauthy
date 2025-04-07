@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\nauth_providers (id, enabled, name, typ, issuer, authorization_endpoint, token_endpoint,\nuserinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value, mfa_claim_path,\nmfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic, client_secret_post,\njwks_endpoint)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Bool",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bytea",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bool",
+        "Bool",
+        "Varchar",
+        "Bool",
+        "Bool",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "003acd71123476beeefa00f5501205111db308c1783541373e9f209031f0e520"
+}

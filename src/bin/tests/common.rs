@@ -74,6 +74,36 @@ pub async fn get_token_set() -> TokenSet {
     ts
 }
 
+pub async fn get_token_set_init_client() -> TokenSet {
+    // get a token to validate
+    let url_token = format!("{}/oidc/token", get_backend_url());
+    let body = TokenRequest {
+        grant_type: "password".to_string(),
+        code: None,
+        redirect_uri: None,
+        client_id: Some(CLIENT_ID.to_string()),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        code_verifier: None,
+        device_code: None,
+        username: Some(USERNAME.to_string()),
+        password: Some(PASSWORD.to_string()),
+        refresh_token: None,
+    };
+
+    let res = reqwest::Client::new()
+        .post(&url_token)
+        .form(&body)
+        .send()
+        .await
+        .expect("Is the test-backend running?");
+    if !res.status().is_success() {
+        let text = res.text().await.unwrap();
+        panic!("Error during login to init_client:\n{text}");
+    }
+
+    res.json::<TokenSet>().await.unwrap()
+}
+
 pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
@@ -231,7 +261,7 @@ where
         ));
     }
     let body = body.unwrap();
-    let b64 = base64_url_no_pad_decode(body).unwrap();
+    let b64 = base64_url_no_pad_decode(body)?;
 
     let s = String::from_utf8_lossy(b64.as_slice());
     let claims = match serde_json::from_str::<T>(s.as_ref()) {
@@ -246,4 +276,9 @@ where
     };
 
     Ok(claims)
+}
+
+pub fn init_client_bcl_uri() -> String {
+    let host = env::var("PUB_URL").expect("PUB_URL env var is not set");
+    format!("http://{host}/auth/v1/dev/backchannel_logout")
 }

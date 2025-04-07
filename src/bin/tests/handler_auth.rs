@@ -1,6 +1,6 @@
 use crate::common::{
     CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, check_status, code_state_from_headers,
-    cookie_csrf_headers_from_res, get_auth_headers, get_backend_url,
+    cookie_csrf_headers_from_res, get_auth_headers, get_backend_url, init_client_bcl_uri,
 };
 use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
@@ -285,7 +285,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         force_mfa: false,
         client_uri: None,
         contacts: None,
-        backchannel_logout_uri: None,
+        backchannel_logout_uri: Some(init_client_bcl_uri()),
     };
     let url_client = format!("{}/clients/{}", backend_url, CLIENT_ID);
     let auth_headers = get_auth_headers().await?;
@@ -812,7 +812,7 @@ async fn test_authorization_code_flow_ephemeral_client() -> Result<(), Box<dyn E
 
     let url_token = format!("{}/oidc/token", backend_url);
     let res = client.post(&url_token).form(&req_token).send().await?;
-    // assert!(res.status().is_success());
+    assert!(res.status().is_success());
 
     let ts = res.json::<TokenSet>().await?;
     assert!(ts.access_token.len() > 0);

@@ -8,7 +8,7 @@ use rauthy_error::ErrorResponse;
 use std::ops::Add;
 use tracing::warn;
 
-pub async fn migrate_dev_data() -> Result<(), ErrorResponse> {
+pub async fn migrate_dev_data(issuer: &str) -> Result<(), ErrorResponse> {
     warn!("Migrating DEV DATA - DO NOT USE IN PRODUCTION!");
 
     let needs_migration = if is_hiqlite() {
@@ -131,13 +131,13 @@ pub async fn migrate_dev_data() -> Result<(), ErrorResponse> {
     let eddsahex = "18000000000000006778646d6a6261616d516a6c43553464327453534c454447baaebc6500000000030000001000000000000000625643795473476167675679357971516200000000000000010100160000625643795473476167675679357971517a2536806a5960d51bd373a54bd1cb9691e7166bb7840a8db81be9b6744079337f9d80dad6ad3b7ab4149b9787ca5f1aefc4da11ba357293f2792c7838b73598be76eb5d2e0deb8f7d4dda4c";
 
     let mut jwks = Vec::with_capacity(4);
-    let entity = bincode::deserialize::<Jwk>(hex::decode(rs256hex).unwrap().as_slice()).unwrap();
+    let entity = bincode::deserialize::<Jwk>(hex::decode(rs256hex).unwrap().as_slice())?;
     jwks.push(entity);
-    let entity = bincode::deserialize::<Jwk>(hex::decode(rs384hex).unwrap().as_slice()).unwrap();
+    let entity = bincode::deserialize::<Jwk>(hex::decode(rs384hex).unwrap().as_slice())?;
     jwks.push(entity);
-    let entity = bincode::deserialize::<Jwk>(hex::decode(rs512hex).unwrap().as_slice()).unwrap();
+    let entity = bincode::deserialize::<Jwk>(hex::decode(rs512hex).unwrap().as_slice())?;
     jwks.push(entity);
-    let entity = bincode::deserialize::<Jwk>(hex::decode(eddsahex).unwrap().as_slice()).unwrap();
+    let entity = bincode::deserialize::<Jwk>(hex::decode(eddsahex).unwrap().as_slice())?;
     jwks.push(entity);
 
     for jwk in jwks {
@@ -174,6 +174,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
         }
     }
 
+    let backchannel_logout_uri = format!("{issuer}/dev/backchannel_logout");
     let ml = MagicLink {
         id: "2qqdUOcXECQeypBNTs7Pnp7A2zAwr0VzynyzJiIjNR1Ua9KA95dTewM56JaPIoyj".to_string(),
         user_id: "2PYV3STNz3MN7VnPjJVcPQap".to_string(),
@@ -184,6 +185,14 @@ VALUES ($1, $2, $3, $4, $5)"#,
         usage: MagicLinkUsage::PasswordReset(None).to_string(),
     };
     if is_hiqlite() {
+        // make sure that the newer backchannel logout uri is set for integration tests
+        DB::client()
+            .execute(
+                "UPDATE clients SET backchannel_logout_uri = $1 WHERE id = 'init_client'",
+                params!(backchannel_logout_uri),
+            )
+            .await?;
+
         DB::client()
             .execute(
                 r#"
@@ -194,6 +203,13 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
             )
             .await?;
     } else {
+        sqlx::query!(
+            "UPDATE clients SET backchannel_logout_uri = $1 WHERE id = 'init_client'",
+            backchannel_logout_uri
+        )
+        .execute(DB::conn())
+        .await?;
+
         let _ = sqlx::query(
             r#"
 INSERT INTO
