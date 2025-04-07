@@ -166,15 +166,13 @@ generate an encryption key.</p>
 <pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 </code></pre>
 <p>The first part until the first <code>/</code> is the key ID. This has to be between 2 and 20 characters and should not contain any
-special ones.
-The second part after the first <code>/</code> is the key itself, encoded as base64. This value <strong>must</strong> exactly 32 bytes long. If
-it is
-not, Rauthy will yell at startup and panic early.</p>
+special ones. The second part after the first <code>/</code> is the key itself. This value <strong>must</strong> be exactly 32 bytes long and
+then be base64 encoded. If it is not, Rauthy will yell at startup and panic early.</p>
 <p>If you have generated a key, lets say the output was</p>
 <pre><code>❯ echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI=
 </code></pre>
-<p>Your config values should look like this:</p>
+<p>Your config value should look like this:</p>
 <pre><code>ENC_KEYS="
 90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI=
 "
@@ -182,6 +180,20 @@ ENC_KEY_ACTIVE=90eb6d69
 </code></pre>
 <p>You can add more keys if you like, <strong>separated by new lines</strong>, which is needed for the key rotation described below.
 The <code>ENC_KEY_ACTIVE</code> will be the key being used for all new encryption's.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
+</div>
+<div>
+<p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which will make Rauthy
+panic on startup, when it checks the given values. If you run into that situation, you can generate them without
+<code>openssl</code> as well, with e.g:</p>
+<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+</div>
+</div>
 <h2 id="key-rotation"><a class="header" href="#key-rotation">Key Rotation</a></h2>
 <p>A good practice is to rotate encryption keys from time to time. Rauthy does auto-rotate the keys for signing tokens,
 but the admin is responsible for the encryption keys, since they have a greater impact.</p>
@@ -244,12 +256,12 @@ encrypted cookies with older keys.</p>
 been used to encrypt cookies, the user will be prompted to log in again, even if cookies have not expired yet.</p>
 </div>
 </div>
-<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
 <div class="admonition-title">
-<div id="admonition-note-title">
+<div id="admonition-note-1-title">
 <p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-note"></a>
+<a class="admonition-anchor-link" href="#admonition-note-1"></a>
 </div>
 <div>
 <p>Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some attack vectors if
