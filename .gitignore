@@ -15,6 +15,7 @@ frontend/node_modules
 frontend/out
 book/book
 out/
+src/bin/tests/test_data
 .npm_cache
 pnpm-lock.yaml
 pictures/
