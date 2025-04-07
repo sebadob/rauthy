@@ -456,19 +456,6 @@ appropriate config.</p>
 <p>Rauthy can either be configured via environment variables only, or you can provide a config file. It parses both, the
 config first and any env var that is set will overwrite a possibly existing one from the config. You can add environment
 variables to the startup command with the <code>-e</code> option.</p>
-<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
-<div class="admonition-title">
-<div id="admonition-caution-title">
-<p>Caution</p>
-</div>
-<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-caution"></a>
-</div>
-<div>
-<p>Even if you don't want to use any config file at all, you need to make sure to set safe defaults. Usually you should
-always create a least an empty config just to overwrite the test-config inside the container, because it sets some
-variables that should only be used for testing.</p>
-</div>
-</div>
 <div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
 <div class="admonition-title">
 <div id="admonition-note-1-title">
@@ -506,12 +493,12 @@ sudo chown -R 10001:10001 rauthy
 </code></pre>
 <p>This will make the directory writeable for everyone, so Rauthy can create the database files inside the container
 with <code>10001:10001</code> again.</p>
-<div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
-<div id="admonition-caution-1-title">
+<div id="admonition-caution-title">
 <p>Caution</p>
 </div>
-<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-caution-1"></a>
+<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-caution"></a>
 </div>
 <div>
 <p>The safest approach would be to change the owner and group for these files on the host system. This needs <code>sudo</code>
@@ -526,6 +513,7 @@ take care of this automatically during sub-directory creation, but the config in
 example, be sure to not change <code>HQL_DATA_DIR</code>.</p>
 <p>For an in-depth guide on a production ready config, check the <a href="getting_started/../config/production_config.html">Production Config</a>
 section.</p>
+<p>A <strong>mandatory step</strong> will be to generate proper encryption keys. Take a look at <a href="getting_started/../config/encryption.html">Encryption</a>.</p>
 <p><strong>5. Start the container with volume mounts</strong></p>
 <pre><code>docker run -d \
     -v $(pwd)/rauthy/rauthy.cfg:/app/rauthy.cfg \
@@ -709,6 +697,20 @@ alphanumeric value, which for instance:</p>
 </code></pre>
 <p>If you plan on using S3 for backups, paste the proper values into <code>HQL_S3_KEY</code> and <code>HQL_S3_SECRET</code>, otherwise
 out-comment them.</p>
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div class="admonition-title">
+<div id="admonition-note-1-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="getting_started/k8s.html#admonition-note-1"></a>
+</div>
+<div>
+<p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which will make Rauthy
+panic on startup, when it checks the given values. If you run into that situation, you can generate them without
+<code>openssl</code> as well, with e.g:</p>
+<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+</div>
+</div>
 <h3 id="create-and-apply-the-stateful-set"><a class="header" href="#create-and-apply-the-stateful-set">Create and apply the stateful set</a></h3>
 <pre><code>touch sts.yaml
 </code></pre>
@@ -1278,15 +1280,13 @@ generate an encryption key.</p>
 <pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 </code></pre>
 <p>The first part until the first <code>/</code> is the key ID. This has to be between 2 and 20 characters and should not contain any
-special ones.
-The second part after the first <code>/</code> is the key itself, encoded as base64. This value <strong>must</strong> exactly 32 bytes long. If
-it is
-not, Rauthy will yell at startup and panic early.</p>
+special ones. The second part after the first <code>/</code> is the key itself. This value <strong>must</strong> be exactly 32 bytes long and
+then be base64 encoded. If it is not, Rauthy will yell at startup and panic early.</p>
 <p>If you have generated a key, lets say the output was</p>
 <pre><code>❯ echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI=
 </code></pre>
-<p>Your config values should look like this:</p>
+<p>Your config value should look like this:</p>
 <pre><code>ENC_KEYS="
 90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI=
 "
@@ -1294,6 +1294,20 @@ ENC_KEY_ACTIVE=90eb6d69
 </code></pre>
 <p>You can add more keys if you like, <strong>separated by new lines</strong>, which is needed for the key rotation described below.
 The <code>ENC_KEY_ACTIVE</code> will be the key being used for all new encryption's.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="config/encryption.html#admonition-note"></a>
+</div>
+<div>
+<p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which will make Rauthy
+panic on startup, when it checks the given values. If you run into that situation, you can generate them without
+<code>openssl</code> as well, with e.g:</p>
+<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+</div>
+</div>
 <h2 id="key-rotation"><a class="header" href="#key-rotation">Key Rotation</a></h2>
 <p>A good practice is to rotate encryption keys from time to time. Rauthy does auto-rotate the keys for signing tokens,
 but the admin is responsible for the encryption keys, since they have a greater impact.</p>
@@ -1356,12 +1370,12 @@ encrypted cookies with older keys.</p>
 been used to encrypt cookies, the user will be prompted to log in again, even if cookies have not expired yet.</p>
 </div>
 </div>
-<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
 <div class="admonition-title">
-<div id="admonition-note-title">
+<div id="admonition-note-1-title">
 <p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="config/encryption.html#admonition-note"></a>
+<a class="admonition-anchor-link" href="config/encryption.html#admonition-note-1"></a>
 </div>
 <div>
 <p>Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some attack vectors if

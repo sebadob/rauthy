@@ -321,6 +321,20 @@ alphanumeric value, which for instance:</p>
 </code></pre>
 <p>If you plan on using S3 for backups, paste the proper values into <code>HQL_S3_KEY</code> and <code>HQL_S3_SECRET</code>, otherwise
 out-comment them.</p>
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div class="admonition-title">
+<div id="admonition-note-1-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note-1"></a>
+</div>
+<div>
+<p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which will make Rauthy
+panic on startup, when it checks the given values. If you run into that situation, you can generate them without
+<code>openssl</code> as well, with e.g:</p>
+<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+</div>
+</div>
 <h3 id="create-and-apply-the-stateful-set"><a class="header" href="#create-and-apply-the-stateful-set">Create and apply the stateful set</a></h3>
 <pre><code>touch sts.yaml
 </code></pre>
