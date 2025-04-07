@@ -12,7 +12,7 @@ pub async fn user_login_states_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!(
                 "Running HA mode without being the leader - skipping user_login_states_cleanup scheduler"
             );
@@ -26,7 +26,7 @@ pub async fn user_login_states_cleanup() {
         let threshold = Utc::now().timestamp() - *SESSION_LIFETIME as i64 - 3600 * 24;
 
         if is_hiqlite() {
-            if let Err(err) = DB::client()
+            if let Err(err) = DB::hql()
                 .execute(
                     "DELETE FROM user_login_states WHERE timestamp < $1",
                     params!(threshold),
@@ -39,7 +39,7 @@ pub async fn user_login_states_cleanup() {
             "DELETE FROM user_login_states WHERE timestamp < $1",
             threshold
         )
-        .execute(DB::conn())
+        .execute(DB::conn_sqlx())
         .await
         {
             error!("User Login State Cleanup Error: {:?}", err)

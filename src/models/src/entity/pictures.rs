@@ -106,7 +106,7 @@ impl UserPicture {
         let id = new_store_id();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO pictures (id, content_type, storage, data)
@@ -124,7 +124,7 @@ VALUES ($1, $2, $3, $4)"#,
                 storage.as_str(),
                 data
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -134,12 +134,12 @@ VALUES ($1, $2, $3, $4)"#,
     /// Deletes the UserPicture in the DB - does NOT delete the file on the storage.
     async fn delete(id: String) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute("DELETE FROM pictures WHERE id = $1", params!(id))
                 .await?;
         } else {
             sqlx::query!("DELETE FROM pictures WHERE id = $1", id)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
@@ -148,12 +148,12 @@ VALUES ($1, $2, $3, $4)"#,
 
     async fn find(id: String) -> Result<Self, ErrorResponse> {
         let slf = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as_one("SELECT * FROM pictures WHERE id = $1", params!(id))
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM pictures WHERE id = $1", id)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 

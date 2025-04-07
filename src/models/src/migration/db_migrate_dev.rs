@@ -12,7 +12,7 @@ pub async fn migrate_dev_data(issuer: &str) -> Result<(), ErrorResponse> {
     warn!("Migrating DEV DATA - DO NOT USE IN PRODUCTION!");
 
     let needs_migration = if is_hiqlite() {
-        match DB::client()
+        match DB::hql()
             .query_as::<Jwk, _>("SELECT * FROM jwks", params!())
             .await
         {
@@ -21,7 +21,7 @@ pub async fn migrate_dev_data(issuer: &str) -> Result<(), ErrorResponse> {
         }
     } else {
         match sqlx::query_as::<_, Jwk>("SELECT * FROM jwks")
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await
         {
             Ok(res) => res.is_empty(),
@@ -142,7 +142,7 @@ pub async fn migrate_dev_data(issuer: &str) -> Result<(), ErrorResponse> {
 
     for jwk in jwks {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO
@@ -169,7 +169,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
             .bind(jwk.signature.as_str().to_string())
             .bind(&jwk.enc_key_id)
             .bind(&jwk.jwk)
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await;
         }
     }
@@ -186,14 +186,14 @@ VALUES ($1, $2, $3, $4, $5)"#,
     };
     if is_hiqlite() {
         // make sure that the newer backchannel logout uri is set for integration tests
-        DB::client()
+        DB::hql()
             .execute(
                 "UPDATE clients SET backchannel_logout_uri = $1 WHERE id = 'init_client'",
                 params!(backchannel_logout_uri),
             )
             .await?;
 
-        DB::client()
+        DB::hql()
             .execute(
                 r#"
 INSERT INTO
@@ -207,7 +207,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
             "UPDATE clients SET backchannel_logout_uri = $1 WHERE id = 'init_client'",
             backchannel_logout_uri
         )
-        .execute(DB::conn())
+        .execute(DB::conn_sqlx())
         .await?;
 
         let _ = sqlx::query(
@@ -222,7 +222,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
         .bind(ml.exp)
         .bind(false)
         .bind(ml.usage)
-        .execute(DB::conn())
+        .execute(DB::conn_sqlx())
         .await;
     }
 

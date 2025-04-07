@@ -8,7 +8,6 @@ use std::env;
 
 pub mod compression;
 pub mod constants;
-mod params_iter;
 pub mod password_hasher;
 pub mod utils;
 
@@ -60,4 +59,11 @@ pub fn is_sqlite() -> bool {
 #[inline(always)]
 pub fn is_postgres() -> bool {
     *DB_TYPE == DbType::Postgres
+}
+
+/// Helper function to reduce boilerplate when doing raw postgres streaming queries.
+pub fn params_iter<'a>(
+    s: &'a [&'a (dyn postgres_types::ToSql + Sync)],
+) -> impl ExactSizeIterator<Item = &'a dyn postgres_types::ToSql> + 'a {
+    s.iter().map(|s| *s as _)
 }

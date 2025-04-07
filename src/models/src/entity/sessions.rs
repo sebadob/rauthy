@@ -122,23 +122,23 @@ impl SessionState {
 impl Session {
     pub async fn delete(self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute("DELETE FROM sessions WHERE id = $1", params!(&self.id))
                 .await?;
         } else {
             sqlx::query!("DELETE FROM sessions WHERE id = $1", self.id)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
-        DB::client().delete(Cache::Session, self.id).await?;
+        DB::hql().delete(Cache::Session, self.id).await?;
 
         Ok(())
     }
 
     pub async fn delete_by_user(user_id: &str) -> Result<(), ErrorResponse> {
         let sids: Vec<String> = if is_hiqlite() {
-            let rows = DB::client()
+            let rows = DB::hql()
                 .execute_returning(
                     "DELETE FROM sessions WHERE user_id = $1 RETURNING id",
                     params!(user_id),
@@ -155,7 +155,7 @@ impl Session {
                 "DELETE FROM sessions WHERE user_id = $1 RETURNING id",
                 user_id
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?;
 
             let mut ids = Vec::with_capacity(rows.len());
@@ -165,7 +165,7 @@ impl Session {
             ids
         };
 
-        let client = DB::client();
+        let client = DB::hql();
         for id in sids {
             client.delete(Cache::Session, id).await?;
         }
@@ -175,7 +175,7 @@ impl Session {
 
     // Returns a session by id
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::Session, id.clone()).await? {
             return Ok(slf);
@@ -194,7 +194,7 @@ impl Session {
                 "SELECT * FROM sessions WHERE id = $1 ORDER BY exp DESC",
                 id
             )
-            .fetch_one(DB::conn())
+            .fetch_one(DB::conn_sqlx())
             .await?
         };
 
@@ -208,12 +208,12 @@ impl Session {
     // not cached -> only used in the admin ui and can get very big
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let sessions = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as("SELECT * FROM sessions ORDER BY exp DESC", params!())
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM sessions ORDER BY exp DESC")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
         Ok(sessions)
@@ -234,7 +234,7 @@ impl Session {
         if let Some(token) = continuation_token {
             if backwards {
                 let mut rows: Vec<Self> = if is_hiqlite() {
-                    DB::client()
+                    DB::hql()
                         .query_as(
                             r#"
 SELECT *
@@ -261,7 +261,7 @@ OFFSET $4"#,
                         page_size,
                         offset,
                     )
-                    .fetch_all(DB::conn())
+                    .fetch_all(DB::conn_sqlx())
                     .await?
                 };
 
@@ -272,7 +272,7 @@ OFFSET $4"#,
                 res = Some(rows);
             } else {
                 let rows = if is_hiqlite() {
-                    DB::client()
+                    DB::hql()
                         .query_as(
                             r#"
 SELECT *
@@ -299,7 +299,7 @@ OFFSET $4"#,
                         page_size,
                         offset,
                     )
-                    .fetch_all(DB::conn())
+                    .fetch_all(DB::conn_sqlx())
                     .await?
                 };
 
@@ -312,7 +312,7 @@ OFFSET $4"#,
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
             let mut rows = if is_hiqlite() {
-                DB::client()
+                DB::hql()
                     .query_as(
                         r#"
 SELECT *
@@ -335,7 +335,7 @@ OFFSET $2"#,
                     page_size,
                     offset,
                 )
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
             };
 
@@ -346,7 +346,7 @@ OFFSET $2"#,
             res = Some(rows);
         } else {
             let rows = if is_hiqlite() {
-                DB::client()
+                DB::hql()
                     .query_as(
                         r#"
 SELECT *
@@ -369,7 +369,7 @@ OFFSET $2"#,
                     page_size,
                     offset,
                 )
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
             };
 
@@ -393,19 +393,19 @@ OFFSET $2"#,
         let now = Utc::now().timestamp() - 1;
 
         let rows_affected = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute("UPDATE sessions SET exp = $1 WHERE exp > $1", params!(now))
                 .await? as u64
         } else {
             sqlx::query!("UPDATE sessions SET exp = $1 WHERE exp > $1", now)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?
                 .rows_affected()
         };
         // at least the session used to invalidate all will always exist
         debug_assert!(rows_affected > 0);
 
-        DB::client().clear_cache(Cache::Session).await?;
+        DB::hql().clear_cache(Cache::Session).await?;
 
         Ok(())
     }
@@ -413,7 +413,7 @@ OFFSET $2"#,
     /// Returns `Vec<SessionId>`
     pub async fn invalidate_for_user(uid: &str) -> Result<Vec<String>, ErrorResponse> {
         let sids: Vec<String> = if is_hiqlite() {
-            let rows = DB::client()
+            let rows = DB::hql()
                 .execute_returning(
                     "DELETE FROM sessions WHERE user_id = $1 RETURNING id",
                     params!(uid),
@@ -428,7 +428,7 @@ OFFSET $2"#,
         } else {
             let rows = sqlx::query("DELETE FROM sessions WHERE user_id = $1 RETURNING id")
                 .bind(uid)
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?;
 
             let mut ids = Vec::with_capacity(rows.len());
@@ -438,7 +438,7 @@ OFFSET $2"#,
             ids
         };
 
-        let client = DB::client();
+        let client = DB::hql();
         for sid in &sids {
             client.delete(Cache::Session, sid.clone()).await?;
         }
@@ -450,7 +450,7 @@ OFFSET $2"#,
         let state_str = &self.state;
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO
@@ -493,11 +493,11 @@ remote_ip = $10"#,
                 self.last_seen,
                 self.remote_ip,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
-        DB::client()
+        DB::hql()
             .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
             .await?;
 
@@ -515,7 +515,7 @@ remote_ip = $10"#,
         let res = match idx {
             SearchParamsIdx::UserId => {
                 if is_hiqlite() {
-                    DB::client().query_as(
+                    DB::hql().query_as(
                     "SELECT * FROM sessions WHERE user_id LIKE $1 ORDER BY exp DESC LIMIT $2",
                         params!(q, limit)
                     ).await?
@@ -526,13 +526,13 @@ remote_ip = $10"#,
                         q,
                         limit
                     )
-                    .fetch_all(DB::conn())
+                    .fetch_all(DB::conn_sqlx())
                     .await?
                 }
             }
             SearchParamsIdx::Id | SearchParamsIdx::SessionId => {
                 if is_hiqlite() {
-                    DB::client()
+                    DB::hql()
                         .query_as(
                             "SELECT * FROM sessions WHERE id LIKE $1 ORDER BY exp DESC LIMIT $2",
                             params!(q, limit),
@@ -545,13 +545,13 @@ remote_ip = $10"#,
                         q,
                         limit
                     )
-                    .fetch_all(DB::conn())
+                    .fetch_all(DB::conn_sqlx())
                     .await?
                 }
             }
             SearchParamsIdx::Ip => {
                 if is_hiqlite() {
-                    DB::client().query_as(
+                    DB::hql().query_as(
                         "SELECT * FROM sessions WHERE remote_ip LIKE $1 ORDER BY exp DESC LIMIT $2",
                             params!(q, limit)
                         ).await?
@@ -562,7 +562,7 @@ remote_ip = $10"#,
                         q,
                         limit
                     )
-                    .fetch_all(DB::conn())
+                    .fetch_all(DB::conn_sqlx())
                     .await?
                 }
             }
@@ -696,7 +696,7 @@ impl Session {
         let state = SessionState::LoggedOut.as_str().to_string();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "UPDATE sessions SET exp = $1, state = $2 WHERE id = $3",
                     params!(now, state, self.id.clone()),
@@ -709,11 +709,11 @@ impl Session {
                 state,
                 &self.id
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
-        DB::client().delete(Cache::Session, self.id).await?;
+        DB::hql().delete(Cache::Session, self.id).await?;
 
         Ok(())
     }

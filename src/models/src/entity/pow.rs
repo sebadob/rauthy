@@ -9,7 +9,7 @@ impl PowEntity {
     pub async fn create() -> Result<Pow, ErrorResponse> {
         let pow = Pow::with_difficulty(*POW_DIFFICULTY, *POW_EXP)?;
 
-        DB::client()
+        DB::hql()
             .put(Cache::PoW, pow.challenge.clone(), &pow, *CACHE_TTL_POW)
             .await?;
 
@@ -18,7 +18,7 @@ impl PowEntity {
 
     /// Checks re-usages of PoWs and prevents a future re-use
     pub async fn check_prevent_reuse(challenge: String) -> Result<(), ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         let opt: Option<Pow> = client.get(Cache::PoW, challenge).await?;
         let pow = match opt {

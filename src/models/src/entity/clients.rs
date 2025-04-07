@@ -127,7 +127,7 @@ impl Client {
         client.secret_kid = kid;
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
@@ -192,7 +192,7 @@ $18, $19, $20, $21)"#,
                 client.contacts,
                 client.backchannel_logout_uri,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -214,7 +214,7 @@ $18, $19, $20, $21)"#,
         let (_secret_plain, registration_token) = Self::generate_new_secret()?;
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .txn([
                     (
                         r#"
@@ -263,7 +263,7 @@ VALUES ($1, $2, $3, $4)"#,
                 ])
                 .await?;
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             sqlx::query!(
                 r#"
@@ -328,12 +328,12 @@ VALUES ($1, $2, $3, $4)"#,
     // Deletes a client
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute("DELETE FROM clients WHERE id = $1", params!(&self.id))
                 .await?;
         } else {
             sqlx::query!("DELETE FROM clients WHERE id = $1", self.id,)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
@@ -348,7 +348,7 @@ VALUES ($1, $2, $3, $4)"#,
     }
 
     pub async fn delete_cache(&self) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .delete(Cache::App, Self::cache_idx(&self.id))
             .await?;
 
@@ -356,13 +356,13 @@ VALUES ($1, $2, $3, $4)"#,
     }
 
     pub async fn delete_cache_for(id: &str) -> Result<(), ErrorResponse> {
-        DB::client().delete(Cache::App, Self::cache_idx(id)).await?;
+        DB::hql().delete(Cache::App, Self::cache_idx(id)).await?;
         Ok(())
     }
 
     // Returns a client by id without its secret.
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
         };
@@ -374,7 +374,7 @@ VALUES ($1, $2, $3, $4)"#,
         } else {
             sqlx::query_as::<_, Self>("SELECT * FROM clients WHERE id = $1")
                 .bind(&id)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 
@@ -387,12 +387,12 @@ VALUES ($1, $2, $3, $4)"#,
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let clients = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as("SELECT * FROM clients", params!())
                 .await?
         } else {
             sqlx::query_as("SELECT * FROM clients")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -405,7 +405,7 @@ VALUES ($1, $2, $3, $4)"#,
         // which is why we will filter on the client side for now.
         // The
         let clients = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as(
                     "SELECT * FROM clients WHERE backchannel_logout_uri IS NOT NULL",
                     params!(),
@@ -416,7 +416,7 @@ VALUES ($1, $2, $3, $4)"#,
                 Self,
                 "SELECT * FROM clients WHERE backchannel_logout_uri IS NOT NULL",
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         }
         .into_iter()
@@ -434,7 +434,7 @@ VALUES ($1, $2, $3, $4)"#,
     /// Returns all registered `client_uri`s to be used during `USER_REG_OPEN_REDIRECT` checks.
     pub async fn find_all_client_uris() -> Result<Vec<String>, ErrorResponse> {
         let uris = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_raw(
                     "SELECT client_uri FROM clients WHERE client_uri IS NOT NULL",
                     params!(),
@@ -445,7 +445,7 @@ VALUES ($1, $2, $3, $4)"#,
                 .collect::<Vec<_>>()
         } else {
             sqlx::query("SELECT client_uri FROM clients WHERE client_uri IS NOT NULL")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
                 .into_iter()
                 .map(|r| r.get::<String, _>("client_uri"))
@@ -464,7 +464,7 @@ VALUES ($1, $2, $3, $4)"#,
             return Self::find(id).await;
         }
 
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::ClientEphemeral, &id).await? {
             return Ok(slf);
         }
@@ -488,7 +488,7 @@ VALUES ($1, $2, $3, $4)"#,
         let like = format!("%{scope_name}%");
 
         let clients = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as(
                     "SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1",
                     params!(like),
@@ -497,7 +497,7 @@ VALUES ($1, $2, $3, $4)"#,
         } else {
             sqlx::query_as("SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1")
                 .bind(like)
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -601,7 +601,7 @@ WHERE id = $21"#,
     }
 
     pub async fn save_cache(&self) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .put(Cache::App, Client::cache_idx(&self.id), self, CACHE_TTL_APP)
             .await?;
         Ok(())
@@ -620,7 +620,7 @@ WHERE id = $21"#,
             .filter(|uri| !uri.is_empty());
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 UPDATE clients
@@ -687,11 +687,11 @@ WHERE id = $21"#,
                 backchannel_logout_uri,
                 self.id,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
-        DB::client()
+        DB::hql()
             .put(Cache::App, Client::cache_idx(&self.id), self, CACHE_TTL_APP)
             .await?;
 
@@ -747,9 +747,9 @@ WHERE id = $4"#,
                 ),
             ));
 
-            DB::client().txn(txn).await?;
+            DB::hql().txn(txn).await?;
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             new_client.save_txn(&mut txn).await?;
             sqlx::query!(
@@ -769,7 +769,7 @@ WHERE id = $4"#,
         }
 
         new_client.save_cache().await?;
-        DB::client()
+        DB::hql()
             .put(
                 Cache::ClientDynamic,
                 ClientDyn::get_cache_entry(&client_dyn.id),

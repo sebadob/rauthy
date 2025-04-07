@@ -57,7 +57,7 @@ impl RefreshTokenDevice {
 
     pub async fn delete(self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "DELETE FROM refresh_tokens_devices WHERE id = $1",
                     params!(self.id),
@@ -65,7 +65,7 @@ impl RefreshTokenDevice {
                 .await?;
         } else {
             sqlx::query!("DELETE FROM refresh_tokens_devices WHERE id = $1", self.id)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
         Ok(())
@@ -73,12 +73,12 @@ impl RefreshTokenDevice {
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as("SELECT * FROM refresh_tokens_devices", params!())
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM refresh_tokens_devices")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
         Ok(res)
@@ -88,7 +88,7 @@ impl RefreshTokenDevice {
         let now = OffsetDateTime::now_utc().unix_timestamp();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1",
                     params!(now),
@@ -99,7 +99,7 @@ impl RefreshTokenDevice {
                 "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1",
                 now
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -110,7 +110,7 @@ impl RefreshTokenDevice {
         let now = Utc::now().timestamp();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2",
                     params!(now, user_id),
@@ -122,7 +122,7 @@ impl RefreshTokenDevice {
                 now,
                 user_id
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -133,7 +133,7 @@ impl RefreshTokenDevice {
         let now = Utc::now().timestamp();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as_one(
                     "SELECT * FROM refresh_tokens_devices WHERE id = $1 AND exp > $2",
                     params!(id, now),
@@ -152,7 +152,7 @@ impl RefreshTokenDevice {
                 id,
                 now
             )
-            .fetch_one(DB::conn())
+            .fetch_one(DB::conn_sqlx())
             .await
             .map_err(|_| {
                 ErrorResponse::new(
@@ -165,7 +165,7 @@ impl RefreshTokenDevice {
 
     pub async fn invalidate_all_for_device(device_id: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "DELETE FROM refresh_tokens_devices WHERE device_id = $1",
                     params!(device_id),
@@ -176,7 +176,7 @@ impl RefreshTokenDevice {
                 "DELETE FROM refresh_tokens_devices WHERE device_id = $1",
                 device_id
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -185,7 +185,7 @@ impl RefreshTokenDevice {
 
     pub async fn invalidate_all_for_user(user_id: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "DELETE FROM refresh_tokens_devices WHERE user_id = $1",
                     params!(user_id),
@@ -196,7 +196,7 @@ impl RefreshTokenDevice {
                 "DELETE FROM refresh_tokens_devices WHERE user_id = $1",
                 user_id
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -205,7 +205,7 @@ impl RefreshTokenDevice {
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO refresh_tokens_devices
@@ -238,7 +238,7 @@ SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6"#,
                 self.exp,
                 self.scope,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 

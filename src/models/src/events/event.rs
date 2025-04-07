@@ -481,7 +481,7 @@ impl Event {
         let typ = self.typ.value();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO events (id, timestamp, level, typ, ip, data, text)
@@ -510,7 +510,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 self.data,
                 self.text,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -533,7 +533,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
         let res = if let Some(typ) = typ {
             let typ = typ.value();
             if is_hiqlite() {
-                DB::client()
+                DB::hql()
                     .query_map(
                         r#"
 SELECT * FROM events
@@ -554,11 +554,11 @@ ORDER BY timestamp DESC"#,
                     level,
                     typ,
                 )
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
             }
         } else if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_map(
                     r#"
 SELECT * FROM events
@@ -578,7 +578,7 @@ ORDER BY timestamp DESC"#,
                 until,
                 level,
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
@@ -587,7 +587,7 @@ ORDER BY timestamp DESC"#,
 
     pub async fn find_latest(limit: i64) -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_map(
                     "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
                     params!(limit),
@@ -599,7 +599,7 @@ ORDER BY timestamp DESC"#,
                 "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
                 limit
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         };
 

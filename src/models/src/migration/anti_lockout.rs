@@ -62,7 +62,7 @@ pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
     // Update only here and prevent `rauthy` deletion as a special check on DELETE /client
 
     if is_hiqlite() {
-        DB::client()
+        DB::hql()
             .execute(
                 r#"
 UPDATE clients SET enabled = $1, confidential = $2, redirect_uris = $3,
@@ -117,7 +117,7 @@ WHERE id = $17"#,
             rauthy.contacts,
             rauthy.id,
         )
-        .execute(DB::conn())
+        .execute(DB::conn_sqlx())
         .await?;
     }
 

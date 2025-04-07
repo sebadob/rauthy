@@ -16,7 +16,7 @@ pub async fn magic_link_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!(
                 "Running HA mode without being the leader - skipping magic_link_cleanup scheduler"
             );
@@ -42,7 +42,7 @@ pub async fn magic_link_cleanup() {
 }
 
 async fn cleanup_hiqlite(exp: i64) -> Result<(), ErrorResponse> {
-    let rows_affected = DB::client()
+    let rows_affected = DB::hql()
         .execute(
             r#"
 DELETE FROM users
@@ -60,7 +60,7 @@ AND password IS NULL AND webauthn_user_id IS NULL"#,
     );
 
     // now we can just delete all expired magic links
-    let rows_affected = DB::client()
+    let rows_affected = DB::hql()
         .execute("DELETE FROM magic_links WHERE exp < $1", params!(exp))
         .await?;
     debug!("Cleaned up {} expired and used magic links", rows_affected);
@@ -79,7 +79,7 @@ WHERE id IN (
 AND password IS NULL AND webauthn_user_id IS NULL"#,
     )
     .bind(exp)
-    .execute(DB::conn())
+    .execute(DB::conn_sqlx())
     .await?;
     info!(
         "Cleaned up {} users which did not use their initial password reset magic link",
@@ -89,7 +89,7 @@ AND password IS NULL AND webauthn_user_id IS NULL"#,
     // now we can just delete all expired magic links
     let res = sqlx::query("DELETE FROM magic_links WHERE exp < $1")
         .bind(exp)
-        .execute(DB::conn())
+        .execute(DB::conn_sqlx())
         .await?;
     debug!(
         "Cleaned up {} expired and used magic links",

@@ -14,7 +14,7 @@ pub async fn devices_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!("Running HA mode without being the leader - skipping devices_cleanup scheduler");
             continue;
         }
@@ -23,7 +23,7 @@ pub async fn devices_cleanup() {
 
         let threshold = Utc::now().sub(chrono::Duration::days(1)).timestamp();
         if is_hiqlite() {
-            let res = DB::client()
+            let res = DB::hql()
                 .execute(
                     r#"
 DELETE FROM devices
@@ -49,7 +49,7 @@ AND (refresh_exp IS NULL OR refresh_exp < $1)"#,
     AND (refresh_exp IS NULL OR refresh_exp < $1)"#,
                 threshold
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await;
 
             match res {

@@ -24,14 +24,14 @@ impl ClientDyn {
     /// This only deletes a `ClientDyn` from the cache.
     /// The deletion at database level happens via the foreign key cascade.
     pub async fn delete_from_cache(id: &str) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .delete(Cache::App, ClientDyn::get_cache_entry(id))
             .await?;
         Ok(())
     }
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client
             .get(Cache::ClientDynamic, ClientDyn::get_cache_entry(&id))
@@ -41,12 +41,12 @@ impl ClientDyn {
         }
 
         let slf = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as_one("SELECT * FROM clients_dyn WHERE id = $1", params!(id))
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM clients_dyn WHERE id = $1", id)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 
@@ -66,7 +66,7 @@ impl ClientDyn {
         let now = Utc::now().timestamp();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "UPDATE clients_dyn SET last_used = $1 WHERE id = $2",
                     params!(now, id),
@@ -78,7 +78,7 @@ impl ClientDyn {
                 now,
                 id
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -95,7 +95,7 @@ impl ClientDyn {
     /// Returns an Err(_) if the IP is currently existing inside the cache.
     /// If not, the IP will be cached with an Ok(()).
     pub async fn rate_limit_ip(ip: IpAddr) -> Result<(), ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         let ts: Option<i64> = client.get(Cache::IPRateLimit, ip.to_string()).await?;
         match ts {

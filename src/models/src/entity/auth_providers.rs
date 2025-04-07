@@ -236,7 +236,7 @@ impl AuthProvider {
         let typ = slf.typ.as_str();
 
         slf = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute_returning_map_one(
                     r#"
 INSERT INTO
@@ -304,7 +304,7 @@ VALUES
                 slf.client_secret_basic,
                 slf.client_secret_post
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
 
             slf
@@ -312,7 +312,7 @@ VALUES
 
         Self::invalidate_cache_all().await?;
 
-        DB::client()
+        DB::hql()
             .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
             .await?;
 
@@ -320,7 +320,7 @@ VALUES
     }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(id)).await? {
             return Ok(slf);
         }
@@ -331,7 +331,7 @@ VALUES
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM auth_providers WHERE id = $1", id)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 
@@ -345,7 +345,7 @@ VALUES
     /// Tries to find an Auth Provider by the given `iss`. This function does not use any caching.
     pub async fn find_by_iss(iss: String) -> Result<Self, ErrorResponse> {
         let slf = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_map_one(
                     "SELECT * FROM auth_providers WHERE issuer = $1",
                     params!(iss),
@@ -353,7 +353,7 @@ VALUES
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM auth_providers WHERE issuer = $1", iss)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 
@@ -361,7 +361,7 @@ VALUES
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(res) = client.get(Cache::App, Self::cache_idx("all")).await? {
             return Ok(res);
         }
@@ -372,7 +372,7 @@ VALUES
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM auth_providers")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -388,7 +388,7 @@ VALUES
         id: &str,
     ) -> Result<Vec<ProviderLinkedUserResponse>, ErrorResponse> {
         let users = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as(
                     "SELECT id, email FROM users WHERE auth_provider_id = $1",
                     params!(id),
@@ -400,7 +400,7 @@ VALUES
                 "SELECT id, email FROM users WHERE auth_provider_id = $1",
                 id
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
@@ -409,17 +409,17 @@ VALUES
 
     pub async fn delete(id: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute("DELETE FROM auth_providers WHERE id = $1", params!(id))
                 .await?;
         } else {
             query!("DELETE FROM auth_providers WHERE id = $1", id)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
         Self::invalidate_cache_all().await?;
-        DB::client().delete(Cache::App, Self::cache_idx(id)).await?;
+        DB::hql().delete(Cache::App, Self::cache_idx(id)).await?;
 
         Ok(())
     }
@@ -432,7 +432,7 @@ VALUES
         let typ = self.typ.as_str();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 UPDATE auth_providers
@@ -499,12 +499,12 @@ WHERE id = $21"#,
                 self.client_secret_post,
                 self.id,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
         Self::invalidate_cache_all().await?;
-        DB::client()
+        DB::hql()
             .put(Cache::App, Self::cache_idx(&self.id), self, CACHE_TTL_APP)
             .await?;
 
@@ -592,9 +592,7 @@ impl AuthProvider {
     }
 
     async fn invalidate_cache_all() -> Result<(), ErrorResponse> {
-        DB::client()
-            .delete(Cache::App, Self::cache_idx("all"))
-            .await?;
+        DB::hql().delete(Cache::App, Self::cache_idx("all")).await?;
 
         // Directly update the template cache preemptively.
         // This is needed all the time anyway.
@@ -782,7 +780,7 @@ pub struct AuthProviderCallback {
 // CRUD
 impl AuthProviderCallback {
     pub async fn delete(callback_id: String) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .delete(Cache::AuthProviderCallback, callback_id)
             .await?;
 
@@ -790,7 +788,7 @@ impl AuthProviderCallback {
     }
 
     async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
-        let opt: Option<Self> = DB::client()
+        let opt: Option<Self> = DB::hql()
             .get(Cache::AuthProviderCallback, callback_id)
             .await?;
 
@@ -804,7 +802,7 @@ impl AuthProviderCallback {
     }
 
     async fn save(&self) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .put(
                 Cache::AuthProviderCallback,
                 self.callback_id.clone(),
@@ -1164,7 +1162,7 @@ pub struct AuthProviderTemplate {
 
 impl AuthProviderTemplate {
     pub async fn get_all_json_template() -> Result<String, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE).await? {
             return Ok(slf);
         }
@@ -1193,7 +1191,7 @@ impl AuthProviderTemplate {
     }
 
     async fn invalidate_cache() -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .delete(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE)
             .await?;
 

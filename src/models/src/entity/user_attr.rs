@@ -32,9 +32,7 @@ impl UserAttrConfigEntity {
     }
 
     pub async fn clear_cache_all() -> Result<(), ErrorResponse> {
-        DB::client()
-            .delete(Cache::App, IDX_USER_ATTR_CONFIG)
-            .await?;
+        DB::hql().delete(Cache::App, IDX_USER_ATTR_CONFIG).await?;
         Ok(())
     }
 
@@ -47,7 +45,7 @@ impl UserAttrConfigEntity {
         }
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "INSERT INTO user_attr_config (name, \"desc\") VALUES ($1, $2)",
                     params!(&new_attr.name, &new_attr.desc),
@@ -59,7 +57,7 @@ impl UserAttrConfigEntity {
                 new_attr.name,
                 new_attr.desc,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         };
 
@@ -69,7 +67,7 @@ impl UserAttrConfigEntity {
             desc: new_attr.desc.clone(),
         };
         attrs.push(slf.clone());
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_USER_ATTR_CONFIG, &attrs, CACHE_TTL_APP)
             .await?;
 
@@ -115,7 +113,7 @@ impl UserAttrConfigEntity {
             }
         }
 
-        let client = DB::client();
+        let client = DB::hql();
         let user_attr_cache_cleanup_keys;
 
         if is_hiqlite() {
@@ -141,7 +139,7 @@ impl UserAttrConfigEntity {
 
             client.txn(txn).await?;
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             for (id, attr_include_access, attr_include_id) in scope_updates {
                 Scope::update_mapping_only(&id, attr_include_access, attr_include_id, &mut txn)
@@ -172,7 +170,7 @@ impl UserAttrConfigEntity {
     }
 
     pub async fn find(name: String) -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(&name)).await? {
             return Ok(slf);
         }
@@ -186,7 +184,7 @@ impl UserAttrConfigEntity {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM user_attr_config WHERE name = $1", name)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 
@@ -198,7 +196,7 @@ impl UserAttrConfigEntity {
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX_USER_ATTR_CONFIG).await? {
             return Ok(slf);
         }
@@ -209,7 +207,7 @@ impl UserAttrConfigEntity {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM user_attr_config")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -229,7 +227,7 @@ impl UserAttrConfigEntity {
         slf.name.clone_from(&req_data.name);
         slf.desc.clone_from(&req_data.desc);
 
-        let client = DB::client();
+        let client = DB::hql();
         let mut scope_updates = Vec::new();
 
         // we only need to update pre-computed data in other places if the name changes
@@ -247,7 +245,7 @@ impl UserAttrConfigEntity {
             } else {
                 sqlx::query("SELECT user_id FROM user_attr_values WHERE key = $1")
                     .bind(&name)
-                    .fetch_all(DB::conn())
+                    .fetch_all(DB::conn_sqlx())
                     .await?
                     .into_iter()
                     .map(|row| row.get("user_id"))
@@ -315,7 +313,7 @@ impl UserAttrConfigEntity {
 
             client.txn(txn).await?;
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             for (id, attr_include_access, attr_include_id) in scope_updates {
                 Scope::update_mapping_only(&id, attr_include_access, attr_include_id, &mut txn)
@@ -389,7 +387,7 @@ pub struct UserAttrValueEntity {
 
 impl UserAttrValueEntity {
     pub async fn clear_cache(cache_idx: String) -> Result<(), ErrorResponse> {
-        DB::client().delete(Cache::User, cache_idx).await?;
+        DB::hql().delete(Cache::User, cache_idx).await?;
         Ok(())
     }
 
@@ -401,7 +399,7 @@ impl UserAttrValueEntity {
     ) -> Result<Vec<String>, ErrorResponse> {
         let cache_idxs =
             sqlx::query_as!(Self, "SELECT * FROM user_attr_values WHERE key = $1", key)
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
                 .into_iter()
                 .map(|a| Self::cache_idx(&a.user_id))
@@ -420,7 +418,7 @@ impl UserAttrValueEntity {
         key: &str,
         txn: &mut Vec<(&str, Params)>,
     ) -> Result<Vec<String>, ErrorResponse> {
-        let cache_idxs = DB::client()
+        let cache_idxs = DB::hql()
             .query_raw(
                 "SELECT user_id FROM user_attr_values WHERE key = $1",
                 params!(key),
@@ -437,7 +435,7 @@ impl UserAttrValueEntity {
 
     pub async fn find_for_user(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
         let idx = Self::cache_idx(user_id);
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
             return Ok(slf);
@@ -456,7 +454,7 @@ impl UserAttrValueEntity {
                 "SELECT * FROM user_attr_values WHERE user_id = $1",
                 user_id
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
@@ -481,7 +479,7 @@ impl UserAttrValueEntity {
             }
         };
 
-        let client = DB::client();
+        let client = DB::hql();
 
         let res = if is_hiqlite() {
             let mut txn = Vec::with_capacity(req_data.values.len());
@@ -512,7 +510,7 @@ ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
                 )
                 .await?
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             for value in req_data.values {
                 if delete_value(&value.value) {
@@ -546,7 +544,7 @@ ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
                 "SELECT * FROM user_attr_values WHERE user_id = $1",
                 user_id
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         };
 

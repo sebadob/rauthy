@@ -11,7 +11,7 @@ pub async fn refresh_tokens_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!(
                 "Running HA mode without being the leader - skipping refresh_tokens_cleanup scheduler"
             );
@@ -23,7 +23,7 @@ pub async fn refresh_tokens_cleanup() {
         let now = Utc::now().timestamp();
 
         if is_hiqlite() {
-            if let Err(err) = DB::client()
+            if let Err(err) = DB::hql()
                 .execute("DELETE FROM refresh_tokens WHERE exp < $1", params!(now))
                 .await
             {
@@ -31,7 +31,7 @@ pub async fn refresh_tokens_cleanup() {
             }
         } else if let Err(err) = sqlx::query("DELETE FROM refresh_tokens WHERE exp < $1")
             .bind(now)
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await
         {
             error!("Refresh Token Cleanup Error: {:?}", err)

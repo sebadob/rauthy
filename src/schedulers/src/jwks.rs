@@ -21,7 +21,7 @@ pub async fn jwks_auto_rotate(data: web::Data<AppState>) {
     loop {
         sleep_schedule_next(&schedule).await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!("Running HA mode without being the leader - skipping jwks_cleanup scheduler");
             continue;
         }
@@ -39,7 +39,7 @@ pub async fn jwks_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!("Running HA mode without being the leader - skipping jwks_cleanup scheduler");
             continue;
         }
@@ -51,13 +51,13 @@ pub async fn jwks_cleanup() {
 
         // find all existing jwks
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as("SELECT * FROM jwks ORDER BY created_at asc", params!())
                 .await
                 .map_err(|err| err.to_string())
         } else {
             sqlx::query_as::<_, Jwk>("SELECT * FROM jwks ORDER BY created_at asc")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await
                 .map_err(|err| err.to_string())
         };
@@ -96,7 +96,7 @@ pub async fn jwks_cleanup() {
         let count = to_delete.len();
         for kid in to_delete {
             if is_hiqlite() {
-                if let Err(err) = DB::client()
+                if let Err(err) = DB::hql()
                     .execute("DELETE FROM jwks WHERE kid = $1", params!())
                     .await
                 {
@@ -105,7 +105,7 @@ pub async fn jwks_cleanup() {
                 }
             } else if let Err(err) = sqlx::query("DELETE FROM jwks WHERE kid = $1")
                 .bind(&kid)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await
             {
                 error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
@@ -113,7 +113,7 @@ pub async fn jwks_cleanup() {
             }
 
             let idx = format!("{}{}", IDX_JWK_KID, kid);
-            if let Err(err) = DB::client().delete(Cache::App, idx).await {
+            if let Err(err) = DB::hql().delete(Cache::App, idx).await {
                 error!("Error deleting JWK from cache: {}", err);
             }
         }

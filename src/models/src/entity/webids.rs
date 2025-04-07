@@ -32,7 +32,7 @@ impl WebId {
 
     /// Returns the WebId from the database, if it exists, and a default otherwise.
     pub async fn find(user_id: String) -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::User, Self::cache_idx(&user_id)).await? {
             return Ok(slf);
         }
@@ -48,7 +48,7 @@ impl WebId {
                 })
         } else {
             query_as!(Self, "SELECT * FROM webids WHERE user_id = $1", user_id)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await
                 .unwrap_or(Self {
                     user_id,
@@ -71,7 +71,7 @@ impl WebId {
 
     pub async fn upsert(web_id: WebId) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO webids (user_id, custom_triples, expose_email)
@@ -92,11 +92,11 @@ SET custom_triples = $2, expose_email = $3"#,
                 web_id.custom_triples,
                 web_id.expose_email,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
-        DB::client()
+        DB::hql()
             .put(
                 Cache::User,
                 Self::cache_idx(&web_id.user_id),

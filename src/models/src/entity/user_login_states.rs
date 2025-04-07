@@ -48,9 +48,9 @@ WHERE NOT EXISTS (
                 ));
             }
 
-            DB::client().txn(txn).await?;
+            DB::hql().txn(txn).await?;
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             // TODO for some reason, the query! returns an error with the prepared statement type
             // for user_id, even though the query works just fine...
@@ -110,7 +110,7 @@ WHERE NOT EXISTS (
 
     pub async fn find_all_without_session() -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as(
                     "SELECT * FROM user_login_states WHERE session_id IS NULL",
                     params!(),
@@ -121,7 +121,7 @@ WHERE NOT EXISTS (
                 Self,
                 "SELECT * FROM user_login_states WHERE session_id IS NULL",
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
@@ -132,7 +132,7 @@ WHERE NOT EXISTS (
         client_id: String,
     ) -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as(
                     "SELECT * FROM user_login_states WHERE client_id = $1 AND session_id IS NULL",
                     params!(client_id),
@@ -144,7 +144,7 @@ WHERE NOT EXISTS (
                 "SELECT * FROM user_login_states WHERE client_id = $1 AND session_id IS NULL",
                 client_id
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
@@ -153,7 +153,7 @@ WHERE NOT EXISTS (
 
     pub async fn find_by_user(user_id: String) -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as(
                     "SELECT * FROM user_login_states WHERE user_id = $1",
                     params!(user_id),
@@ -165,7 +165,7 @@ WHERE NOT EXISTS (
                 "SELECT * FROM user_login_states WHERE user_id = $1",
                 user_id
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
@@ -174,7 +174,7 @@ WHERE NOT EXISTS (
 
     pub async fn find_by_session(session_id: String) -> Result<Vec<Self>, ErrorResponse> {
         let slf = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as(
                     "SELECT * FROM user_login_states WHERE session_id = $1",
                     params!(session_id),
@@ -186,7 +186,7 @@ WHERE NOT EXISTS (
                 "SELECT * FROM user_login_states WHERE session_id = $1",
                 session_id
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
@@ -195,7 +195,7 @@ WHERE NOT EXISTS (
 
     pub async fn delete(self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "DELETE FROM user_login_states WHERE timestamp = $1 AND user_id = $2",
                     params!(self.timestamp, self.user_id),
@@ -207,7 +207,7 @@ WHERE NOT EXISTS (
                 self.timestamp,
                 self.user_id,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -216,12 +216,12 @@ WHERE NOT EXISTS (
 
     pub async fn delete_all() -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute("DELETE FROM user_login_states", params!())
                 .await?;
         } else {
             sqlx::query!("DELETE FROM user_login_states")
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
@@ -230,7 +230,7 @@ WHERE NOT EXISTS (
 
     pub async fn delete_all_by_cid(cid: String) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "DELETE FROM user_login_states WHERE client_id = $1",
                     params!(cid),
@@ -238,7 +238,7 @@ WHERE NOT EXISTS (
                 .await?;
         } else {
             sqlx::query!("DELETE FROM user_login_states WHERE client_id = $1", cid)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
@@ -247,7 +247,7 @@ WHERE NOT EXISTS (
 
     pub async fn delete_all_by_uid(uid: String) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "DELETE FROM user_login_states WHERE user_id = $1",
                     params!(uid),
@@ -255,7 +255,7 @@ WHERE NOT EXISTS (
                 .await?;
         } else {
             sqlx::query!("DELETE FROM user_login_states WHERE user_id = $1", uid)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
@@ -264,7 +264,7 @@ WHERE NOT EXISTS (
 
     pub async fn delete_all_by_sid(sid: String) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "DELETE FROM user_login_states WHERE session_id = $1",
                     params!(sid),
@@ -272,7 +272,7 @@ WHERE NOT EXISTS (
                 .await?;
         } else {
             sqlx::query!("DELETE FROM user_login_states WHERE session_id = $1", sid)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 

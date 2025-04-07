@@ -24,12 +24,10 @@ use validator::Validate;
 pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<(), ErrorResponse> {
     // check if the database is un-initialized by looking at the jwks table, which should be empty
     let jwks = if is_hiqlite() {
-        DB::client()
-            .query_as("SELECT * FROM JWKS", params!())
-            .await?
+        DB::hql().query_as("SELECT * FROM JWKS", params!()).await?
     } else {
         sqlx::query_as::<_, Jwk>("SELECT * FROM JWKS")
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
     };
 
@@ -43,20 +41,20 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
 
         // cleanup
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute("DELETE FROM clients WHERE id = 'init_client'", params!())
                 .await?;
-            DB::client().execute("DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')", params!())
+            DB::hql().execute("DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')", params!())
                 .await?;
         } else {
             sqlx::query!("DELETE FROM clients WHERE id = 'init_client'")
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
 
             sqlx::query!(
                 "DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')",
             )
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
@@ -119,7 +117,7 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
         if is_hiqlite() {
             // TODO we could grab a possibly existing `RAUTHY_ADMIN_EMAIL` and initialize a custom
             // admin
-            DB::client()
+            DB::hql()
                 .execute(
                     "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'",
                     params!(email, hash),
@@ -131,7 +129,7 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
                 email,
                 hash
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -162,7 +160,7 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
                     .to_vec();
 
                 if is_hiqlite() {
-                    DB::client()
+                    DB::hql()
                         .execute(
                             "UPDATE api_keys SET secret = $1 WHERE name = $2",
                             params!(secret_enc, key_name),
@@ -174,7 +172,7 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
                         secret_enc,
                         key_name,
                     )
-                    .execute(DB::conn())
+                    .execute(DB::conn_sqlx())
                     .await?;
                 }
             }

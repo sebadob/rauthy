@@ -20,6 +20,8 @@ use tokio_postgres::config::{LoadBalanceHosts, SslMode};
 use tracing::log::LevelFilter;
 use tracing::{debug, error, info, warn};
 
+pub type PgClient = deadpool_postgres::Object;
+
 static CLIENT: OnceLock<hiqlite::Client> = OnceLock::new();
 static PG_POOL_SQLX: OnceLock<sqlx::PgPool> = OnceLock::new();
 static PG_POOL_DEADPOOL: OnceLock<deadpool_postgres::Pool> = OnceLock::new();
@@ -79,17 +81,29 @@ impl DB {
     }
 
     /// Returns the static handle to the Hiqlite client
-    pub fn client() -> &'static hiqlite::Client {
+    #[inline]
+    pub fn hql() -> &'static hiqlite::Client {
         CLIENT
             .get()
             .expect("cache::start_cache() must be called at startup")
+    }
+
+    /// Returns a client from the Postgress connection pool
+    #[inline]
+    pub async fn pg() -> Result<PgClient, ErrorResponse> {
+        PG_POOL_DEADPOOL
+            .get()
+            .expect("Database not initialized")
+            .get()
+            .await
+            .map_err(ErrorResponse::from)
     }
 
     /// Returns a Postgres connection.
     ///
     /// # Panics
     /// On logic errors in the code, as this must never be called with no configured Postgres DB.
-    pub fn conn<'a>() -> &'a sqlx::PgPool {
+    pub fn conn_sqlx<'a>() -> &'a sqlx::PgPool {
         PG_POOL_SQLX
             .get()
             .expect("DB::conn() must never be called with no configured Postgres DB")
@@ -99,7 +113,7 @@ impl DB {
     ///
     /// # Panics
     /// On logic errors in the code, as this must never be called with no configured Postgres DB.
-    pub async fn txn<'a>() -> Result<sqlx::Transaction<'a, Postgres>, ErrorResponse> {
+    pub async fn txn_sqlx<'a>() -> Result<sqlx::Transaction<'a, Postgres>, ErrorResponse> {
         let txn = PG_POOL_SQLX
             .get()
             .expect("DB::txn() must never be called with no configured Postgres DB")
@@ -187,56 +201,39 @@ impl DB {
         //     .await
         //     .expect("Error running DB migrations");
 
-        // database migrations
-        let mut conn = pool.get().await?;
-        let client = conn.deref_mut().deref_mut();
-        let report = migrations_postgres::migrations::runner()
-            .run_async(client)
-            .await
-            .map_err(|err| {
-                ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    format!("refinery postgres migrations error: {:?}", err),
-                )
-            })?;
-        debug!("{:?}", report);
-
         Ok(pool)
     }
 
     async fn init_connect_postgres() -> Result<(), ErrorResponse> {
-        let db_max_conn = env::var("DATABASE_MAX_CONN")
+        let db_max_conn = env::var("PG_MAX_CONN")
             .unwrap_or_else(|_| "20".to_string())
             .parse::<u32>()
             .expect("Error parsing DATABASE_MAX_CONN to u32");
 
-        if let Some(db_url) = DATABASE_URL.as_ref() {
-            // BEGIN:sqlx - TODO remove the sqlx section after migration is finished
-            let pool = Self::connect_postgres_sqlx(db_url, db_max_conn).await?;
-            info!("Postgres database connection pool created successfully");
+        // BEGIN:sqlx - TODO remove the sqlx section after migration is finished
+        let db_url = DATABASE_URL.as_ref().expect("DATABASE_URL is not set");
+        let pool = Self::connect_postgres_sqlx(db_url, db_max_conn).await?;
+        info!("Postgres database connection pool created successfully");
 
-            PG_POOL_SQLX
-                .set(pool)
-                .expect("DB::init_postgres() must only be called once at startup");
-            // END: sqlx
+        PG_POOL_SQLX
+            .set(pool)
+            .expect("DB::init_postgres() must only be called once at startup");
+        // END: sqlx
 
-            let host = env::var("DATABASE_HOST").expect("DATABASE_HOST is not set");
-            let port = env::var("DATABASE_PORT")
-                .unwrap_or_else(|_| "5432".to_string())
-                .parse::<u16>()
-                .expect("Cannot parse DATABASE_PORT to u16");
-            let user = env::var("DATABASE_USER").expect("DATABASE_USER is not set");
-            let password = env::var("DATABASE_PASSWORD").expect("DATABASE_PASSWORD is not set");
-            let db_name = env::var("DATABASE_NAME").expect("DATABASE_NAME is not set");
-            let pool = Self::connect_postgres(&host, port, &user, &password, &db_name, db_max_conn)
-                .await?;
+        let host = env::var("PG_HOST").expect("PG_HOST is not set");
+        let port = env::var("PG_PORT")
+            .unwrap_or_else(|_| "5432".to_string())
+            .parse::<u16>()
+            .expect("Cannot parse PG_PORT to u16");
+        let user = env::var("PG_USER").expect("PG_USER is not set");
+        let password = env::var("PG_PASSWORD").expect("PG_PASSWORD is not set");
+        let db_name = env::var("PG_DB_NAME").unwrap_or_else(|_| "rauthy".to_string());
+        let pool =
+            Self::connect_postgres(&host, port, &user, &password, &db_name, db_max_conn).await?;
 
-            PG_POOL_DEADPOOL
-                .set(pool)
-                .expect("DB::init_postgres() must only be called once at startup");
-        } else {
-            panic!("DATABASE_URL is not set");
-        }
+        PG_POOL_DEADPOOL
+            .set(pool)
+            .expect("DB::init_postgres() must only be called once at startup");
 
         Ok(())
     }
@@ -247,20 +244,33 @@ impl DB {
         let db_version = DbVersion::check_app_version().await?;
 
         if is_hiqlite() {
-            Self::client().migrate::<Migrations>().await?;
-        } else if is_postgres() {
+            Self::hql().migrate::<Migrations>().await?;
+        } else {
             debug!("Migrating data from ../../migrations/postgres");
-            sqlx::migrate!("../../migrations/postgres")
-                .run(Self::conn())
+
+            // TODO we can only finally switch migrations after all sqlx::query! have been removed
+            // database migrations
+            let mut client = DB::pg().await?;
+            let report = migrations_postgres::migrations::runner()
+                .run_async(client.deref_mut().deref_mut())
                 .await
                 .map_err(|err| {
                     ErrorResponse::new(
-                        ErrorResponseType::Database,
-                        format!("Postgres migration error: {:?}", err),
+                        ErrorResponseType::Internal,
+                        format!("refinery postgres migrations error: {:?}", err),
                     )
                 })?;
-        } else {
-            unreachable!();
+            debug!("{:?}", report);
+
+            // sqlx::migrate!("../../migrations/postgres")
+            //     .run(Self::conn_sqlx())
+            //     .await
+            //     .map_err(|err| {
+            //         ErrorResponse::new(
+            //             ErrorResponseType::Database,
+            //             format!("Postgres migration error: {:?}", err),
+            //         )
+            //     })?;
         }
 
         // migrate dynamic DB data

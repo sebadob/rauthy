@@ -18,7 +18,7 @@ impl DeviceIpRateLimit {
     pub async fn insert(ip: String) -> Result<(), ErrorResponse> {
         let limit_secs = DEVICE_GRANT_RATE_LIMIT.unwrap_or(1) as i64;
         let limit = Utc::now().add(chrono::Duration::seconds(limit_secs));
-        DB::client()
+        DB::hql()
             .put(Cache::IPRateLimit, ip, &limit, Some(limit_secs))
             .await?;
 
@@ -26,7 +26,7 @@ impl DeviceIpRateLimit {
     }
 
     pub async fn is_limited(ip: String) -> Result<Option<DateTime<Utc>>, ErrorResponse> {
-        let dt = DB::client().get(Cache::IPRateLimit, ip).await?;
+        let dt = DB::hql().get(Cache::IPRateLimit, ip).await?;
         Ok(dt)
     }
 }

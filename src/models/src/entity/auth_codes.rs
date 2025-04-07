@@ -38,20 +38,18 @@ impl Debug for AuthCode {
 impl AuthCode {
     // Deletes an Authorization Code from the cache
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::client()
-            .delete(Cache::AuthCode, self.id.clone())
-            .await?;
+        DB::hql().delete(Cache::AuthCode, self.id.clone()).await?;
         Ok(())
     }
 
     // Returns an Authorization code from the cache
     pub async fn find(id: String) -> Result<Option<Self>, ErrorResponse> {
-        Ok(DB::client().get(Cache::AuthCode, id).await?)
+        Ok(DB::hql().get(Cache::AuthCode, id).await?)
     }
 
     // Saves an Authorization Code
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .put(Cache::AuthCode, self.id.clone(), self, *CACHE_TTL_AUTH_CODE)
             .await?;
         Ok(())

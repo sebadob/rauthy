@@ -19,7 +19,7 @@ pub async fn events_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!("Running HA mode without being the leader - skipping events_cleanup scheduler");
             continue;
         }
@@ -31,7 +31,7 @@ pub async fn events_cleanup() {
             .timestamp_millis();
 
         if is_hiqlite() {
-            let res = DB::client()
+            let res = DB::hql()
                 .execute(
                     "DELETE FROM events WHERE timestamp < $1",
                     params!(threshold),
@@ -46,7 +46,7 @@ pub async fn events_cleanup() {
             }
         } else {
             let res = sqlx::query!("DELETE FROM events WHERE timestamp < $1", threshold)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await;
 
             match res {

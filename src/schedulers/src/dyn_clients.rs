@@ -32,7 +32,7 @@ pub async fn dyn_client_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!(
                 "Running HA mode without being the leader - skipping dynamic_client_cleanup scheduler"
             );
@@ -41,7 +41,7 @@ pub async fn dyn_client_cleanup() {
         debug!("Running dynamic_client_cleanup scheduler");
 
         let clients_res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as(
                     "SELECT * FROM clients_dyn WHERE last_used = null",
                     params!(),
@@ -53,7 +53,7 @@ pub async fn dyn_client_cleanup() {
                 ClientDyn,
                 "SELECT * FROM clients_dyn WHERE last_used = null"
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await
             .map_err(|err| err.to_string())
         };

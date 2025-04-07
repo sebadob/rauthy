@@ -68,7 +68,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     conn.pragma_update(None, "foreign_keys", "ON")?;
 
     // before doing anything, make sure that we are on the same feature version
-    let mut res = DB::client()
+    let mut res = DB::hql()
         .query_raw_one("SELECT data FROM config WHERE id = 'db_version'", params!())
         .await?;
     let bytes: Vec<u8> = res.get("data");

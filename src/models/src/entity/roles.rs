@@ -36,7 +36,7 @@ impl Role {
         };
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "INSERT INTO roles (id, name) VALUES ($1, $2)",
                     params!(new_role.id.clone(), new_role.name.clone()),
@@ -48,12 +48,12 @@ impl Role {
                 new_role.id,
                 new_role.name,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
         roles.push(new_role.clone());
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_ROLES, &roles, CACHE_TTL_APP)
             .await?;
 
@@ -84,12 +84,12 @@ impl Role {
 
             txn.push(("DELETE FROM roles WHERE id = $1", params!(role.id.clone())));
 
-            for res in DB::client().txn(txn).await? {
+            for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             for mut user in users {
                 user.delete_role(&role.name);
@@ -108,7 +108,7 @@ impl Role {
             .filter(|r| r.id != role.id)
             .collect::<Vec<Role>>();
 
-        let client = DB::client();
+        let client = DB::hql();
         // clearing users cache is more safe and less resource intensive than trying to
         // update each single entry
         client.clear_cache(Cache::User).await?;
@@ -122,12 +122,12 @@ impl Role {
     // Returns a single role by id
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as_one("SELECT * FROM roles WHERE id = $1", params!(id))
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM roles WHERE id = $1", id)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 
@@ -136,18 +136,16 @@ impl Role {
 
     // Returns all existing roles
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX_ROLES).await? {
             return Ok(slf);
         }
 
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as("SELECT * FROM roles", params!())
-                .await?
+            DB::hql().query_as("SELECT * FROM roles", params!()).await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM roles")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -180,12 +178,12 @@ impl Role {
                 params!(new_role.name.clone(), new_role.id.clone()),
             ));
 
-            for res in DB::client().txn(txn).await? {
+            for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             for mut user in users {
                 user.delete_role(&role.name);
@@ -213,9 +211,9 @@ impl Role {
             })
             .collect::<Vec<Role>>();
 
-        let client = DB::client();
+        let client = DB::hql();
         client.clear_cache(Cache::User).await?;
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_ROLES, &roles, CACHE_TTL_APP)
             .await?;
 

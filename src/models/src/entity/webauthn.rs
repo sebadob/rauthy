@@ -90,7 +90,7 @@ impl PasskeyEntity {
         };
 
         let user_email = user.as_ref().map(|u| u.email.clone());
-        let client = DB::client();
+        let client = DB::hql();
 
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(2);
@@ -119,7 +119,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 
             client.txn(txn).await?;
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             if let Some(user) = user {
                 debug_assert!(user.webauthn_user_id.is_some());
@@ -167,7 +167,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 
     pub async fn count_for_user(user_id: String) -> Result<i64, ErrorResponse> {
         let count: i64 = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_raw_one(
                     "SELECT COUNT (*) AS count FROM passkeys WHERE user_id = $1",
                     params!(user_id),
@@ -179,7 +179,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 "SELECT COUNT (*) AS count FROM passkeys WHERE user_id = $1",
                 user_id
             )
-            .fetch_one(DB::conn())
+            .fetch_one(DB::conn_sqlx())
             .await?
             .count
             .unwrap_or_default()
@@ -226,9 +226,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             }
             Self::delete_by_id_name_append(user_id.clone(), name.clone(), &mut txn);
 
-            DB::client().txn(txn).await?;
+            DB::hql().txn(txn).await?;
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             if let Some(user) = user_to_save {
                 user.save_txn(&mut txn).await?;
@@ -273,7 +273,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
         user_email: Option<String>,
         name: &str,
     ) -> Result<(), ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(email) = user_email {
             User::invalidate_cache(user_id, &email).await?;
@@ -297,7 +297,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 
     pub async fn find(user_id: &str, name: &str) -> Result<Self, ErrorResponse> {
         let idx = Self::cache_idx_single(user_id, name);
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::Webauthn, &idx).await? {
             return Ok(slf);
@@ -317,7 +317,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 user_id,
                 name,
             )
-            .fetch_one(DB::conn())
+            .fetch_one(DB::conn_sqlx())
             .await?
         };
 
@@ -330,7 +330,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 
     pub async fn find_cred_ids_for_user(user_id: &str) -> Result<Vec<CredentialID>, ErrorResponse> {
         let idx = Self::cache_idx_creds(user_id);
-        let client = DB::client();
+        let client = DB::hql();
 
         let opt: Option<Vec<Vec<u8>>> = client.get(Cache::Webauthn, &idx).await?;
         if let Some(bytes) = opt {
@@ -352,7 +352,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 "SELECT credential_id FROM passkeys WHERE user_id = $1",
                 user_id
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
             .into_iter()
             .map(|row| row.credential_id)
@@ -368,7 +368,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 
     pub async fn find_for_user(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
         let idx = Self::cache_idx_user(user_id);
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::Webauthn, &idx).await? {
             return Ok(slf);
@@ -383,7 +383,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM passkeys WHERE user_id = $1", user_id)
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -396,7 +396,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 
     pub async fn find_for_user_with_uv(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
         let idx = Self::cache_idx_user_with_uv(user_id);
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::Webauthn, &idx).await? {
             return Ok(slf);
@@ -415,7 +415,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 "SELECT * FROM passkeys WHERE user_id = $1 AND user_verified = true",
                 user_id
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
@@ -501,7 +501,7 @@ WHERE user_id = $3 AND name = $4"#,
     }
 
     async fn update_caches_after_update(&self) -> Result<(), ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         client
             .put(
@@ -621,14 +621,12 @@ pub struct WebauthnData {
 // CURD
 impl WebauthnData {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::client()
-            .delete(Cache::Webauthn, self.code.clone())
-            .await?;
+        DB::hql().delete(Cache::Webauthn, self.code.clone()).await?;
         Ok(())
     }
 
     pub async fn find(code: String) -> Result<Self, ErrorResponse> {
-        let res: Option<Self> = DB::client().get(Cache::Webauthn, code).await?;
+        let res: Option<Self> = DB::hql().get(Cache::Webauthn, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -639,7 +637,7 @@ impl WebauthnData {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .put(
                 Cache::Webauthn,
                 self.code.clone(),
@@ -709,14 +707,12 @@ pub struct WebauthnLoginReq {
 // CRUD
 impl WebauthnLoginReq {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::client()
-            .delete(Cache::Webauthn, self.code.clone())
-            .await?;
+        DB::hql().delete(Cache::Webauthn, self.code.clone()).await?;
         Ok(())
     }
 
     pub async fn find(code: String) -> Result<Self, ErrorResponse> {
-        let res: Option<Self> = DB::client().get(Cache::Webauthn, code).await?;
+        let res: Option<Self> = DB::hql().get(Cache::Webauthn, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -727,7 +723,7 @@ impl WebauthnLoginReq {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .put(
                 Cache::Webauthn,
                 self.code.clone(),
@@ -755,14 +751,12 @@ impl WebauthnServiceReq {
     }
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::client()
-            .delete(Cache::Webauthn, self.code.clone())
-            .await?;
+        DB::hql().delete(Cache::Webauthn, self.code.clone()).await?;
         Ok(())
     }
 
     pub async fn find(code: String) -> Result<Self, ErrorResponse> {
-        let res = DB::client().get(Cache::Webauthn, code).await?;
+        let res = DB::hql().get(Cache::Webauthn, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -773,7 +767,7 @@ impl WebauthnServiceReq {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .put(
                 Cache::Webauthn,
                 self.code.clone(),
@@ -914,9 +908,9 @@ pub async fn auth_finish(
                             let mut txn = Vec::with_capacity(2);
                             pk_entity.update_passkey_txn_append(&mut txn);
                             user.save_txn_append(&mut txn);
-                            DB::client().txn(txn).await?;
+                            DB::hql().txn(txn).await?;
                         } else {
-                            let mut txn = DB::txn().await?;
+                            let mut txn = DB::txn_sqlx().await?;
                             pk_entity.update_passkey_txn(&mut txn).await?;
                             user.save_txn(&mut txn).await?;
                             txn.commit().await?;
@@ -999,7 +993,7 @@ pub async fn reg_start(
 
             // persist the reg_state
             let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
-            DB::client()
+            DB::hql()
                 .put(Cache::Webauthn, idx, &reg_data, *CACHE_TTL_WEBAUTHN)
                 .await?;
 
@@ -1024,7 +1018,7 @@ pub async fn reg_finish(
     let mut user = User::find(id).await?;
 
     let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
-    let client = DB::client();
+    let client = DB::hql();
 
     let res: Option<WebauthnReg> = client.get(Cache::Webauthn, &idx).await?;
     if res.is_none() {

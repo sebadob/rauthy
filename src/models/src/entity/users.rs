@@ -125,7 +125,7 @@ impl Debug for User {
 // CRUD
 impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         let idx = format!("{}_{}", IDX_USERS, &user_id);
         client.delete(Cache::User, idx).await?;
@@ -137,7 +137,7 @@ impl User {
     }
 
     pub async fn count() -> Result<i64, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(count) = client.get(Cache::App, IDX_USER_COUNT).await? {
             return Ok(count);
@@ -151,7 +151,7 @@ impl User {
                 .get("count")
         } else {
             sqlx::query!("SELECT COUNT (*) count FROM users")
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
                 .count
                 .unwrap_or_default()
@@ -169,7 +169,7 @@ impl User {
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only
         count += 1;
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
             .await?;
         Ok(())
@@ -180,7 +180,7 @@ impl User {
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only
         count -= 1;
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
             .await?;
         Ok(())
@@ -242,12 +242,12 @@ impl User {
         }
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute("DELETE FROM users WHERE id = $1", params!(&self.id))
                 .await?;
         } else {
             sqlx::query!("DELETE FROM users WHERE id = $1", self.id)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
@@ -260,13 +260,13 @@ impl User {
     pub async fn exists(id: String) -> Result<(), ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
 
-        let opt: Option<Self> = DB::client().get(Cache::User, idx).await?;
+        let opt: Option<Self> = DB::hql().get(Cache::User, idx).await?;
         if opt.is_some() {
             return Ok(());
         }
 
         if is_hiqlite() {
-            let rows = DB::client()
+            let rows = DB::hql()
                 .query_raw("SELECT 1 FROM users WHERE id = $1", params!(id))
                 .await?;
             if rows.is_empty() {
@@ -277,7 +277,7 @@ impl User {
             }
         } else {
             sqlx::query!("SELECT id FROM users WHERE id = $1", id)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?;
         }
 
@@ -286,7 +286,7 @@ impl User {
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
             return Ok(slf);
@@ -298,7 +298,7 @@ impl User {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users WHERE id = $1", id)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 
@@ -310,7 +310,7 @@ impl User {
         let email = email.to_lowercase();
 
         let idx = format!("{}_{}", IDX_USERS, email);
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
             return Ok(slf);
@@ -322,7 +322,7 @@ impl User {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users WHERE email = $1", email)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 
@@ -335,7 +335,7 @@ impl User {
         federation_uid: &str,
     ) -> Result<Self, ErrorResponse> {
         let slf = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as_one(
                     "SELECT * FROM users WHERE auth_provider_id = $1 AND federation_uid = $2",
                     params!(auth_provider_id, federation_uid),
@@ -348,7 +348,7 @@ impl User {
                 auth_provider_id,
                 federation_uid
             )
-            .fetch_one(DB::conn())
+            .fetch_one(DB::conn_sqlx())
             .await?
         };
 
@@ -357,12 +357,12 @@ impl User {
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as("SELECT * FROM users ORDER BY created_at ASC", params!())
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users ORDER BY created_at ASC")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -371,7 +371,7 @@ impl User {
 
     pub async fn find_all_simple() -> Result<Vec<UserResponseSimple>, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as(
                     r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
@@ -388,7 +388,7 @@ SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC"#
             )
-            .fetch_all(DB::conn())
+            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
@@ -400,12 +400,12 @@ ORDER BY created_at ASC"#
         let like = format!("%{group_name}%");
 
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as("SELECT * FROM users WHERE groups LIKE $1", params!(like))
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users WHERE groups LIKE $1", like)
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -417,12 +417,12 @@ ORDER BY created_at ASC"#
         let like = format!("%{role_name}%");
 
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as("SELECT * FROM users WHERE roles LIKE $1", params!(like))
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users WHERE roles LIKE $1", like)
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -433,12 +433,12 @@ ORDER BY created_at ASC"#
         let now = Utc::now().add(chrono::Duration::seconds(10)).timestamp();
 
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as("SELECT * FROM users WHERE user_expires < $1", params!(now))
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users WHERE user_expires < $1", now)
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -479,7 +479,7 @@ ORDER BY created_at ASC"#
         let res = if let Some(token) = continuation_token {
             if backwards {
                 if is_hiqlite() {
-                    let mut res = DB::client()
+                    let mut res = DB::hql()
                         .query_as(
                             r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
@@ -509,7 +509,7 @@ OFFSET $4"#,
                         page_size,
                         offset,
                     )
-                    .fetch_all(DB::conn())
+                    .fetch_all(DB::conn_sqlx())
                     .await?;
 
                     res.reverse();
@@ -518,7 +518,7 @@ OFFSET $4"#,
             } else {
                 #[allow(clippy::collapsible_else_if)]
                 if is_hiqlite() {
-                    DB::client()
+                    DB::hql()
                         .query_as(
                             r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
@@ -545,7 +545,7 @@ OFFSET $4"#,
                         page_size,
                         offset,
                     )
-                    .fetch_all(DB::conn())
+                    .fetch_all(DB::conn_sqlx())
                     .await?
                 }
             }
@@ -554,7 +554,7 @@ OFFSET $4"#,
             // serve the last elements without any other conditions
 
             if is_hiqlite() {
-                let mut res = DB::client()
+                let mut res = DB::hql()
                     .query_as(
                         r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
@@ -580,7 +580,7 @@ OFFSET $2"#,
                     page_size,
                     offset,
                 )
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?;
 
                 res.reverse();
@@ -589,7 +589,7 @@ OFFSET $2"#,
         } else {
             #[allow(clippy::collapsible_else_if)]
             if is_hiqlite() {
-                DB::client()
+                DB::hql()
                     .query_as(
                         r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
@@ -612,7 +612,7 @@ OFFSET $2"#,
                     page_size,
                     offset,
                 )
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
             }
         };
@@ -628,7 +628,7 @@ OFFSET $2"#,
         let lang = new_user.language.as_str();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO USERS
@@ -677,7 +677,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                 new_user.federation_uid,
                 new_user.picture_id,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -795,7 +795,7 @@ WHERE id = $19"#,
         }
 
         let lang = self.language.as_str();
-        let client = DB::client();
+        let client = DB::hql();
 
         if is_hiqlite() {
             client
@@ -859,7 +859,7 @@ WHERE id = $19"#,
             .bind(&self.federation_uid)
             .bind(&self.picture_id)
             .bind(&self.id)
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -893,7 +893,7 @@ WHERE id = $19"#,
         let res = match idx {
             SearchParamsIdx::Id | SearchParamsIdx::UserId => {
                 if is_hiqlite() {
-                    DB::client()
+                    DB::hql()
                         .query_as(
                             r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
@@ -916,13 +916,13 @@ LIMIT $2"#,
                         q,
                         limit
                     )
-                    .fetch_all(DB::conn())
+                    .fetch_all(DB::conn_sqlx())
                     .await?
                 }
             }
             SearchParamsIdx::Email => {
                 if is_hiqlite() {
-                    DB::client()
+                    DB::hql()
                         .query_as(
                             r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
@@ -945,7 +945,7 @@ LIMIT $2"#,
                         q,
                         limit
                     )
-                    .fetch_all(DB::conn())
+                    .fetch_all(DB::conn_sqlx())
                     .await?
                 }
             }
@@ -965,7 +965,7 @@ LIMIT $2"#,
         email_verified: bool,
     ) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "UPDATE users SET email_verified = $1 WHERE id = $2",
                     params!(email_verified, user_id),
@@ -977,7 +977,7 @@ LIMIT $2"#,
                 email_verified,
                 user_id
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
         Ok(())
@@ -1065,7 +1065,7 @@ LIMIT $2"#,
         let lang = self.language.as_str();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "UPDATE users SET language = $1 WHERE id = $2",
                     params!(lang, &self.id),
@@ -1077,7 +1077,7 @@ LIMIT $2"#,
                 lang,
                 self.id
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 

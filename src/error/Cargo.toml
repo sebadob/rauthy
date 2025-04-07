@@ -33,6 +33,7 @@ sqlx = { workspace = true }
 svg-hush = { workspace = true }
 time = { workspace = true }
 tokio-postgres = { workspace = true }
+tokio-pg-mapper = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true }
 validator = { workspace = true }

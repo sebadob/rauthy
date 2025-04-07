@@ -125,13 +125,13 @@ pub struct PasswordPolicy {
 // CRUD
 impl PasswordPolicy {
     pub async fn find() -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX_PASSWORD_RULES).await? {
             return Ok(slf);
         }
 
         let bytes: Vec<u8> = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_raw_one(
                     "SELECT data FROM config WHERE id = 'password_policy'",
                     params!(),
@@ -140,7 +140,7 @@ impl PasswordPolicy {
                 .get("data")
         } else {
             sqlx::query("SELECT data FROM config WHERE id = 'password_policy'")
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
                 .get("data")
         };
@@ -157,7 +157,7 @@ impl PasswordPolicy {
         let slf = bincode::serialize(&self)?;
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "UPDATE config SET data = $1 WHERE id = 'password_policy'",
                     params!(slf),
@@ -168,11 +168,11 @@ impl PasswordPolicy {
                 "UPDATE config SET data = $1 WHERE id = 'password_policy'",
                 slf
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_PASSWORD_RULES, self, CACHE_TTL_APP)
             .await?;
 
@@ -218,7 +218,7 @@ pub struct RecentPasswordsEntity {
 impl RecentPasswordsEntity {
     pub async fn create(user_id: &str, passwords: String) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)",
                     params!(user_id, passwords),
@@ -230,7 +230,7 @@ impl RecentPasswordsEntity {
                 user_id,
                 passwords,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -239,7 +239,7 @@ impl RecentPasswordsEntity {
 
     pub async fn find(user_id: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as_one(
                     "SELECT * FROM recent_passwords WHERE user_id = $1",
                     params!(user_id),
@@ -251,7 +251,7 @@ impl RecentPasswordsEntity {
                 "SELECT * FROM recent_passwords WHERE user_id = $1",
                 user_id,
             )
-            .fetch_one(DB::conn())
+            .fetch_one(DB::conn_sqlx())
             .await?
         };
         Ok(res)
@@ -259,7 +259,7 @@ impl RecentPasswordsEntity {
 
     pub async fn save(self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "UPDATE recent_passwords SET passwords = $1 WHERE user_id = $2",
                     params!(self.passwords, self.user_id),
@@ -271,7 +271,7 @@ impl RecentPasswordsEntity {
                 self.passwords,
                 self.user_id,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
         Ok(())

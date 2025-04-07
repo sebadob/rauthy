@@ -36,7 +36,7 @@ impl Group {
         };
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "INSERT INTO groups (id, name) VALUES ($1, $2)",
                     params!(new_group.id.clone(), new_group.name.clone()),
@@ -48,12 +48,12 @@ impl Group {
                 new_group.id,
                 new_group.name,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
         groups.push(new_group.clone());
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_GROUPS, &groups, CACHE_TTL_APP)
             .await?;
 
@@ -78,12 +78,12 @@ impl Group {
                 params!(group.id.clone()),
             ));
 
-            for res in DB::client().txn(txn).await? {
+            for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             for mut user in users {
                 user.delete_group(&group.name);
@@ -102,7 +102,7 @@ impl Group {
             .filter(|g| g.id != group.id)
             .collect::<Vec<Group>>();
 
-        let client = DB::client();
+        let client = DB::hql();
         // clearing users cache is more safe and less resource intensive than trying to
         // update each single entry
         client.clear_cache(Cache::User).await?;
@@ -116,12 +116,12 @@ impl Group {
     // Returns a single group by id
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as_one("SELECT * FROM groups WHERE id = $1", params!(id))
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM groups WHERE id = $1", id,)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 
@@ -130,7 +130,7 @@ impl Group {
 
     // Returns all existing groups
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX_GROUPS).await? {
             return Ok(slf);
         }
@@ -139,7 +139,7 @@ impl Group {
             client.query_as("SELECT * FROM groups", params!()).await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM groups")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -178,12 +178,12 @@ impl Group {
                 params!(new_group.name.clone(), new_group.id.clone()),
             ));
 
-            for res in DB::client().txn(txn).await? {
+            for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             for mut user in users {
                 user.delete_group(&group.name);
@@ -211,7 +211,7 @@ impl Group {
             })
             .collect::<Vec<Group>>();
 
-        let client = DB::client();
+        let client = DB::hql();
         client.clear_cache(Cache::User).await?;
         client
             .put(Cache::App, IDX_GROUPS, &groups, CACHE_TTL_APP)

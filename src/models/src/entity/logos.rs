@@ -91,18 +91,18 @@ impl Logo {
         match typ {
             LogoType::Client => {
                 if is_hiqlite() {
-                    DB::client()
+                    DB::hql()
                         .execute("DELETE FROM client_logos WHERE client_id = $1", params!(id))
                         .await?;
                 } else {
                     query!("DELETE FROM client_logos WHERE client_id = $1", id)
-                        .execute(DB::conn())
+                        .execute(DB::conn_sqlx())
                         .await?;
                 }
             }
             LogoType::AuthProvider => {
                 if is_hiqlite() {
-                    DB::client()
+                    DB::hql()
                         .execute(
                             "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1",
                             params!(id),
@@ -113,16 +113,16 @@ impl Logo {
                         "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1",
                         id
                     )
-                    .execute(DB::conn())
+                    .execute(DB::conn_sqlx())
                     .await?;
                 }
             }
         };
 
-        DB::client()
+        DB::hql()
             .delete(Cache::App, Self::cache_idx(typ, id))
             .await?;
-        DB::client()
+        DB::hql()
             .delete(Cache::App, Self::cache_idx_updated(typ, id))
             .await?;
 
@@ -264,7 +264,7 @@ SET content_type = $3, data = $4, updated = $5"#
                 }
             };
 
-            DB::client()
+            DB::hql()
                 .execute(
                     sql,
                     params!(
@@ -307,12 +307,12 @@ SET content_type = $3, data = $4, updated = $5"#,
                     )
                 }
             }
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
         if with_cache {
-            DB::client()
+            DB::hql()
                 .put(
                     Cache::App,
                     Self::cache_idx(typ, &self.id),
@@ -320,7 +320,7 @@ SET content_type = $3, data = $4, updated = $5"#,
                     CACHE_TTL_APP,
                 )
                 .await?;
-            DB::client()
+            DB::hql()
                 .put(
                     Cache::App,
                     Self::cache_idx_updated(typ, &self.id),
@@ -356,7 +356,7 @@ FROM auth_provider_logos
 WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
                 }
             };
-            DB::client()
+            DB::hql()
                 .query_map_one(sql, params!(id, res, res_svg))
                 .await?
         } else {
@@ -372,7 +372,7 @@ WHERE client_id = $1 AND (res = $2 OR res = $3)"#,
                         res,
                         res_svg,
                     )
-                    .fetch_one(DB::conn())
+                    .fetch_one(DB::conn_sqlx())
                     .await?
                 }
                 LogoType::AuthProvider => {
@@ -386,7 +386,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
                         res,
                         res_svg,
                     )
-                    .fetch_one(DB::conn())
+                    .fetch_one(DB::conn_sqlx())
                     .await?
                 }
             }
@@ -397,7 +397,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
 
     /// special fn because we only want to cache the small logos
     pub async fn find_cached(id: &str, typ: &LogoType) -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(typ, id)).await? {
             return Ok(slf);
         }
@@ -412,7 +412,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
     }
 
     pub async fn find_updated(id: &str, typ: &LogoType) -> Result<Option<i64>, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(updated) = client
             .get(Cache::App, Self::cache_idx_updated(typ, id))
             .await?
@@ -427,7 +427,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
                     "SELECT updated FROM auth_provider_logos WHERE auth_provider_id = $1 LIMIT 1"
                 }
             };
-            DB::client()
+            DB::hql()
                 .query_raw(sql, params!(id))
                 .await?
                 .first_mut()
@@ -438,7 +438,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
                     "SELECT updated FROM client_logos WHERE client_id = $1 LIMIT 1",
                     id,
                 )
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
                 .first()
                 .map(|r| r.updated),
@@ -447,7 +447,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
                     "SELECT updated FROM auth_provider_logos WHERE auth_provider_id = $1 LIMIT 1",
                     id,
                 )
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
                 .first()
                 .map(|r| r.updated),

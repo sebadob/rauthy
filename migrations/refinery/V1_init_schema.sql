@@ -1,4 +1,15 @@
-create table clients
+create table if not exists _sqlx_migrations
+(
+    version        bigint                                 not null
+        primary key,
+    description    text                                   not null,
+    installed_on   timestamp with time zone default now() not null,
+    success        boolean                                not null,
+    checksum       bytea                                  not null,
+    execution_time bigint                                 not null
+);
+
+create table if not exists clients
 (
     id                        varchar not null
         constraint clients_pk
@@ -24,10 +35,10 @@ create table clients
     contacts                  varchar
 );
 
-create index clients_client_uri_index
+create index if not exists clients_client_uri_index
     on clients (client_uri);
 
-create table groups
+create table if not exists groups
 (
     id   varchar not null
         constraint groups_pk
@@ -35,7 +46,7 @@ create table groups
     name varchar not null
 );
 
-create table jwks
+create table if not exists jwks
 (
     kid        varchar not null
         constraint jwks_pk
@@ -46,10 +57,10 @@ create table jwks
     jwk        bytea   not null
 );
 
-create index jwks_signature_created_at_index
+create index if not exists jwks_signature_created_at_index
     on jwks (signature, created_at);
 
-create table config
+create table if not exists config
 (
     id   varchar not null
         constraint config_pk
@@ -57,7 +68,7 @@ create table config
     data bytea
 );
 
-create table roles
+create table if not exists roles
 (
     id   varchar not null
         constraint roles_pk
@@ -65,7 +76,7 @@ create table roles
     name varchar not null
 );
 
-create table scopes
+create table if not exists scopes
 (
     id                  varchar not null
         constraint scopes_pk
@@ -75,7 +86,7 @@ create table scopes
     attr_include_id     varchar
 );
 
-create table user_attr_config
+create table if not exists user_attr_config
 (
     name   varchar not null
         constraint user_attr_config_pk
@@ -83,7 +94,7 @@ create table user_attr_config
     "desc" varchar
 );
 
-create table events
+create table if not exists events
 (
     id        varchar  not null,
     timestamp bigint   not null,
@@ -96,10 +107,10 @@ create table events
         primary key (id, timestamp)
 );
 
-create index events_timestamp_index
+create index if not exists events_timestamp_index
     on events (timestamp desc);
 
-create table api_keys
+create table if not exists api_keys
 (
     name       varchar not null
         constraint api_keys_pk
@@ -111,13 +122,13 @@ create table api_keys
     access     bytea   not null
 );
 
-create index api_keys_enc_key_id_index
+create index if not exists api_keys_enc_key_id_index
     on api_keys (enc_key_id);
 
-create index api_keys_expires_index
+create index if not exists api_keys_expires_index
     on api_keys (expires);
 
-create table clients_dyn
+create table if not exists clients_dyn
 (
     id                         varchar not null
         constraint clients_dyn_pk
@@ -131,10 +142,10 @@ create table clients_dyn
     token_endpoint_auth_method varchar not null
 );
 
-create index clients_dyn_last_used_index
+create index if not exists clients_dyn_last_used_index
     on clients_dyn (last_used);
 
-create table auth_providers
+create table if not exists auth_providers
 (
     id                      varchar              not null
         constraint auth_providers_pk
@@ -160,7 +171,7 @@ create table auth_providers
     client_secret_post      boolean default true not null
 );
 
-create table users
+create table if not exists users
 (
     id                    varchar                                 not null
         constraint users_pk
@@ -195,10 +206,10 @@ create table users
         unique (auth_provider_id, federation_uid)
 );
 
-create index users_created_at_index
+create index if not exists users_created_at_index
     on users (created_at);
 
-create table magic_links
+create table if not exists magic_links
 (
     id         varchar not null
         constraint magic_links_pk
@@ -213,13 +224,13 @@ create table magic_links
     usage      varchar not null
 );
 
-create index magic_links_exp_index
+create index if not exists magic_links_exp_index
     on magic_links (exp);
 
-create index magic_links_user_id_index
+create index if not exists magic_links_user_id_index
     on magic_links (user_id);
 
-create table recent_passwords
+create table if not exists recent_passwords
 (
     user_id   varchar not null
         constraint recent_passwords_pk
@@ -229,7 +240,7 @@ create table recent_passwords
     passwords varchar not null
 );
 
-create table refresh_tokens
+create table if not exists refresh_tokens
 (
     id      varchar               not null
         constraint refresh_tokens_pk
@@ -243,13 +254,13 @@ create table refresh_tokens
     is_mfa  boolean default false not null
 );
 
-create index refresh_tokens_exp_index
+create index if not exists refresh_tokens_exp_index
     on refresh_tokens (exp);
 
-create index refresh_tokens_user_id_index
+create index if not exists refresh_tokens_user_id_index
     on refresh_tokens (user_id);
 
-create table user_attr_values
+create table if not exists user_attr_values
 (
     user_id varchar not null
         constraint user_attr_values_users_id_fk
@@ -263,7 +274,7 @@ create table user_attr_values
         primary key (user_id, key)
 );
 
-create table sessions
+create table if not exists sessions
 (
     id         varchar not null
         constraint sessions_pk
@@ -281,10 +292,10 @@ create table sessions
     remote_ip  varchar
 );
 
-create index sessions_exp_index
+create index if not exists sessions_exp_index
     on sessions (exp);
 
-create table passkeys
+create table if not exists passkeys
 (
     user_id         varchar not null
         constraint passkeys_users_id_fk
@@ -304,13 +315,13 @@ create table passkeys
         primary key (user_id, name)
 );
 
-create unique index passkeys_credential_id_uindex
+create unique index if not exists passkeys_credential_id_uindex
     on passkeys (credential_id);
 
-create index passkeys_passkey_user_id_uindex
+create index if not exists passkeys_passkey_user_id_uindex
     on passkeys (passkey_user_id);
 
-create table webids
+create table if not exists webids
 (
     user_id        varchar not null
         constraint webids_pk
@@ -322,7 +333,7 @@ create table webids
     expose_email   boolean not null
 );
 
-create table users_values
+create table if not exists users_values
 (
     id        varchar not null
         constraint users_values_pk
@@ -338,7 +349,7 @@ create table users_values
     country   varchar
 );
 
-create table auth_provider_logos
+create table if not exists auth_provider_logos
 (
     auth_provider_id varchar          not null
         constraint auth_provider_logos_auth_providers_id_fk
@@ -352,7 +363,7 @@ create table auth_provider_logos
         primary key (auth_provider_id, res)
 );
 
-create table client_logos
+create table if not exists client_logos
 (
     client_id    varchar          not null
         constraint client_logos_client_id_fk
@@ -366,7 +377,7 @@ create table client_logos
         primary key (client_id, res)
 );
 
-create table devices
+create table if not exists devices
 (
     id          varchar not null
         constraint devices_pk
@@ -386,10 +397,10 @@ create table devices
     name        varchar not null
 );
 
-create index devices_access_exp_refresh_exp_index
+create index if not exists devices_access_exp_refresh_exp_index
     on devices (access_exp, refresh_exp);
 
-create table refresh_tokens_devices
+create table if not exists refresh_tokens_devices
 (
     id        varchar not null
         constraint refresh_tokens_devices_pk
@@ -407,10 +418,10 @@ create table refresh_tokens_devices
     scope     varchar
 );
 
-create index refresh_tokens_devices_exp_index
+create index if not exists refresh_tokens_devices_exp_index
     on refresh_tokens_devices (exp);
 
-create table themes
+create table if not exists themes
 (
     client_id     varchar not null
         constraint themes_pk
@@ -425,7 +436,7 @@ create table themes
     border_radius varchar not null
 );
 
-create table pictures
+create table if not exists pictures
 (
     id           varchar not null
         constraint pictures_pk

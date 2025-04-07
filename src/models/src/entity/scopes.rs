@@ -29,7 +29,7 @@ pub struct Scope {
 // CRUD
 impl Scope {
     pub async fn clear_cache() -> Result<(), ErrorResponse> {
-        DB::client().delete(Cache::App, IDX_SCOPES).await?;
+        DB::hql().delete(Cache::App, IDX_SCOPES).await?;
         Ok(())
     }
 
@@ -70,7 +70,7 @@ impl Scope {
         };
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
@@ -93,12 +93,12 @@ VALUES ($1, $2, $3, $4)"#,
                 new_scope.attr_include_access,
                 new_scope.attr_include_id,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
         scopes.push(new_scope.clone());
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
             .await?;
 
@@ -127,12 +127,12 @@ VALUES ($1, $2, $3, $4)"#,
             }
             txn.push(("DELETE FROM scopes WHERE id = $1", params!(&scope.id)));
 
-            for res in DB::client().txn(txn).await? {
+            for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             for client in &mut clients {
                 client.delete_scope(&scope.name);
@@ -151,7 +151,7 @@ VALUES ($1, $2, $3, $4)"#,
             .filter(|s| s.id != scope.id)
             .collect::<Vec<Scope>>();
 
-        let client = DB::client();
+        let client = DB::hql();
         // no need to evict the cache if no clients are updated
         if !clients.is_empty() {
             client.delete(Cache::App, IDX_CLIENTS).await?;
@@ -172,12 +172,12 @@ VALUES ($1, $2, $3, $4)"#,
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as_one("SELECT * FROM scopes WHERE id = $1", params!(id))
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM scopes WHERE id = $1", id)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 
@@ -185,18 +185,18 @@ VALUES ($1, $2, $3, $4)"#,
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX_SCOPES).await? {
             return Ok(slf);
         }
 
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as("SELECT * FROM scopes", params!())
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM scopes")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -286,12 +286,12 @@ WHERE id = $4"#,
                 ),
             ));
 
-            for res in DB::client().txn(txn).await? {
+            for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn().await?;
+            let mut txn = DB::txn_sqlx().await?;
 
             if let Some(clients) = &clients {
                 for client in clients {
@@ -331,8 +331,8 @@ WHERE id = $4"#,
             })
             .collect::<Vec<Scope>>();
 
-        let client = DB::client();
-        DB::client()
+        let client = DB::hql();
+        DB::hql()
             .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
             .await?;
 

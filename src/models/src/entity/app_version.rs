@@ -20,14 +20,14 @@ pub struct LatestAppVersion {
 
 impl LatestAppVersion {
     pub async fn find() -> Option<Self> {
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Ok(Some(slf)) = client.get(Cache::App, IDX_APP_VERSION).await {
             return Some(slf);
         }
 
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as(
                     "SELECT data FROM config WHERE id = 'latest_version'",
                     params!(),
@@ -36,7 +36,7 @@ impl LatestAppVersion {
                 .ok()
         } else {
             query!("select data from config where id = 'latest_version'")
-                .fetch_optional(DB::conn())
+                .fetch_optional(DB::conn_sqlx())
                 .await
                 .ok()?
                 .map(|r| {
@@ -87,7 +87,7 @@ impl LatestAppVersion {
         let data = bincode::serialize(&slf)?;
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO config (id, data) VALUES ('latest_version', $1)
@@ -102,11 +102,11 @@ INSERT INTO config (id, data) VALUES ('latest_version', $1)
 ON CONFLICT(id) DO UPDATE SET data = $1"#,
                 data
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_APP_VERSION, &slf, CACHE_TTL_APP)
             .await?;
 

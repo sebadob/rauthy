@@ -111,7 +111,7 @@ impl From<ThemeCssFull> for ThemeRequestResponse {
 impl ThemeCssFull {
     pub async fn find(client_id: String) -> Result<Self, ErrorResponse> {
         let slf: Self = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_map_optional(
                     "SELECT * FROM themes WHERE client_id = $1",
                     params!(client_id),
@@ -120,7 +120,7 @@ impl ThemeCssFull {
         } else {
             sqlx::query("SELECT * FROM themes WHERE client_id = $1")
                 .bind(client_id)
-                .fetch_optional(DB::conn())
+                .fetch_optional(DB::conn_sqlx())
                 .await?
                 .map(|row| Self::from_row(&row).unwrap())
         }
@@ -132,7 +132,7 @@ impl ThemeCssFull {
     /// Returns the CSS variables for the light theme to be inserted directly into
     /// an E-Mail `body { }` CSS.
     pub async fn find_theme_variables_email() -> Result<String, ErrorResponse> {
-        if let Some(bytes) = DB::client()
+        if let Some(bytes) = DB::hql()
             .get_bytes(Cache::Html, CACHE_KEY_EMAIL_CSS)
             .await?
         {
@@ -145,7 +145,7 @@ impl ThemeCssFull {
         full.light.append_css(&mut vars)?;
         write!(vars, "--border-radius:{};", full.border_radius)?;
 
-        DB::client()
+        DB::hql()
             .put_bytes(
                 Cache::Html,
                 CACHE_KEY_EMAIL_CSS,
@@ -173,12 +173,12 @@ impl ThemeCssFull {
         let id = client_id.clone();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute("DELETE FROM themes WHERE client_id = $1", params!(id))
                 .await?;
         } else {
             sqlx::query!("DELETE FROM themes WHERE client_id = $1", id)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
@@ -188,7 +188,7 @@ impl ThemeCssFull {
             //
             // No need to rebuild any other HTML, because the theme for clients is fetched
             // only during `/authorize, which is dynamically built each time and not cached.
-            DB::client().clear_cache(Cache::Html).await?;
+            DB::hql().clear_cache(Cache::Html).await?;
         }
         Self::invalidate_caches(client_id).await?;
 
@@ -207,7 +207,7 @@ impl ThemeCssFull {
         let dark = dark.as_bytes();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
@@ -233,14 +233,12 @@ SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
                 dark,
                 border_radius
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
         if client_id == "rauthy" {
-            DB::client()
-                .delete(Cache::Html, CACHE_KEY_EMAIL_CSS)
-                .await?;
+            DB::hql().delete(Cache::Html, CACHE_KEY_EMAIL_CSS).await?;
         }
         // TODO if we have the prebuild fn at some point, favor this instead of invalidation
         Self::invalidate_caches(client_id).await?;
@@ -298,7 +296,7 @@ impl ThemeCssFull {
     // }
 
     async fn invalidate_caches(client_id: String) -> Result<(), ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         client
             .delete(Cache::Html, Self::cache_key_plain(&client_id))
@@ -344,7 +342,7 @@ impl ThemeCssFull {
     }
 
     pub async fn br(client_id: &str) -> Result<Vec<u8>, ErrorResponse> {
-        if let Some(bytes) = DB::client()
+        if let Some(bytes) = DB::hql()
             .get_bytes(Cache::Html, Self::cache_key_br(client_id))
             .await?
         {
@@ -353,7 +351,7 @@ impl ThemeCssFull {
 
         let plain = Self::plain(client_id.to_string()).await?;
         let compressed = compress_br(plain.as_bytes())?;
-        DB::client()
+        DB::hql()
             .put_bytes(
                 Cache::Html,
                 Self::cache_key_br(client_id),
@@ -366,7 +364,7 @@ impl ThemeCssFull {
     }
 
     pub async fn gzip(client_id: &str) -> Result<Vec<u8>, ErrorResponse> {
-        if let Some(bytes) = DB::client()
+        if let Some(bytes) = DB::hql()
             .get_bytes(Cache::Html, Self::cache_key_gzip(client_id))
             .await?
         {
@@ -375,7 +373,7 @@ impl ThemeCssFull {
 
         let plain = Self::plain(client_id.to_string()).await?;
         let compressed = compress_gzip(plain.as_bytes())?;
-        DB::client()
+        DB::hql()
             .put_bytes(
                 Cache::Html,
                 Self::cache_key_gzip(client_id),

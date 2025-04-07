@@ -26,7 +26,7 @@ impl UserValues {
 
     pub async fn find(user_id: &str) -> Result<Option<Self>, ErrorResponse> {
         let idx = Self::cache_idx(user_id);
-        let client = DB::client();
+        let client = DB::hql();
 
         let opt: Option<Option<Self>> = client.get(Cache::User, &idx).await?;
         if let Some(slf) = opt {
@@ -40,7 +40,7 @@ impl UserValues {
         } else {
             sqlx::query_as::<_, Self>("SELECT * FROM users_values WHERE id = $1")
                 .bind(user_id)
-                .fetch_optional(DB::conn())
+                .fetch_optional(DB::conn_sqlx())
                 .await?
         };
 
@@ -54,7 +54,7 @@ impl UserValues {
         values: UserValuesRequest,
     ) -> Result<Option<Self>, ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO
@@ -89,7 +89,7 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#
                 values.city,
                 values.country,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -103,7 +103,7 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#
             city: values.city,
             country: values.country,
         });
-        DB::client()
+        DB::hql()
             .put(Cache::User, idx, &slf, CACHE_TTL_USER)
             .await?;
 
@@ -114,16 +114,16 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#
         let cache_idx = Self::cache_idx(&user_id);
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute("DELETE FROM users_values WHERE id = $1", params!(user_id))
                 .await?;
         } else {
             sqlx::query!("DELETE FROM users_values WHERE id = $1", user_id)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
-        DB::client().delete(Cache::User, cache_idx).await?;
+        DB::hql().delete(Cache::User, cache_idx).await?;
 
         Ok(())
     }

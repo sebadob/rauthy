@@ -52,7 +52,7 @@ impl ApiKeyEntity {
         let secret_fmt = format!("{}${}", name, secret_plain);
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO
@@ -81,7 +81,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 enc_key_active,
                 access_enc,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -90,12 +90,12 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 
     pub async fn delete(name: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute("DELETE FROM api_keys WHERE name = $1", params!(name))
                 .await?;
         } else {
             query!("DELETE FROM api_keys WHERE name = $1", name)
-                .execute(DB::conn())
+                .execute(DB::conn_sqlx())
                 .await?;
         }
 
@@ -105,12 +105,12 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 
     pub async fn find(name: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as_one("SELECT * FROM api_keys WHERE name = $1", params!(name))
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM api_keys WHERE name = $1", name)
-                .fetch_one(DB::conn())
+                .fetch_one(DB::conn_sqlx())
                 .await?
         };
 
@@ -119,12 +119,12 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as("SELECT * FROM api_keys", params!())
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM api_keys")
-                .fetch_all(DB::conn())
+                .fetch_all(DB::conn_sqlx())
                 .await?
         };
 
@@ -147,7 +147,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
         let enc_key_active = &EncKeys::get_static().enc_key_active;
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     "UPDATE api_keys SET secret = $1, enc_key_id = $2, access = $3 WHERE name = $4",
                     params!(
@@ -166,7 +166,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 access_enc,
                 name,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -193,7 +193,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
         let enc_key_active = &EncKeys::get_static().enc_key_active;
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 UPDATE api_keys
@@ -220,7 +220,7 @@ WHERE name = $5"#,
                 access_enc,
                 name,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -233,7 +233,7 @@ WHERE name = $5"#,
         let name = self.name.clone();
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
     UPDATE api_keys
@@ -260,7 +260,7 @@ WHERE name = $5"#,
                 self.access,
                 self.name,
             )
-            .execute(DB::conn())
+            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -279,7 +279,7 @@ impl ApiKeyEntity {
     #[inline]
     async fn cache_invalidate(name: &str) -> Result<(), ErrorResponse> {
         let idx = Self::cache_idx(name);
-        DB::client().delete(Cache::App, idx).await?;
+        DB::hql().delete(Cache::App, idx).await?;
         Ok(())
     }
 
@@ -289,7 +289,7 @@ impl ApiKeyEntity {
             ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed API-Key")
         })?;
 
-        let client = DB::client();
+        let client = DB::hql();
         let idx = Self::cache_idx(name);
         let api_key = if let Some(key) = client.get(Cache::App, &idx).await? {
             key
