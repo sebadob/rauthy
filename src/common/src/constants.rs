@@ -384,12 +384,7 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .expect("OPEN_USER_REG cannot be parsed to bool - bad format");
-    pub static ref USER_REG_DOMAIN_RESTRICTION: Option<String> = {
-        match env::var("USER_REG_DOMAIN_RESTRICTION") {
-            Err(_) => None,
-            Ok(domain) => Some(domain)
-        }
-    };
+    pub static ref USER_REG_DOMAIN_RESTRICTION: Option<String> = env::var("USER_REG_DOMAIN_RESTRICTION").ok();
     pub static ref USER_REG_DOMAIN_BLACKLIST: Option<Vec<String>> = env::var("USER_REG_DOMAIN_BLACKLIST")
         .ok()
         .map(|blacklist| blacklist.lines()

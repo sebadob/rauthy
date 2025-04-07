@@ -16,6 +16,7 @@ use std::env;
 use std::str::FromStr;
 use std::string::ToString;
 use std::sync::LazyLock;
+use tracing::error;
 
 static EVENT: &str = "http://schemas.openid.net/event/backchannel-logout";
 
@@ -43,15 +44,15 @@ static LOGOUT_TOKEN_ALLOWED_LIFETIME: LazyLock<u16> = LazyLock::new(|| {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LogoutToken {
     // default claims
-    iss: String,
-    aud: String,
-    exp: i64,
+    pub iss: String,
+    pub aud: String,
+    pub exp: i64,
 
     // MUST always either not exist or be `logout+jwt`
     typ: Option<JwtTokenType>,
     // alg: JwkKeyPairAlg,
-    iat: i64,
-    jti: String,
+    pub iat: i64,
+    pub jti: String,
     // MUST always contain `"http://schemas.openid.net/event/backchannel-logout": {}`
     events: serde_json::Value,
 
@@ -121,7 +122,18 @@ impl LogoutToken {
         let (header, slf) = Self::build_from_str(logout_token)?;
         let (kid, alg) = slf.validate_claims(header)?;
 
-        let provider = AuthProvider::find_by_iss(slf.iss.clone()).await?;
+        let provider = AuthProvider::find_by_iss(slf.iss.clone())
+            .await
+            .map_err(|err| {
+                error!(
+                    "Error looking up AuthProvider by issuer during backchannel logout: {:?}",
+                    err
+                );
+                ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "invalid / unknown `issuer` for the given `logout_token`",
+                )
+            })?;
         if provider.jwks_endpoint.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
@@ -132,7 +144,7 @@ impl LogoutToken {
         if slf.aud != provider.client_id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "`aud` claim does not match our `client_id",
+                "`aud` claim does not match our `client_id`",
             ));
         }
 
@@ -154,8 +166,12 @@ impl LogoutToken {
         Ok(slf)
     }
 
+    /// CAUTION: DO NOT use this function directly outside of tests. It DOES NOT VALIDATE the input.
+    /// Only use `from_str_validated()`!
+    ///
+    /// Returns `(jwt_header, Self)`
     #[inline]
-    fn build_from_str(logout_token: &str) -> Result<(serde_json::Value, Self), ErrorResponse> {
+    pub fn build_from_str(logout_token: &str) -> Result<(serde_json::Value, Self), ErrorResponse> {
         // Before we can actually validate the token, we need to decode it and take a peek at the
         // issuer, so we can validate that we do have the issuer configured as an upstream provider.
         let mut split = logout_token.split(".");

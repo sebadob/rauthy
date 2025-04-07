@@ -171,6 +171,7 @@ pub struct LoginRefreshRequest {
 }
 
 #[derive(Debug, Default, Deserialize, Validate, ToSchema, IntoParams)]
+#[cfg_attr(debug_assertions, derive(serde::Serialize))]
 pub struct LogoutRequest {
     /// Valid `id_token` issued by Rauthy to do an RP Initiated Logout.
     /// https://openid.net/specs/openid-connect-rpinitiated-1_0.html

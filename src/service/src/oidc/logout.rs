@@ -19,14 +19,13 @@ use rauthy_models::entity::users::User;
 use rauthy_models::html::HtmlCached;
 use rauthy_models::{JwtIdClaims, JwtTokenType};
 use std::borrow::Cow;
-use std::collections::HashSet;
 use std::env;
 use std::str::FromStr;
 use std::string::ToString;
 use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::task::JoinSet;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 static LOGOUT_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     let allow_http = env::var("BACKCHANNEL_DANGER_ALLOW_HTTP")
@@ -37,6 +36,11 @@ static LOGOUT_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .unwrap_or_else(|_| "false".to_string())
         .parse::<bool>()
         .expect("Cannot parse BACKCHANNEL_DANGER_ALLOW_INSECURE as bool");
+
+    info!(
+        "Building backchannel logout client with: BACKCHANNEL_DANGER_ALLOW_HTTP: {allow_http}, \
+    BACKCHANNEL_DANGER_ALLOW_INSECURE: {allow_insecure}"
+    );
 
     reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
@@ -275,7 +279,7 @@ pub async fn execute_backchannel_logout(
     let client_ids = states
         .iter()
         .map(|st| st.client_id.as_str())
-        .collect::<HashSet<_>>();
+        .collect::<Vec<_>>();
     let clients = Client::find_all_bcl(&client_ids).await?;
 
     if !clients.is_empty() {
@@ -406,10 +410,14 @@ pub async fn send_backchannel_logout(
     kp: &JwkKeyPair,
     tasks: &mut JoinSet<Result<(), ErrorResponse>>,
 ) -> Result<(), ErrorResponse> {
-    let logout_token = LogoutToken::new(issuer, client_id.to_string(), sub.clone(), sid.clone())
+    let logout_token = LogoutToken::new(issuer, client_id.clone(), sub.clone(), sid.clone())
         .into_token_with_kp(kp)?;
 
     tasks.spawn(async move {
+        debug!(
+            "Sending backchannel logout to {}: {}",
+            client_id, backchannel_logout_uri
+        );
         let res = LOGOUT_CLIENT
             .post(backchannel_logout_uri)
             .form(&BackchannelLogoutRequest { logout_token })

@@ -24,55 +24,83 @@ impl UserLoginState {
         let now = Utc::now().timestamp_millis();
 
         if is_hiqlite() {
-            DB::client()
-                .txn([
-                    (
-                        r#"
+            let mut txn = Vec::with_capacity(session_id.as_ref().map(|_| 2).unwrap_or(1));
+            txn.push((
+                r#"
 INSERT INTO user_login_states(timestamp, user_id, client_id)
-VALUES ($1, $2, $3)
-ON CONFLICT (user_id, client_id, session_id)
-DO NOTHING"#,
-                        params!(now - 1, user_id.clone(), client_id.clone()),
-                    ),
-                    (
-                        r#"
+SELECT $1, $2, $3
+WHERE NOT EXISTS (
+    SELECT 1 FROM user_login_states
+    WHERE user_id = $2 AND client_id = $3 AND session_id IS NULL
+)"#,
+                params!(now - 1, user_id.clone(), client_id.clone()),
+            ));
+            if session_id.is_some() {
+                txn.push((
+                    r#"
 INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (user_id, client_id, session_id)
-DO NOTHING"#,
-                        params!(now, user_id, client_id, session_id),
-                    ),
-                ])
-                .await?;
+SELECT $1, $2, $3, $4
+WHERE NOT EXISTS (
+    SELECT 1 FROM user_login_states
+    WHERE user_id = $2 AND client_id = $3 AND session_id = $4
+)"#,
+                    params!(now, user_id, client_id, session_id),
+                ));
+            }
+
+            DB::client().txn(txn).await?;
         } else {
             let mut txn = DB::txn().await?;
 
-            sqlx::query!(
+            // TODO for some reason, the query! returns an error with the prepared statement type
+            // for user_id, even though the query works just fine...
+            //             sqlx::query!(
+            //                 r#"
+            // INSERT INTO user_login_states(timestamp, user_id, client_id)
+            // SELECT $1, $2, $3
+            // WHERE NOT EXISTS (
+            //     SELECT 1 FROM user_login_states
+            //     WHERE user_id = $2 AND client_id = $3 AND session_id IS NULL
+            // )"#,
+            //                 now - 1,
+            //                 user_id,
+            //                 client_id,
+            //             )
+            //             .execute(&mut *txn)
+            //             .await?;
+
+            sqlx::query(
                 r#"
 INSERT INTO user_login_states(timestamp, user_id, client_id)
-VALUES ($1, $2, $3)
-ON CONFLICT (user_id, client_id, session_id)
-DO NOTHING"#,
-                now - 1,
-                user_id,
-                client_id,
+SELECT $1, $2, $3
+WHERE NOT EXISTS (
+    SELECT 1 FROM user_login_states
+    WHERE user_id = $2 AND client_id = $3 AND session_id IS NULL
+)"#,
             )
+            .bind(now - 1)
+            .bind(user_id.clone())
+            .bind(client_id.clone())
             .execute(&mut *txn)
             .await?;
 
-            sqlx::query!(
-                r#"
+            if session_id.is_some() {
+                sqlx::query(
+                    r#"
 INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (user_id, client_id, session_id)
-DO NOTHING"#,
-                now,
-                user_id,
-                client_id,
-                session_id,
-            )
-            .execute(&mut *txn)
-            .await?;
+SELECT $1, $2, $3, $4
+WHERE NOT EXISTS (
+    SELECT 1 FROM user_login_states
+    WHERE user_id = $2 AND client_id = $3 AND session_id = $4
+)"#,
+                )
+                .bind(now)
+                .bind(user_id)
+                .bind(client_id)
+                .bind(session_id)
+                .execute(&mut *txn)
+                .await?;
+            }
 
             txn.commit().await?;
         }

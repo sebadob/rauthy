@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM clients WHERE id IN ($1) AND backchannel_logout_uri IS NOT NULL",
+  "query": "SELECT * FROM clients WHERE backchannel_logout_uri IS NOT NULL",
   "describe": {
     "columns": [
       {
@@ -110,9 +110,7 @@
       }
     ],
     "parameters": {
-      "Left": [
-        "Text"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
@@ -138,5 +136,5 @@
       true
     ]
   },
-  "hash": "2793d60de3d0c5d9707ee8972f05827523a604681dd622fad35c0cb3bcee93e7"
+  "hash": "96e5f1e16c6697668460a93ea2f414933caad3338b736e2ab8c3cb2db29874eb"
 }

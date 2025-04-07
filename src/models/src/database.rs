@@ -203,7 +203,9 @@ impl DB {
                 };
             }
         } else if *DEV_MODE {
-            migrate_dev_data().await.expect("Migrating DEV DATA");
+            migrate_dev_data(&app_state.issuer)
+                .await
+                .expect("Migrating DEV DATA");
         }
 
         if let Err(err) = anti_lockout::anti_lockout(&app_state.issuer).await {

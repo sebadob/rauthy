@@ -1,4 +1,4 @@
-use crate::common::{get_auth_headers, get_backend_url};
+use crate::common::{get_auth_headers, get_backend_url, init_client_bcl_uri};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{ClientResponse, UpdateClientRequest};
 use rauthy_api_types::scopes::ScopeRequest;
@@ -77,7 +77,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         force_mfa: init_client.force_mfa,
         client_uri: init_client.client_uri,
         contacts: init_client.contacts,
-        backchannel_logout_uri: None,
+        backchannel_logout_uri: Some(init_client_bcl_uri()),
     };
     let res = client
         .put(&url_client)
