@@ -210,8 +210,7 @@ docker run -it --rm \
 
 If you need professional (paid) support for Rauthy, please feel free to contact me at `mail@sebadob.dev`.
 Otherwise, please use the Discussions Q&A section. Opened issues, which are actually just support requests, will
-most probably not be answered at all. I am working on this project mostly in my free time and don't earn anything from
-it.
+most probably not be answered at all. I am working on this project mostly in my free time.
 
 ## Contributing
 
