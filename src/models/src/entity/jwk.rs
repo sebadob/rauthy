@@ -8,6 +8,7 @@ use jwt_simple::algorithms;
 use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };
+use postgres_types::Type;
 use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, COOKIE_MODE, CookieMode, DEV_MODE, IDX_JWK_KID,
@@ -27,6 +28,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
+use tokio_pg_mapper_derive::PostgresMapper;
 use tracing::{error, info};
 
 #[macro_export]
@@ -103,7 +105,8 @@ macro_rules! validate_jwt {
 The Json Web Keys are saved encrypted inside the database. The encryption is the same as for a
 Client secret -> *ChaCha20Poly1305*
  */
-#[derive(FromRow, Serialize, Deserialize)]
+#[derive(FromRow, Serialize, Deserialize, PostgresMapper)]
+#[pg_mapper(table = "jwks")]
 pub struct Jwk {
     pub kid: String,
     pub created_at: i64,
@@ -130,9 +133,9 @@ impl Jwk {
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    r#"INSERT INTO
-                    jwks (kid, created_at, signature, enc_key_id, jwk)
-                    VALUES ($1, $2, $3, $4, $5)"#,
+                    r#"
+INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
+VALUES ($1, $2, $3, $4, $5)"#,
                     params!(
                         self.kid.clone(),
                         self.created_at,
@@ -143,17 +146,18 @@ impl Jwk {
                 )
                 .await?;
         } else {
-            sqlx::query!(
-                r#"INSERT INTO
-                jwks (kid, created_at, signature, enc_key_id, jwk)
-                VALUES ($1, $2, $3, $4, $5)"#,
-                self.kid,
-                self.created_at,
-                sig_str,
-                self.enc_key_id,
-                self.jwk,
+            DB::pg_execute(
+                r#"
+INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
+VALUES ($1, $2, $3, $4, $5)"#,
+                &[
+                    &self.kid,
+                    &self.created_at,
+                    &sig_str,
+                    &self.enc_key_id,
+                    &self.jwk,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -194,12 +198,10 @@ impl JWKS {
             return Ok(slf);
         }
 
-        let res = if is_hiqlite() {
+        let res: Vec<Jwk> = if is_hiqlite() {
             client.query_as("SELECT * FROM jwks", params!()).await?
         } else {
-            sqlx::query_as!(Jwk, "SELECT * FROM jwks")
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query("SELECT * FROM jwks", &[], 8).await?
         };
 
         let mut jwks = JWKS::default();
@@ -231,7 +233,7 @@ impl JWKS {
 
     /// Rotates and generates a whole new Set of JWKs for signing JWT Tokens
     pub async fn rotate(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        info!("Starting JWKS rotation");
+        info!("Starting JWKS rotation - this might take some time");
 
         // let key = data.enc_keys.get(&data.enc_key_active).unwrap();
         let enc_key_active = &EncKeys::get_static().enc_key_active;
@@ -477,6 +479,7 @@ impl JWKSPublicKey {
             return res;
         }
 
+        // TODO use unified `LazyLock`ed client for this
         let client = reqwest::Client::builder()
             // TODO add proper config variable
             .https_only(!(*DEV_MODE || *COOKIE_MODE == CookieMode::DangerInsecure))
@@ -752,14 +755,12 @@ impl JwkKeyPair {
             return Ok(slf);
         }
 
-        let jwk = if is_hiqlite() {
+        let jwk: Jwk = if is_hiqlite() {
             client
                 .query_as_one("SELECT * FROM jwks WHERE kid = $1", params!(kid))
                 .await?
         } else {
-            sqlx::query_as!(Jwk, "SELECT * FROM jwks WHERE kid = $1", kid,)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_one("SELECT * FROM jwks WHERE kid = $1", &[&kid]).await?
         };
 
         let kp = JwkKeyPair::decrypt(&jwk, jwk.signature.clone())?;
@@ -780,7 +781,7 @@ impl JwkKeyPair {
         }
 
         let signature = key_pair_alg.as_str().to_string();
-        let jwk_latest = if is_hiqlite() {
+        let jwk_latest: Jwk = if is_hiqlite() {
             client
                 .query_as_one(
                     r#"
@@ -793,17 +794,15 @@ LIMIT 1
                 )
                 .await?
         } else {
-            sqlx::query_as!(
-                Jwk,
+            DB::pg_query_one(
                 r#"
 SELECT * FROM jwks
 WHERE signature = $1
 ORDER BY created_at DESC
 LIMIT 1
 "#,
-                signature
+                &[&signature],
             )
-            .fetch_one(DB::conn_sqlx())
             .await?
         };
 
@@ -891,11 +890,29 @@ impl From<String> for JwkKeyPairAlg {
     }
 }
 
+// TODO remove after sqlx migration
 impl FromRow<'_, PgRow> for JwkKeyPairAlg {
     fn from_row(row: &'_ PgRow) -> Result<Self, Error> {
         let sig = row.try_get("signature")?;
         let slf = JwkKeyPairAlg::from_str(sig).expect("corrupted signature in database");
         Ok(slf)
+    }
+}
+
+impl postgres_types::FromSql<'_> for JwkKeyPairAlg {
+    fn from_sql<'a>(
+        _ty: &Type,
+        raw: &'a [u8],
+    ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
+        let sig = String::from_utf8_lossy(raw);
+        let slf = JwkKeyPairAlg::from_str(sig.as_ref()).expect("corrupted signature in database");
+        Ok(slf)
+    }
+
+    fn accepts(ty: &Type) -> bool {
+        // TEXT or VARCHAR
+        ty.eq(&Type::from_oid(tokio_postgres::types::Oid::from(25u32)).unwrap())
+            || ty.eq(&Type::from_oid(tokio_postgres::types::Oid::from(1043u32)).unwrap())
     }
 }
 
