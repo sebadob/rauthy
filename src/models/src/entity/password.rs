@@ -1,4 +1,5 @@
 use crate::database::{Cache, DB};
+use crate::entity::config::ConfigEntity;
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
@@ -122,6 +123,21 @@ pub struct PasswordPolicy {
     pub not_recently_used: Option<i32>,
 }
 
+impl From<tokio_postgres::Row> for PasswordPolicy {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            length_min: row.get("length_min"),
+            length_max: row.get("length_max"),
+            include_lower_case: row.get("include_lower_case"),
+            include_upper_case: row.get("include_upper_case"),
+            include_digits: row.get("include_digits"),
+            include_special: row.get("include_special"),
+            valid_days: row.get("valid_days"),
+            not_recently_used: row.get("not_recently_used"),
+        }
+    }
+}
+
 // CRUD
 impl PasswordPolicy {
     pub async fn find() -> Result<Self, ErrorResponse> {
@@ -139,10 +155,12 @@ impl PasswordPolicy {
                 .await?
                 .get("data")
         } else {
-            sqlx::query("SELECT data FROM config WHERE id = 'password_policy'")
-                .fetch_one(DB::conn_sqlx())
-                .await?
-                .get("data")
+            DB::pg_query_map_one::<ConfigEntity>(
+                "SELECT data FROM config WHERE id = 'password_policy'",
+                &[],
+            )
+            .await?
+            .data
         };
         let policy = bincode::deserialize::<Self>(&bytes)?;
 
@@ -154,21 +172,20 @@ impl PasswordPolicy {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let slf = bincode::serialize(&self)?;
+        let data = bincode::serialize(&self)?;
 
         if is_hiqlite() {
             DB::hql()
                 .execute(
                     "UPDATE config SET data = $1 WHERE id = 'password_policy'",
-                    params!(slf),
+                    params!(data),
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 "UPDATE config SET data = $1 WHERE id = 'password_policy'",
-                slf
+                &[&data],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -215,6 +232,15 @@ pub struct RecentPasswordsEntity {
     pub passwords: String,
 }
 
+impl From<tokio_postgres::Row> for RecentPasswordsEntity {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            user_id: row.get("user_id"),
+            passwords: row.get("passwords"),
+        }
+    }
+}
+
 impl RecentPasswordsEntity {
     pub async fn create(user_id: &str, passwords: String) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
@@ -225,12 +251,10 @@ impl RecentPasswordsEntity {
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)",
-                user_id,
-                passwords,
+                &[&user_id, &passwords],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -246,12 +270,10 @@ impl RecentPasswordsEntity {
                 )
                 .await?
         } else {
-            sqlx::query_as!(
-                Self,
+            DB::pg_query_map_one(
                 "SELECT * FROM recent_passwords WHERE user_id = $1",
-                user_id,
+                &[&user_id],
             )
-            .fetch_one(DB::conn_sqlx())
             .await?
         };
         Ok(res)
@@ -266,12 +288,10 @@ impl RecentPasswordsEntity {
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 "UPDATE recent_passwords SET passwords = $1 WHERE user_id = $2",
-                self.passwords,
-                self.user_id,
+                &[&self.passwords, &self.user_id],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
         Ok(())

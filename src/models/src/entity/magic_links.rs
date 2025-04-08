@@ -1,6 +1,5 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::DB;
-use crate::entity::logos::{Logo, LogoRes};
 use actix_web::HttpRequest;
 use chrono::Utc;
 use hiqlite::{Param, params};
@@ -9,7 +8,6 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::fmt::{Debug, Display, Formatter};
 use time::OffsetDateTime;
 use tracing::warn;
