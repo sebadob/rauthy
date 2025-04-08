@@ -3,8 +3,10 @@ use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
+use tokio_pg_mapper_derive::PostgresMapper;
 
-#[derive(Debug, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Deserialize, sqlx::FromRow, PostgresMapper)]
+#[pg_mapper(table = "failed_backchannel_logouts")]
 pub struct FailedBackchannelLogout {
     pub client_id: String,
     // both `sub` and `sid` may be empty but cannot be NULL because Postgres requires
@@ -35,17 +37,14 @@ DO UPDATE SET retry_count = retry_count + 1"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 r#"
 INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
 VALUES ($1, $2, $3, 0)
 ON CONFLICT (client_id, sub, sid)
 DO UPDATE SET retry_count = failed_backchannel_logouts.retry_count + 1"#,
-                client_id,
-                sub,
-                sid,
+                &[&client_id, &sub, &sid],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -58,9 +57,7 @@ DO UPDATE SET retry_count = failed_backchannel_logouts.retry_count + 1"#,
                 .query_as("SELECT * FROM failed_backchannel_logouts", params!())
                 .await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM failed_backchannel_logouts")
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query("SELECT * FROM failed_backchannel_logouts", &[], 0).await?
         };
 
         Ok(res)
@@ -77,15 +74,12 @@ WHERE client_id = $1 AND sub = $2 AND sid = $3"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 r#"
 DELETE FROM failed_backchannel_logouts
 WHERE client_id = $1 AND sub = $2 AND sid = $3"#,
-                self.client_id,
-                self.sub,
-                self.sid
+                &[&self.client_id, &self.sub, &self.sid],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -101,11 +95,10 @@ WHERE client_id = $1 AND sub = $2 AND sid = $3"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 "DELETE FROM failed_backchannel_logouts WHERE client_id = $1",
-                client_id,
+                &[&client_id],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
