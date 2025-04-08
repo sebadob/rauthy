@@ -14,7 +14,7 @@ use rauthy_common::constants::{
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Row};
+use sqlx::FromRow;
 use std::cmp::max;
 use tokio::time;
 use utoipa::ToSchema;

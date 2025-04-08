@@ -95,6 +95,17 @@ pub struct UserPicture {
     pub data: Option<Vec<u8>>,
 }
 
+impl From<tokio_postgres::Row> for UserPicture {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            content_type: row.get("content_type"),
+            storage: row.get("storage"),
+            data: row.get("data"),
+        }
+    }
+}
+
 // CRUD
 impl UserPicture {
     /// Inserts a new UserPicture for a user and returns the generated `id`.
@@ -115,16 +126,12 @@ VALUES ($1, $2, $3, $4)"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 r#"
 INSERT INTO pictures (id, content_type, storage, data)
 VALUES ($1, $2, $3, $4)"#,
-                &id,
-                content_type,
-                storage.as_str(),
-                data
+                &[&id, &content_type, &storage.as_str(), &data],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -138,9 +145,7 @@ VALUES ($1, $2, $3, $4)"#,
                 .execute("DELETE FROM pictures WHERE id = $1", params!(id))
                 .await?;
         } else {
-            sqlx::query!("DELETE FROM pictures WHERE id = $1", id)
-                .execute(DB::conn_sqlx())
-                .await?;
+            DB::pg_execute("DELETE FROM pictures WHERE id = $1", &[&id]).await?;
         }
 
         Ok(())
@@ -152,9 +157,7 @@ VALUES ($1, $2, $3, $4)"#,
                 .query_as_one("SELECT * FROM pictures WHERE id = $1", params!(id))
                 .await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM pictures WHERE id = $1", id)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_map_one("SELECT * FROM pictures WHERE id = $1", &[&id]).await?
         };
 
         Ok(slf)
