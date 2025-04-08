@@ -1,6 +1,8 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::DB;
+use crate::entity::logos::{Logo, LogoRes};
 use actix_web::HttpRequest;
+use chrono::Utc;
 use hiqlite::{Param, params};
 use rauthy_common::constants::{PASSWORD_RESET_COOKIE_BINDING, PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::is_hiqlite;
@@ -85,7 +87,7 @@ impl Display for MagicLinkUsage {
     }
 }
 
-#[derive(Clone, FromRow, Serialize, Deserialize)]
+#[derive(Clone, sqlx::FromRow, Serialize, Deserialize)]
 pub struct MagicLink {
     pub id: String,
     pub user_id: String,
@@ -109,6 +111,20 @@ impl Debug for MagicLink {
             self.used,
             self.usage
         )
+    }
+}
+
+impl From<tokio_postgres::Row> for MagicLink {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            csrf_token: row.get("csrf_token"),
+            cookie: row.get("cookie"),
+            exp: row.get("exp"),
+            used: row.get("used"),
+            usage: row.get("usage"),
+        }
     }
 }
 
@@ -148,18 +164,19 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 r#"
 INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
 VALUES ($1, $2, $3, $4, $5, $6)"#,
-                link.id,
-                link.user_id,
-                link.csrf_token,
-                link.exp,
-                false,
-                link.usage,
+                &[
+                    &link.id,
+                    &link.user_id,
+                    &link.csrf_token,
+                    &link.exp,
+                    &false,
+                    &link.usage,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -175,11 +192,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'password_reset%'",
-                user_id,
+                &[&user_id],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         };
 
@@ -192,9 +208,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 .query_as_one("SELECT * FROM magic_links WHERE id = $1", params!(id))
                 .await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM magic_links WHERE id = $1", id)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_map_one("SELECT * FROM magic_links WHERE id = $1", &[&id]).await?
         };
 
         Ok(res)
@@ -209,13 +223,8 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 )
                 .await?
         } else {
-            sqlx::query_as!(
-                Self,
-                "SELECT * FROM magic_links WHERE user_id = $1",
-                user_id
-            )
-            .fetch_one(DB::conn_sqlx())
-            .await?
+            DB::pg_query_map_one("SELECT * FROM magic_links WHERE user_id = $1", &[&user_id])
+                .await?
         };
 
         Ok(res)
@@ -230,11 +239,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'email_change$%'",
-                user_id,
+                &[&user_id],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         };
 
@@ -246,18 +254,14 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
             DB::hql()
                 .execute(
                     "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4",
-                    params!(self.cookie.clone(), self.exp, self.used, self.id.clone()),
+                    params!(&self.cookie, self.exp, self.used, &self.id),
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4",
-                self.cookie,
-                self.exp,
-                self.used,
-                self.id,
+                &[&self.cookie, &self.exp, &self.used, &self.id],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -268,7 +272,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 impl MagicLink {
     /// Sets the magic link as being expired and used.
     pub async fn invalidate(&mut self) -> Result<(), ErrorResponse> {
-        self.exp = OffsetDateTime::now_utc().unix_timestamp() - 10;
+        self.exp = Utc::now().timestamp() - 10;
         self.used = true;
         self.save().await
     }
