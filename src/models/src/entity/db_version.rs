@@ -1,11 +1,11 @@
 use crate::database::DB;
+use crate::entity::config::ConfigEntity;
 use hiqlite::{Param, params};
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use sqlx::query;
 use std::str::FromStr;
 use tracing::{debug, warn};
 
@@ -29,16 +29,10 @@ impl DbVersion {
             let version = bincode::deserialize::<Self>(&bytes)?;
             Ok(Some(version))
         } else {
-            let res = query!("SELECT data FROM config WHERE id = 'db_version'")
-                .fetch_optional(DB::conn_sqlx())
-                .await?;
-            match res {
-                Some(record) => {
-                    let data = record
-                        .data
-                        .expect("to get 'data' back from the AppVersion query");
-                    Ok(Some(bincode::deserialize::<Self>(&data)?))
-                }
+            let config: Option<ConfigEntity> =
+                DB::pg_query_opt("SELECT data FROM config WHERE id = 'db_version'", &[]).await?;
+            match config {
+                Some(c) => Ok(Some(bincode::deserialize::<Self>(&c.data)?)),
                 None => Ok(None),
             }
         }
@@ -55,20 +49,21 @@ impl DbVersion {
             if is_hiqlite() {
                 DB::hql()
                     .execute(
-                        r#"INSERT INTO config (id, data)
-                        VALUES ('db_version', $1)
-                        ON CONFLICT(id) DO UPDATE SET data = $1"#,
+                        r#"
+INSERT INTO config (id, data)
+VALUES ('db_version', $1)
+ON CONFLICT(id) DO UPDATE SET data = $1"#,
                         params!(data),
                     )
                     .await?;
             } else {
-                query!(
-                    r#"INSERT INTO config (id, data)
-                    VALUES ('db_version', $1)
-                    ON CONFLICT(id) DO UPDATE SET data = $1"#,
-                    data,
+                DB::pg_execute(
+                    r#"
+INSERT INTO config (id, data)
+VALUES ('db_version', $1)
+ON CONFLICT(id) DO UPDATE SET data = $1"#,
+                    &[&data],
                 )
-                .execute(DB::conn_sqlx())
                 .await?;
             }
         }
@@ -89,8 +84,7 @@ impl DbVersion {
                 .await
                 .is_ok()
         } else {
-            query!("SELECT id FROM config LIMIT 1")
-                .fetch_one(DB::conn_sqlx())
+            DB::pg_query_one_row("SELECT id FROM config LIMIT 1", &[])
                 .await
                 .is_ok()
         };
@@ -170,10 +164,12 @@ impl DbVersion {
                 .await
                 .is_err()
         } else {
-            query!("SELECT * FROM pg_tables WHERE tablename = 'passkeys' LIMIT 1")
-                .fetch_one(DB::conn_sqlx())
-                .await
-                .is_err()
+            DB::pg_query_one_row(
+                "SELECT * FROM pg_tables WHERE tablename = 'passkeys' LIMIT 1",
+                &[],
+            )
+            .await
+            .is_err()
         };
         if is_db_v0_15_0 {
             panic!(
@@ -193,10 +189,12 @@ impl DbVersion {
                 .await
                 .is_err()
         } else {
-            query!("SELECT * FROM pg_tables WHERE tablename = 'clients' LIMIT 1")
-                .fetch_one(DB::conn_sqlx())
-                .await
-                .is_err()
+            DB::pg_query_one_row(
+                "SELECT * FROM pg_tables WHERE tablename = 'clients' LIMIT 1",
+                &[],
+            )
+            .await
+            .is_err()
         };
         if is_db_pre_v0_15_0 {
             panic!(

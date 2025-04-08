@@ -8,7 +8,7 @@ use rauthy_common::constants::{CACHE_TTL_DYN_CLIENT, CACHE_TTL_IP_RATE_LIMIT};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, query, query_as};
+use sqlx::FromRow;
 use std::net::IpAddr;
 use tokio_pg_mapper_derive::PostgresMapper;
 
