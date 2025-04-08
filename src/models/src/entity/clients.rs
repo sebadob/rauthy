@@ -1,5 +1,5 @@
 use crate::ListenScheme;
-use crate::app_state::{AppState, DbTxn};
+use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::JwkKeyPairAlg;
@@ -10,6 +10,7 @@ use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use cryptr::{EncKeys, EncValue, utils};
+use deadpool_postgres::GenericClient;
 use hiqlite::{Param, Params, params};
 use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
@@ -27,12 +28,13 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::{Url, tls};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Row};
+use sqlx::FromRow;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
+use tokio_pg_mapper_derive::PostgresMapper;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
 
@@ -48,7 +50,8 @@ performance, when we do reads on clients, which we do most of the time.
 
 `*_lifetime` values are meant to be in seconds.
  */
-#[derive(Clone, PartialEq, Eq, FromRow, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Eq, FromRow, Deserialize, Serialize, PostgresMapper)]
+#[pg_mapper(table = "clients")]
 pub struct Client {
     pub id: String,
     pub name: Option<String>,
@@ -162,7 +165,7 @@ $18, $19, $20, $21)"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 r#"
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
@@ -170,29 +173,30 @@ auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, fo
 client_uri, contacts, backchannel_logout_uri)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
 $18, $19, $20, $21)"#,
-                client.id,
-                client.name,
-                client.enabled,
-                client.confidential,
-                client.secret,
-                client.secret_kid,
-                client.redirect_uris,
-                client.post_logout_redirect_uris,
-                client.allowed_origins,
-                client.flows_enabled,
-                client.access_token_alg,
-                client.id_token_alg,
-                client.auth_code_lifetime,
-                client.access_token_lifetime,
-                client.scopes,
-                client.default_scopes,
-                client.challenge,
-                client.force_mfa,
-                client.client_uri,
-                client.contacts,
-                client.backchannel_logout_uri,
+                &[
+                    &client.id,
+                    &client.name,
+                    &client.enabled,
+                    &client.confidential,
+                    &client.secret,
+                    &client.secret_kid,
+                    &client.redirect_uris,
+                    &client.post_logout_redirect_uris,
+                    &client.allowed_origins,
+                    &client.flows_enabled,
+                    &client.access_token_alg,
+                    &client.id_token_alg,
+                    &client.auth_code_lifetime,
+                    &client.access_token_lifetime,
+                    &client.scopes,
+                    &client.default_scopes,
+                    &client.challenge,
+                    &client.force_mfa,
+                    &client.client_uri,
+                    &client.contacts,
+                    &client.backchannel_logout_uri,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -263,9 +267,11 @@ VALUES ($1, $2, $3, $4)"#,
                 ])
                 .await?;
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
-            sqlx::query!(
+            DB::pg_txn_append(
+                &txn,
                 r#"
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
@@ -273,42 +279,45 @@ auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, fo
 client_uri, contacts, backchannel_logout_uri)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
         $21)"#,
-                client.id,
-                client.name,
-                client.enabled,
-                client.confidential,
-                client.secret,
-                client.secret_kid,
-                client.redirect_uris,
-                client.post_logout_redirect_uris,
-                client.allowed_origins,
-                client.flows_enabled,
-                client.access_token_alg,
-                client.id_token_alg,
-                client.auth_code_lifetime,
-                client.access_token_lifetime,
-                client.scopes,
-                client.default_scopes,
-                client.challenge,
-                client.force_mfa,
-                client.client_uri,
-                client.contacts,
-                client.backchannel_logout_uri,
+                &[
+                    &client.id,
+                    &client.name,
+                    &client.enabled,
+                    &client.confidential,
+                    &client.secret,
+                    &client.secret_kid,
+                    &client.redirect_uris,
+                    &client.post_logout_redirect_uris,
+                    &client.allowed_origins,
+                    &client.flows_enabled,
+                    &client.access_token_alg,
+                    &client.id_token_alg,
+                    &client.auth_code_lifetime,
+                    &client.access_token_lifetime,
+                    &client.scopes,
+                    &client.default_scopes,
+                    &client.challenge,
+                    &client.force_mfa,
+                    &client.client_uri,
+                    &client.contacts,
+                    &client.backchannel_logout_uri,
+                ],
             )
-            .execute(&mut *txn)
             .await?;
 
-            sqlx::query!(
+            DB::pg_txn_append(
+                &txn,
                 r#"
 INSERT INTO
 clients_dyn (id, created, registration_token, token_endpoint_auth_method)
 VALUES ($1, $2, $3, $4)"#,
-                client.id,
-                created,
-                registration_token,
-                token_endpoint_auth_method,
+                &[
+                    &client.id,
+                    &created,
+                    &registration_token,
+                    &token_endpoint_auth_method,
+                ],
             )
-            .execute(&mut *txn)
             .await?;
 
             txn.commit().await?;
@@ -332,9 +341,7 @@ VALUES ($1, $2, $3, $4)"#,
                 .execute("DELETE FROM clients WHERE id = $1", params!(&self.id))
                 .await?;
         } else {
-            sqlx::query!("DELETE FROM clients WHERE id = $1", self.id,)
-                .execute(DB::conn_sqlx())
-                .await?;
+            DB::pg_execute("DELETE FROM clients WHERE id = $1", &[&self.id]).await?;
         }
 
         self.delete_cache().await?;
@@ -367,15 +374,12 @@ VALUES ($1, $2, $3, $4)"#,
             return Ok(slf);
         };
 
-        let slf = if is_hiqlite() {
+        let slf: Self = if is_hiqlite() {
             client
                 .query_as_one("SELECT * FROM clients WHERE id = $1", params!(id))
                 .await?
         } else {
-            sqlx::query_as::<_, Self>("SELECT * FROM clients WHERE id = $1")
-                .bind(&id)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_one("SELECT * FROM clients WHERE id = $1", &[&id]).await?
         };
 
         client
@@ -391,9 +395,7 @@ VALUES ($1, $2, $3, $4)"#,
                 .query_as("SELECT * FROM clients", params!())
                 .await?
         } else {
-            sqlx::query_as("SELECT * FROM clients")
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query("SELECT * FROM clients", &[], 2).await?
         };
 
         Ok(clients)
@@ -412,15 +414,15 @@ VALUES ($1, $2, $3, $4)"#,
                 )
                 .await?
         } else {
-            sqlx::query_as!(
-                Self,
+            DB::pg_query(
                 "SELECT * FROM clients WHERE backchannel_logout_uri IS NOT NULL",
+                &[],
+                0,
             )
-            .fetch_all(DB::conn_sqlx())
             .await?
         }
         .into_iter()
-        .filter(|c| ids.contains(&c.id.as_str()))
+        .filter(|c: &Self| ids.contains(&c.id.as_str()))
         .collect::<Vec<_>>();
 
         debug!(
@@ -444,12 +446,15 @@ VALUES ($1, $2, $3, $4)"#,
                 .map(|mut r| r.get::<String>("client_uri"))
                 .collect::<Vec<_>>()
         } else {
-            sqlx::query("SELECT client_uri FROM clients WHERE client_uri IS NOT NULL")
-                .fetch_all(DB::conn_sqlx())
-                .await?
-                .into_iter()
-                .map(|r| r.get::<String, _>("client_uri"))
-                .collect::<Vec<_>>()
+            DB::pg_query_rows(
+                "SELECT client_uri FROM clients WHERE client_uri IS NOT NULL",
+                &[],
+                2,
+            )
+            .await?
+            .into_iter()
+            .map(|r| r.get::<_, String>("client_uri"))
+            .collect::<Vec<_>>()
         };
 
         Ok(uris)
@@ -464,14 +469,13 @@ VALUES ($1, $2, $3, $4)"#,
             return Self::find(id).await;
         }
 
-        let client = DB::hql();
-        if let Some(slf) = client.get(Cache::ClientEphemeral, &id).await? {
+        if let Some(slf) = DB::hql().get(Cache::ClientEphemeral, &id).await? {
             return Ok(slf);
         }
 
         let slf = Self::ephemeral_from_url(&id).await?;
 
-        client
+        DB::hql()
             .put(
                 Cache::ClientEphemeral,
                 id,
@@ -495,10 +499,12 @@ VALUES ($1, $2, $3, $4)"#,
                 )
                 .await?
         } else {
-            sqlx::query_as("SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1")
-                .bind(like)
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query(
+                "SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1",
+                &[&like],
+                0,
+            )
+            .await?
         };
 
         Ok(clients)
@@ -551,7 +557,10 @@ WHERE id = $21"#,
         ));
     }
 
-    pub async fn save_txn(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
+    pub async fn save_txn(
+        &self,
+        txn: &deadpool_postgres::Transaction<'_>,
+    ) -> Result<(), ErrorResponse> {
         let allowed_origins = self.allowed_origins.clone().filter(|o| !o.is_empty());
         let contacts = self.contacts.clone().filter(|c| !c.is_empty());
         let post_logout_redirect_uris = self
@@ -563,7 +572,8 @@ WHERE id = $21"#,
             .clone()
             .filter(|uri| !uri.is_empty());
 
-        sqlx::query!(
+        DB::pg_txn_append(
+            txn,
             r#"
 UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
@@ -572,29 +582,30 @@ id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scope
 default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
 backchannel_logout_uri = $20
 WHERE id = $21"#,
-            self.name,
-            self.enabled,
-            self.confidential,
-            self.secret,
-            self.secret_kid,
-            self.redirect_uris,
-            post_logout_redirect_uris,
-            allowed_origins,
-            self.flows_enabled,
-            self.access_token_alg,
-            self.id_token_alg,
-            self.auth_code_lifetime,
-            self.access_token_lifetime,
-            self.scopes,
-            self.default_scopes,
-            self.challenge,
-            self.force_mfa,
-            self.client_uri,
-            contacts,
-            backchannel_logout_uri,
-            self.id,
+            &[
+                &self.name,
+                &self.enabled,
+                &self.confidential,
+                &self.secret,
+                &self.secret_kid,
+                &self.redirect_uris,
+                &post_logout_redirect_uris,
+                &allowed_origins,
+                &self.flows_enabled,
+                &self.access_token_alg,
+                &self.id_token_alg,
+                &self.auth_code_lifetime,
+                &self.access_token_lifetime,
+                &self.scopes,
+                &self.default_scopes,
+                &self.challenge,
+                &self.force_mfa,
+                &self.client_uri,
+                &contacts,
+                &backchannel_logout_uri,
+                &self.id,
+            ],
         )
-        .execute(&mut **txn)
         .await?;
 
         Ok(())
@@ -656,7 +667,7 @@ WHERE id = $21"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 r#"
 UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
@@ -665,29 +676,30 @@ id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scope
 default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
 backchannel_logout_uri = $20
 WHERE id = $21"#,
-                self.name,
-                self.enabled,
-                self.confidential,
-                self.secret,
-                self.secret_kid,
-                self.redirect_uris,
-                post_logout_redirect_uris,
-                allowed_origins,
-                self.flows_enabled,
-                self.access_token_alg,
-                self.id_token_alg,
-                self.auth_code_lifetime,
-                self.access_token_lifetime,
-                self.scopes,
-                self.default_scopes,
-                self.challenge,
-                self.force_mfa,
-                self.client_uri,
-                contacts,
-                backchannel_logout_uri,
-                self.id,
+                &[
+                    &self.name,
+                    &self.enabled,
+                    &self.confidential,
+                    &self.secret,
+                    &self.secret_kid,
+                    &self.redirect_uris,
+                    &post_logout_redirect_uris,
+                    &allowed_origins,
+                    &self.flows_enabled,
+                    &self.access_token_alg,
+                    &self.id_token_alg,
+                    &self.auth_code_lifetime,
+                    &self.access_token_lifetime,
+                    &self.scopes,
+                    &self.default_scopes,
+                    &self.challenge,
+                    &self.force_mfa,
+                    &self.client_uri,
+                    &contacts,
+                    &backchannel_logout_uri,
+                    &self.id,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -749,20 +761,24 @@ WHERE id = $4"#,
 
             DB::hql().txn(txn).await?;
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
-            new_client.save_txn(&mut txn).await?;
-            sqlx::query!(
+            new_client.save_txn(&txn).await?;
+
+            DB::pg_txn_append(
+                &txn,
                 r#"
 UPDATE clients_dyn
 SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
 WHERE id = $4"#,
-                client_dyn.registration_token,
-                client_dyn.token_endpoint_auth_method,
-                client_dyn.last_used,
-                client_dyn.id,
+                &[
+                    &client_dyn.registration_token,
+                    &client_dyn.token_endpoint_auth_method,
+                    &client_dyn.last_used,
+                    &client_dyn.id,
+                ],
             )
-            .execute(&mut *txn)
             .await?;
 
             txn.commit().await?;
@@ -838,7 +854,6 @@ impl Client {
     /// # Panics
     /// The decryption depends on correctly set up `ENC_KEYS` and `ENC_KEY_ACTIVE` environment
     /// variables and panics, if this is not the case.
-    #[inline(always)]
     pub fn generate_new_secret() -> Result<(String, Vec<u8>), ErrorResponse> {
         let rnd = utils::secure_random_alnum(64);
         let enc = EncValue::encrypt(rnd.as_bytes())?.into_bytes().to_vec();
@@ -878,7 +893,6 @@ impl Client {
         Some(res)
     }
 
-    #[inline]
     pub fn get_contacts(&self) -> Option<Vec<String>> {
         if let Some(contacts) = &self.contacts {
             let mut res = Vec::with_capacity(1);

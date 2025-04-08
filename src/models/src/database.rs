@@ -102,6 +102,17 @@ impl DB {
             .map_err(ErrorResponse::from)
     }
 
+    #[inline]
+    pub async fn pg_txn_append(
+        txn: &deadpool_postgres::Transaction<'_>,
+        stmt: &str,
+        params: &[&(dyn postgres_types::ToSql + Sync)],
+    ) -> Result<u64, ErrorResponse> {
+        let st = txn.prepare(stmt).await?;
+        let rows_affected = txn.execute(&st, params).await?;
+        Ok(rows_affected)
+    }
+
     /// Returns a Postgres connection.
     ///
     /// # Panics
@@ -398,9 +409,9 @@ impl DB {
         }
     }
 
-    /// If you can roughly estimate how many rows would be returned from the given query, provide a
-    /// proper `expected_rows_size_hint` to reserve memory in advance. This will provide a small performance
-    /// boost.
+    /// If you can estimate how many rows would be returned from the given query, provide a
+    /// proper `expected_rows_size_hint` to reserve memory in advance. This will provide a small
+    /// performance boost.
     #[inline]
     pub async fn pg_query<'a, T: FromTokioPostgresRow>(
         stmt: &str,
@@ -415,6 +426,28 @@ impl DB {
         let mut res: Vec<T> = Vec::with_capacity(expected_rows_size_hint);
         while let Some(row) = s.next().await {
             res.push(T::from_row(row?)?);
+        }
+
+        Ok(res)
+    }
+
+    /// If you can estimate how many rows would be returned from the given query, provide a
+    /// proper `expected_rows_size_hint` to reserve memory in advance. This will provide a small
+    /// performance boost.
+    #[inline]
+    pub async fn pg_query_rows<'a>(
+        stmt: &str,
+        params: &'a [&'a (dyn postgres_types::ToSql + Sync)],
+        expected_rows_size_hint: usize,
+    ) -> Result<Vec<tokio_postgres::Row>, ErrorResponse> {
+        let cl = Self::pg().await?;
+        let st = cl.prepare(stmt).await?;
+        let s = cl.query_raw(&st, Self::params_iter(params)).await?;
+        pin!(s);
+
+        let mut res = Vec::with_capacity(expected_rows_size_hint);
+        while let Some(row) = s.next().await {
+            res.push(row?);
         }
 
         Ok(res)
