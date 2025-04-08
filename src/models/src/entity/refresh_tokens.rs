@@ -3,11 +3,11 @@ use chrono::{DateTime, Utc};
 use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sqlx::FromRow;
 use std::fmt::{Debug, Formatter};
 
-#[derive(FromRow, Serialize, Deserialize)]
+#[derive(FromRow, Deserialize)]
 pub struct RefreshToken {
     pub id: String,
     pub user_id: String,
@@ -31,6 +31,20 @@ impl Debug for RefreshToken {
             self.is_mfa,
             self.session_id
         )
+    }
+}
+
+impl From<tokio_postgres::Row> for RefreshToken {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            nbf: row.get("nbf"),
+            exp: row.get("exp"),
+            scope: row.get("scope"),
+            is_mfa: row.get("is_mfa"),
+            session_id: row.get("session_id"),
+        }
     }
 }
 
@@ -68,9 +82,7 @@ impl RefreshToken {
                 .execute("DELETE FROM refresh_tokens WHERE id = $1", params!(self.id))
                 .await?;
         } else {
-            sqlx::query!("DELETE FROM refresh_tokens WHERE id = $1", self.id)
-                .execute(DB::conn_sqlx())
-                .await?;
+            DB::pg_execute("DELETE FROM refresh_tokens WHERE id = $1", &[&self.id]).await?;
         }
         Ok(())
     }
@@ -84,11 +96,10 @@ impl RefreshToken {
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 "DELETE FROM refresh_tokens WHERE session_id = $1",
-                session_id
+                &[&session_id],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
         Ok(())
@@ -100,9 +111,7 @@ impl RefreshToken {
                 .query_as("SELECT * FROM refresh_tokens", params!())
                 .await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM refresh_tokens")
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query_map("SELECT * FROM refresh_tokens", &[], 0).await?
         };
         Ok(res)
     }
@@ -118,9 +127,7 @@ impl RefreshToken {
                 )
                 .await?;
         } else {
-            sqlx::query!("UPDATE refresh_tokens SET exp = $1 WHERE exp > $1", now)
-                .execute(DB::conn_sqlx())
-                .await?;
+            DB::pg_execute("UPDATE refresh_tokens SET exp = $1 WHERE exp > $1", &[&now]).await?;
         }
 
         Ok(())
@@ -135,9 +142,7 @@ impl RefreshToken {
                 )
                 .await?;
         } else {
-            sqlx::query!("DELETE FROM refresh_tokens WHERE user_id = $1", user_id)
-                .execute(DB::conn_sqlx())
-                .await?;
+            DB::pg_execute("DELETE FROM refresh_tokens WHERE user_id = $1", &[&user_id]).await?;
         }
         Ok(())
     }
@@ -145,9 +150,9 @@ impl RefreshToken {
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
 
-        let slf = if is_hiqlite() {
+        let slf: Self = if is_hiqlite() {
             DB::hql()
-                .query_as_one::<Self, _>(
+                .query_as_one(
                     "SELECT * FROM refresh_tokens WHERE id = $1 AND exp > $2",
                     params!(id, now),
                 )
@@ -156,13 +161,10 @@ impl RefreshToken {
                     ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
                 })?
         } else {
-            sqlx::query_as!(
-                Self,
+            DB::pg_query_map_one(
                 "SELECT * FROM refresh_tokens WHERE id = $1 AND exp > $2",
-                id,
-                now
+                &[&id],
             )
-            .fetch_one(DB::conn_sqlx())
             .await
             .map_err(|_| {
                 ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
@@ -191,20 +193,21 @@ ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, sess
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 r#"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7"#,
-                self.id,
-                self.user_id,
-                self.nbf,
-                self.exp,
-                self.scope,
-                self.is_mfa,
-                self.session_id,
+                &[
+                    &self.id,
+                    &self.user_id,
+                    &self.nbf,
+                    &self.exp,
+                    &self.scope,
+                    &self.is_mfa,
+                    &self.session_id,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -222,9 +225,7 @@ impl RefreshToken {
                 )
                 .await?;
         } else {
-            sqlx::query!("DELETE FROM refresh_tokens WHERE user_id = $1", user_id)
-                .execute(DB::conn_sqlx())
-                .await?;
+            DB::pg_execute("DELETE FROM refresh_tokens WHERE user_id = $1", &[&user_id]).await?;
         }
 
         Ok(())

@@ -450,6 +450,28 @@ impl DB {
     /// proper `expected_rows_size_hint` to reserve memory in advance. This will provide a small
     /// performance boost.
     #[inline]
+    pub async fn pg_query_map<'a, T: From<tokio_postgres::Row>>(
+        stmt: &str,
+        params: &'a [&'a (dyn postgres_types::ToSql + Sync)],
+        expected_rows_size_hint: usize,
+    ) -> Result<Vec<T>, ErrorResponse> {
+        let cl = Self::pg().await?;
+        let st = cl.prepare(stmt).await?;
+        let s = cl.query_raw(&st, Self::params_iter(params)).await?;
+        pin!(s);
+
+        let mut res: Vec<T> = Vec::with_capacity(expected_rows_size_hint);
+        while let Some(row) = s.next().await {
+            res.push(T::from(row?));
+        }
+
+        Ok(res)
+    }
+
+    /// If you can estimate how many rows would be returned from the given query, provide a
+    /// proper `expected_rows_size_hint` to reserve memory in advance. This will provide a small
+    /// performance boost.
+    #[inline]
     pub async fn pg_query_rows<'a>(
         stmt: &str,
         params: &'a [&'a (dyn postgres_types::ToSql + Sync)],
