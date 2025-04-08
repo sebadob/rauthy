@@ -374,6 +374,9 @@ impl DB {
         Ok(rows_affected as usize)
     }
 
+    // TODO we probably want to drop the pg mapper because it adds way more code
+    // than we actually need. A short manual impl would be more efficient, even if its more
+    // work.
     #[inline]
     pub async fn pg_query_one<T: FromTokioPostgresRow>(
         stmt: &str,
@@ -383,6 +386,17 @@ impl DB {
         let st = cl.prepare(stmt).await?;
         let row = cl.query_one(&st, params).await?;
         Ok(T::from_row(row)?)
+    }
+
+    #[inline]
+    pub async fn pg_query_map_one<T: From<tokio_postgres::Row>>(
+        stmt: &str,
+        params: &[&(dyn postgres_types::ToSql + Sync)],
+    ) -> Result<T, ErrorResponse> {
+        let cl = Self::pg().await?;
+        let st = cl.prepare(stmt).await?;
+        let row = cl.query_one(&st, params).await?;
+        Ok(T::from(row))
     }
 
     #[inline]
