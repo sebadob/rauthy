@@ -368,7 +368,7 @@ impl DB {
         params: &[&(dyn postgres_types::ToSql + Sync)],
     ) -> Result<usize, ErrorResponse> {
         let cl = Self::pg().await?;
-        let st = cl.prepare(stmt).await?;
+        let st = cl.prepare_cached(stmt).await?;
         let rows_affected = cl.execute(&st, params).await?;
         // cast to usize for a uniform interface with Hiqlite
         Ok(rows_affected as usize)
@@ -383,7 +383,7 @@ impl DB {
         params: &[&(dyn postgres_types::ToSql + Sync)],
     ) -> Result<T, ErrorResponse> {
         let cl = Self::pg().await?;
-        let st = cl.prepare(stmt).await?;
+        let st = cl.prepare_cached(stmt).await?;
         let row = cl.query_one(&st, params).await?;
         Ok(T::from_row(row)?)
     }
@@ -394,7 +394,7 @@ impl DB {
         params: &[&(dyn postgres_types::ToSql + Sync)],
     ) -> Result<T, ErrorResponse> {
         let cl = Self::pg().await?;
-        let st = cl.prepare(stmt).await?;
+        let st = cl.prepare_cached(stmt).await?;
         let row = cl.query_one(&st, params).await?;
         Ok(T::from(row))
     }
@@ -405,7 +405,7 @@ impl DB {
         params: &[&(dyn postgres_types::ToSql + Sync)],
     ) -> Result<tokio_postgres::Row, ErrorResponse> {
         let cl = Self::pg().await?;
-        let st = cl.prepare(stmt).await?;
+        let st = cl.prepare_cached(stmt).await?;
         let row = cl.query_one(&st, params).await?;
         Ok(row)
     }
@@ -416,7 +416,7 @@ impl DB {
         params: &[&(dyn postgres_types::ToSql + Sync)],
     ) -> Result<Option<T>, ErrorResponse> {
         let cl = Self::pg().await?;
-        let st = cl.prepare(stmt).await?;
+        let st = cl.prepare_cached(stmt).await?;
         let row = cl.query_opt(&st, params).await?;
         match row {
             None => Ok(None),
@@ -434,7 +434,7 @@ impl DB {
         expected_rows_size_hint: usize,
     ) -> Result<Vec<T>, ErrorResponse> {
         let cl = Self::pg().await?;
-        let st = cl.prepare(stmt).await?;
+        let st = cl.prepare_cached(stmt).await?;
         let s = cl.query_raw(&st, Self::params_iter(params)).await?;
         pin!(s);
 
@@ -456,7 +456,7 @@ impl DB {
         expected_rows_size_hint: usize,
     ) -> Result<Vec<T>, ErrorResponse> {
         let cl = Self::pg().await?;
-        let st = cl.prepare(stmt).await?;
+        let st = cl.prepare_cached(stmt).await?;
         let s = cl.query_raw(&st, Self::params_iter(params)).await?;
         pin!(s);
 
@@ -478,7 +478,7 @@ impl DB {
         expected_rows_size_hint: usize,
     ) -> Result<Vec<tokio_postgres::Row>, ErrorResponse> {
         let cl = Self::pg().await?;
-        let st = cl.prepare(stmt).await?;
+        let st = cl.prepare_cached(stmt).await?;
         let s = cl.query_raw(&st, Self::params_iter(params)).await?;
         pin!(s);
 
