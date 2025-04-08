@@ -130,12 +130,14 @@ impl Debug for Jwk {
 impl Jwk {
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let sig_str = self.signature.as_str();
+        let sql = r#"
+INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
+VALUES ($1, $2, $3, $4, $5)"#;
+
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    r#"
-INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
-VALUES ($1, $2, $3, $4, $5)"#,
+                    sql,
                     params!(
                         self.kid.clone(),
                         self.created_at,
@@ -147,9 +149,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 .await?;
         } else {
             DB::pg_execute(
-                r#"
-INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
-VALUES ($1, $2, $3, $4, $5)"#,
+                sql,
                 &[
                     &self.kid,
                     &self.created_at,
@@ -198,10 +198,11 @@ impl JWKS {
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM jwks";
         let res: Vec<Jwk> = if is_hiqlite() {
-            client.query_as("SELECT * FROM jwks", params!()).await?
+            client.query_as(sql, params!()).await?
         } else {
-            DB::pg_query("SELECT * FROM jwks", &[], 8).await?
+            DB::pg_query(sql, &[], 8).await?
         };
 
         let mut jwks = JWKS::default();
@@ -755,12 +756,11 @@ impl JwkKeyPair {
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM jwks WHERE kid = $1";
         let jwk: Jwk = if is_hiqlite() {
-            client
-                .query_as_one("SELECT * FROM jwks WHERE kid = $1", params!(kid))
-                .await?
+            client.query_as_one(sql, params!(kid)).await?
         } else {
-            DB::pg_query_one("SELECT * FROM jwks WHERE kid = $1", &[&kid]).await?
+            DB::pg_query_one(sql, &[&kid]).await?
         };
 
         let kp = JwkKeyPair::decrypt(&jwk, jwk.signature.clone())?;
@@ -781,29 +781,16 @@ impl JwkKeyPair {
         }
 
         let signature = key_pair_alg.as_str().to_string();
+        let sql = r#"
+SELECT * FROM jwks
+WHERE signature = $1
+ORDER BY created_at DESC
+LIMIT 1"#;
+
         let jwk_latest: Jwk = if is_hiqlite() {
-            client
-                .query_as_one(
-                    r#"
-SELECT * FROM jwks
-WHERE signature = $1
-ORDER BY created_at DESC
-LIMIT 1
-"#,
-                    params!(signature),
-                )
-                .await?
+            client.query_as_one(sql, params!(signature)).await?
         } else {
-            DB::pg_query_one(
-                r#"
-SELECT * FROM jwks
-WHERE signature = $1
-ORDER BY created_at DESC
-LIMIT 1
-"#,
-                &[&signature],
-            )
-            .await?
+            DB::pg_query_one(sql, &[&signature]).await?
         };
 
         let jwk = JwkKeyPair::decrypt(&jwk_latest, key_pair_alg)?;

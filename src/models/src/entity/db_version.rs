@@ -18,10 +18,9 @@ pub struct DbVersion {
 
 impl DbVersion {
     pub async fn find() -> Result<Option<Self>, ErrorResponse> {
+        let sql = "SELECT data FROM config WHERE id = 'db_version'";
         if is_hiqlite() {
-            let mut rows = DB::hql()
-                .query_raw("SELECT data FROM config WHERE id = 'db_version'", params!())
-                .await?;
+            let mut rows = DB::hql().query_raw(sql, params!()).await?;
             if rows.is_empty() {
                 return Ok(None);
             }
@@ -29,8 +28,7 @@ impl DbVersion {
             let version = bincode::deserialize::<Self>(&bytes)?;
             Ok(Some(version))
         } else {
-            let config: Option<ConfigEntity> =
-                DB::pg_query_opt("SELECT data FROM config WHERE id = 'db_version'", &[]).await?;
+            let config: Option<ConfigEntity> = DB::pg_query_opt(sql, &[]).await?;
             match config {
                 Some(c) => Ok(Some(bincode::deserialize::<Self>(&c.data)?)),
                 None => Ok(None),
@@ -46,25 +44,15 @@ impl DbVersion {
             };
             let data = bincode::serialize(&slf)?;
 
+            let sql = r#"
+INSERT INTO config (id, data)
+VALUES ('db_version', $1)
+ON CONFLICT(id) DO UPDATE SET data = $1"#;
+
             if is_hiqlite() {
-                DB::hql()
-                    .execute(
-                        r#"
-INSERT INTO config (id, data)
-VALUES ('db_version', $1)
-ON CONFLICT(id) DO UPDATE SET data = $1"#,
-                        params!(data),
-                    )
-                    .await?;
+                DB::hql().execute(sql, params!(data)).await?;
             } else {
-                DB::pg_execute(
-                    r#"
-INSERT INTO config (id, data)
-VALUES ('db_version', $1)
-ON CONFLICT(id) DO UPDATE SET data = $1"#,
-                    &[&data],
-                )
-                .await?;
+                DB::pg_execute(sql, &[&data]).await?;
             }
         }
 
@@ -78,15 +66,11 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#,
         // check DB version for compatibility
         // We check the `config` table first instead of db version, because the db version does not
         // exist in early versions while the `config` does from the very beginning.
+        let sql = "SELECT id FROM config LIMIT 1";
         let db_exists = if is_hiqlite() {
-            DB::hql()
-                .query_raw("SELECT id FROM config LIMIT 1", params!())
-                .await
-                .is_ok()
+            DB::hql().query_raw(sql, params!()).await.is_ok()
         } else {
-            DB::pg_query_one_row("SELECT id FROM config LIMIT 1", &[])
-                .await
-                .is_ok()
+            DB::pg_query_one_row(sql, &[]).await.is_ok()
         };
 
         if !db_exists {
@@ -155,21 +139,12 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#,
         // which is already checked above
 
         // the passkeys table was introduced with v0.15.0
+        let sql_15 =
+            "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'passkeys' LIMIT 1";
         let is_db_v0_15_0 = if is_hiqlite() {
-            DB::hql()
-                .query_raw(
-                    "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'passkeys' LIMIT 1",
-                    params!(),
-                )
-                .await
-                .is_err()
+            DB::hql().query_raw(sql_15, params!()).await.is_err()
         } else {
-            DB::pg_query_one_row(
-                "SELECT * FROM pg_tables WHERE tablename = 'passkeys' LIMIT 1",
-                &[],
-            )
-            .await
-            .is_err()
+            DB::pg_query_one_row(sql_15, &[]).await.is_err()
         };
         if is_db_v0_15_0 {
             panic!(
@@ -180,21 +155,12 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#,
 
         // To check for any DB older than 0.15.0, we check for the existence of the 'clients' table
         // which is there since the very beginning.
+        let sql_15_pre =
+            "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'clients' LIMIT 1";
         let is_db_pre_v0_15_0 = if is_hiqlite() {
-            DB::hql()
-                .query_raw(
-                    "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'clients' LIMIT 1",
-                    params!(),
-                )
-                .await
-                .is_err()
+            DB::hql().query_raw(sql_15_pre, params!()).await.is_err()
         } else {
-            DB::pg_query_one_row(
-                "SELECT * FROM pg_tables WHERE tablename = 'clients' LIMIT 1",
-                &[],
-            )
-            .await
-            .is_err()
+            DB::pg_query_one_row(sql_15_pre, &[]).await.is_err()
         };
         if is_db_pre_v0_15_0 {
             panic!(

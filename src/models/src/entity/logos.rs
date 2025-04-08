@@ -102,28 +102,19 @@ impl Logo {
     pub async fn delete(id: &str, typ: &LogoType) -> Result<(), ErrorResponse> {
         match typ {
             LogoType::Client => {
+                let sql = "DELETE FROM client_logos WHERE client_id = $1";
                 if is_hiqlite() {
-                    DB::hql()
-                        .execute("DELETE FROM client_logos WHERE client_id = $1", params!(id))
-                        .await?;
+                    DB::hql().execute(sql, params!(id)).await?;
                 } else {
-                    DB::pg_execute("DELETE FROM client_logos WHERE client_id = $1", &[&id]).await?;
+                    DB::pg_execute(sql, &[&id]).await?;
                 }
             }
             LogoType::AuthProvider => {
+                let sql = "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1";
                 if is_hiqlite() {
-                    DB::hql()
-                        .execute(
-                            "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1",
-                            params!(id),
-                        )
-                        .await?;
+                    DB::hql().execute(sql, params!(id)).await?;
                 } else {
-                    DB::pg_execute(
-                        "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1",
-                        &[&id],
-                    )
-                    .await?;
+                    DB::pg_execute(sql, &[&id]).await?;
                 }
             }
         };
@@ -255,7 +246,7 @@ impl Logo {
     async fn upsert_self(&self, typ: &LogoType, with_cache: bool) -> Result<(), ErrorResponse> {
         let res = self.res.as_str();
 
-        let stmt = match typ {
+        let sql = match typ {
             LogoType::Client => {
                 r#"
 INSERT INTO client_logos (client_id, res, content_type, data, updated)
@@ -275,7 +266,7 @@ SET content_type = $3, data = $4, updated = $5"#
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    stmt,
+                    sql,
                     params!(
                         self.id.clone(),
                         res,
@@ -287,7 +278,7 @@ SET content_type = $3, data = $4, updated = $5"#
                 .await?;
         } else {
             DB::pg_execute(
-                stmt,
+                sql,
                 &[
                     &self.id,
                     &res,
@@ -329,7 +320,7 @@ SET content_type = $3, data = $4, updated = $5"#
         let res = res.as_str();
         let res_svg = LogoRes::Svg.as_str();
 
-        let stmt = match typ {
+        let sql = match typ {
             LogoType::Client => {
                 r#"
 SELECT client_id AS id, res, content_type, data, updated
@@ -346,10 +337,10 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
 
         let slf = if is_hiqlite() {
             DB::hql()
-                .query_map_one(stmt, params!(id, res, res_svg))
+                .query_map_one(sql, params!(id, res, res_svg))
                 .await?
         } else {
-            DB::pg_query_map_one(stmt, &[&id, &res, &res_svg]).await?
+            DB::pg_query_map_one(sql, &[&id, &res, &res_svg]).await?
         };
 
         Ok(slf)
@@ -380,7 +371,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
             return Ok(updated);
         }
 
-        let stmt = match typ {
+        let sql = match typ {
             LogoType::Client => "SELECT updated FROM client_logos WHERE client_id = $1 LIMIT 1",
             LogoType::AuthProvider => {
                 "SELECT updated FROM auth_provider_logos WHERE auth_provider_id = $1 LIMIT 1"
@@ -388,12 +379,12 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
         };
         let updated = if is_hiqlite() {
             DB::hql()
-                .query_raw_one(stmt, params!(id))
+                .query_raw_one(sql, params!(id))
                 .await?
                 .try_get::<i64>("updated")
                 .ok()
         } else {
-            DB::pg_query_one_row(stmt, &[&id])
+            DB::pg_query_one_row(sql, &[&id])
                 .await?
                 .try_get::<_, i64>("updated")
                 .ok()

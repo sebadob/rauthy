@@ -115,24 +115,16 @@ impl UserPicture {
         data: Option<Vec<u8>>,
     ) -> Result<String, ErrorResponse> {
         let id = new_store_id();
+        let sql = r#"
+INSERT INTO pictures (id, content_type, storage, data)
+VALUES ($1, $2, $3, $4)"#;
 
         if is_hiqlite() {
             DB::hql()
-                .execute(
-                    r#"
-INSERT INTO pictures (id, content_type, storage, data)
-VALUES ($1, $2, $3, $4)"#,
-                    params!(&id, content_type, storage.as_str(), data),
-                )
+                .execute(sql, params!(&id, content_type, storage.as_str(), data))
                 .await?;
         } else {
-            DB::pg_execute(
-                r#"
-INSERT INTO pictures (id, content_type, storage, data)
-VALUES ($1, $2, $3, $4)"#,
-                &[&id, &content_type, &storage.as_str(), &data],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&id, &content_type, &storage.as_str(), &data]).await?;
         }
 
         Ok(id)
@@ -140,24 +132,22 @@ VALUES ($1, $2, $3, $4)"#,
 
     /// Deletes the UserPicture in the DB - does NOT delete the file on the storage.
     async fn delete(id: String) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM pictures WHERE id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute("DELETE FROM pictures WHERE id = $1", params!(id))
-                .await?;
+            DB::hql().execute(sql, params!(id)).await?;
         } else {
-            DB::pg_execute("DELETE FROM pictures WHERE id = $1", &[&id]).await?;
+            DB::pg_execute(sql, &[&id]).await?;
         }
 
         Ok(())
     }
 
     async fn find(id: String) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM pictures WHERE id = $1";
         let slf = if is_hiqlite() {
-            DB::hql()
-                .query_as_one("SELECT * FROM pictures WHERE id = $1", params!(id))
-                .await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_map_one("SELECT * FROM pictures WHERE id = $1", &[&id]).await?
+            DB::pg_query_map_one(sql, &[&id]).await?
         };
 
         Ok(slf)

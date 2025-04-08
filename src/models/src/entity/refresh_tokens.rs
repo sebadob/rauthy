@@ -77,96 +77,69 @@ impl RefreshToken {
     }
 
     pub async fn delete(self) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens WHERE id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute("DELETE FROM refresh_tokens WHERE id = $1", params!(self.id))
-                .await?;
+            DB::hql().execute(sql, params!(self.id)).await?;
         } else {
-            DB::pg_execute("DELETE FROM refresh_tokens WHERE id = $1", &[&self.id]).await?;
+            DB::pg_execute(sql, &[&self.id]).await?;
         }
         Ok(())
     }
 
     pub async fn delete_by_sid(session_id: String) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens WHERE session_id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "DELETE FROM refresh_tokens WHERE session_id = $1",
-                    params!(session_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(session_id)).await?;
         } else {
-            DB::pg_execute(
-                "DELETE FROM refresh_tokens WHERE session_id = $1",
-                &[&session_id],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&session_id]).await?;
         }
         Ok(())
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM refresh_tokens";
         let res = if is_hiqlite() {
-            DB::hql()
-                .query_as("SELECT * FROM refresh_tokens", params!())
-                .await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
-            DB::pg_query_map("SELECT * FROM refresh_tokens", &[], 0).await?
+            DB::pg_query_map(sql, &[], 0).await?
         };
         Ok(res)
     }
 
     pub async fn invalidate_all() -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
-
+        let sql = "UPDATE refresh_tokens SET exp = $1 WHERE exp > $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "UPDATE refresh_tokens SET exp = $1 WHERE exp > $1",
-                    params!(now),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(now)).await?;
         } else {
-            DB::pg_execute("UPDATE refresh_tokens SET exp = $1 WHERE exp > $1", &[&now]).await?;
+            DB::pg_execute(sql, &[&now]).await?;
         }
 
         Ok(())
     }
 
     pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens WHERE user_id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "DELETE FROM refresh_tokens WHERE user_id = $1",
-                    params!(user_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(user_id)).await?;
         } else {
-            DB::pg_execute("DELETE FROM refresh_tokens WHERE user_id = $1", &[&user_id]).await?;
+            DB::pg_execute(sql, &[&user_id]).await?;
         }
         Ok(())
     }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
-
+        let sql = "SELECT * FROM refresh_tokens WHERE id = $1 AND exp > $2";
         let slf: Self = if is_hiqlite() {
             DB::hql()
-                .query_as_one(
-                    "SELECT * FROM refresh_tokens WHERE id = $1 AND exp > $2",
-                    params!(id, now),
-                )
+                .query_as_one(sql, params!(id, now))
                 .await
                 .map_err(|_| {
                     ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
                 })?
         } else {
-            DB::pg_query_map_one(
-                "SELECT * FROM refresh_tokens WHERE id = $1 AND exp > $2",
-                &[&id],
-            )
-            .await
-            .map_err(|_| {
+            DB::pg_query_map_one(sql, &[&id]).await.map_err(|_| {
                 ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
             })?
         };
@@ -174,13 +147,15 @@ impl RefreshToken {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
+        let sql = r#"
+INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7"#;
+
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    r#"
-INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7"#,
+                    sql,
                     params!(
                         self.id.clone(),
                         self.user_id.clone(),
@@ -194,10 +169,7 @@ ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, sess
                 .await?;
         } else {
             DB::pg_execute(
-                r#"
-INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7"#,
+                sql,
                 &[
                     &self.id,
                     &self.user_id,
@@ -217,15 +189,11 @@ ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, sess
 
 impl RefreshToken {
     pub async fn invalidate_all_for_user(user_id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens WHERE user_id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "DELETE FROM refresh_tokens WHERE user_id = $1",
-                    params!(user_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(user_id)).await?;
         } else {
-            DB::pg_execute("DELETE FROM refresh_tokens WHERE user_id = $1", &[&user_id]).await?;
+            DB::pg_execute(sql, &[&user_id]).await?;
         }
 
         Ok(())

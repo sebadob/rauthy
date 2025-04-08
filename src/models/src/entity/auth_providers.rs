@@ -235,56 +235,50 @@ impl<'r> From<hiqlite::Row<'r>> for AuthProvider {
 
 impl AuthProvider {
     pub async fn create(payload: ProviderRequest) -> Result<Self, ErrorResponse> {
-        let mut slf = Self::try_from_id_req(new_store_id(), payload)?;
+        let slf = Self::try_from_id_req(new_store_id(), payload)?;
         let typ = slf.typ.as_str();
 
-        slf = if is_hiqlite() {
-            DB::hql()
-                .execute_returning_map_one(
-                    r#"
+        let sql = r#"
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, jwks_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
 mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic,
 client_secret_post)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
-RETURNING *"#,
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
-                        slf.id,
-                        slf.name,
+                        &slf.id,
+                        &slf.name,
                         slf.enabled,
                         typ,
-                        slf.issuer,
-                        slf.authorization_endpoint,
-                        slf.token_endpoint,
-                        slf.userinfo_endpoint,
-                        slf.jwks_endpoint,
-                        slf.client_id,
-                        slf.secret,
-                        slf.scope,
-                        slf.admin_claim_path,
-                        slf.admin_claim_value,
-                        slf.mfa_claim_path,
-                        slf.mfa_claim_value,
+                        &slf.issuer,
+                        &slf.authorization_endpoint,
+                        &slf.token_endpoint,
+                        &slf.userinfo_endpoint,
+                        &slf.jwks_endpoint,
+                        &slf.client_id,
+                        &slf.secret,
+                        &slf.scope,
+                        &slf.admin_claim_path,
+                        &slf.admin_claim_value,
+                        &slf.mfa_claim_path,
+                        &slf.mfa_claim_value,
                         slf.allow_insecure_requests,
                         slf.use_pkce,
-                        slf.root_pem,
+                        &slf.root_pem,
                         slf.client_secret_basic,
                         slf.client_secret_post
                     ),
                 )
-                .await?
+                .await?;
         } else {
             DB::pg_execute(
-                r#"
-INSERT INTO
-auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
-userinfo_endpoint, jwks_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
-mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic,
-client_secret_post)
-VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#,
+                sql,
                 &[
                     &slf.id,
                     &slf.name,
@@ -310,7 +304,6 @@ VALUES
                 ],
             )
             .await?;
-            slf
         };
 
         Self::invalidate_cache_all().await?;
@@ -328,12 +321,11 @@ VALUES
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM auth_providers WHERE id = $1";
         let slf = if is_hiqlite() {
-            client
-                .query_map_one("SELECT * FROM auth_providers WHERE id = $1", params!(id))
-                .await?
+            client.query_map_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_one("SELECT * FROM auth_providers WHERE id = $1", &[&id]).await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         client
@@ -345,15 +337,11 @@ VALUES
 
     /// Tries to find an Auth Provider by the given `iss`. This function does not use any caching.
     pub async fn find_by_iss(iss: String) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM auth_providers WHERE issuer = $1";
         let slf = if is_hiqlite() {
-            DB::hql()
-                .query_map_one(
-                    "SELECT * FROM auth_providers WHERE issuer = $1",
-                    params!(iss),
-                )
-                .await?
+            DB::hql().query_map_one(sql, params!(iss)).await?
         } else {
-            DB::pg_query_one("SELECT * FROM auth_providers WHERE issuer = $1", &[&iss]).await?
+            DB::pg_query_one(sql, &[&iss]).await?
         };
 
         Ok(slf)
@@ -365,12 +353,11 @@ VALUES
             return Ok(res);
         }
 
+        let sql = "SELECT * FROM auth_providers";
         let res = if is_hiqlite() {
-            client
-                .query_map("SELECT * FROM auth_providers", params!())
-                .await?
+            client.query_map(sql, params!()).await?
         } else {
-            DB::pg_query("SELECT * FROM auth_providers", &[], 0).await?
+            DB::pg_query(sql, &[], 0).await?
         };
 
         // needed for rendering each single login page -> always cache this
@@ -384,32 +371,22 @@ VALUES
     pub async fn find_linked_users(
         id: &str,
     ) -> Result<Vec<ProviderLinkedUserResponse>, ErrorResponse> {
+        let sql = "SELECT id, email FROM users WHERE auth_provider_id = $1";
         let users = if is_hiqlite() {
-            DB::hql()
-                .query_as(
-                    "SELECT id, email FROM users WHERE auth_provider_id = $1",
-                    params!(id),
-                )
-                .await?
+            DB::hql().query_as(sql, params!(id)).await?
         } else {
-            DB::pg_query(
-                "SELECT id, email FROM users WHERE auth_provider_id = $1",
-                &[&id],
-                0,
-            )
-            .await?
+            DB::pg_query(sql, &[&id], 0).await?
         };
 
         Ok(users)
     }
 
     pub async fn delete(id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM auth_providers WHERE id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute("DELETE FROM auth_providers WHERE id = $1", params!(id))
-                .await?;
+            DB::hql().execute(sql, params!(id)).await?;
         } else {
-            DB::pg_execute("DELETE FROM auth_providers WHERE id = $1", &[]).await?;
+            DB::pg_execute(sql, &[]).await?;
         }
 
         Self::invalidate_cache_all().await?;
@@ -425,17 +402,19 @@ VALUES
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let typ = self.typ.as_str();
 
-        if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    r#"
+        let sql = r#"
 UPDATE auth_providers
 SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
 token_endpoint = $6, userinfo_endpoint = $7, jwks_endpoint = $8, client_id = $9, secret = $10,
 scope = $11, admin_claim_path = $12, admin_claim_value = $13, mfa_claim_path = $14,
 mfa_claim_value = $15, allow_insecure_requests = $16, use_pkce = $17, root_pem = $18,
 client_secret_basic = $19, client_secret_post = $20
-WHERE id = $21"#,
+WHERE id = $21"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
                         self.name.clone(),
                         self.enabled,
@@ -463,14 +442,7 @@ WHERE id = $21"#,
                 .await?;
         } else {
             DB::pg_execute(
-                r#"
-UPDATE auth_providers
-SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
-token_endpoint = $6, userinfo_endpoint = $7, jwks_endpoint = $8, client_id = $9, secret = $10,
-scope = $11, admin_claim_path = $12, admin_claim_value = $13, mfa_claim_path = $14,
-mfa_claim_value = $15, allow_insecure_requests = $16, use_pkce = $17, root_pem = $18,
-client_secret_basic = $19, client_secret_post = $20
-WHERE id = $21"#,
+                sql,
                 &[
                     &self.name,
                     &self.enabled,

@@ -145,12 +145,14 @@ impl MagicLink {
             usage: usage.to_string(),
         };
 
+        let sql = r#"
+INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
+VALUES ($1, $2, $3, $4, $5, $6)"#;
+
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    r#"
-INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
+                    sql,
                     params!(
                         link.id.clone(),
                         link.user_id.clone(),
@@ -163,9 +165,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 .await?;
         } else {
             DB::pg_execute(
-                r#"
-INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
+                sql,
                 &[
                     &link.id,
                     &link.user_id,
@@ -182,85 +182,57 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
     }
 
     pub async fn delete_all_pwd_reset_for_user(user_id: String) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'password_reset%'";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'password_reset%'",
-                    params!(user_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(user_id)).await?;
         } else {
-            DB::pg_execute(
-                "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'password_reset%'",
-                &[&user_id],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&user_id]).await?;
         };
 
         Ok(())
     }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM magic_links WHERE id = $1";
         let res = if is_hiqlite() {
-            DB::hql()
-                .query_as_one("SELECT * FROM magic_links WHERE id = $1", params!(id))
-                .await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_map_one("SELECT * FROM magic_links WHERE id = $1", &[&id]).await?
+            DB::pg_query_map_one(sql, &[&id]).await?
         };
 
         Ok(res)
     }
 
     pub async fn find_by_user(user_id: String) -> Result<MagicLink, ErrorResponse> {
+        let sql = "SELECT * FROM magic_links WHERE user_id = $1";
         let res = if is_hiqlite() {
-            DB::hql()
-                .query_as_one(
-                    "SELECT * FROM magic_links WHERE user_id = $1",
-                    params!(user_id),
-                )
-                .await?
+            DB::hql().query_as_one(sql, params!(user_id)).await?
         } else {
-            DB::pg_query_map_one("SELECT * FROM magic_links WHERE user_id = $1", &[&user_id])
-                .await?
+            DB::pg_query_map_one(sql, &[&user_id]).await?
         };
 
         Ok(res)
     }
 
     pub async fn invalidate_all_email_change(user_id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'email_change$%'";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'email_change$%'",
-                    params!(user_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(user_id)).await?;
         } else {
-            DB::pg_execute(
-                "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'email_change$%'",
-                &[&user_id],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&user_id]).await?;
         };
 
         Ok(())
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4";
         if is_hiqlite() {
             DB::hql()
-                .execute(
-                    "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4",
-                    params!(&self.cookie, self.exp, self.used, &self.id),
-                )
+                .execute(sql, params!(&self.cookie, self.exp, self.used, &self.id))
                 .await?;
         } else {
-            DB::pg_execute(
-                "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4",
-                &[&self.cookie, &self.exp, &self.used, &self.id],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&self.cookie, &self.exp, &self.used, &self.id]).await?;
         }
 
         Ok(())

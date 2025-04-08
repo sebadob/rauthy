@@ -25,16 +25,11 @@ impl LatestAppVersion {
             return Some(slf);
         }
 
+        let sql = "SELECT data FROM config WHERE id = 'latest_version'";
         let res = if is_hiqlite() {
-            DB::hql()
-                .query_as(
-                    "SELECT data FROM config WHERE id = 'latest_version'",
-                    params!(),
-                )
-                .await
-                .ok()
+            DB::hql().query_as(sql, params!()).await.ok()
         } else {
-            DB::pg_query_one_row("SELECT data FROM config WHERE id = 'latest_version'", &[])
+            DB::pg_query_one_row(sql, &[])
                 .await
                 .ok()
                 .map(|r| r.get::<_, Vec<u8>>("data"))
@@ -81,23 +76,14 @@ impl LatestAppVersion {
         };
         let data = bincode::serialize(&slf)?;
 
+        let sql = r#"
+INSERT INTO config (id, data) VALUES ('latest_version', $1)
+ON CONFLICT(id) DO UPDATE SET data = $1"#;
+
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    r#"
-INSERT INTO config (id, data) VALUES ('latest_version', $1)
-ON CONFLICT(id) DO UPDATE SET data = $1"#,
-                    params!(data),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(data)).await?;
         } else {
-            DB::pg_execute(
-                r#"
-INSERT INTO config (id, data) VALUES ('latest_version', $1)
-ON CONFLICT(id) DO UPDATE SET data = $1"#,
-                &[&data],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&data]).await?;
         }
 
         DB::hql()

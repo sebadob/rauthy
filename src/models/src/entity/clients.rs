@@ -40,6 +40,15 @@ use validator::Validate;
 
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
+static SQL_SAVE: &str = r#"
+UPDATE clients
+SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
+post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
+id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
+default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
+backchannel_logout_uri = $20
+WHERE id = $21"#;
+
 /**
 # OIDC Client
 
@@ -129,16 +138,18 @@ impl Client {
         let mut client = Client::try_from(client_req)?;
         client.secret_kid = kid;
 
-        if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    r#"
+        let sql = r#"
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
 client_uri, contacts, backchannel_logout_uri)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21)"#,
+$18, $19, $20, $21)"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
                         &client.id,
                         &client.name,
@@ -166,13 +177,7 @@ $18, $19, $20, $21)"#,
                 .await?;
         } else {
             DB::pg_execute(
-                r#"
-INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
-post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
-auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21)"#,
+                sql,
                 &[
                     &client.id,
                     &client.name,
@@ -217,17 +222,23 @@ $18, $19, $20, $21)"#,
         let created = Utc::now().timestamp();
         let (_secret_plain, registration_token) = Self::generate_new_secret()?;
 
-        if is_hiqlite() {
-            DB::hql()
-                .txn([
-                    (
-                        r#"
+        let sql_1 = r#"
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
 client_uri, contacts, backchannel_logout_uri)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-$21)"#,
+$21)"#;
+        let sql_2 = r#"
+INSERT INTO
+clients_dyn (id, created, registration_token, token_endpoint_auth_method)
+VALUES ($1, $2, $3, $4)"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .txn([
+                    (
+                        sql_1,
                         params!(
                             &client.id,
                             &client.name,
@@ -253,10 +264,7 @@ $21)"#,
                         ),
                     ),
                     (
-                        r#"
-INSERT INTO
-clients_dyn (id, created, registration_token, token_endpoint_auth_method)
-VALUES ($1, $2, $3, $4)"#,
+                        sql_2,
                         params!(
                             client.id.clone(),
                             created,
@@ -272,13 +280,7 @@ VALUES ($1, $2, $3, $4)"#,
 
             DB::pg_txn_append(
                 &txn,
-                r#"
-INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
-post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
-auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-        $21)"#,
+                sql_1,
                 &[
                     &client.id,
                     &client.name,
@@ -304,13 +306,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
                 ],
             )
             .await?;
-
             DB::pg_txn_append(
                 &txn,
-                r#"
-INSERT INTO
-clients_dyn (id, created, registration_token, token_endpoint_auth_method)
-VALUES ($1, $2, $3, $4)"#,
+                sql_2,
                 &[
                     &client.id,
                     &created,
@@ -336,12 +334,11 @@ VALUES ($1, $2, $3, $4)"#,
 
     // Deletes a client
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM clients WHERE id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute("DELETE FROM clients WHERE id = $1", params!(&self.id))
-                .await?;
+            DB::hql().execute(sql, params!(&self.id)).await?;
         } else {
-            DB::pg_execute("DELETE FROM clients WHERE id = $1", &[&self.id]).await?;
+            DB::pg_execute(sql, &[&self.id]).await?;
         }
 
         self.delete_cache().await?;
@@ -374,12 +371,11 @@ VALUES ($1, $2, $3, $4)"#,
             return Ok(slf);
         };
 
+        let sql = "SELECT * FROM clients WHERE id = $1";
         let slf: Self = if is_hiqlite() {
-            client
-                .query_as_one("SELECT * FROM clients WHERE id = $1", params!(id))
-                .await?
+            client.query_as_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_one("SELECT * FROM clients WHERE id = $1", &[&id]).await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         client
@@ -390,12 +386,11 @@ VALUES ($1, $2, $3, $4)"#,
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM clients";
         let clients = if is_hiqlite() {
-            DB::hql()
-                .query_as("SELECT * FROM clients", params!())
-                .await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
-            DB::pg_query("SELECT * FROM clients", &[], 2).await?
+            DB::pg_query(sql, &[], 2).await?
         };
 
         Ok(clients)
@@ -406,20 +401,11 @@ VALUES ($1, $2, $3, $4)"#,
         // Unfortunately, we cannot build the `IN` value upfront and use prepared statements,
         // which is why we will filter on the client side for now.
         // The
+        let sql = "SELECT * FROM clients WHERE backchannel_logout_uri IS NOT NULL";
         let clients = if is_hiqlite() {
-            DB::hql()
-                .query_as(
-                    "SELECT * FROM clients WHERE backchannel_logout_uri IS NOT NULL",
-                    params!(),
-                )
-                .await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
-            DB::pg_query(
-                "SELECT * FROM clients WHERE backchannel_logout_uri IS NOT NULL",
-                &[],
-                0,
-            )
-            .await?
+            DB::pg_query(sql, &[], 0).await?
         }
         .into_iter()
         .filter(|c: &Self| ids.contains(&c.id.as_str()))
@@ -435,26 +421,20 @@ VALUES ($1, $2, $3, $4)"#,
 
     /// Returns all registered `client_uri`s to be used during `USER_REG_OPEN_REDIRECT` checks.
     pub async fn find_all_client_uris() -> Result<Vec<String>, ErrorResponse> {
+        let sql = "SELECT client_uri FROM clients WHERE client_uri IS NOT NULL";
         let uris = if is_hiqlite() {
             DB::hql()
-                .query_raw(
-                    "SELECT client_uri FROM clients WHERE client_uri IS NOT NULL",
-                    params!(),
-                )
+                .query_raw(sql, params!())
                 .await?
                 .into_iter()
                 .map(|mut r| r.get::<String>("client_uri"))
                 .collect::<Vec<_>>()
         } else {
-            DB::pg_query_rows(
-                "SELECT client_uri FROM clients WHERE client_uri IS NOT NULL",
-                &[],
-                2,
-            )
-            .await?
-            .into_iter()
-            .map(|r| r.get::<_, String>("client_uri"))
-            .collect::<Vec<_>>()
+            DB::pg_query_rows(sql, &[], 2)
+                .await?
+                .into_iter()
+                .map(|r| r.get::<_, String>("client_uri"))
+                .collect::<Vec<_>>()
         };
 
         Ok(uris)
@@ -490,21 +470,12 @@ VALUES ($1, $2, $3, $4)"#,
     /// This is an expensive query using `LIKE`, only use when necessary.
     pub async fn find_with_scope(scope_name: &str) -> Result<Vec<Self>, ErrorResponse> {
         let like = format!("%{scope_name}%");
+        let sql = "SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1";
 
         let clients = if is_hiqlite() {
-            DB::hql()
-                .query_as(
-                    "SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1",
-                    params!(like),
-                )
-                .await?
+            DB::hql().query_as(sql, params!(like)).await?
         } else {
-            DB::pg_query(
-                "SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1",
-                &[&like],
-                0,
-            )
-            .await?
+            DB::pg_query(sql, &[&like], 0).await?
         };
 
         Ok(clients)
@@ -523,14 +494,7 @@ VALUES ($1, $2, $3, $4)"#,
             .filter(|uri| !uri.is_empty());
 
         txn.push((
-            r#"
-UPDATE clients
-SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
-post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
-id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
-default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
-backchannel_logout_uri = $20
-WHERE id = $21"#,
+            SQL_SAVE,
             params!(
                 &self.name,
                 self.enabled,
@@ -574,14 +538,7 @@ WHERE id = $21"#,
 
         DB::pg_txn_append(
             txn,
-            r#"
-UPDATE clients
-SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
-post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
-id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
-default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
-backchannel_logout_uri = $20
-WHERE id = $21"#,
+            SQL_SAVE,
             &[
                 &self.name,
                 &self.enabled,
@@ -633,14 +590,7 @@ WHERE id = $21"#,
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    r#"
-UPDATE clients
-SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
-post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
-id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
-default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
-backchannel_logout_uri = $20
-WHERE id = $21"#,
+                    SQL_SAVE,
                     params!(
                         self.name.clone(),
                         self.enabled,
@@ -668,14 +618,7 @@ WHERE id = $21"#,
                 .await?;
         } else {
             DB::pg_execute(
-                r#"
-UPDATE clients
-SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
-post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
-id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
-default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
-backchannel_logout_uri = $20
-WHERE id = $21"#,
+                SQL_SAVE,
                 &[
                     &self.name,
                     &self.enabled,
@@ -743,14 +686,16 @@ WHERE id = $21"#,
             client_dyn.registration_token = registration_token;
         }
 
+        let sql = r#"
+UPDATE clients_dyn
+SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
+WHERE id = $4"#;
+
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(2);
             new_client.save_txn_append(&mut txn);
             txn.push((
-                r#"
-UPDATE clients_dyn
-SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
-WHERE id = $4"#,
+                sql,
                 params!(
                     client_dyn.registration_token.clone(),
                     client_dyn.token_endpoint_auth_method.clone(),
@@ -768,10 +713,7 @@ WHERE id = $4"#,
 
             DB::pg_txn_append(
                 &txn,
-                r#"
-UPDATE clients_dyn
-SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
-WHERE id = $4"#,
+                sql,
                 &[
                     &client_dyn.registration_token,
                     &client_dyn.token_endpoint_auth_method,

@@ -38,19 +38,13 @@ impl Group {
             name: group_req.group,
         };
 
+        let sql = "INSERT INTO groups (id, name) VALUES ($1, $2)";
         if is_hiqlite() {
             DB::hql()
-                .execute(
-                    "INSERT INTO groups (id, name) VALUES ($1, $2)",
-                    params!(new_group.id.clone(), new_group.name.clone()),
-                )
+                .execute(sql, params!(new_group.id.clone(), new_group.name.clone()))
                 .await?;
         } else {
-            DB::pg_execute(
-                "INSERT INTO groups (id, name) VALUES ($1, $2)",
-                &[&new_group.id, &new_group.name],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&new_group.id, &new_group.name]).await?;
         }
 
         groups.push(new_group.clone());
@@ -66,6 +60,8 @@ impl Group {
         let group = Group::find(id).await?;
         let users = User::find_with_group(&group.name).await?;
 
+        let sql = "DELETE FROM groups WHERE id = $1";
+
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
@@ -74,10 +70,7 @@ impl Group {
                 user.save_txn_append(&mut txn);
             }
 
-            txn.push((
-                "DELETE FROM groups WHERE id = $1",
-                params!(group.id.clone()),
-            ));
+            txn.push((sql, params!(group.id.clone())));
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
@@ -91,7 +84,7 @@ impl Group {
                 user.delete_group(&group.name);
                 user.save_txn(&txn).await?;
             }
-            DB::pg_txn_append(&txn, "DELETE FROM groups WHERE id = $1", &[&id]).await?;
+            DB::pg_txn_append(&txn, sql, &[&id]).await?;
 
             txn.commit().await?;
         }
@@ -115,12 +108,11 @@ impl Group {
 
     // Returns a single group by id
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM groups WHERE id = $1";
         let res = if is_hiqlite() {
-            DB::hql()
-                .query_as_one("SELECT * FROM groups WHERE id = $1", params!(id))
-                .await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_one("SELECT * FROM groups WHERE id = $1", &[&id]).await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         Ok(res)
@@ -133,10 +125,11 @@ impl Group {
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM groups";
         let res = if is_hiqlite() {
-            client.query_as("SELECT * FROM groups", params!()).await?
+            client.query_as(sql, params!()).await?
         } else {
-            DB::pg_query("SELECT * FROM groups", &[], 2).await?
+            DB::pg_query(sql, &[], 2).await?
         };
 
         client
@@ -156,6 +149,7 @@ impl Group {
             name: new_name,
         };
 
+        let sql = "UPDATE groups SET name = $1 WHERE id = $2";
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
@@ -169,10 +163,7 @@ impl Group {
                 user.save_txn_append(&mut txn);
             }
 
-            txn.push((
-                "UPDATE groups SET name = $1 WHERE id = $2",
-                params!(new_group.name.clone(), new_group.id.clone()),
-            ));
+            txn.push((sql, params!(new_group.name.clone(), new_group.id.clone())));
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
@@ -186,12 +177,7 @@ impl Group {
                 user.delete_group(&group.name);
                 user.save_txn(&txn).await?;
             }
-            DB::pg_txn_append(
-                &txn,
-                "UPDATE groups SET name = $1 WHERE id = $2",
-                &[&new_group.name, &new_group.id],
-            )
-            .await?;
+            DB::pg_txn_append(&txn, sql, &[&new_group.name, &new_group.id]).await?;
 
             txn.commit().await?;
         }

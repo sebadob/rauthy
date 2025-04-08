@@ -31,13 +31,15 @@ pub struct DeviceEntity {
 
 impl DeviceEntity {
     pub async fn insert(self) -> Result<(), ErrorResponse> {
+        let sql = r#"
+INSERT INTO devices
+(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    r#"
-INSERT INTO devices
-(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+                    sql,
                     params!(
                         self.id,
                         self.client_id,
@@ -52,10 +54,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 .await?;
         } else {
             DB::pg_execute(
-                r#"
-INSERT INTO devices
-(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+                sql,
                 &[
                     &self.id,
                     &self.client_id,
@@ -74,23 +73,21 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
     }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM devices WHERE id = $1";
         let slf = if is_hiqlite() {
-            DB::hql()
-                .query_as_one("SELECT * FROM devices WHERE id = $1", params!(id))
-                .await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_one("SELECT * FROM devices WHERE id = $1", &[&id]).await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
         Ok(slf)
     }
 
     pub async fn find_for_user(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM devices WHERE user_id = $1";
         let res = if is_hiqlite() {
-            DB::hql()
-                .query_as("SELECT * FROM devices WHERE user_id = $1", params!(user_id))
-                .await?
+            DB::hql().query_as(sql, params!(user_id)).await?
         } else {
-            DB::pg_query("SELECT * FROM devices WHERE user_id = $1", &[&user_id], 0).await?
+            DB::pg_query(sql, &[&user_id], 0).await?
         };
         Ok(res)
     }
@@ -101,23 +98,14 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             .sub(chrono::Duration::try_hours(1).unwrap())
             .timestamp();
 
+        let sql = r#"
+DELETE FROM devices
+WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#;
+
         let rows_affected = if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    r#"
-DELETE FROM devices
-WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
-                    params!(exp),
-                )
-                .await?
+            DB::hql().execute(sql, params!(exp)).await?
         } else {
-            DB::pg_execute(
-                r#"
-DELETE FROM devices
-WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
-                &[&exp],
-            )
-            .await?
+            DB::pg_execute(sql, &[&exp]).await?
         };
         info!("Cleaned up {} expires devices", rows_affected);
 
@@ -125,12 +113,11 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
     }
 
     pub async fn invalidate(id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM devices WHERE id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute("DELETE FROM devices WHERE id = $1", params!(id))
-                .await?;
+            DB::hql().execute(sql, params!(id)).await?;
         } else {
-            DB::pg_execute("DELETE FROM devices WHERE id = $1", &[&id]).await?;
+            DB::pg_execute(sql, &[&id]).await?;
         }
 
         // we don't need to manually clean up refresh_tokens because of FK cascades
@@ -140,19 +127,11 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
     pub async fn revoke_refresh_tokens(device_id: &str) -> Result<(), ErrorResponse> {
         RefreshTokenDevice::invalidate_all_for_device(device_id).await?;
 
+        let sql = "UPDATE devices SET refresh_exp = null WHERE id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "UPDATE devices SET refresh_exp = null WHERE id = $1",
-                    params!(device_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(device_id)).await?;
         } else {
-            DB::pg_execute(
-                "UPDATE devices SET refresh_exp = null WHERE id = $1",
-                &[&device_id],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&device_id]).await?;
         }
 
         Ok(())
@@ -163,19 +142,13 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
         user_id: &str,
         name: &str,
     ) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE devices SET name = $1 WHERE id = $2 AND user_id = $3";
         if is_hiqlite() {
             DB::hql()
-                .execute(
-                    "UPDATE devices SET name = $1 WHERE id = $2 AND user_id = $3",
-                    params!(name, device_id, user_id),
-                )
+                .execute(sql, params!(name, device_id, user_id))
                 .await?;
         } else {
-            DB::pg_execute(
-                "UPDATE devices SET name = $1 WHERE id = $2 AND user_id = $3",
-                &[&name, &device_id, &user_id],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&name, &device_id, &user_id]).await?;
         }
 
         Ok(())

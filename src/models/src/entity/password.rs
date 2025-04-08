@@ -146,21 +146,11 @@ impl PasswordPolicy {
             return Ok(slf);
         }
 
+        let sql = "SELECT data FROM config WHERE id = 'password_policy'";
         let bytes: Vec<u8> = if is_hiqlite() {
-            DB::hql()
-                .query_raw_one(
-                    "SELECT data FROM config WHERE id = 'password_policy'",
-                    params!(),
-                )
-                .await?
-                .get("data")
+            DB::hql().query_raw_one(sql, params!()).await?.get("data")
         } else {
-            DB::pg_query_map_one::<ConfigEntity>(
-                "SELECT data FROM config WHERE id = 'password_policy'",
-                &[],
-            )
-            .await?
-            .data
+            DB::pg_query_map_one::<ConfigEntity>(sql, &[]).await?.data
         };
         let policy = bincode::deserialize::<Self>(&bytes)?;
 
@@ -174,19 +164,11 @@ impl PasswordPolicy {
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let data = bincode::serialize(&self)?;
 
+        let sql = "UPDATE config SET data = $1 WHERE id = 'password_policy'";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "UPDATE config SET data = $1 WHERE id = 'password_policy'",
-                    params!(data),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(data)).await?;
         } else {
-            DB::pg_execute(
-                "UPDATE config SET data = $1 WHERE id = 'password_policy'",
-                &[&data],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&data]).await?;
         }
 
         DB::hql()
@@ -243,56 +225,34 @@ impl From<tokio_postgres::Row> for RecentPasswordsEntity {
 
 impl RecentPasswordsEntity {
     pub async fn create(user_id: &str, passwords: String) -> Result<(), ErrorResponse> {
+        let sql = "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)",
-                    params!(user_id, passwords),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(user_id, passwords)).await?;
         } else {
-            DB::pg_execute(
-                "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)",
-                &[&user_id, &passwords],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&user_id, &passwords]).await?;
         }
 
         Ok(())
     }
 
     pub async fn find(user_id: &str) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM recent_passwords WHERE user_id = $1";
         let res = if is_hiqlite() {
-            DB::hql()
-                .query_as_one(
-                    "SELECT * FROM recent_passwords WHERE user_id = $1",
-                    params!(user_id),
-                )
-                .await?
+            DB::hql().query_as_one(sql, params!(user_id)).await?
         } else {
-            DB::pg_query_map_one(
-                "SELECT * FROM recent_passwords WHERE user_id = $1",
-                &[&user_id],
-            )
-            .await?
+            DB::pg_query_map_one(sql, &[&user_id]).await?
         };
         Ok(res)
     }
 
     pub async fn save(self) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE recent_passwords SET passwords = $1 WHERE user_id = $2";
         if is_hiqlite() {
             DB::hql()
-                .execute(
-                    "UPDATE recent_passwords SET passwords = $1 WHERE user_id = $2",
-                    params!(self.passwords, self.user_id),
-                )
+                .execute(sql, params!(self.passwords, self.user_id))
                 .await?;
         } else {
-            DB::pg_execute(
-                "UPDATE recent_passwords SET passwords = $1 WHERE user_id = $2",
-                &[&self.passwords, &self.user_id],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&self.passwords, &self.user_id]).await?;
         }
         Ok(())
     }

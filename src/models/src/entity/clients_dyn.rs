@@ -42,12 +42,11 @@ impl ClientDyn {
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM clients_dyn WHERE id = $1";
         let slf: Self = if is_hiqlite() {
-            DB::hql()
-                .query_as_one("SELECT * FROM clients_dyn WHERE id = $1", params!(id))
-                .await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_one("SELECT * FROM clients_dyn WHERE id = $1", &[&id]).await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         client
@@ -64,20 +63,11 @@ impl ClientDyn {
 
     pub async fn update_used(id: &str) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
-
+        let sql = "UPDATE clients_dyn SET last_used = $1 WHERE id = $2";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "UPDATE clients_dyn SET last_used = $1 WHERE id = $2",
-                    params!(now, id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(now, id)).await?;
         } else {
-            DB::pg_execute(
-                "UPDATE clients_dyn SET last_used = $1 WHERE id = $2",
-                &[&id],
-            )
-            .await?;
+            DB::pg_execute(sql, &[&id]).await?;
         }
 
         Ok(())
