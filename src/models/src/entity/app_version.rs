@@ -7,7 +7,6 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::ACCEPT;
 use serde::{Deserialize, Serialize};
 use serde_json::value;
-use sqlx::query;
 use std::time::Duration;
 use tracing::error;
 
@@ -35,14 +34,10 @@ impl LatestAppVersion {
                 .await
                 .ok()
         } else {
-            query!("select data from config where id = 'latest_version'")
-                .fetch_optional(DB::conn_sqlx())
+            DB::pg_query_one_row("SELECT data FROM config WHERE id = 'latest_version'", &[])
                 .await
-                .ok()?
-                .map(|r| {
-                    r.data
-                        .expect("to get 'data' back from the AppVersion query")
-                })
+                .ok()
+                .map(|r| r.get::<_, Vec<u8>>("data"))
         };
 
         if let Some(data) = res {
@@ -96,13 +91,12 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#,
                 )
                 .await?;
         } else {
-            query!(
+            DB::pg_execute(
                 r#"
 INSERT INTO config (id, data) VALUES ('latest_version', $1)
 ON CONFLICT(id) DO UPDATE SET data = $1"#,
-                data
+                &[&data],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 

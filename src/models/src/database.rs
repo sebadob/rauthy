@@ -374,6 +374,17 @@ impl DB {
     }
 
     #[inline]
+    pub async fn pg_query_one_row(
+        stmt: &str,
+        params: &[&(dyn postgres_types::ToSql + Sync)],
+    ) -> Result<tokio_postgres::Row, ErrorResponse> {
+        let cl = Self::pg().await?;
+        let st = cl.prepare(stmt).await?;
+        let row = cl.query_one(&st, params).await?;
+        Ok(row)
+    }
+
+    #[inline]
     pub async fn pg_query_opt<T: FromTokioPostgresRow>(
         stmt: &str,
         params: &[&(dyn postgres_types::ToSql + Sync)],
