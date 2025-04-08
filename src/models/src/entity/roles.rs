@@ -1,5 +1,6 @@
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
+use deadpool_postgres::GenericClient;
 use hiqlite::{Param, Params, params};
 use rauthy_api_types::roles::RoleRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_ROLES};
@@ -16,9 +17,17 @@ pub struct Role {
     pub name: String,
 }
 
+impl From<tokio_postgres::Row> for Role {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            name: row.get("name"),
+        }
+    }
+}
+
 // CRUD
 impl Role {
-    // Inserts a new role into the database
     pub async fn create(role_req: RoleRequest) -> Result<Self, ErrorResponse> {
         let mut roles = Role::find_all().await?;
         for s in &roles {
@@ -35,21 +44,13 @@ impl Role {
             name: role_req.role,
         };
 
+        let sql = "INSERT INTO roles (id, name) VALUES ($1, $2)";
         if is_hiqlite() {
             DB::hql()
-                .execute(
-                    "INSERT INTO roles (id, name) VALUES ($1, $2)",
-                    params!(new_role.id.clone(), new_role.name.clone()),
-                )
+                .execute(sql, params!(new_role.id.clone(), new_role.name.clone()))
                 .await?;
         } else {
-            sqlx::query!(
-                "INSERT INTO roles (id, name) VALUES ($1, $2)",
-                new_role.id,
-                new_role.name,
-            )
-            .execute(DB::conn_sqlx())
-            .await?;
+            DB::pg_execute(sql, &[&new_role.id, &new_role.name]).await?;
         }
 
         roles.push(new_role.clone());
@@ -60,7 +61,6 @@ impl Role {
         Ok(new_role)
     }
 
-    // Deletes a role
     pub async fn delete(id: &str) -> Result<(), ErrorResponse> {
         let role = Role::find(id).await?;
 
@@ -74,6 +74,7 @@ impl Role {
 
         let users = User::find_with_role(&role.name).await?;
 
+        let sql = "DELETE FROM roles WHERE id = $1";
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
@@ -82,22 +83,21 @@ impl Role {
                 user.save_txn_append(&mut txn);
             }
 
-            txn.push(("DELETE FROM roles WHERE id = $1", params!(role.id.clone())));
+            txn.push((sql, params!(role.id.clone())));
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             for mut user in users {
                 user.delete_role(&role.name);
-                user.save_txn(&mut txn).await?;
+                user.save_txn(&txn).await?;
             }
-            sqlx::query!("DELETE FROM roles WHERE id = $1", id)
-                .execute(&mut *txn)
-                .await?;
+            DB::pg_txn_append(&txn, sql, &[&id]).await?;
 
             txn.commit().await?;
         }
@@ -119,34 +119,28 @@ impl Role {
         Ok(())
     }
 
-    // Returns a single role by id
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM roles WHERE id = $1";
         let res = if is_hiqlite() {
-            DB::hql()
-                .query_as_one("SELECT * FROM roles WHERE id = $1", params!(id))
-                .await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM roles WHERE id = $1", id)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_map_one(sql, &[&id]).await?
         };
 
         Ok(res)
     }
 
-    // Returns all existing roles
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX_ROLES).await? {
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM roles";
         let res = if is_hiqlite() {
-            DB::hql().query_as("SELECT * FROM roles", params!()).await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM roles")
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query_map(sql, &[], 3).await?
         };
 
         client
@@ -165,6 +159,7 @@ impl Role {
             name: new_name,
         };
 
+        let sql = "UPDATE roles SET name = $1 WHERE id = $2";
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
@@ -173,29 +168,21 @@ impl Role {
                 user.save_txn_append(&mut txn);
             }
 
-            txn.push((
-                "UPDATE roles SET name = $1 WHERE id = $2",
-                params!(new_role.name.clone(), new_role.id.clone()),
-            ));
+            txn.push((sql, params!(new_role.name.clone(), new_role.id.clone())));
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             for mut user in users {
                 user.delete_role(&role.name);
-                user.save_txn(&mut txn).await?;
+                user.save_txn(&txn).await?;
             }
-            sqlx::query!(
-                "UPDATE roles SET name = $1 WHERE id = $2",
-                new_role.name,
-                new_role.id,
-            )
-            .execute(&mut *txn)
-            .await?;
+            DB::pg_txn_append(&txn, sql, &[&new_role.name, &new_role.id]).await?;
 
             txn.commit().await?;
         }

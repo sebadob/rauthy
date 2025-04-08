@@ -43,10 +43,10 @@ static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 static SQL_SAVE: &str = r#"
 UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
-post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
-id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
-default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
-backchannel_logout_uri = $20
+    post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
+    id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
+    default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
+    backchannel_logout_uri = $20
 WHERE id = $21"#;
 
 /**
