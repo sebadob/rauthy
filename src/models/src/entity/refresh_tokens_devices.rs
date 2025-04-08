@@ -32,6 +32,19 @@ impl Debug for RefreshTokenDevice {
     }
 }
 
+impl From<tokio_postgres::Row> for RefreshTokenDevice {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            device_id: row.get("device_id"),
+            user_id: row.get("user_id"),
+            nbf: row.get("nbf"),
+            exp: row.get("exp"),
+            scope: row.get("scope"),
+        }
+    }
+}
+
 // CRUD
 impl RefreshTokenDevice {
     pub async fn create(
@@ -56,51 +69,32 @@ impl RefreshTokenDevice {
     }
 
     pub async fn delete(self) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens_devices WHERE id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "DELETE FROM refresh_tokens_devices WHERE id = $1",
-                    params!(self.id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(self.id)).await?;
         } else {
-            sqlx::query!("DELETE FROM refresh_tokens_devices WHERE id = $1", self.id)
-                .execute(DB::conn_sqlx())
-                .await?;
+            DB::pg_execute(sql, &[&self.id]).await?;
         }
         Ok(())
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM refresh_tokens_devices";
         let res = if is_hiqlite() {
-            DB::hql()
-                .query_as("SELECT * FROM refresh_tokens_devices", params!())
-                .await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM refresh_tokens_devices")
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query_map(sql, &[], 0).await?
         };
         Ok(res)
     }
 
     pub async fn invalidate_all() -> Result<(), ErrorResponse> {
         let now = OffsetDateTime::now_utc().unix_timestamp();
-
+        let sql = "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1",
-                    params!(now),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(now)).await?;
         } else {
-            sqlx::query!(
-                "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1",
-                now
-            )
-            .execute(DB::conn_sqlx())
-            .await?;
+            DB::pg_execute(sql, &[&now]).await?;
         }
 
         Ok(())
@@ -108,22 +102,11 @@ impl RefreshTokenDevice {
 
     pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
-
+        let sql = "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2",
-                    params!(now, user_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(now, user_id)).await?;
         } else {
-            sqlx::query!(
-                "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2",
-                now,
-                user_id
-            )
-            .execute(DB::conn_sqlx())
-            .await?;
+            DB::pg_execute(sql, &[&now, &user_id]).await?;
         }
 
         Ok(())
@@ -131,13 +114,10 @@ impl RefreshTokenDevice {
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
-
+        let sql = "SELECT * FROM refresh_tokens_devices WHERE id = $1 AND exp > $2";
         if is_hiqlite() {
             DB::hql()
-                .query_as_one(
-                    "SELECT * FROM refresh_tokens_devices WHERE id = $1 AND exp > $2",
-                    params!(id, now),
-                )
+                .query_as_one(sql, params!(id, now))
                 .await
                 .map_err(|_| {
                     ErrorResponse::new(
@@ -146,15 +126,7 @@ impl RefreshTokenDevice {
                     )
                 })?
         } else {
-            sqlx::query_as!(
-                Self,
-                "SELECT * FROM refresh_tokens_devices WHERE id = $1 AND exp > $2",
-                id,
-                now
-            )
-            .fetch_one(DB::conn_sqlx())
-            .await
-            .map_err(|_| {
+            DB::pg_query_map_one(sql, &[&id, &now]).await.map_err(|_| {
                 ErrorResponse::new(
                     ErrorResponseType::NotFound,
                     "Device Refresh Token does not exist",
@@ -164,55 +136,39 @@ impl RefreshTokenDevice {
     }
 
     pub async fn invalidate_all_for_device(device_id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens_devices WHERE device_id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "DELETE FROM refresh_tokens_devices WHERE device_id = $1",
-                    params!(device_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(device_id)).await?;
         } else {
-            sqlx::query!(
-                "DELETE FROM refresh_tokens_devices WHERE device_id = $1",
-                device_id
-            )
-            .execute(DB::conn_sqlx())
-            .await?;
+            DB::pg_execute(sql, &[&device_id]).await?;
         }
 
         Ok(())
     }
 
     pub async fn invalidate_all_for_user(user_id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens_devices WHERE user_id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    "DELETE FROM refresh_tokens_devices WHERE user_id = $1",
-                    params!(user_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(user_id)).await?;
         } else {
-            sqlx::query!(
-                "DELETE FROM refresh_tokens_devices WHERE user_id = $1",
-                user_id
-            )
-            .execute(DB::conn_sqlx())
-            .await?;
+            DB::pg_execute(sql, &[&user_id]).await?;
         }
 
         Ok(())
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    r#"
+        let sql = r#"
 INSERT INTO refresh_tokens_devices
 (id, device_id, user_id, nbf, exp, scope)
 VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT(id) DO UPDATE
-SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6"#,
+SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
                         self.id.clone(),
                         self.device_id.clone(),
@@ -224,21 +180,17 @@ SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
-                r#"
-INSERT INTO refresh_tokens_devices
-(id, device_id, user_id, nbf, exp, scope)
-VALUES ($1, $2, $3, $4, $5, $6)
-ON CONFLICT(id) DO UPDATE
-SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6"#,
-                self.id,
-                self.device_id,
-                self.user_id,
-                self.nbf,
-                self.exp,
-                self.scope,
+            DB::pg_execute(
+                sql,
+                &[
+                    &self.id,
+                    &self.device_id,
+                    &self.user_id,
+                    &self.nbf,
+                    &self.exp,
+                    &self.scope,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
