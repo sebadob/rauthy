@@ -10,8 +10,10 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, query, query_as};
 use std::net::IpAddr;
+use tokio_pg_mapper_derive::PostgresMapper;
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Serialize, Deserialize, FromRow, PostgresMapper)]
+#[pg_mapper(table = "clients_dyn")]
 pub struct ClientDyn {
     pub id: String,
     pub created: i64,
@@ -40,14 +42,12 @@ impl ClientDyn {
             return Ok(slf);
         }
 
-        let slf = if is_hiqlite() {
+        let slf: Self = if is_hiqlite() {
             DB::hql()
                 .query_as_one("SELECT * FROM clients_dyn WHERE id = $1", params!(id))
                 .await?
         } else {
-            query_as!(Self, "SELECT * FROM clients_dyn WHERE id = $1", id)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_one("SELECT * FROM clients_dyn WHERE id = $1", &[&id]).await?
         };
 
         client
@@ -73,12 +73,10 @@ impl ClientDyn {
                 )
                 .await?;
         } else {
-            query!(
+            DB::pg_execute(
                 "UPDATE clients_dyn SET last_used = $1 WHERE id = $2",
-                now,
-                id
+                &[&id],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
