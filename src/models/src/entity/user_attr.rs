@@ -1,7 +1,7 @@
-use crate::app_state::DbTxn;
 use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
+use deadpool_postgres::GenericClient;
 use hiqlite::{Param, Params, params};
 use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigValueResponse, UserAttrValueResponse,
@@ -12,13 +12,15 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::{FromRow, Row};
+use sqlx::FromRow;
 use std::collections::HashSet;
+use tokio_pg_mapper_derive::PostgresMapper;
 use utoipa::ToSchema;
 
 // Additional custom attributes for users. These can be set for every user and then mapped to a
 // scope, to include them in JWT tokens.
-#[derive(Clone, Debug, FromRow, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize, ToSchema, PostgresMapper)]
+#[pg_mapper(table = "user_attr_config")]
 pub struct UserAttrConfigEntity {
     pub name: String,
     pub desc: Option<String>,
@@ -52,12 +54,10 @@ impl UserAttrConfigEntity {
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 "INSERT INTO user_attr_config (name, \"desc\") VALUES ($1, $2)",
-                new_attr.name,
-                new_attr.desc,
+                &[&new_attr.name, &new_attr.desc],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         };
 
@@ -139,19 +139,22 @@ impl UserAttrConfigEntity {
 
             client.txn(txn).await?;
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             for (id, attr_include_access, attr_include_id) in scope_updates {
-                Scope::update_mapping_only(&id, attr_include_access, attr_include_id, &mut txn)
-                    .await?;
+                Scope::update_mapping_only(&id, attr_include_access, attr_include_id, &txn).await?;
             }
 
             user_attr_cache_cleanup_keys =
-                UserAttrValueEntity::delete_all_by_key(&name, &mut txn).await?;
+                UserAttrValueEntity::delete_all_by_key(&name, &txn).await?;
 
-            sqlx::query!("DELETE FROM user_attr_config WHERE name  = $1", name)
-                .execute(&mut *txn)
-                .await?;
+            DB::pg_txn_append(
+                &txn,
+                "DELETE FROM user_attr_config WHERE name  = $1",
+                &[&name],
+            )
+            .await?;
 
             txn.commit().await?;
         }
@@ -175,7 +178,7 @@ impl UserAttrConfigEntity {
             return Ok(slf);
         }
 
-        let slf = if is_hiqlite() {
+        let slf: Self = if is_hiqlite() {
             client
                 .query_as_one(
                     "SELECT * FROM user_attr_config WHERE name = $1",
@@ -183,9 +186,7 @@ impl UserAttrConfigEntity {
                 )
                 .await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM user_attr_config WHERE name = $1", name)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_one("SELECT * FROM user_attr_config WHERE name = $1", &[&name]).await?
         };
 
         client
@@ -206,9 +207,7 @@ impl UserAttrConfigEntity {
                 .query_as("SELECT * FROM user_attr_config", params!())
                 .await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM user_attr_config")
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query("SELECT * FROM user_attr_config", &[], 0).await?
         };
 
         client
@@ -243,13 +242,15 @@ impl UserAttrConfigEntity {
                     .map(|mut row| row.get::<String>("user_id"))
                     .collect::<Vec<_>>()
             } else {
-                sqlx::query("SELECT user_id FROM user_attr_values WHERE key = $1")
-                    .bind(&name)
-                    .fetch_all(DB::conn_sqlx())
-                    .await?
-                    .into_iter()
-                    .map(|row| row.get("user_id"))
-                    .collect::<Vec<_>>()
+                DB::pg_query_rows(
+                    "SELECT user_id FROM user_attr_values WHERE key = $1",
+                    &[&name],
+                    0,
+                )
+                .await?
+                .into_iter()
+                .map(|row| row.get::<_, String>("user_id"))
+                .collect::<Vec<_>>()
             };
 
             // update all possible scope mappings
@@ -313,23 +314,20 @@ impl UserAttrConfigEntity {
 
             client.txn(txn).await?;
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             for (id, attr_include_access, attr_include_id) in scope_updates {
-                Scope::update_mapping_only(&id, attr_include_access, attr_include_id, &mut txn)
-                    .await?;
+                Scope::update_mapping_only(&id, attr_include_access, attr_include_id, &txn).await?;
             }
 
-            // TODO double check after hiqlite migration if we really don't
-            // need another user_attr_values update here
+            // TODO double check if we really don't need another user_attr_values update here
 
-            sqlx::query!(
+            DB::pg_txn_append(
+                &txn,
                 "UPDATE user_attr_config SET name  = $1, \"desc\" = $2 WHERE name = $3",
-                slf.name,
-                slf.desc,
-                name,
+                &[&slf.name, &slf.desc, &name],
             )
-            .execute(&mut *txn)
             .await?;
 
             txn.commit().await?;
@@ -378,7 +376,8 @@ impl From<UserAttrConfigEntity> for UserAttrConfigValueResponse {
 
 /// The value for a pre-defined UserAttrConfig with all `serde_json::Value` being valid values.
 /// Important: There is no further input validation / restriction
-#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize, PostgresMapper)]
+#[pg_mapper(table = "user_attr_values")]
 pub struct UserAttrValueEntity {
     pub user_id: String,
     pub key: String,
@@ -395,19 +394,22 @@ impl UserAttrValueEntity {
     /// after successful txn commit!
     pub async fn delete_all_by_key(
         key: &str,
-        txn: &mut DbTxn<'_>,
+        txn: &deadpool_postgres::Transaction<'_>,
     ) -> Result<Vec<String>, ErrorResponse> {
-        let cache_idxs =
-            sqlx::query_as!(Self, "SELECT * FROM user_attr_values WHERE key = $1", key)
-                .fetch_all(DB::conn_sqlx())
-                .await?
-                .into_iter()
-                .map(|a| Self::cache_idx(&a.user_id))
-                .collect::<Vec<_>>();
+        let cache_idxs = DB::pg_query_rows(
+            "SELECT user_id FROM user_attr_values WHERE key = $1",
+            &[&key],
+            0,
+        )
+        .await?
+        .into_iter()
+        .map(|r| {
+            let user_id: String = r.get("user_id");
+            Self::cache_idx(&user_id)
+        })
+        .collect::<Vec<_>>();
 
-        sqlx::query!("DELETE FROM user_attr_values WHERE key = $1", key)
-            .execute(&mut **txn)
-            .await?;
+        DB::pg_txn_append(txn, "DELETE FROM user_attr_values WHERE key = $1", &[&key]).await?;
 
         Ok(cache_idxs)
     }
@@ -449,12 +451,11 @@ impl UserAttrValueEntity {
                 )
                 .await?
         } else {
-            sqlx::query_as!(
-                Self,
+            DB::pg_query(
                 "SELECT * FROM user_attr_values WHERE user_id = $1",
-                user_id
+                &[&user_id],
+                0,
             )
-            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
@@ -510,41 +511,38 @@ ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
                 )
                 .await?
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             for value in req_data.values {
                 if delete_value(&value.value) {
-                    sqlx::query!(
+                    DB::pg_txn_append(
+                        &txn,
                         "DELETE FROM user_attr_values WHERE user_id = $1 AND key = $2",
-                        user_id,
-                        value.key,
+                        &[&user_id, &value.key],
                     )
-                    .execute(&mut *txn)
                     .await?;
                 } else {
                     let v = serde_json::to_vec(&value.value)?;
-                    sqlx::query!(
+                    DB::pg_txn_append(
+                        &txn,
                         r#"
     INSERT INTO user_attr_values (user_id, key, value)
     VALUES ($1, $2, $3)
     ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
-                        user_id,
-                        value.key,
-                        v,
+                        &[&user_id, &value.key, &v],
                     )
-                    .execute(&mut *txn)
                     .await?;
                 }
             }
 
             txn.commit().await?;
 
-            sqlx::query_as!(
-                Self,
+            DB::pg_query(
                 "SELECT * FROM user_attr_values WHERE user_id = $1",
-                user_id
+                &[&user_id],
+                0,
             )
-            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
