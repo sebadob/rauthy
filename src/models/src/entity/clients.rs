@@ -1077,7 +1077,7 @@ impl Client {
         if has_any {
             Ok(())
         } else {
-            trace!("Invalid `redirect_uri`");
+            trace!("Invalid `redirect_uri`: {}", redirect_uri);
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid redirect uri",
@@ -1552,7 +1552,7 @@ pub fn is_origin_external<'a>(
         return Ok((false, ""));
     }
     let origin = opt.unwrap().to_str().unwrap_or("");
-    debug!(origin, "External Origin header found:");
+    debug!(origin, "Origin header found:");
 
     let (scheme, url) = origin.split_once("://").ok_or_else(|| {
         ErrorResponse::new(
