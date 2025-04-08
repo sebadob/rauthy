@@ -45,18 +45,20 @@ use ring::digest;
 use serde::{Deserialize, Serialize};
 use serde_json::value;
 use serde_json_path::JsonPath;
-use sqlx::{FromRow, query, query_as};
+use sqlx::FromRow;
 use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
+use tokio_pg_mapper_derive::PostgresMapper;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::Type, postgres_types::FromSql)]
 #[sqlx(type_name = "varchar")]
 #[sqlx(rename_all = "lowercase")]
+#[postgres(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum AuthProviderType {
     Custom,
@@ -170,7 +172,8 @@ impl AuthProviderLinkCookie {
 }
 
 /// Upstream Auth Provider for upstream logins without a local Rauthy account
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, PostgresMapper)]
+#[pg_mapper(table = "auth_providers")]
 pub struct AuthProvider {
     pub id: String,
     pub name: String,
@@ -273,7 +276,7 @@ RETURNING *"#,
                 )
                 .await?
         } else {
-            query!(
+            DB::pg_execute(
                 r#"
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
@@ -282,31 +285,31 @@ mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, cl
 client_secret_post)
 VALUES
 ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#,
-                slf.id,
-                slf.name,
-                slf.enabled,
-                typ,
-                slf.issuer,
-                slf.authorization_endpoint,
-                slf.token_endpoint,
-                slf.userinfo_endpoint,
-                slf.jwks_endpoint,
-                slf.client_id,
-                slf.secret,
-                slf.scope,
-                slf.admin_claim_path,
-                slf.admin_claim_value,
-                slf.mfa_claim_path,
-                slf.mfa_claim_value,
-                slf.allow_insecure_requests,
-                slf.use_pkce,
-                slf.root_pem,
-                slf.client_secret_basic,
-                slf.client_secret_post
+                &[
+                    &slf.id,
+                    &slf.name,
+                    &slf.enabled,
+                    &typ,
+                    &slf.issuer,
+                    &slf.authorization_endpoint,
+                    &slf.token_endpoint,
+                    &slf.userinfo_endpoint,
+                    &slf.jwks_endpoint,
+                    &slf.client_id,
+                    &slf.secret,
+                    &slf.scope,
+                    &slf.admin_claim_path,
+                    &slf.admin_claim_value,
+                    &slf.mfa_claim_path,
+                    &slf.mfa_claim_value,
+                    &slf.allow_insecure_requests,
+                    &slf.use_pkce,
+                    &slf.root_pem,
+                    &slf.client_secret_basic,
+                    &slf.client_secret_post,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
-
             slf
         };
 
@@ -330,9 +333,7 @@ VALUES
                 .query_map_one("SELECT * FROM auth_providers WHERE id = $1", params!(id))
                 .await?
         } else {
-            query_as!(Self, "SELECT * FROM auth_providers WHERE id = $1", id)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_one("SELECT * FROM auth_providers WHERE id = $1", &[&id]).await?
         };
 
         client
@@ -352,9 +353,7 @@ VALUES
                 )
                 .await?
         } else {
-            query_as!(Self, "SELECT * FROM auth_providers WHERE issuer = $1", iss)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_one("SELECT * FROM auth_providers WHERE issuer = $1", &[&iss]).await?
         };
 
         Ok(slf)
@@ -371,9 +370,7 @@ VALUES
                 .query_map("SELECT * FROM auth_providers", params!())
                 .await?
         } else {
-            query_as!(Self, "SELECT * FROM auth_providers")
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query("SELECT * FROM auth_providers", &[], 0).await?
         };
 
         // needed for rendering each single login page -> always cache this
@@ -395,12 +392,11 @@ VALUES
                 )
                 .await?
         } else {
-            query_as!(
-                ProviderLinkedUserResponse,
+            DB::pg_query(
                 "SELECT id, email FROM users WHERE auth_provider_id = $1",
-                id
+                &[&id],
+                0,
             )
-            .fetch_all(DB::conn_sqlx())
             .await?
         };
 
@@ -413,9 +409,7 @@ VALUES
                 .execute("DELETE FROM auth_providers WHERE id = $1", params!(id))
                 .await?;
         } else {
-            query!("DELETE FROM auth_providers WHERE id = $1", id)
-                .execute(DB::conn_sqlx())
-                .await?;
+            DB::pg_execute("DELETE FROM auth_providers WHERE id = $1", &[]).await?;
         }
 
         Self::invalidate_cache_all().await?;
@@ -468,7 +462,7 @@ WHERE id = $21"#,
                 )
                 .await?;
         } else {
-            query!(
+            DB::pg_execute(
                 r#"
 UPDATE auth_providers
 SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
@@ -477,29 +471,30 @@ scope = $11, admin_claim_path = $12, admin_claim_value = $13, mfa_claim_path = $
 mfa_claim_value = $15, allow_insecure_requests = $16, use_pkce = $17, root_pem = $18,
 client_secret_basic = $19, client_secret_post = $20
 WHERE id = $21"#,
-                self.name,
-                self.enabled,
-                self.issuer,
-                typ,
-                self.authorization_endpoint,
-                self.token_endpoint,
-                self.userinfo_endpoint,
-                self.jwks_endpoint,
-                self.client_id,
-                self.secret,
-                self.scope,
-                self.admin_claim_path,
-                self.admin_claim_value,
-                self.mfa_claim_path,
-                self.mfa_claim_value,
-                self.allow_insecure_requests,
-                self.use_pkce,
-                self.root_pem,
-                self.client_secret_basic,
-                self.client_secret_post,
-                self.id,
+                &[
+                    &self.name,
+                    &self.enabled,
+                    &self.issuer,
+                    &typ,
+                    &self.authorization_endpoint,
+                    &self.token_endpoint,
+                    &self.userinfo_endpoint,
+                    &self.jwks_endpoint,
+                    &self.client_id,
+                    &self.secret,
+                    &self.scope,
+                    &self.admin_claim_path,
+                    &self.admin_claim_value,
+                    &self.mfa_claim_path,
+                    &self.mfa_claim_value,
+                    &self.allow_insecure_requests,
+                    &self.use_pkce,
+                    &self.root_pem,
+                    &self.client_secret_basic,
+                    &self.client_secret_post,
+                    &self.id,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -555,6 +550,8 @@ impl AuthProvider {
             }
             builder.build()?
         };
+
+        // TODO it would probably make sense to have a `LazyLock`ed client here
 
         Ok(client)
     }

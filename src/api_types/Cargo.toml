@@ -18,3 +18,7 @@ time = { workspace = true }
 utoipa = { workspace = true }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
+
+tokio-pg-mapper = { workspace = true }
+tokio-pg-mapper-derive = { workspace = true }
+tokio-postgres = { workspace = true }
