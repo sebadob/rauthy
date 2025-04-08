@@ -3,6 +3,7 @@ use crate::entity::db_version::DbVersion;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, db_migrate, init_prod};
 use actix_web::web;
+use futures_util::StreamExt;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::{DATABASE_URL, DEV_MODE};
 use rauthy_common::{is_hiqlite, is_postgres};
@@ -15,7 +16,9 @@ use std::ops::DerefMut;
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
+use tokio::pin;
 use tokio::time::sleep;
+use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_postgres::config::{LoadBalanceHosts, SslMode};
 use tracing::log::LevelFilter;
 use tracing::{debug, error, info, warn};
@@ -33,7 +36,7 @@ mod migrations_postgres {
 
 #[derive(rust_embed::Embed)]
 #[folder = "../../migrations/hiqlite"]
-struct Migrations;
+struct MigrationsHiqlite;
 
 /// Cache Index for the `hiqlite` cache layer
 #[derive(Debug, Serialize, Deserialize, hiqlite::EnumIter, hiqlite::ToPrimitive)]
@@ -244,7 +247,7 @@ impl DB {
         let db_version = DbVersion::check_app_version().await?;
 
         if is_hiqlite() {
-            Self::hql().migrate::<Migrations>().await?;
+            Self::hql().migrate::<MigrationsHiqlite>().await?;
         } else {
             debug!("Migrating data from ../../migrations/postgres");
 
@@ -334,6 +337,76 @@ impl DB {
         DbVersion::upsert(db_version).await?;
 
         Ok(())
+    }
+}
+
+// Postgres helpers
+impl DB {
+    /// Helper function to reduce boilerplate when doing raw postgres streaming queries.
+    /// This is needed to make postgres `query_raw()` work easily.
+    #[inline]
+    pub fn params_iter<'a>(
+        s: &'a [&'a (dyn postgres_types::ToSql + Sync)],
+    ) -> impl ExactSizeIterator<Item = &'a dyn postgres_types::ToSql> + 'a {
+        s.iter().map(|s| *s as _)
+    }
+
+    #[inline]
+    pub async fn pg_execute(
+        stmt: &str,
+        params: &[&(dyn postgres_types::ToSql + Sync)],
+    ) -> Result<u64, ErrorResponse> {
+        let cl = Self::pg().await?;
+        let st = cl.prepare(stmt).await?;
+        let rows_affected = cl.execute(&st, params).await?;
+        Ok(rows_affected)
+    }
+
+    #[inline]
+    pub async fn pg_query_one<T: FromTokioPostgresRow>(
+        stmt: &str,
+        params: &[&(dyn postgres_types::ToSql + Sync)],
+    ) -> Result<T, ErrorResponse> {
+        let cl = Self::pg().await?;
+        let st = cl.prepare(stmt).await?;
+        let row = cl.query_one(&st, params).await?;
+        Ok(T::from_row(row)?)
+    }
+
+    #[inline]
+    pub async fn pg_query_opt<T: FromTokioPostgresRow>(
+        stmt: &str,
+        params: &[&(dyn postgres_types::ToSql + Sync)],
+    ) -> Result<Option<T>, ErrorResponse> {
+        let cl = Self::pg().await?;
+        let st = cl.prepare(stmt).await?;
+        let row = cl.query_opt(&st, params).await?;
+        match row {
+            None => Ok(None),
+            Some(row) => Ok(Some(T::from_row(row)?)),
+        }
+    }
+
+    /// If you can roughly estimate how many rows would be returned from the given query, provide a
+    /// proper `expected_rows_size_hint` to reserve memory in advance. This will provide a small performance
+    /// boost.
+    #[inline]
+    pub async fn pg_query<'a, T: FromTokioPostgresRow>(
+        stmt: &str,
+        params: &'a [&'a (dyn postgres_types::ToSql + Sync)],
+        expected_rows_size_hint: usize,
+    ) -> Result<Vec<T>, ErrorResponse> {
+        let cl = Self::pg().await?;
+        let st = cl.prepare(stmt).await?;
+        let s = cl.query_raw(&st, Self::params_iter(params)).await?;
+        pin!(s);
+
+        let mut res: Vec<T> = Vec::with_capacity(expected_rows_size_hint);
+        while let Some(row) = s.next().await {
+            res.push(T::from_row(row?)?);
+        }
+
+        Ok(res)
     }
 }
 

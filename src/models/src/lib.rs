@@ -23,7 +23,6 @@ pub mod html;
 pub mod i18n_email;
 pub mod language;
 pub mod migration;
-pub mod pg_query;
 
 pub enum AuthStep {
     LoggedIn(AuthStepLoggedIn),

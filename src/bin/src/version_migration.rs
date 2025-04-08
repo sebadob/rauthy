@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::base64_decode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::pg_query::pg_query;
+use rauthy_models::database::DB;
 use tokio_pg_mapper_derive::PostgresMapper;
 use tracing::{debug, warn};
 
@@ -35,7 +35,7 @@ struct SqlxMigration {
 /// Checks if the currently used Postgres database is already set up for `sqlx` from before the
 /// `tokio-postgres` migration.
 async fn is_existing_sqlx_database() -> Result<bool, ErrorResponse> {
-    let mut rows = pg_query::<SqlxMigration>("SELECT * FROM _sqlx_migrations", &[], 0).await?;
+    let mut rows = DB::pg_query::<SqlxMigration>("SELECT * FROM _sqlx_migrations", &[], 0).await?;
     debug!("rows from pg_query!\n{:?}", rows);
 
     // in v0.28, migration no 32 is `pictures`
