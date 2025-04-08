@@ -1,9 +1,10 @@
-use crate::app_state::{AppState, DbTxn};
+use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::clients::Client;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::entity::well_known::WellKnown;
 use actix_web::web;
+use deadpool_postgres::GenericClient;
 use hiqlite::{Param, Params, params};
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_CLIENTS, IDX_SCOPES};
@@ -13,10 +14,12 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::collections::HashSet;
+use tokio_pg_mapper_derive::PostgresMapper;
 use tracing::debug;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema, PostgresMapper)]
+#[pg_mapper(table = "scopes")]
 pub struct Scope {
     pub id: String,
     pub name: String,
@@ -84,16 +87,17 @@ VALUES ($1, $2, $3, $4)"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 r#"
     INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
     VALUES ($1, $2, $3, $4)"#,
-                new_scope.id,
-                new_scope.name,
-                new_scope.attr_include_access,
-                new_scope.attr_include_id,
+                &[
+                    &new_scope.id,
+                    &new_scope.name,
+                    &new_scope.attr_include_access,
+                    &new_scope.attr_include_id,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -132,15 +136,14 @@ VALUES ($1, $2, $3, $4)"#,
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             for client in &mut clients {
                 client.delete_scope(&scope.name);
-                client.save_txn(&mut txn).await?;
+                client.save_txn(&txn).await?;
             }
-            sqlx::query!("DELETE FROM scopes WHERE id = $1", id)
-                .execute(&mut *txn)
-                .await?;
+            DB::pg_txn_append(&txn, "DELETE FROM scopes WHERE id = $1", &[&id]).await?;
 
             txn.commit().await?;
         }
@@ -176,9 +179,7 @@ VALUES ($1, $2, $3, $4)"#,
                 .query_as_one("SELECT * FROM scopes WHERE id = $1", params!(id))
                 .await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM scopes WHERE id = $1", id)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_one("SELECT * FROM scopes WHERE id = $1", &[&id]).await?
         };
 
         Ok(res)
@@ -195,9 +196,7 @@ VALUES ($1, $2, $3, $4)"#,
                 .query_as("SELECT * FROM scopes", params!())
                 .await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM scopes")
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query("SELECT * FROM scopes", &[], 6).await?
         };
 
         client
@@ -242,7 +241,6 @@ VALUES ($1, $2, $3, $4)"#,
                     c
                 })
                 .collect::<Vec<_>>();
-            debug!("\n\n{:?}\n", clients);
             Some(clients)
         } else {
             None
@@ -291,24 +289,27 @@ WHERE id = $4"#,
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             if let Some(clients) = &clients {
                 for client in clients {
-                    client.save_txn(&mut txn).await?;
+                    client.save_txn(&txn).await?;
                 }
             }
-            sqlx::query!(
+            DB::pg_txn_append(
+                &txn,
                 r#"
 UPDATE scopes
 SET name = $1, attr_include_access = $2, attr_include_id = $3
 WHERE id = $4"#,
-                new_scope.name,
-                new_scope.attr_include_access,
-                new_scope.attr_include_id,
-                new_scope.id,
+                &[
+                    &new_scope.name,
+                    &new_scope.attr_include_access,
+                    &new_scope.attr_include_id,
+                    &new_scope.id,
+                ],
             )
-            .execute(&mut *txn)
             .await?;
 
             txn.commit().await?;
@@ -349,20 +350,17 @@ WHERE id = $4"#,
         id: &str,
         attr_include_access: Option<String>,
         attr_include_id: Option<String>,
-        txn: &mut DbTxn<'_>,
+        txn: &deadpool_postgres::Transaction<'_>,
     ) -> Result<(), ErrorResponse> {
-        sqlx::query!(
+        DB::pg_txn_append(
+            txn,
             r#"
     UPDATE scopes
     SET attr_include_access = $1, attr_include_id = $2
     WHERE id = $3"#,
-            attr_include_access,
-            attr_include_id,
-            id,
+            &[&attr_include_access, &attr_include_id, &id],
         )
-        .execute(&mut **txn)
         .await?;
-
         Ok(())
     }
 
@@ -384,7 +382,6 @@ WHERE id = $4"#,
 }
 
 impl Scope {
-    #[inline]
     pub fn clean_up_attrs(
         req_attrs: Option<Vec<String>>,
         existing_attrs: &HashSet<String>,
