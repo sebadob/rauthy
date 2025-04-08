@@ -54,6 +54,36 @@ impl From<hiqlite::Row<'_>> for ThemeCssFull {
     }
 }
 
+impl From<tokio_postgres::Row> for ThemeCssFull {
+    fn from(row: tokio_postgres::Row) -> Self {
+        let version: i32 = row.get("version");
+        let (light, dark) = if version == 1 {
+            let bytes: Vec<u8> = row.get("light");
+            let light = ThemeCss::from(bytes.as_slice());
+            let bytes: Vec<u8> = row.get("dark");
+            let dark = ThemeCss::from(bytes.as_slice());
+
+            (light, dark)
+        } else {
+            error!(
+                "Invalid CSS version {} returned from database, using defaults",
+                version
+            );
+            (ThemeCss::default_light(), ThemeCss::default_dark())
+        };
+
+        Self {
+            client_id: row.get("client_id"),
+            last_update: row.get("last_update"),
+            version: version as i64,
+            light,
+            dark,
+            border_radius: row.get("border_radius"),
+        }
+    }
+}
+
+// TODO remove after sqlx migration
 impl FromRow<'_, sqlx::postgres::PgRow> for ThemeCssFull {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, Error> {
         let version: i32 = row.get("version");
@@ -110,19 +140,13 @@ impl From<ThemeCssFull> for ThemeRequestResponse {
 // CRUD
 impl ThemeCssFull {
     pub async fn find(client_id: String) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM themes WHERE client_id = $1";
         let slf: Self = if is_hiqlite() {
             DB::hql()
-                .query_map_optional(
-                    "SELECT * FROM themes WHERE client_id = $1",
-                    params!(client_id),
-                )
+                .query_map_optional(sql, params!(client_id))
                 .await?
         } else {
-            sqlx::query("SELECT * FROM themes WHERE client_id = $1")
-                .bind(client_id)
-                .fetch_optional(DB::conn_sqlx())
-                .await?
-                .map(|row| Self::from_row(&row).unwrap())
+            DB::pg_query_map_opt(sql, &[&client_id]).await?
         }
         .unwrap_or_default();
 
@@ -171,15 +195,12 @@ impl ThemeCssFull {
 
     pub async fn delete(client_id: String) -> Result<(), ErrorResponse> {
         let id = client_id.clone();
+        let sql = "DELETE FROM themes WHERE client_id = $1";
 
         if is_hiqlite() {
-            DB::hql()
-                .execute("DELETE FROM themes WHERE client_id = $1", params!(id))
-                .await?;
+            DB::hql().execute(sql, params!(id)).await?;
         } else {
-            sqlx::query!("DELETE FROM themes WHERE client_id = $1", id)
-                .execute(DB::conn_sqlx())
-                .await?;
+            DB::pg_execute(sql, &[&id]).await?;
         }
 
         if client_id == "rauthy" {
@@ -206,34 +227,32 @@ impl ThemeCssFull {
         let light = light.as_bytes();
         let dark = dark.as_bytes();
 
-        if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    r#"
+        let sql = r#"
 INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
 VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (client_id) DO UPDATE
 SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
-"#,
+"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(id, now, LATEST_CSS_VERSION, light, dark, border_radius),
                 )
                 .await?;
         } else {
-            sqlx::query!(
-                r#"
-INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
-VALUES ($1, $2, $3, $4, $5, $6)
-ON CONFLICT (client_id) DO UPDATE
-SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
-"#,
-                id,
-                now,
-                LATEST_CSS_VERSION,
-                light,
-                dark,
-                border_radius
+            DB::pg_execute(
+                sql,
+                &[
+                    &id,
+                    &now,
+                    &LATEST_CSS_VERSION,
+                    &light,
+                    &dark,
+                    &border_radius,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -281,20 +300,6 @@ impl ThemeCssFull {
         format!("{}_theme_gzip", client_id)
     }
 
-    // pub async fn etag_update(client_id: &str) -> Result<String, ErrorResponse> {
-    //     let slf = Self::find(client_id.to_string()).await?;
-    //     let etag = slf.last_update.to_string();
-    //     DB::client()
-    //         .put_bytes(
-    //             Cache::Etag,
-    //             Self::cache_key_etag(client_id),
-    //             etag.as_bytes().to_vec(),
-    //             None,
-    //         )
-    //         .await?;
-    //     Ok(etag)
-    // }
-
     async fn invalidate_caches(client_id: String) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
@@ -313,31 +318,8 @@ impl ThemeCssFull {
     }
 
     pub async fn plain(client_id: String) -> Result<String, ErrorResponse> {
-        // TODO do we even want to cache the plain version?
-        // It is probably only used once each time to build the compressed versions anyway.
-
-        // // Note: If only ever using ::default(), don't cache this - building from default
-        // // String is always faster than retrieving from cache!
-        // if let Some(bytes) = DB::client()
-        //     .get_bytes(Cache::Html, Self::cache_key_plain(client_id))
-        //     .await?
-        // {
-        //     let css = String::from_utf8(bytes)?;
-        //     return Ok(css);
-        // }
-
         let slf = Self::find(client_id).await?;
         let res = slf.as_css()?;
-
-        // DB::client()
-        //     .put_bytes(
-        //         Cache::Html,
-        //         Self::cache_key_plain(client_id),
-        //         res.as_bytes().to_vec(),
-        //         None,
-        //     )
-        //     .await?;
-
         Ok(res)
     }
 
@@ -525,21 +507,6 @@ impl ThemeCss {
         bincode::serialize(self).unwrap()
     }
 
-    // fn default_dark() -> Self {
-    //     Self {
-    //         text: [228, 2, 70],
-    //         text_high: [228, 8, 90],
-    //         bg: [208, 90, 4],
-    //         bg_high: [208, 30, 19],
-    //         action: [34, 100, 59],
-    //         accent: [265, 100, 53],
-    //         error: [15, 100, 37],
-    //         btn_text: "hsl(var(--bg))".to_string(),
-    //         theme_sun: "hsla(var(--action) / .7)".to_string(),
-    //         theme_moon: "hsla(var(--accent) / .85)".to_string(),
-    //     }
-    // }
-
     fn default_dark() -> Self {
         Self {
             text: [34, 5, 75],
@@ -554,21 +521,6 @@ impl ThemeCss {
             theme_moon: "hsla(var(--accent) / .85)".to_string(),
         }
     }
-
-    // fn default_light() -> Self {
-    //     Self {
-    //         text: [208, 10, 40],
-    //         text_high: [208, 20, 20],
-    //         bg: [228, 2, 98],
-    //         bg_high: [228, 8, 84],
-    //         action: [34, 100, 59],
-    //         accent: [265, 100, 53],
-    //         error: [15, 100, 37],
-    //         btn_text: "white".to_string(),
-    //         theme_sun: "hsla(var(--action) / .7)".to_string(),
-    //         theme_moon: "hsla(var(--accent) / .85)".to_string(),
-    //     }
-    // }
 
     fn default_light() -> Self {
         Self {

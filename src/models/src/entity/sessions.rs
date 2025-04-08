@@ -2,7 +2,7 @@ use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
-use actix_web::cookie::{SameSite, time};
+use actix_web::cookie::SameSite;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, cookie, web};
 use chrono::Utc;

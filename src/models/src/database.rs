@@ -424,6 +424,20 @@ impl DB {
         }
     }
 
+    #[inline]
+    pub async fn pg_query_map_opt<T: From<tokio_postgres::Row>>(
+        stmt: &str,
+        params: &[&(dyn postgres_types::ToSql + Sync)],
+    ) -> Result<Option<T>, ErrorResponse> {
+        let cl = Self::pg().await?;
+        let st = cl.prepare_cached(stmt).await?;
+        let row = cl.query_opt(&st, params).await?;
+        match row {
+            None => Ok(None),
+            Some(row) => Ok(Some(T::from(row))),
+        }
+    }
+
     /// If you can estimate how many rows would be returned from the given query, provide a
     /// proper `expected_rows_size_hint` to reserve memory in advance. This will provide a small
     /// performance boost.
