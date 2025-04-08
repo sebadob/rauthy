@@ -366,11 +366,12 @@ impl DB {
     pub async fn pg_execute(
         stmt: &str,
         params: &[&(dyn postgres_types::ToSql + Sync)],
-    ) -> Result<u64, ErrorResponse> {
+    ) -> Result<usize, ErrorResponse> {
         let cl = Self::pg().await?;
         let st = cl.prepare(stmt).await?;
         let rows_affected = cl.execute(&st, params).await?;
-        Ok(rows_affected)
+        // cast to usize for a uniform interface with Hiqlite
+        Ok(rows_affected as usize)
     }
 
     #[inline]
