@@ -1,5 +1,6 @@
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
+use deadpool_postgres::GenericClient;
 use hiqlite::{Param, Params, params};
 use rauthy_api_types::groups::GroupRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS};
@@ -8,9 +9,11 @@ use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use tokio_pg_mapper_derive::PostgresMapper;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema, PostgresMapper)]
+#[pg_mapper(table = "groups")]
 pub struct Group {
     pub id: String,
     pub name: String,
@@ -43,12 +46,10 @@ impl Group {
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 "INSERT INTO groups (id, name) VALUES ($1, $2)",
-                new_group.id,
-                new_group.name,
+                &[&new_group.id, &new_group.name],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -83,15 +84,14 @@ impl Group {
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             for mut user in users {
                 user.delete_group(&group.name);
-                user.save_txn(&mut txn).await?;
+                user.save_txn(&txn).await?;
             }
-            sqlx::query!("DELETE FROM groups WHERE id = $1", group.id)
-                .execute(&mut *txn)
-                .await?;
+            DB::pg_txn_append(&txn, "DELETE FROM groups WHERE id = $1", &[&id]).await?;
 
             txn.commit().await?;
         }
@@ -120,9 +120,7 @@ impl Group {
                 .query_as_one("SELECT * FROM groups WHERE id = $1", params!(id))
                 .await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM groups WHERE id = $1", id,)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_one("SELECT * FROM groups WHERE id = $1", &[&id]).await?
         };
 
         Ok(res)
@@ -138,9 +136,7 @@ impl Group {
         let res = if is_hiqlite() {
             client.query_as("SELECT * FROM groups", params!()).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM groups")
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query("SELECT * FROM groups", &[], 2).await?
         };
 
         client
@@ -183,18 +179,18 @@ impl Group {
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             for mut user in users {
                 user.delete_group(&group.name);
-                user.save_txn(&mut txn).await?;
+                user.save_txn(&txn).await?;
             }
-            sqlx::query!(
+            DB::pg_txn_append(
+                &txn,
                 "UPDATE groups SET name = $1 WHERE id = $2",
-                new_group.name,
-                new_group.id,
+                &[&new_group.name, &new_group.id],
             )
-            .execute(&mut *txn)
             .await?;
 
             txn.commit().await?;
