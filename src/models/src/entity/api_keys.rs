@@ -9,10 +9,11 @@ use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use ring::digest;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, query, query_as};
 use std::fmt::{Debug, Formatter};
+use tokio_pg_mapper_derive::PostgresMapper;
 
-#[derive(Clone, Serialize, Deserialize, FromRow)]
+#[derive(Clone, Serialize, Deserialize, sqlx::FromRow, PostgresMapper)]
+#[pg_mapper(table = "api_keys")]
 pub struct ApiKeyEntity {
     pub name: String,
     pub secret: Vec<u8>,
@@ -69,19 +70,20 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 )
                 .await?;
         } else {
-            query!(
+            DB::pg_execute(
                 r#"
 INSERT INTO
 api_keys (name, secret, created, expires, enc_key_id, access)
 VALUES ($1, $2, $3, $4, $5, $6)"#,
-                name,
-                secret_enc,
-                created,
-                expires,
-                enc_key_active,
-                access_enc,
+                &[
+                    &name,
+                    &secret_enc,
+                    &created,
+                    &expires,
+                    enc_key_active,
+                    &access_enc,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -94,9 +96,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 .execute("DELETE FROM api_keys WHERE name = $1", params!(name))
                 .await?;
         } else {
-            query!("DELETE FROM api_keys WHERE name = $1", name)
-                .execute(DB::conn_sqlx())
-                .await?;
+            DB::pg_execute("DELETE FROM api_keys WHERE name = $1", &[&name]).await?;
         }
 
         Self::cache_invalidate(name).await?;
@@ -109,9 +109,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 .query_as_one("SELECT * FROM api_keys WHERE name = $1", params!(name))
                 .await?
         } else {
-            query_as!(Self, "SELECT * FROM api_keys WHERE name = $1", name)
-                .fetch_one(DB::conn_sqlx())
-                .await?
+            DB::pg_query_one("SELECT * FROM api_keys WHERE name = $1", &[&name]).await?
         };
 
         Ok(res)
@@ -123,9 +121,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 .query_as("SELECT * FROM api_keys", params!())
                 .await?
         } else {
-            query_as!(Self, "SELECT * FROM api_keys")
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query("SELECT * FROM api_keys", &[], 0).await?
         };
 
         Ok(res)
@@ -159,14 +155,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 )
                 .await?;
         } else {
-            query!(
+            DB::pg_execute(
                 "UPDATE api_keys SET secret = $1, enc_key_id = $2, access = $3 WHERE name = $4",
-                secret_enc,
-                enc_key_active,
-                access_enc,
-                name,
+                &[&secret_enc, enc_key_active, &access_enc, &name],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -209,18 +201,13 @@ WHERE name = $5"#,
                 )
                 .await?;
         } else {
-            query!(
+            DB::pg_execute(
                 r#"
 UPDATE api_keys
 SET secret = $1, expires = $2, enc_key_id = $3, access = $4
 WHERE name = $5"#,
-                secret_enc,
-                expires,
-                enc_key_active,
-                access_enc,
-                name,
+                &[&secret_enc, &expires, enc_key_active, &access_enc, &name],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -249,18 +236,19 @@ WHERE name = $5"#,
                 )
                 .await?;
         } else {
-            query!(
+            DB::pg_execute(
                 r#"
     UPDATE api_keys
     SET secret = $1, expires = $2, enc_key_id = $3, access = $4
     WHERE name = $5"#,
-                self.secret,
-                self.expires,
-                self.enc_key_id,
-                self.access,
-                self.name,
+                &[
+                    &self.secret,
+                    &self.expires,
+                    &self.enc_key_id,
+                    &self.access,
+                    &self.name,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
