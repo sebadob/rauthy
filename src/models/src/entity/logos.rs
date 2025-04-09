@@ -65,7 +65,7 @@ pub enum LogoType {
     AuthProvider,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Logo {
     pub id: String,
     pub res: LogoRes,
@@ -340,7 +340,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
                 .query_map_one(sql, params!(id, res, res_svg))
                 .await?
         } else {
-            DB::pg_query_map_one(sql, &[&id, &res, &res_svg]).await?
+            DB::pg_query_one(sql, &[&id, &res, &res_svg]).await?
         };
 
         Ok(slf)

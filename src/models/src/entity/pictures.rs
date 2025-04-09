@@ -87,7 +87,7 @@ impl PictureStorage {
     }
 }
 
-#[derive(Debug, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Deserialize)]
 pub struct UserPicture {
     pub id: String,
     pub content_type: String,
@@ -147,7 +147,7 @@ VALUES ($1, $2, $3, $4)"#;
         let slf = if is_hiqlite() {
             DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_map_one(sql, &[&id]).await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         Ok(slf)

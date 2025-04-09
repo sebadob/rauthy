@@ -12,14 +12,12 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::collections::HashSet;
-use tokio_pg_mapper_derive::PostgresMapper;
+
 use tracing::debug;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema, PostgresMapper)]
-#[pg_mapper(table = "scopes")]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Scope {
     pub id: String,
     pub name: String,
@@ -27,6 +25,17 @@ pub struct Scope {
     pub attr_include_access: Option<String>,
     // Custom user attributes as CSV to include in the id token
     pub attr_include_id: Option<String>,
+}
+
+impl From<tokio_postgres::Row> for Scope {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            name: row.get("name"),
+            attr_include_access: row.get("attr_include_access"),
+            attr_include_id: row.get("attr_include_id"),
+        }
+    }
 }
 
 // CRUD

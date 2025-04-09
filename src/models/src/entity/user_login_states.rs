@@ -5,7 +5,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Deserialize)]
 pub struct UserLoginState {
     // Unix Timestamp in Millis - used inside PK
     pub timestamp: i64,
@@ -80,7 +80,7 @@ WHERE NOT EXISTS (
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!()).await?
         } else {
-            DB::pg_query_map(sql, &[], 2).await?
+            DB::pg_query(sql, &[], 2).await?
         };
 
         Ok(res)
@@ -93,7 +93,7 @@ WHERE NOT EXISTS (
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!(client_id)).await?
         } else {
-            DB::pg_query_map(sql, &[&client_id], 1).await?
+            DB::pg_query(sql, &[&client_id], 1).await?
         };
 
         Ok(res)
@@ -104,7 +104,7 @@ WHERE NOT EXISTS (
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!(user_id)).await?
         } else {
-            DB::pg_query_map(sql, &[&user_id], 2).await?
+            DB::pg_query(sql, &[&user_id], 2).await?
         };
 
         Ok(res)
@@ -115,7 +115,7 @@ WHERE NOT EXISTS (
         let slf = if is_hiqlite() {
             DB::hql().query_as(sql, params!(session_id)).await?
         } else {
-            DB::pg_query_map(sql, &[&session_id], 2).await?
+            DB::pg_query(sql, &[&session_id], 2).await?
         };
 
         Ok(slf)

@@ -3,7 +3,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::base64_decode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::database::DB;
-use tokio_pg_mapper_derive::PostgresMapper;
+
 use tracing::{debug, warn};
 
 /// If it's necessary to apply manual migrations between major versions, which are
@@ -18,8 +18,7 @@ pub async fn manual_version_migrations() -> Result<(), ErrorResponse> {
     Ok(())
 }
 
-#[derive(Debug, PostgresMapper)]
-#[pg_mapper(table = "_sqlx_migrations")]
+#[derive(Debug)]
 struct SqlxMigration {
     version: i64,
     description: String,
@@ -30,6 +29,19 @@ struct SqlxMigration {
     checksum: Vec<u8>,
     #[allow(dead_code)]
     execution_time: i64,
+}
+
+impl From<tokio_postgres::Row> for SqlxMigration {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            version: row.get("version"),
+            description: row.get("description"),
+            installed_on: row.get("installed_on"),
+            success: row.get("success"),
+            checksum: row.get("checksum"),
+            execution_time: row.get("execution_time"),
+        }
+    }
 }
 
 /// Checks if the currently used Postgres database is already set up for `sqlx` from before the

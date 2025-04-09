@@ -23,7 +23,7 @@ use std::ops::Add;
 use std::str::FromStr;
 use tracing::{error, warn};
 
-#[derive(Clone, sqlx::FromRow, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Session {
     pub id: String,
     pub csrf_token: String,
@@ -188,7 +188,7 @@ impl Session {
         let slf: Self = if is_hiqlite() {
             client.query_as_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_map_one(sql, &[&id]).await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         client
@@ -204,7 +204,7 @@ impl Session {
         let sessions = if is_hiqlite() {
             DB::hql().query_as(sql, params!()).await?
         } else {
-            DB::pg_query_map(sql, &[], 4).await?
+            DB::pg_query(sql, &[], 4).await?
         };
         Ok(sessions)
     }
@@ -237,7 +237,7 @@ OFFSET $4"#;
                         .query_as(sql, params!(token.ts, token.id, page_size, offset))
                         .await?
                 } else {
-                    DB::pg_query_map(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
+                    DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
                         .await?
                 };
 
@@ -260,7 +260,7 @@ OFFSET $4"#;
                         .query_as(sql, params!(token.ts, token.id, page_size, offset))
                         .await?
                 } else {
-                    DB::pg_query_map(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
+                    DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
                         .await?
                 };
 
@@ -282,7 +282,7 @@ OFFSET $2"#;
             let mut rows: Vec<Self> = if is_hiqlite() {
                 DB::hql().query_as(sql, params!(page_size, offset)).await?
             } else {
-                DB::pg_query_map(sql, &[&page_size, &offset], size_hint).await?
+                DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
             };
 
             rows.reverse();
@@ -301,7 +301,7 @@ OFFSET $2"#;
             let rows: Vec<Self> = if is_hiqlite() {
                 DB::hql().query_as(sql, params!(page_size, offset)).await?
             } else {
-                DB::pg_query_map(sql, &[&page_size, &offset], size_hint).await?
+                DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
             };
 
             if let Some(s) = rows.last() {
@@ -451,7 +451,7 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!(q, limit)).await?
         } else {
-            DB::pg_query_map(sql, &[&q, &limit], size_hint).await?
+            DB::pg_query(sql, &[&q, &limit], size_hint).await?
         };
 
         Ok(res)

@@ -223,13 +223,6 @@ impl From<tokio_postgres::Error> for ErrorResponse {
     }
 }
 
-impl From<tokio_pg_mapper::Error> for ErrorResponse {
-    fn from(e: tokio_pg_mapper::Error) -> Self {
-        error!("{}", e);
-        ErrorResponse::new(ErrorResponseType::Database, e.to_string())
-    }
-}
-
 impl From<sqlx::Error> for ErrorResponse {
     fn from(err: sqlx::Error) -> Self {
         debug!("From<sqlx::Error>: {:?}", err);

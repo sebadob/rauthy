@@ -49,17 +49,16 @@ pub async fn jwks_cleanup() {
         // clean up all JWKs older than 90 days
         let cleanup_threshold = Utc::now().sub(chrono::Duration::days(90)).timestamp();
 
-        // find all existing jwks
-        let res = if is_hiqlite() {
+        let sql = "SELECT * FROM jwks ORDER BY created_at asc";
+        let res: Result<Vec<Jwk>, String> = if is_hiqlite() {
             DB::hql()
-                .query_as("SELECT * FROM jwks ORDER BY created_at asc", params!())
+                .query_as(sql, params!())
                 .await
                 .map_err(|err| err.to_string())
         } else {
-            sqlx::query_as::<_, Jwk>("SELECT * FROM jwks ORDER BY created_at asc")
-                .fetch_all(DB::conn_sqlx())
+            DB::pg_query(sql, &[], 8)
                 .await
-                .map_err(|err| err.to_string())
+                .map_err(|err| err.message.to_string())
         };
 
         let jwks_all = match res {

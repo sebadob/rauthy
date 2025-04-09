@@ -385,23 +385,6 @@ impl From<tokio_postgres::Row> for Event {
     }
 }
 
-// TODO remove after sqlx migration
-impl<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> for Event {
-    fn from_row(row: &'r sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
-        use sqlx::Row;
-
-        Ok(Self {
-            id: row.get("id"),
-            timestamp: row.get("timestamp"),
-            level: EventLevel::from(row.get::<i16, _>("level")),
-            typ: EventType::from(row.get::<i16, _>("typ")),
-            ip: row.get("ip"),
-            data: row.get("data"),
-            text: row.get("text"),
-        })
-    }
-}
-
 impl From<&Event> for Notification {
     fn from(value: &Event) -> Self {
         let icon = match value.level {
@@ -559,7 +542,7 @@ ORDER BY timestamp DESC"#;
                     .query_map(sql, params!(from, until, level, typ))
                     .await?
             } else {
-                DB::pg_query_map(sql, &[&from, &until, &level, &typ], 32).await?
+                DB::pg_query(sql, &[&from, &until, &level, &typ], 32).await?
             }
         } else {
             let sql = r#"
@@ -572,7 +555,7 @@ ORDER BY timestamp DESC"#;
                     .query_map(sql, params!(from, until, level))
                     .await?
             } else {
-                DB::pg_query_map(sql, &[&from, &until, &level], 32).await?
+                DB::pg_query(sql, &[&from, &until, &level], 32).await?
             }
         };
 
@@ -585,7 +568,7 @@ ORDER BY timestamp DESC"#;
             DB::hql().query_map(sql, params!(limit)).await?
         } else {
             let size_hint = max(limit, 1) as usize;
-            DB::pg_query_map(sql, &[&limit], size_hint).await?
+            DB::pg_query(sql, &[&limit], size_hint).await?
         };
 
         Ok(res)

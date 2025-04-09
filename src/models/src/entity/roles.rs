@@ -8,10 +8,9 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Role {
     pub id: String,
     pub name: String,
@@ -124,7 +123,7 @@ impl Role {
         let res = if is_hiqlite() {
             DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_map_one(sql, &[&id]).await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         Ok(res)
@@ -140,7 +139,7 @@ impl Role {
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!()).await?
         } else {
-            DB::pg_query_map(sql, &[], 3).await?
+            DB::pg_query(sql, &[], 3).await?
         };
 
         client

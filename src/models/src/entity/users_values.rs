@@ -6,7 +6,7 @@ use rauthy_common::constants::{CACHE_TTL_USER, IDX_USERS_VALUES};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 
-#[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserValues {
     pub id: String,
     pub birthdate: Option<String>,
@@ -50,7 +50,7 @@ impl UserValues {
         let slf = if is_hiqlite() {
             client.query_as_optional(sql, params!(user_id)).await?
         } else {
-            DB::pg_query_map_opt(sql, &[&user_id]).await?
+            DB::pg_query_opt(sql, &[&user_id]).await?
         };
 
         client.put(Cache::User, idx, &slf, CACHE_TTL_USER).await?;

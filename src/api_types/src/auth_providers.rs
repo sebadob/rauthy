@@ -4,7 +4,7 @@ use rauthy_common::constants::{
     RE_URI,
 };
 use serde::{Deserialize, Serialize};
-use tokio_pg_mapper_derive::PostgresMapper;
+
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -177,11 +177,19 @@ pub struct ProviderResponse {
     pub root_pem: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PostgresMapper)]
-#[pg_mapper(table = "users")] // TODO make sure this table mapping works like expected
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProviderLinkedUserResponse {
     pub id: String,
     pub email: String,
+}
+
+impl From<tokio_postgres::Row> for ProviderLinkedUserResponse {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            email: row.get("email"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]

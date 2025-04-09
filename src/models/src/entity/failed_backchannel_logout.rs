@@ -3,10 +3,8 @@ use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
-use tokio_pg_mapper_derive::PostgresMapper;
 
-#[derive(Debug, Deserialize, sqlx::FromRow, PostgresMapper)]
-#[pg_mapper(table = "failed_backchannel_logouts")]
+#[derive(Debug, Deserialize)]
 pub struct FailedBackchannelLogout {
     pub client_id: String,
     // both `sub` and `sid` may be empty but cannot be NULL because Postgres requires
@@ -14,6 +12,17 @@ pub struct FailedBackchannelLogout {
     pub sub: String,
     pub sid: String,
     pub retry_count: i32,
+}
+
+impl From<tokio_postgres::Row> for FailedBackchannelLogout {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            client_id: row.get("client_id"),
+            sub: row.get("sub"),
+            sid: row.get("sid"),
+            retry_count: row.get("retry_count"),
+        }
+    }
 }
 
 impl FailedBackchannelLogout {

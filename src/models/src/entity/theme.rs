@@ -7,7 +7,6 @@ use rauthy_common::constants::BUILD_TIME;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
-use sqlx::{Error, FromRow, Row};
 use std::fmt::Write;
 use tracing::error;
 
@@ -83,36 +82,6 @@ impl From<tokio_postgres::Row> for ThemeCssFull {
     }
 }
 
-// TODO remove after sqlx migration
-impl FromRow<'_, sqlx::postgres::PgRow> for ThemeCssFull {
-    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, Error> {
-        let version: i32 = row.get("version");
-        let (light, dark) = if version == 1 {
-            let bytes: Vec<u8> = row.get("light");
-            let light = ThemeCss::from(bytes.as_slice());
-            let bytes: Vec<u8> = row.get("dark");
-            let dark = ThemeCss::from(bytes.as_slice());
-
-            (light, dark)
-        } else {
-            error!(
-                "Invalid CSS version {} returned from database, using defaults",
-                version
-            );
-            (ThemeCss::default_light(), ThemeCss::default_dark())
-        };
-
-        Ok(Self {
-            client_id: row.get("client_id"),
-            last_update: row.get("last_update"),
-            version: version as i64,
-            light,
-            dark,
-            border_radius: row.get("border_radius"),
-        })
-    }
-}
-
 impl Default for ThemeCssFull {
     fn default() -> Self {
         Self {
@@ -146,7 +115,7 @@ impl ThemeCssFull {
                 .query_map_optional(sql, params!(client_id))
                 .await?
         } else {
-            DB::pg_query_map_opt(sql, &[&client_id]).await?
+            DB::pg_query_opt(sql, &[&client_id]).await?
         }
         .unwrap_or_default();
 
@@ -405,7 +374,7 @@ impl ThemeCssFull {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ThemeCss {
     // HSL values without prefix
     pub text: [u16; 3],

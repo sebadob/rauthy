@@ -15,10 +15,7 @@ openssl-sys = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 time = { workspace = true }
+tokio-postgres = { workspace = true }
 utoipa = { workspace = true }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
-
-tokio-pg-mapper = { workspace = true }
-tokio-pg-mapper-derive = { workspace = true }
-tokio-postgres = { workspace = true }

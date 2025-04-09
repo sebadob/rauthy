@@ -21,14 +21,12 @@ use reqwest::header::CONTENT_TYPE;
 use reqwest::tls;
 use rsa::BigUint;
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgRow;
-use sqlx::{Error, FromRow, Row};
 use std::default::Default;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
-use tokio_pg_mapper_derive::PostgresMapper;
+
 use tracing::{error, info};
 
 #[macro_export]
@@ -105,12 +103,10 @@ macro_rules! validate_jwt {
 The Json Web Keys are saved encrypted inside the database. The encryption is the same as for a
 Client secret -> *ChaCha20Poly1305*
  */
-#[derive(FromRow, Serialize, Deserialize, PostgresMapper)]
-#[pg_mapper(table = "jwks")]
+#[derive(Serialize, Deserialize)]
 pub struct Jwk {
     pub kid: String,
     pub created_at: i64,
-    #[sqlx(flatten)]
     pub signature: JwkKeyPairAlg,
     pub enc_key_id: String,
     pub jwk: Vec<u8>,
@@ -123,6 +119,18 @@ impl Debug for Jwk {
             "kid: {}, created_at: {}, signature: {:?}, enc_key_id: {}, jwk: <hidden>",
             self.kid, self.created_at, self.signature, self.enc_key_id,
         )
+    }
+}
+
+impl From<tokio_postgres::row::Row> for Jwk {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            kid: row.get("kid"),
+            created_at: row.get("created_at"),
+            signature: row.get("signature"),
+            enc_key_id: row.get("enc_key_id"),
+            jwk: row.get("jwk"),
+        }
     }
 }
 
@@ -874,15 +882,6 @@ impl From<String> for JwkKeyPairAlg {
             "EdDSA" => JwkKeyPairAlg::EdDSA,
             _ => unreachable!(),
         }
-    }
-}
-
-// TODO remove after sqlx migration
-impl FromRow<'_, PgRow> for JwkKeyPairAlg {
-    fn from_row(row: &'_ PgRow) -> Result<Self, Error> {
-        let sig = row.try_get("signature")?;
-        let slf = JwkKeyPairAlg::from_str(sig).expect("corrupted signature in database");
-        Ok(slf)
     }
 }
 

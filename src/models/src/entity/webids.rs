@@ -11,7 +11,7 @@ use rio_turtle::{NTriplesFormatter, NTriplesParser, TurtleFormatter, TurtleParse
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct WebId {
     pub user_id: String,
     pub expose_email: bool,
@@ -57,7 +57,7 @@ impl WebId {
                     expose_email: false,
                 })
         } else {
-            DB::pg_query_map_one(sql, &[&user_id]).await?
+            DB::pg_query_one(sql, &[&user_id]).await?
         };
 
         client

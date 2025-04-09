@@ -28,13 +28,11 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::{Url, tls};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
-use tokio_pg_mapper_derive::PostgresMapper;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
 
@@ -59,8 +57,7 @@ performance, when we do reads on clients, which we do most of the time.
 
 `*_lifetime` values are meant to be in seconds.
  */
-#[derive(Clone, PartialEq, Eq, FromRow, Deserialize, Serialize, PostgresMapper)]
-#[pg_mapper(table = "clients")]
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Client {
     pub id: String,
     pub name: Option<String>,
@@ -116,6 +113,34 @@ impl Debug for Client {
             self.contacts,
             self.backchannel_logout_uri
         )
+    }
+}
+
+impl From<tokio_postgres::Row> for Client {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            name: row.get("name"),
+            enabled: row.get("enabled"),
+            confidential: row.get("confidential"),
+            secret: row.get("secret"),
+            secret_kid: row.get("secret_kid"),
+            redirect_uris: row.get("redirect_uris"),
+            post_logout_redirect_uris: row.get("post_logout_redirect_uris"),
+            allowed_origins: row.get("allowed_origins"),
+            flows_enabled: row.get("flows_enabled"),
+            access_token_alg: row.get("access_token_alg"),
+            id_token_alg: row.get("id_token_alg"),
+            auth_code_lifetime: row.get("auth_code_lifetime"),
+            access_token_lifetime: row.get("access_token_lifetime"),
+            scopes: row.get("scopes"),
+            default_scopes: row.get("default_scopes"),
+            challenge: row.get("challenge"),
+            force_mfa: row.get("force_mfa"),
+            client_uri: row.get("client_uri"),
+            contacts: row.get("contacts"),
+            backchannel_logout_uri: row.get("backchannel_logout_uri"),
+        }
     }
 }
 

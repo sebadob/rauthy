@@ -14,7 +14,6 @@ use rauthy_common::constants::{
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::cmp::max;
 use tokio::time;
 use utoipa::ToSchema;
@@ -111,7 +110,7 @@ pub struct PasswordHashTime {
     pub time_taken: u32,
 }
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PasswordPolicy {
     pub length_min: i32,
     pub length_max: i32,
@@ -150,7 +149,7 @@ impl PasswordPolicy {
         let bytes: Vec<u8> = if is_hiqlite() {
             DB::hql().query_raw_one(sql, params!()).await?.get("data")
         } else {
-            DB::pg_query_map_one::<ConfigEntity>(sql, &[]).await?.data
+            DB::pg_query_one::<ConfigEntity>(sql, &[]).await?.data
         };
         let policy = bincode::deserialize::<Self>(&bytes)?;
 
@@ -207,7 +206,7 @@ impl From<PasswordPolicy> for PasswordPolicyResponse {
     }
 }
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecentPasswordsEntity {
     pub user_id: String,
     // password hashes separated by \n
@@ -240,7 +239,7 @@ impl RecentPasswordsEntity {
         let res = if is_hiqlite() {
             DB::hql().query_as_one(sql, params!(user_id)).await?
         } else {
-            DB::pg_query_map_one(sql, &[&user_id]).await?
+            DB::pg_query_one(sql, &[&user_id]).await?
         };
         Ok(res)
     }

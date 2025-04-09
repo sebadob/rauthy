@@ -23,12 +23,11 @@ use validator::Validate;
 /// Initializes an empty production database for a new deployment
 pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<(), ErrorResponse> {
     // check if the database is un-initialized by looking at the jwks table, which should be empty
-    let jwks = if is_hiqlite() {
-        DB::hql().query_as("SELECT * FROM JWKS", params!()).await?
+    let sql = "SELECT * FROM JWKS";
+    let jwks: Vec<Jwk> = if is_hiqlite() {
+        DB::hql().query_as(sql, params!()).await?
     } else {
-        sqlx::query_as::<_, Jwk>("SELECT * FROM JWKS")
-            .fetch_all(DB::conn_sqlx())
-            .await?
+        DB::pg_query(sql, &[], 8).await?
     };
 
     if jwks.is_empty() {

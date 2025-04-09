@@ -8,18 +8,27 @@ use rauthy_common::constants::{CACHE_TTL_DYN_CLIENT, CACHE_TTL_IP_RATE_LIMIT};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::net::IpAddr;
-use tokio_pg_mapper_derive::PostgresMapper;
 
-#[derive(Debug, Serialize, Deserialize, FromRow, PostgresMapper)]
-#[pg_mapper(table = "clients_dyn")]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ClientDyn {
     pub id: String,
     pub created: i64,
     pub last_used: Option<i64>,
     pub registration_token: Vec<u8>,
     pub token_endpoint_auth_method: String,
+}
+
+impl From<tokio_postgres::Row> for ClientDyn {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            created: row.get("created"),
+            last_used: row.get("last_used"),
+            registration_token: row.get("registration_token"),
+            token_endpoint_auth_method: row.get("token_endpoint_auth_method"),
+        }
+    }
 }
 
 impl ClientDyn {

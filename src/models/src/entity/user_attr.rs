@@ -12,18 +12,25 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::FromRow;
 use std::collections::HashSet;
-use tokio_pg_mapper_derive::PostgresMapper;
+
 use utoipa::ToSchema;
 
 // Additional custom attributes for users. These can be set for every user and then mapped to a
 // scope, to include them in JWT tokens.
-#[derive(Clone, Debug, FromRow, Serialize, Deserialize, ToSchema, PostgresMapper)]
-#[pg_mapper(table = "user_attr_config")]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct UserAttrConfigEntity {
     pub name: String,
     pub desc: Option<String>,
+}
+
+impl From<tokio_postgres::Row> for UserAttrConfigEntity {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            name: row.get("name"),
+            desc: row.get("desc"),
+        }
+    }
 }
 
 // CRUD
@@ -376,12 +383,21 @@ impl From<UserAttrConfigEntity> for UserAttrConfigValueResponse {
 
 /// The value for a pre-defined UserAttrConfig with all `serde_json::Value` being valid values.
 /// Important: There is no further input validation / restriction
-#[derive(Clone, Debug, FromRow, Serialize, Deserialize, PostgresMapper)]
-#[pg_mapper(table = "user_attr_values")]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserAttrValueEntity {
     pub user_id: String,
     pub key: String,
     pub value: Vec<u8>,
+}
+
+impl From<tokio_postgres::Row> for UserAttrValueEntity {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            user_id: row.get("user_id"),
+            key: row.get("key"),
+            value: row.get("value"),
+        }
+    }
 }
 
 impl UserAttrValueEntity {

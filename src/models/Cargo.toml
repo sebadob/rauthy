@@ -79,8 +79,6 @@ deadpool = { workspace = true }
 deadpool-postgres = { workspace = true }
 postgres-types = { workspace = true }
 refinery = { workspace = true }
-tokio-pg-mapper = { workspace = true }
-tokio-pg-mapper-derive = { workspace = true }
 tokio-postgres = { workspace = true }
 tokio-postgres-rustls = { workspace = true }
 

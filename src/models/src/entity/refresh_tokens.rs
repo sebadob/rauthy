@@ -4,10 +4,9 @@ use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Deserialize;
-use sqlx::FromRow;
 use std::fmt::{Debug, Formatter};
 
-#[derive(FromRow, Deserialize)]
+#[derive(Deserialize)]
 pub struct RefreshToken {
     pub id: String,
     pub user_id: String,
@@ -101,7 +100,7 @@ impl RefreshToken {
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!()).await?
         } else {
-            DB::pg_query_map(sql, &[], 0).await?
+            DB::pg_query(sql, &[], 0).await?
         };
         Ok(res)
     }
@@ -139,7 +138,7 @@ impl RefreshToken {
                     ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
                 })?
         } else {
-            DB::pg_query_map_one(sql, &[&id]).await.map_err(|_| {
+            DB::pg_query_one(sql, &[&id]).await.map_err(|_| {
                 ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
             })?
         };

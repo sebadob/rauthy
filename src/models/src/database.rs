@@ -18,7 +18,6 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tokio::pin;
 use tokio::time::sleep;
-use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_postgres::config::{LoadBalanceHosts, SslMode};
 use tracing::log::LevelFilter;
 use tracing::{debug, error, info, warn};
@@ -152,7 +151,7 @@ impl DB {
         Ok(pool)
     }
 
-    async fn connect_postgres(
+    pub async fn connect_postgres(
         host: &str,
         port: u16,
         user: &str,
@@ -323,9 +322,8 @@ impl DB {
                     if let Err(err) = db_migrate::migrate_from_sqlite(&from).await {
                         panic!("Error during db migration: {:?}", err);
                     }
-                } else if from.starts_with("postgresql://") {
-                    let pool = Self::connect_postgres_sqlx(&from, 1).await?;
-                    if let Err(err) = db_migrate::migrate_from_postgres(pool).await {
+                } else if from.starts_with("postgres") {
+                    if let Err(err) = db_migrate::migrate_from_postgres().await {
                         panic!("Error during db migration: {:?}", err);
                     }
                 } else {
@@ -374,22 +372,8 @@ impl DB {
         Ok(rows_affected as usize)
     }
 
-    // TODO we probably want to drop the pg mapper because it adds way more code
-    // than we actually need. A short manual impl would be more efficient, even if its more
-    // work.
     #[inline]
-    pub async fn pg_query_one<T: FromTokioPostgresRow>(
-        stmt: &str,
-        params: &[&(dyn postgres_types::ToSql + Sync)],
-    ) -> Result<T, ErrorResponse> {
-        let cl = Self::pg().await?;
-        let st = cl.prepare_cached(stmt).await?;
-        let row = cl.query_one(&st, params).await?;
-        Ok(T::from_row(row)?)
-    }
-
-    #[inline]
-    pub async fn pg_query_map_one<T: From<tokio_postgres::Row>>(
+    pub async fn pg_query_one<T: From<tokio_postgres::Row>>(
         stmt: &str,
         params: &[&(dyn postgres_types::ToSql + Sync)],
     ) -> Result<T, ErrorResponse> {
@@ -411,21 +395,7 @@ impl DB {
     }
 
     #[inline]
-    pub async fn pg_query_opt<T: FromTokioPostgresRow>(
-        stmt: &str,
-        params: &[&(dyn postgres_types::ToSql + Sync)],
-    ) -> Result<Option<T>, ErrorResponse> {
-        let cl = Self::pg().await?;
-        let st = cl.prepare_cached(stmt).await?;
-        let row = cl.query_opt(&st, params).await?;
-        match row {
-            None => Ok(None),
-            Some(row) => Ok(Some(T::from_row(row)?)),
-        }
-    }
-
-    #[inline]
-    pub async fn pg_query_map_opt<T: From<tokio_postgres::Row>>(
+    pub async fn pg_query_opt<T: From<tokio_postgres::Row>>(
         stmt: &str,
         params: &[&(dyn postgres_types::ToSql + Sync)],
     ) -> Result<Option<T>, ErrorResponse> {
@@ -442,36 +412,23 @@ impl DB {
     /// proper `expected_rows_size_hint` to reserve memory in advance. This will provide a small
     /// performance boost.
     #[inline]
-    pub async fn pg_query<'a, T: FromTokioPostgresRow>(
+    pub async fn pg_query<'a, T: From<tokio_postgres::Row>>(
         stmt: &str,
         params: &'a [&'a (dyn postgres_types::ToSql + Sync)],
         expected_rows_size_hint: usize,
     ) -> Result<Vec<T>, ErrorResponse> {
-        let cl = Self::pg().await?;
-        let st = cl.prepare_cached(stmt).await?;
-        let s = cl.query_raw(&st, Self::params_iter(params)).await?;
-        pin!(s);
-
-        let mut res: Vec<T> = Vec::with_capacity(expected_rows_size_hint);
-        while let Some(row) = s.next().await {
-            res.push(T::from_row(row?)?);
-        }
-
-        Ok(res)
+        Self::pg_query_map_with(&Self::pg().await?, stmt, params, expected_rows_size_hint).await
     }
 
-    /// If you can estimate how many rows would be returned from the given query, provide a
-    /// proper `expected_rows_size_hint` to reserve memory in advance. This will provide a small
-    /// performance boost.
     #[inline]
-    pub async fn pg_query_map<'a, T: From<tokio_postgres::Row>>(
+    pub async fn pg_query_map_with<'a, T: From<tokio_postgres::Row>>(
+        client: &PgClient,
         stmt: &str,
         params: &'a [&'a (dyn postgres_types::ToSql + Sync)],
         expected_rows_size_hint: usize,
     ) -> Result<Vec<T>, ErrorResponse> {
-        let cl = Self::pg().await?;
-        let st = cl.prepare_cached(stmt).await?;
-        let s = cl.query_raw(&st, Self::params_iter(params)).await?;
+        let st = client.prepare_cached(stmt).await?;
+        let s = client.query_raw(&st, Self::params_iter(params)).await?;
         pin!(s);
 
         let mut res: Vec<T> = Vec::with_capacity(expected_rows_size_hint);

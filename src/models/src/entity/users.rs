@@ -74,7 +74,7 @@ impl From<AccountType> for UserAccountTypeResponse {
     }
 }
 
-#[derive(Clone, sqlx::FromRow, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct User {
     pub id: String,
     pub email: String,
@@ -323,7 +323,7 @@ impl User {
         let slf: Self = if is_hiqlite() {
             client.query_as_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_map_one(sql, &[&id]).await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         client.put(Cache::User, idx, &slf, CACHE_TTL_USER).await?;
@@ -344,7 +344,7 @@ impl User {
         let slf = if is_hiqlite() {
             client.query_as_one(sql, params!(email)).await?
         } else {
-            DB::pg_query_map_one(sql, &[&email]).await?
+            DB::pg_query_one(sql, &[&email]).await?
         };
 
         client.put(Cache::User, idx, &slf, CACHE_TTL_USER).await?;
@@ -361,7 +361,7 @@ impl User {
                 .query_as_one(sql, params!(auth_provider_id, federation_uid))
                 .await?
         } else {
-            DB::pg_query_map_one(sql, &[&auth_provider_id, &federation_uid]).await?
+            DB::pg_query_one(sql, &[&auth_provider_id, &federation_uid]).await?
         };
 
         Ok(slf)
@@ -375,7 +375,7 @@ impl User {
             // for big instances, fetching the count from the cache upfront is a speed improvement
             // because we only need a single memory allocation for the internal `Vec<_>`
             let count = Self::count().await?;
-            DB::pg_query_map(sql, &[], count as usize).await?
+            DB::pg_query(sql, &[], count as usize).await?
         };
 
         Ok(res)
@@ -393,7 +393,7 @@ ORDER BY created_at ASC"#;
             // for big instances, fetching the count from the cache upfront is a speed improvement
             // because we only need a single memory allocation for the internal `Vec<_>`
             let count = Self::count().await?;
-            DB::pg_query_map(sql, &[], count as usize).await?
+            DB::pg_query(sql, &[], count as usize).await?
         };
 
         Ok(res)
@@ -408,7 +408,7 @@ ORDER BY created_at ASC"#;
             DB::hql().query_as(sql, params!(like)).await?
         } else {
             let count = Self::count().await? as usize;
-            DB::pg_query_map(sql, &[&like], count).await?
+            DB::pg_query(sql, &[&like], count).await?
         };
 
         Ok(res)
@@ -423,7 +423,7 @@ ORDER BY created_at ASC"#;
             DB::hql().query_as(sql, params!(like)).await?
         } else {
             let count = Self::count().await? as usize;
-            DB::pg_query_map(sql, &[&like], count).await?
+            DB::pg_query(sql, &[&like], count).await?
         };
 
         Ok(res)
@@ -437,7 +437,7 @@ ORDER BY created_at ASC"#;
             DB::hql().query_as(sql, params!(now)).await?
         } else {
             let count = Self::count().await? as usize;
-            DB::pg_query_map(sql, &[&now], count).await?
+            DB::pg_query(sql, &[&now], count).await?
         };
 
         Ok(res)
@@ -491,7 +491,7 @@ OFFSET $4"#;
                         .query_as(sql, params!(token.ts, token.id, page_size, offset))
                         .await?
                 } else {
-                    DB::pg_query_map(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
+                    DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
                         .await?
                 };
                 res.reverse();
@@ -510,7 +510,7 @@ OFFSET $4"#;
                         .query_as(sql, params!(token.ts, token.id, page_size, offset))
                         .await?
                 } else {
-                    DB::pg_query_map(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
+                    DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
                         .await?
                 }
             }
@@ -527,7 +527,7 @@ OFFSET $2"#;
             let mut res = if is_hiqlite() {
                 DB::hql().query_as(sql, params!(page_size, offset)).await?
             } else {
-                DB::pg_query_map(sql, &[&page_size, &offset], size_hint).await?
+                DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
             };
             res.reverse();
             res
@@ -542,7 +542,7 @@ OFFSET $2"#;
             if is_hiqlite() {
                 DB::hql().query_as(sql, params!(page_size, offset)).await?
             } else {
-                DB::pg_query_map(sql, &[&page_size, &offset], size_hint).await?
+                DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
             }
         };
 
@@ -812,7 +812,7 @@ LIMIT $2"#;
                 if is_hiqlite() {
                     DB::hql().query_as(sql, params!(q, limit)).await?
                 } else {
-                    DB::pg_query_map(sql, &[&q, &limit], size_hint).await?
+                    DB::pg_query(sql, &[&q, &limit], size_hint).await?
                 }
             }
             SearchParamsIdx::Email => {
@@ -826,7 +826,7 @@ LIMIT $2"#;
                 if is_hiqlite() {
                     DB::hql().query_as(sql, params!(q, limit)).await?
                 } else {
-                    DB::pg_query_map(sql, &[&q, &limit], size_hint).await?
+                    DB::pg_query(sql, &[&q, &limit], size_hint).await?
                 }
             }
             _ => {

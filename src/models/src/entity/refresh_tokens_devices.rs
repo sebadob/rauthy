@@ -4,11 +4,10 @@ use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::fmt::{Debug, Formatter};
 use time::OffsetDateTime;
 
-#[derive(FromRow, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct RefreshTokenDevice {
     pub id: String,
     pub device_id: String,
@@ -83,7 +82,7 @@ impl RefreshTokenDevice {
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!()).await?
         } else {
-            DB::pg_query_map(sql, &[], 0).await?
+            DB::pg_query(sql, &[], 0).await?
         };
         Ok(res)
     }
@@ -126,7 +125,7 @@ impl RefreshTokenDevice {
                     )
                 })?
         } else {
-            DB::pg_query_map_one(sql, &[&id, &now]).await.map_err(|_| {
+            DB::pg_query_one(sql, &[&id, &now]).await.map_err(|_| {
                 ErrorResponse::new(
                     ErrorResponseType::NotFound,
                     "Device Refresh Token does not exist",

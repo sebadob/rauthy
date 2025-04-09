@@ -35,7 +35,7 @@ use webauthn_rs_proto::{
     AuthenticatorSelectionCriteria, ResidentKeyRequirement, UserVerificationPolicy,
 };
 
-#[derive(Clone, sqlx::FromRow, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct PasskeyEntity {
     pub user_id: String,
     pub name: String,
@@ -313,7 +313,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
         let slf = if is_hiqlite() {
             client.query_as_one(sql, params!(user_id, name)).await?
         } else {
-            DB::pg_query_map_one(sql, &[&user_id, &name]).await?
+            DB::pg_query_one(sql, &[&user_id, &name]).await?
         };
 
         client
@@ -367,7 +367,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
         let pks = if is_hiqlite() {
             client.query_as(sql, params!(user_id)).await?
         } else {
-            DB::pg_query_map(sql, &[&user_id], 2).await?
+            DB::pg_query(sql, &[&user_id], 2).await?
         };
 
         client
@@ -389,7 +389,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
         let pks = if is_hiqlite() {
             client.query_as(sql, params!(user_id)).await?
         } else {
-            DB::pg_query_map(sql, &[&user_id], 2).await?
+            DB::pg_query(sql, &[&user_id], 2).await?
         };
 
         client

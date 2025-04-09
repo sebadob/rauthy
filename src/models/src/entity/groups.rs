@@ -8,15 +8,21 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use tokio_pg_mapper_derive::PostgresMapper;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema, PostgresMapper)]
-#[pg_mapper(table = "groups")]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Group {
     pub id: String,
     pub name: String,
+}
+
+impl From<tokio_postgres::Row> for Group {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            name: row.get("name"),
+        }
+    }
 }
 
 // CRUD

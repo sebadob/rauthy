@@ -10,10 +10,8 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
-use tokio_pg_mapper_derive::PostgresMapper;
 
-#[derive(Clone, Serialize, Deserialize, sqlx::FromRow, PostgresMapper)]
-#[pg_mapper(table = "api_keys")]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ApiKeyEntity {
     pub name: String,
     pub secret: Vec<u8>,
@@ -21,6 +19,19 @@ pub struct ApiKeyEntity {
     pub expires: Option<i64>,
     pub enc_key_id: String,
     pub access: Vec<u8>,
+}
+
+impl From<tokio_postgres::Row> for ApiKeyEntity {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            name: row.get("name"),
+            secret: row.get("secret"),
+            created: row.get("created"),
+            expires: row.get("expires"),
+            enc_key_id: row.get("enc_key_id"),
+            access: row.get("access"),
+        }
+    }
 }
 
 impl Debug for ApiKeyEntity {

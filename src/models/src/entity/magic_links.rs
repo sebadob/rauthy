@@ -85,7 +85,7 @@ impl Display for MagicLinkUsage {
     }
 }
 
-#[derive(Clone, sqlx::FromRow, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct MagicLink {
     pub id: String,
     pub user_id: String,
@@ -197,7 +197,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         let res = if is_hiqlite() {
             DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_map_one(sql, &[&id]).await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         Ok(res)
@@ -208,7 +208,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         let res = if is_hiqlite() {
             DB::hql().query_as_one(sql, params!(user_id)).await?
         } else {
-            DB::pg_query_map_one(sql, &[&user_id]).await?
+            DB::pg_query_one(sql, &[&user_id]).await?
         };
 
         Ok(res)

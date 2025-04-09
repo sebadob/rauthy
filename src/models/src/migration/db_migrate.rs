@@ -33,7 +33,7 @@ use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_error::ErrorResponse;
 use semver::Version;
 use serde::Deserialize;
-use sqlx::{FromRow, Row, query};
+use std::env;
 use std::fmt::Debug;
 use std::str::FromStr;
 use tracing::{debug, info};
@@ -218,7 +218,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     inserts::devices(before).await?;
 
     // REFRESH TOKENS DEVICES
-    debug!("Migrating table: devices");
+    debug!("Migrating table: refresh_tokens_devices");
     let before =
         query_sqlite::<RefreshTokenDevice>(&conn, "SELECT * FROM refresh_tokens_devices").await?;
     inserts::refresh_tokens_devices(before).await?;
@@ -259,234 +259,203 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     Ok(())
 }
 
-pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorResponse> {
-    info!("Starting migration to another DB");
+pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
+    info!("Starting migration from Postgres to another DB");
+
+    let host = env::var("MIGRATE_PG_HOST").expect("MIGRATE_PG_HOST is not set");
+    let port = env::var("MIGRATE_PG_PORT")
+        .unwrap_or_else(|_| "5432".to_string())
+        .parse::<u16>()
+        .expect("Cannot parse MIGRATE_PG_PORT to u16");
+    let user = env::var("MIGRATE_PG_USER").expect("MIGRATE_PG_USER is not set");
+    let password = env::var("MIGRATE_PG_PASSWORD").expect("MIGRATE_PG_PASSWORD is not set");
+    let db_name = env::var("MIGRATE_PG_DB_NAME").unwrap_or_else(|_| "rauthy".to_string());
+    let pool = DB::connect_postgres(&host, port, &user, &password, &db_name, 1).await?;
+    let cl = pool.get().await?;
 
     // before doing anything, make sure that we are on the same feature version
-    let res = query!("SELECT data FROM config WHERE id = 'db_version'")
-        .fetch_one(&db_from)
-        .await?;
-    let bytes = res
-        .data
-        .expect("to get 'data' back from the AppVersion query");
+    let mut rows: Vec<ConfigEntity> =
+        DB::pg_query_map_with(&cl, "SELECT * FROM config WHERE id = 'db_version'", &[], 1).await?;
+    if rows.is_empty() {
+        panic!("The MIGRATE_DB_FROM database is empty or too old");
+    }
+    let bytes = rows.swap_remove(0).data;
     let version = bincode::deserialize::<DbVersion>(&bytes)?.version;
     check_feature_version_migrate(version);
 
     // CONFIG
     debug!("Migrating table: config");
-    let before =
-        sqlx::query_as::<_, ConfigEntity>("SELECT * FROM config WHERE id = 'password_policy'")
-            .fetch_all(&db_from)
-            .await?;
+    let before = DB::pg_query_map_with(
+        &cl,
+        "SELECT * FROM config WHERE id = 'password_policy'",
+        &[],
+        1,
+    )
+    .await?;
     inserts::config(before).await?;
 
     // API KEYS
     debug!("Migrating table: api_keys");
-    let before = sqlx::query_as::<_, ApiKeyEntity>("SELECT * FROM api_keys")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM api_keys", &[], 0).await?;
     inserts::api_keys(before).await?;
 
     // The users table has a FK to auth_providers - the order is important here!
     // AUTH PROVIDERS
     debug!("Migrating table: auth_providers");
-    let before = sqlx::query_as::<_, AuthProvider>("SELECT * FROM auth_providers")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM auth_providers", &[], 0).await?;
     inserts::auth_providers(before).await?;
 
     // AUTH PROVIDER LOGOS
     debug!("Migrating table: auth_provider_logos");
-    let before = sqlx::query_as::<_, Logo>(
+    let before = DB::pg_query_map_with(
+        &cl,
         "SELECT auth_provider_id AS id, res, content_type, data FROM auth_provider_logos",
+        &[],
+        0,
     )
-    .fetch_all(&db_from)
     .await?;
     inserts::auth_provider_logos(before).await?;
 
     // PICTURES
     debug!("Migrating table: pictures");
-    let before = sqlx::query_as::<_, UserPicture>("SELECT * FROM pictures")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM pictures", &[], 0).await?;
     inserts::pictures(before).await?;
 
     // USERS
-    debug!("Migrating table: users"); // TODO fails on FK??
-    let before = sqlx::query_as::<_, User>("SELECT * FROM users")
-        .fetch_all(&db_from)
-        .await?;
+    debug!("Migrating table: users");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM users", &[], 2).await?;
     debug!("before users insert");
     inserts::users(before).await?;
     debug!("after users insert");
 
     // PASSKEYS
     debug!("Migrating table: passkeys");
-    let before = sqlx::query_as::<_, PasskeyEntity>("SELECT * FROM passkeys")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM passkeys", &[], 0).await?;
     inserts::passkeys(before).await?;
 
     // Do not change the order - tables below have FKs to clients
     // CLIENTS
     debug!("Migrating table: clients");
-    let before = sqlx::query_as::<_, Client>("SELECT * FROM clients")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM clients", &[], 2).await?;
     inserts::clients(before).await?;
 
     // CLIENTS DYN
     debug!("Migrating table: clients_dyn");
-    let before = sqlx::query_as::<_, ClientDyn>("SELECT * FROM clients_dyn")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM clients_dyn", &[], 0).await?;
     inserts::clients_dyn(before).await?;
 
     // CLIENT LOGOS
     debug!("Migrating table: client_logos");
-    let before = sqlx::query_as::<_, Logo>(
+    let before = DB::pg_query_map_with(
+        &cl,
         "SELECT client_id AS id, res, content_type, data FROM client_logos",
+        &[],
+        0,
     )
-    .fetch_all(&db_from)
     .await?;
     inserts::client_logos(before).await?;
 
     // GROUPS
     debug!("Migrating table: groups");
-    let before = sqlx::query_as::<_, Group>("SELECT * FROM groups")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM groups", &[], 4).await?;
     inserts::groups(before).await?;
 
     // JWKS
     debug!("Migrating table: jwks");
-    let before = sqlx::query_as::<_, Jwk>("SELECT * FROM jwks")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM jwks", &[], 8).await?;
     inserts::jwks(before).await?;
 
     // MAGIC LINKS
     debug!("Migrating table: magic_links");
-    let before = sqlx::query_as::<_, MagicLink>("SELECT * FROM magic_links")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM magic_links", &[], 0).await?;
     inserts::magic_links(before).await?;
 
     // PASSWORD POLICY
     debug!("Migrating table: password_policy");
-    let res = sqlx::query("SELECT data FROM config WHERE id = 'password_policy'")
-        .fetch_one(&db_from)
-        .await?;
-    let bytes: Vec<u8> = res.get("data");
+    let mut rows: Vec<ConfigEntity> = DB::pg_query_map_with(
+        &cl,
+        "SELECT data FROM config WHERE id = 'password_policy'",
+        &[],
+        1,
+    )
+    .await?;
+    let bytes = rows.swap_remove(0).data;
     inserts::password_policy(bytes).await?;
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
-    let before = sqlx::query_as::<_, RefreshToken>("SELECT * FROM refresh_tokens")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM refresh_tokens", &[], 0).await?;
     inserts::refresh_tokens(before).await?;
 
     // ROLES
     debug!("Migrating table: roles");
-    let before = sqlx::query_as::<_, Role>("SELECT * FROM roles")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM roles", &[], 6).await?;
     inserts::roles(before).await?;
 
     // SCOPES
     debug!("Migrating table: scopes");
-    let before = sqlx::query_as::<_, Scope>("SELECT * FROM scopes")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM scopes", &[], 0).await?;
     inserts::scopes(before).await?;
 
     // EVENTS
     debug!("Migrating table: events");
-    let before = sqlx::query("SELECT * FROM events")
-        .fetch_all(&db_from)
-        .await?
-        .into_iter()
-        .map(|row| Event::from_row(&row).unwrap())
-        .collect::<Vec<_>>();
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM events", &[], 32).await?;
     inserts::events(before).await?;
 
     // USER ATTR CONFIG
     debug!("Migrating table: user_attr_config");
-    let before = sqlx::query_as::<_, UserAttrConfigEntity>("SELECT * FROM user_attr_config")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM user_attr_config", &[], 0).await?;
     inserts::user_attr_config(before).await?;
 
     // USER ATTR VALUES
     debug!("Migrating table: user_attr_values");
-    let before = sqlx::query_as::<_, UserAttrValueEntity>("SELECT * FROM user_attr_values")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM user_attr_values", &[], 0).await?;
     inserts::user_attr_values(before).await?;
 
     // USERS VALUES
     debug!("Migrating table: users_values");
-    let before = sqlx::query_as::<_, UserValues>("SELECT * FROM users_values")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM users_values", &[], 0).await?;
     inserts::users_values(before).await?;
 
     // DEVICES
     debug!("Migrating table: devices");
-    let before = sqlx::query_as::<_, DeviceEntity>("SELECT * FROM devices")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM devices", &[], 0).await?;
     inserts::devices(before).await?;
 
     // REFRESH TOKENS DEVICES
-    debug!("Migrating table: devices");
-    let before = sqlx::query_as::<_, RefreshTokenDevice>("SELECT * FROM refresh_tokens_devices")
-        .fetch_all(&db_from)
-        .await?;
+    debug!("Migrating table: refresh_tokens_devices");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM refresh_tokens_devices", &[], 0).await?;
     inserts::refresh_tokens_devices(before).await?;
 
     // SESSIONS
     debug!("Migrating table: sessions");
-    let before = sqlx::query_as::<_, Session>("SELECT * FROM sessions")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM sessions", &[], 16).await?;
     inserts::sessions(before).await?;
 
     // USER LOGIN STATES
     debug!("Migrating table: user_login_states");
-    let before = sqlx::query_as::<_, UserLoginState>("SELECT * FROM user_login_states")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM user_login_states", &[], 0).await?;
     inserts::user_login_states(before).await?;
 
     // FAILED BACKCHANNEL LOGOUTS
     debug!("Migrating table: failed_backchannel_logouts");
     let before =
-        sqlx::query_as::<_, FailedBackchannelLogout>("SELECT * FROM failed_backchannel_logouts")
-            .fetch_all(&db_from)
-            .await?;
+        DB::pg_query_map_with(&cl, "SELECT * FROM failed_backchannel_logouts", &[], 0).await?;
     inserts::failed_backchannel_logouts(before).await?;
 
     // RECENT PASSWORDS
     debug!("Migrating table: recent_passwords");
-    let before = sqlx::query_as::<_, RecentPasswordsEntity>("SELECT * FROM recent_passwords")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM recent_passwords", &[], 0).await?;
     inserts::recent_passwords(before).await?;
 
     // THEMES
     debug!("Migrating table: themes");
-    let before = sqlx::query_as::<_, ThemeCssFull>("SELECT * FROM themes")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM themes", &[], 0).await?;
     inserts::themes(before).await?;
 
     // WEBIDS
     debug!("Migrating table: webids");
-    let before = sqlx::query_as::<_, WebId>("SELECT * FROM webids")
-        .fetch_all(&db_from)
-        .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM webids", &[], 0).await?;
     inserts::webids(before).await?;
 
     Ok(())

@@ -11,19 +11,14 @@ use tracing::warn;
 pub async fn migrate_dev_data(issuer: &str) -> Result<(), ErrorResponse> {
     warn!("Migrating DEV DATA - DO NOT USE IN PRODUCTION!");
 
+    let sql = "SELECT * FROM jwks";
     let needs_migration = if is_hiqlite() {
-        match DB::hql()
-            .query_as::<Jwk, _>("SELECT * FROM jwks", params!())
-            .await
-        {
+        match DB::hql().query_as::<Jwk, _>(sql, params!()).await {
             Ok(res) => res.is_empty(),
             Err(_) => true,
         }
     } else {
-        match sqlx::query_as::<_, Jwk>("SELECT * FROM jwks")
-            .fetch_all(DB::conn_sqlx())
-            .await
-        {
+        match DB::pg_query::<Jwk>(sql, &[], 8).await {
             Ok(res) => res.is_empty(),
             Err(_) => true,
         }
