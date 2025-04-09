@@ -3,14 +3,11 @@ use actix_web::http::header::{ACCEPT_LANGUAGE, HeaderValue};
 use rauthy_common::constants::COOKIE_LOCALE;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::Type;
 use std::fmt::{Display, Formatter};
 use tracing::debug;
 
 // Note: Updating this enum will require an update on the LANGUAGES constant for the frontend too
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Type, strum::EnumIter)]
-#[sqlx(type_name = "varchar")]
-#[sqlx(rename_all = "lowercase")]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, strum::EnumIter)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
     En,

@@ -13,7 +13,6 @@ use rauthy_common::constants::{
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Row};
 use std::cmp::max;
 use tokio::time;
 use utoipa::ToSchema;
@@ -110,7 +109,7 @@ pub struct PasswordHashTime {
     pub time_taken: u32,
 }
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PasswordPolicy {
     pub length_min: i32,
     pub length_max: i32,
@@ -122,27 +121,34 @@ pub struct PasswordPolicy {
     pub not_recently_used: Option<i32>,
 }
 
+impl From<tokio_postgres::Row> for PasswordPolicy {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            length_min: row.get("length_min"),
+            length_max: row.get("length_max"),
+            include_lower_case: row.get("include_lower_case"),
+            include_upper_case: row.get("include_upper_case"),
+            include_digits: row.get("include_digits"),
+            include_special: row.get("include_special"),
+            valid_days: row.get("valid_days"),
+            not_recently_used: row.get("not_recently_used"),
+        }
+    }
+}
+
 // CRUD
 impl PasswordPolicy {
     pub async fn find() -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX_PASSWORD_RULES).await? {
             return Ok(slf);
         }
 
+        let sql = "SELECT data FROM config WHERE id = 'password_policy'";
         let bytes: Vec<u8> = if is_hiqlite() {
-            DB::client()
-                .query_raw_one(
-                    "SELECT data FROM config WHERE id = 'password_policy'",
-                    params!(),
-                )
-                .await?
-                .get("data")
+            DB::hql().query_raw_one(sql, params!()).await?.get("data")
         } else {
-            sqlx::query("SELECT data FROM config WHERE id = 'password_policy'")
-                .fetch_one(DB::conn())
-                .await?
-                .get("data")
+            DB::pg_query_one_row(sql, &[]).await?.get("data")
         };
         let policy = bincode::deserialize::<Self>(&bytes)?;
 
@@ -154,25 +160,16 @@ impl PasswordPolicy {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let slf = bincode::serialize(&self)?;
+        let data = bincode::serialize(&self)?;
 
+        let sql = "UPDATE config SET data = $1 WHERE id = 'password_policy'";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "UPDATE config SET data = $1 WHERE id = 'password_policy'",
-                    params!(slf),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(data)).await?;
         } else {
-            sqlx::query!(
-                "UPDATE config SET data = $1 WHERE id = 'password_policy'",
-                slf
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&data]).await?;
         }
 
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_PASSWORD_RULES, self, CACHE_TTL_APP)
             .await?;
 
@@ -208,71 +205,52 @@ impl From<PasswordPolicy> for PasswordPolicyResponse {
     }
 }
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecentPasswordsEntity {
     pub user_id: String,
     // password hashes separated by \n
     pub passwords: String,
 }
 
+impl From<tokio_postgres::Row> for RecentPasswordsEntity {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            user_id: row.get("user_id"),
+            passwords: row.get("passwords"),
+        }
+    }
+}
+
 impl RecentPasswordsEntity {
     pub async fn create(user_id: &str, passwords: String) -> Result<(), ErrorResponse> {
+        let sql = "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)",
-                    params!(user_id, passwords),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(user_id, passwords)).await?;
         } else {
-            sqlx::query!(
-                "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)",
-                user_id,
-                passwords,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&user_id, &passwords]).await?;
         }
 
         Ok(())
     }
 
     pub async fn find(user_id: &str) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM recent_passwords WHERE user_id = $1";
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as_one(
-                    "SELECT * FROM recent_passwords WHERE user_id = $1",
-                    params!(user_id),
-                )
-                .await?
+            DB::hql().query_as_one(sql, params!(user_id)).await?
         } else {
-            sqlx::query_as!(
-                Self,
-                "SELECT * FROM recent_passwords WHERE user_id = $1",
-                user_id,
-            )
-            .fetch_one(DB::conn())
-            .await?
+            DB::pg_query_one(sql, &[&user_id]).await?
         };
         Ok(res)
     }
 
     pub async fn save(self) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE recent_passwords SET passwords = $1 WHERE user_id = $2";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "UPDATE recent_passwords SET passwords = $1 WHERE user_id = $2",
-                    params!(self.passwords, self.user_id),
-                )
+            DB::hql()
+                .execute(sql, params!(self.passwords, self.user_id))
                 .await?;
         } else {
-            sqlx::query!(
-                "UPDATE recent_passwords SET passwords = $1 WHERE user_id = $2",
-                self.passwords,
-                self.user_id,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&self.passwords, &self.user_id]).await?;
         }
         Ok(())
     }

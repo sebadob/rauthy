@@ -42,7 +42,7 @@ const IDX: &str = ".well-known";
 
 impl WellKnown {
     pub async fn json(data: &web::Data<AppState>) -> Result<String, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX).await? {
             return Ok(slf);
         }
@@ -71,9 +71,7 @@ impl WellKnown {
         let slf = Self::new(&data.issuer, scopes);
         let json = serde_json::to_string(&slf)?;
 
-        DB::client()
-            .put(Cache::App, IDX, &json, CACHE_TTL_APP)
-            .await?;
+        DB::hql().put(Cache::App, IDX, &json, CACHE_TTL_APP).await?;
 
         Ok(())
     }

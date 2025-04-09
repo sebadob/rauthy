@@ -108,7 +108,7 @@ impl HtmlCached {
         let lang = Language::try_from(&req).unwrap_or_default();
         debug!("lang: {}", lang);
         let cache_key = if with_cache {
-            if let Some(bytes) = DB::client()
+            if let Some(bytes) = DB::hql()
                 .get_bytes(Cache::Html, self.cache_key(&lang, encoding))
                 .await?
             {
@@ -168,7 +168,7 @@ impl HtmlCached {
         };
 
         if with_cache {
-            DB::client()
+            DB::hql()
                 .put_bytes(Cache::Html, cache_key, body_bytes.clone(), None)
                 .await?;
         }

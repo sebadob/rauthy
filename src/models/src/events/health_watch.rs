@@ -14,7 +14,7 @@ pub async fn watch_health(tx_events: flume::Sender<Event>) {
     loop {
         interval.tick().await;
 
-        let cache_healthy = DB::client().is_healthy_cache().await.is_ok();
+        let cache_healthy = DB::hql().is_healthy_cache().await.is_ok();
 
         let db_healthy = if !is_db_alive().await {
             // wait for a few seconds and try again before alerting

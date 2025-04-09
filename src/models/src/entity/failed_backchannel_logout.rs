@@ -4,7 +4,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Deserialize)]
 pub struct FailedBackchannelLogout {
     pub client_id: String,
     // both `sub` and `sid` may be empty but cannot be NULL because Postgres requires
@@ -12,6 +12,17 @@ pub struct FailedBackchannelLogout {
     pub sub: String,
     pub sid: String,
     pub retry_count: i32,
+}
+
+impl From<tokio_postgres::Row> for FailedBackchannelLogout {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            client_id: row.get("client_id"),
+            sub: row.get("sub"),
+            sid: row.get("sid"),
+            retry_count: row.get("retry_count"),
+        }
+    }
 }
 
 impl FailedBackchannelLogout {
@@ -23,90 +34,54 @@ impl FailedBackchannelLogout {
         let sub = sub.unwrap_or_default();
         let sid = sid.unwrap_or_default();
 
+        let sql = r#"
+INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
+VALUES ($1, $2, $3, 0)
+ON CONFLICT (client_id, sub, sid)
+DO UPDATE SET retry_count = retry_count + 1"#;
+
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    r#"
-INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
-VALUES ($1, $2, $3, 0)
-ON CONFLICT (client_id, sub, sid)
-DO UPDATE SET retry_count = retry_count + 1"#,
-                    params!(client_id, sub, sid),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(client_id, sub, sid)).await?;
         } else {
-            sqlx::query!(
-                r#"
-INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
-VALUES ($1, $2, $3, 0)
-ON CONFLICT (client_id, sub, sid)
-DO UPDATE SET retry_count = failed_backchannel_logouts.retry_count + 1"#,
-                client_id,
-                sub,
-                sid,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&client_id, &sub, &sid]).await?;
         }
 
         Ok(())
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM failed_backchannel_logouts";
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as("SELECT * FROM failed_backchannel_logouts", params!())
-                .await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM failed_backchannel_logouts")
-                .fetch_all(DB::conn())
-                .await?
+            DB::pg_query(sql, &[], 0).await?
         };
 
         Ok(res)
     }
 
     pub async fn delete(self) -> Result<(), ErrorResponse> {
-        if is_hiqlite() {
-            DB::client()
-                .execute(
-                    r#"
+        let sql = r#"
 DELETE FROM failed_backchannel_logouts
-WHERE client_id = $1 AND sub = $2 AND sid = $3"#,
-                    params!(self.client_id, self.sub, self.sid),
-                )
+WHERE client_id = $1 AND sub = $2 AND sid = $3"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(sql, params!(self.client_id, self.sub, self.sid))
                 .await?;
         } else {
-            sqlx::query!(
-                r#"
-DELETE FROM failed_backchannel_logouts
-WHERE client_id = $1 AND sub = $2 AND sid = $3"#,
-                self.client_id,
-                self.sub,
-                self.sid
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&self.client_id, &self.sub, &self.sid]).await?;
         }
 
         Ok(())
     }
 
     pub async fn delete_all_by_client(client_id: String) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM failed_backchannel_logouts WHERE client_id = $1";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "DELETE FROM failed_backchannel_logouts WHERE client_id = $1",
-                    params!(client_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(client_id)).await?;
         } else {
-            sqlx::query!(
-                "DELETE FROM failed_backchannel_logouts WHERE client_id = $1",
-                client_id,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&client_id]).await?;
         }
 
         Ok(())

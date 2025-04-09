@@ -23,7 +23,7 @@ pub async fn password_expiry_checker(data: web::Data<AppState>) {
     loop {
         sleep_schedule_next(&schedule).await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!(
                 "Running HA mode without being the leader - skipping password_expiry_checker scheduler"
             );
@@ -39,24 +39,14 @@ pub async fn password_expiry_checker(data: web::Data<AppState>) {
         let lower = now.add(chrono::Duration::days(9)).timestamp();
         let upper = now.add(chrono::Duration::days(10)).timestamp();
 
+        let sql = "SELECT * FROM users WHERE password_expires <= $1 AND password_expires > $2";
         let expiring_users: Result<Vec<User>, ErrorResponse> = if is_hiqlite() {
-            DB::client()
-                .query_as(
-                    "SELECT * FROM users WHERE password_expires <= $1 AND password_expires > $2",
-                    params!(upper, lower),
-                )
+            DB::hql()
+                .query_as(sql, params!(upper, lower))
                 .await
                 .map_err(ErrorResponse::from)
         } else {
-            sqlx::query_as!(
-                User,
-                "SELECT * FROM users WHERE password_expires <= $1 AND password_expires > $2",
-                upper,
-                lower
-            )
-            .fetch_all(DB::conn())
-            .await
-            .map_err(ErrorResponse::from)
+            DB::pg_query(sql, &[&upper, &lower], 0).await
         };
 
         match expiring_users {

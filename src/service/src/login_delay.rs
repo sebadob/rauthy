@@ -27,7 +27,7 @@ pub async fn handle_login_delay(
     res: Result<HttpResponse, ErrorResponse>,
     has_password_been_hashed: bool,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let client = DB::client();
+    let client = DB::hql();
     let success_time: i64 = client
         .get(Cache::App, IDX_LOGIN_TIME)
         .await?

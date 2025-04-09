@@ -123,6 +123,7 @@ pub async fn get_authorize(
         false
     };
 
+    debug!("1");
     // check if the user needs to do the Webauthn login each time
     let mut action = FrontendAction::None;
     if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA)) {
@@ -139,6 +140,7 @@ pub async fn get_authorize(
         }
     }
 
+    debug!("2");
     // check for `prompt=no-prompt`
     if !force_new_session
         && params
@@ -152,8 +154,11 @@ pub async fn get_authorize(
         return Ok(ErrorHtml::response(body, status));
     }
 
+    debug!("3");
     let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
+    debug!("4");
     let logo_updated = Logo::find_updated(&client.id, &LogoType::Client).await?;
+    debug!("5");
 
     // if the user is still authenticated and everything is valid -> immediate refresh
     if !force_new_session && principal.validate_session_auth().is_ok() {
@@ -191,6 +196,7 @@ pub async fn get_authorize(
         Session::new(*SESSION_LIFETIME, Some(real_ip_from_req(&req)?))
     };
 
+    debug!("6");
     if let Err(err) = session.save().await {
         let status = err.status_code();
         let body = Error1Html::build(&lang, theme_ts, status, err.message);

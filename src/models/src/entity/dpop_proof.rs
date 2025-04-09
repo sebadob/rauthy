@@ -36,7 +36,7 @@ impl DPoPNonce {
             value: get_rand(32),
         };
 
-        let client = DB::client();
+        let client = DB::hql();
         client
             .put(Cache::DPoPNonce, "latest", &slf, *CACHE_TTL_DPOP_NONCE)
             .await?;
@@ -58,14 +58,14 @@ impl DPoPNonce {
     /// Checks the validity of the given DPoP nonce value
     pub async fn is_valid(value: String) -> bool {
         let slf: Result<Option<Self>, hiqlite::Error> =
-            DB::client().get(Cache::DPoPNonce, value).await;
+            DB::hql().get(Cache::DPoPNonce, value).await;
         slf.is_ok()
     }
 
     /// Always returns the value of the latest valid DPoP nonce which is valid for at least
     /// 15 more seconds or longer.
     pub async fn get_latest() -> Result<String, ErrorResponse> {
-        let slf: Option<Self> = DB::client().get(Cache::DPoPNonce, "latest").await?;
+        let slf: Option<Self> = DB::hql().get(Cache::DPoPNonce, "latest").await?;
         match slf {
             None => Self::new_value().await,
             Some(slf) => {

@@ -2,7 +2,7 @@ use crate::database::{Cache, DB};
 use crate::entity::auth_providers::AuthProviderTemplate;
 use actix_web::web;
 use chrono::Utc;
-use hiqlite::{Param, Row, params};
+use hiqlite::{Param, params};
 use image::imageops::FilterType;
 use image::{EncodableLayout, ImageFormat};
 use jwt_simple::prelude::{Deserialize, Serialize};
@@ -11,7 +11,6 @@ use rauthy_common::constants::{
 };
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use sqlx::{query, query_as};
 use std::io::Cursor;
 use svg_hush::data_url_filter;
 use tracing::debug;
@@ -23,10 +22,9 @@ const RES_PROVIDER_LOGO: u32 = 20;
 // The default height for any logo how it will be saved for possible later use
 const RES_LATER_USE: u32 = 128;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, postgres_types::FromSql)]
 #[serde(rename_all = "lowercase")]
-#[sqlx(type_name = "varchar")]
-#[sqlx(rename_all = "lowercase")]
+#[postgres(rename_all = "lowercase")]
 pub enum LogoRes {
     Small,
     Medium,
@@ -65,7 +63,7 @@ pub enum LogoType {
     AuthProvider,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Logo {
     pub id: String,
     pub res: LogoRes,
@@ -74,8 +72,20 @@ pub struct Logo {
     pub updated: i64,
 }
 
+impl From<tokio_postgres::Row> for Logo {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            res: LogoRes::from(row.get::<_, String>("res")),
+            content_type: row.get("content_type"),
+            data: row.get("data"),
+            updated: row.get("updated"),
+        }
+    }
+}
+
 impl<'r> From<hiqlite::Row<'r>> for Logo {
-    fn from(mut row: Row<'r>) -> Self {
+    fn from(mut row: hiqlite::Row<'r>) -> Self {
         Self {
             id: row.get("id"),
             res: LogoRes::from(row.get::<String>("res")),
@@ -90,39 +100,27 @@ impl Logo {
     pub async fn delete(id: &str, typ: &LogoType) -> Result<(), ErrorResponse> {
         match typ {
             LogoType::Client => {
+                let sql = "DELETE FROM client_logos WHERE client_id = $1";
                 if is_hiqlite() {
-                    DB::client()
-                        .execute("DELETE FROM client_logos WHERE client_id = $1", params!(id))
-                        .await?;
+                    DB::hql().execute(sql, params!(id)).await?;
                 } else {
-                    query!("DELETE FROM client_logos WHERE client_id = $1", id)
-                        .execute(DB::conn())
-                        .await?;
+                    DB::pg_execute(sql, &[&id]).await?;
                 }
             }
             LogoType::AuthProvider => {
+                let sql = "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1";
                 if is_hiqlite() {
-                    DB::client()
-                        .execute(
-                            "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1",
-                            params!(id),
-                        )
-                        .await?;
+                    DB::hql().execute(sql, params!(id)).await?;
                 } else {
-                    query!(
-                        "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1",
-                        id
-                    )
-                    .execute(DB::conn())
-                    .await?;
+                    DB::pg_execute(sql, &[&id]).await?;
                 }
             }
         };
 
-        DB::client()
+        DB::hql()
             .delete(Cache::App, Self::cache_idx(typ, id))
             .await?;
-        DB::client()
+        DB::hql()
             .delete(Cache::App, Self::cache_idx_updated(typ, id))
             .await?;
 
@@ -246,25 +244,25 @@ impl Logo {
     async fn upsert_self(&self, typ: &LogoType, with_cache: bool) -> Result<(), ErrorResponse> {
         let res = self.res.as_str();
 
-        if is_hiqlite() {
-            let sql = match typ {
-                LogoType::Client => {
-                    r#"
+        let sql = match typ {
+            LogoType::Client => {
+                r#"
 INSERT INTO client_logos (client_id, res, content_type, data, updated)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT(client_id, res) DO UPDATE
 SET content_type = $3, data = $4, updated = $5"#
-                }
-                LogoType::AuthProvider => {
-                    r#"
+            }
+            LogoType::AuthProvider => {
+                r#"
 INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data, updated)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT(auth_provider_id, res) DO UPDATE
 SET content_type = $3, data = $4, updated = $5"#
-                }
-            };
+            }
+        };
 
-            DB::client()
+        if is_hiqlite() {
+            DB::hql()
                 .execute(
                     sql,
                     params!(
@@ -277,42 +275,21 @@ SET content_type = $3, data = $4, updated = $5"#
                 )
                 .await?;
         } else {
-            match typ {
-                LogoType::Client => {
-                    query!(
-                        r#"
-INSERT INTO client_logos (client_id, res, content_type, data, updated)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT(client_id, res) DO UPDATE
-SET content_type = $3, data = $4, updated = $5"#,
-                        self.id,
-                        res,
-                        self.content_type,
-                        self.data,
-                        self.updated
-                    )
-                }
-                LogoType::AuthProvider => {
-                    query!(
-                        r#"
-INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data, updated)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT(auth_provider_id, res) DO UPDATE
-SET content_type = $3, data = $4, updated = $5"#,
-                        self.id,
-                        res,
-                        self.content_type,
-                        self.data,
-                        self.updated
-                    )
-                }
-            }
-            .execute(DB::conn())
+            DB::pg_execute(
+                sql,
+                &[
+                    &self.id,
+                    &res,
+                    &self.content_type,
+                    &self.data,
+                    &self.updated,
+                ],
+            )
             .await?;
         }
 
         if with_cache {
-            DB::client()
+            DB::hql()
                 .put(
                     Cache::App,
                     Self::cache_idx(typ, &self.id),
@@ -320,7 +297,7 @@ SET content_type = $3, data = $4, updated = $5"#,
                     CACHE_TTL_APP,
                 )
                 .await?;
-            DB::client()
+            DB::hql()
                 .put(
                     Cache::App,
                     Self::cache_idx_updated(typ, &self.id),
@@ -341,55 +318,27 @@ SET content_type = $3, data = $4, updated = $5"#,
         let res = res.as_str();
         let res_svg = LogoRes::Svg.as_str();
 
-        let slf = if is_hiqlite() {
-            let sql = match typ {
-                LogoType::Client => {
-                    r#"
+        let sql = match typ {
+            LogoType::Client => {
+                r#"
 SELECT client_id AS id, res, content_type, data, updated
 FROM client_logos
 WHERE client_id = $1 AND (res = $2 OR res = $3)"#
-                }
-                LogoType::AuthProvider => {
-                    r#"
+            }
+            LogoType::AuthProvider => {
+                r#"
 SELECT auth_provider_id AS id, res, content_type, data, updated
 FROM auth_provider_logos
 WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
-                }
-            };
-            DB::client()
+            }
+        };
+
+        let slf = if is_hiqlite() {
+            DB::hql()
                 .query_map_one(sql, params!(id, res, res_svg))
                 .await?
         } else {
-            match typ {
-                LogoType::Client => {
-                    query_as!(
-                        Self,
-                        r#"
-SELECT client_id AS id, res, content_type, data, updated
-FROM client_logos
-WHERE client_id = $1 AND (res = $2 OR res = $3)"#,
-                        id,
-                        res,
-                        res_svg,
-                    )
-                    .fetch_one(DB::conn())
-                    .await?
-                }
-                LogoType::AuthProvider => {
-                    query_as!(
-                        Self,
-                        r#"
-SELECT auth_provider_id AS id, res, content_type, data, updated
-FROM auth_provider_logos
-WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
-                        id,
-                        res,
-                        res_svg,
-                    )
-                    .fetch_one(DB::conn())
-                    .await?
-                }
-            }
+            DB::pg_query_one(sql, &[&id, &res, &res_svg]).await?
         };
 
         Ok(slf)
@@ -397,7 +346,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
 
     /// special fn because we only want to cache the small logos
     pub async fn find_cached(id: &str, typ: &LogoType) -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(typ, id)).await? {
             return Ok(slf);
         }
@@ -412,7 +361,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
     }
 
     pub async fn find_updated(id: &str, typ: &LogoType) -> Result<Option<i64>, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(updated) = client
             .get(Cache::App, Self::cache_idx_updated(typ, id))
             .await?
@@ -420,38 +369,23 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
             return Ok(updated);
         }
 
+        let sql = match typ {
+            LogoType::Client => "SELECT updated FROM client_logos WHERE client_id = $1 LIMIT 1",
+            LogoType::AuthProvider => {
+                "SELECT updated FROM auth_provider_logos WHERE auth_provider_id = $1 LIMIT 1"
+            }
+        };
         let updated = if is_hiqlite() {
-            let sql = match typ {
-                LogoType::Client => "SELECT updated FROM client_logos WHERE client_id = $1 LIMIT 1",
-                LogoType::AuthProvider => {
-                    "SELECT updated FROM auth_provider_logos WHERE auth_provider_id = $1 LIMIT 1"
-                }
-            };
-            DB::client()
+            DB::hql()
                 .query_raw(sql, params!(id))
                 .await?
                 .first_mut()
                 .map(|r| r.get::<i64>("updated"))
         } else {
-            match typ {
-                LogoType::Client => query!(
-                    "SELECT updated FROM client_logos WHERE client_id = $1 LIMIT 1",
-                    id,
-                )
-                .fetch_all(DB::conn())
+            DB::pg_query_rows(sql, &[&id], 1)
                 .await?
                 .first()
-                .map(|r| r.updated),
-
-                LogoType::AuthProvider => query!(
-                    "SELECT updated FROM auth_provider_logos WHERE auth_provider_id = $1 LIMIT 1",
-                    id,
-                )
-                .fetch_all(DB::conn())
-                .await?
-                .first()
-                .map(|r| r.updated),
-            }
+                .map(|r| r.get::<_, i64>("updated"))
         };
 
         client

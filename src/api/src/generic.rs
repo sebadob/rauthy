@@ -216,7 +216,7 @@ pub async fn get_login_time(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Generic, AccessRights::Read)?;
 
-    let login_time: u32 = DB::client()
+    let login_time: u32 = DB::hql()
         .get(Cache::App, IDX_LOGIN_TIME)
         .await?
         .unwrap_or(2000);
@@ -425,7 +425,7 @@ pub async fn get_health() -> impl Responder {
         })
     } else {
         let db_healthy = is_db_alive().await;
-        let cache_healthy = DB::client().is_healthy_cache().await.is_ok();
+        let cache_healthy = DB::hql().is_healthy_cache().await.is_ok();
 
         let body = HealthResponse {
             db_healthy,

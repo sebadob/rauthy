@@ -3,11 +3,10 @@ use chrono::{DateTime, Utc};
 use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use serde::Deserialize;
 use std::fmt::{Debug, Formatter};
 
-#[derive(FromRow, Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct RefreshToken {
     pub id: String,
     pub user_id: String,
@@ -31,6 +30,20 @@ impl Debug for RefreshToken {
             self.is_mfa,
             self.session_id
         )
+    }
+}
+
+impl From<tokio_postgres::Row> for RefreshToken {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            nbf: row.get("nbf"),
+            exp: row.get("exp"),
+            scope: row.get("scope"),
+            is_mfa: row.get("is_mfa"),
+            session_id: row.get("session_id"),
+        }
     }
 }
 
@@ -63,108 +76,69 @@ impl RefreshToken {
     }
 
     pub async fn delete(self) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens WHERE id = $1";
         if is_hiqlite() {
-            DB::client()
-                .execute("DELETE FROM refresh_tokens WHERE id = $1", params!(self.id))
-                .await?;
+            DB::hql().execute(sql, params!(self.id)).await?;
         } else {
-            sqlx::query!("DELETE FROM refresh_tokens WHERE id = $1", self.id)
-                .execute(DB::conn())
-                .await?;
+            DB::pg_execute(sql, &[&self.id]).await?;
         }
         Ok(())
     }
 
     pub async fn delete_by_sid(session_id: String) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens WHERE session_id = $1";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "DELETE FROM refresh_tokens WHERE session_id = $1",
-                    params!(session_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(session_id)).await?;
         } else {
-            sqlx::query!(
-                "DELETE FROM refresh_tokens WHERE session_id = $1",
-                session_id
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&session_id]).await?;
         }
         Ok(())
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM refresh_tokens";
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as("SELECT * FROM refresh_tokens", params!())
-                .await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM refresh_tokens")
-                .fetch_all(DB::conn())
-                .await?
+            DB::pg_query(sql, &[], 0).await?
         };
         Ok(res)
     }
 
     pub async fn invalidate_all() -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
-
+        let sql = "UPDATE refresh_tokens SET exp = $1 WHERE exp > $1";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "UPDATE refresh_tokens SET exp = $1 WHERE exp > $1",
-                    params!(now),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(now)).await?;
         } else {
-            sqlx::query!("UPDATE refresh_tokens SET exp = $1 WHERE exp > $1", now)
-                .execute(DB::conn())
-                .await?;
+            DB::pg_execute(sql, &[&now]).await?;
         }
 
         Ok(())
     }
 
     pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens WHERE user_id = $1";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "DELETE FROM refresh_tokens WHERE user_id = $1",
-                    params!(user_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(user_id)).await?;
         } else {
-            sqlx::query!("DELETE FROM refresh_tokens WHERE user_id = $1", user_id)
-                .execute(DB::conn())
-                .await?;
+            DB::pg_execute(sql, &[&user_id]).await?;
         }
         Ok(())
     }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
-
-        let slf = if is_hiqlite() {
-            DB::client()
-                .query_as_one::<Self, _>(
-                    "SELECT * FROM refresh_tokens WHERE id = $1 AND exp > $2",
-                    params!(id, now),
-                )
+        let sql = "SELECT * FROM refresh_tokens WHERE id = $1 AND exp > $2";
+        let slf: Self = if is_hiqlite() {
+            DB::hql()
+                .query_as_one(sql, params!(id, now))
                 .await
                 .map_err(|_| {
                     ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
                 })?
         } else {
-            sqlx::query_as!(
-                Self,
-                "SELECT * FROM refresh_tokens WHERE id = $1 AND exp > $2",
-                id,
-                now
-            )
-            .fetch_one(DB::conn())
-            .await
-            .map_err(|_| {
+            DB::pg_query_one(sql, &[&id, &now]).await.map_err(|_| {
                 ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
             })?
         };
@@ -172,13 +146,15 @@ impl RefreshToken {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        if is_hiqlite() {
-            DB::client()
-                .execute(
-                    r#"
+        let sql = r#"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7"#,
+ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
                         self.id.clone(),
                         self.user_id.clone(),
@@ -191,20 +167,18 @@ ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, sess
                 )
                 .await?;
         } else {
-            sqlx::query!(
-                r#"
-INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7"#,
-                self.id,
-                self.user_id,
-                self.nbf,
-                self.exp,
-                self.scope,
-                self.is_mfa,
-                self.session_id,
+            DB::pg_execute(
+                sql,
+                &[
+                    &self.id,
+                    &self.user_id,
+                    &self.nbf,
+                    &self.exp,
+                    &self.scope,
+                    &self.is_mfa,
+                    &self.session_id,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
 
@@ -214,17 +188,11 @@ ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, sess
 
 impl RefreshToken {
     pub async fn invalidate_all_for_user(user_id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens WHERE user_id = $1";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "DELETE FROM refresh_tokens WHERE user_id = $1",
-                    params!(user_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(user_id)).await?;
         } else {
-            sqlx::query!("DELETE FROM refresh_tokens WHERE user_id = $1", user_id)
-                .execute(DB::conn())
-                .await?;
+            DB::pg_execute(sql, &[&user_id]).await?;
         }
 
         Ok(())

@@ -3,6 +3,7 @@
 ## CURRENT WORK
 
 - greatly reduce the allowed clock skew during token validation and make it configurable
+- add `HIGHEST_COMPATIBLE_VERSION` to DB version check
 
 ## Stage 1 - essentials
 

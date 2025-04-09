@@ -14,7 +14,7 @@ pub async fn devices_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!("Running HA mode without being the leader - skipping devices_cleanup scheduler");
             continue;
         }
@@ -22,17 +22,13 @@ pub async fn devices_cleanup() {
         debug!("Running devices_cleanup scheduler");
 
         let threshold = Utc::now().sub(chrono::Duration::days(1)).timestamp();
-        if is_hiqlite() {
-            let res = DB::client()
-                .execute(
-                    r#"
+        let sql = r#"
 DELETE FROM devices
 WHERE access_exp < $1
-AND (refresh_exp IS NULL OR refresh_exp < $1)"#,
-                    params!(threshold),
-                )
-                .await;
+AND (refresh_exp IS NULL OR refresh_exp < $1)"#;
 
+        if is_hiqlite() {
+            let res = DB::hql().execute(sql, params!(threshold)).await;
             match res {
                 Ok(rows_affected) => {
                     debug!("Cleaned up {} expired devices", rows_affected);
@@ -42,19 +38,10 @@ AND (refresh_exp IS NULL OR refresh_exp < $1)"#,
                 }
             }
         } else {
-            let res = sqlx::query!(
-                r#"
-    DELETE FROM devices
-    WHERE access_exp < $1
-    AND (refresh_exp IS NULL OR refresh_exp < $1)"#,
-                threshold
-            )
-            .execute(DB::conn())
-            .await;
-
+            let res = DB::pg_execute(sql, &[&threshold]).await;
             match res {
-                Ok(r) => {
-                    debug!("Cleaned up {} expired devices", r.rows_affected());
+                Ok(rows_affected) => {
+                    debug!("Cleaned up {} expired devices", rows_affected);
                 }
                 Err(err) => {
                     error!("devices_cleanup error: {:?}", err)

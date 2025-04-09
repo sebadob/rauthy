@@ -227,7 +227,7 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
 
     // We need to clear the HTML cache to make sure the correct static
     // assets are referenced after an app upgrade with a newly built UI.
-    DB::client().clear_cache(Cache::Html).await.unwrap();
+    DB::hql().clear_cache(Cache::Html).await.unwrap();
 
     // trigger config builds to have them fast-failing on invalid config
     {
@@ -253,7 +253,7 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
     }
 
     actix.join().unwrap().unwrap();
-    DB::client().shutdown().await.unwrap();
+    DB::hql().shutdown().await.unwrap();
 
     Ok(())
 }

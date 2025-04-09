@@ -1,13 +1,13 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::DB;
 use actix_web::HttpRequest;
+use chrono::Utc;
 use hiqlite::{Param, params};
 use rauthy_common::constants::{PASSWORD_RESET_COOKIE_BINDING, PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::fmt::{Debug, Display, Formatter};
 use time::OffsetDateTime;
 use tracing::warn;
@@ -85,7 +85,7 @@ impl Display for MagicLinkUsage {
     }
 }
 
-#[derive(Clone, FromRow, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct MagicLink {
     pub id: String,
     pub user_id: String,
@@ -112,6 +112,20 @@ impl Debug for MagicLink {
     }
 }
 
+impl From<tokio_postgres::Row> for MagicLink {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            csrf_token: row.get("csrf_token"),
+            cookie: row.get("cookie"),
+            exp: row.get("exp"),
+            used: row.get("used"),
+            usage: row.get("usage"),
+        }
+    }
+}
+
 // CRUD
 impl MagicLink {
     pub async fn create(
@@ -131,12 +145,14 @@ impl MagicLink {
             usage: usage.to_string(),
         };
 
-        if is_hiqlite() {
-            DB::client()
-                .execute(
-                    r#"
+        let sql = r#"
 INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
+VALUES ($1, $2, $3, $4, $5, $6)"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
                         link.id.clone(),
                         link.user_id.clone(),
@@ -148,18 +164,17 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
-                r#"
-INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
-                link.id,
-                link.user_id,
-                link.csrf_token,
-                link.exp,
-                false,
-                link.usage,
+            DB::pg_execute(
+                sql,
+                &[
+                    &link.id,
+                    &link.user_id,
+                    &link.csrf_token,
+                    &link.exp,
+                    &false,
+                    &link.usage,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
 
@@ -167,98 +182,57 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
     }
 
     pub async fn delete_all_pwd_reset_for_user(user_id: String) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'password_reset%'";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'password_reset%'",
-                    params!(user_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(user_id)).await?;
         } else {
-            sqlx::query!(
-                "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'password_reset%'",
-                user_id,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&user_id]).await?;
         };
 
         Ok(())
     }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM magic_links WHERE id = $1";
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as_one("SELECT * FROM magic_links WHERE id = $1", params!(id))
-                .await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM magic_links WHERE id = $1", id)
-                .fetch_one(DB::conn())
-                .await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         Ok(res)
     }
 
     pub async fn find_by_user(user_id: String) -> Result<MagicLink, ErrorResponse> {
+        let sql = "SELECT * FROM magic_links WHERE user_id = $1";
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as_one(
-                    "SELECT * FROM magic_links WHERE user_id = $1",
-                    params!(user_id),
-                )
-                .await?
+            DB::hql().query_as_one(sql, params!(user_id)).await?
         } else {
-            sqlx::query_as!(
-                Self,
-                "SELECT * FROM magic_links WHERE user_id = $1",
-                user_id
-            )
-            .fetch_one(DB::conn())
-            .await?
+            DB::pg_query_one(sql, &[&user_id]).await?
         };
 
         Ok(res)
     }
 
     pub async fn invalidate_all_email_change(user_id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'email_change$%'";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'email_change$%'",
-                    params!(user_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(user_id)).await?;
         } else {
-            sqlx::query!(
-                "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'email_change$%'",
-                user_id,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&user_id]).await?;
         };
 
         Ok(())
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4",
-                    params!(self.cookie.clone(), self.exp, self.used, self.id.clone()),
-                )
+            DB::hql()
+                .execute(sql, params!(&self.cookie, self.exp, self.used, &self.id))
                 .await?;
         } else {
-            sqlx::query!(
-                "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4",
-                self.cookie,
-                self.exp,
-                self.used,
-                self.id,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&self.cookie, &self.exp, &self.used, &self.id]).await?;
         }
 
         Ok(())
@@ -268,7 +242,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 impl MagicLink {
     /// Sets the magic link as being expired and used.
     pub async fn invalidate(&mut self) -> Result<(), ErrorResponse> {
-        self.exp = OffsetDateTime::now_utc().unix_timestamp() - 10;
+        self.exp = Utc::now().timestamp() - 10;
         self.used = true;
         self.save().await
     }

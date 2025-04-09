@@ -1270,7 +1270,7 @@ pub async fn get_user_webid(
         language: user.language.into(),
     };
 
-    WebId::into_turtle(resp)
+    WebId::try_into_turtle(resp)
         .map(|content| HttpResponse::Ok().content_type(TEXT_TURTLE).body(content))
 }
 

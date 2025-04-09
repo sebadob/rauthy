@@ -2,7 +2,7 @@ use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
-use actix_web::cookie::{SameSite, time};
+use actix_web::cookie::SameSite;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, cookie, web};
 use chrono::Utc;
@@ -15,16 +15,15 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Row, query_as};
 use std::borrow::Cow;
+use std::cmp::max;
 use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
 use std::ops::Add;
 use std::str::FromStr;
-use time::OffsetDateTime;
 use tracing::{error, warn};
 
-#[derive(Clone, FromRow, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Session {
     pub id: String,
     pub csrf_token: String,
@@ -55,6 +54,23 @@ impl Debug for Session {
             self.last_seen,
             self.remote_ip
         )
+    }
+}
+
+impl From<tokio_postgres::Row> for Session {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            csrf_token: row.get("csrf_token"),
+            user_id: row.get("user_id"),
+            roles: row.get("roles"),
+            groups: row.get("groups"),
+            is_mfa: row.get("is_mfa"),
+            state: row.get("state"),
+            exp: row.get("exp"),
+            last_seen: row.get("last_seen"),
+            remote_ip: row.get("remote_ip"),
+        }
     }
 }
 
@@ -121,29 +137,22 @@ impl SessionState {
 // CRUD
 impl Session {
     pub async fn delete(self) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM sessions WHERE id = $1";
         if is_hiqlite() {
-            DB::client()
-                .execute("DELETE FROM sessions WHERE id = $1", params!(&self.id))
-                .await?;
+            DB::hql().execute(sql, params!(&self.id)).await?;
         } else {
-            sqlx::query!("DELETE FROM sessions WHERE id = $1", self.id)
-                .execute(DB::conn())
-                .await?;
+            DB::pg_execute(sql, &[&self.id]).await?;
         }
 
-        DB::client().delete(Cache::Session, self.id).await?;
+        DB::hql().delete(Cache::Session, self.id).await?;
 
         Ok(())
     }
 
     pub async fn delete_by_user(user_id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM sessions WHERE user_id = $1 RETURNING id";
         let sids: Vec<String> = if is_hiqlite() {
-            let rows = DB::client()
-                .execute_returning(
-                    "DELETE FROM sessions WHERE user_id = $1 RETURNING id",
-                    params!(user_id),
-                )
-                .await?;
+            let rows = DB::hql().execute_returning(sql, params!(user_id)).await?;
 
             let mut ids = Vec::with_capacity(rows.len());
             for row in rows {
@@ -151,21 +160,15 @@ impl Session {
             }
             ids
         } else {
-            let rows = sqlx::query!(
-                "DELETE FROM sessions WHERE user_id = $1 RETURNING id",
-                user_id
-            )
-            .fetch_all(DB::conn())
-            .await?;
-
+            let rows = DB::pg_query_rows(sql, &[&user_id], 2).await?;
             let mut ids = Vec::with_capacity(rows.len());
             for row in rows {
-                ids.push(row.id);
+                ids.push(row.get::<_, String>("id"));
             }
             ids
         };
 
-        let client = DB::client();
+        let client = DB::hql();
         for id in sids {
             client.delete(Cache::Session, id).await?;
         }
@@ -173,29 +176,18 @@ impl Session {
         Ok(())
     }
 
-    // Returns a session by id
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::Session, id.clone()).await? {
             return Ok(slf);
         }
 
-        let slf = if is_hiqlite() {
-            client
-                .query_as_one(
-                    "SELECT * FROM sessions WHERE id = $1 ORDER BY exp DESC",
-                    params!(id),
-                )
-                .await?
+        let sql = "SELECT * FROM sessions WHERE id = $1";
+        let slf: Self = if is_hiqlite() {
+            client.query_as_one(sql, params!(id)).await?
         } else {
-            sqlx::query_as!(
-                Self,
-                "SELECT * FROM sessions WHERE id = $1 ORDER BY exp DESC",
-                id
-            )
-            .fetch_one(DB::conn())
-            .await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         client
@@ -207,14 +199,11 @@ impl Session {
 
     // not cached -> only used in the admin ui and can get very big
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM sessions ORDER BY exp DESC";
         let sessions = if is_hiqlite() {
-            DB::client()
-                .query_as("SELECT * FROM sessions ORDER BY exp DESC", params!())
-                .await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM sessions ORDER BY exp DESC")
-                .fetch_all(DB::conn())
-                .await?
+            DB::pg_query(sql, &[], 4).await?
         };
         Ok(sessions)
     }
@@ -230,39 +219,25 @@ impl Session {
         #[allow(unused_assignments)]
         let mut res = None;
         let mut latest_ts = 0;
+        let size_hint = max(page_size as usize, 1);
 
         if let Some(token) = continuation_token {
             if backwards {
-                let mut rows: Vec<Self> = if is_hiqlite() {
-                    DB::client()
-                        .query_as(
-                            r#"
+                let sql = r#"
 SELECT *
 FROM sessions
 WHERE exp >= $1 AND id != $2
 ORDER BY exp ASC
 LIMIT $3
-OFFSET $4"#,
-                            params!(token.ts, token.id, page_size, offset),
-                        )
+OFFSET $4"#;
+
+                let mut rows: Vec<Self> = if is_hiqlite() {
+                    DB::hql()
+                        .query_as(sql, params!(token.ts, token.id, page_size, offset))
                         .await?
                 } else {
-                    sqlx::query_as!(
-                        Self,
-                        r#"
-SELECT *
-FROM sessions
-WHERE exp >= $1 AND id != $2
-ORDER BY exp ASC
-LIMIT $3
-OFFSET $4"#,
-                        token.ts,
-                        token.id,
-                        page_size,
-                        offset,
-                    )
-                    .fetch_all(DB::conn())
-                    .await?
+                    DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
+                        .await?
                 };
 
                 rows.reverse();
@@ -271,36 +246,21 @@ OFFSET $4"#,
                 }
                 res = Some(rows);
             } else {
-                let rows = if is_hiqlite() {
-                    DB::client()
-                        .query_as(
-                            r#"
+                let sql = r#"
 SELECT *
 FROM sessions
 WHERE exp <= $1 AND id != $2
 ORDER BY exp DESC
 LIMIT $3
-OFFSET $4"#,
-                            params!(token.ts, token.id, page_size, offset),
-                        )
+OFFSET $4"#;
+
+                let rows: Vec<Self> = if is_hiqlite() {
+                    DB::hql()
+                        .query_as(sql, params!(token.ts, token.id, page_size, offset))
                         .await?
                 } else {
-                    sqlx::query_as!(
-                        Self,
-                        r#"
-SELECT *
-FROM sessions
-WHERE exp <= $1 AND id != $2
-ORDER BY exp DESC
-LIMIT $3
-OFFSET $4"#,
-                        token.ts,
-                        token.id,
-                        page_size,
-                        offset,
-                    )
-                    .fetch_all(DB::conn())
-                    .await?
+                    DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
+                        .await?
                 };
 
                 if let Some(s) = rows.last() {
@@ -311,32 +271,17 @@ OFFSET $4"#,
         } else if backwards {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
-            let mut rows = if is_hiqlite() {
-                DB::client()
-                    .query_as(
-                        r#"
+            let sql = r#"
 SELECT *
 FROM sessions
 ORDER BY exp ASC
 LIMIT $1
-OFFSET $2"#,
-                        params!(page_size, offset),
-                    )
-                    .await?
+OFFSET $2"#;
+
+            let mut rows: Vec<Self> = if is_hiqlite() {
+                DB::hql().query_as(sql, params!(page_size, offset)).await?
             } else {
-                sqlx::query_as!(
-                    Self,
-                    r#"
-SELECT *
-FROM sessions
-ORDER BY exp ASC
-LIMIT $1
-OFFSET $2"#,
-                    page_size,
-                    offset,
-                )
-                .fetch_all(DB::conn())
-                .await?
+                DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
             };
 
             rows.reverse();
@@ -345,32 +290,17 @@ OFFSET $2"#,
             }
             res = Some(rows);
         } else {
-            let rows = if is_hiqlite() {
-                DB::client()
-                    .query_as(
-                        r#"
+            let sql = r#"
 SELECT *
 FROM sessions
 ORDER BY exp DESC
 LIMIT $1
-OFFSET $2"#,
-                        params!(page_size, offset),
-                    )
-                    .await?
+OFFSET $2"#;
+
+            let rows: Vec<Self> = if is_hiqlite() {
+                DB::hql().query_as(sql, params!(page_size, offset)).await?
             } else {
-                sqlx::query_as!(
-                    Self,
-                    r#"
-SELECT *
-FROM sessions
-ORDER BY exp DESC
-LIMIT $1
-OFFSET $2"#,
-                    page_size,
-                    offset,
-                )
-                .fetch_all(DB::conn())
-                .await?
+                DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
             };
 
             if let Some(s) = rows.last() {
@@ -391,34 +321,26 @@ OFFSET $2"#,
     /// Invalidates all sessions by setting the expiry to `now()`
     pub async fn invalidate_all() -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp() - 1;
+        let sql = "UPDATE sessions SET exp = $1 WHERE exp > $1";
 
         let rows_affected = if is_hiqlite() {
-            DB::client()
-                .execute("UPDATE sessions SET exp = $1 WHERE exp > $1", params!(now))
-                .await? as u64
+            DB::hql().execute(sql, params!(now)).await?
         } else {
-            sqlx::query!("UPDATE sessions SET exp = $1 WHERE exp > $1", now)
-                .execute(DB::conn())
-                .await?
-                .rows_affected()
+            DB::pg_execute(sql, &[&now]).await?
         };
         // at least the session used to invalidate all will always exist
         debug_assert!(rows_affected > 0);
 
-        DB::client().clear_cache(Cache::Session).await?;
+        DB::hql().clear_cache(Cache::Session).await?;
 
         Ok(())
     }
 
     /// Returns `Vec<SessionId>`
     pub async fn invalidate_for_user(uid: &str) -> Result<Vec<String>, ErrorResponse> {
+        let sql = "DELETE FROM sessions WHERE user_id = $1 RETURNING id";
         let sids: Vec<String> = if is_hiqlite() {
-            let rows = DB::client()
-                .execute_returning(
-                    "DELETE FROM sessions WHERE user_id = $1 RETURNING id",
-                    params!(uid),
-                )
-                .await?;
+            let rows = DB::hql().execute_returning(sql, params!(uid)).await?;
 
             let mut ids = Vec::with_capacity(rows.len());
             for row in rows {
@@ -426,11 +348,7 @@ OFFSET $2"#,
             }
             ids
         } else {
-            let rows = sqlx::query("DELETE FROM sessions WHERE user_id = $1 RETURNING id")
-                .bind(uid)
-                .fetch_all(DB::conn())
-                .await?;
-
+            let rows = DB::pg_query_rows(sql, &[&uid], 1).await?;
             let mut ids = Vec::with_capacity(rows.len());
             for row in rows {
                 ids.push(row.get("id"));
@@ -438,7 +356,7 @@ OFFSET $2"#,
             ids
         };
 
-        let client = DB::client();
+        let client = DB::hql();
         for sid in &sids {
             client.delete(Cache::Session, sid.clone()).await?;
         }
@@ -449,16 +367,18 @@ OFFSET $2"#,
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let state_str = &self.state;
 
-        if is_hiqlite() {
-            DB::client()
-                .execute(
-                    r#"
+        let sql = r#"
 INSERT INTO
 sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, last_seen = $9,
-remote_ip = $10"#,
+    remote_ip = $10"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
                         &self.id,
                         &self.csrf_token,
@@ -474,30 +394,25 @@ remote_ip = $10"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
-                r#"
-INSERT INTO
-sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-ON CONFLICT(id) DO UPDATE
-SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, last_seen = $9,
-remote_ip = $10"#,
-                self.id,
-                self.csrf_token,
-                self.user_id,
-                self.roles,
-                self.groups,
-                self.is_mfa,
-                state_str,
-                self.exp,
-                self.last_seen,
-                self.remote_ip,
+            DB::pg_execute(
+                sql,
+                &[
+                    &self.id,
+                    &self.csrf_token,
+                    &self.user_id,
+                    &self.roles,
+                    &self.groups,
+                    &self.is_mfa,
+                    &state_str,
+                    &self.exp,
+                    &self.last_seen,
+                    &self.remote_ip,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
 
-        DB::client()
+        DB::hql()
             .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
             .await?;
 
@@ -512,59 +427,17 @@ remote_ip = $10"#,
     ) -> Result<Vec<Self>, ErrorResponse> {
         let q = format!("%{}%", q);
 
-        let res = match idx {
+        let size_hint = max(limit as usize, 1);
+
+        let sql = match idx {
             SearchParamsIdx::UserId => {
-                if is_hiqlite() {
-                    DB::client().query_as(
-                    "SELECT * FROM sessions WHERE user_id LIKE $1 ORDER BY exp DESC LIMIT $2",
-                        params!(q, limit)
-                    ).await?
-                } else {
-                    query_as!(
-                        Self,
-                        "SELECT * FROM sessions WHERE user_id LIKE $1 ORDER BY exp DESC LIMIT $2",
-                        q,
-                        limit
-                    )
-                    .fetch_all(DB::conn())
-                    .await?
-                }
+                "SELECT * FROM sessions WHERE user_id LIKE $1 ORDER BY exp DESC LIMIT $2"
             }
             SearchParamsIdx::Id | SearchParamsIdx::SessionId => {
-                if is_hiqlite() {
-                    DB::client()
-                        .query_as(
-                            "SELECT * FROM sessions WHERE id LIKE $1 ORDER BY exp DESC LIMIT $2",
-                            params!(q, limit),
-                        )
-                        .await?
-                } else {
-                    query_as!(
-                        Self,
-                        "SELECT * FROM sessions WHERE id LIKE $1 ORDER BY exp DESC LIMIT $2",
-                        q,
-                        limit
-                    )
-                    .fetch_all(DB::conn())
-                    .await?
-                }
+                "SELECT * FROM sessions WHERE id LIKE $1 ORDER BY exp DESC LIMIT $2"
             }
             SearchParamsIdx::Ip => {
-                if is_hiqlite() {
-                    DB::client().query_as(
-                        "SELECT * FROM sessions WHERE remote_ip LIKE $1 ORDER BY exp DESC LIMIT $2",
-                            params!(q, limit)
-                        ).await?
-                } else {
-                    query_as!(
-                        Self,
-                        "SELECT * FROM sessions WHERE remote_ip LIKE $1 ORDER BY exp DESC LIMIT $2",
-                        q,
-                        limit
-                    )
-                    .fetch_all(DB::conn())
-                    .await?
-                }
+                "SELECT * FROM sessions WHERE remote_ip LIKE $1 ORDER BY exp DESC LIMIT $2"
             }
             _ => {
                 return Err(ErrorResponse::new(
@@ -572,6 +445,12 @@ remote_ip = $10"#,
                     "supported search idx for users: id / session_id, user_id, ip",
                 ));
             }
+        };
+
+        let res = if is_hiqlite() {
+            DB::hql().query_as(sql, params!(q, limit)).await?
+        } else {
+            DB::pg_query(sql, &[&q, &limit], size_hint).await?
         };
 
         Ok(res)
@@ -583,7 +462,7 @@ impl Session {
     pub fn new(exp_in: u32, remote_ip: Option<IpAddr>) -> Self {
         let id = get_rand(32);
         let csrf_token = get_rand(32);
-        let now = OffsetDateTime::now_utc();
+        let now = Utc::now();
 
         Self {
             id,
@@ -594,9 +473,9 @@ impl Session {
             is_mfa: false, // cannot be known at the creation stage
             state: SessionState::Init.as_str().to_string(),
             exp: now
-                .add(time::Duration::seconds(exp_in as i64))
-                .unix_timestamp(),
-            last_seen: now.unix_timestamp(),
+                .add(chrono::Duration::seconds(exp_in as i64))
+                .timestamp(),
+            last_seen: now.timestamp(),
             remote_ip: remote_ip.map(|ip| ip.to_string()),
         }
     }
@@ -613,24 +492,24 @@ impl Session {
         let roles = Some(user.roles.clone());
         let groups = user.groups.clone();
 
-        let now = OffsetDateTime::now_utc();
+        let now = Utc::now();
 
         // make sure to check the max session lifetime for expiring users
         let exp = if let Some(ts) = user.user_expires {
-            if now.unix_timestamp() > ts {
+            if now.timestamp() > ts {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
                     "User has expired",
                 ));
             } else {
                 let target = now
-                    .add(time::Duration::seconds(exp_in as i64))
-                    .unix_timestamp();
+                    .add(chrono::Duration::seconds(exp_in as i64))
+                    .timestamp();
                 if ts < target { ts } else { target }
             }
         } else {
-            now.add(time::Duration::seconds(exp_in as i64))
-                .unix_timestamp()
+            now.add(chrono::Duration::seconds(exp_in as i64))
+                .timestamp()
         };
 
         Ok(Self {
@@ -642,7 +521,7 @@ impl Session {
             is_mfa: false, // cannot be known at the creation stage
             state: SessionState::Init.as_str().to_string(),
             exp,
-            last_seen: now.unix_timestamp(),
+            last_seen: now.timestamp(),
             remote_ip,
         })
     }
@@ -695,25 +574,16 @@ impl Session {
         let now = Utc::now().timestamp() - 1;
         let state = SessionState::LoggedOut.as_str().to_string();
 
+        let sql = "UPDATE sessions SET exp = $1, state = $2 WHERE id = $3";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "UPDATE sessions SET exp = $1, state = $2 WHERE id = $3",
-                    params!(now, state, self.id.clone()),
-                )
+            DB::hql()
+                .execute(sql, params!(now, state, &self.id))
                 .await?;
         } else {
-            sqlx::query!(
-                "UPDATE sessions SET exp = $1, state = $2 WHERE id = $3",
-                now,
-                state,
-                &self.id
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&now, &state, &self.id]).await?;
         }
 
-        DB::client().delete(Cache::Session, self.id).await?;
+        DB::hql().delete(Cache::Session, self.id).await?;
 
         Ok(())
     }
@@ -726,7 +596,7 @@ impl Session {
 
     /// Checks if the current session is valid: has not expired and has not timed out (last_seen)
     pub fn is_valid(&self, session_timeout: u32, remote_ip: Option<IpAddr>) -> bool {
-        let now = OffsetDateTime::now_utc().unix_timestamp();
+        let now = Utc::now().timestamp();
         if self.exp < now {
             return false;
         }
@@ -815,7 +685,7 @@ impl Session {
 
     pub fn validate_user_expiry(&mut self, user: &User) -> Result<(), ErrorResponse> {
         if let Some(ts) = user.user_expires {
-            if OffsetDateTime::now_utc().unix_timestamp() > ts {
+            if Utc::now().timestamp() > ts {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
                     "User has expired",

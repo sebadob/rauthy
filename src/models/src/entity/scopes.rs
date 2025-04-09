@@ -1,9 +1,10 @@
-use crate::app_state::{AppState, DbTxn};
+use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::clients::Client;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::entity::well_known::WellKnown;
 use actix_web::web;
+use deadpool_postgres::GenericClient;
 use hiqlite::{Param, Params, params};
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_CLIENTS, IDX_SCOPES};
@@ -11,12 +12,12 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::collections::HashSet;
+
 use tracing::debug;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Scope {
     pub id: String,
     pub name: String,
@@ -26,10 +27,21 @@ pub struct Scope {
     pub attr_include_id: Option<String>,
 }
 
+impl From<tokio_postgres::Row> for Scope {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            name: row.get("name"),
+            attr_include_access: row.get("attr_include_access"),
+            attr_include_id: row.get("attr_include_id"),
+        }
+    }
+}
+
 // CRUD
 impl Scope {
     pub async fn clear_cache() -> Result<(), ErrorResponse> {
-        DB::client().delete(Cache::App, IDX_SCOPES).await?;
+        DB::hql().delete(Cache::App, IDX_SCOPES).await?;
         Ok(())
     }
 
@@ -70,7 +82,7 @@ impl Scope {
         };
 
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
                     r#"
 INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
@@ -84,21 +96,22 @@ VALUES ($1, $2, $3, $4)"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
+            DB::pg_execute(
                 r#"
     INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
     VALUES ($1, $2, $3, $4)"#,
-                new_scope.id,
-                new_scope.name,
-                new_scope.attr_include_access,
-                new_scope.attr_include_id,
+                &[
+                    &new_scope.id,
+                    &new_scope.name,
+                    &new_scope.attr_include_access,
+                    &new_scope.attr_include_id,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
 
         scopes.push(new_scope.clone());
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
             .await?;
 
@@ -127,20 +140,19 @@ VALUES ($1, $2, $3, $4)"#,
             }
             txn.push(("DELETE FROM scopes WHERE id = $1", params!(&scope.id)));
 
-            for res in DB::client().txn(txn).await? {
+            for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             for client in &mut clients {
                 client.delete_scope(&scope.name);
-                client.save_txn(&mut txn).await?;
+                client.save_txn(&txn).await?;
             }
-            sqlx::query!("DELETE FROM scopes WHERE id = $1", id)
-                .execute(&mut *txn)
-                .await?;
+            DB::pg_txn_append(&txn, "DELETE FROM scopes WHERE id = $1", &[&id]).await?;
 
             txn.commit().await?;
         }
@@ -151,7 +163,7 @@ VALUES ($1, $2, $3, $4)"#,
             .filter(|s| s.id != scope.id)
             .collect::<Vec<Scope>>();
 
-        let client = DB::client();
+        let client = DB::hql();
         // no need to evict the cache if no clients are updated
         if !clients.is_empty() {
             client.delete(Cache::App, IDX_CLIENTS).await?;
@@ -172,32 +184,28 @@ VALUES ($1, $2, $3, $4)"#,
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as_one("SELECT * FROM scopes WHERE id = $1", params!(id))
                 .await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM scopes WHERE id = $1", id)
-                .fetch_one(DB::conn())
-                .await?
+            DB::pg_query_one("SELECT * FROM scopes WHERE id = $1", &[&id]).await?
         };
 
         Ok(res)
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX_SCOPES).await? {
             return Ok(slf);
         }
 
         let res = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_as("SELECT * FROM scopes", params!())
                 .await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM scopes")
-                .fetch_all(DB::conn())
-                .await?
+            DB::pg_query("SELECT * FROM scopes", &[], 6).await?
         };
 
         client
@@ -242,7 +250,6 @@ VALUES ($1, $2, $3, $4)"#,
                     c
                 })
                 .collect::<Vec<_>>();
-            debug!("\n\n{:?}\n", clients);
             Some(clients)
         } else {
             None
@@ -286,29 +293,32 @@ WHERE id = $4"#,
                 ),
             ));
 
-            for res in DB::client().txn(txn).await? {
+            for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             if let Some(clients) = &clients {
                 for client in clients {
-                    client.save_txn(&mut txn).await?;
+                    client.save_txn(&txn).await?;
                 }
             }
-            sqlx::query!(
+            DB::pg_txn_append(
+                &txn,
                 r#"
 UPDATE scopes
 SET name = $1, attr_include_access = $2, attr_include_id = $3
 WHERE id = $4"#,
-                new_scope.name,
-                new_scope.attr_include_access,
-                new_scope.attr_include_id,
-                new_scope.id,
+                &[
+                    &new_scope.name,
+                    &new_scope.attr_include_access,
+                    &new_scope.attr_include_id,
+                    &new_scope.id,
+                ],
             )
-            .execute(&mut *txn)
             .await?;
 
             txn.commit().await?;
@@ -331,8 +341,8 @@ WHERE id = $4"#,
             })
             .collect::<Vec<Scope>>();
 
-        let client = DB::client();
-        DB::client()
+        let client = DB::hql();
+        DB::hql()
             .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
             .await?;
 
@@ -349,20 +359,17 @@ WHERE id = $4"#,
         id: &str,
         attr_include_access: Option<String>,
         attr_include_id: Option<String>,
-        txn: &mut DbTxn<'_>,
+        txn: &deadpool_postgres::Transaction<'_>,
     ) -> Result<(), ErrorResponse> {
-        sqlx::query!(
+        DB::pg_txn_append(
+            txn,
             r#"
     UPDATE scopes
     SET attr_include_access = $1, attr_include_id = $2
     WHERE id = $3"#,
-            attr_include_access,
-            attr_include_id,
-            id,
+            &[&attr_include_access, &attr_include_id, &id],
         )
-        .execute(&mut **txn)
         .await?;
-
         Ok(())
     }
 
@@ -384,7 +391,6 @@ WHERE id = $4"#,
 }
 
 impl Scope {
-    #[inline]
     pub fn clean_up_attrs(
         req_attrs: Option<Vec<String>>,
         existing_attrs: &HashSet<String>,

@@ -8,10 +8,9 @@ use rauthy_common::constants::{CACHE_TTL_DYN_CLIENT, CACHE_TTL_IP_RATE_LIMIT};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, query, query_as};
 use std::net::IpAddr;
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ClientDyn {
     pub id: String,
     pub created: i64,
@@ -20,18 +19,30 @@ pub struct ClientDyn {
     pub token_endpoint_auth_method: String,
 }
 
+impl From<tokio_postgres::Row> for ClientDyn {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            created: row.get("created"),
+            last_used: row.get("last_used"),
+            registration_token: row.get("registration_token"),
+            token_endpoint_auth_method: row.get("token_endpoint_auth_method"),
+        }
+    }
+}
+
 impl ClientDyn {
     /// This only deletes a `ClientDyn` from the cache.
     /// The deletion at database level happens via the foreign key cascade.
     pub async fn delete_from_cache(id: &str) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .delete(Cache::App, ClientDyn::get_cache_entry(id))
             .await?;
         Ok(())
     }
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client
             .get(Cache::ClientDynamic, ClientDyn::get_cache_entry(&id))
@@ -40,14 +51,11 @@ impl ClientDyn {
             return Ok(slf);
         }
 
-        let slf = if is_hiqlite() {
-            DB::client()
-                .query_as_one("SELECT * FROM clients_dyn WHERE id = $1", params!(id))
-                .await?
+        let sql = "SELECT * FROM clients_dyn WHERE id = $1";
+        let slf: Self = if is_hiqlite() {
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            query_as!(Self, "SELECT * FROM clients_dyn WHERE id = $1", id)
-                .fetch_one(DB::conn())
-                .await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         client
@@ -64,22 +72,11 @@ impl ClientDyn {
 
     pub async fn update_used(id: &str) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
-
+        let sql = "UPDATE clients_dyn SET last_used = $1 WHERE id = $2";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "UPDATE clients_dyn SET last_used = $1 WHERE id = $2",
-                    params!(now, id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(now, id)).await?;
         } else {
-            query!(
-                "UPDATE clients_dyn SET last_used = $1 WHERE id = $2",
-                now,
-                id
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&id]).await?;
         }
 
         Ok(())
@@ -95,7 +92,7 @@ impl ClientDyn {
     /// Returns an Err(_) if the IP is currently existing inside the cache.
     /// If not, the IP will be cached with an Ok(()).
     pub async fn rate_limit_ip(ip: IpAddr) -> Result<(), ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         let ts: Option<i64> = client.get(Cache::IPRateLimit, ip.to_string()).await?;
         match ts {

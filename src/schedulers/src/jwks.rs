@@ -21,7 +21,7 @@ pub async fn jwks_auto_rotate(data: web::Data<AppState>) {
     loop {
         sleep_schedule_next(&schedule).await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!("Running HA mode without being the leader - skipping jwks_cleanup scheduler");
             continue;
         }
@@ -39,7 +39,7 @@ pub async fn jwks_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!("Running HA mode without being the leader - skipping jwks_cleanup scheduler");
             continue;
         }
@@ -49,17 +49,16 @@ pub async fn jwks_cleanup() {
         // clean up all JWKs older than 90 days
         let cleanup_threshold = Utc::now().sub(chrono::Duration::days(90)).timestamp();
 
-        // find all existing jwks
-        let res = if is_hiqlite() {
-            DB::client()
-                .query_as("SELECT * FROM jwks ORDER BY created_at asc", params!())
+        let sql = "SELECT * FROM jwks ORDER BY created_at asc";
+        let res: Result<Vec<Jwk>, String> = if is_hiqlite() {
+            DB::hql()
+                .query_as(sql, params!())
                 .await
                 .map_err(|err| err.to_string())
         } else {
-            sqlx::query_as::<_, Jwk>("SELECT * FROM jwks ORDER BY created_at asc")
-                .fetch_all(DB::conn())
+            DB::pg_query(sql, &[], 8)
                 .await
-                .map_err(|err| err.to_string())
+                .map_err(|err| err.message.to_string())
         };
 
         let jwks_all = match res {
@@ -94,26 +93,20 @@ pub async fn jwks_cleanup() {
 
         // finally, delete all expired JWKs
         let count = to_delete.len();
+        let sql = "DELETE FROM jwks WHERE kid = $1";
         for kid in to_delete {
             if is_hiqlite() {
-                if let Err(err) = DB::client()
-                    .execute("DELETE FROM jwks WHERE kid = $1", params!())
-                    .await
-                {
+                if let Err(err) = DB::hql().execute(sql, params!()).await {
                     error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
                     continue;
                 }
-            } else if let Err(err) = sqlx::query("DELETE FROM jwks WHERE kid = $1")
-                .bind(&kid)
-                .execute(DB::conn())
-                .await
-            {
+            } else if let Err(err) = DB::pg_execute(sql, &[]).await {
                 error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
                 continue;
             }
 
             let idx = format!("{}{}", IDX_JWK_KID, kid);
-            if let Err(err) = DB::client().delete(Cache::App, idx).await {
+            if let Err(err) = DB::hql().delete(Cache::App, idx).await {
                 error!("Error deleting JWK from cache: {}", err);
             }
         }

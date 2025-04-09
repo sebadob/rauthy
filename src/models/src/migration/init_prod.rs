@@ -23,14 +23,11 @@ use validator::Validate;
 /// Initializes an empty production database for a new deployment
 pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<(), ErrorResponse> {
     // check if the database is un-initialized by looking at the jwks table, which should be empty
-    let jwks = if is_hiqlite() {
-        DB::client()
-            .query_as("SELECT * FROM JWKS", params!())
-            .await?
+    let sql = "SELECT * FROM JWKS";
+    let jwks: Vec<Jwk> = if is_hiqlite() {
+        DB::hql().query_as(sql, params!()).await?
     } else {
-        sqlx::query_as::<_, Jwk>("SELECT * FROM JWKS")
-            .fetch_all(DB::conn())
-            .await?
+        DB::pg_query(sql, &[], 8).await?
     };
 
     if jwks.is_empty() {
@@ -42,22 +39,15 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
         // - generate a new set of JWKs
 
         // cleanup
-        if is_hiqlite() {
-            DB::client()
-                .execute("DELETE FROM clients WHERE id = 'init_client'", params!())
-                .await?;
-            DB::client().execute("DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')", params!())
-                .await?;
-        } else {
-            sqlx::query!("DELETE FROM clients WHERE id = 'init_client'")
-                .execute(DB::conn())
-                .await?;
+        let sql_1 = "DELETE FROM clients WHERE id = 'init_client'";
+        let sql_2 = "DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')";
 
-            sqlx::query!(
-                "DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')",
-            )
-                .execute(DB::conn())
-                .await?;
+        if is_hiqlite() {
+            DB::hql().execute(sql_1, params!()).await?;
+            DB::hql().execute(sql_2, params!()).await?;
+        } else {
+            DB::pg_execute(sql_1, &[]).await?;
+            DB::pg_execute(sql_2, &[]).await?;
         }
 
         // check if we should use manually provided bootstrap values
@@ -116,23 +106,13 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
             }
         };
 
+        let sql = "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'";
         if is_hiqlite() {
             // TODO we could grab a possibly existing `RAUTHY_ADMIN_EMAIL` and initialize a custom
             // admin
-            DB::client()
-                .execute(
-                    "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'",
-                    params!(email, hash),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(email, hash)).await?;
         } else {
-            sqlx::query!(
-                "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'",
-                email,
-                hash
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&email, &hash]).await?;
         }
 
         // now check if we should bootstrap an API Key
@@ -161,21 +141,13 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
                     .into_bytes()
                     .to_vec();
 
+                let sql = "UPDATE api_keys SET secret = $1 WHERE name = $2";
                 if is_hiqlite() {
-                    DB::client()
-                        .execute(
-                            "UPDATE api_keys SET secret = $1 WHERE name = $2",
-                            params!(secret_enc, key_name),
-                        )
+                    DB::hql()
+                        .execute(sql, params!(secret_enc, key_name))
                         .await?;
                 } else {
-                    sqlx::query!(
-                        "UPDATE api_keys SET secret = $1 WHERE name = $2",
-                        secret_enc,
-                        key_name,
-                    )
-                    .execute(DB::conn())
-                    .await?;
+                    DB::pg_execute(sql, &[&secret_enc, &key_name]).await?;
                 }
             }
         }

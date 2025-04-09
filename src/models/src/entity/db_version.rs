@@ -1,13 +1,16 @@
 use crate::database::DB;
+use crate::entity::config::ConfigEntity;
 use hiqlite::{Param, params};
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use sqlx::query;
 use std::str::FromStr;
 use tracing::{debug, warn};
+
+static LOWEST_COMPATIBLE_VERSION: &str = "0.28.0";
+// TODO add HIGHEST_COMPATIBLE_VERSION
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DbVersion {
@@ -15,31 +18,17 @@ pub struct DbVersion {
 }
 
 impl DbVersion {
-    pub async fn find() -> Result<Option<Self>, ErrorResponse> {
-        if is_hiqlite() {
-            let mut rows = DB::client()
-                .query_raw("SELECT data FROM config WHERE id = 'db_version'", params!())
-                .await?;
-            if rows.is_empty() {
-                return Ok(None);
-            }
-            let bytes: Vec<u8> = rows.remove(0).get("data");
-            let version = bincode::deserialize::<Self>(&bytes)?;
-            Ok(Some(version))
+    pub async fn find() -> Option<Self> {
+        let sql = "SELECT * FROM config WHERE id = 'db_version'";
+        let bytes: Vec<u8> = if is_hiqlite() {
+            let config: ConfigEntity = DB::hql().query_as_optional(sql, params!()).await.ok()??;
+            config.data
         } else {
-            let res = query!("SELECT data FROM config WHERE id = 'db_version'")
-                .fetch_optional(DB::conn())
-                .await?;
-            match res {
-                Some(record) => {
-                    let data = record
-                        .data
-                        .expect("to get 'data' back from the AppVersion query");
-                    Ok(Some(bincode::deserialize::<Self>(&data)?))
-                }
-                None => Ok(None),
-            }
-        }
+            let config: ConfigEntity = DB::pg_query_opt(sql, &[]).await.ok()??;
+            config.data
+        };
+
+        bincode::deserialize::<Self>(&bytes).ok()
     }
 
     pub async fn upsert(db_version: Option<Version>) -> Result<(), ErrorResponse> {
@@ -50,24 +39,15 @@ impl DbVersion {
             };
             let data = bincode::serialize(&slf)?;
 
+            let sql = r#"
+INSERT INTO config (id, data)
+VALUES ('db_version', $1)
+ON CONFLICT(id) DO UPDATE SET data = $1"#;
+
             if is_hiqlite() {
-                DB::client()
-                    .execute(
-                        r#"INSERT INTO config (id, data)
-                        VALUES ('db_version', $1)
-                        ON CONFLICT(id) DO UPDATE SET data = $1"#,
-                        params!(data),
-                    )
-                    .await?;
+                DB::hql().execute(sql, params!(data)).await?;
             } else {
-                query!(
-                    r#"INSERT INTO config (id, data)
-                    VALUES ('db_version', $1)
-                    ON CONFLICT(id) DO UPDATE SET data = $1"#,
-                    data,
-                )
-                .execute(DB::conn())
-                .await?;
+                DB::pg_execute(sql, &[&data]).await?;
             }
         }
 
@@ -81,23 +61,18 @@ impl DbVersion {
         // check DB version for compatibility
         // We check the `config` table first instead of db version, because the db version does not
         // exist in early versions while the `config` does from the very beginning.
+        let sql = "SELECT id FROM config LIMIT 1";
         let db_exists = if is_hiqlite() {
-            DB::client()
-                .query_raw("SELECT id FROM config LIMIT 1", params!())
-                .await
-                .is_ok()
+            DB::hql().query_raw(sql, params!()).await.is_ok()
         } else {
-            query!("SELECT id FROM config LIMIT 1")
-                .fetch_one(DB::conn())
-                .await
-                .is_ok()
+            DB::pg_query_one_row(sql, &[]).await.is_ok()
         };
 
         if !db_exists {
             return Ok(None);
         }
 
-        let db_version = match Self::find().await? {
+        let db_version = match Self::find().await {
             None => {
                 debug!("No Current DB Version found");
                 Self::is_db_compatible(&app_version, None).await?;
@@ -121,9 +96,10 @@ impl DbVersion {
     ) -> Result<(), ErrorResponse> {
         // this check panics on purpose, and it is there to never forget to adjust this
         // version check before doing any major or minor release
-        if app_version.major != 0 || app_version.minor != 28 {
+        if app_version.major != 0 || app_version.minor != 29 {
             panic!(
-                "\nDbVersion::check_app_version needs adjustment for the new RAUTHY_VERSION: {}",
+                "\nDbVersion::check_app_version needs adjustment for the new RAUTHY_VERSION: {}\\n
+               Also make sure that `LOWEST_COMPATIBLE_VERSION` is still correctly set",
                 RAUTHY_VERSION
             );
         }
@@ -138,7 +114,7 @@ impl DbVersion {
 
         // check for the lowest DB version we can use with this App Version
         if let Some(db_version) = db_version {
-            let lowest_compatible_version = Version::parse("0.20.0").unwrap();
+            let lowest_compatible_version = Version::parse(LOWEST_COMPATIBLE_VERSION).unwrap();
 
             if db_version < &lowest_compatible_version {
                 panic!(
@@ -159,18 +135,14 @@ impl DbVersion {
 
         // the passkeys table was introduced with v0.15.0
         let is_db_v0_15_0 = if is_hiqlite() {
-            DB::client()
-                .query_raw(
-                    "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'passkeys' LIMIT 1",
-                    params!(),
-                )
-                .await
-                .is_err()
+            DB::hql().query_raw("SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'passkeys' LIMIT 1", params!()).await.is_err()
         } else {
-            query!("SELECT * FROM pg_tables WHERE tablename = 'passkeys' LIMIT 1")
-                .fetch_one(DB::conn())
-                .await
-                .is_err()
+            DB::pg_query_one_row(
+                "SELECT * FROM pg_tables WHERE tablename = 'passkeys' LIMIT 1",
+                &[],
+            )
+            .await
+            .is_err()
         };
         if is_db_v0_15_0 {
             panic!(
@@ -182,7 +154,7 @@ impl DbVersion {
         // To check for any DB older than 0.15.0, we check for the existence of the 'clients' table
         // which is there since the very beginning.
         let is_db_pre_v0_15_0 = if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .query_raw(
                     "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'clients' LIMIT 1",
                     params!(),
@@ -190,10 +162,12 @@ impl DbVersion {
                 .await
                 .is_err()
         } else {
-            query!("SELECT * FROM pg_tables WHERE tablename = 'clients' LIMIT 1")
-                .fetch_one(DB::conn())
-                .await
-                .is_err()
+            DB::pg_query_one_row(
+                "SELECT * FROM pg_tables WHERE tablename = 'clients' LIMIT 1",
+                &[],
+            )
+            .await
+            .is_err()
         };
         if is_db_pre_v0_15_0 {
             panic!(

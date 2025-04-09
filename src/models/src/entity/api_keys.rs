@@ -9,10 +9,9 @@ use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use ring::digest;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, query, query_as};
 use std::fmt::{Debug, Formatter};
 
-#[derive(Clone, Serialize, Deserialize, FromRow)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ApiKeyEntity {
     pub name: String,
     pub secret: Vec<u8>,
@@ -20,6 +19,19 @@ pub struct ApiKeyEntity {
     pub expires: Option<i64>,
     pub enc_key_id: String,
     pub access: Vec<u8>,
+}
+
+impl From<tokio_postgres::Row> for ApiKeyEntity {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            name: row.get("name"),
+            secret: row.get("secret"),
+            created: row.get("created"),
+            expires: row.get("expires"),
+            enc_key_id: row.get("enc_key_id"),
+            access: row.get("access"),
+        }
+    }
 }
 
 impl Debug for ApiKeyEntity {
@@ -51,13 +63,15 @@ impl ApiKeyEntity {
         let enc_key_active = &EncKeys::get_static().enc_key_active;
         let secret_fmt = format!("{}${}", name, secret_plain);
 
-        if is_hiqlite() {
-            DB::client()
-                .execute(
-                    r#"
+        let sql = r#"
 INSERT INTO
 api_keys (name, secret, created, expires, enc_key_id, access)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
+VALUES ($1, $2, $3, $4, $5, $6)"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
                         name,
                         secret_enc,
@@ -69,19 +83,17 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 )
                 .await?;
         } else {
-            query!(
-                r#"
-INSERT INTO
-api_keys (name, secret, created, expires, enc_key_id, access)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
-                name,
-                secret_enc,
-                created,
-                expires,
-                enc_key_active,
-                access_enc,
+            DB::pg_execute(
+                sql,
+                &[
+                    &name,
+                    &secret_enc,
+                    &created,
+                    &expires,
+                    enc_key_active,
+                    &access_enc,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
 
@@ -89,14 +101,11 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
     }
 
     pub async fn delete(name: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM api_keys WHERE name = $1";
         if is_hiqlite() {
-            DB::client()
-                .execute("DELETE FROM api_keys WHERE name = $1", params!(name))
-                .await?;
+            DB::hql().execute(sql, params!(name)).await?;
         } else {
-            query!("DELETE FROM api_keys WHERE name = $1", name)
-                .execute(DB::conn())
-                .await?;
+            DB::pg_execute(sql, &[&name]).await?;
         }
 
         Self::cache_invalidate(name).await?;
@@ -104,28 +113,22 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
     }
 
     pub async fn find(name: &str) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM api_keys WHERE name = $1";
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as_one("SELECT * FROM api_keys WHERE name = $1", params!(name))
-                .await?
+            DB::hql().query_as_one(sql, params!(name)).await?
         } else {
-            query_as!(Self, "SELECT * FROM api_keys WHERE name = $1", name)
-                .fetch_one(DB::conn())
-                .await?
+            DB::pg_query_one(sql, &[&name]).await?
         };
 
         Ok(res)
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM api_keys";
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as("SELECT * FROM api_keys", params!())
-                .await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
-            query_as!(Self, "SELECT * FROM api_keys")
-                .fetch_all(DB::conn())
-                .await?
+            DB::pg_query(sql, &[], 0).await?
         };
 
         Ok(res)
@@ -146,10 +149,12 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 
         let enc_key_active = &EncKeys::get_static().enc_key_active;
 
+        let sql = "UPDATE api_keys SET secret = $1, enc_key_id = $2, access = $3 WHERE name = $4";
+
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
-                    "UPDATE api_keys SET secret = $1, enc_key_id = $2, access = $3 WHERE name = $4",
+                    sql,
                     params!(
                         secret_enc,
                         enc_key_active.clone(),
@@ -159,15 +164,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 )
                 .await?;
         } else {
-            query!(
-                "UPDATE api_keys SET secret = $1, enc_key_id = $2, access = $3 WHERE name = $4",
-                secret_enc,
-                enc_key_active,
-                access_enc,
-                name,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&secret_enc, enc_key_active, &access_enc, &name]).await?;
         }
 
         Self::cache_invalidate(name).await?;
@@ -192,13 +189,15 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 
         let enc_key_active = &EncKeys::get_static().enc_key_active;
 
-        if is_hiqlite() {
-            DB::client()
-                .execute(
-                    r#"
+        let sql = r#"
 UPDATE api_keys
 SET secret = $1, expires = $2, enc_key_id = $3, access = $4
-WHERE name = $5"#,
+WHERE name = $5"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
                         secret_enc,
                         expires,
@@ -209,18 +208,10 @@ WHERE name = $5"#,
                 )
                 .await?;
         } else {
-            query!(
-                r#"
-UPDATE api_keys
-SET secret = $1, expires = $2, enc_key_id = $3, access = $4
-WHERE name = $5"#,
-                secret_enc,
-                expires,
-                enc_key_active,
-                access_enc,
-                name,
+            DB::pg_execute(
+                sql,
+                &[&secret_enc, &expires, enc_key_active, &access_enc, &name],
             )
-            .execute(DB::conn())
             .await?;
         }
 
@@ -232,13 +223,15 @@ WHERE name = $5"#,
     pub async fn save(self) -> Result<(), ErrorResponse> {
         let name = self.name.clone();
 
+        let sql = r#"
+UPDATE api_keys
+SET secret = $1, expires = $2, enc_key_id = $3, access = $4
+WHERE name = $5"#;
+
         if is_hiqlite() {
-            DB::client()
+            DB::hql()
                 .execute(
-                    r#"
-    UPDATE api_keys
-    SET secret = $1, expires = $2, enc_key_id = $3, access = $4
-    WHERE name = $5"#,
+                    sql,
                     params!(
                         self.secret,
                         self.expires,
@@ -249,18 +242,16 @@ WHERE name = $5"#,
                 )
                 .await?;
         } else {
-            query!(
-                r#"
-    UPDATE api_keys
-    SET secret = $1, expires = $2, enc_key_id = $3, access = $4
-    WHERE name = $5"#,
-                self.secret,
-                self.expires,
-                self.enc_key_id,
-                self.access,
-                self.name,
+            DB::pg_execute(
+                sql,
+                &[
+                    &self.secret,
+                    &self.expires,
+                    &self.enc_key_id,
+                    &self.access,
+                    &self.name,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
 
@@ -279,7 +270,7 @@ impl ApiKeyEntity {
     #[inline]
     async fn cache_invalidate(name: &str) -> Result<(), ErrorResponse> {
         let idx = Self::cache_idx(name);
-        DB::client().delete(Cache::App, idx).await?;
+        DB::hql().delete(Cache::App, idx).await?;
         Ok(())
     }
 
@@ -289,7 +280,7 @@ impl ApiKeyEntity {
             ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed API-Key")
         })?;
 
-        let client = DB::client();
+        let client = DB::hql();
         let idx = Self::cache_idx(name);
         let api_key = if let Some(key) = client.get(Cache::App, &idx).await? {
             key

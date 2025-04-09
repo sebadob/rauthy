@@ -11,11 +11,11 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, query, query_as};
 use std::ops::{Add, Sub};
+
 use tracing::info;
 
-#[derive(Debug, Deserialize, FromRow)]
+#[derive(Debug, Deserialize)]
 pub struct DeviceEntity {
     pub id: String,
     pub client_id: String,
@@ -27,15 +27,32 @@ pub struct DeviceEntity {
     pub name: String,
 }
 
+impl From<tokio_postgres::Row> for DeviceEntity {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            client_id: row.get("client_id"),
+            user_id: row.get("user_id"),
+            created: row.get("created"),
+            access_exp: row.get("access_exp"),
+            refresh_exp: row.get("refresh_exp"),
+            peer_ip: row.get("peer_ip"),
+            name: row.get("name"),
+        }
+    }
+}
+
 impl DeviceEntity {
     pub async fn insert(self) -> Result<(), ErrorResponse> {
-        if is_hiqlite() {
-            DB::client()
-                .execute(
-                    r#"
+        let sql = r#"
 INSERT INTO devices
 (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
                         self.id,
                         self.client_id,
@@ -49,21 +66,19 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 )
                 .await?;
         } else {
-            query!(
-                r#"
-    INSERT INTO devices
-    (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
-                self.id,
-                self.client_id,
-                self.user_id,
-                self.created,
-                self.access_exp,
-                self.refresh_exp,
-                self.peer_ip,
-                self.name,
+            DB::pg_execute(
+                sql,
+                &[
+                    &self.id,
+                    &self.client_id,
+                    &self.user_id,
+                    &self.created,
+                    &self.access_exp,
+                    &self.refresh_exp,
+                    &self.peer_ip,
+                    &self.name,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
 
@@ -71,27 +86,21 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
     }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM devices WHERE id = $1";
         let slf = if is_hiqlite() {
-            DB::client()
-                .query_as_one("SELECT * FROM devices WHERE id = $1", params!(id))
-                .await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            query_as!(Self, "SELECT * FROM devices WHERE id = $1", id)
-                .fetch_one(DB::conn())
-                .await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
         Ok(slf)
     }
 
     pub async fn find_for_user(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM devices WHERE user_id = $1";
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as("SELECT * FROM devices WHERE user_id = $1", params!(user_id))
-                .await?
+            DB::hql().query_as(sql, params!(user_id)).await?
         } else {
-            query_as!(Self, "SELECT * FROM devices WHERE user_id = $1", user_id)
-                .fetch_all(DB::conn())
-                .await?
+            DB::pg_query(sql, &[&user_id], 0).await?
         };
         Ok(res)
     }
@@ -102,26 +111,14 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             .sub(chrono::Duration::try_hours(1).unwrap())
             .timestamp();
 
+        let sql = r#"
+DELETE FROM devices
+WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#;
+
         let rows_affected = if is_hiqlite() {
-            DB::client()
-                .execute(
-                    r#"
-DELETE FROM devices
-WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
-                    params!(exp),
-                )
-                .await?
+            DB::hql().execute(sql, params!(exp)).await?
         } else {
-            let res = query!(
-                r#"
-DELETE FROM devices
-WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
-                exp
-            )
-            .execute(DB::conn())
-            .await?
-            .rows_affected();
-            res as usize
+            DB::pg_execute(sql, &[&exp]).await?
         };
         info!("Cleaned up {} expires devices", rows_affected);
 
@@ -129,14 +126,11 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
     }
 
     pub async fn invalidate(id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM devices WHERE id = $1";
         if is_hiqlite() {
-            DB::client()
-                .execute("DELETE FROM devices WHERE id = $1", params!(id))
-                .await?;
+            DB::hql().execute(sql, params!(id)).await?;
         } else {
-            query!("DELETE FROM devices WHERE id = $1", id)
-                .execute(DB::conn())
-                .await?;
+            DB::pg_execute(sql, &[&id]).await?;
         }
 
         // we don't need to manually clean up refresh_tokens because of FK cascades
@@ -146,20 +140,11 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
     pub async fn revoke_refresh_tokens(device_id: &str) -> Result<(), ErrorResponse> {
         RefreshTokenDevice::invalidate_all_for_device(device_id).await?;
 
+        let sql = "UPDATE devices SET refresh_exp = null WHERE id = $1";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "UPDATE devices SET refresh_exp = null WHERE id = $1",
-                    params!(device_id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(device_id)).await?;
         } else {
-            query!(
-                "UPDATE devices SET refresh_exp = null WHERE id = $1",
-                device_id,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&device_id]).await?;
         }
 
         Ok(())
@@ -170,22 +155,13 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
         user_id: &str,
         name: &str,
     ) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE devices SET name = $1 WHERE id = $2 AND user_id = $3";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "UPDATE devices SET name = $1 WHERE id = $2 AND user_id = $3",
-                    params!(name, device_id, user_id),
-                )
+            DB::hql()
+                .execute(sql, params!(name, device_id, user_id))
                 .await?;
         } else {
-            query!(
-                "UPDATE devices SET name = $1 WHERE id = $2 AND user_id = $3",
-                name,
-                device_id,
-                user_id
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&name, &device_id, &user_id]).await?;
         }
 
         Ok(())
@@ -250,7 +226,7 @@ impl DeviceAuthCode {
             warnings: 0,
         };
 
-        DB::client()
+        DB::hql()
             .put(
                 Cache::DeviceCode,
                 slf.user_code().to_string(),
@@ -268,7 +244,7 @@ impl DeviceAuthCode {
     }
 
     pub async fn find(user_code: String) -> Result<Option<Self>, ErrorResponse> {
-        let slf: Option<Self> = DB::client().get(Cache::DeviceCode, user_code).await?;
+        let slf: Option<Self> = DB::hql().get(Cache::DeviceCode, user_code).await?;
         match slf {
             None => Ok(None),
             Some(slf) => {
@@ -283,14 +259,14 @@ impl DeviceAuthCode {
     }
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .delete(Cache::DeviceCode, self.user_code().to_string())
             .await?;
         Ok(())
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        DB::client()
+        DB::hql()
             .put(
                 Cache::DeviceCode,
                 self.user_code().to_string(),

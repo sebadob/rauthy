@@ -11,9 +11,6 @@ use tracing::{debug, info};
 use webauthn_rs::Webauthn;
 use webauthn_rs::prelude::Url;
 
-pub type DbPool = sqlx::PgPool;
-pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Postgres>;
-
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub public_url: String,
@@ -112,26 +109,14 @@ impl AppState {
             .expect("Could not parse REFRESH_TOKEN_GRACE_TIME");
 
         #[cfg(target_os = "windows")]
-        let issuer_scheme = if matches!(
-            listen_scheme,
-            ListenScheme::HttpHttps | ListenScheme::Https
-        ) || *PROXY_MODE
-        {
-            "https"
-        } else {
-            "http"
-        };
-
+        let is_https =
+            matches!(listen_scheme, ListenScheme::HttpHttps | ListenScheme::Https) || *PROXY_MODE;
         #[cfg(not(target_os = "windows"))]
-        let issuer_scheme = if matches!(
+        let is_https = matches!(
             listen_scheme,
             ListenScheme::HttpHttps | ListenScheme::Https | ListenScheme::UnixHttps
-        ) || *PROXY_MODE
-        {
-            "https"
-        } else {
-            "http"
-        };
+        ) || *PROXY_MODE;
+        let issuer_scheme = if is_https { "https" } else { "http" };
 
         let issuer = format!("{}://{}/auth/v1", issuer_scheme, public_url);
         debug!("Issuer: {}", issuer);

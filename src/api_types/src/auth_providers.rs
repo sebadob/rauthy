@@ -4,6 +4,7 @@ use rauthy_common::constants::{
     RE_URI,
 };
 use serde::{Deserialize, Serialize};
+
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -180,6 +181,15 @@ pub struct ProviderResponse {
 pub struct ProviderLinkedUserResponse {
     pub id: String,
     pub email: String,
+}
+
+impl From<tokio_postgres::Row> for ProviderLinkedUserResponse {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            email: row.get("email"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]

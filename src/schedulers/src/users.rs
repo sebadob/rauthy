@@ -30,7 +30,7 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!(
                 "Running HA mode without being the leader - skipping user_expiry_checker scheduler"
             );

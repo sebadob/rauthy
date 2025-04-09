@@ -30,17 +30,18 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 
 pub async fn api_keys(data_before: Vec<ApiKeyEntity>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM api_keys", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM api_keys";
+    let sql_2 = r#"
 INSERT INTO
 api_keys (name, secret, created, expires, enc_key_id, access)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
+VALUES ($1, $2, $3, $4, $5, $6)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.name,
                         b.secret,
@@ -53,23 +54,19 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM api_keys")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO
-api_keys (name, secret, created, expires, enc_key_id, access)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
-                b.name,
-                b.secret,
-                b.created,
-                b.expires,
-                b.enc_key_id,
-                b.access
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.name,
+                    &b.secret,
+                    &b.created,
+                    &b.expires,
+                    &b.enc_key_id,
+                    &b.access,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -77,40 +74,30 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 }
 
 pub async fn auth_provider_logos(data_before: Vec<Logo>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM auth_provider_logos", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM auth_provider_logos";
+    let sql_2 = r#"
 INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data, updated)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT(auth_provider_id, res) DO UPDATE
-SET content_type = $3, data = $4, updated = $5"#,
+SET content_type = $3, data = $4, updated = $5"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(b.id, b.res.as_str(), b.content_type, b.data, b.updated),
                 )
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM auth_provider_logos")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data, updated)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT(auth_provider_id, res) DO UPDATE
-SET content_type = $3, data = $4, updated = $5"#,
-                b.id,
-                b.res.as_str(),
-                b.content_type,
-                b.data,
-                b.updated
+            DB::pg_execute(
+                sql_2,
+                &[&b.id, &b.res.as_str(), &b.content_type, &b.data, &b.updated],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -118,20 +105,21 @@ SET content_type = $3, data = $4, updated = $5"#,
 }
 
 pub async fn auth_providers(data_before: Vec<AuthProvider>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM auth_providers", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM auth_providers";
+    let sql_2 = r#"
 INSERT INTO
 auth_providers (id, enabled, name, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value, mfa_claim_path,
 mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic, client_secret_post,
 jwks_endpoint)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.id,
                         b.enabled,
@@ -159,41 +147,34 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM auth_providers")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO
-auth_providers (id, enabled, name, typ, issuer, authorization_endpoint, token_endpoint,
-userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value, mfa_claim_path,
-mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic, client_secret_post,
-jwks_endpoint)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#,
-                b.id,
-                b.enabled,
-                b.name,
-                b.typ.as_str(),
-                b.issuer,
-                b.authorization_endpoint,
-                b.token_endpoint,
-                b.userinfo_endpoint,
-                b.client_id,
-                b.secret,
-                b.scope,
-                b.admin_claim_path,
-                b.admin_claim_value,
-                b.mfa_claim_path,
-                b.mfa_claim_value,
-                b.allow_insecure_requests,
-                b.use_pkce,
-                b.root_pem,
-                b.client_secret_basic,
-                b.client_secret_post,
-                b.jwks_endpoint
+            DB::pg_execute(
+                sql_1,
+                &[
+                    &b.id,
+                    &b.enabled,
+                    &b.name,
+                    &b.typ.as_str(),
+                    &b.issuer,
+                    &b.authorization_endpoint,
+                    &b.token_endpoint,
+                    &b.userinfo_endpoint,
+                    &b.client_id,
+                    &b.secret,
+                    &b.scope,
+                    &b.admin_claim_path,
+                    &b.admin_claim_value,
+                    &b.mfa_claim_path,
+                    &b.mfa_claim_value,
+                    &b.allow_insecure_requests,
+                    &b.use_pkce,
+                    &b.root_pem,
+                    &b.client_secret_basic,
+                    &b.client_secret_post,
+                    &b.jwks_endpoint,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -201,36 +182,28 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
 }
 
 pub async fn client_logos(data_before: Vec<Logo>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM client_logos", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM client_logos";
+    let sql_2 = r#"
 INSERT INTO client_logos (client_id, res, content_type, data, updated)
-VALUES ($1, $2, $3, $4, $5)"#,
+VALUES ($1, $2, $3, $4, $5)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(b.id, b.res.as_str(), b.content_type, b.data, b.updated),
                 )
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM client_logos")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO client_logos (client_id, res, content_type, data, updated)
-VALUES ($1, $2, $3, $4, $5)"#,
-                b.id,
-                b.res.as_str(),
-                b.content_type,
-                b.data,
-                b.updated
+            DB::pg_execute(
+                sql_2,
+                &[&b.id, &b.res.as_str(), &b.content_type, &b.data, &b.updated],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -238,22 +211,23 @@ VALUES ($1, $2, $3, $4, $5)"#,
 }
 
 pub async fn clients(data_before: Vec<Client>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM clients", params!())
-            .await?;
-
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM clients";
+    let sql_2 = r#"
 INSERT INTO clients
 (id, name, enabled, confidential, secret, secret_kid, redirect_uris, post_logout_redirect_uris,
 allowed_origins, flows_enabled, access_token_alg, id_token_alg, auth_code_lifetime,
 access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts,
 backchannel_logout_uri)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#,
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.id,
                         b.name,
@@ -281,43 +255,34 @@ VALUES
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM clients")
-            .execute(DB::conn())
-            .await?;
-
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO clients
-(id, name, enabled, confidential, secret, secret_kid, redirect_uris, post_logout_redirect_uris,
-allowed_origins, flows_enabled, access_token_alg, id_token_alg, auth_code_lifetime,
-access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts,
- backchannel_logout_uri)
-VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#,
-                b.id,
-                b.name,
-                b.enabled,
-                b.confidential,
-                b.secret,
-                b.secret_kid,
-                b.redirect_uris,
-                b.post_logout_redirect_uris,
-                b.allowed_origins,
-                b.flows_enabled,
-                b.access_token_alg,
-                b.id_token_alg,
-                b.auth_code_lifetime,
-                b.access_token_lifetime,
-                b.scopes,
-                b.default_scopes,
-                b.challenge,
-                b.force_mfa,
-                b.client_uri,
-                b.contacts,
-                b.backchannel_logout_uri
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.id,
+                    &b.name,
+                    &b.enabled,
+                    &b.confidential,
+                    &b.secret,
+                    &b.secret_kid,
+                    &b.redirect_uris,
+                    &b.post_logout_redirect_uris,
+                    &b.allowed_origins,
+                    &b.flows_enabled,
+                    &b.access_token_alg,
+                    &b.id_token_alg,
+                    &b.auth_code_lifetime,
+                    &b.access_token_lifetime,
+                    &b.scopes,
+                    &b.default_scopes,
+                    &b.challenge,
+                    &b.force_mfa,
+                    &b.client_uri,
+                    &b.contacts,
+                    &b.backchannel_logout_uri,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -325,17 +290,18 @@ VALUES
 }
 
 pub async fn clients_dyn(data_before: Vec<ClientDyn>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM clients_dyn", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM clients_dyn";
+    let sql_2 = r#"
 INSERT INTO
 clients_dyn (id, created, last_used, registration_token, token_endpoint_auth_method)
-VALUES ($1, $2, $3, $4, $5)"#,
+VALUES ($1, $2, $3, $4, $5)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.id,
                         b.created,
@@ -347,22 +313,18 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM clients_dyn")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO
-clients_dyn (id, created, last_used, registration_token, token_endpoint_auth_method)
-VALUES ($1, $2, $3, $4, $5)"#,
-                b.id,
-                b.created,
-                b.last_used,
-                b.registration_token,
-                b.token_endpoint_auth_method
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.id,
+                    &b.created,
+                    &b.last_used,
+                    &b.registration_token,
+                    &b.token_endpoint_auth_method,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -370,47 +332,36 @@ VALUES ($1, $2, $3, $4, $5)"#,
 }
 
 pub async fn config(data_before: Vec<ConfigEntity>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM config";
+    let sql_2 = "INSERT INTO config (id, data) VALUES ($1, $2)";
+
     if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM config", params!())
-            .await?;
+        DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::client()
-                .execute(
-                    "INSERT INTO config (id, data) VALUES ($1, $2)",
-                    params!(b.id, b.data),
-                )
-                .await?;
+            DB::hql().execute(sql_2, params!(b.id, b.data)).await?;
         }
     } else {
-        sqlx::query("DELETE FROM config")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                "INSERT INTO config (id, data) VALUES ($1, $2)",
-                b.id,
-                b.data,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql_2, &[&b.id, &b.data]).await?;
         }
     }
     Ok(())
 }
 
 pub async fn devices(data_before: Vec<DeviceEntity>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM devices", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM devices";
+    let sql_2 = r#"
 INSERT INTO devices
 (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.id,
                         b.client_id,
@@ -425,25 +376,21 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM devices")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO devices
-(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
-                b.id,
-                b.client_id,
-                b.user_id,
-                b.created,
-                b.access_exp,
-                b.refresh_exp,
-                b.peer_ip,
-                b.name
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.id,
+                    &b.client_id,
+                    &b.user_id,
+                    &b.created,
+                    &b.access_exp,
+                    &b.refresh_exp,
+                    &b.peer_ip,
+                    &b.name,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -451,16 +398,17 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 }
 
 pub async fn events(data_before: Vec<Event>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM events", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM events";
+    let sql_2 = r#"
 INSERT INTO events (id, timestamp, level, typ, ip, data, text)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.id,
                         b.timestamp,
@@ -474,23 +422,20 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM events")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO events (id, timestamp, level, typ, ip, data, text)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-                b.id,
-                b.timestamp,
-                b.level.value(),
-                b.typ.value(),
-                b.ip,
-                b.data,
-                b.text
+            DB::pg_execute(
+                sql_1,
+                &[
+                    &b.id,
+                    &b.timestamp,
+                    &b.level.value(),
+                    &b.typ.value(),
+                    &b.ip,
+                    &b.data,
+                    &b.text,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -500,82 +445,58 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
 pub async fn failed_backchannel_logouts(
     data_before: Vec<FailedBackchannelLogout>,
 ) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM failed_backchannel_logouts";
+    let sql_2 = r#"
+INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
+VALUES ($1, $2, $3, $4)"#;
+
     if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM failed_backchannel_logouts", params!())
-            .await?;
+        DB::hql().execute(sql_1, params!()).await?;
 
         for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
-INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
-VALUES ($1, $2, $3, $4)"#,
-                    params!(b.client_id, b.sub, b.sid, b.retry_count),
-                )
+            DB::hql()
+                .execute(sql_2, params!(b.client_id, b.sub, b.sid, b.retry_count))
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM failed_backchannel_logouts")
-            .execute(DB::conn())
-            .await?;
-
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
-VALUES ($1, $2, $3, $4)"#,
-                b.client_id,
-                b.sub,
-                b.sid,
-                b.retry_count
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql_2, &[&b.client_id, &b.sub, &b.sid, &b.retry_count]).await?;
         }
     }
     Ok(())
 }
 
 pub async fn groups(data_before: Vec<Group>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM groups";
+    let sql_2 = "INSERT INTO groups (id, name) VALUES ($1, $2)";
+
     if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM groups", params!())
-            .await?;
+        DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::client()
-                .execute(
-                    "INSERT INTO groups (id, name) VALUES ($1, $2)",
-                    params!(b.id, b.name),
-                )
-                .await?;
+            DB::hql().execute(sql_2, params!(b.id, b.name)).await?;
         }
     } else {
-        sqlx::query("DELETE FROM groups")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                "INSERT INTO groups (id, name) VALUES ($1, $2)",
-                b.id,
-                b.name,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql_2, &[&b.id, &b.name]).await?;
         }
     }
     Ok(())
 }
 
 pub async fn jwks(data_before: Vec<Jwk>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client().execute("DELETE FROM jwks", params!()).await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM jwks";
+    let sql_2 = r#"
 INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
-VALUES ($1, $2, $3, $4, $5)"#,
+VALUES ($1, $2, $3, $4, $5)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.kid,
                         b.created_at,
@@ -587,19 +508,18 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM jwks").execute(DB::conn()).await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
-VALUES ($1, $2, $3, $4, $5)"#,
-                b.kid,
-                b.created_at,
-                b.signature.as_str(),
-                &b.enc_key_id,
-                b.jwk
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.kid,
+                    &b.created_at,
+                    &b.signature.as_str(),
+                    &b.enc_key_id,
+                    &b.jwk,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -607,17 +527,18 @@ VALUES ($1, $2, $3, $4, $5)"#,
 }
 
 pub async fn magic_links(data_before: Vec<MagicLink>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM magic_links", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM magic_links";
+    let sql_2 = r#"
 INSERT INTO magic_links
 (id, user_id, csrf_token, cookie, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.id,
                         b.user_id,
@@ -631,24 +552,20 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM magic_links")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO magic_links
-(id, user_id, csrf_token, cookie, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-                b.id,
-                b.user_id,
-                b.csrf_token,
-                b.cookie,
-                b.exp,
-                b.used,
-                b.usage
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.id,
+                    &b.user_id,
+                    &b.csrf_token,
+                    &b.cookie,
+                    &b.exp,
+                    &b.used,
+                    &b.usage,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -656,17 +573,18 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
 }
 
 pub async fn passkeys(data_before: Vec<PasskeyEntity>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM passkeys", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM passkeys";
+    let sql_2 = r#"
 INSERT INTO passkeys
 (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.user_id,
                         b.name,
@@ -681,25 +599,21 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM passkeys")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO passkeys
-(user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
-                b.user_id,
-                b.name,
-                b.passkey_user_id,
-                b.passkey,
-                b.credential_id,
-                b.registered,
-                b.last_used,
-                b.user_verified
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.user_id,
+                    &b.name,
+                    &b.passkey_user_id,
+                    &b.passkey,
+                    &b.credential_id,
+                    &b.registered,
+                    &b.last_used,
+                    &b.user_verified,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -707,57 +621,34 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 }
 
 pub async fn password_policy(bytes: Vec<u8>) -> Result<(), ErrorResponse> {
+    let sql = "UPDATE config SET data = $1 WHERE id = 'password_policy'";
+
     if is_hiqlite() {
-        DB::client()
-            .execute(
-                "UPDATE config SET data = $1 WHERE id = 'password_policy'",
-                params!(bytes),
-            )
-            .await?;
+        DB::hql().execute(sql, params!(bytes)).await?;
     } else {
-        sqlx::query!(
-            "UPDATE config SET data = $1 WHERE id = 'password_policy'",
-            bytes,
-        )
-        .execute(DB::conn())
-        .await?;
+        DB::pg_execute(sql, &[]).await?;
     }
     Ok(())
 }
 
 pub async fn pictures(data_before: Vec<UserPicture>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM pictures";
+    let sql_2 = r#"
+INSERT INTO pictures (id, content_type, storage, data)
+VALUES ($1, $2, $3, $4)"#;
+
     if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM pictures", params!())
-            .await?;
+        DB::hql().execute(sql_1, params!()).await?;
 
         for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
-INSERT INTO pictures (id, content_type, storage, data)
-VALUES ($1, $2, $3, $4)"#,
-                    params!(b.id, b.content_type, b.storage, b.data),
-                )
+            DB::hql()
+                .execute(sql_2, params!(b.id, b.content_type, b.storage, b.data))
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM pictures")
-            .execute(DB::conn())
-            .await?;
-
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO pictures (id, content_type, storage, data)
-VALUES ($1, $2, $3, $4)"#,
-                b.id,
-                b.content_type,
-                b.storage,
-                b.data
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql_2, &[&b.id, &b.content_type, &b.storage, &b.data]).await?;
         }
     }
 
@@ -767,46 +658,37 @@ VALUES ($1, $2, $3, $4)"#,
 pub async fn recent_passwords(
     data_before: Vec<RecentPasswordsEntity>,
 ) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM recent_passwords";
+    let sql_2 = "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)";
+
     if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM recent_passwords", params!())
-            .await?;
+        DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::client()
-                .execute(
-                    "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)",
-                    params!(b.user_id, b.passwords),
-                )
+            DB::hql()
+                .execute(sql_2, params!(b.user_id, b.passwords))
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM recent_passwords")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)",
-                b.user_id,
-                b.passwords
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql_2, &[&b.user_id, &b.passwords]).await?;
         }
     }
     Ok(())
 }
 
 pub async fn refresh_tokens(data_before: Vec<RefreshToken>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM refresh_tokens", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM refresh_tokens";
+    let sql_2 = r#"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.id,
                         b.user_id,
@@ -820,23 +702,20 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM refresh_tokens")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-                b.id,
-                b.user_id,
-                b.nbf,
-                b.exp,
-                b.scope,
-                b.is_mfa,
-                b.session_id
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.id,
+                    &b.user_id,
+                    &b.nbf,
+                    &b.exp,
+                    &b.scope,
+                    &b.is_mfa,
+                    &b.session_id,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -846,39 +725,29 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
 pub async fn refresh_tokens_devices(
     data_before: Vec<RefreshTokenDevice>,
 ) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM refresh_tokens_devices", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM refresh_tokens_devices";
+    let sql_2 = r#"
 INSERT INTO refresh_tokens_devices
 (id, device_id, user_id, nbf, exp, scope)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
+VALUES ($1, $2, $3, $4, $5, $6)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(b.id, b.device_id, b.user_id, b.nbf, b.exp, b.scope),
                 )
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM refresh_tokens_devices")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO refresh_tokens_devices
-(id, device_id, user_id, nbf, exp, scope)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
-                b.id,
-                b.device_id,
-                b.user_id,
-                b.nbf,
-                b.exp,
-                b.scope
+            DB::pg_execute(
+                sql_2,
+                &[&b.id, &b.device_id, &b.user_id, &b.nbf, &b.exp, &b.scope],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -886,57 +755,46 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 }
 
 pub async fn roles(data_before: Vec<Role>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM roles";
+    let sql_2 = "INSERT INTO roles (id, name) VALUES ($1, $2)";
+
     if is_hiqlite() {
-        DB::client().execute("DELETE FROM roles", params!()).await?;
+        DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::client()
-                .execute(
-                    "INSERT INTO roles (id, name) VALUES ($1, $2)",
-                    params!(b.id, b.name),
-                )
-                .await?;
+            DB::hql().execute(sql_2, params!(b.id, b.name)).await?;
         }
     } else {
-        sqlx::query("DELETE FROM roles").execute(DB::conn()).await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!("INSERT INTO roles (id, name) VALUES ($1, $2)", b.id, b.name)
-                .execute(DB::conn())
-                .await?;
+            DB::pg_execute(sql_2, &[&b.id, &b.name]).await?;
         }
     }
     Ok(())
 }
 
 pub async fn scopes(data_before: Vec<Scope>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM scopes", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM scopes";
+    let sql_2 = r#"
 INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
-VALUES ($1, $2, $3, $4)"#,
+VALUES ($1, $2, $3, $4)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(b.id, b.name, b.attr_include_access, b.attr_include_id),
                 )
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM scopes")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
-VALUES ($1, $2, $3, $4)"#,
-                b.id,
-                b.name,
-                b.attr_include_access,
-                b.attr_include_id
+            DB::pg_execute(
+                sql_2,
+                &[&b.id, &b.name, &b.attr_include_access, &b.attr_include_id],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -944,17 +802,18 @@ VALUES ($1, $2, $3, $4)"#,
 }
 
 pub async fn sessions(data_before: Vec<Session>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM sessions", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM sessions";
+    let sql_2 = r#"
 INSERT INTO
 sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.id,
                         b.csrf_token,
@@ -970,26 +829,22 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM sessions")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO
-sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
-                b.id,
-                b.csrf_token,
-                b.user_id,
-                b.roles,
-                b.groups,
-                b.is_mfa,
-                b.state,
-                b.exp,
-                b.last_seen
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.id,
+                    &b.csrf_token,
+                    &b.user_id,
+                    &b.roles,
+                    &b.groups,
+                    &b.is_mfa,
+                    &b.state,
+                    &b.exp,
+                    &b.last_seen,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -997,16 +852,17 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
 }
 
 pub async fn themes(data_before: Vec<ThemeCssFull>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM themes", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM themes";
+    let sql_2 = r#"
 INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
+VALUES ($1, $2, $3, $4, $5, $6)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.client_id,
                         b.last_update,
@@ -1019,22 +875,19 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM themes")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
-                b.client_id,
-                b.last_update,
-                b.version as i32,
-                b.light.as_bytes(),
-                b.dark.as_bytes(),
-                b.border_radius
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.client_id,
+                    &b.last_update,
+                    &b.version,
+                    &b.light.as_bytes(),
+                    &b.dark.as_bytes(),
+                    &b.border_radius,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -1042,102 +895,69 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 }
 
 pub async fn user_attr_config(data_before: Vec<UserAttrConfigEntity>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM user_attr_config";
+    let sql_2 = "INSERT INTO user_attr_config (name, desc) VALUES ($1, $2)";
+
     if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM user_attr_config", params!())
-            .await?;
+        DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::client()
-                .execute(
-                    "INSERT INTO user_attr_config (name, desc) VALUES ($1, $2)",
-                    params!(b.name, b.desc),
-                )
-                .await?;
+            DB::hql().execute(sql_2, params!(b.name, b.desc)).await?;
         }
     } else {
-        sqlx::query("DELETE FROM user_attr_config")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                "INSERT INTO user_attr_config (name, \"desc\") VALUES ($1, $2)",
-                b.name,
-                b.desc
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql_2, &[&b.name, &b.desc]).await?;
         }
     }
     Ok(())
 }
 
 pub async fn user_attr_values(data_before: Vec<UserAttrValueEntity>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM user_attr_values";
+    let sql_2 = "INSERT INTO user_attr_values (user_id, key, value) VALUES ($1, $2, $3)";
+
     if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM user_attr_values", params!())
-            .await?;
+        DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::client()
-                .execute(
-                    "INSERT INTO user_attr_values (user_id, key, value) VALUES ($1, $2, $3)",
-                    params!(b.user_id, b.key, b.value),
-                )
+            DB::hql()
+                .execute(sql_2, params!(b.user_id, b.key, b.value))
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM user_attr_values")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                "INSERT INTO user_attr_values (user_id, key, value) VALUES ($1, $2, $3)",
-                b.user_id,
-                b.key,
-                b.value
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql_2, &[&b.user_id, &b.key, &b.value]).await?;
         }
     }
     Ok(())
 }
 
 pub async fn user_login_states(data_before: Vec<UserLoginState>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM user_login_states", params!())
-            .await?;
-
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM user_login_states";
+    let sql_2 = r#"
 INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT (user_id, client_id, session_id)
-DO NOTHING"#,
+DO NOTHING"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(b.timestamp, b.user_id, b.client_id, b.session_id),
                 )
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM user_login_states")
-            .execute(DB::conn())
-            .await?;
-
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (user_id, client_id, session_id)
-DO NOTHING"#,
-                b.timestamp,
-                b.user_id,
-                b.client_id,
-                b.session_id,
+            DB::pg_execute(
+                sql_2,
+                &[&b.timestamp, &b.user_id, &b.client_id, &b.session_id],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -1145,23 +965,24 @@ DO NOTHING"#,
 }
 
 pub async fn users(data_before: Vec<User>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        // the user_login_states restrict a deletion to prevent logic errors, which we can ignore
-        // during a migration
-        DB::client()
-            .execute("DELETE FROM user_login_states", params!())
-            .await?;
-        DB::client().execute("DELETE FROM users", params!()).await?;
-
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    // the user_login_states restrict a deletion to prevent logic errors, which we can ignore
+    // during a migration
+    let sql_1 = "DELETE FROM user_login_states";
+    let sql_2 = "DELETE FROM users";
+    let sql_3 = r#"
 INSERT INTO users
 (id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
 password_expires, created_at, last_login, last_failed_login, failed_login_attempts, language,
 webauthn_user_id, user_expires, auth_provider_id, federation_uid, picture_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        DB::hql().execute(sql_2, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_3,
                     params!(
                         b.id,
                         b.email,
@@ -1188,43 +1009,34 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
                 .await?;
         }
     } else {
-        // the user_login_states restrict a deletion to prevent logic errors, which we can ignore
-        // during a migration
-        sqlx::query("DELETE FROM user_login_states")
-            .execute(DB::conn())
-            .await?;
-        sqlx::query("DELETE FROM users").execute(DB::conn()).await?;
-
+        DB::pg_execute(sql_1, &[]).await?;
+        DB::pg_execute(sql_2, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO users
-(id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
-password_expires, created_at, last_login, last_failed_login, failed_login_attempts, language,
-webauthn_user_id, user_expires, auth_provider_id, federation_uid, picture_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
-                b.id,
-                b.email,
-                b.given_name,
-                b.family_name,
-                b.password,
-                b.roles,
-                b.groups,
-                b.enabled,
-                b.email_verified,
-                b.password_expires,
-                b.created_at,
-                b.last_login,
-                b.last_failed_login,
-                b.failed_login_attempts,
-                b.language.as_str(),
-                b.webauthn_user_id,
-                b.user_expires,
-                b.auth_provider_id,
-                b.federation_uid,
-                b.picture_id
+            DB::pg_execute(
+                sql_3,
+                &[
+                    &b.id,
+                    &b.email,
+                    &b.given_name,
+                    &b.family_name,
+                    &b.password,
+                    &b.roles,
+                    &b.groups,
+                    &b.enabled,
+                    &b.email_verified,
+                    &b.password_expires,
+                    &b.created_at,
+                    &b.last_login,
+                    &b.last_failed_login,
+                    &b.failed_login_attempts,
+                    &b.language.as_str(),
+                    &b.webauthn_user_id,
+                    &b.user_expires,
+                    &b.auth_provider_id,
+                    &b.federation_uid,
+                    &b.picture_id,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -1232,17 +1044,18 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
 }
 
 pub async fn users_values(data_before: Vec<UserValues>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM users_values", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    r#"
+    let sql_1 = "DELETE FROM users_values";
+    let sql_2 = r#"
 INSERT INTO
 users_values (id, birthdate, phone, street, zip, city, country)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
                     params!(
                         b.id,
                         b.birthdate,
@@ -1256,24 +1069,20 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM users_values")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                r#"
-INSERT INTO
-users_values (id, birthdate, phone, street, zip, city, country)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-                b.id,
-                b.birthdate,
-                b.phone,
-                b.street,
-                b.zip,
-                b.city,
-                b.country
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.id,
+                    &b.birthdate,
+                    &b.phone,
+                    &b.street,
+                    &b.zip,
+                    &b.city,
+                    &b.country,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
     }
@@ -1281,31 +1090,20 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
 }
 
 pub async fn webids(data_before: Vec<WebId>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM webids";
+    let sql_2 = "INSERT INTO webids (user_id, custom_triples, expose_email) VALUES ($1, $2, $3)";
+
     if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM webids", params!())
-            .await?;
+        DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::client()
-                .execute(
-                    "INSERT INTO webids (user_id, custom_triples, expose_email) VALUES ($1, $2, $3)",
-                    params!(b.user_id, b.custom_triples, b.expose_email),
-                )
+            DB::hql()
+                .execute(sql_2, params!(b.user_id, b.custom_triples, b.expose_email))
                 .await?;
         }
     } else {
-        sqlx::query("DELETE FROM webids")
-            .execute(DB::conn())
-            .await?;
+        DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            sqlx::query!(
-                "INSERT INTO webids (user_id, custom_triples, expose_email) VALUES ($1, $2, $3)",
-                b.user_id,
-                b.custom_triples,
-                b.expose_email
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql_2, &[&b.user_id, &b.custom_triples, &b.expose_email]).await?;
         }
     }
     Ok(())

@@ -1,5 +1,6 @@
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
+use deadpool_postgres::GenericClient;
 use hiqlite::{Param, Params, params};
 use rauthy_api_types::groups::GroupRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS};
@@ -7,13 +8,21 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Group {
     pub id: String,
     pub name: String,
+}
+
+impl From<tokio_postgres::Row> for Group {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            name: row.get("name"),
+        }
+    }
 }
 
 // CRUD
@@ -35,25 +44,17 @@ impl Group {
             name: group_req.group,
         };
 
+        let sql = "INSERT INTO groups (id, name) VALUES ($1, $2)";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "INSERT INTO groups (id, name) VALUES ($1, $2)",
-                    params!(new_group.id.clone(), new_group.name.clone()),
-                )
+            DB::hql()
+                .execute(sql, params!(new_group.id.clone(), new_group.name.clone()))
                 .await?;
         } else {
-            sqlx::query!(
-                "INSERT INTO groups (id, name) VALUES ($1, $2)",
-                new_group.id,
-                new_group.name,
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&new_group.id, &new_group.name]).await?;
         }
 
         groups.push(new_group.clone());
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_GROUPS, &groups, CACHE_TTL_APP)
             .await?;
 
@@ -65,6 +66,8 @@ impl Group {
         let group = Group::find(id).await?;
         let users = User::find_with_group(&group.name).await?;
 
+        let sql = "DELETE FROM groups WHERE id = $1";
+
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
@@ -73,25 +76,21 @@ impl Group {
                 user.save_txn_append(&mut txn);
             }
 
-            txn.push((
-                "DELETE FROM groups WHERE id = $1",
-                params!(group.id.clone()),
-            ));
+            txn.push((sql, params!(group.id.clone())));
 
-            for res in DB::client().txn(txn).await? {
+            for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             for mut user in users {
                 user.delete_group(&group.name);
-                user.save_txn(&mut txn).await?;
+                user.save_txn(&txn).await?;
             }
-            sqlx::query!("DELETE FROM groups WHERE id = $1", group.id)
-                .execute(&mut *txn)
-                .await?;
+            DB::pg_txn_append(&txn, sql, &[&group.id]).await?;
 
             txn.commit().await?;
         }
@@ -102,7 +101,7 @@ impl Group {
             .filter(|g| g.id != group.id)
             .collect::<Vec<Group>>();
 
-        let client = DB::client();
+        let client = DB::hql();
         // clearing users cache is more safe and less resource intensive than trying to
         // update each single entry
         client.clear_cache(Cache::User).await?;
@@ -115,14 +114,11 @@ impl Group {
 
     // Returns a single group by id
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM groups WHERE id = $1";
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as_one("SELECT * FROM groups WHERE id = $1", params!(id))
-                .await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM groups WHERE id = $1", id,)
-                .fetch_one(DB::conn())
-                .await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         Ok(res)
@@ -130,17 +126,16 @@ impl Group {
 
     // Returns all existing groups
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX_GROUPS).await? {
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM groups";
         let res = if is_hiqlite() {
-            client.query_as("SELECT * FROM groups", params!()).await?
+            client.query_as(sql, params!()).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM groups")
-                .fetch_all(DB::conn())
-                .await?
+            DB::pg_query(sql, &[], 2).await?
         };
 
         client
@@ -160,6 +155,7 @@ impl Group {
             name: new_name,
         };
 
+        let sql = "UPDATE groups SET name = $1 WHERE id = $2";
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
@@ -173,29 +169,21 @@ impl Group {
                 user.save_txn_append(&mut txn);
             }
 
-            txn.push((
-                "UPDATE groups SET name = $1 WHERE id = $2",
-                params!(new_group.name.clone(), new_group.id.clone()),
-            ));
+            txn.push((sql, params!(new_group.name.clone(), new_group.id.clone())));
 
-            for res in DB::client().txn(txn).await? {
+            for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = DB::txn().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             for mut user in users {
                 user.delete_group(&group.name);
-                user.save_txn(&mut txn).await?;
+                user.save_txn(&txn).await?;
             }
-            sqlx::query!(
-                "UPDATE groups SET name = $1 WHERE id = $2",
-                new_group.name,
-                new_group.id,
-            )
-            .execute(&mut *txn)
-            .await?;
+            DB::pg_txn_append(&txn, sql, &[&new_group.name, &new_group.id]).await?;
 
             txn.commit().await?;
         }
@@ -211,7 +199,7 @@ impl Group {
             })
             .collect::<Vec<Group>>();
 
-        let client = DB::client();
+        let client = DB::hql();
         client.clear_cache(Cache::User).await?;
         client
             .put(Cache::App, IDX_GROUPS, &groups, CACHE_TTL_APP)

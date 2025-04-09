@@ -38,7 +38,7 @@ async fn check_app_version(
     data: &web::Data<AppState>,
     last_version_notification: &mut Option<Version>,
 ) {
-    if !DB::client().is_leader_cache().await {
+    if !DB::hql().is_leader_cache().await {
         debug!("Running HA mode without being the leader - skipping app_version_check scheduler");
         return;
     }

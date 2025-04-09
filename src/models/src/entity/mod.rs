@@ -1,7 +1,6 @@
 use crate::database::DB;
 use hiqlite::params;
 use rauthy_common::is_hiqlite;
-use sqlx::query;
 
 pub mod api_keys;
 pub mod app_version;
@@ -44,11 +43,11 @@ pub mod well_known;
 pub async fn is_db_alive() -> bool {
     if is_hiqlite() {
         // execute returning instead of query to make sure the leader is reachable in HA deployment
-        DB::client()
+        DB::hql()
             .execute_returning("SELECT 1", params!())
             .await
             .is_ok()
     } else {
-        query("SELECT 1").execute(DB::conn()).await.is_ok()
+        DB::pg_query_one_row("SELECT 1", &[]).await.is_ok()
     }
 }

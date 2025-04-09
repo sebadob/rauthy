@@ -406,6 +406,20 @@ pub struct UserResponseSimple {
     pub picture_id: Option<String>,
 }
 
+impl From<tokio_postgres::Row> for UserResponseSimple {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            email: row.get("email"),
+            given_name: row.get("given_name"),
+            family_name: row.get("family_name"),
+            created_at: row.get("created_at"),
+            last_login: row.get("last_login"),
+            picture_id: row.get("picture_id"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
 pub struct UserValuesResponse {
     pub birthdate: Option<String>,

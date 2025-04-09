@@ -16,8 +16,7 @@ use rauthy_common::utils::{get_local_hostname, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgRow;
-use sqlx::{Error, FromRow, Row as SqlxRow, query, query_as};
+use std::cmp::max;
 use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::str::FromStr;
@@ -372,17 +371,17 @@ impl<'r> From<hiqlite::Row<'r>> for Event {
     }
 }
 
-impl<'r> FromRow<'r, PgRow> for Event {
-    fn from_row(row: &'r PgRow) -> Result<Self, Error> {
-        Ok(Self {
+impl From<tokio_postgres::Row> for Event {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
             id: row.get("id"),
             timestamp: row.get("timestamp"),
-            level: EventLevel::from(row.get::<i16, _>("level")),
-            typ: EventType::from(row.get::<i16, _>("typ")),
+            level: EventLevel::from(row.get::<_, i16>("level")),
+            typ: EventType::from(row.get::<_, i16>("typ")),
             ip: row.get("ip"),
             data: row.get("data"),
             text: row.get("text"),
-        })
+        }
     }
 }
 
@@ -480,12 +479,14 @@ impl Event {
         let level = self.level.value();
         let typ = self.typ.value();
 
-        if is_hiqlite() {
-            DB::client()
-                .execute(
-                    r#"
+        let sql = r#"
 INSERT INTO events (id, timestamp, level, typ, ip, data, text)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
                         &self.id,
                         self.timestamp,
@@ -498,19 +499,18 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 )
                 .await?;
         } else {
-            query!(
-                r#"
-INSERT INTO events (id, timestamp, level, typ, ip, data, text)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-                self.id,
-                self.timestamp,
-                level,
-                typ,
-                self.ip,
-                self.data,
-                self.text,
+            DB::pg_execute(
+                sql,
+                &[
+                    &self.id,
+                    &self.timestamp,
+                    &level,
+                    &typ,
+                    &self.ip,
+                    &self.data,
+                    &self.text,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
 
@@ -532,75 +532,43 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
 
         let res = if let Some(typ) = typ {
             let typ = typ.value();
-            if is_hiqlite() {
-                DB::client()
-                    .query_map(
-                        r#"
+            let sql = r#"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
-ORDER BY timestamp DESC"#,
-                        params!(from, until, level, typ),
-                    )
+ORDER BY timestamp DESC"#;
+
+            if is_hiqlite() {
+                DB::hql()
+                    .query_map(sql, params!(from, until, level, typ))
                     .await?
             } else {
-                query_as!(
-                    Self,
-                    r#"
-SELECT * FROM events
-WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
-ORDER BY timestamp DESC"#,
-                    from,
-                    until,
-                    level,
-                    typ,
-                )
-                .fetch_all(DB::conn())
-                .await?
+                DB::pg_query(sql, &[&from, &until, &level, &typ], 32).await?
             }
-        } else if is_hiqlite() {
-            DB::client()
-                .query_map(
-                    r#"
-SELECT * FROM events
-WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
-ORDER BY timestamp DESC"#,
-                    params!(from, until, level),
-                )
-                .await?
         } else {
-            query_as!(
-                Self,
-                r#"
+            let sql = r#"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
-ORDER BY timestamp DESC"#,
-                from,
-                until,
-                level,
-            )
-            .fetch_all(DB::conn())
-            .await?
+ORDER BY timestamp DESC"#;
+
+            if is_hiqlite() {
+                DB::hql()
+                    .query_map(sql, params!(from, until, level))
+                    .await?
+            } else {
+                DB::pg_query(sql, &[&from, &until, &level], 32).await?
+            }
         };
 
         Ok(res)
     }
 
     pub async fn find_latest(limit: i64) -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1";
         let res = if is_hiqlite() {
-            DB::client()
-                .query_map(
-                    "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
-                    params!(limit),
-                )
-                .await?
+            DB::hql().query_map(sql, params!(limit)).await?
         } else {
-            query_as!(
-                Self,
-                "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
-                limit
-            )
-            .fetch_all(DB::conn())
-            .await?
+            let size_hint = max(limit, 1) as usize;
+            DB::pg_query(sql, &[&limit], size_hint).await?
         };
 
         Ok(res)

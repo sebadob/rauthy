@@ -19,7 +19,7 @@ pub async fn sessions_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!(
                 "Running HA mode without being the leader - skipping sessions_cleanup scheduler"
             );
@@ -29,19 +29,13 @@ pub async fn sessions_cleanup() {
         debug!("Running sessions_cleanup scheduler");
 
         let thres = Utc::now().sub(chrono::Duration::hours(24)).timestamp();
+        let sql = "DELETE FROM sessions WHERE exp < $1";
 
         if is_hiqlite() {
-            if let Err(err) = DB::client()
-                .execute("DELETE FROM sessions WHERE exp < $1", params!(thres))
-                .await
-            {
+            if let Err(err) = DB::hql().execute(sql, params!(thres)).await {
                 error!("Session Cleanup Error: {:?}", err)
             }
-        } else if let Err(err) = sqlx::query("DELETE FROM sessions WHERE exp < $1")
-            .bind(thres)
-            .execute(DB::conn())
-            .await
-        {
+        } else if let Err(err) = DB::pg_execute(sql, &[&thres]).await {
             error!("Session Cleanup Error: {:?}", err)
         }
     }

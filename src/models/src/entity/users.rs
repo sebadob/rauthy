@@ -1,4 +1,4 @@
-use crate::app_state::{AppState, DbTxn};
+use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
 use crate::entity::continuation_token::ContinuationToken;
@@ -34,11 +34,19 @@ use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, query_as};
+use std::cmp::max;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace};
+
+static SQL_SAVE: &str = r#"
+UPDATE USERS SET
+email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
+email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
+failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
+auth_provider_id = $16, federation_uid = $17, picture_id = $18
+WHERE id = $19"#;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
@@ -66,7 +74,7 @@ impl From<AccountType> for UserAccountTypeResponse {
     }
 }
 
-#[derive(Clone, FromRow, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct User {
     pub id: String,
     pub email: String,
@@ -122,10 +130,37 @@ impl Debug for User {
     }
 }
 
+impl From<tokio_postgres::Row> for User {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            email: row.get("email"),
+            given_name: row.get("given_name"),
+            family_name: row.get("family_name"),
+            password: row.get("password"),
+            roles: row.get("roles"),
+            groups: row.get("groups"),
+            enabled: row.get("enabled"),
+            email_verified: row.get("email_verified"),
+            password_expires: row.get("password_expires"),
+            created_at: row.get("created_at"),
+            last_login: row.get("last_login"),
+            last_failed_login: row.get("last_failed_login"),
+            failed_login_attempts: row.get("failed_login_attempts"),
+            language: Language::from(row.get::<_, String>("language")),
+            webauthn_user_id: row.get("webauthn_user_id"),
+            user_expires: row.get("user_expires"),
+            auth_provider_id: row.get("auth_provider_id"),
+            federation_uid: row.get("federation_uid"),
+            picture_id: row.get("picture_id"),
+        }
+    }
+}
+
 // CRUD
 impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         let idx = format!("{}_{}", IDX_USERS, &user_id);
         client.delete(Cache::User, idx).await?;
@@ -137,24 +172,21 @@ impl User {
     }
 
     pub async fn count() -> Result<i64, ErrorResponse> {
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(count) = client.get(Cache::App, IDX_USER_COUNT).await? {
             return Ok(count);
         }
 
-        let count = if is_hiqlite() {
+        let sql = "SELECT COUNT (*) AS count FROM users";
+        let count: i64 = if is_hiqlite() {
             client
-                .query_raw("SELECT COUNT (*) AS count FROM users", params!())
+                .query_raw(sql, params!())
                 .await?
                 .remove(0)
                 .get("count")
         } else {
-            sqlx::query!("SELECT COUNT (*) count FROM users")
-                .fetch_one(DB::conn())
-                .await?
-                .count
-                .unwrap_or_default()
+            DB::pg_query_rows(sql, &[], 1).await?.remove(0).get("count")
         };
 
         client
@@ -169,7 +201,7 @@ impl User {
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only
         count += 1;
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
             .await?;
         Ok(())
@@ -180,7 +212,7 @@ impl User {
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only
         count -= 1;
-        DB::client()
+        DB::hql()
             .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
             .await?;
         Ok(())
@@ -241,14 +273,11 @@ impl User {
             UserPicture::remove(picture_id.clone(), self.id.clone()).await?;
         }
 
+        let sql = "DELETE FROM users WHERE id = $1";
         if is_hiqlite() {
-            DB::client()
-                .execute("DELETE FROM users WHERE id = $1", params!(&self.id))
-                .await?;
+            DB::hql().execute(sql, params!(&self.id)).await?;
         } else {
-            sqlx::query!("DELETE FROM users WHERE id = $1", self.id)
-                .execute(DB::conn())
-                .await?;
+            DB::pg_execute(sql, &[&self.id]).await?;
         }
 
         Self::invalidate_cache(&self.id, &self.email).await?;
@@ -260,25 +289,23 @@ impl User {
     pub async fn exists(id: String) -> Result<(), ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
 
-        let opt: Option<Self> = DB::client().get(Cache::User, idx).await?;
+        let opt: Option<Self> = DB::hql().get(Cache::User, idx).await?;
         if opt.is_some() {
             return Ok(());
         }
 
-        if is_hiqlite() {
-            let rows = DB::client()
-                .query_raw("SELECT 1 FROM users WHERE id = $1", params!(id))
-                .await?;
-            if rows.is_empty() {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::NotFound,
-                    "user does not exist",
-                ));
-            }
+        let sql = "SELECT 1 FROM users WHERE id = $1";
+        let user_exists = if is_hiqlite() {
+            DB::hql().query_raw(sql, params!(id)).await?.is_empty()
         } else {
-            sqlx::query!("SELECT id FROM users WHERE id = $1", id)
-                .fetch_one(DB::conn())
-                .await?;
+            DB::pg_query_rows(sql, &[&id], 1).await?.is_empty()
+        };
+
+        if !user_exists {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::NotFound,
+                "user does not exist",
+            ));
         }
 
         Ok(())
@@ -286,20 +313,17 @@ impl User {
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
             return Ok(slf);
         }
 
-        let slf = if is_hiqlite() {
-            client
-                .query_as_one("SELECT * FROM users WHERE id = $1", params!(id))
-                .await?
+        let sql = "SELECT * FROM users WHERE id = $1";
+        let slf: Self = if is_hiqlite() {
+            client.query_as_one(sql, params!(id)).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM users WHERE id = $1", id)
-                .fetch_one(DB::conn())
-                .await?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         client.put(Cache::User, idx, &slf, CACHE_TTL_USER).await?;
@@ -310,20 +334,17 @@ impl User {
         let email = email.to_lowercase();
 
         let idx = format!("{}_{}", IDX_USERS, email);
-        let client = DB::client();
+        let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM users WHERE email = $1";
         let slf = if is_hiqlite() {
-            client
-                .query_as_one("SELECT * FROM users WHERE email = $1", params!(email))
-                .await?
+            client.query_as_one(sql, params!(email)).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM users WHERE email = $1", email)
-                .fetch_one(DB::conn())
-                .await?
+            DB::pg_query_one(sql, &[&email]).await?
         };
 
         client.put(Cache::User, idx, &slf, CACHE_TTL_USER).await?;
@@ -334,62 +355,45 @@ impl User {
         auth_provider_id: &str,
         federation_uid: &str,
     ) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM users WHERE auth_provider_id = $1 AND federation_uid = $2";
         let slf = if is_hiqlite() {
-            DB::client()
-                .query_as_one(
-                    "SELECT * FROM users WHERE auth_provider_id = $1 AND federation_uid = $2",
-                    params!(auth_provider_id, federation_uid),
-                )
+            DB::hql()
+                .query_as_one(sql, params!(auth_provider_id, federation_uid))
                 .await?
         } else {
-            sqlx::query_as!(
-                Self,
-                "SELECT * FROM users WHERE auth_provider_id = $1 AND federation_uid = $2",
-                auth_provider_id,
-                federation_uid
-            )
-            .fetch_one(DB::conn())
-            .await?
+            DB::pg_query_one(sql, &[&auth_provider_id, &federation_uid]).await?
         };
 
         Ok(slf)
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM users ORDER BY created_at ASC";
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as("SELECT * FROM users ORDER BY created_at ASC", params!())
-                .await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM users ORDER BY created_at ASC")
-                .fetch_all(DB::conn())
-                .await?
+            // for big instances, fetching the count from the cache upfront is a speed improvement
+            // because we only need a single memory allocation for the internal `Vec<_>`
+            let count = Self::count().await?;
+            DB::pg_query(sql, &[], count as usize).await?
         };
 
         Ok(res)
     }
 
     pub async fn find_all_simple() -> Result<Vec<UserResponseSimple>, ErrorResponse> {
+        let sql = r#"
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
+FROM users
+ORDER BY created_at ASC"#;
+
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as(
-                    r#"
-SELECT id, email, given_name, family_name, created_at, last_login, picture_id
-FROM users
-ORDER BY created_at ASC"#,
-                    params!(),
-                )
-                .await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
-            sqlx::query_as!(
-                UserResponseSimple,
-                r#"
-SELECT id, email, given_name, family_name, created_at, last_login, picture_id
-FROM users
-ORDER BY created_at ASC"#
-            )
-            .fetch_all(DB::conn())
-            .await?
+            // for big instances, fetching the count from the cache upfront is a speed improvement
+            // because we only need a single memory allocation for the internal `Vec<_>`
+            let count = Self::count().await?;
+            DB::pg_query(sql, &[], count as usize).await?
         };
 
         Ok(res)
@@ -398,15 +402,13 @@ ORDER BY created_at ASC"#
     /// This is a very expensive query using `LIKE`, use only when necessary.
     pub async fn find_with_group(group_name: &str) -> Result<Vec<Self>, ErrorResponse> {
         let like = format!("%{group_name}%");
+        let sql = "SELECT * FROM users WHERE groups LIKE $1";
 
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as("SELECT * FROM users WHERE groups LIKE $1", params!(like))
-                .await?
+            DB::hql().query_as(sql, params!(like)).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM users WHERE groups LIKE $1", like)
-                .fetch_all(DB::conn())
-                .await?
+            let count = Self::count().await? as usize;
+            DB::pg_query(sql, &[&like], count).await?
         };
 
         Ok(res)
@@ -415,15 +417,13 @@ ORDER BY created_at ASC"#
     /// This is a very expensive query using `LIKE`, use only when necessary.
     pub async fn find_with_role(role_name: &str) -> Result<Vec<Self>, ErrorResponse> {
         let like = format!("%{role_name}%");
+        let sql = "SELECT * FROM users WHERE roles LIKE $1";
 
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as("SELECT * FROM users WHERE roles LIKE $1", params!(like))
-                .await?
+            DB::hql().query_as(sql, params!(like)).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM users WHERE roles LIKE $1", like)
-                .fetch_all(DB::conn())
-                .await?
+            let count = Self::count().await? as usize;
+            DB::pg_query(sql, &[&like], count).await?
         };
 
         Ok(res)
@@ -431,15 +431,13 @@ ORDER BY created_at ASC"#
 
     pub async fn find_expired() -> Result<Vec<Self>, ErrorResponse> {
         let now = Utc::now().add(chrono::Duration::seconds(10)).timestamp();
+        let sql = "SELECT * FROM users WHERE user_expires < $1";
 
         let res = if is_hiqlite() {
-            DB::client()
-                .query_as("SELECT * FROM users WHERE user_expires < $1", params!(now))
-                .await?
+            DB::hql().query_as(sql, params!(now)).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM users WHERE user_expires < $1", now)
-                .fetch_all(DB::conn())
-                .await?
+            let count = Self::count().await? as usize;
+            DB::pg_query(sql, &[&now], count).await?
         };
 
         Ok(res)
@@ -476,144 +474,75 @@ ORDER BY created_at ASC"#
         offset: i64,
         backwards: bool,
     ) -> Result<(Vec<UserResponseSimple>, Option<ContinuationToken>), ErrorResponse> {
+        let size_hint = max(page_size, 1) as usize;
+
         let res = if let Some(token) = continuation_token {
             if backwards {
-                if is_hiqlite() {
-                    let mut res = DB::client()
-                        .query_as(
-                            r#"
+                let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE created_at <= $1 AND id != $2
 ORDER BY created_at DESC
 LIMIT $3
-OFFSET $4"#,
-                            params!(token.ts, token.id, page_size, offset),
-                        )
-                        .await?;
+OFFSET $4"#;
 
-                    res.reverse();
-                    res
-                } else {
-                    let mut res = sqlx::query_as!(
-                        UserResponseSimple,
-                        r#"
-SELECT id, email, given_name, family_name, created_at, last_login, picture_id
-FROM users
-WHERE created_at <= $1 AND id != $2
-ORDER BY created_at DESC
-LIMIT $3
-OFFSET $4"#,
-                        token.ts,
-                        token.id,
-                        page_size,
-                        offset,
-                    )
-                    .fetch_all(DB::conn())
-                    .await?;
-
-                    res.reverse();
-                    res
-                }
-            } else {
-                #[allow(clippy::collapsible_else_if)]
-                if is_hiqlite() {
-                    DB::client()
-                        .query_as(
-                            r#"
-SELECT id, email, given_name, family_name, created_at, last_login, picture_id
-FROM users
-WHERE created_at >= $1 AND id != $2
-ORDER BY created_at ASC
-LIMIT $3
-OFFSET $4"#,
-                            params!(token.ts, token.id, page_size, offset),
-                        )
+                let mut res: Vec<UserResponseSimple> = if is_hiqlite() {
+                    DB::hql()
+                        .query_as(sql, params!(token.ts, token.id, page_size, offset))
                         .await?
                 } else {
-                    sqlx::query_as!(
-                        UserResponseSimple,
-                        r#"
+                    DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
+                        .await?
+                };
+                res.reverse();
+                res
+            } else {
+                let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE created_at >= $1 AND id != $2
 ORDER BY created_at ASC
 LIMIT $3
-OFFSET $4"#,
-                        token.ts,
-                        token.id,
-                        page_size,
-                        offset,
-                    )
-                    .fetch_all(DB::conn())
-                    .await?
+OFFSET $4"#;
+
+                if is_hiqlite() {
+                    DB::hql()
+                        .query_as(sql, params!(token.ts, token.id, page_size, offset))
+                        .await?
+                } else {
+                    DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
+                        .await?
                 }
             }
         } else if backwards {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
-
-            if is_hiqlite() {
-                let mut res = DB::client()
-                    .query_as(
-                        r#"
+            let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at DESC
 LIMIT $1
-OFFSET $2"#,
-                        params!(page_size, offset),
-                    )
-                    .await?;
+OFFSET $2"#;
 
-                res.reverse();
-                res
+            let mut res = if is_hiqlite() {
+                DB::hql().query_as(sql, params!(page_size, offset)).await?
             } else {
-                let mut res = sqlx::query_as!(
-                    UserResponseSimple,
-                    r#"
-SELECT id, email, given_name, family_name, created_at, last_login, picture_id
-FROM users
-ORDER BY created_at DESC
-LIMIT $1
-OFFSET $2"#,
-                    page_size,
-                    offset,
-                )
-                .fetch_all(DB::conn())
-                .await?;
-
-                res.reverse();
-                res
-            }
+                DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
+            };
+            res.reverse();
+            res
         } else {
-            #[allow(clippy::collapsible_else_if)]
+            let sql = r#"
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
+FROM users
+ORDER BY created_at ASC
+LIMIT $1
+OFFSET $2"#;
+
             if is_hiqlite() {
-                DB::client()
-                    .query_as(
-                        r#"
-SELECT id, email, given_name, family_name, created_at, last_login, picture_id
-FROM users
-ORDER BY created_at ASC
-LIMIT $1
-OFFSET $2"#,
-                        params!(page_size, offset),
-                    )
-                    .await?
+                DB::hql().query_as(sql, params!(page_size, offset)).await?
             } else {
-                sqlx::query_as!(
-                    UserResponseSimple,
-                    r#"
-SELECT id, email, given_name, family_name, created_at, last_login, picture_id
-FROM users
-ORDER BY created_at ASC
-LIMIT $1
-OFFSET $2"#,
-                    page_size,
-                    offset,
-                )
-                .fetch_all(DB::conn())
-                .await?
+                DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
             }
         };
 
@@ -626,15 +555,16 @@ OFFSET $2"#,
 
     pub async fn insert(new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
-
-        if is_hiqlite() {
-            DB::client()
-                .execute(
-                    r#"
+        let sql = r#"
 INSERT INTO USERS
 (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
 last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(
                         &new_user.id,
                         &new_user.email,
@@ -655,29 +585,26 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                 )
                 .await?;
         } else {
-            sqlx::query!(
-                r#"
-INSERT INTO USERS
-(id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
-                new_user.id,
-                new_user.email,
-                new_user.given_name,
-                new_user.family_name,
-                new_user.roles,
-                new_user.groups,
-                new_user.enabled,
-                new_user.email_verified,
-                new_user.created_at,
-                new_user.last_login,
-                lang,
-                new_user.user_expires,
-                new_user.auth_provider_id,
-                new_user.federation_uid,
-                new_user.picture_id,
+            DB::pg_execute(
+                sql,
+                &[
+                    &new_user.id,
+                    &new_user.email,
+                    &new_user.given_name,
+                    &new_user.family_name,
+                    &new_user.roles,
+                    &new_user.groups,
+                    &new_user.enabled,
+                    &new_user.email_verified,
+                    &new_user.created_at,
+                    &new_user.last_login,
+                    &lang,
+                    &new_user.user_expires,
+                    &new_user.auth_provider_id,
+                    &new_user.federation_uid,
+                    &new_user.picture_id,
+                ],
             )
-            .execute(DB::conn())
             .await?;
         }
 
@@ -715,13 +642,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
     /// need additional cache cleanup and E-Mail handling!
     pub fn save_txn_append(self, txn: &mut Vec<(&str, Params)>) {
         txn.push((
-            r#"
-UPDATE USERS SET
-email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
-email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
-failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, picture_id = $18
-WHERE id = $19"#,
+            SQL_SAVE,
             params!(
                 self.email,
                 self.given_name,
@@ -752,38 +673,37 @@ WHERE id = $19"#,
     ///
     /// CAUTION:
     /// DO NOT use this function to update a user's `email` or `enabled` state!
-    pub async fn save_txn(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
+    pub async fn save_txn(
+        &self,
+        txn: &deadpool_postgres::Transaction<'_>,
+    ) -> Result<(), ErrorResponse> {
         let lang = self.language.as_str();
 
-        sqlx::query(
-            r#"
-UPDATE USERS SET
-email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
-email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
-failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, picture_id = $18
-WHERE id = $19"#,
+        DB::pg_txn_append(
+            txn,
+            SQL_SAVE,
+            &[
+                &self.email,
+                &self.given_name,
+                &self.family_name,
+                &self.password,
+                &self.roles,
+                &self.groups,
+                &self.enabled,
+                &self.email_verified,
+                &self.password_expires,
+                &self.last_login,
+                &self.last_failed_login,
+                &self.failed_login_attempts,
+                &lang,
+                &self.webauthn_user_id,
+                &self.user_expires,
+                &self.auth_provider_id,
+                &self.federation_uid,
+                &self.picture_id,
+                &self.id,
+            ],
         )
-        .bind(&self.email)
-        .bind(&self.given_name)
-        .bind(&self.family_name)
-        .bind(&self.password)
-        .bind(&self.roles)
-        .bind(&self.groups)
-        .bind(self.enabled)
-        .bind(self.email_verified)
-        .bind(self.password_expires)
-        .bind(self.last_login)
-        .bind(self.last_failed_login)
-        .bind(self.failed_login_attempts)
-        .bind(lang)
-        .bind(self.webauthn_user_id.clone())
-        .bind(self.user_expires)
-        .bind(&self.auth_provider_id)
-        .bind(&self.federation_uid)
-        .bind(&self.picture_id)
-        .bind(&self.id)
-        .execute(&mut **txn)
         .await?;
 
         Ok(())
@@ -795,18 +715,12 @@ WHERE id = $19"#,
         }
 
         let lang = self.language.as_str();
-        let client = DB::client();
+        let client = DB::hql();
 
         if is_hiqlite() {
             client
                 .execute(
-                    r#"
-UPDATE USERS SET
-email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
-email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
-failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, picture_id = $18
-WHERE id = $19"#,
+                    SQL_SAVE,
                     params!(
                         &self.email,
                         &self.given_name,
@@ -831,35 +745,30 @@ WHERE id = $19"#,
                 )
                 .await?;
         } else {
-            sqlx::query(
-                r#"
-UPDATE USERS SET
-email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
-email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
-failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, picture_id = $18
-WHERE id = $19"#,
+            DB::pg_execute(
+                SQL_SAVE,
+                &[
+                    &self.email,
+                    &self.given_name,
+                    &self.family_name,
+                    &self.password,
+                    &self.roles,
+                    &self.groups,
+                    &self.enabled,
+                    &self.email_verified,
+                    &self.password_expires,
+                    &self.last_login,
+                    &self.last_failed_login,
+                    &self.failed_login_attempts,
+                    &lang,
+                    &self.webauthn_user_id,
+                    &self.user_expires,
+                    &self.auth_provider_id,
+                    &self.federation_uid,
+                    &self.picture_id,
+                    &self.id,
+                ],
             )
-            .bind(&self.email)
-            .bind(&self.given_name)
-            .bind(&self.family_name)
-            .bind(&self.password)
-            .bind(&self.roles)
-            .bind(&self.groups)
-            .bind(self.enabled)
-            .bind(self.email_verified)
-            .bind(self.password_expires)
-            .bind(self.last_login)
-            .bind(self.last_failed_login)
-            .bind(self.failed_login_attempts)
-            .bind(lang)
-            .bind(self.webauthn_user_id.clone())
-            .bind(self.user_expires)
-            .bind(&self.auth_provider_id)
-            .bind(&self.federation_uid)
-            .bind(&self.picture_id)
-            .bind(&self.id)
-            .execute(DB::conn())
             .await?;
         }
 
@@ -889,64 +798,35 @@ WHERE id = $19"#,
         limit: i64,
     ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
         let q = format!("%{}%", q);
+        let size_hint = max(limit, 1) as usize;
 
         let res = match idx {
             SearchParamsIdx::Id | SearchParamsIdx::UserId => {
+                let sql = r#"
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
+FROM users
+WHERE id LIKE $1
+ORDER BY created_at ASC
+LIMIT $2"#;
+
                 if is_hiqlite() {
-                    DB::client()
-                        .query_as(
-                            r#"
-SELECT id, email, given_name, family_name, created_at, last_login, picture_id
-FROM users
-WHERE id LIKE $1
-ORDER BY created_at ASC
-LIMIT $2"#,
-                            params!(q, limit),
-                        )
-                        .await?
+                    DB::hql().query_as(sql, params!(q, limit)).await?
                 } else {
-                    query_as!(
-                        UserResponseSimple,
-                        r#"
-SELECT id, email, given_name, family_name, created_at, last_login, picture_id
-FROM users
-WHERE id LIKE $1
-ORDER BY created_at ASC
-LIMIT $2"#,
-                        q,
-                        limit
-                    )
-                    .fetch_all(DB::conn())
-                    .await?
+                    DB::pg_query(sql, &[&q, &limit], size_hint).await?
                 }
             }
             SearchParamsIdx::Email => {
+                let sql = r#"
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
+FROM users
+WHERE email LIKE $1
+ORDER BY created_at ASC
+LIMIT $2"#;
+
                 if is_hiqlite() {
-                    DB::client()
-                        .query_as(
-                            r#"
-SELECT id, email, given_name, family_name, created_at, last_login, picture_id
-FROM users
-WHERE email LIKE $1
-ORDER BY created_at ASC
-LIMIT $2"#,
-                            params!(q, limit),
-                        )
-                        .await?
+                    DB::hql().query_as(sql, params!(q, limit)).await?
                 } else {
-                    query_as!(
-                        UserResponseSimple,
-                        r#"
-SELECT id, email, given_name, family_name, created_at, last_login, picture_id
-FROM users
-WHERE email LIKE $1
-ORDER BY created_at ASC
-LIMIT $2"#,
-                        q,
-                        limit
-                    )
-                    .fetch_all(DB::conn())
-                    .await?
+                    DB::pg_query(sql, &[&q, &limit], size_hint).await?
                 }
             }
             _ => {
@@ -964,21 +844,13 @@ LIMIT $2"#,
         user_id: String,
         email_verified: bool,
     ) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE users SET email_verified = $1 WHERE id = $2";
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "UPDATE users SET email_verified = $1 WHERE id = $2",
-                    params!(email_verified, user_id),
-                )
+            DB::hql()
+                .execute(sql, params!(email_verified, user_id))
                 .await?;
         } else {
-            sqlx::query!(
-                "UPDATE users SET email_verified = $1 WHERE id = $2",
-                email_verified,
-                user_id
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&email_verified, &user_id]).await?;
         }
         Ok(())
     }
@@ -1063,22 +935,12 @@ LIMIT $2"#,
 
     pub async fn update_language(&self) -> Result<(), ErrorResponse> {
         let lang = self.language.as_str();
+        let sql = "UPDATE users SET language = $1 WHERE id = $2";
 
         if is_hiqlite() {
-            DB::client()
-                .execute(
-                    "UPDATE users SET language = $1 WHERE id = $2",
-                    params!(lang, &self.id),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(lang, &self.id)).await?;
         } else {
-            sqlx::query!(
-                "UPDATE users SET language = $1 WHERE id = $2",
-                lang,
-                self.id
-            )
-            .execute(DB::conn())
-            .await?;
+            DB::pg_execute(sql, &[&lang, &self.id]).await?;
         }
 
         Ok(())
@@ -1391,8 +1253,7 @@ impl User {
             MagicLinkUsage::NewUser(_) | MagicLinkUsage::PasswordReset(_) => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "The Magic Link is not meant to be used to confirm an E-Mail address"
-                        .to_string(),
+                    "The Magic Link is not meant to be used to confirm an E-Mail address",
                 ));
             }
             MagicLinkUsage::EmailChange(email) => email,

@@ -16,7 +16,7 @@ pub async fn magic_link_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::client().is_leader_cache().await {
+        if !DB::hql().is_leader_cache().await {
             debug!(
                 "Running HA mode without being the leader - skipping magic_link_cleanup scheduler"
             );
@@ -31,70 +31,40 @@ pub async fn magic_link_cleanup() {
         // Check for expired and unused magic links that are bound to a user which has no password
         // at all. These users should be deleted since they never cared about the (very important)
         // password E-Mail.
-        if is_hiqlite() {
-            if let Err(err) = cleanup_hiqlite(exp).await {
-                error!("{:?}", err);
-            }
-        } else if let Err(err) = cleanup_sqlx(exp).await {
+        if let Err(err) = cleanup(exp).await {
             error!("{:?}", err);
         }
     }
 }
 
-async fn cleanup_hiqlite(exp: i64) -> Result<(), ErrorResponse> {
-    let rows_affected = DB::client()
-        .execute(
-            r#"
+async fn cleanup(exp: i64) -> Result<(), ErrorResponse> {
+    let sql = r#"
 DELETE FROM users
 WHERE id IN (
     SELECT DISTINCT user_id
     FROM magic_links
     WHERE exp < $1 AND used = false)
-AND password IS NULL AND webauthn_user_id IS NULL"#,
-            params!(exp),
-        )
-        .await?;
+AND password IS NULL AND webauthn_user_id IS NULL"#;
+
+    let rows_affected = if is_hiqlite() {
+        DB::hql().execute(sql, params!(exp)).await?
+    } else {
+        DB::pg_execute(sql, &[&exp]).await?
+    };
+
     info!(
         "Cleaned up {} users which did not use their initial password reset magic link",
         rows_affected
     );
 
     // now we can just delete all expired magic links
-    let rows_affected = DB::client()
-        .execute("DELETE FROM magic_links WHERE exp < $1", params!(exp))
-        .await?;
+    let sql = "DELETE FROM magic_links WHERE exp < $1";
+    let rows_affected = if is_hiqlite() {
+        DB::hql().execute(sql, params!(exp)).await?
+    } else {
+        DB::pg_execute(sql, &[&exp]).await?
+    };
     debug!("Cleaned up {} expired and used magic links", rows_affected);
-
-    Ok(())
-}
-
-async fn cleanup_sqlx(exp: i64) -> Result<(), ErrorResponse> {
-    let res = sqlx::query(
-        r#"
-DELETE FROM users
-WHERE id IN (
-    SELECT DISTINCT user_id
-    FROM magic_links
-    WHERE exp < $1 AND used = false)
-AND password IS NULL AND webauthn_user_id IS NULL"#,
-    )
-    .bind(exp)
-    .execute(DB::conn())
-    .await?;
-    info!(
-        "Cleaned up {} users which did not use their initial password reset magic link",
-        res.rows_affected()
-    );
-
-    // now we can just delete all expired magic links
-    let res = sqlx::query("DELETE FROM magic_links WHERE exp < $1")
-        .bind(exp)
-        .execute(DB::conn())
-        .await?;
-    debug!(
-        "Cleaned up {} expired and used magic links",
-        res.rows_affected()
-    );
 
     Ok(())
 }
