@@ -2,12 +2,13 @@ use crate::app_state::AppState;
 use crate::entity::db_version::DbVersion;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, db_migrate, init_prod};
+use crate::sqlx_refinery_migration::migrate_sqlx_to_refinery;
 use actix_web::web;
 use futures_util::StreamExt;
 use hiqlite::NodeConfig;
-use rauthy_common::constants::DEV_MODE;
+use rauthy_common::constants::{DEV_MODE, RAUTHY_VERSION};
 use rauthy_common::{is_hiqlite, is_postgres};
-use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::ops::DerefMut;
@@ -20,12 +21,11 @@ use tracing::{debug, error, info, warn};
 
 pub type PgClient = deadpool_postgres::Object;
 
-static CLIENT: OnceLock<hiqlite::Client> = OnceLock::new();
+static HIQLITE_CLIENT: OnceLock<hiqlite::Client> = OnceLock::new();
 static PG_POOL: OnceLock<deadpool_postgres::Pool> = OnceLock::new();
 
 mod migrations_postgres {
-    use refinery::embed_migrations;
-    embed_migrations!("../../migrations/refinery");
+    refinery::embed_migrations!("../../migrations/postgres");
 }
 
 #[derive(rust_embed::Embed)]
@@ -57,7 +57,7 @@ pub struct DB;
 impl DB {
     /// Builds the NodeConfig and starts the Hiqlite node
     pub async fn init() -> Result<(), ErrorResponse> {
-        if CLIENT.get().is_some() {
+        if HIQLITE_CLIENT.get().is_some() {
             panic!("DB::init() must only be called once at startup");
         }
 
@@ -68,7 +68,7 @@ impl DB {
         // This means, even if Postgres is configured, this will still create and start the Hiqlite
         // DB, but it simply won't do anything else than heartbeats between the nodes.
         let client = hiqlite::start_node_with_cache::<Cache>(config).await?;
-        let _ = CLIENT.set(client);
+        let _ = HIQLITE_CLIENT.set(client);
 
         if is_postgres() {
             Self::init_connect_postgres().await?;
@@ -80,7 +80,7 @@ impl DB {
     /// Returns the static handle to the Hiqlite client
     #[inline]
     pub fn hql() -> &'static hiqlite::Client {
-        CLIENT
+        HIQLITE_CLIENT
             .get()
             .expect("cache::start_cache() must be called at startup")
     }
@@ -164,12 +164,6 @@ impl DB {
 
         info!("Database Connection Pool created successfully");
 
-        // // Note: Postgres 15 denies to create anything in the public schema for any user but postgres.
-        // sqlx::migrate!()
-        //     .run(&db)
-        //     .await
-        //     .expect("Error running DB migrations");
-
         Ok(pool)
     }
 
@@ -205,31 +199,19 @@ impl DB {
         if is_hiqlite() {
             Self::hql().migrate::<MigrationsHiqlite>().await?;
         } else {
-            debug!("Migrating data from ../../migrations/postgres");
+            // TODO remove after v0.29
+            if semver::Version::parse(RAUTHY_VERSION).unwrap().minor > 29 {
+                panic!("Remove the ` migrate_sqlx_to_refinery()` block after v0.29");
+            }
+            migrate_sqlx_to_refinery().await?;
 
-            // TODO we can only finally switch migrations after all sqlx::query! have been removed
-            // database migrations
+            debug!("Migrating data from ../../migrations/postgres");
             let mut client = DB::pg().await?;
             let report = migrations_postgres::migrations::runner()
                 .run_async(client.deref_mut().deref_mut())
                 .await
-                .map_err(|err| {
-                    ErrorResponse::new(
-                        ErrorResponseType::Internal,
-                        format!("refinery postgres migrations error: {:?}", err),
-                    )
-                })?;
-            debug!("{:?}", report);
-
-            // sqlx::migrate!("../../migrations/postgres")
-            //     .run(Self::conn_sqlx())
-            //     .await
-            //     .map_err(|err| {
-            //         ErrorResponse::new(
-            //             ErrorResponseType::Database,
-            //             format!("Postgres migration error: {:?}", err),
-            //         )
-            //     })?;
+                .expect("Error applying Postgres database migrations");
+            debug!("Database Migration Report: {:?}", report);
         }
 
         // migrate dynamic DB data

@@ -376,8 +376,8 @@ impl From<tokio_postgres::Row> for Event {
         Self {
             id: row.get("id"),
             timestamp: row.get("timestamp"),
-            level: EventLevel::from(row.get::<_, i64>("level")),
-            typ: EventType::from(row.get::<_, i64>("typ")),
+            level: EventLevel::from(row.get::<_, i16>("level")),
+            typ: EventType::from(row.get::<_, i16>("typ")),
             ip: row.get("ip"),
             data: row.get("data"),
             text: row.get("text"),

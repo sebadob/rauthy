@@ -23,6 +23,7 @@ pub mod html;
 pub mod i18n_email;
 pub mod language;
 pub mod migration;
+mod sqlx_refinery_migration;
 
 pub enum AuthStep {
     LoggedIn(AuthStepLoggedIn),

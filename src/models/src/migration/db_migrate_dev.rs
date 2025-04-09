@@ -201,7 +201,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
     } else {
         DB::pg_execute(sql_1, &[&backchannel_logout_uri]).await?;
         DB::pg_execute(
-            sql_1,
+            sql_2,
             &[
                 &ml.id,
                 &ml.user_id,

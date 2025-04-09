@@ -151,6 +151,10 @@ mailcrab-stop:
     {{ docker }} stop {{ container_mailcrab }}
     {{ docker }} rm {{ container_mailcrab }}
 
+# migrate the postgres database with sqlx
+migrate-postgres:
+    cargo sqlx migrate run --source migrations/sqlx_legacy
+
 # Starts mailcrab
 postgres-start:
     #!/usr/bin/env bash
@@ -165,10 +169,10 @@ postgres-start:
       --restart unless-stopped \
       docker.io/library/postgres:17.2-alpine
 
-    while ! just migrate-postgres; do
-        echo "Database migrations failed - Postgres is probably still starting up"
-        sleep 3
-    done
+#    while ! just migrate-postgres; do
+#        echo "Database migrations failed - Postgres is probably still starting up"
+#        sleep 3
+#    done
 
 # Stops mailcrab
 postgres-stop:
@@ -193,12 +197,6 @@ delete-hiqlite:
     mkdir -p data/
     rm -rf data/logs
     rm -rf data/state_machine
-
-# migrate the postgres database with sqlx
-migrate-postgres:
-    cargo sqlx migrate run --source migrations/postgres
-    cargo sqlx prepare --workspace
-    git add .sqlx/*
 
 # runs any of: none (hiqlite), postgres, ui
 run ty="hiqlite":
