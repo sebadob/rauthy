@@ -9,7 +9,6 @@ use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
 use rio_api::parser::TriplesParser;
 use rio_turtle::{NTriplesFormatter, NTriplesParser, TurtleFormatter, TurtleParser};
 use serde::{Deserialize, Serialize};
-use sqlx::{query, query_as};
 use std::fmt::Debug;
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
@@ -17,6 +16,16 @@ pub struct WebId {
     pub user_id: String,
     pub expose_email: bool,
     pub custom_triples: Option<String>,
+}
+
+impl From<tokio_postgres::Row> for WebId {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            user_id: row.get("user_id"),
+            expose_email: row.get("expose_email"),
+            custom_triples: row.get("custom_triples"),
+        }
+    }
 }
 
 impl WebId {
@@ -37,9 +46,10 @@ impl WebId {
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM webids WHERE user_id = $1";
         let slf = if is_hiqlite() {
             client
-                .query_as_one("SELECT * FROM webids WHERE user_id = $1", params!(&user_id))
+                .query_as_one(sql, params!(&user_id))
                 .await
                 .unwrap_or(Self {
                     user_id,
@@ -47,14 +57,7 @@ impl WebId {
                     expose_email: false,
                 })
         } else {
-            query_as!(Self, "SELECT * FROM webids WHERE user_id = $1", user_id)
-                .fetch_one(DB::conn_sqlx())
-                .await
-                .unwrap_or(Self {
-                    user_id,
-                    custom_triples: None,
-                    expose_email: false,
-                })
+            DB::pg_query_map_one(sql, &[&user_id]).await?
         };
 
         client
@@ -70,29 +73,28 @@ impl WebId {
     }
 
     pub async fn upsert(web_id: WebId) -> Result<(), ErrorResponse> {
-        if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    r#"
+        let sql = r#"
 INSERT INTO webids (user_id, custom_triples, expose_email)
 VALUES ($1, $2, $3)
 ON CONFLICT(user_id) DO UPDATE
-SET custom_triples = $2, expose_email = $3"#,
+SET custom_triples = $2, expose_email = $3"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
                     params!(&web_id.user_id, &web_id.custom_triples, web_id.expose_email),
                 )
                 .await?;
         } else {
-            query!(
-                r#"
-    INSERT INTO webids (user_id, custom_triples, expose_email)
-    VALUES ($1, $2, $3)
-    ON CONFLICT(user_id) DO UPDATE
-    SET custom_triples = $2, expose_email = $3"#,
-                web_id.user_id,
-                web_id.custom_triples,
-                web_id.expose_email,
+            DB::pg_execute(
+                sql,
+                &[
+                    &web_id.user_id,
+                    &web_id.custom_triples,
+                    &web_id.expose_email,
+                ],
             )
-            .execute(DB::conn_sqlx())
             .await?;
         }
 
@@ -241,7 +243,7 @@ impl WebId {
         Ok(())
     }
 
-    pub fn into_turtle(resp: WebIdResponse) -> Result<String, ErrorResponse> {
+    pub fn try_into_turtle(resp: WebIdResponse) -> Result<String, ErrorResponse> {
         let mut formatter = TurtleFormatter::new(Vec::<u8>::new());
         WebId::serialize_turtle(resp, &mut formatter)?;
 
@@ -332,7 +334,7 @@ mod tests {
             language: Language::En,
         };
 
-        let ttl = WebId::into_turtle(resp).unwrap();
+        let ttl = WebId::try_into_turtle(resp).unwrap();
         assert_eq!(ttl, expected_resp);
         // TODO we actually need real test cases with complex custom_triples to make sure
         // the outcome is as expected
