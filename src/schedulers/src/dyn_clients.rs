@@ -8,7 +8,6 @@ use rauthy_common::is_hiqlite;
 use rauthy_models::database::DB;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
-use sqlx::query_as;
 use std::time::Duration;
 use tracing::{debug, error, info};
 
@@ -40,22 +39,16 @@ pub async fn dyn_client_cleanup() {
         }
         debug!("Running dynamic_client_cleanup scheduler");
 
-        let clients_res = if is_hiqlite() {
+        let sql = "SELECT * FROM clients_dyn WHERE last_used = null";
+        let clients_res: Result<Vec<ClientDyn>, String> = if is_hiqlite() {
             DB::hql()
-                .query_as(
-                    "SELECT * FROM clients_dyn WHERE last_used = null",
-                    params!(),
-                )
+                .query_as(sql, params!())
                 .await
                 .map_err(|err| err.to_string())
         } else {
-            query_as!(
-                ClientDyn,
-                "SELECT * FROM clients_dyn WHERE last_used = null"
-            )
-            .fetch_all(DB::conn_sqlx())
-            .await
-            .map_err(|err| err.to_string())
+            DB::pg_query(sql, &[], 0)
+                .await
+                .map_err(|err| err.to_string())
         };
         let clients: Vec<ClientDyn> = match clients_res {
             Ok(c) => c,

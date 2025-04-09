@@ -39,22 +39,15 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
         // - generate a new set of JWKs
 
         // cleanup
-        if is_hiqlite() {
-            DB::hql()
-                .execute("DELETE FROM clients WHERE id = 'init_client'", params!())
-                .await?;
-            DB::hql().execute("DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')", params!())
-                .await?;
-        } else {
-            sqlx::query!("DELETE FROM clients WHERE id = 'init_client'")
-                .execute(DB::conn_sqlx())
-                .await?;
+        let sql_1 = "DELETE FROM clients WHERE id = 'init_client'";
+        let sql_2 = "DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')";
 
-            sqlx::query!(
-                "DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')",
-            )
-                .execute(DB::conn_sqlx())
-                .await?;
+        if is_hiqlite() {
+            DB::hql().execute(sql_1, params!()).await?;
+            DB::hql().execute(sql_2, params!()).await?;
+        } else {
+            DB::pg_execute(sql_1, &[]).await?;
+            DB::pg_execute(sql_2, &[]).await?;
         }
 
         // check if we should use manually provided bootstrap values
@@ -113,23 +106,13 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
             }
         };
 
+        let sql = "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'";
         if is_hiqlite() {
             // TODO we could grab a possibly existing `RAUTHY_ADMIN_EMAIL` and initialize a custom
             // admin
-            DB::hql()
-                .execute(
-                    "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'",
-                    params!(email, hash),
-                )
-                .await?;
+            DB::hql().execute(sql, params!(email, hash)).await?;
         } else {
-            sqlx::query!(
-                "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'",
-                email,
-                hash
-            )
-            .execute(DB::conn_sqlx())
-            .await?;
+            DB::pg_execute(sql, &[&email, &hash]).await?;
         }
 
         // now check if we should bootstrap an API Key
@@ -158,21 +141,13 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
                     .into_bytes()
                     .to_vec();
 
+                let sql = "UPDATE api_keys SET secret = $1 WHERE name = $2";
                 if is_hiqlite() {
                     DB::hql()
-                        .execute(
-                            "UPDATE api_keys SET secret = $1 WHERE name = $2",
-                            params!(secret_enc, key_name),
-                        )
+                        .execute(sql, params!(secret_enc, key_name))
                         .await?;
                 } else {
-                    sqlx::query!(
-                        "UPDATE api_keys SET secret = $1 WHERE name = $2",
-                        secret_enc,
-                        key_name,
-                    )
-                    .execute(DB::conn_sqlx())
-                    .await?;
+                    DB::pg_execute(sql, &[&secret_enc, &key_name]).await?;
                 }
             }
         }

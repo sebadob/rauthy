@@ -135,14 +135,16 @@ pub async fn migrate_dev_data(issuer: &str) -> Result<(), ErrorResponse> {
     let entity = bincode::deserialize::<Jwk>(hex::decode(eddsahex).unwrap().as_slice())?;
     jwks.push(entity);
 
+    let sql = r#"
+INSERT INTO
+jwks (kid, created_at, signature, enc_key_id, jwk)
+VALUES ($1, $2, $3, $4, $5)"#;
+
     for jwk in jwks {
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    r#"
-INSERT INTO
-jwks (kid, created_at, signature, enc_key_id, jwk)
-VALUES ($1, $2, $3, $4, $5)"#,
+                    sql,
                     params!(
                         jwk.kid,
                         jwk.created_at,
@@ -153,19 +155,17 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 )
                 .await?;
         } else {
-            let _ = sqlx::query(
-                r#"
-INSERT INTO
-jwks (kid, created_at, signature, enc_key_id, jwk)
-VALUES ($1, $2, $3, $4, $5)"#,
+            DB::pg_execute(
+                sql,
+                &[
+                    &jwk.kid,
+                    &jwk.created_at,
+                    &jwk.signature.as_str(),
+                    &jwk.enc_key_id,
+                    &jwk.jwk,
+                ],
             )
-            .bind(&jwk.kid)
-            .bind(jwk.created_at)
-            .bind(jwk.signature.as_str().to_string())
-            .bind(&jwk.enc_key_id)
-            .bind(&jwk.jwk)
-            .execute(DB::conn_sqlx())
-            .await;
+            .await?;
         }
     }
 
@@ -179,46 +179,39 @@ VALUES ($1, $2, $3, $4, $5)"#,
         used: false,
         usage: MagicLinkUsage::PasswordReset(None).to_string(),
     };
+
+    let sql_1 = "UPDATE clients SET backchannel_logout_uri = $1 WHERE id = 'init_client'";
+    let sql_2 = r#"
+INSERT INTO
+magic_links (id, user_id, csrf_token, exp, used, usage)
+VALUES ($1, $2, $3, $4, $5, $6)"#;
+
     if is_hiqlite() {
         // make sure that the newer backchannel logout uri is set for integration tests
         DB::hql()
-            .execute(
-                "UPDATE clients SET backchannel_logout_uri = $1 WHERE id = 'init_client'",
-                params!(backchannel_logout_uri),
-            )
+            .execute(sql_1, params!(backchannel_logout_uri))
             .await?;
 
         DB::hql()
             .execute(
-                r#"
-INSERT INTO
-magic_links (id, user_id, csrf_token, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
+                sql_2,
                 params!(ml.id, ml.user_id, ml.csrf_token, ml.exp, false, ml.usage),
             )
             .await?;
     } else {
-        sqlx::query!(
-            "UPDATE clients SET backchannel_logout_uri = $1 WHERE id = 'init_client'",
-            backchannel_logout_uri
+        DB::pg_execute(sql_1, &[&backchannel_logout_uri]).await?;
+        DB::pg_execute(
+            sql_1,
+            &[
+                &ml.id,
+                &ml.user_id,
+                &ml.csrf_token,
+                &ml.exp,
+                &false,
+                &ml.usage,
+            ],
         )
-        .execute(DB::conn_sqlx())
         .await?;
-
-        let _ = sqlx::query(
-            r#"
-INSERT INTO
-magic_links (id, user_id, csrf_token, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6)"#,
-        )
-        .bind(&ml.id)
-        .bind(&ml.user_id)
-        .bind(&ml.csrf_token)
-        .bind(ml.exp)
-        .bind(false)
-        .bind(ml.usage)
-        .execute(DB::conn_sqlx())
-        .await;
     }
 
     Ok(())

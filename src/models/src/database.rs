@@ -5,28 +5,23 @@ use crate::migration::{anti_lockout, db_migrate, init_prod};
 use actix_web::web;
 use futures_util::StreamExt;
 use hiqlite::NodeConfig;
-use rauthy_common::constants::{DATABASE_URL, DEV_MODE};
+use rauthy_common::constants::DEV_MODE;
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::pool::PoolOptions;
-use sqlx::{ConnectOptions, Postgres};
 use std::env;
 use std::ops::DerefMut;
-use std::str::FromStr;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tokio::pin;
 use tokio::time::sleep;
 use tokio_postgres::config::{LoadBalanceHosts, SslMode};
-use tracing::log::LevelFilter;
 use tracing::{debug, error, info, warn};
 
 pub type PgClient = deadpool_postgres::Object;
 
 static CLIENT: OnceLock<hiqlite::Client> = OnceLock::new();
-static PG_POOL_SQLX: OnceLock<sqlx::PgPool> = OnceLock::new();
-static PG_POOL_DEADPOOL: OnceLock<deadpool_postgres::Pool> = OnceLock::new();
+static PG_POOL: OnceLock<deadpool_postgres::Pool> = OnceLock::new();
 
 mod migrations_postgres {
     use refinery::embed_migrations;
@@ -93,7 +88,7 @@ impl DB {
     /// Returns a client from the Postgress connection pool
     #[inline]
     pub async fn pg() -> Result<PgClient, ErrorResponse> {
-        PG_POOL_DEADPOOL
+        PG_POOL
             .get()
             .expect("Database not initialized")
             .get()
@@ -110,45 +105,6 @@ impl DB {
         let st = txn.prepare(stmt).await?;
         let rows_affected = txn.execute(&st, params).await?;
         Ok(rows_affected)
-    }
-
-    /// Returns a Postgres connection.
-    ///
-    /// # Panics
-    /// On logic errors in the code, as this must never be called with no configured Postgres DB.
-    pub fn conn_sqlx<'a>() -> &'a sqlx::PgPool {
-        PG_POOL_SQLX
-            .get()
-            .expect("DB::conn() must never be called with no configured Postgres DB")
-    }
-
-    /// Returns a Postgres transaction.
-    ///
-    /// # Panics
-    /// On logic errors in the code, as this must never be called with no configured Postgres DB.
-    pub async fn txn_sqlx<'a>() -> Result<sqlx::Transaction<'a, Postgres>, ErrorResponse> {
-        let txn = PG_POOL_SQLX
-            .get()
-            .expect("DB::txn() must never be called with no configured Postgres DB")
-            .begin()
-            .await?;
-        Ok(txn)
-    }
-
-    async fn connect_postgres_sqlx(
-        url: &str,
-        db_max_conn: u32,
-    ) -> Result<sqlx::PgPool, ErrorResponse> {
-        info!("Trying to connect to Postgres instance");
-        let opts = sqlx::postgres::PgConnectOptions::from_str(url)?
-            .log_slow_statements(LevelFilter::Debug, Duration::from_secs(3));
-        let pool = PoolOptions::new()
-            .min_connections(2)
-            .max_connections(db_max_conn)
-            .acquire_timeout(Duration::from_secs(10))
-            .connect_with(opts)
-            .await?;
-        Ok(pool)
     }
 
     pub async fn connect_postgres(
@@ -223,16 +179,6 @@ impl DB {
             .parse::<u32>()
             .expect("Error parsing DATABASE_MAX_CONN to u32");
 
-        // BEGIN:sqlx - TODO remove the sqlx section after migration is finished
-        let db_url = DATABASE_URL.as_ref().expect("DATABASE_URL is not set");
-        let pool = Self::connect_postgres_sqlx(db_url, db_max_conn).await?;
-        info!("Postgres database connection pool created successfully");
-
-        PG_POOL_SQLX
-            .set(pool)
-            .expect("DB::init_postgres() must only be called once at startup");
-        // END: sqlx
-
         let host = env::var("PG_HOST").expect("PG_HOST is not set");
         let port = env::var("PG_PORT")
             .unwrap_or_else(|_| "5432".to_string())
@@ -244,7 +190,7 @@ impl DB {
         let pool =
             Self::connect_postgres(&host, port, &user, &password, &db_name, db_max_conn).await?;
 
-        PG_POOL_DEADPOOL
+        PG_POOL
             .set(pool)
             .expect("DB::init_postgres() must only be called once at startup");
 

@@ -61,15 +61,17 @@ pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
     // saved for `rauthy` before.
     // Update only here and prevent `rauthy` deletion as a special check on DELETE /client
 
-    if is_hiqlite() {
-        DB::hql()
-            .execute(
-                r#"
+    let sql = r#"
 UPDATE clients SET enabled = $1, confidential = $2, redirect_uris = $3,
 post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6, access_token_alg = $7,
 id_token_alg = $8, auth_code_lifetime = $9, access_token_lifetime = $10, scopes = $11,
 default_scopes = $12, challenge = $13, force_mfa = $14, client_uri = $15, contacts = $16
-WHERE id = $17"#,
+WHERE id = $17"#;
+
+    if is_hiqlite() {
+        DB::hql()
+            .execute(
+                sql,
                 params!(
                     rauthy.enabled,
                     rauthy.confidential,
@@ -92,32 +94,28 @@ WHERE id = $17"#,
             )
             .await?;
     } else {
-        sqlx::query!(
-            r#"
-UPDATE clients SET enabled = $1, confidential = $2, redirect_uris = $3,
-post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6, access_token_alg = $7,
-id_token_alg = $8, auth_code_lifetime = $9, access_token_lifetime = $10, scopes = $11,
-default_scopes = $12, challenge = $13, force_mfa = $14, client_uri = $15, contacts = $16
-WHERE id = $17"#,
-            rauthy.enabled,
-            rauthy.confidential,
-            rauthy.redirect_uris,
-            rauthy.post_logout_redirect_uris,
-            rauthy.allowed_origins,
-            rauthy.flows_enabled,
-            rauthy.access_token_alg,
-            rauthy.id_token_alg,
-            rauthy.auth_code_lifetime,
-            rauthy.access_token_lifetime,
-            rauthy.scopes,
-            rauthy.default_scopes,
-            rauthy.challenge,
-            rauthy.force_mfa,
-            rauthy.client_uri,
-            rauthy.contacts,
-            rauthy.id,
+        DB::pg_execute(
+            sql,
+            &[
+                &rauthy.enabled,
+                &rauthy.confidential,
+                &rauthy.redirect_uris,
+                &rauthy.post_logout_redirect_uris,
+                &rauthy.allowed_origins,
+                &rauthy.flows_enabled,
+                &rauthy.access_token_alg,
+                &rauthy.id_token_alg,
+                &rauthy.auth_code_lifetime,
+                &rauthy.access_token_lifetime,
+                &rauthy.scopes,
+                &rauthy.default_scopes,
+                &rauthy.challenge,
+                &rauthy.force_mfa,
+                &rauthy.client_uri,
+                &rauthy.contacts,
+                &rauthy.id,
+            ],
         )
-        .execute(DB::conn_sqlx())
         .await?;
     }
 

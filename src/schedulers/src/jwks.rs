@@ -93,20 +93,14 @@ pub async fn jwks_cleanup() {
 
         // finally, delete all expired JWKs
         let count = to_delete.len();
+        let sql = "DELETE FROM jwks WHERE kid = $1";
         for kid in to_delete {
             if is_hiqlite() {
-                if let Err(err) = DB::hql()
-                    .execute("DELETE FROM jwks WHERE kid = $1", params!())
-                    .await
-                {
+                if let Err(err) = DB::hql().execute(sql, params!()).await {
                     error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
                     continue;
                 }
-            } else if let Err(err) = sqlx::query("DELETE FROM jwks WHERE kid = $1")
-                .bind(&kid)
-                .execute(DB::conn_sqlx())
-                .await
-            {
+            } else if let Err(err) = DB::pg_execute(sql, &[]).await {
                 error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
                 continue;
             }

@@ -30,14 +30,9 @@ pub async fn events_cleanup() {
             .sub(chrono::Duration::days(cleanup_days))
             .timestamp_millis();
 
+        let sql = "DELETE FROM events WHERE timestamp < $1";
         if is_hiqlite() {
-            let res = DB::hql()
-                .execute(
-                    "DELETE FROM events WHERE timestamp < $1",
-                    params!(threshold),
-                )
-                .await;
-
+            let res = DB::hql().execute(sql, params!(threshold)).await;
             match res {
                 Ok(rows_affected) => {
                     debug!("Cleaned up {} expired events", rows_affected);
@@ -45,13 +40,10 @@ pub async fn events_cleanup() {
                 Err(err) => error!("Events cleanup error: {:?}", err),
             }
         } else {
-            let res = sqlx::query!("DELETE FROM events WHERE timestamp < $1", threshold)
-                .execute(DB::conn_sqlx())
-                .await;
-
+            let res = DB::pg_execute(sql, &[&threshold]).await;
             match res {
-                Ok(r) => {
-                    debug!("Cleaned up {} expired events", r.rows_affected());
+                Ok(rows_affected) => {
+                    debug!("Cleaned up {} expired events", rows_affected);
                 }
                 Err(err) => error!("Events cleanup error: {:?}", err),
             }

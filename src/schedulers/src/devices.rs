@@ -22,17 +22,13 @@ pub async fn devices_cleanup() {
         debug!("Running devices_cleanup scheduler");
 
         let threshold = Utc::now().sub(chrono::Duration::days(1)).timestamp();
-        if is_hiqlite() {
-            let res = DB::hql()
-                .execute(
-                    r#"
+        let sql = r#"
 DELETE FROM devices
 WHERE access_exp < $1
-AND (refresh_exp IS NULL OR refresh_exp < $1)"#,
-                    params!(threshold),
-                )
-                .await;
+AND (refresh_exp IS NULL OR refresh_exp < $1)"#;
 
+        if is_hiqlite() {
+            let res = DB::hql().execute(sql, params!(threshold)).await;
             match res {
                 Ok(rows_affected) => {
                     debug!("Cleaned up {} expired devices", rows_affected);
@@ -42,19 +38,10 @@ AND (refresh_exp IS NULL OR refresh_exp < $1)"#,
                 }
             }
         } else {
-            let res = sqlx::query!(
-                r#"
-    DELETE FROM devices
-    WHERE access_exp < $1
-    AND (refresh_exp IS NULL OR refresh_exp < $1)"#,
-                threshold
-            )
-            .execute(DB::conn_sqlx())
-            .await;
-
+            let res = DB::pg_execute(sql, &[&threshold]).await;
             match res {
-                Ok(r) => {
-                    debug!("Cleaned up {} expired devices", r.rows_affected());
+                Ok(rows_affected) => {
+                    debug!("Cleaned up {} expired devices", rows_affected);
                 }
                 Err(err) => {
                     error!("devices_cleanup error: {:?}", err)

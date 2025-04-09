@@ -29,19 +29,13 @@ pub async fn sessions_cleanup() {
         debug!("Running sessions_cleanup scheduler");
 
         let thres = Utc::now().sub(chrono::Duration::hours(24)).timestamp();
+        let sql = "DELETE FROM sessions WHERE exp < $1";
 
         if is_hiqlite() {
-            if let Err(err) = DB::hql()
-                .execute("DELETE FROM sessions WHERE exp < $1", params!(thres))
-                .await
-            {
+            if let Err(err) = DB::hql().execute(sql, params!(thres)).await {
                 error!("Session Cleanup Error: {:?}", err)
             }
-        } else if let Err(err) = sqlx::query("DELETE FROM sessions WHERE exp < $1")
-            .bind(thres)
-            .execute(DB::conn_sqlx())
-            .await
-        {
+        } else if let Err(err) = DB::pg_execute(sql, &[&thres]).await {
             error!("Session Cleanup Error: {:?}", err)
         }
     }
