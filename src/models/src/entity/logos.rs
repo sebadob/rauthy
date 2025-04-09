@@ -22,10 +22,8 @@ const RES_PROVIDER_LOGO: u32 = 20;
 // The default height for any logo how it will be saved for possible later use
 const RES_LATER_USE: u32 = 128;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, sqlx::Type, postgres_types::FromSql)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, postgres_types::FromSql)]
 #[serde(rename_all = "lowercase")]
-#[sqlx(type_name = "varchar")]
-#[sqlx(rename_all = "lowercase")]
 #[postgres(rename_all = "lowercase")]
 pub enum LogoRes {
     Small,

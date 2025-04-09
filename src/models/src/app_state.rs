@@ -11,8 +11,6 @@ use tracing::{debug, info};
 use webauthn_rs::Webauthn;
 use webauthn_rs::prelude::Url;
 
-pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Postgres>;
-
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub public_url: String,

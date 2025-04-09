@@ -21,7 +21,6 @@ libflate = { workspace = true }
 once_cell = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
-postgres-types = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
 regex = { workspace = true }

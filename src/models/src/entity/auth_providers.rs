@@ -54,9 +54,7 @@ use time::OffsetDateTime;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::Type, postgres_types::FromSql)]
-#[sqlx(type_name = "varchar")]
-#[sqlx(rename_all = "lowercase")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, postgres_types::FromSql)]
 #[postgres(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum AuthProviderType {

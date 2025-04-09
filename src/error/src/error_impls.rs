@@ -20,7 +20,7 @@ use std::borrow::Cow;
 use std::string::FromUtf8Error;
 use svg_hush::FError;
 use time::OffsetDateTime;
-use tracing::{debug, error, trace};
+use tracing::{error, trace};
 use validator::ValidationError;
 
 const APPLICATION_JSON: &str = "application/json";
@@ -220,51 +220,6 @@ impl From<tokio_postgres::Error> for ErrorResponse {
     fn from(e: tokio_postgres::Error) -> Self {
         error!("{}", e);
         ErrorResponse::new(ErrorResponseType::Database, e.to_string())
-    }
-}
-
-impl From<sqlx::Error> for ErrorResponse {
-    fn from(err: sqlx::Error) -> Self {
-        debug!("From<sqlx::Error>: {:?}", err);
-        let (error, msg) = match err {
-            sqlx::Error::Configuration(e) => (ErrorResponseType::Database, e.to_string()),
-            sqlx::Error::Database(e) => {
-                let s = e.to_string();
-                if s.contains("duplicate key") || s.contains("UNIQUE") {
-                    // basically returns http 400 on duplicate id column errors -> no distinct err type
-                    (ErrorResponseType::BadRequest, s)
-                } else {
-                    (ErrorResponseType::Database, s)
-                }
-            }
-            sqlx::Error::Io(e) => (ErrorResponseType::DatabaseIo, e.to_string()),
-            sqlx::Error::RowNotFound => (ErrorResponseType::NotFound, "not found".to_string()),
-            sqlx::Error::TypeNotFound { type_name } => (
-                ErrorResponseType::NotFound,
-                format!("Type not found: {}", type_name),
-            ),
-            sqlx::Error::ColumnNotFound(s) => (
-                ErrorResponseType::NotFound,
-                format!("Column not found: {}", s),
-            ),
-            sqlx::Error::PoolTimedOut => (
-                ErrorResponseType::Internal,
-                "Network error, please try again".to_string(),
-            ),
-            sqlx::Error::PoolClosed => (
-                ErrorResponseType::Internal,
-                "Network error, please try again".to_string(),
-            ),
-            e => {
-                error!("Database Error: {:?}", e);
-                (
-                    ErrorResponseType::Internal,
-                    "Internal error, please try again".to_string(),
-                )
-            }
-        };
-
-        ErrorResponse::new(error, msg)
     }
 }
 

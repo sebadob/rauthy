@@ -105,7 +105,6 @@ serde_json_path = "0.7.1"
 serde_rusqlite = "0.36.0"
 serde_urlencoded = "0.7.1"
 spow = { version = "0.4", features = ["server"] }
-sqlx = { version = "0.8.2", features = ["macros", "migrate", "postgres", "runtime-tokio", "tls-rustls"] }
 # blocked by sqlx
 strum = { version = "0.26.3", features = ["derive"] }
 svg-hush = "0.9.4"
