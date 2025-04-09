@@ -1,5 +1,5 @@
 use crate::api_cookie::ApiCookie;
-use crate::app_state::{AppState, DbTxn};
+use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::users::{AccountType, User};
@@ -9,6 +9,7 @@ use actix_web::http::header::HeaderValue;
 use actix_web::{HttpResponse, web};
 use chrono::Utc;
 use cryptr::EncValue;
+use deadpool_postgres::GenericClient;
 use hiqlite::{Param, Params, params};
 use rauthy_api_types::users::{
     MfaPurpose, PasskeyResponse, WebauthnAuthFinishRequest, WebauthnAuthStartResponse,
@@ -23,7 +24,6 @@ use rauthy_common::utils::base64_decode;
 use rauthy_common::utils::{base64_encode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use std::str::FromStr;
@@ -35,7 +35,7 @@ use webauthn_rs_proto::{
     AuthenticatorSelectionCriteria, ResidentKeyRequirement, UserVerificationPolicy,
 };
 
-#[derive(Clone, FromRow, Deserialize, Serialize)]
+#[derive(Clone, sqlx::FromRow, Deserialize, Serialize)]
 pub struct PasskeyEntity {
     pub user_id: String,
     pub name: String,
@@ -45,6 +45,21 @@ pub struct PasskeyEntity {
     pub registered: i64,
     pub last_used: i64,
     pub user_verified: Option<bool>,
+}
+
+impl From<tokio_postgres::Row> for PasskeyEntity {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            user_id: row.get("user_id"),
+            name: row.get("name"),
+            passkey_user_id: row.get("passkey_user_id"),
+            passkey: row.get("passkey"),
+            credential_id: row.get("credential_id"),
+            registered: row.get("registered"),
+            last_used: row.get("last_used"),
+            user_verified: row.get("user_verified"),
+        }
+    }
 }
 
 impl Debug for PasskeyEntity {
@@ -92,6 +107,11 @@ impl PasskeyEntity {
         let user_email = user.as_ref().map(|u| u.email.clone());
         let client = DB::hql();
 
+        let sql = r#"
+INSERT INTO passkeys
+(user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(2);
 
@@ -101,10 +121,7 @@ impl PasskeyEntity {
             }
 
             txn.push((
-                r#"
-INSERT INTO passkeys
-(user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+                sql,
                 params!(
                     &entity.user_id,
                     entity.name,
@@ -119,28 +136,27 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 
             client.txn(txn).await?;
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             if let Some(user) = user {
                 debug_assert!(user.webauthn_user_id.is_some());
-                user.save_txn(&mut txn).await?;
+                user.save_txn(&txn).await?;
             }
-
-            sqlx::query!(
-                r#"
-INSERT INTO passkeys
-(user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
-                entity.user_id,
-                entity.name,
-                entity.passkey_user_id,
-                entity.passkey,
-                entity.credential_id,
-                now,
-                now,
-                entity.user_verified,
+            DB::pg_txn_append(
+                &txn,
+                sql,
+                &[
+                    &entity.user_id,
+                    &entity.name,
+                    &entity.passkey_user_id,
+                    &entity.passkey,
+                    &entity.credential_id,
+                    &now,
+                    &now,
+                    &entity.user_verified,
+                ],
             )
-            .execute(&mut *txn)
             .await?;
 
             txn.commit().await?;
@@ -166,23 +182,14 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
     }
 
     pub async fn count_for_user(user_id: String) -> Result<i64, ErrorResponse> {
+        let sql = "SELECT COUNT (*) AS count FROM passkeys WHERE user_id = $1";
         let count: i64 = if is_hiqlite() {
             DB::hql()
-                .query_raw_one(
-                    "SELECT COUNT (*) AS count FROM passkeys WHERE user_id = $1",
-                    params!(user_id),
-                )
+                .query_raw_one(sql, params!(user_id))
                 .await?
                 .get("count")
         } else {
-            sqlx::query!(
-                "SELECT COUNT (*) AS count FROM passkeys WHERE user_id = $1",
-                user_id
-            )
-            .fetch_one(DB::conn_sqlx())
-            .await?
-            .count
-            .unwrap_or_default()
+            DB::pg_query_one_row(sql, &[&user_id]).await?.get("count")
         };
 
         Ok(count)
@@ -228,12 +235,13 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 
             DB::hql().txn(txn).await?;
         } else {
-            let mut txn = DB::txn_sqlx().await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
 
             if let Some(user) = user_to_save {
-                user.save_txn(&mut txn).await?;
+                user.save_txn(&txn).await?;
             }
-            Self::delete_by_id_name(&user_id, &name, &mut txn).await?;
+            Self::delete_by_id_name(&user_id, &name, &txn).await?;
 
             txn.commit().await?;
         }
@@ -247,16 +255,14 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
     async fn delete_by_id_name(
         user_id: &str,
         name: &str,
-        txn: &mut DbTxn<'_>,
+        txn: &deadpool_postgres::Transaction<'_>,
     ) -> Result<(), ErrorResponse> {
-        sqlx::query!(
+        DB::pg_txn_append(
+            txn,
             "DELETE FROM passkeys WHERE user_id = $1 AND name = $2",
-            user_id,
-            name
+            &[&user_id, &name],
         )
-        .execute(&mut **txn)
         .await?;
-
         Ok(())
     }
 
@@ -303,22 +309,11 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM passkeys WHERE user_id = $1 AND name = $2";
         let slf = if is_hiqlite() {
-            client
-                .query_as_one(
-                    "SELECT * FROM passkeys WHERE user_id = $1 AND name = $2",
-                    params!(user_id, name),
-                )
-                .await?
+            client.query_as_one(sql, params!(user_id, name)).await?
         } else {
-            sqlx::query_as!(
-                Self,
-                "SELECT * FROM passkeys WHERE user_id = $1 AND name = $2",
-                user_id,
-                name,
-            )
-            .fetch_one(DB::conn_sqlx())
-            .await?
+            DB::pg_query_map_one(sql, &[&user_id, &name]).await?
         };
 
         client
@@ -337,26 +332,20 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             return Ok(bytes.into_iter().map(CredentialID::from).collect());
         }
 
+        let sql = "SELECT credential_id FROM passkeys WHERE user_id = $1";
         let creds = if is_hiqlite() {
             client
-                .query_raw(
-                    "SELECT credential_id FROM passkeys WHERE user_id = $1",
-                    params!(user_id),
-                )
+                .query_raw(sql, params!(user_id))
                 .await?
                 .into_iter()
                 .map(|mut r| r.get::<Vec<u8>>("credential_id"))
                 .collect::<Vec<_>>()
         } else {
-            sqlx::query!(
-                "SELECT credential_id FROM passkeys WHERE user_id = $1",
-                user_id
-            )
-            .fetch_all(DB::conn_sqlx())
-            .await?
-            .into_iter()
-            .map(|row| row.credential_id)
-            .collect::<Vec<Vec<u8>>>()
+            DB::pg_query_rows(sql, &[&user_id], 2)
+                .await?
+                .into_iter()
+                .map(|r| r.get::<_, Vec<u8>>("credential_id"))
+                .collect::<Vec<_>>()
         };
 
         client
@@ -374,17 +363,11 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM passkeys WHERE user_id = $1";
         let pks = if is_hiqlite() {
-            client
-                .query_as(
-                    "SELECT * FROM passkeys WHERE user_id = $1",
-                    params!(user_id),
-                )
-                .await?
+            client.query_as(sql, params!(user_id)).await?
         } else {
-            sqlx::query_as!(Self, "SELECT * FROM passkeys WHERE user_id = $1", user_id)
-                .fetch_all(DB::conn_sqlx())
-                .await?
+            DB::pg_query_map(sql, &[&user_id], 2).await?
         };
 
         client
@@ -402,21 +385,11 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM passkeys WHERE user_id = $1 AND user_verified = true";
         let pks = if is_hiqlite() {
-            client
-                .query_as(
-                    "SELECT * FROM passkeys WHERE user_id = $1 AND user_verified = true",
-                    params!(user_id),
-                )
-                .await?
+            client.query_as(sql, params!(user_id)).await?
         } else {
-            sqlx::query_as!(
-                Self,
-                "SELECT * FROM passkeys WHERE user_id = $1 AND user_verified = true",
-                user_id
-            )
-            .fetch_all(DB::conn_sqlx())
-            .await?
+            DB::pg_query_map(sql, &[&user_id], 2).await?
         };
 
         client
@@ -425,53 +398,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 
         Ok(pks)
     }
-
-    //     pub async fn update_passkey(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
-    //         let client = DB::client();
-    //
-    //         if is_hiqlite() {
-    //             client
-    //                 .execute(
-    //                     r#"
-    // UPDATE passkeys
-    // SET passkey = $1, last_used = $2
-    // WHERE user_id = $3 AND name = $4"#,
-    //                     params!(&self.passkey, self.last_used, &self.user_id, &self.name),
-    //                 )
-    //                 .await?;
-    //         } else {
-    //             sqlx::query!(
-    //                 r#"
-    // UPDATE passkeys
-    // SET passkey = $1, last_used = $2
-    // WHERE user_id = $3 AND name = $4"#,
-    //                 self.passkey,
-    //                 self.last_used,
-    //                 self.user_id,
-    //                 self.name,
-    //             )
-    //             .execute(&mut **txn)
-    //             .await?;
-    //         }
-    //
-    //         client
-    //             .put(
-    //                 Cache::Webauthn,
-    //                 Self::cache_idx_single(&self.user_id, &self.name),
-    //                 self,
-    //                 *CACHE_TTL_WEBAUTHN,
-    //             )
-    //             .await?;
-    //
-    //         client
-    //             .delete(Cache::Webauthn, Self::cache_idx_user(&self.user_id))
-    //             .await?;
-    //         client
-    //             .delete(Cache::Webauthn, Self::cache_idx_user_with_uv(&self.user_id))
-    //             .await?;
-    //
-    //         Ok(())
-    //     }
 
     pub fn update_passkey_txn_append(&self, txn: &mut Vec<(&str, Params)>) {
         txn.push((
@@ -483,18 +409,18 @@ WHERE user_id = $3 AND name = $4"#,
         ));
     }
 
-    pub async fn update_passkey_txn(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
-        sqlx::query!(
+    pub async fn update_passkey_txn(
+        &self,
+        txn: &deadpool_postgres::Transaction<'_>,
+    ) -> Result<(), ErrorResponse> {
+        DB::pg_txn_append(
+            txn,
             r#"
 UPDATE passkeys
 SET passkey = $1, last_used = $2
 WHERE user_id = $3 AND name = $4"#,
-            self.passkey,
-            self.last_used,
-            self.user_id,
-            self.name,
+            &[&self.passkey, &self.last_used, &self.user_id, &self.name],
         )
-        .execute(&mut **txn)
         .await?;
 
         Ok(())
@@ -566,7 +492,7 @@ impl From<PasskeyEntity> for PasskeyResponse {
     }
 }
 
-#[derive(Debug, Clone, FromRow, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WebauthnCookie {
     pub email: String,
     pub exp: OffsetDateTime,
@@ -910,9 +836,10 @@ pub async fn auth_finish(
                             user.save_txn_append(&mut txn);
                             DB::hql().txn(txn).await?;
                         } else {
-                            let mut txn = DB::txn_sqlx().await?;
-                            pk_entity.update_passkey_txn(&mut txn).await?;
-                            user.save_txn(&mut txn).await?;
+                            let mut cl = DB::pg().await?;
+                            let txn = cl.transaction().await?;
+                            pk_entity.update_passkey_txn(&txn).await?;
+                            user.save_txn(&txn).await?;
                             txn.commit().await?;
                         }
 

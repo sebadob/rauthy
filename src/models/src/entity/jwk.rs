@@ -887,10 +887,7 @@ impl FromRow<'_, PgRow> for JwkKeyPairAlg {
 }
 
 impl postgres_types::FromSql<'_> for JwkKeyPairAlg {
-    fn from_sql<'a>(
-        _ty: &Type,
-        raw: &'a [u8],
-    ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
+    fn from_sql(_ty: &Type, raw: &[u8]) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
         let sig = String::from_utf8_lossy(raw);
         let slf = JwkKeyPairAlg::from_str(sig.as_ref()).expect("corrupted signature in database");
         Ok(slf)

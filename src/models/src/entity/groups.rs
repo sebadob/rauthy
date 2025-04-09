@@ -84,7 +84,7 @@ impl Group {
                 user.delete_group(&group.name);
                 user.save_txn(&txn).await?;
             }
-            DB::pg_txn_append(&txn, sql, &[&id]).await?;
+            DB::pg_txn_append(&txn, sql, &[&group.id]).await?;
 
             txn.commit().await?;
         }
