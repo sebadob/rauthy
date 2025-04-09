@@ -4,7 +4,6 @@ use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
-use tokio_postgres::GenericClient;
 
 #[derive(Debug, Deserialize, sqlx::FromRow)]
 pub struct UserLoginState {
