@@ -1,5 +1,4 @@
 use crate::database::{Cache, DB};
-use crate::entity::config::ConfigEntity;
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
@@ -149,7 +148,7 @@ impl PasswordPolicy {
         let bytes: Vec<u8> = if is_hiqlite() {
             DB::hql().query_raw_one(sql, params!()).await?.get("data")
         } else {
-            DB::pg_query_one::<ConfigEntity>(sql, &[]).await?.data
+            DB::pg_query_one_row(sql, &[]).await?.get("data")
         };
         let policy = bincode::deserialize::<Self>(&bytes)?;
 

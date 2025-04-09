@@ -138,7 +138,7 @@ impl RefreshToken {
                     ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
                 })?
         } else {
-            DB::pg_query_one(sql, &[&id]).await.map_err(|_| {
+            DB::pg_query_one(sql, &[&id, &now]).await.map_err(|_| {
                 ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
             })?
         };

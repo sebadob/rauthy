@@ -34,26 +34,29 @@ impl UserLoginState {
     ) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp_millis();
 
-        let sql_1 = r#"
+        if is_hiqlite() {
+            let mut txn = Vec::with_capacity(session_id.as_ref().map(|_| 2).unwrap_or(1));
+            txn.push((
+                r#"
 INSERT INTO user_login_states(timestamp, user_id, client_id)
 SELECT $1, $2, $3
 WHERE NOT EXISTS (
     SELECT 1 FROM user_login_states
     WHERE user_id = $2 AND client_id = $3 AND session_id IS NULL
-)"#;
-        let sql_2 = r#"
+)"#,
+                params!(now - 1, &user_id, &client_id),
+            ));
+            if session_id.is_some() {
+                txn.push((
+                    r#"
 INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
 SELECT $1, $2, $3, $4
 WHERE NOT EXISTS (
     SELECT 1 FROM user_login_states
     WHERE user_id = $2 AND client_id = $3 AND session_id = $4
-)"#;
-
-        if is_hiqlite() {
-            let mut txn = Vec::with_capacity(session_id.as_ref().map(|_| 2).unwrap_or(1));
-            txn.push((sql_1, params!(now - 1, &user_id, &client_id)));
-            if session_id.is_some() {
-                txn.push((sql_2, params!(now, user_id, client_id, session_id)));
+)"#,
+                    params!(now, user_id, client_id, session_id),
+                ));
             }
 
             DB::hql().txn(txn).await?;
@@ -61,11 +64,28 @@ WHERE NOT EXISTS (
             let mut cl = DB::pg().await?;
             let txn = cl.transaction().await?;
 
-            DB::pg_txn_append(&txn, sql_1, &[&(now - 1), &user_id, &client_id]).await?;
             DB::pg_txn_append(
                 &txn,
-                sql_2,
-                &[&(now - 1), &user_id, &client_id, &session_id],
+                r#"
+INSERT INTO user_login_states(timestamp, user_id, client_id)
+SELECT $1, $2, $3
+WHERE NOT EXISTS (
+    SELECT 1 FROM user_login_states
+    WHERE user_id = $2::VARCHAR AND client_id = $3::VARCHAR AND session_id IS NULL
+)"#,
+                &[&(now - 1), &user_id, &client_id],
+            )
+            .await?;
+            DB::pg_txn_append(
+                &txn,
+                r#"
+INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
+SELECT $1, $2, $3, $4
+WHERE NOT EXISTS (
+    SELECT 1 FROM user_login_states
+    WHERE user_id = $2::VARCHAR AND client_id = $3::VARCHAR AND session_id = $4::VARCHAR
+)"#,
+                &[&(now), &user_id, &client_id, &session_id],
             )
             .await?;
 

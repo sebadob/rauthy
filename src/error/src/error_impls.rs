@@ -8,6 +8,7 @@ use actix_web::http::header::{
 use actix_web::http::{StatusCode, header};
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError, error};
 use cryptr::CryptrError;
+use cryptr::utils::secure_random_alnum;
 use css_color::ParseColorError;
 use deadpool::managed::{BuildError, PoolError};
 use image::ImageError;
@@ -20,7 +21,7 @@ use std::borrow::Cow;
 use std::string::FromUtf8Error;
 use svg_hush::FError;
 use time::OffsetDateTime;
-use tracing::{error, trace};
+use tracing::{debug, error};
 use validator::ValidationError;
 
 const APPLICATION_JSON: &str = "application/json";
@@ -140,7 +141,7 @@ impl ResponseError for ErrorResponse {
 
 impl From<std::io::Error> for ErrorResponse {
     fn from(value: std::io::Error) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("IO Error: {}", value),
@@ -150,7 +151,7 @@ impl From<std::io::Error> for ErrorResponse {
 
 impl From<actix_web::Error> for ErrorResponse {
     fn from(err: actix_web::Error) -> Self {
-        trace!("{:?}", err);
+        debug!("{:?}", err);
         ErrorResponse::new(
             ErrorResponseType::Internal,
             format!("actix_web::Error Error: {}", err),
@@ -160,7 +161,7 @@ impl From<actix_web::Error> for ErrorResponse {
 
 impl From<argon2::Error> for ErrorResponse {
     fn from(err: argon2::Error) -> Self {
-        trace!("{:?}", err);
+        debug!("{:?}", err);
         ErrorResponse::new(
             ErrorResponseType::Internal,
             format!("Argon2Id Error: {}", err),
@@ -177,7 +178,7 @@ impl From<Box<bincode::ErrorKind>> for ErrorResponse {
 
 impl From<chrono::ParseError> for ErrorResponse {
     fn from(value: chrono::ParseError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Unable to parse the correct DateTime",
@@ -187,7 +188,7 @@ impl From<chrono::ParseError> for ErrorResponse {
 
 impl From<BlockingError> for ErrorResponse {
     fn from(value: BlockingError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Internal,
             "Database Pool is gone, please re-try later",
@@ -204,28 +205,61 @@ impl From<chacha20poly1305::Error> for ErrorResponse {
 
 impl From<deadpool::managed::BuildError> for ErrorResponse {
     fn from(e: BuildError) -> Self {
-        error!("{}", e);
+        debug!("{}", e);
         ErrorResponse::new(ErrorResponseType::DatabaseIo, e.to_string())
     }
 }
 
 impl From<deadpool::managed::PoolError<tokio_postgres::Error>> for ErrorResponse {
     fn from(e: PoolError<tokio_postgres::Error>) -> Self {
-        error!("{}", e);
+        debug!("{}", e);
         ErrorResponse::new(ErrorResponseType::DatabaseIo, e.to_string())
     }
 }
 
 impl From<tokio_postgres::Error> for ErrorResponse {
     fn from(e: tokio_postgres::Error) -> Self {
-        error!("{}", e);
-        ErrorResponse::new(ErrorResponseType::Database, e.to_string())
+        debug!("{}", e);
+
+        if let Some(code) = e.code() {
+            let code = code.code();
+            let (typ, msg) = match code {
+                // unique constraint violation
+                "23505" => (
+                    ErrorResponseType::BadRequest,
+                    Cow::from("ID exists already"),
+                ),
+                _ => (ErrorResponseType::Database, Cow::from(e.to_string())),
+            };
+
+            error!("SqlState({}) -> {}", code, msg);
+            ErrorResponse::new(typ, msg)
+        } else {
+            let msg = e.to_string();
+
+            // If we don't get a code, we can try to match by message.
+            // This is usually quite brittle, but if these messages ever change, the integration
+            // tests will catch them.
+            if msg == "query returned an unexpected number of rows" {
+                return Self::new(ErrorResponseType::NotFound, "No results found");
+            }
+
+            let id = secure_random_alnum(6);
+            error!("db-err-id({}): {}", id, msg);
+            Self::new(
+                ErrorResponseType::Database,
+                format!(
+                    "Database error without inner error, check logs for:  db-err-id({})",
+                    id
+                ),
+            )
+        }
     }
 }
 
 impl From<hiqlite::Error> for ErrorResponse {
     fn from(value: hiqlite::Error) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         // tracing::warn!("{:?}", value);
 
         let (error, msg) = match value {
@@ -279,7 +313,7 @@ impl From<hiqlite::Error> for ErrorResponse {
 
 impl From<ParseColorError> for ErrorResponse {
     fn from(value: ParseColorError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Cannot parse input to valid CSS color",
@@ -289,7 +323,7 @@ impl From<ParseColorError> for ErrorResponse {
 
 impl From<actix_multipart::MultipartError> for ErrorResponse {
     fn from(value: actix_multipart::MultipartError) -> Self {
-        error!("From<actix_multipart::MultipartError>: {:?}", value);
+        debug!("From<actix_multipart::MultipartError>: {:?}", value);
 
         let text = match value {
             MultipartError::MissingField(_) => "MultipartError::MissingField",
@@ -320,21 +354,21 @@ impl From<actix_multipart::MultipartError> for ErrorResponse {
 
 impl From<error::PayloadError> for ErrorResponse {
     fn from(value: error::PayloadError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(ErrorResponseType::BadRequest, value.to_string())
     }
 }
 
 impl From<FromUtf8Error> for ErrorResponse {
     fn from(value: FromUtf8Error) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(ErrorResponseType::Internal, value.to_string())
     }
 }
 
 impl From<validator::ValidationErrors> for ErrorResponse {
     fn from(value: validator::ValidationErrors) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Payload validation error: {:?}", value),
@@ -344,7 +378,7 @@ impl From<validator::ValidationErrors> for ErrorResponse {
 
 impl From<validator::ValidationError> for ErrorResponse {
     fn from(value: ValidationError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Payload validation error: {:?}", value),
@@ -354,7 +388,7 @@ impl From<validator::ValidationError> for ErrorResponse {
 
 impl From<serde_json::Error> for ErrorResponse {
     fn from(value: Error) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Payload deserialization error: {:?}", value),
@@ -363,7 +397,7 @@ impl From<serde_json::Error> for ErrorResponse {
 }
 impl From<reqwest::header::ToStrError> for ErrorResponse {
     fn from(value: reqwest::header::ToStrError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!(
@@ -376,7 +410,7 @@ impl From<reqwest::header::ToStrError> for ErrorResponse {
 
 impl From<reqwest::Error> for ErrorResponse {
     fn from(value: reqwest::Error) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Connection,
             format!("Cannot send out HTTP request: {:?}", value),
@@ -386,7 +420,7 @@ impl From<reqwest::Error> for ErrorResponse {
 
 impl From<TurtleError> for ErrorResponse {
     fn from(value: TurtleError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Cannot format / parse turtle data: {:?}", value),
@@ -396,7 +430,7 @@ impl From<TurtleError> for ErrorResponse {
 
 impl From<oxiri::IriParseError> for ErrorResponse {
     fn from(value: oxiri::IriParseError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Invalid iri given: {:?}", value),
@@ -406,21 +440,21 @@ impl From<oxiri::IriParseError> for ErrorResponse {
 
 impl From<CryptrError> for ErrorResponse {
     fn from(value: CryptrError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(ErrorResponseType::Encryption, value.to_string())
     }
 }
 
 impl From<PowError> for ErrorResponse {
     fn from(value: PowError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(ErrorResponseType::Forbidden, value.to_string())
     }
 }
 
 impl From<serde_json_path::ParseError> for ErrorResponse {
     fn from(value: ParseError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("JsonPath error: {}", value),
@@ -430,7 +464,7 @@ impl From<serde_json_path::ParseError> for ErrorResponse {
 
 impl From<serde_urlencoded::de::Error> for ErrorResponse {
     fn from(value: serde_urlencoded::de::Error) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("URL encoded error: {}", value),
@@ -440,7 +474,7 @@ impl From<serde_urlencoded::de::Error> for ErrorResponse {
 
 impl From<ImageError> for ErrorResponse {
     fn from(value: ImageError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Cannot parse the image data: {}", value),
@@ -450,7 +484,7 @@ impl From<ImageError> for ErrorResponse {
 
 impl From<actix_web::http::header::ToStrError> for ErrorResponse {
     fn from(value: actix_web::http::header::ToStrError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!(
@@ -463,7 +497,7 @@ impl From<actix_web::http::header::ToStrError> for ErrorResponse {
 
 impl From<header::InvalidHeaderValue> for ErrorResponse {
     fn from(value: InvalidHeaderValue) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Internal,
             format!("Cannot convert to HeaderValue: {:?}", value),
@@ -473,7 +507,7 @@ impl From<header::InvalidHeaderValue> for ErrorResponse {
 
 impl From<std::fmt::Error> for ErrorResponse {
     fn from(value: std::fmt::Error) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Internal,
             format!("fmt error: {:?}", value),
@@ -483,7 +517,7 @@ impl From<std::fmt::Error> for ErrorResponse {
 
 impl From<ruma::client::Error<reqwest::Error, ruma::api::client::Error>> for ErrorResponse {
     fn from(value: ruma::client::Error<reqwest::Error, ruma::api::client::Error>) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Connection,
             format!("matrix error: {:?}", value),
@@ -493,7 +527,7 @@ impl From<ruma::client::Error<reqwest::Error, ruma::api::client::Error>> for Err
 
 impl From<svg_hush::FError> for ErrorResponse {
     fn from(value: FError) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("svg sanitization error: {:?}", value),
@@ -503,7 +537,7 @@ impl From<svg_hush::FError> for ErrorResponse {
 
 impl From<s3_simple::S3Error> for ErrorResponse {
     fn from(value: S3Error) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Connection,
             format!("S3 error: {:?}", value),
@@ -513,7 +547,7 @@ impl From<s3_simple::S3Error> for ErrorResponse {
 
 impl From<rusqlite::Error> for ErrorResponse {
     fn from(value: rusqlite::Error) -> Self {
-        trace!("{:?}", value);
+        debug!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Database,
             format!("rusqlite error: {:?}", value),

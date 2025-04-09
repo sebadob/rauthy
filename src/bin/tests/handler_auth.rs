@@ -89,6 +89,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     );
     let query_pkce = format!("{}&code_challenge={}", query, challenge_plain);
     let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
+    println!("GET: {}", url_auth);
     let mut res = reqwest::get(&url_auth).await?;
     res = check_status(res, 200).await?;
     let headers = cookie_csrf_headers_from_res(res).await?;
@@ -739,7 +740,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
 }
 
 #[tokio::test]
-async fn test_authorization_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
+async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
 

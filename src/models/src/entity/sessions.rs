@@ -176,7 +176,6 @@ impl Session {
         Ok(())
     }
 
-    // Returns a session by id
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let client = DB::hql();
 
@@ -184,7 +183,7 @@ impl Session {
             return Ok(slf);
         }
 
-        let sql = "SELECT * FROM sessions WHERE id = $1 ORDER BY exp DESC";
+        let sql = "SELECT * FROM sessions WHERE id = $1";
         let slf: Self = if is_hiqlite() {
             client.query_as_one(sql, params!(id)).await?
         } else {

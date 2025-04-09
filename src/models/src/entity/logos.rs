@@ -377,15 +377,15 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
         };
         let updated = if is_hiqlite() {
             DB::hql()
-                .query_raw_one(sql, params!(id))
+                .query_raw(sql, params!(id))
                 .await?
-                .try_get::<i64>("updated")
-                .ok()
+                .first_mut()
+                .map(|r| r.get::<i64>("updated"))
         } else {
-            DB::pg_query_one_row(sql, &[&id])
+            DB::pg_query_rows(sql, &[&id], 1)
                 .await?
-                .try_get::<_, i64>("updated")
-                .ok()
+                .first()
+                .map(|r| r.get::<_, i64>("updated"))
         };
 
         client

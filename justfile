@@ -269,6 +269,8 @@ test-postgres test="": test-backend-stop postgres-stop postgres-start
     #!/usr/bin/env bash
     clear
 
+    sleep 2
+
     cargo build
     {{ postgres }} ./target/debug/rauthy test &
     echo $! > {{ file_test_pid }}
@@ -276,7 +278,7 @@ test-postgres test="": test-backend-stop postgres-stop postgres-start
     sleep 1
 
     if {{ postgres }} cargo test {{ test }}; then
-      echo "All SQLite tests successful"
+      echo "All Postgres tests successful"
       just test-backend-stop
     else
       echo "Failed Tests"
