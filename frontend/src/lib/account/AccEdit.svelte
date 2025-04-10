@@ -64,6 +64,9 @@
         let res = await fetchPut<UserResponse>(`/auth/v1/users/${user.id}/self`, payload);
         if (res.body) {
             success = true;
+            if (!res.body.user_values?.birthdate) {
+                res.body.user_values.birthdate = '';
+            }
             user = res.body;
 
             let timer = 3000;
