@@ -51,7 +51,7 @@ futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 # blocked by sqlx
-hiqlite = { version = "0.4", features = ["full"] }
+hiqlite = { version = "0.5", features = ["full"] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
@@ -73,7 +73,7 @@ openssl = { version = "0.10.72", features = ["vendored"] }
 openssl-sys = { version = "0.9.105", features = ["vendored"] }
 oxiri = "0.2.2"
 postgres-types = { version = "0.2.6", features = ["derive"] }
-prometheus = "0.13.3"
+prometheus = "0.13"
 # blocked by argon2
 rand = "0.8"
 # blocked by argon2
@@ -90,8 +90,7 @@ rsa = { version = "0.9.3", features = ["serde", "sha2"] }
 ruma = { version = "0.12.0", features = [
     "client-api-c", "client-ext-client-api", "client-reqwest", "markdown", "rand"
 ] }
-# blocked by sqlx
-rusqlite = "0.32.0"
+rusqlite = "0.33"
 rust-embed = "8.5.0"
 rustls = { version = "0.23", default-features = false, features = ["logging", "std", "tls12", "ring"] }
 rustls-pki-types = "1.4.1"
@@ -101,12 +100,10 @@ semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_json_path = "0.7.1"
-# blocked by sqlx
-serde_rusqlite = "0.36.0"
+serde_rusqlite = "0.37"
 serde_urlencoded = "0.7.1"
 spow = { version = "0.4", features = ["server"] }
-# blocked by sqlx
-strum = { version = "0.26.3", features = ["derive"] }
+strum = { version = "0.26", features = ["derive"] }
 svg-hush = "0.9.4"
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }
