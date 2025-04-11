@@ -1,6 +1,6 @@
 use crate::database::DB;
 use crate::entity::clients::Client;
-use hiqlite::{Param, params};
+use deadpool_postgres::GenericClient;
 use rauthy_common::constants::{
     ADMIN_FORCE_MFA, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL,
 };
@@ -54,69 +54,18 @@ pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
         contacts: RAUTHY_ADMIN_EMAIL.clone(),
         backchannel_logout_uri: None,
     };
+    debug!("Rauthy client anti-lockout: {:?}", rauthy);
 
-    // MUST NOT use `insert or replace` syntax
-    // -> SQLite basically re-creates this under the hood, which means the FK restriction
-    // from `client_logos` -> `clients` will actually delete the client logo that was
-    // saved for `rauthy` before.
-    // Update only here and prevent `rauthy` deletion as a special check on DELETE /client
-
-    let sql = r#"
-UPDATE clients SET enabled = $1, confidential = $2, redirect_uris = $3,
-post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6, access_token_alg = $7,
-id_token_alg = $8, auth_code_lifetime = $9, access_token_lifetime = $10, scopes = $11,
-default_scopes = $12, challenge = $13, force_mfa = $14, client_uri = $15, contacts = $16
-WHERE id = $17"#;
-
+    // we are using a txn h ere to be able to re-use the already written update queries for the client
     if is_hiqlite() {
-        DB::hql()
-            .execute(
-                sql,
-                params!(
-                    rauthy.enabled,
-                    rauthy.confidential,
-                    rauthy.redirect_uris,
-                    rauthy.post_logout_redirect_uris,
-                    rauthy.allowed_origins,
-                    rauthy.flows_enabled,
-                    rauthy.access_token_alg,
-                    rauthy.id_token_alg,
-                    rauthy.auth_code_lifetime,
-                    rauthy.access_token_lifetime,
-                    rauthy.scopes,
-                    rauthy.default_scopes,
-                    rauthy.challenge,
-                    rauthy.force_mfa,
-                    rauthy.client_uri,
-                    rauthy.contacts,
-                    rauthy.id
-                ),
-            )
-            .await?;
+        let mut txn = Vec::new();
+        rauthy.save_txn_append(&mut txn);
+        DB::hql().txn(txn).await?;
     } else {
-        DB::pg_execute(
-            sql,
-            &[
-                &rauthy.enabled,
-                &rauthy.confidential,
-                &rauthy.redirect_uris,
-                &rauthy.post_logout_redirect_uris,
-                &rauthy.allowed_origins,
-                &rauthy.flows_enabled,
-                &rauthy.access_token_alg,
-                &rauthy.id_token_alg,
-                &rauthy.auth_code_lifetime,
-                &rauthy.access_token_lifetime,
-                &rauthy.scopes,
-                &rauthy.default_scopes,
-                &rauthy.challenge,
-                &rauthy.force_mfa,
-                &rauthy.client_uri,
-                &rauthy.contacts,
-                &rauthy.id,
-            ],
-        )
-        .await?;
+        let mut cl = DB::pg().await?;
+        let txn = cl.transaction().await?;
+        rauthy.save_txn(&txn).await?;
+        txn.commit().await?;
     }
 
     Ok(())
