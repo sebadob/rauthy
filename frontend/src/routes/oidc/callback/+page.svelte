@@ -20,17 +20,6 @@
     let pState = useParam('state');
 
     onMount(async () => {
-        let redirectUri = window.location.origin + REDIRECT_URI_SUCCESS;
-
-        let state = pState.get();
-        if (state) {
-            if (state === 'account') {
-                redirectUri = window.location.origin + REDIRECT_URI_SUCCESS_ACC;
-            } else if (state.startsWith('device')) {
-                redirectUri = `${window.location.origin}/auth/v1/${state}`;
-            }
-        }
-
         let code = pCode.get();
         if (!code) {
             console.error('no `code` given');
@@ -40,7 +29,7 @@
         const data = new URLSearchParams();
         data.append('grant_type', 'authorization_code');
         data.append('code', code);
-        data.append('redirect_uri', redirectUri);
+        data.append('redirect_uri', `${window.location.origin}/auth/v1/oidc/callback`);
         data.append('client_id', CLIENT_ID);
         data.append('code_verifier', getVerifierFromStorage());
 
@@ -82,7 +71,16 @@
 
             deleteVerifierFromStorage();
 
-            window.location.replace(redirectUri);
+            let redirectTo = window.location.origin + REDIRECT_URI_SUCCESS;
+            let state = pState.get();
+            if (state) {
+                if (state === 'account') {
+                    redirectTo = window.location.origin + REDIRECT_URI_SUCCESS_ACC;
+                } else if (state.startsWith('device')) {
+                    redirectTo = `${window.location.origin}/auth/v1/${state}`;
+                }
+            }
+            window.location.replace(redirectTo);
         } else {
             err = '';
         }
