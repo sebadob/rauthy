@@ -50,7 +50,6 @@ futures = "0.3"
 futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
-# blocked by sqlx
 hiqlite = { version = "0.5", features = ["full"] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
@@ -96,6 +95,7 @@ rustls = { version = "0.23", default-features = false, features = ["logging", "s
 rustls-pki-types = "1.4.1"
 rustls-pemfile = "2.1.2"
 s3-simple = "0.4.1"
+scim_v2 = "0.2.5"
 semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

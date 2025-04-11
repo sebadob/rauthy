@@ -4379,6 +4379,7 @@ dependencies = [
  "rauthy-models",
  "reqwest",
  "ring",
+ "scim_v2",
  "serde",
  "serde_json",
  "tokio",
@@ -5157,6 +5158,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f29ebaa345f945cec9fbbc532eb307f0fdad8161f281b6369539c8d84876b3d"
 dependencies = [
  "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "scim_v2"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e507064d55d2acd848a51da2aa57e0c204d1b569c1faa18c396561e6385ea26"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
