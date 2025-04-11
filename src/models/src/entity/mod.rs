@@ -15,6 +15,7 @@ pub mod db_version;
 pub mod devices;
 pub mod dpop_proof;
 pub mod failed_backchannel_logout;
+mod failed_scim_tasks;
 pub mod fed_cm;
 pub mod groups;
 pub mod ip_rate_limit;
