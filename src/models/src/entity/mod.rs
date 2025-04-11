@@ -30,6 +30,7 @@ pub mod principal;
 pub mod refresh_tokens;
 pub mod refresh_tokens_devices;
 pub mod roles;
+mod scim;
 pub mod scopes;
 pub mod sessions;
 pub mod theme;

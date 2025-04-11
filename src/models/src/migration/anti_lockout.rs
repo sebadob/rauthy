@@ -21,7 +21,7 @@ pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
 
         (
             format!(
-                "{issuer}/oidc/callback,http://localhost:5173/*,https://{}:5173/*",
+                "{issuer}/oidc/callback,http://localhost:5173/auth/v1/oidc/callback,https://{}:5173/auth/v1/oidc/callback",
                 ip
             ),
             Some(origin),
@@ -58,7 +58,7 @@ pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
 
     // we are using a txn h ere to be able to re-use the already written update queries for the client
     if is_hiqlite() {
-        let mut txn = Vec::new();
+        let mut txn = Vec::with_capacity(1);
         rauthy.save_txn_append(&mut txn);
         DB::hql().txn(txn).await?;
     } else {

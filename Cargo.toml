@@ -95,7 +95,6 @@ rustls = { version = "0.23", default-features = false, features = ["logging", "s
 rustls-pki-types = "1.4.1"
 rustls-pemfile = "2.1.2"
 s3-simple = "0.4.1"
-scim_v2 = "0.2.5"
 semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -2,6 +2,7 @@ use crate::database::DB;
 use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq)]
 pub enum ScimAction {
@@ -54,12 +55,12 @@ impl From<&str> for ScimResource {
     }
 }
 
-impl ToString for ScimResource {
-    fn to_string(&self) -> String {
+impl Display for ScimResource {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ScimResource::User(uid) => format!("u_{}", uid),
-            ScimResource::Group(gid) => format!("g_{}", gid),
-            ScimResource::Unknown => "unknown".to_string(),
+            ScimResource::User(uid) => write!(f, "u_{}", uid),
+            ScimResource::Group(gid) => write!(f, "g_{}", gid),
+            ScimResource::Unknown => write!(f, "unknown"),
         }
     }
 }
