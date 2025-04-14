@@ -238,22 +238,6 @@ SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
 impl ThemeCssFull {
     // TODO fn to pre-build and compress themes for all existing clients at app startup
 
-    // pub async fn etag(client_id: &str) -> Result<String, ErrorResponse> {
-    //     if let Some(etag) = DB::client()
-    //         .get_bytes(Cache::Etag, Self::cache_key_etag(client_id))
-    //         .await?
-    //     {
-    //         Ok(String::from_utf8(etag)?)
-    //     } else {
-    //         Self::etag_update(client_id).await
-    //     }
-    // }
-
-    // #[inline]
-    // fn cache_key_etag(client_id: &str) -> String {
-    //     format!("{}_theme_etag", client_id)
-    // }
-
     #[inline]
     fn cache_key_plain(client_id: &str) -> String {
         format!("{}_theme_plain", client_id)
