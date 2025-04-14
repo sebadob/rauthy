@@ -11,7 +11,6 @@ use rauthy_common::constants::APPLICATION_JSON_SCIM;
 use rauthy_common::{HTTP_CLIENT, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
-use rsa::sha2::digest::typenum::Gr;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use tracing::{debug, error};
@@ -295,12 +294,31 @@ impl ClientScim {
         Ok(())
     }
 
-    /// Fetches a group from the client by `group.name` filter.
+    /// Fetches a SCIM group from the Service Provider.
+    /// Always tries via `externalId` first and will use a fallback to `displayName` if None
+    /// jas been returned for the id.
     async fn get_group(&self, group: &Group) -> Result<Option<ScimGroup>, ErrorResponse> {
         let url = format!(
-            "{}/Groups?filter=displayName%20eq%20%22{}%22",
-            self.base_endpoint, group.name
+            "{}/Groups?filter=externalId%20eq%20%22{}%22",
+            self.base_endpoint, group.id
         );
+        match self.get_group_with(group, url).await? {
+            None => {
+                let url = format!(
+                    "{}/Groups?filter=displayName%20eq%20%22{}%22",
+                    self.base_endpoint, group.name
+                );
+                self.get_group_with(group, url).await
+            }
+            Some(g) => Ok(Some(g)),
+        }
+    }
+
+    async fn get_group_with(
+        &self,
+        group: &Group,
+        url: String,
+    ) -> Result<Option<ScimGroup>, ErrorResponse> {
         let res = HTTP_CLIENT
             .get(url)
             .header(AUTHORIZATION, self.auth_header())
@@ -321,7 +339,20 @@ impl ClientScim {
                             self.client_id
                         ),
                     )),
-                    ScimResource::Group(remote) => Ok(Some(*remote)),
+                    ScimResource::Group(remote) => {
+                        if let Some(ext_id) = &remote.external_id {
+                            if ext_id != &group.id {
+                                return Err(ErrorResponse::new(
+                                    ErrorResponseType::Connection,
+                                    format!(
+                                        "Error for SCIM client {} with group {}: Group has an external ID which does not match ours",
+                                        self.client_id, group.name
+                                    ),
+                                ));
+                            }
+                        }
+                        Ok(Some(*remote))
+                    }
                 }
             }
         } else {
@@ -499,29 +530,31 @@ impl ClientScim {
         }
     }
 
-    /// Fetches a user from the client.
-    /// If `try_via_email == true`, a filter with `userName == user.email` will be used. Otherwise,
-    /// it will be `externalId == user.id`.
-    ///
-    /// CAUTION: Make sure to only use the `user.email` for filtering if this is the very first sync
-    /// for a client with newly configured SCIM. All following syncs / updates should always be done
-    /// via `externalId` in case of an email change for a user!
-    async fn get_user(
+    /// Fetches a SCIM group from the Service Provider.
+    /// Always tries via `externalId` first and will use a fallback to `userName` if None
+    /// jas been returned for the id.
+    async fn get_user(&self, user: &User) -> Result<Option<ScimUser>, ErrorResponse> {
+        let url = format!(
+            "{}/Users?filter=externalId%20eq%20%22{}%22",
+            self.base_endpoint, user.id
+        );
+        match self.get_user_with(user, url).await? {
+            None => {
+                let url = format!(
+                    "{}/Users?filter=userName%20eq%20%22{}%22",
+                    self.base_endpoint, user.email
+                );
+                self.get_user_with(user, url).await
+            }
+            Some(user) => Ok(Some(user)),
+        }
+    }
+
+    async fn get_user_with(
         &self,
         user: &User,
-        filter_by_email: bool,
+        url: String,
     ) -> Result<Option<ScimUser>, ErrorResponse> {
-        let url = if filter_by_email {
-            format!(
-                "{}/Users?filter=userName%20eq%20%22{}%22",
-                self.base_endpoint, user.email
-            )
-        } else {
-            format!(
-                "{}/Users?filter=externalId%20eq%20%22{}%22",
-                self.base_endpoint, user.id
-            )
-        };
         let res = HTTP_CLIENT
             .get(url)
             .header(AUTHORIZATION, self.auth_header())
@@ -536,24 +569,19 @@ impl ClientScim {
                 let res = lr.resources.swap_remove(0);
                 match res {
                     ScimResource::User(remote) => {
-                        if filter_by_email {
-                            if let Some(ext_id) = &remote.external_id {
-                                if ext_id != &user.id {
-                                    let err = format!(
-                                        "Error for SCIM client {} with user {}: User has an external ID which does not match ours",
-                                        self.client_id, user.email
-                                    );
-                                    error!("{}", err);
-                                    return Err(ErrorResponse::new(
-                                        ErrorResponseType::Connection,
-                                        err,
-                                    ));
-                                }
+                        if let Some(ext_id) = &remote.external_id {
+                            if ext_id != &user.id {
+                                let err = format!(
+                                    "Error for SCIM client {} with user {}: User has an external ID which does not match ours",
+                                    self.client_id, user.email
+                                );
+                                error!("{}", err);
+                                return Err(ErrorResponse::new(ErrorResponseType::Connection, err));
                             }
                         }
                         Ok(Some(*remote))
                     }
-                    ScimResource::Group(remote) => Err(ErrorResponse::new(
+                    ScimResource::Group(_) => Err(ErrorResponse::new(
                         ErrorResponseType::Connection,
                         format!(
                             "Received a Group from SCIM client {} when expected a User",
@@ -577,22 +605,30 @@ impl ClientScim {
 
     /// Fetches all users from all SCIM configured clients, compares the data on them vs local
     /// and sends update requests if necessary.
-    pub async fn sync_users(&self, users: &[User]) -> Result<(), ErrorResponse> {
+    pub async fn sync_users(
+        &self,
+        users: &[User],
+        filter_by_email: bool,
+    ) -> Result<(), ErrorResponse> {
         todo!()
     }
 
     /// Either creates or updates the user, depending on if it exists on remote already, or not.
-    pub async fn create_update_user(&self, user: User) -> Result<(), ErrorResponse> {
+    pub async fn create_update_user(
+        &self,
+        user: User,
+        filter_by_email: bool,
+    ) -> Result<(), ErrorResponse> {
         todo!()
     }
 
     /// Directly send update requests to all SCIM configured clients. Makes sense after a local update.
-    async fn create_user(&self, user: User) -> Result<(), ErrorResponse> {
+    async fn create_user(&self, user: User, filter_by_email: bool) -> Result<(), ErrorResponse> {
         todo!()
     }
 
     /// Directly send update requests to all SCIM configured clients. Makes sense after a local update.
-    async fn update_user(&self, user: User) -> Result<(), ErrorResponse> {
+    async fn update_user(&self, user: User, filter_by_email: bool) -> Result<(), ErrorResponse> {
         todo!()
     }
 
