@@ -161,6 +161,13 @@ impl ClientScim {
         }
     }
 
+    // fn url_group(&self, group: &Group) -> String {
+    //     format!(
+    //         "{}/Groups?filter=displayName%20eq%20%22{}%22",
+    //         self.base_endpoint, group.name
+    //     )
+    // }
+
     fn should_sync_group(&self, group: Option<&Group>) -> bool {
         if !self.sync_groups {
             debug!("Group syncing disabled for SCIM client {}", self.client_id);
@@ -286,6 +293,59 @@ impl ClientScim {
         Ok(())
     }
 
+    /// Either creates or updates the group, depending on if it exists on remote already, or not.
+    pub async fn create_update_group(&self, group: Group) -> Result<(), ErrorResponse> {
+        if !self.should_sync_group(Some(&group)) {
+            return Ok(());
+        }
+
+        let url = format!(
+            "{}/Groups?filter=displayName%20eq%20%22{}%22",
+            self.base_endpoint, group.name
+        );
+        let res = HTTP_CLIENT
+            .get(url)
+            .header(AUTHORIZATION, self.auth_header())
+            .send()
+            .await?;
+
+        if res.status().is_success() {
+            let mut lr = res.json::<ScimListResponse>().await?;
+            if lr.resources.is_empty() {
+                self.create_group(group).await?;
+            } else {
+                let res = lr.resources.swap_remove(0);
+                match res {
+                    ScimResource::User(_) => {
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::Connection,
+                            format!(
+                                "Received a User from SCIM client {} when expected a Group",
+                                self.client_id
+                            ),
+                        ));
+                    }
+                    ScimResource::Group(remote) => {
+                        if let Some(ext_id) = &remote.external_id {
+                            if ext_id != &group.id {
+                                return Err(ErrorResponse::new(
+                                    ErrorResponseType::Connection,
+                                    format!(
+                                        "SCIM client {} group already exists but with different 'externalId'",
+                                        self.client_id
+                                    ),
+                                ));
+                            }
+                        }
+                        self.update_group(group, remote).await?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn create_group(&self, group: Group) -> Result<(), ErrorResponse> {
         if !self.should_sync_group(Some(&group)) {
             return Ok(());
@@ -294,10 +354,10 @@ impl ClientScim {
         let local_id = group.id.clone();
 
         let payload = ScimGroup {
+            // must be None on our side - managed by the client
             id: None,
             external_id: Some(group.id),
             display_name: group.name,
-            members: None,
             ..Default::default()
         };
         let json = serde_json::to_string(&payload)?;
@@ -355,6 +415,10 @@ impl ClientScim {
         let mut value = HashMap::with_capacity(2);
         value.insert("id".into(), serde_json::Value::String(remote_id));
         value.insert(
+            "externalId".into(),
+            serde_json::Value::String(group_local.id),
+        );
+        value.insert(
             "displayName".into(),
             serde_json::Value::String(group_local.name),
         );
@@ -365,6 +429,7 @@ impl ClientScim {
             }],
             ..Default::default()
         };
+
         let json = serde_json::to_string(&payload)?;
         let res = HTTP_CLIENT
             .patch(url)
@@ -388,7 +453,7 @@ impl ClientScim {
         }
     }
 
-    pub async fn delete_group(group: Group) -> Result<(), ErrorResponse> {
+    pub async fn delete_group(&self, group: Group) -> Result<(), ErrorResponse> {
         // if !self.sync_groups {
         //     debug!("Group syncing disabled for SCIM client {}", self.client_id);
         //     return Ok(());
@@ -403,16 +468,26 @@ impl ClientScim {
         todo!()
     }
 
+    /// Either creates or updates the user, depending on if it exists on remote already, or not.
+    pub async fn create_update_user(&self, user: User) -> Result<(), ErrorResponse> {
+        todo!()
+    }
+
     /// Directly send update requests to all SCIM configured clients. Makes sense after a local update.
-    pub async fn update_user(groups: User) -> Result<(), ErrorResponse> {
+    async fn create_user(&self, user: User) -> Result<(), ErrorResponse> {
         todo!()
     }
 
-    pub async fn delete_user(user: User) -> Result<(), ErrorResponse> {
+    /// Directly send update requests to all SCIM configured clients. Makes sense after a local update.
+    async fn update_user(&self, user: User) -> Result<(), ErrorResponse> {
         todo!()
     }
 
-    pub async fn update_groups_assignment(user: User) -> Result<(), ErrorResponse> {
+    pub async fn delete_user(&self, user: User) -> Result<(), ErrorResponse> {
+        todo!()
+    }
+
+    async fn update_groups_assignment(&self, user: User) -> Result<(), ErrorResponse> {
         todo!()
     }
 }

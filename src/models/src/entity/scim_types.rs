@@ -237,7 +237,7 @@ pub struct ScimError {
     pub status: u16,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Debug)]
 pub struct ScimPatchOp {
     /// `urn:ietf:params:scim:api:messages:2.0:PatchOp`
     pub schemas: Vec<Cow<'static, str>>,
@@ -254,7 +254,7 @@ impl Default for ScimPatchOp {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ScimOp {
     Add,
@@ -262,7 +262,7 @@ pub enum ScimOp {
     Replace,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Debug)]
 pub struct ScimPatchOperations {
     pub op: ScimOp,
     pub value: HashMap<Cow<'static, str>, serde_json::Value>,
