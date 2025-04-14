@@ -16,14 +16,15 @@ CREATE INDEX failed_scim_tasks_client_id_index
 
 CREATE TABLE clients_scim
 (
-    client_id         TEXT NOT NULL
+    client_id         TEXT    NOT NULL
         CONSTRAINT clients_scim_pk
             PRIMARY KEY
         CONSTRAINT clients_scim_clients_id_fk
             REFERENCES clients
             ON DELETE CASCADE ON UPDATE CASCADE,
-    bearer_token      BLOB NOT NULL,
-    base_endpoint     TEXT NOT NULL,
+    bearer_token      BLOB    NOT NULL,
+    base_endpoint     TEXT    NOT NULL,
+    sync_groups       INTEGER NOT NULL,
     group_sync_prefix TEXT
 ) STRICT;
 

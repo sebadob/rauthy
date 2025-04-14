@@ -22,6 +22,7 @@ CREATE TABLE clients_scim
             ON DELETE CASCADE ON UPDATE CASCADE,
     bearer_token      BYTEA   NOT NULL,
     base_endpoint     VARCHAR NOT NULL,
+    sync_groups       BOOLEAN NOT NULL,
     group_sync_prefix VARCHAR
 );
 
