@@ -18,6 +18,13 @@ lto = true
 strip = true
 panic = "abort"
 
+[profile.profiling]
+inherits = "release"
+codegen-units = 16
+debug = true
+lto = false
+strip = false
+
 [patch.crates-io]
 #hiqlite = { git = "https://github.com/sebadob/hiqlite.git", branch = "optimized-migration-checks-in-writer", package = "hiqlite" }
 #hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }

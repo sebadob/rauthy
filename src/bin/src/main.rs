@@ -234,15 +234,6 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
         debug!("I18n Config: {:?}", *I18N_CONFIG);
     }
 
-    // actix web
-    let state = app_state.clone();
-    let actix = thread::spawn(move || {
-        let actix_system = actix_web::rt::System::new();
-        actix_system.block_on(actix_main(state)).map_err(|e| {
-            error!("{}", e);
-        })
-    });
-
     if args.len() > 1 && args[1] == "dummy-data" {
         let amount = if args.len() > 2 {
             args[2].parse::<u32>().unwrap_or(100_000)
@@ -252,19 +243,13 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
         tokio::spawn(dummy_data::insert_dummy_data(amount));
     }
 
-    actix.join().unwrap().unwrap();
+    actix_main(app_state).await?;
     DB::hql().shutdown().await.unwrap();
 
     Ok(())
 }
 
-// #[actix_web::main]
 async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
-    debug!(
-        "Actix Main Thread is running on {:?}",
-        thread::current().id()
-    );
-
     let listen_scheme = app_state.listen_scheme.clone();
     let listen_addr = app_state.listen_addr.clone();
 
@@ -370,7 +355,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             .wrap(CsrfProtectionMiddleware)
             .wrap(
                 middleware::DefaultHeaders::new()
-                    .add(("x-frame-options", "SAMEORIGIN"))
+                    .add(("x-frame-options", "DENY"))
                     .add(("x-content-type-options", "nosniff"))
                     .add((
                         "strict-transport-security",

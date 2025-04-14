@@ -225,6 +225,20 @@ test-backend: test-backend-stop delete-hiqlite
     clear
     cargo run test
 
+# starts the test backend with memory profiling - expects `heaptrack` to be available
+test-backend-heaptrack: test-backend-stop delete-hiqlite
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    clear
+    echo "Building a release build with the 'profiling' profile - this will take some time ..."
+    RUSTFLAGS=-g cargo build --profile profiling
+    #echo "Temporarily removing kernel hardening and elevating ptrace rights until reboot"
+    #echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
+    #echo 'grant temporary access to performance events until reboot'
+    #echo '1' | sudo tee /proc/sys/kernel/perf_event_paranoid
+    #echo 'if you get an mmap error, try: sudo sysctl kernel.perf_event_mlock_kb=2048'
+    heaptrack ./target/profiling/rauthy test
+
 # stops a possibly running test backend that may have spawned in the background for integration tests
 test-backend-stop:
     #!/usr/bin/env bash
@@ -321,6 +335,15 @@ build-docs:
     cd book
     mdbook build -d ../docs
     git add ../docs/*
+
+# builds a release version with the `profiling` profile for analyzations with `heaptrack`
+build-profiling:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    clear
+    echo "Building a release build with the 'profiling' profile - this will take some time ..."
+    RUSTFLAGS=-g cargo build --profile profiling
+    echo "You can analyze the application via: heaptrack ./target/profiling/rauthy"
 
 # Build the final container image.
 build image="ghcr.io/sebadob/rauthy": build-ui
