@@ -54,7 +54,7 @@ export let I18nAdminKo: I18nAdmin = {
         scopes: {
             allowed: "허용된 범위",
             default: "기본 범위",
-            desc: `허용 범위는 <code>authorization_code</code> 플로우를 사용할 때 로그인 리디렉션 중에
+            desc: `허용된 범위는 <code>authorization_code</code> 플로우를 사용할 때 로그인 리디렉션 중에
                 클라이언트가 동적으로 요청할 수 있는 범위입니다. 예를 들어 <code>password</code> 를
                 사용할 때, 일부 문제를 해결하기 위해 기본 범위가 항상 토큰에 추가됩니다.`,
         },
@@ -214,7 +214,7 @@ export let I18nAdminKo: I18nAdmin = {
         configDesc: "새 비밀번호에 대한 정책입니다.",
         resetSet0: "0으로 설정하면 비활성화됩니다.",
         validForDays: "기간 제한",
-        validityNew: "비밀번호 사용 제한입니다.",
+        validityNew: "이전 비밀번호 사용 제한 정책입니다.",
     },
     providers: {
         config: {
@@ -296,8 +296,8 @@ export let I18nAdminKo: I18nAdmin = {
         forceLogout: `기존 세션을 모두 삭제하고, 이 사용자의 모든 Refresh 토큰을 삭제하시겠습니까?`,
         lastLogin: "마지막 로그인",
         mfaDelete1: "이 사용자의 패스키를 삭제할 수 있습니다.",
-        mfaDelete2: `주의! 패스키 삭제는 <b>되돌릴 수 없습니다.</b>`,
-        noMfaKeys: "등록된 패스키가 없습니다.",
+        mfaDelete2: `이 작업은 되돌릴 수 없습니다!`,
+        noMfaKeys: "등록된 패스키 없음",
         pkOnly1: "이 사용자는 패스키 전용 계정입니다.",
         pkOnly2: "이 사용자는 비밀번호 없는 로그인을 사용하며, 설정된 비밀번호가 없습니다.",
         pkOnly3: `이 사용자가 모든 비밀번호를 분실한 경우, 계정을 완전히 재설정하고 새로운 비밀번호
