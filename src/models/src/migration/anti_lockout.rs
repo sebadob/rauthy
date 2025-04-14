@@ -33,13 +33,13 @@ pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
     // we will actually skip non-mandatory values in the query below
     let rauthy = Client {
         id: "rauthy".to_string(),
-        name: None,
+        name: Some("Rauthy".to_string()),
         enabled: true,
         confidential: false,
         secret: None,
         secret_kid: None,
-        redirect_uris: redirect_uris.clone(),
-        post_logout_redirect_uris: Some(redirect_uris),
+        redirect_uris,
+        post_logout_redirect_uris: None,
         allowed_origins,
         flows_enabled: "authorization_code".to_string(),
         access_token_alg: "EdDSA".to_string(),

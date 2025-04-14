@@ -33,7 +33,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(client.enabled, true);
     assert_eq!(client.confidential, false);
     assert_eq!(client.redirect_uris.len(), 3);
-    assert_eq!(client.post_logout_redirect_uris.as_ref().unwrap().len(), 3);
+    assert_eq!(client.post_logout_redirect_uris, None);
     assert_eq!(
         client.allowed_origins,
         Some(vec!["http://localhost:5173".to_string()])
