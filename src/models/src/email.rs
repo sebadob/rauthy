@@ -501,10 +501,7 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
     let mailer = {
         let smtp_url = SMTP_URL.as_deref().unwrap();
         let smtp_port = env::var("SMTP_PORT")
-            .map(|rl| {
-                rl.parse::<u16>()
-                    .expect("SMTP_PORT cannot be parsed to u16 - bad format")
-            })
+            .map(|s| s.parse::<u16>().expect("SMTP_PORT cannot be parsed to u16"))
             .ok();
         let smtp_insecure = env::var("SMTP_DANGER_INSECURE")
             .unwrap_or_else(|_| "false".to_string())
