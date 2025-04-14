@@ -13,7 +13,7 @@ use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
 use lettre::{AsyncSmtpTransport, AsyncTransport, message};
 use rauthy_common::constants::{
-    EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME,
+    EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_PASSWORD, SMTP_PORT, SMTP_URL, SMTP_USERNAME,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::Notification;
@@ -581,8 +581,12 @@ async fn connect_test_smtp(
     let creds = authentication::Credentials::new(SMTP_USERNAME.clone(), SMTP_PASSWORD.clone());
 
     // always try fully wrapped TLS first
-    let mut conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
-        .expect("Connection Error with 'SMTP_URL'")
+    let mut builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
+        .expect("Connection Error with 'SMTP_URL'");
+    if let Some(port) = SMTP_PORT.as_deref() {
+        builder = builder.port(SMTP_PORT.as_deref().unwrap());
+    }
+    let mut conn = builder
         .credentials(creds.clone())
         .timeout(Some(Duration::from_secs(10)))
         .build();
@@ -604,8 +608,12 @@ async fn connect_test_smtp(
     }
 
     // only if full TLS fails, try STARTTLS
-    conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(smtp_url)
-        .expect("Connection Error with 'SMTP_URL'")
+    builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(smtp_url)
+        .expect("Connection Error with 'SMTP_URL'");
+    if let Some(port) = SMTP_PORT.as_deref() {
+        builder = builder.port(SMTP_PORT.as_deref().unwrap());
+    }
+    conn = builder
         .credentials(creds)
         .timeout(Some(Duration::from_secs(10)))
         .build();
@@ -638,11 +646,7 @@ async fn connect_test_smtp(
 async fn conn_test_smtp_insecure(
     smtp_url: &str,
 ) -> Result<AsyncSmtpTransport<lettre::Tokio1Executor>, ErrorResponse> {
-    let port = env::var("SMTP_DANGER_INSECURE_PORT")
-        .unwrap_or_else(|_| "1025".to_string())
-        .trim()
-        .parse::<u16>()
-        .expect("Cannot parse SMTP_DANGER_INSECURE_PORT to u16");
+    let port = SMTP_PORT.as_derf().unwrap_or(1025);
 
     let conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::builder_dangerous(smtp_url)
         .port(port)

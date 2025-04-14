@@ -470,6 +470,10 @@ lazy_static! {
     pub static ref SMTP_URL: Option<String> = env::var("SMTP_URL")
         .ok()
         .map(|url| url.trim().to_string());
+    pub static ref SMTP_PORT: Option<u16> = env::var("SMTP_PORT")
+        .map(|rl| rl.parse::<u16>()
+        .expect("SMTP_PORT cannot be parsed to u16 - bad format"))
+        .ok();
     pub static ref SMTP_FROM: String = env::var("SMTP_FROM")
         .unwrap_or_else(|_| "Rauthy <rauthy@localhost.de>".to_string())
         .trim()
