@@ -5,8 +5,10 @@ use std::collections::HashMap;
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScimName {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub formatted: Option<String>,
+    // Note: We don't even want to send `formatted`, because it's duplicate data and therefore
+    // wasted bandwidth. The `formatted` can be built from all other existing values -> pointless!
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub formatted: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub family_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -16,8 +18,10 @@ pub struct ScimName {
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScimAddress {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub formatted: Option<String>,
+    // Note: We don't even want to send `formatted`, because it's duplicate data and therefore
+    // wasted bandwidth. The `formatted` can be built from all other existing values -> pointless!
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub formatted: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub street_address: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -31,8 +35,8 @@ pub struct ScimAddress {
     /// the United States and Sweden are "US" and "SE", respectively.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<String>,
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    pub type_: Option<String>,
+    // #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    // pub _type: Option<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
