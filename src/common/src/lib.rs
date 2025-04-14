@@ -3,13 +3,32 @@
 // needed because the lazy_static! initialization of constants grew quite a bit
 #![recursion_limit = "512"]
 
-use crate::constants::DB_TYPE;
+use crate::constants::{DB_TYPE, DEV_MODE, RAUTHY_VERSION};
+use reqwest::tls;
 use std::env;
+use std::sync::LazyLock;
+use std::time::Duration;
 
 pub mod compression;
 pub mod constants;
 pub mod password_hasher;
 pub mod utils;
+
+/// TODO make sure that in (almost) all places, this single client is being used for all outgoing
+/// requests to reduce duplicate Client builds and the amount of duplicate TLS handshakes.
+pub static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(10))
+        .user_agent(format!("Rauthy v{}", RAUTHY_VERSION))
+        .min_tls_version(tls::Version::TLS_1_2)
+        .pool_idle_timeout(Duration::from_secs(600))
+        // TODO make these 2 globally configurable
+        .https_only(!*DEV_MODE)
+        .danger_accept_invalid_certs(*DEV_MODE)
+        .build()
+        .unwrap()
+});
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DbType {

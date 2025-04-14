@@ -66,14 +66,14 @@ impl Display for ScimResource {
 }
 
 #[derive(Debug)]
-pub struct FailedScrimTask {
+pub struct FailedScimTask {
     pub action: ScimAction,
     pub client_id: String,
     pub resource: ScimResource,
     pub retry_count: i64,
 }
 
-impl<'r> From<hiqlite::Row<'r>> for FailedScrimTask {
+impl<'r> From<hiqlite::Row<'r>> for FailedScimTask {
     fn from(mut row: hiqlite::Row<'r>) -> Self {
         Self {
             action: ScimAction::from(row.get::<String>("action").as_str()),
@@ -84,7 +84,7 @@ impl<'r> From<hiqlite::Row<'r>> for FailedScrimTask {
     }
 }
 
-impl From<tokio_postgres::Row> for FailedScrimTask {
+impl From<tokio_postgres::Row> for FailedScimTask {
     fn from(row: tokio_postgres::Row) -> Self {
         Self {
             action: ScimAction::from(row.get::<_, String>("action").as_str()),
@@ -95,7 +95,7 @@ impl From<tokio_postgres::Row> for FailedScrimTask {
     }
 }
 
-impl FailedScrimTask {
+impl FailedScimTask {
     pub async fn upsert(
         action: &ScimAction,
         resource: &ScimResource,
