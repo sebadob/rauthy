@@ -23,6 +23,7 @@
   derived.
     - base url for `/Users`
     - base url for `/Groups
+- test against https://scim.dev/ to make sure everything is fine
 
 ## Stage 1 - essentials
 
@@ -40,12 +41,6 @@
 - find a nice way to always expose the swagger UI for rauthy admins only without config
   current issue: when the session cookie is a non-host cookie with path restriction -> not working
   probably move from `/docs/v1` to `/auth/v1/docs`
-- prettify the UI
-- maybe get a nicer logo
-
-### `rauthy-client` TODO's
-
-- when implementing userinfo lookup, add an fn to validate the `at_hash` as well
 
 ## Stage 3 - Possible nice to haves
 
