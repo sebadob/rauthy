@@ -7,7 +7,7 @@ use actix_web_prom::PrometheusMetricsBuilder;
 use cryptr::EncKeys;
 use prometheus::Registry;
 use rauthy_common::constants::{
-    BUILD_TIME, DEV_MODE, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
+    BUILD_TIME, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
 };
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_common::{is_sqlite, password_hasher};
