@@ -320,7 +320,7 @@ impl ClientScim {
 
     /// Fetches a SCIM group from the Service Provider.
     /// Always tries via `externalId` first and will use a fallback to `displayName` if None
-    /// jas been returned for the id.
+    /// has been returned for the id.
     async fn get_group(&self, group: &Group) -> Result<Option<ScimGroup>, ErrorResponse> {
         let url = format!(
             "{}/Groups?filter=externalId%20eq%20%22{}%22",
@@ -962,7 +962,7 @@ impl ClientScim {
             let url = format!("{}/Groups/{}", self.base_endpoint, remote_group_id);
 
             // create the user - group mapping
-            let mut value = HashMap::with_capacity(3);
+            let mut value = HashMap::with_capacity(2);
             value.insert(
                 "value".into(),
                 serde_json::Value::String(user_id_remote.clone()),
