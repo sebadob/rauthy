@@ -26,8 +26,8 @@ use rauthy_api_types::users::{
     UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesResponse,
 };
 use rauthy_common::constants::{
-    CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
-    WEBAUTHN_NO_PASSWORD_EXPIRY,
+    CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, PUB_URL_WITH_SCHEME,
+    RAUTHY_ADMIN_ROLE, WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
@@ -1490,6 +1490,15 @@ impl User {
         }
         let hash = self.password.as_ref().unwrap().to_owned();
         ComparePasswords::is_match(plain, hash).await
+    }
+
+    pub fn picture_uri(&self) -> Option<String> {
+        self.picture_id.as_ref().map(|pic_id| {
+            format!(
+                "{}/auth/v1/users/{}/picture/{}",
+                *PUB_URL_WITH_SCHEME, self.id, pic_id
+            )
+        })
     }
 
     pub fn push_group(&mut self, group: &str) {

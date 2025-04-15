@@ -5,6 +5,7 @@ use crate::entity::scim_types::{
     ScimUser,
 };
 use crate::entity::users::User;
+use crate::entity::users_values::UserValues;
 use cryptr::EncValue;
 use hiqlite::{Param, params};
 use rauthy_common::constants::APPLICATION_JSON_SCIM;
@@ -12,8 +13,9 @@ use rauthy_common::{HTTP_CLIENT, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use std::collections::HashMap;
+use std::default::Default;
 use std::fmt::Debug;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 pub struct ClientScim {
     pub client_id: String,
@@ -362,7 +364,7 @@ impl ClientScim {
                 ErrorResponseType::Connection,
                 format!(
                     "Error getting group from SCIM client {}: {:?}",
-                    self.client_id, err.detail
+                    self.client_id, err
                 ),
             ))
         }
@@ -383,9 +385,9 @@ impl ClientScim {
         Ok(())
     }
 
-    pub async fn create_group(&self, group: Group) -> Result<(), ErrorResponse> {
+    pub async fn create_group(&self, group: Group) -> Result<Option<ScimGroup>, ErrorResponse> {
         if !self.should_sync_group(Some(&group)) {
-            return Ok(());
+            return Ok(None);
         }
 
         let local_id = group.id.clone();
@@ -410,7 +412,7 @@ impl ClientScim {
         if res.status().is_success() {
             let remote = res.json::<ScimGroup>().await?;
             if remote.external_id == Some(local_id) {
-                Ok(())
+                Ok(Some(remote))
             } else {
                 let err = format!(
                     "SCIM client {} has not respected our group id",
@@ -424,9 +426,10 @@ impl ClientScim {
             error!("{:?}", err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
-                err.detail.unwrap_or_else(|| {
-                    format!("SCIM client {} group creation failed", self.client_id)
-                }),
+                format!(
+                    "SCIM client {} group creation failed: {:?}",
+                    self.client_id, err
+                ),
             ))
         }
     }
@@ -450,7 +453,6 @@ impl ClientScim {
         let url = format!("{}/Groups/{}", self.base_endpoint, remote_id);
 
         let mut value = HashMap::with_capacity(2);
-        value.insert("id".into(), serde_json::Value::String(remote_id));
         value.insert(
             "externalId".into(),
             serde_json::Value::String(group_local.id),
@@ -462,6 +464,7 @@ impl ClientScim {
         let payload = ScimPatchOp {
             operations: vec![ScimPatchOperations {
                 op: ScimOp::Replace,
+                path: None,
                 value,
             }],
             ..Default::default()
@@ -483,9 +486,10 @@ impl ClientScim {
             error!("{:?}", err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
-                err.detail.unwrap_or_else(|| {
-                    format!("SCIM client {} group update failed", self.client_id)
-                }),
+                format!(
+                    "SCIM client {} group update failed: {:?}",
+                    self.client_id, err
+                ),
             ))
         }
     }
@@ -533,16 +537,21 @@ impl ClientScim {
     /// Fetches a SCIM group from the Service Provider.
     /// Always tries via `externalId` first and will use a fallback to `userName` if None
     /// jas been returned for the id.
-    async fn get_user(&self, user: &User) -> Result<Option<ScimUser>, ErrorResponse> {
+    async fn get_user(
+        &self,
+        user: &User,
+        old_email: Option<&str>,
+    ) -> Result<Option<ScimUser>, ErrorResponse> {
         let url = format!(
             "{}/Users?filter=externalId%20eq%20%22{}%22",
             self.base_endpoint, user.id
         );
         match self.get_user_with(user, url).await? {
             None => {
+                let email = old_email.unwrap_or(user.email.as_str());
                 let url = format!(
                     "{}/Users?filter=userName%20eq%20%22{}%22",
-                    self.base_endpoint, user.email
+                    self.base_endpoint, email
                 );
                 self.get_user_with(user, url).await
             }
@@ -597,7 +606,7 @@ impl ClientScim {
                 ErrorResponseType::Connection,
                 format!(
                     "Error getting user from SCIM client {}: {:?}",
-                    self.client_id, err.detail
+                    self.client_id, err
                 ),
             ))
         }
@@ -605,11 +614,7 @@ impl ClientScim {
 
     /// Fetches all users from all SCIM configured clients, compares the data on them vs local
     /// and sends update requests if necessary.
-    pub async fn sync_users(
-        &self,
-        users: &[User],
-        filter_by_email: bool,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn sync_users(&self, users: &[User]) -> Result<(), ErrorResponse> {
         todo!()
     }
 
@@ -617,26 +622,282 @@ impl ClientScim {
     pub async fn create_update_user(
         &self,
         user: User,
-        filter_by_email: bool,
+        user_values: UserValues,
+        old_email: Option<&str>,
+        groups_local: &[Group],
+        groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
-        todo!()
+        match self.get_user(&user, old_email).await? {
+            None => {
+                self.create_user(user, user_values, groups_local, groups_remote)
+                    .await
+            }
+            Some(user_remote) => {
+                self.update_user(user, user_values, user_remote, groups_local, groups_remote)
+                    .await
+            }
+        }
     }
 
     /// Directly send update requests to all SCIM configured clients. Makes sense after a local update.
-    async fn create_user(&self, user: User, filter_by_email: bool) -> Result<(), ErrorResponse> {
-        todo!()
+    async fn create_user(
+        &self,
+        user: User,
+        user_values: UserValues,
+        groups_local: &[Group],
+        groups_remote: &mut HashMap<String, ScimGroup>,
+    ) -> Result<(), ErrorResponse> {
+        let groups_expected = user.get_groups();
+
+        let payload = ScimUser::from_user_values(user, user_values);
+        let json = serde_json::to_string(&payload)?;
+        let res = HTTP_CLIENT
+            .post(format!("{}/Users", self.base_endpoint))
+            .header(AUTHORIZATION, self.auth_header())
+            .header(CONTENT_TYPE, APPLICATION_JSON_SCIM)
+            .body(json)
+            .send()
+            .await?;
+
+        if res.status().is_success() {
+            let user_remote = res.json::<ScimUser>().await?;
+            self.update_groups_assignment(
+                groups_expected,
+                payload.user_name,
+                user_remote,
+                groups_local,
+                groups_remote,
+            )
+            .await?;
+            Ok(())
+        } else {
+            let err = res.json::<ScimError>().await?;
+            error!("{:?}", err);
+            Err(ErrorResponse::new(
+                ErrorResponseType::Connection,
+                format!(
+                    "Error creating user with SCIM client {}: {:?}",
+                    self.client_id, err
+                ),
+            ))
+        }
     }
 
     /// Directly send update requests to all SCIM configured clients. Makes sense after a local update.
-    async fn update_user(&self, user: User, filter_by_email: bool) -> Result<(), ErrorResponse> {
-        todo!()
+    async fn update_user(
+        &self,
+        user_local: User,
+        user_values: UserValues,
+        user_remote: ScimUser,
+        groups_local: &[Group],
+        groups_remote: &mut HashMap<String, ScimGroup>,
+    ) -> Result<(), ErrorResponse> {
+        let groups_expected = user_local.get_groups();
+
+        let payload = ScimUser::from_user_values(user_local, user_values);
+        let json = serde_json::to_string(&payload)?;
+        let res = HTTP_CLIENT
+            .put(format!(
+                "{}/Users/{}",
+                self.base_endpoint,
+                user_remote.id.unwrap_or_default()
+            ))
+            .header(AUTHORIZATION, self.auth_header())
+            .header(CONTENT_TYPE, APPLICATION_JSON_SCIM)
+            .body(json)
+            .send()
+            .await?;
+
+        if res.status().is_success() {
+            let user_remote = res.json::<ScimUser>().await?;
+            self.update_groups_assignment(
+                groups_expected,
+                payload.user_name,
+                user_remote,
+                groups_local,
+                groups_remote,
+            )
+            .await?;
+            Ok(())
+        } else {
+            let err = res.json::<ScimError>().await?;
+            error!("{:?}", err);
+            Err(ErrorResponse::new(
+                ErrorResponseType::Connection,
+                format!(
+                    "Error updating user with SCIM client {}: {:?}",
+                    self.client_id, err
+                ),
+            ))
+        }
     }
 
-    pub async fn delete_user(&self, user: User) -> Result<(), ErrorResponse> {
-        todo!()
+    pub async fn delete_user(&self, user: &User) -> Result<(), ErrorResponse> {
+        let remote_user = self.get_user(user, None).await?;
+        if remote_user.is_none() {
+            debug!("Should delete remote user but does not exist - nothing to do");
+            return Ok(());
+        }
+        let remote_id = if let Some(id) = remote_user.unwrap().id {
+            id
+        } else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "Remote SCIM user without an ID",
+            ));
+        };
+        let url = format!("{}/Users/{}", self.base_endpoint, remote_id);
+
+        let res = HTTP_CLIENT
+            .delete(url)
+            .header(AUTHORIZATION, self.auth_header())
+            .send()
+            .await?;
+        if res.status().is_success() {
+            Ok(())
+        } else {
+            let err = res.json::<ScimError>().await?;
+            error!("{:?}", err);
+            Err(ErrorResponse::new(
+                ErrorResponseType::Connection,
+                format!(
+                    "Error deleting user on SCIM client {}: {:?}",
+                    self.client_id, err
+                ),
+            ))
+        }
     }
 
-    async fn update_groups_assignment(&self, user: User) -> Result<(), ErrorResponse> {
-        todo!()
+    // The `groups_remote` functions as a cache here. The idea is to reduce the overall necessary
+    // fetches if we are syncing all users for a client for instance.
+    // If a group does not exist in the Vec, we need to look it up and / or create otherwise.
+    async fn update_groups_assignment(
+        &self,
+        mut user_groups_local: Vec<String>,
+        user_email: String,
+        user_remote: ScimUser,
+        groups_local: &[Group],
+        groups_remote: &mut HashMap<String, ScimGroup>,
+    ) -> Result<(), ErrorResponse> {
+        if let Some(prefix) = &self.group_sync_prefix {
+            user_groups_local.retain(|g| g.starts_with(prefix));
+        }
+        let user_id_remote = match user_remote.id.clone() {
+            None => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    format!("empty remote user id for SCIM user {:?}", user_remote),
+                ));
+            }
+            Some(id) => id,
+        };
+        let mut user_groups_remote = user_remote.groups.unwrap_or_default();
+
+        while let Some(expected_name) = user_groups_local.pop() {
+            let pos = user_groups_remote
+                .iter()
+                .position(|g| g.value == expected_name);
+            if let Some(pos) = pos {
+                user_groups_remote.swap_remove(pos);
+                continue;
+            }
+
+            let group_remote = match groups_remote.get(&expected_name) {
+                None => {
+                    // Will happen, if the ScimGroup is needed for the first time, since the map
+                    // will be empty at first. We need to fetch or create it and make sure it exists
+                    // afterward.
+                    let group_local = groups_local.iter().find(|g| g.name == expected_name);
+                    if group_local.is_none() {
+                        let err = format!(
+                            "Group {} does not exist in local database but is mapped to a user - this should never happen",
+                            expected_name
+                        );
+                        error!("{}", err);
+                        // do not return, try to execute as many mappings as possible
+                        continue;
+                    }
+                    let g = group_local.unwrap();
+                    let mut remote = self.get_group(g).await?;
+                    if remote.is_none() {
+                        remote = self.create_group(g.clone()).await?;
+                    }
+                    if remote.is_none() {
+                        let err = format!(
+                            "SCIM group {} does not exist on Service Provider even after creation - this should never happen",
+                            expected_name
+                        );
+                        error!("{}", err);
+                        // do not return, try to execute as many mappings as possible
+                        continue;
+                    }
+
+                    let remote = remote.unwrap();
+                    groups_remote.insert(expected_name.clone(), remote);
+                    groups_remote
+                        .get(&expected_name)
+                        .expect("The just inserted group to exist")
+                }
+                Some(g) => g,
+            };
+
+            let remote_group_id = group_remote.id.as_deref().unwrap_or_default();
+            if remote_group_id.is_empty() {
+                error!(
+                    "SCIM Client {} remote group id is empty - this should never happen",
+                    self.client_id
+                );
+                continue;
+            }
+            let url = format!("{}/Groups/{}", self.base_endpoint, remote_group_id);
+
+            // create the user - group mapping
+            let mut value = HashMap::with_capacity(3);
+            value.insert(
+                "value".into(),
+                serde_json::Value::String(user_id_remote.clone()),
+            );
+            value.insert(
+                "display".into(),
+                serde_json::Value::String(user_email.clone()),
+            );
+            let payload = ScimPatchOp {
+                operations: vec![ScimPatchOperations {
+                    op: ScimOp::Add,
+                    path: Some("members".into()),
+                    value,
+                }],
+                ..Default::default()
+            };
+            let json = serde_json::to_string(&payload)?;
+            let res = HTTP_CLIENT
+                .patch(url)
+                .header(AUTHORIZATION, self.auth_header())
+                .header(CONTENT_TYPE, APPLICATION_JSON_SCIM)
+                .body(json)
+                .send()
+                .await?;
+            if !res.status().is_success() {
+                let err = res.json::<ScimError>().await?;
+                error!(
+                    "Error updating Groups assignment for SCIM client {}: {:?}",
+                    self.client_id, err
+                );
+            }
+        }
+
+        // At this point, everything left in `user_groups_remote` is a mapping that must have been
+        // done manually on the remote server, but does not match our records. We want to correct
+        // it and remove the mappings.
+        // TODO maybe add an auto-cleanup logic here
+        if !user_groups_remote.is_empty() {
+            warn!(
+                "Found user - group mappings for SCIM Client {} and user {} that do not match our \
+                records. Needs manual interaction: {:?}",
+                self.client_id, user_email, user_groups_remote
+            );
+        }
+
+        Ok(())
     }
 }

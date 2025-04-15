@@ -1,3 +1,6 @@
+use crate::AddressClaim;
+use crate::entity::users::User;
+use crate::entity::users_values::UserValues;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -99,8 +102,9 @@ pub struct ScimUser {
     /// `groups` are read-only and changes MUST be applied via the "Group Resource"
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<Vec<ScimGroupValue>>,
+    /// RFC does not specify how this value should look, although it is "expected" to be a String
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub roles: Option<Vec<ScimValue>>,
+    pub roles: Option<String>,
 }
 
 impl Default for ScimUser {
@@ -121,6 +125,60 @@ impl Default for ScimUser {
             addresses: None,
             groups: None,
             roles: None,
+        }
+    }
+}
+
+impl ScimUser {
+    pub fn from_user_values(user: User, values: UserValues) -> Self {
+        let address = AddressClaim::try_build(&user, &values);
+        let picture_uri = user.picture_uri();
+
+        Self {
+            schemas: vec!["urn:ietf:params:scim:schemas:core:2.0:User".into()],
+            // must be None, set by the service provider
+            id: None,
+            external_id: Some(user.id),
+            user_name: user.email.clone(),
+            name: Some(ScimName {
+                family_name: user.family_name,
+                given_name: Some(user.given_name),
+            }),
+            display_name: user.email.clone(),
+            preferred_language: Some(user.language.as_str().to_string()),
+            locale: Some(user.language.as_str().to_string()),
+            active: Some(user.enabled),
+            emails: Some(vec![ScimValue {
+                value: user.email,
+                display: None,
+                primary: Some(true),
+            }]),
+            phone_numbers: values.phone.map(|no| {
+                vec![ScimValue {
+                    value: no,
+                    display: None,
+                    primary: Some(true),
+                }]
+            }),
+            photos: picture_uri.map(|uri| {
+                vec![ScimValue {
+                    value: uri,
+                    display: None,
+                    primary: Some(true),
+                }]
+            }),
+            addresses: address.map(|addr| {
+                vec![ScimAddress {
+                    street_address: addr.street_address,
+                    locality: addr.locality,
+                    region: None,
+                    postal_code: addr.postal_code.map(|zip| zip.to_string()),
+                    country: addr.country,
+                }]
+            }),
+            // read-only
+            groups: None,
+            roles: Some(user.roles),
         }
     }
 }
@@ -269,5 +327,6 @@ pub enum ScimOp {
 #[derive(Serialize, Debug)]
 pub struct ScimPatchOperations {
     pub op: ScimOp,
+    pub path: Option<Cow<'static, str>>,
     pub value: HashMap<Cow<'static, str>, serde_json::Value>,
 }

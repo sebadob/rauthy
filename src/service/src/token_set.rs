@@ -281,12 +281,13 @@ impl TokenSet {
                 }
             }
 
-            if let Some(picture_id) = &user.picture_id {
-                custom_claims.picture = Some(format!(
-                    "{}/users/{}/picture/{}",
-                    data.issuer, user.id, picture_id
-                ));
-            }
+            custom_claims.picture = user.picture_uri();
+            // if let Some(picture_id) = &user.picture_id {
+            // custom_claims.picture = Some(format!(
+            //     "{}/users/{}/picture/{}",
+            //     data.issuer, user.id, picture_id
+            // ));
+            // }
         }
 
         if scope.contains("address") {
