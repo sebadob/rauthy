@@ -719,7 +719,14 @@ impl ClientScim {
                 let created = user.created_at;
 
                 match self
-                    .create_update_user(user, &client, values, None, groups_local, groups_remote)
+                    .create_update_user_exec(
+                        user,
+                        &client,
+                        values,
+                        None,
+                        groups_local,
+                        groups_remote,
+                    )
                     .await
                 {
                     Ok(_) => {
@@ -747,7 +754,44 @@ impl ClientScim {
     }
 
     /// Either creates or updates the user, depending on if it exists on remote already, or not.
-    pub async fn create_update_user(
+    pub async fn create_update_user(user: User) -> Result<(), ErrorResponse> {
+        let clients_scim = Self::find_all().await?;
+        if clients_scim.is_empty() {
+            return Ok(());
+        }
+
+        let groups_local = Group::find_all().await?;
+        let mut groups_remote = HashMap::with_capacity(groups_local.len());
+
+        let uv = UserValues {
+            id: user.id.clone(),
+            birthdate: None,
+            phone: None,
+            street: None,
+            zip: None,
+            city: None,
+            country: None,
+        };
+
+        for client_scim in clients_scim {
+            let client = Client::find(client_scim.client_id.clone()).await?;
+            client_scim
+                .create_update_user_exec(
+                    user.clone(),
+                    &client,
+                    uv.clone(),
+                    None,
+                    &groups_local,
+                    &mut groups_remote,
+                )
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    /// Either creates or updates the user, depending on if it exists on remote already, or not.
+    pub async fn create_update_user_exec(
         &self,
         user: User,
         client: &Client,
