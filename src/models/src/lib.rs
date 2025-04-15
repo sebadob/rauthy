@@ -93,7 +93,7 @@ pub struct JwtCommonClaims {
     pub cnf: Option<JktClaim>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AddressClaim {
     pub formatted: String,
     #[serde(skip_serializing_if = "Option::is_none")]

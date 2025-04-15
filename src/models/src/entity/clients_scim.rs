@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::entity::clients::Client;
 use crate::entity::failed_scim_tasks;
 use crate::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use crate::entity::groups::Group;
@@ -31,7 +32,8 @@ impl Debug for ClientScim {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "ClientScim {{ client_id: {}, bearer_token: <hidden>, base_endpoint: {}, group_sync_prefix: {:?} }}",
+            "ClientScim {{ client_id: {}, bearer_token: <hidden>, base_endpoint: {}, \
+            group_sync_prefix: {:?} }}",
             self.client_id, self.base_endpoint, self.group_sync_prefix
         )
     }
@@ -596,21 +598,22 @@ impl ClientScim {
     /// jas been returned for the id.
     async fn get_user(
         &self,
-        user: &User,
+        user_id: &str,
+        user_email: &str,
         old_email: Option<&str>,
     ) -> Result<Option<ScimUser>, ErrorResponse> {
         let url = format!(
             "{}/Users?filter=externalId%20eq%20%22{}%22",
-            self.base_endpoint, user.id
+            self.base_endpoint, user_id
         );
-        match self.get_user_with(user, url).await? {
+        match self.get_user_with(user_id, user_email, url).await? {
             None => {
-                let email = old_email.unwrap_or(user.email.as_str());
+                let email = old_email.unwrap_or(user_email);
                 let url = format!(
                     "{}/Users?filter=userName%20eq%20%22{}%22",
                     self.base_endpoint, email
                 );
-                self.get_user_with(user, url).await
+                self.get_user_with(user_id, user_email, url).await
             }
             Some(user) => Ok(Some(user)),
         }
@@ -618,7 +621,8 @@ impl ClientScim {
 
     async fn get_user_with(
         &self,
-        user: &User,
+        user_id: &str,
+        user_email: &str,
         url: String,
     ) -> Result<Option<ScimUser>, ErrorResponse> {
         let res = HTTP_CLIENT
@@ -636,10 +640,10 @@ impl ClientScim {
                 match res {
                     ScimResource::User(remote) => {
                         if let Some(ext_id) = &remote.external_id {
-                            if ext_id != &user.id {
+                            if ext_id != user_id {
                                 let err = format!(
                                     "Error for SCIM client {} with user {}: User has an external ID which does not match ours",
-                                    self.client_id, user.email
+                                    self.client_id, user_email
                                 );
                                 error!("{}", err);
                                 return Err(ErrorResponse::new(ErrorResponseType::Connection, err));
@@ -676,33 +680,38 @@ impl ClientScim {
         groups_local: &[Group],
         groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
+        let client = Client::find(self.client_id.clone()).await?;
         let mut last_created_ts = retry_failed_user_ts.unwrap_or(0);
-        let users = User::find_for_scim_sync(last_created_ts, 100).await?;
+        let mut users = User::find_for_scim_sync(last_created_ts, 100).await?;
 
-        for (user, values) in users {
-            debug_assert_eq!(user.id, values.id);
-            let created = user.created_at;
+        while !users.is_empty() {
+            for (user, values) in users {
+                debug_assert_eq!(user.id, values.id);
+                let created = user.created_at;
 
-            match self
-                .create_update_user(user, values, None, groups_local, groups_remote)
-                .await
-            {
-                Ok(_) => {
-                    last_created_ts = created;
-                }
-                Err(err) => {
-                    error!(
-                        "Error during sync users for SCIM client {}: {:?}",
-                        self.client_id, err
-                    );
-                    FailedScimTask::upsert(
-                        &ScimAction::Sync,
-                        &failed_scim_tasks::ScimResource::Users(last_created_ts),
-                        &self.client_id,
-                    )
-                    .await?;
+                match self
+                    .create_update_user(user, &client, values, None, groups_local, groups_remote)
+                    .await
+                {
+                    Ok(_) => {
+                        last_created_ts = created;
+                    }
+                    Err(err) => {
+                        error!(
+                            "Error during sync users for SCIM client {}: {:?}",
+                            self.client_id, err
+                        );
+                        FailedScimTask::upsert(
+                            &ScimAction::Sync,
+                            &failed_scim_tasks::ScimResource::Users(last_created_ts),
+                            &self.client_id,
+                        )
+                        .await?;
+                    }
                 }
             }
+
+            users = User::find_for_scim_sync(last_created_ts, 100).await?;
         }
 
         Ok(())
@@ -712,19 +721,37 @@ impl ClientScim {
     pub async fn create_update_user(
         &self,
         user: User,
+        client: &Client,
         user_values: UserValues,
         old_email: Option<&str>,
         groups_local: &[Group],
         groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
-        match self.get_user(&user, old_email).await? {
+        let scopes = format!("{},{}", client.scopes, client.default_scopes);
+        let expected_groups = user.get_groups();
+        let payload = ScimUser::from_user_values(user, user_values, &scopes);
+
+        match self
+            .get_user(
+                payload.external_id.as_ref().unwrap(),
+                &payload.user_name,
+                old_email,
+            )
+            .await?
+        {
             None => {
-                self.create_user(user, user_values, groups_local, groups_remote)
+                self.create_user(expected_groups, payload, groups_local, groups_remote)
                     .await
             }
             Some(user_remote) => {
-                self.update_user(user, user_values, user_remote, groups_local, groups_remote)
-                    .await
+                self.update_user(
+                    expected_groups,
+                    payload,
+                    user_remote,
+                    groups_local,
+                    groups_remote,
+                )
+                .await
             }
         }
     }
@@ -732,15 +759,12 @@ impl ClientScim {
     /// Directly send update requests to all SCIM configured clients. Makes sense after a local update.
     async fn create_user(
         &self,
-        user: User,
-        user_values: UserValues,
+        groups_expected: Vec<String>,
+        update_payload: ScimUser,
         groups_local: &[Group],
         groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
-        let groups_expected = user.get_groups();
-
-        let payload = ScimUser::from_user_values(user, user_values);
-        let json = serde_json::to_string(&payload)?;
+        let json = serde_json::to_string(&update_payload)?;
         let res = HTTP_CLIENT
             .post(format!("{}/Users", self.base_endpoint))
             .header(AUTHORIZATION, self.auth_header())
@@ -753,7 +777,7 @@ impl ClientScim {
             let user_remote = res.json::<ScimUser>().await?;
             self.update_groups_assignment(
                 groups_expected,
-                payload.user_name,
+                update_payload.user_name,
                 user_remote,
                 groups_local,
                 groups_remote,
@@ -776,16 +800,13 @@ impl ClientScim {
     /// Directly send update requests to all SCIM configured clients. Makes sense after a local update.
     async fn update_user(
         &self,
-        user_local: User,
-        user_values: UserValues,
+        groups_expected: Vec<String>,
+        update_payload: ScimUser,
         user_remote: ScimUser,
         groups_local: &[Group],
         groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
-        let groups_expected = user_local.get_groups();
-
-        let payload = ScimUser::from_user_values(user_local, user_values);
-        let json = serde_json::to_string(&payload)?;
+        let json = serde_json::to_string(&update_payload)?;
         let res = HTTP_CLIENT
             .put(format!(
                 "{}/Users/{}",
@@ -802,7 +823,7 @@ impl ClientScim {
             let user_remote = res.json::<ScimUser>().await?;
             self.update_groups_assignment(
                 groups_expected,
-                payload.user_name,
+                update_payload.user_name,
                 user_remote,
                 groups_local,
                 groups_remote,
@@ -811,7 +832,6 @@ impl ClientScim {
             Ok(())
         } else {
             let err = res.json::<ScimError>().await?;
-            error!("{:?}", err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
                 format!(
@@ -823,7 +843,7 @@ impl ClientScim {
     }
 
     pub async fn delete_user(&self, user: &User) -> Result<(), ErrorResponse> {
-        let remote_user = self.get_user(user, None).await?;
+        let remote_user = self.get_user(&user.id, &user.email, None).await?;
         if remote_user.is_none() {
             debug!("Should delete remote user but does not exist - nothing to do");
             return Ok(());

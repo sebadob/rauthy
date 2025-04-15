@@ -619,8 +619,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         limit: u16,
     ) -> Result<Vec<(Self, UserValues)>, ErrorResponse> {
         let sql = r#"
-SELECT u.id AS user_id, email, given_name, family_name, roles, groups, enabled, created_at, language,
-    picture_id, birthdate, phone, street, zip, city, country
+SELECT u.id AS user_id, email, email_verified, given_name, family_name, roles, groups, enabled,
+    created_at, language, picture_id, birthdate, phone, street, zip, city, country
 FROM users u
 JOIN users_values uv ON u.id = uv.id
 WHERE u.created_at >= $1
@@ -634,6 +634,11 @@ LIMIT $2"#;
                 .query_raw(sql, params!(last_created_ts, limit))
                 .await?;
             for mut row in rows {
+                let email_verified: bool = row.get("email_verified");
+                if !email_verified {
+                    continue;
+                }
+
                 let user = Self {
                     id: row.get("user_id"),
                     email: row.get("email"),
@@ -643,7 +648,7 @@ LIMIT $2"#;
                     roles: row.get("roles"),
                     groups: row.get("groups"),
                     enabled: row.get("enabled"),
-                    email_verified: false,
+                    email_verified: true,
                     password_expires: None,
                     created_at: row.get("created_at"),
                     last_login: None,
@@ -671,6 +676,11 @@ LIMIT $2"#;
             let rows = DB::pg_query_rows(sql, &[&last_created_ts, &(limit as i32)], limit as usize)
                 .await?;
             for row in rows {
+                let email_verified: bool = row.get("email_verified");
+                if !email_verified {
+                    continue;
+                }
+
                 let user = Self {
                     id: row.get("user_id"),
                     email: row.get("email"),

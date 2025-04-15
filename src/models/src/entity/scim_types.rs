@@ -130,9 +130,35 @@ impl Default for ScimUser {
 }
 
 impl ScimUser {
-    pub fn from_user_values(user: User, values: UserValues) -> Self {
-        let address = AddressClaim::try_build(&user, &values);
-        let picture_uri = user.picture_uri();
+    /// Respects the `client_scopes` as much as possible. Some values though are necessary for most
+    /// SCIM Service Providers, like `email` and the users' names, even though they should only
+    /// be given with the `profile` scope.
+    pub fn from_user_values(user: User, values: UserValues, client_scopes: &str) -> Self {
+        let address = if client_scopes.contains("address") {
+            AddressClaim::try_build(&user, &values)
+        } else {
+            None
+        };
+        let (picture_uri, preferred_language, locale) = if client_scopes.contains("profile") {
+            (
+                user.picture_uri(),
+                Some(user.language.as_str().to_string()),
+                Some(user.language.as_str().to_string()),
+            )
+        } else {
+            (None, None, None)
+        };
+        let phone_numbers = if client_scopes.contains("phone") {
+            values.phone.map(|no| {
+                vec![ScimValue {
+                    value: no,
+                    display: None,
+                    primary: Some(true),
+                }]
+            })
+        } else {
+            None
+        };
 
         Self {
             schemas: vec!["urn:ietf:params:scim:schemas:core:2.0:User".into()],
@@ -145,21 +171,15 @@ impl ScimUser {
                 given_name: Some(user.given_name),
             }),
             display_name: user.email.clone(),
-            preferred_language: Some(user.language.as_str().to_string()),
-            locale: Some(user.language.as_str().to_string()),
+            preferred_language,
+            locale,
             active: Some(user.enabled),
             emails: Some(vec![ScimValue {
                 value: user.email,
                 display: None,
                 primary: Some(true),
             }]),
-            phone_numbers: values.phone.map(|no| {
-                vec![ScimValue {
-                    value: no,
-                    display: None,
-                    primary: Some(true),
-                }]
-            }),
+            phone_numbers,
             photos: picture_uri.map(|uri| {
                 vec![ScimValue {
                     value: uri,
