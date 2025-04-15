@@ -4,11 +4,12 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum ScimAction {
     Create,
     Update,
     Delete,
+    Sync,
     Unknown,
 }
 
@@ -18,6 +19,7 @@ impl From<&str> for ScimAction {
             "create" => Self::Create,
             "update" => Self::Update,
             "delete" => Self::Delete,
+            "sync" => Self::Sync,
             _ => Self::Unknown,
         }
     }
@@ -29,15 +31,21 @@ impl ScimAction {
             Self::Create => "create",
             Self::Update => "update",
             Self::Delete => "delete",
+            Self::Sync => "sync",
             Self::Unknown => "unknown",
         }
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum ScimResource {
+    // user_id
     User(String),
+    // created ts of the last successful user for bigger syncs
+    Users(i64),
+    // group_id
     Group(String),
+    Groups,
     Unknown,
 }
 
@@ -46,9 +54,15 @@ impl From<&str> for ScimResource {
         if s.starts_with("u_") {
             let (_, uid) = s.split_once('_').unwrap();
             Self::User(uid.to_string())
+        } else if s.starts_with("us_") {
+            let (_, ts_str) = s.split_once('_').unwrap();
+            let ts = ts_str.parse::<i64>().unwrap_or_default();
+            Self::Users(ts)
         } else if s.starts_with("g_") {
             let (_, gid) = s.split_once('_').unwrap();
             Self::Group(gid.to_string())
+        } else if s.starts_with("gs_") {
+            Self::Groups
         } else {
             Self::Unknown
         }
@@ -59,7 +73,9 @@ impl Display for ScimResource {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ScimResource::User(uid) => write!(f, "u_{}", uid),
+            ScimResource::Users(created_ts) => write!(f, "us_{}", created_ts),
             ScimResource::Group(gid) => write!(f, "g_{}", gid),
+            ScimResource::Groups => write!(f, "gs_"),
             ScimResource::Unknown => write!(f, "unknown"),
         }
     }

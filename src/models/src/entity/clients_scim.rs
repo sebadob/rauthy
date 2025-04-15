@@ -1,4 +1,6 @@
 use crate::database::DB;
+use crate::entity::failed_scim_tasks;
+use crate::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use crate::entity::groups::Group;
 use crate::entity::scim_types::{
     ScimError, ScimGroup, ScimListResponse, ScimOp, ScimPatchOp, ScimPatchOperations, ScimResource,
@@ -196,6 +198,25 @@ impl ClientScim {
     /// changed. This will fetch all existing groups from the client, compare them against local
     /// and update on remote if necessary.
     pub async fn sync_groups(&self) -> Result<(), ErrorResponse> {
+        match self.sync_groups_exec().await {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                let err = format!("Error during sync groups: {}", err);
+                error!("{}", err);
+
+                FailedScimTask::upsert(
+                    &ScimAction::Sync,
+                    &failed_scim_tasks::ScimResource::Groups,
+                    &self.client_id,
+                )
+                .await?;
+
+                Err(ErrorResponse::new(ErrorResponseType::Connection, err))
+            }
+        }
+    }
+
+    async fn sync_groups_exec(&self) -> Result<(), ErrorResponse> {
         if !self.should_sync_group(None) {
             return Ok(());
         }
@@ -222,10 +243,9 @@ impl ClientScim {
                 .await?;
             if !res.status().is_success() {
                 let err = res.json::<ScimError>().await?;
-                error!("Error retrieving SCIM groups: {:?}", err);
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Connection,
-                    format!("SCIM /Groups errior: {:?}", err),
+                    format!("SCIM GET /Groups errior: {:?}", err),
                 ));
             }
 
@@ -376,16 +396,37 @@ impl ClientScim {
             return Ok(());
         }
 
+        let gid = group.id.clone();
         if let Some(remote) = self.get_group(&group).await? {
-            self.update_group(group, remote).await?;
-        } else {
-            self.create_group(group).await?;
-        }
+            if let Err(err) = self.update_group(group, remote).await {
+                error!(
+                    "Error during create group for SCIM client {}: {:?}",
+                    self.client_id, err
+                );
+                FailedScimTask::upsert(
+                    &ScimAction::Create,
+                    &failed_scim_tasks::ScimResource::Group(gid),
+                    &self.client_id,
+                )
+                .await?;
+            }
+        } else if let Err(err) = self.create_group(group).await {
+            error!(
+                "Error during update group for SCIM client {}: {:?}",
+                self.client_id, err
+            );
+            FailedScimTask::upsert(
+                &ScimAction::Update,
+                &failed_scim_tasks::ScimResource::Group(gid),
+                &self.client_id,
+            )
+            .await?;
+        };
 
         Ok(())
     }
 
-    pub async fn create_group(&self, group: Group) -> Result<Option<ScimGroup>, ErrorResponse> {
+    async fn create_group(&self, group: Group) -> Result<Option<ScimGroup>, ErrorResponse> {
         if !self.should_sync_group(Some(&group)) {
             return Ok(None);
         }
@@ -414,16 +455,16 @@ impl ClientScim {
             if remote.external_id == Some(local_id) {
                 Ok(Some(remote))
             } else {
-                let err = format!(
-                    "SCIM client {} has not respected our group id",
-                    self.client_id
-                );
-                error!("{}", err);
-                Err(ErrorResponse::new(ErrorResponseType::Connection, err))
+                Err(ErrorResponse::new(
+                    ErrorResponseType::Connection,
+                    format!(
+                        "SCIM client {} has not respected our group id",
+                        self.client_id
+                    ),
+                ))
             }
         } else {
             let err = res.json::<ScimError>().await?;
-            error!("{:?}", err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
                 format!(
@@ -434,7 +475,7 @@ impl ClientScim {
         }
     }
 
-    pub async fn update_group(
+    async fn update_group(
         &self,
         group_local: Group,
         group_remote: ScimGroup,
@@ -483,7 +524,6 @@ impl ClientScim {
             Ok(())
         } else {
             let err = res.json::<ScimError>().await?;
-            error!("{:?}", err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
                 format!(
@@ -495,6 +535,24 @@ impl ClientScim {
     }
 
     pub async fn delete_group(&self, group: Group) -> Result<(), ErrorResponse> {
+        let gid = group.id.clone();
+        if let Err(err) = self.delete_group_exec(group).await {
+            error!(
+                "Error during delete group for SCIM client {}: {:?}",
+                self.client_id, err
+            );
+            FailedScimTask::upsert(
+                &ScimAction::Delete,
+                &failed_scim_tasks::ScimResource::Group(gid),
+                &self.client_id,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    async fn delete_group_exec(&self, group: Group) -> Result<(), ErrorResponse> {
         if !self.should_sync_group(Some(&group)) {
             return Ok(());
         }
@@ -523,7 +581,6 @@ impl ClientScim {
             Ok(())
         } else {
             let err = res.json::<ScimError>().await?;
-            error!("{:?}", err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
                 format!(
@@ -612,10 +669,43 @@ impl ClientScim {
         }
     }
 
-    /// Fetches all users from all SCIM configured clients, compares the data on them vs local
-    /// and sends update requests if necessary.
-    pub async fn sync_users(&self, users: &[User]) -> Result<(), ErrorResponse> {
-        todo!()
+    pub async fn sync_users(
+        &self,
+        // specify for retrying a `failed_scim_task` to resume work
+        retry_failed_user_ts: Option<i64>,
+        groups_local: &[Group],
+        groups_remote: &mut HashMap<String, ScimGroup>,
+    ) -> Result<(), ErrorResponse> {
+        let mut last_created_ts = retry_failed_user_ts.unwrap_or(0);
+        let users = User::find_for_scim_sync(last_created_ts, 100).await?;
+
+        for (user, values) in users {
+            debug_assert_eq!(user.id, values.id);
+            let created = user.created_at;
+
+            match self
+                .create_update_user(user, values, None, groups_local, groups_remote)
+                .await
+            {
+                Ok(_) => {
+                    last_created_ts = created;
+                }
+                Err(err) => {
+                    error!(
+                        "Error during sync users for SCIM client {}: {:?}",
+                        self.client_id, err
+                    );
+                    FailedScimTask::upsert(
+                        &ScimAction::Sync,
+                        &failed_scim_tasks::ScimResource::Users(last_created_ts),
+                        &self.client_id,
+                    )
+                    .await?;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Either creates or updates the user, depending on if it exists on remote already, or not.

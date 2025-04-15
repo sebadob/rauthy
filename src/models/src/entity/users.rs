@@ -613,6 +613,102 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         Ok(new_user)
     }
 
+    /// Caution: Results will only contain values necessary for SCIM syncs.
+    pub async fn find_for_scim_sync(
+        last_created_ts: i64,
+        limit: u16,
+    ) -> Result<Vec<(Self, UserValues)>, ErrorResponse> {
+        let sql = r#"
+SELECT u.id AS user_id, email, given_name, family_name, roles, groups, enabled, created_at, language,
+    picture_id, birthdate, phone, street, zip, city, country
+FROM users u
+JOIN users_values uv ON u.id = uv.id
+WHERE u.created_at >= $1
+ORDER BY created_at ASC
+LIMIT $2"#;
+
+        let mut res = Vec::with_capacity(limit as usize);
+
+        if is_hiqlite() {
+            let rows = DB::hql()
+                .query_raw(sql, params!(last_created_ts, limit))
+                .await?;
+            for mut row in rows {
+                let user = Self {
+                    id: row.get("user_id"),
+                    email: row.get("email"),
+                    given_name: row.get("given_name"),
+                    family_name: row.get("family_name"),
+                    password: None,
+                    roles: row.get("roles"),
+                    groups: row.get("groups"),
+                    enabled: row.get("enabled"),
+                    email_verified: false,
+                    password_expires: None,
+                    created_at: row.get("created_at"),
+                    last_login: None,
+                    last_failed_login: None,
+                    failed_login_attempts: None,
+                    language: Language::from(row.get::<String>("language")),
+                    webauthn_user_id: None,
+                    user_expires: None,
+                    auth_provider_id: None,
+                    federation_uid: None,
+                    picture_id: None,
+                };
+                let values = UserValues {
+                    id: user.id.clone(),
+                    birthdate: row.get("birthdate"),
+                    phone: row.get("phone"),
+                    street: row.get("street"),
+                    zip: row.get::<Option<i64>>("zip").map(|zip| zip as i32),
+                    city: row.get("city"),
+                    country: row.get("country"),
+                };
+                res.push((user, values));
+            }
+        } else {
+            let rows = DB::pg_query_rows(sql, &[&last_created_ts, &(limit as i32)], limit as usize)
+                .await?;
+            for row in rows {
+                let user = Self {
+                    id: row.get("user_id"),
+                    email: row.get("email"),
+                    given_name: row.get("given_name"),
+                    family_name: row.get("family_name"),
+                    password: None,
+                    roles: row.get("roles"),
+                    groups: row.get("groups"),
+                    enabled: row.get("enabled"),
+                    email_verified: false,
+                    password_expires: None,
+                    created_at: row.get("created_at"),
+                    last_login: None,
+                    last_failed_login: None,
+                    failed_login_attempts: None,
+                    language: Language::from(row.get::<_, String>("language")),
+                    webauthn_user_id: None,
+                    user_expires: None,
+                    auth_provider_id: None,
+                    federation_uid: None,
+                    picture_id: None,
+                };
+                let values = UserValues {
+                    id: user.id.clone(),
+                    birthdate: row.get("birthdate"),
+                    phone: row.get("phone"),
+                    street: row.get("street"),
+                    zip: row.get("zip"),
+                    city: row.get("city"),
+                    country: row.get("country"),
+                };
+                res.push((user, values));
+            }
+        }
+
+        Ok(res)
+    }
+
     pub async fn provider_unlink(user_id: String) -> Result<Self, ErrorResponse> {
         // we need to find the user first and validate that it has been set up properly
         // to work without a provider
