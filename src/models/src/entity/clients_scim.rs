@@ -680,9 +680,38 @@ impl ClientScim {
         groups_local: &[Group],
         groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
-        let client = Client::find(self.client_id.clone()).await?;
         let mut last_created_ts = retry_failed_user_ts.unwrap_or(0);
-        let mut users = User::find_for_scim_sync(last_created_ts, 100).await?;
+
+        match self
+            .sync_users_exec(&mut last_created_ts, groups_local, groups_remote)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                let err = format!("Error during sync users: {}", err);
+                error!("{}", err);
+
+                FailedScimTask::upsert(
+                    &ScimAction::Sync,
+                    &failed_scim_tasks::ScimResource::Users(last_created_ts),
+                    &self.client_id,
+                )
+                .await?;
+
+                Err(ErrorResponse::new(ErrorResponseType::Connection, err))
+            }
+        }
+    }
+
+    pub async fn sync_users_exec(
+        &self,
+        // specify for retrying a `failed_scim_task` to resume work
+        last_created_ts: &mut i64,
+        groups_local: &[Group],
+        groups_remote: &mut HashMap<String, ScimGroup>,
+    ) -> Result<(), ErrorResponse> {
+        let client = Client::find(self.client_id.clone()).await?;
+        let mut users = User::find_for_scim_sync(*last_created_ts, 100).await?;
 
         while !users.is_empty() {
             for (user, values) in users {
@@ -694,7 +723,7 @@ impl ClientScim {
                     .await
                 {
                     Ok(_) => {
-                        last_created_ts = created;
+                        *last_created_ts = created;
                     }
                     Err(err) => {
                         error!(
@@ -703,7 +732,7 @@ impl ClientScim {
                         );
                         FailedScimTask::upsert(
                             &ScimAction::Sync,
-                            &failed_scim_tasks::ScimResource::Users(last_created_ts),
+                            &failed_scim_tasks::ScimResource::Users(*last_created_ts),
                             &self.client_id,
                         )
                         .await?;
@@ -711,7 +740,7 @@ impl ClientScim {
                 }
             }
 
-            users = User::find_for_scim_sync(last_created_ts, 100).await?;
+            users = User::find_for_scim_sync(*last_created_ts, 100).await?;
         }
 
         Ok(())
@@ -729,6 +758,8 @@ impl ClientScim {
     ) -> Result<(), ErrorResponse> {
         let scopes = format!("{},{}", client.scopes, client.default_scopes);
         let expected_groups = user.get_groups();
+
+        let user_id = user.id.clone();
         let payload = ScimUser::from_user_values(user, user_values, &scopes);
 
         match self
@@ -740,20 +771,48 @@ impl ClientScim {
             .await?
         {
             None => {
-                self.create_user(expected_groups, payload, groups_local, groups_remote)
+                if let Err(err) = self
+                    .create_user(expected_groups, payload, groups_local, groups_remote)
                     .await
+                {
+                    error!(
+                        "Error during create user {} for SCIM client {}: {:?}",
+                        user_id, self.client_id, err
+                    );
+                    FailedScimTask::upsert(
+                        &ScimAction::Create,
+                        &failed_scim_tasks::ScimResource::User(user_id),
+                        &self.client_id,
+                    )
+                    .await?;
+                }
             }
             Some(user_remote) => {
-                self.update_user(
-                    expected_groups,
-                    payload,
-                    user_remote,
-                    groups_local,
-                    groups_remote,
-                )
-                .await
+                if let Err(err) = self
+                    .update_user(
+                        expected_groups,
+                        payload,
+                        user_remote,
+                        groups_local,
+                        groups_remote,
+                    )
+                    .await
+                {
+                    error!(
+                        "Error during update user {} for SCIM client {}: {:?}",
+                        user_id, self.client_id, err
+                    );
+                    FailedScimTask::upsert(
+                        &ScimAction::Update,
+                        &failed_scim_tasks::ScimResource::User(user_id),
+                        &self.client_id,
+                    )
+                    .await?;
+                }
             }
         }
+
+        Ok(())
     }
 
     /// Directly send update requests to all SCIM configured clients. Makes sense after a local update.
@@ -843,6 +902,24 @@ impl ClientScim {
     }
 
     pub async fn delete_user(&self, user: &User) -> Result<(), ErrorResponse> {
+        let user_id = user.id.clone();
+        if let Err(err) = self.delete_user_exec(user).await {
+            error!(
+                "Error during delete user {} for SCIM client {}: {:?}",
+                user_id, self.client_id, err
+            );
+            FailedScimTask::upsert(
+                &ScimAction::Delete,
+                &failed_scim_tasks::ScimResource::User(user_id),
+                &self.client_id,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn delete_user_exec(&self, user: &User) -> Result<(), ErrorResponse> {
         let remote_user = self.get_user(&user.id, &user.email, None).await?;
         if remote_user.is_none() {
             debug!("Should delete remote user but does not exist - nothing to do");
@@ -867,7 +944,6 @@ impl ClientScim {
             Ok(())
         } else {
             let err = res.json::<ScimError>().await?;
-            error!("{:?}", err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
                 format!(
