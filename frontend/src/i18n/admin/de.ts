@@ -73,7 +73,7 @@ export let I18nAdminDe: I18nAdmin = {
             reqLi2: `Mindestens die <code>/Users</code> endpunkte mit <code>filter=externalId eq "*"</code> und
                 <code>filter=userName eq "*"</code> müssen unterstützt sein.`,
             reqLi3: `Wenn Gruppen sychronisiert werden sollen, so müssen unter <code>/Groups</code> zusätzlich 
-                <code>filter=displayName eq "*"</code> und <code>filter=displayName sw "*"</code> unterstützt sein.`,
+                <code>filter=displayName eq "*"</code> unterstützt sein.`,
         },
         scopes: {
             allowed: "Erlaubte Scopes",

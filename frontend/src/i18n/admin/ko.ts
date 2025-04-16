@@ -67,7 +67,7 @@ export let I18nAdminKo: I18nAdmin = {
             reqLi2: `At least <code>/Users</code> endpoints with <code>filter=externalId eq "*"</code> and
                 <code>filter=userName eq "*"</code> must be supported.`,
             reqLi3: `If groups should be synchronized, <code>/Groups</code> must also support 
-                <code>filter=displayName eq "*"</code> and <code>filter=displayName sw "*"</code>.`,
+                <code>filter=displayName eq "*"</code>.`,
         },
         scopes: {
             allowed: "허용된 범위",

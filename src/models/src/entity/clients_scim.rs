@@ -18,7 +18,7 @@ use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use std::collections::HashMap;
 use std::default::Default;
 use std::fmt::Debug;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 #[derive(Clone, PartialEq)]
 pub struct ClientScim {
@@ -168,44 +168,31 @@ impl ClientScim {
     }
 
     fn url_groups(&self, start_index: usize, count: usize) -> String {
-        if let Some(prefix) = &self.group_sync_prefix {
-            format!(
-                "{}/Groups?filter=displayName%20sw%20%22{}%22&startIndex={}&count={}",
-                self.base_uri, prefix, start_index, count
-            )
-        } else {
-            format!(
-                "{}/Groups?startIndex={}&count={}",
-                self.base_uri, start_index, count
-            )
-        }
+        format!(
+            "{}/Groups?startIndex={}&count={}",
+            self.base_uri, start_index, count
+        )
     }
 
-    // fn url_group(&self, group: &Group) -> String {
-    //     format!(
-    //         "{}/Groups?filter=displayName%20eq%20%22{}%22",
-    //         self.base_endpoint, group.name
-    //     )
-    // }
-
-    fn should_sync_group(&self, group: Option<&Group>) -> bool {
+    fn should_sync_groups(&self) -> bool {
         if !self.sync_groups {
             debug!("Group syncing disabled for SCIM client {}", self.client_id);
             return false;
         }
 
-        if let Some(g) = group {
-            if let Some(prefix) = &self.group_sync_prefix {
-                if !g.name.starts_with(prefix) {
-                    debug!(
-                        "Group name does not start with configured prefix for SCIM client {}",
-                        self.client_id
-                    );
-                    return false;
-                }
+        true
+    }
+
+    fn should_update_group(&self, group: &Group) -> bool {
+        if let Some(prefix) = &self.group_sync_prefix {
+            if !group.name.starts_with(prefix) {
+                debug!(
+                    "Group name does not start with configured prefix for SCIM client {}",
+                    self.client_id
+                );
+                return false;
             }
         }
-
         true
     }
 
@@ -232,20 +219,11 @@ impl ClientScim {
     }
 
     async fn sync_groups_exec(&self) -> Result<(), ErrorResponse> {
-        if !self.should_sync_group(None) {
+        if !self.should_sync_groups() {
             return Ok(());
         }
 
         let mut groups = Group::find_all().await?;
-        if let Some(prefix) = &self.group_sync_prefix {
-            groups.retain(|g| g.name.starts_with(prefix.as_str()));
-        }
-
-        // Querying each group on our side with a single `eq` filter could lead to huge amounts
-        // of single queries. Instead, we want to potentially "waste" some resources and collect
-        // all remote groups in memory before we start the comparison. This reduces the overall
-        // number of HTTP requests, which will be the bottleneck for this operation.
-
         let mut start_index = 1;
         let count = 100;
         let mut url = self.url_groups(start_index, count);
@@ -267,7 +245,7 @@ impl ClientScim {
             let lr = res.json::<ScimListResponse>().await?;
             let lr_len = lr.resources.len();
             if lr_len == 0 {
-                debug!("SCIM ListResponse is empty - nothing to do");
+                debug!("SCIM ListResponse is empty - nothing left to do");
                 break;
             }
 
@@ -308,24 +286,21 @@ impl ClientScim {
             url = self.url_groups(start_index, count);
         }
 
-        // If we get here, we have 2 sets of data:
-        // - all left-over local groups in `groups` do not exist on remote -> POST
-        // - all group pairs in `group_pairs` do exist and need an update -> PUT
-        debug!(
-            "Groups to CREATE on SCIM client {}: {:?}",
-            self.client_id, groups
-        );
-        debug!(
-            "Groups to UPDATE on SCIM client {}: {:?}",
-            self.client_id, group_pairs
-        );
-
+        // local groups that are expected on the server but do not exist yet
         for group in groups {
-            self.create_group(group).await?;
+            if self.should_update_group(&group) {
+                self.create_group(group).await?;
+            }
         }
 
+        // found group pairs - some may need to be deleted if we added a prefix for instance
         for (local, remote) in group_pairs {
-            self.update_group(local, remote).await?;
+            if self.should_update_group(&local) {
+                self.update_group(local, remote).await?;
+            } else {
+                warn!("Deleting remote group {:?}", remote);
+                self.delete_group(local, Some(remote)).await?;
+            }
         }
 
         Ok(())
@@ -334,13 +309,20 @@ impl ClientScim {
     /// Fetches a SCIM group from the Service Provider.
     /// Always tries via `externalId` first and will use a fallback to `displayName` if None
     /// has been returned for the id.
-    async fn get_group(&self, group: &Group) -> Result<Option<ScimGroup>, ErrorResponse> {
+    async fn get_group(
+        &self,
+        group: &Group,
+        ext_id_only: bool,
+    ) -> Result<Option<ScimGroup>, ErrorResponse> {
         let url = format!(
             "{}/Groups?filter=externalId%20eq%20%22{}%22",
             self.base_uri, group.id
         );
         match self.get_group_with(group, url).await? {
             None => {
+                if ext_id_only {
+                    return Ok(None);
+                }
                 let url = format!(
                     "{}/Groups?filter=displayName%20eq%20%22{}%22",
                     self.base_uri, group.name
@@ -406,24 +388,28 @@ impl ClientScim {
     }
 
     /// Either creates or updates the group, depending on if it exists on remote already, or not.
+    /// Set `sync_maybe_delete` to `true` for syncs after config updates, if e.g. the sync prefix
+    /// was changed. Never for create though!
     pub async fn create_update_group(&self, group: Group) -> Result<(), ErrorResponse> {
-        if !self.should_sync_group(Some(&group)) {
+        if !self.should_sync_groups() || !self.should_update_group(&group) {
             return Ok(());
         }
 
         let gid = group.id.clone();
-        if let Some(remote) = self.get_group(&group).await? {
-            if let Err(err) = self.update_group(group, remote).await {
-                error!(
-                    "Error during create group for SCIM client {}: {:?}",
-                    self.client_id, err
-                );
-                FailedScimTask::upsert(
-                    &ScimAction::Create,
-                    &failed_scim_tasks::ScimResource::Group(gid),
-                    &self.client_id,
-                )
-                .await?;
+        if let Some(remote) = self.get_group(&group, false).await? {
+            if self.should_update_group(&group) {
+                if let Err(err) = self.update_group(group, remote).await {
+                    error!(
+                        "Error during create group for SCIM client {}: {:?}",
+                        self.client_id, err
+                    );
+                    FailedScimTask::upsert(
+                        &ScimAction::Create,
+                        &failed_scim_tasks::ScimResource::Group(gid),
+                        &self.client_id,
+                    )
+                    .await?;
+                }
             }
         } else if let Err(err) = self.create_group(group).await {
             error!(
@@ -441,11 +427,8 @@ impl ClientScim {
         Ok(())
     }
 
+    /// Does no additional check if it should actually create the group - must be done beforehand.
     async fn create_group(&self, group: Group) -> Result<Option<ScimGroup>, ErrorResponse> {
-        if !self.should_sync_group(Some(&group)) {
-            return Ok(None);
-        }
-
         let local_id = group.id.clone();
 
         let payload = ScimGroup {
@@ -491,14 +474,12 @@ impl ClientScim {
         }
     }
 
+    /// Does no additional check if it should actually update the group - must be done beforehand.
     async fn update_group(
         &self,
         group_local: Group,
         group_remote: ScimGroup,
     ) -> Result<(), ErrorResponse> {
-        if !self.should_sync_group(Some(&group_local)) {
-            return Ok(());
-        }
         let remote_id = if let Some(id) = group_remote.id {
             id
         } else {
@@ -550,9 +531,13 @@ impl ClientScim {
         }
     }
 
-    pub async fn delete_group(&self, group: Group) -> Result<(), ErrorResponse> {
+    pub async fn delete_group(
+        &self,
+        group: Group,
+        remote_group: Option<ScimGroup>,
+    ) -> Result<(), ErrorResponse> {
         let gid = group.id.clone();
-        if let Err(err) = self.delete_group_exec(group).await {
+        if let Err(err) = self.delete_group_exec(group, remote_group).await {
             error!(
                 "Error during delete group for SCIM client {}: {:?}",
                 self.client_id, err
@@ -568,12 +553,19 @@ impl ClientScim {
         Ok(())
     }
 
-    async fn delete_group_exec(&self, group: Group) -> Result<(), ErrorResponse> {
-        if !self.should_sync_group(Some(&group)) {
+    async fn delete_group_exec(
+        &self,
+        group: Group,
+        remote_group: Option<ScimGroup>,
+    ) -> Result<(), ErrorResponse> {
+        if !self.should_sync_groups() {
             return Ok(());
         }
 
-        let remote_group = self.get_group(&group).await?;
+        let remote_group = match remote_group {
+            None => self.get_group(&group, true).await?,
+            Some(g) => Some(g),
+        };
         if remote_group.is_none() {
             debug!("Should delete remote group but does not exist - nothing to do");
             return Ok(());
@@ -1081,7 +1073,7 @@ impl ClientScim {
                         continue;
                     }
                     let g = group_local.unwrap();
-                    let mut remote = self.get_group(g).await?;
+                    let mut remote = self.get_group(g, false).await?;
                     if remote.is_none() {
                         remote = self.create_group(g.clone()).await?;
                     }

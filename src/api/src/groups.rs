@@ -125,7 +125,7 @@ pub async fn delete_group(
     if !clients.is_empty() {
         let group = Group::find(gid.clone()).await?;
         for client in clients {
-            client.delete_group(group.clone()).await?;
+            client.delete_group(group.clone(), None).await?;
         }
     }
 
