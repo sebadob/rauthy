@@ -621,9 +621,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         let sql = r#"
 SELECT u.id AS user_id, email, email_verified, given_name, family_name, roles, groups, enabled,
     created_at, language, picture_id, birthdate, phone, street, zip, city, country
-FROM users u
-JOIN users_values uv ON u.id = uv.id
-WHERE u.created_at >= $1
+    FROM users u
+LEFT JOIN users_values uv ON u.id = uv.id
+WHERE u.created_at > $1
 ORDER BY created_at ASC
 LIMIT $2"#;
 
@@ -659,7 +659,7 @@ LIMIT $2"#;
                     user_expires: None,
                     auth_provider_id: None,
                     federation_uid: None,
-                    picture_id: None,
+                    picture_id: row.get("picture_id"),
                 };
                 let values = UserValues {
                     id: user.id.clone(),
@@ -690,7 +690,7 @@ LIMIT $2"#;
                     roles: row.get("roles"),
                     groups: row.get("groups"),
                     enabled: row.get("enabled"),
-                    email_verified: false,
+                    email_verified: true,
                     password_expires: None,
                     created_at: row.get("created_at"),
                     last_login: None,
@@ -701,7 +701,7 @@ LIMIT $2"#;
                     user_expires: None,
                     auth_provider_id: None,
                     federation_uid: None,
-                    picture_id: None,
+                    picture_id: row.get("picture_id"),
                 };
                 let values = UserValues {
                     id: user.id.clone(),

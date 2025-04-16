@@ -119,6 +119,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             "@alfred:matrix.org".to_string(),
         ]),
         backchannel_logout_uri: None,
+        scim: None,
     };
 
     let url_id = format!("{}/clients/{}", backend_url, client.id);

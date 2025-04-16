@@ -18,7 +18,7 @@ use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use std::collections::HashMap;
 use std::default::Default;
 use std::fmt::Debug;
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 
 #[derive(Clone, PartialEq)]
 pub struct ClientScim {
@@ -725,9 +725,17 @@ impl ClientScim {
         groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
         let client = Client::find(self.client_id.clone()).await?;
-        let mut users = User::find_for_scim_sync(*last_created_ts, 100).await?;
 
-        while !users.is_empty() {
+        let limit = 100;
+        let mut users;
+        loop {
+            users = User::find_for_scim_sync(*last_created_ts, limit).await?;
+            debug!("Users count for SCIM update: {:?}", users.len());
+            if users.is_empty() {
+                break;
+            }
+            let len = users.len();
+
             for (user, values) in users {
                 debug_assert_eq!(user.id, values.id);
                 let created = user.created_at;
@@ -761,7 +769,9 @@ impl ClientScim {
                 }
             }
 
-            users = User::find_for_scim_sync(*last_created_ts, 100).await?;
+            if len < limit as usize {
+                break;
+            }
         }
 
         Ok(())
