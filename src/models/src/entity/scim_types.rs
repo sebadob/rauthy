@@ -167,7 +167,9 @@ impl ScimUser {
             external_id: Some(user.id),
             user_name: user.email.clone(),
             name: Some(ScimName {
-                family_name: user.family_name,
+                // even though this is optional, we want to have at least an empty string to
+                // avoid errors with some service providers like AWS
+                family_name: Some(user.family_name.unwrap_or_default()),
                 given_name: Some(user.given_name),
             }),
             display_name: user.email.clone(),

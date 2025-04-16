@@ -1,11 +1,14 @@
 use rauthy_api_types::clients::{ClientSecretResponse, UpdateClientRequest};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::clients_scim::ClientScim;
 
+/// Returns `true` inside `Option<(ClientScim, bool)>` if `ClientScim`
+/// has been updated and therefore needs a full sync.
 pub async fn update_client(
     id: String,
     client_req: UpdateClientRequest,
-) -> Result<Client, ErrorResponse> {
+) -> Result<(Client, Option<(ClientScim, bool)>), ErrorResponse> {
     let mut client = Client::find(id).await?;
     if client.id != client_req.id {
         return Err(ErrorResponse::new(
@@ -50,7 +53,55 @@ pub async fn update_client(
     client.backchannel_logout_uri = client_req.backchannel_logout_uri;
 
     client.save().await?;
-    Ok(client)
+
+    let scim = if let Some(scim_req) = client_req.scim {
+        if let Some(scim_before) = ClientScim::find_opt(client.id.clone()).await? {
+            let scim_new = ClientScim {
+                client_id: scim_before.client_id.clone(),
+                bearer_token: scim_req.bearer_token.clone(),
+                base_endpoint: scim_req.base_endpoint.clone(),
+                sync_groups: scim_req.sync_groups,
+                group_sync_prefix: scim_req.group_sync_prefix.clone(),
+            };
+            let needs_sync = scim_new != scim_before;
+
+            if needs_sync {
+                ClientScim::upsert(
+                    scim_before.client_id,
+                    scim_req.bearer_token.as_bytes(),
+                    scim_req.base_endpoint,
+                    scim_req.sync_groups,
+                    scim_req.group_sync_prefix.clone(),
+                )
+                .await?;
+            }
+
+            Some((scim_new, needs_sync))
+        } else {
+            ClientScim::upsert(
+                client.id.clone(),
+                scim_req.bearer_token.as_bytes(),
+                scim_req.base_endpoint.clone(),
+                scim_req.sync_groups,
+                scim_req.group_sync_prefix.clone(),
+            )
+            .await?;
+
+            let scim_new = ClientScim {
+                client_id: client.id.clone(),
+                bearer_token: scim_req.bearer_token,
+                base_endpoint: scim_req.base_endpoint,
+                sync_groups: scim_req.sync_groups,
+                group_sync_prefix: scim_req.group_sync_prefix,
+            };
+
+            Some((scim_new, true))
+        }
+    } else {
+        None
+    };
+
+    Ok((client, scim))
 }
 
 /// Returns the clients secret in cleartext.

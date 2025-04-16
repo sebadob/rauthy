@@ -20,6 +20,16 @@ export interface NewClientRequest {
     post_logout_redirect_uris?: string[],
 }
 
+export interface ScimClientRequestResponse {
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    bearer_token: string,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    base_endpoint: string,
+    sync_groups: boolean,
+    /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
+    group_sync_prefix?: string,
+}
+
 export interface UpdateClientRequest {
     /// Validation: PATTERN_CLIENT_ID_EPHEMERAL
     id: string,
@@ -53,6 +63,7 @@ export interface UpdateClientRequest {
     contacts?: string[],
     /// Validation: PATTERN_URI
     backchannel_logout_uri?: string,
+    scim?: ScimClientRequestResponse,
 }
 
 export interface ClientResponse {
@@ -75,6 +86,7 @@ export interface ClientResponse {
     client_uri?: string,
     contacts?: string[],
     backchannel_logout_uri?: string,
+    scim?: ScimClientRequestResponse,
 }
 
 export interface ClientSecretResponse {

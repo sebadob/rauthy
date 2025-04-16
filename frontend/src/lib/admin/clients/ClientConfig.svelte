@@ -41,11 +41,14 @@
     let enabled = $state(client.enabled);
     let confidential = $state(client.confidential);
     let uri: string = $state(client.client_uri || '');
-    let backchannel_logout_uri: string = $state(client.backchannel_logout_uri || '');
     let contacts: string[] = $state(client.contacts ? Array.from(client.contacts) : []);
     let origins: string[] = $state(client.allowed_origins ? Array.from(client.allowed_origins) : []);
     let redirectURIs: string[] = $state(Array.from(client.redirect_uris));
     let postLogoutRedirectURIs: string[] = $state(client.post_logout_redirect_uris ? Array.from(client.post_logout_redirect_uris) : []);
+    let backchannel_logout_uri: string = $state(client.backchannel_logout_uri || '');
+
+    let scimEnabled = $state(true);
+    let scimBaseUri: string = $state(client.scim_base_uri || '');
 
     let flows = $state({
         authorizationCode: client.flows_enabled.includes('authorization_code'),
@@ -242,7 +245,7 @@
             {ta.clients.forceMfa}
         </InputCheckbox>
 
-        <p class="mb-0">Authentication Flows</p>
+        <p class="mb-0"><b>Authentication Flows</b></p>
         <InputCheckbox ariaLabel="authorization_code" bind:checked={flows.authorizationCode}>
             authorization_code
         </InputCheckbox>
@@ -260,6 +263,7 @@
         </InputCheckbox>
 
         <div style:height=".5rem"></div>
+        <p class="mb-0"><b>PKCE</b></p>
         <p class="desc">{ta.clients.descPKCE}</p>
         <p class="desc"><strong>{ta.clients.descPKCEEnforce}</strong></p>
         <InputCheckbox ariaLabel="PKCE plain" bind:checked={challenges.plain}>
@@ -276,22 +280,7 @@
         {/if}
         <div style:height=".5rem"></div>
 
-        <p class="desc">
-            {@html ta
-                .clients.backchannelLogout
-                .replace('{{ OIDC_BCL }}', '<a href="https://openid.net/specs/openid-connect-backchannel-1_0.html" target="_blank">OpenID Connect Back-Channel Logout</a>')
-            }
-        </p>
-        <Input
-                typ="url"
-                bind:value={backchannel_logout_uri}
-                autocomplete="off"
-                label="Backchannel Logout URI"
-                placeholder="Backchannel Logout URI"
-                width={inputWidth}
-                pattern={PATTERN_URI}
-        />
-
+        <p class="mb-0"><b>Origin</b></p>
         <p class="desc">{ta.clients.descOrigin}</p>
         <InputTags
                 typ="url"
@@ -319,6 +308,7 @@
         />
 
         <div style:height=".5rem"></div>
+        <p class="mb-0"><b>Scopes</b></p>
         <p class="desc">{@html ta.clients.scopes.desc}</p>
         <SelectList bind:items={scopes}>
             {ta.clients.scopes.allowed}
@@ -328,6 +318,7 @@
         </SelectList>
 
         <div style:height=".75rem"></div>
+        <p class="mb-0"><b>Tokens</b></p>
         <p>{ta.clients.tokenLifetime.p1}</p>
         <Input
                 typ="number"
@@ -374,6 +365,50 @@
                 max="300"
                 errMsg="10 <= Auth Code Lifetime <= 300"
         />
+
+        <p class="mb-0"><b>Backchannel Logout</b></p>
+        <p class="desc">
+            {@html ta
+                .clients.backchannelLogout
+                .replace('{{ OIDC_BCL }}', '<a href="https://openid.net/specs/openid-connect-backchannel-1_0.html" target="_blank">OpenID Connect Back-Channel Logout</a>')
+            }
+        </p>
+        <Input
+                typ="url"
+                bind:value={backchannel_logout_uri}
+                autocomplete="off"
+                label="Backchannel Logout URI"
+                placeholder="Backchannel Logout URI"
+                width={inputWidth}
+                pattern={PATTERN_URI}
+        />
+
+        <p class="mb-0"><b>SCIM</b></p>
+        <p class="desc">
+            {@html ta
+                .clients.backchannelLogout
+                .replace('{{ OIDC_BCL }}', '<a href="https://openid.net/specs/openid-connect-backchannel-1_0.html" target="_blank">OpenID Connect Back-Channel Logout</a>')
+            }
+        </p>
+        <InputCheckbox
+                ariaLabel="Client SCIMv2"
+                bind:checked={scimEnabled}
+        >
+            Enable SCIMv2
+        </InputCheckbox>
+        {#if scimEnabled}
+            <div transition:slide={{ duration: 150}}>
+                <Input
+                        typ="url"
+                        bind:value={scimBaseUri}
+                        autocomplete="off"
+                        label="SCIM Base URI"
+                        placeholder="SCIM Base URI"
+                        width={inputWidth}
+                        pattern={PATTERN_URI}
+                />
+            </div>
+        {/if}
 
         <div class="flex gap-05" style:margin-top="1rem">
             <Button type="submit">

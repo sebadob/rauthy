@@ -20,6 +20,7 @@ use std::default::Default;
 use std::fmt::Debug;
 use tracing::{debug, error, warn};
 
+#[derive(Clone, PartialEq)]
 pub struct ClientScim {
     pub client_id: String,
     pub bearer_token: String,
@@ -118,6 +119,18 @@ ON CONFLICT (client_id) DO UPDATE SET
             DB::hql().query_map_one(sql, params!(client_id)).await?
         } else {
             DB::pg_query_one(sql, &[&client_id]).await?
+        };
+        Ok(slf)
+    }
+
+    pub async fn find_opt(client_id: String) -> Result<Option<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM clients_scim WHERE client_id = $1";
+        let slf = if is_hiqlite() {
+            DB::hql()
+                .query_map_optional(sql, params!(client_id))
+                .await?
+        } else {
+            DB::pg_query_opt(sql, &[&client_id]).await?
         };
         Ok(slf)
     }

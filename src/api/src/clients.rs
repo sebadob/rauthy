@@ -17,15 +17,21 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
+use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
+use rauthy_models::entity::groups::Group;
 use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_service::client;
 use rauthy_service::oidc::{helpers, logout};
+use std::collections::HashMap;
 use tokio::task;
 use tracing::{debug, error};
 use validator::Validate;
 
 /// Returns all existing OIDC clients with all their information, except for the client secrets.
+///
+/// This endpoint will NOT include any `SCIM` configurations. These will only be included on direct
+/// `GET /clients/{id}` requests.
 ///
 /// **Permissions**
 /// - rauthy_admin
@@ -51,7 +57,7 @@ pub async fn get_clients(principal: ReqPrincipal) -> Result<HttpResponse, ErrorR
     let mut res = Vec::new();
     clients
         .into_iter()
-        .for_each(|c| res.push(ClientResponse::from(c)));
+        .for_each(|c| res.push(c.into_response(None)));
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -79,9 +85,10 @@ pub async fn get_client_by_id(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
 
-    Client::find(path.into_inner())
-        .await
-        .map(|c| HttpResponse::Ok().json(ClientResponse::from(c)))
+    let client = Client::find(path.into_inner()).await?;
+    let scim = ClientScim::find_opt(client.id.clone()).await?;
+
+    Ok(HttpResponse::Ok().json(client.into_response(scim)))
 }
 
 /// Returns the secret in cleartext for a given client by its *id*.
@@ -140,8 +147,10 @@ pub async fn post_clients(
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Create)?;
     payload.validate()?;
 
+    // The `NewClientRequest` does not allow setting up SCIM immediately - no need to trigger here
+
     let client = Client::create(payload).await?;
-    Ok(HttpResponse::Ok().json(ClientResponse::from(client)))
+    Ok(HttpResponse::Ok().json(client.into_response(None)))
 }
 
 /// OIDC Dynamic Client Registration (if enabled)
@@ -284,9 +293,33 @@ pub async fn put_clients(
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
     payload.validate()?;
 
-    client::update_client(path.into_inner(), payload)
-        .await
-        .map(|r| HttpResponse::Ok().json(ClientResponse::from(r)))
+    let client_id = path.into_inner();
+    let (client, scim) = client::update_client(client_id, payload).await?;
+
+    let resp = if let Some((scim, needs_sync)) = scim {
+        let resp = client.into_response(Some(scim.clone()));
+
+        if needs_sync {
+            // We want to sync the groups synchronous to catch possible config errors early.
+            // The user sync however can take a very long time depending on he amount of users,
+            // so it will be pushed into the background.
+            scim.sync_groups().await?;
+
+            let groups = Group::find_all().await?;
+            task::spawn(async move {
+                let mut groups_remote = HashMap::with_capacity(groups.len());
+                if let Err(err) = scim.sync_users(None, &groups, &mut groups_remote).await {
+                    error!("{}", err);
+                }
+            });
+        }
+
+        resp
+    } else {
+        client.into_response(None)
+    };
+
+    Ok(HttpResponse::Ok().json(resp))
 }
 
 /// Retrieve a custom logo for the login page for this client
@@ -500,6 +533,8 @@ pub async fn delete_client(
             error!("Error cleaning up FailedBackchannelLogouts: {:?}", err);
         }
     });
+
+    // TODO we should probably delete all possibly existing failed_scim_tasks here?
 
     client.delete().await?;
 
