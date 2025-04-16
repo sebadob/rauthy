@@ -24,7 +24,7 @@ export interface ScimClientRequestResponse {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     bearer_token: string,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    base_endpoint: string,
+    base_uri: string,
     sync_groups: boolean,
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
     group_sync_prefix?: string,

@@ -47,6 +47,23 @@ export interface I18nAdmin {
         forceMfa: string,
         generateSecret: string,
         name: string,
+        scim: {
+            // inserted as html
+            baseUri: string,
+            // inserted as html
+            desc: string,
+            enable: string,
+            groupSync: string,
+            groupSyncPrefix: string,
+            groupSyncPrefixDesc: string,
+            reqDesc: string
+            // inserted as html
+            reqLi1: string
+            // inserted as html
+            reqLi2: string
+            // inserted as html
+            reqLi3: string
+        },
         scopes: {
             allowed: string,
             default: string,

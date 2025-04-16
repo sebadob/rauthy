@@ -57,6 +57,24 @@ export let I18nAdminDe: I18nAdmin = {
         forceMfa: "MFA Erzwingen",
         generateSecret: "Neues Secret Generieren",
         name: "Client Name",
+        scim: {
+            baseUri: `Die SCIM base URI muss jene sein, von der Sub-Routen wie 
+                <code>{base_uri}/Users/{id}</base_uri></code> korrekt abgeleitet werden können.`,
+            desc: "Sollte dieser client {{ SCIM_LINK }} unterstützen, kann es hier aktiviert werden.",
+            enable: "SCIMv2 aktivieren",
+            groupSync: "Gruppen synchronisieren",
+            groupSyncPrefix: "Gruppen Filter Prefix",
+            groupSyncPrefixDesc: `Die zu synchronisierenden Gruppen können per optionalem Prefix gefiltert werden.
+                Wenn z.B. Gruppen wie <code>app:admins</code> und <code>app:users</code> existieren, würde das
+                Prefix <code>app:</code> dafür sorgen, dass nur diese Gruppen synchronisiert werden, wie auch nur
+                jene Benutzer, die zu mindestens einer dieser Gruppen gehören.`,
+            reqDesc: "Es gibt folgende Bedingungen für die Kompaibilität:",
+            reqLi1: "Der client muss <code>externalId</code> korrekt handhaben.",
+            reqLi2: `Mindestens die <code>/Users</code> endpunkte mit <code>filter=externalId eq "*"</code> und
+                <code>filter=userName eq "*"</code> müssen unterstützt sein.`,
+            reqLi3: `Wenn Gruppen sychronisiert werden sollen, so müssen unter <code>/Groups</code> zusätzlich 
+                <code>filter=displayName eq "*"</code> und <code>filter=displayName sw "*"</code> unterstützt sein.`,
+        },
         scopes: {
             allowed: "Erlaubte Scopes",
             default: "Standard Scopes",
