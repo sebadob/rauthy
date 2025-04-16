@@ -1356,7 +1356,7 @@ impl Client {
             backchannel_logout_uri: self.backchannel_logout_uri,
             scim: scim.map(|scim| ScimClientRequestResponse {
                 bearer_token: scim.bearer_token,
-                base_endpoint: scim.base_endpoint,
+                base_uri: scim.base_uri,
                 sync_groups: scim.sync_groups,
                 group_sync_prefix: scim.group_sync_prefix,
             }),

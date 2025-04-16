@@ -42,8 +42,12 @@ pub async fn update_client(
     client.auth_code_lifetime = client_req.auth_code_lifetime;
     client.access_token_lifetime = client_req.access_token_lifetime;
 
+    let scopes_before = client.scopes;
     client.scopes = Client::sanitize_scopes(client_req.scopes).await?;
+    let default_scopes_before = client.default_scopes;
     client.default_scopes = Client::sanitize_scopes(client_req.default_scopes).await?;
+    let scopes_diff =
+        scopes_before != client.scopes || default_scopes_before != client.default_scopes;
 
     client.challenge = client_req.challenges.map(|c| c.join(","));
     client.force_mfa = client_req.force_mfa;
@@ -55,11 +59,17 @@ pub async fn update_client(
     client.save().await?;
 
     let scim = if let Some(scim_req) = client_req.scim {
+        let base_uri = scim_req
+            .base_uri
+            .strip_suffix("/")
+            .map(String::from)
+            .unwrap_or(scim_req.base_uri);
+
         if let Some(scim_before) = ClientScim::find_opt(client.id.clone()).await? {
             let scim_new = ClientScim {
                 client_id: scim_before.client_id.clone(),
                 bearer_token: scim_req.bearer_token.clone(),
-                base_endpoint: scim_req.base_endpoint.clone(),
+                base_uri,
                 sync_groups: scim_req.sync_groups,
                 group_sync_prefix: scim_req.group_sync_prefix.clone(),
             };
@@ -69,19 +79,19 @@ pub async fn update_client(
                 ClientScim::upsert(
                     scim_before.client_id,
                     scim_req.bearer_token.as_bytes(),
-                    scim_req.base_endpoint,
+                    scim_new.base_uri.clone(),
                     scim_req.sync_groups,
                     scim_req.group_sync_prefix.clone(),
                 )
                 .await?;
             }
 
-            Some((scim_new, needs_sync))
+            Some((scim_new, needs_sync || scopes_diff))
         } else {
             ClientScim::upsert(
                 client.id.clone(),
                 scim_req.bearer_token.as_bytes(),
-                scim_req.base_endpoint.clone(),
+                base_uri.clone(),
                 scim_req.sync_groups,
                 scim_req.group_sync_prefix.clone(),
             )
@@ -90,7 +100,7 @@ pub async fn update_client(
             let scim_new = ClientScim {
                 client_id: client.id.clone(),
                 bearer_token: scim_req.bearer_token,
-                base_endpoint: scim_req.base_endpoint,
+                base_uri,
                 sync_groups: scim_req.sync_groups,
                 group_sync_prefix: scim_req.group_sync_prefix,
             };
@@ -98,6 +108,7 @@ pub async fn update_client(
             Some((scim_new, true))
         }
     } else {
+        ClientScim::delete(client.id.clone()).await?;
         None
     };
 

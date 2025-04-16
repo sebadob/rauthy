@@ -4,8 +4,8 @@ use crate::entity::failed_scim_tasks;
 use crate::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use crate::entity::groups::Group;
 use crate::entity::scim_types::{
-    ScimError, ScimGroup, ScimListResponse, ScimOp, ScimPatchOp, ScimPatchOperations, ScimResource,
-    ScimUser,
+    ScimError, ScimGroup, ScimListResponse, ScimOp, ScimPatchOp, ScimPatchOpWithPath,
+    ScimPatchOperations, ScimPatchOperationsWithPath, ScimResource, ScimUser,
 };
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
@@ -14,7 +14,7 @@ use hiqlite::{Param, params};
 use rauthy_common::constants::APPLICATION_JSON_SCIM;
 use rauthy_common::{HTTP_CLIENT, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
+use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use std::collections::HashMap;
 use std::default::Default;
 use std::fmt::Debug;
@@ -24,7 +24,7 @@ use tracing::{debug, error, warn};
 pub struct ClientScim {
     pub client_id: String,
     pub bearer_token: String,
-    pub base_endpoint: String,
+    pub base_uri: String,
     pub sync_groups: bool,
     pub group_sync_prefix: Option<String>,
 }
@@ -33,9 +33,9 @@ impl Debug for ClientScim {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "ClientScim {{ client_id: {}, bearer_token: <hidden>, base_endpoint: {}, \
+            "ClientScim {{ client_id: {}, bearer_token: <hidden>, base_uri: {}, \
             group_sync_prefix: {:?} }}",
-            self.client_id, self.base_endpoint, self.group_sync_prefix
+            self.client_id, self.base_uri, self.group_sync_prefix
         )
     }
 }
@@ -47,7 +47,7 @@ impl From<hiqlite::Row<'_>> for ClientScim {
         Self {
             client_id: row.get("client_id"),
             bearer_token,
-            base_endpoint: row.get("base_endpoint"),
+            base_uri: row.get("base_endpoint"),
             sync_groups: row.get("sync_groups"),
             group_sync_prefix: row.get("group_sync_prefix"),
         }
@@ -61,7 +61,7 @@ impl From<tokio_postgres::Row> for ClientScim {
         Self {
             client_id: row.get("client_id"),
             bearer_token,
-            base_endpoint: row.get("base_endpoint"),
+            base_uri: row.get("base_endpoint"),
             sync_groups: row.get("sync_groups"),
             group_sync_prefix: row.get("group_sync_prefix"),
         }
@@ -171,12 +171,12 @@ impl ClientScim {
         if let Some(prefix) = &self.group_sync_prefix {
             format!(
                 "{}/Groups?filter=displayName%20sw%20%22{}%22&startIndex={}&count={}",
-                self.base_endpoint, prefix, start_index, count
+                self.base_uri, prefix, start_index, count
             )
         } else {
             format!(
                 "{}/Groups?startIndex={}&count={}",
-                self.base_endpoint, start_index, count
+                self.base_uri, start_index, count
             )
         }
     }
@@ -337,13 +337,13 @@ impl ClientScim {
     async fn get_group(&self, group: &Group) -> Result<Option<ScimGroup>, ErrorResponse> {
         let url = format!(
             "{}/Groups?filter=externalId%20eq%20%22{}%22",
-            self.base_endpoint, group.id
+            self.base_uri, group.id
         );
         match self.get_group_with(group, url).await? {
             None => {
                 let url = format!(
                     "{}/Groups?filter=displayName%20eq%20%22{}%22",
-                    self.base_endpoint, group.name
+                    self.base_uri, group.name
                 );
                 self.get_group_with(group, url).await
             }
@@ -456,10 +456,11 @@ impl ClientScim {
             ..Default::default()
         };
         let json = serde_json::to_string(&payload)?;
-        let url = format!("{}/Groups", self.base_endpoint);
+        let url = format!("{}/Groups", self.base_uri);
         let res = HTTP_CLIENT
             .post(url)
             .header(AUTHORIZATION, self.auth_header())
+            .header(ACCEPT, APPLICATION_JSON_SCIM)
             .header(CONTENT_TYPE, APPLICATION_JSON_SCIM)
             .body(json)
             .send()
@@ -506,7 +507,7 @@ impl ClientScim {
                 "Remote SCIM group without an ID",
             ));
         };
-        let url = format!("{}/Groups/{}", self.base_endpoint, remote_id);
+        let url = format!("{}/Groups/{}", self.base_uri, remote_id);
 
         let mut value = HashMap::with_capacity(2);
         value.insert(
@@ -520,7 +521,6 @@ impl ClientScim {
         let payload = ScimPatchOp {
             operations: vec![ScimPatchOperations {
                 op: ScimOp::Replace,
-                path: None,
                 value,
             }],
             ..Default::default()
@@ -530,6 +530,7 @@ impl ClientScim {
         let res = HTTP_CLIENT
             .patch(url)
             .header(AUTHORIZATION, self.auth_header())
+            .header(ACCEPT, APPLICATION_JSON_SCIM)
             .header(CONTENT_TYPE, APPLICATION_JSON_SCIM)
             .body(json)
             .send()
@@ -585,7 +586,7 @@ impl ClientScim {
                 "Remote SCIM group without an ID",
             ));
         };
-        let url = format!("{}/Groups/{}", self.base_endpoint, remote_id);
+        let url = format!("{}/Groups/{}", self.base_uri, remote_id);
 
         let res = HTTP_CLIENT
             .delete(url)
@@ -617,14 +618,14 @@ impl ClientScim {
     ) -> Result<Option<ScimUser>, ErrorResponse> {
         let url = format!(
             "{}/Users?filter=externalId%20eq%20%22{}%22",
-            self.base_endpoint, user_id
+            self.base_uri, user_id
         );
         match self.get_user_with(user_id, user_email, url).await? {
             None => {
                 let email = old_email.unwrap_or(user_email);
                 let url = format!(
                     "{}/Users?filter=userName%20eq%20%22{}%22",
-                    self.base_endpoint, email
+                    self.base_uri, email
                 );
                 self.get_user_with(user_id, user_email, url).await
             }
@@ -882,8 +883,9 @@ impl ClientScim {
     ) -> Result<(), ErrorResponse> {
         let json = serde_json::to_string(&update_payload)?;
         let res = HTTP_CLIENT
-            .post(format!("{}/Users", self.base_endpoint))
+            .post(format!("{}/Users", self.base_uri))
             .header(AUTHORIZATION, self.auth_header())
+            .header(ACCEPT, APPLICATION_JSON_SCIM)
             .header(CONTENT_TYPE, APPLICATION_JSON_SCIM)
             .body(json)
             .send()
@@ -926,10 +928,11 @@ impl ClientScim {
         let res = HTTP_CLIENT
             .put(format!(
                 "{}/Users/{}",
-                self.base_endpoint,
+                self.base_uri,
                 user_remote.id.unwrap_or_default()
             ))
             .header(AUTHORIZATION, self.auth_header())
+            .header(ACCEPT, APPLICATION_JSON_SCIM)
             .header(CONTENT_TYPE, APPLICATION_JSON_SCIM)
             .body(json)
             .send()
@@ -990,7 +993,7 @@ impl ClientScim {
                 "Remote SCIM user without an ID",
             ));
         };
-        let url = format!("{}/Users/{}", self.base_endpoint, remote_id);
+        let url = format!("{}/Users/{}", self.base_uri, remote_id);
 
         let res = HTTP_CLIENT
             .delete(url)
@@ -1035,12 +1038,19 @@ impl ClientScim {
             Some(id) => id,
         };
         let mut user_groups_remote = user_remote.groups.unwrap_or_default();
+        debug!("user_groups_local: {:?}", user_groups_local);
+        debug!("user_groups_remote: {:?}", user_groups_remote);
 
         while let Some(expected_name) = user_groups_local.pop() {
+            debug!(
+                "Checking for local group '{}' in remote groups: {:?}",
+                expected_name, user_groups_local
+            );
             let pos = user_groups_remote
                 .iter()
-                .position(|g| g.value == expected_name);
+                .position(|g| g.display.as_deref() == Some(expected_name.as_str()));
             if let Some(pos) = pos {
+                debug!("Found matching local - remote group: {}", expected_name);
                 user_groups_remote.swap_remove(pos);
                 continue;
             }
@@ -1092,7 +1102,7 @@ impl ClientScim {
                 );
                 continue;
             }
-            let url = format!("{}/Groups/{}", self.base_endpoint, remote_group_id);
+            let url = format!("{}/Groups/{}", self.base_uri, remote_group_id);
 
             // create the user - group mapping
             let mut value = HashMap::with_capacity(2);
@@ -1104,18 +1114,20 @@ impl ClientScim {
                 "display".into(),
                 serde_json::Value::String(user_email.clone()),
             );
-            let payload = ScimPatchOp {
-                operations: vec![ScimPatchOperations {
+            let payload = ScimPatchOpWithPath {
+                operations: vec![ScimPatchOperationsWithPath {
                     op: ScimOp::Add,
-                    path: Some("members".into()),
-                    value,
+                    path: "members".into(),
+                    value: vec![value],
                 }],
                 ..Default::default()
             };
             let json = serde_json::to_string(&payload)?;
+
             let res = HTTP_CLIENT
                 .patch(url)
                 .header(AUTHORIZATION, self.auth_header())
+                .header(ACCEPT, APPLICATION_JSON_SCIM)
                 .header(CONTENT_TYPE, APPLICATION_JSON_SCIM)
                 .body(json)
                 .send()
@@ -1123,7 +1135,7 @@ impl ClientScim {
             if !res.status().is_success() {
                 let err = res.json::<ScimError>().await?;
                 error!(
-                    "Error updating Groups assignment for SCIM client {}: {:?}",
+                    "Error adding Group assignment for SCIM client {}: {:?}",
                     self.client_id, err
                 );
             }
@@ -1132,13 +1144,39 @@ impl ClientScim {
         // At this point, everything left in `user_groups_remote` is a mapping that must have been
         // done manually on the remote server, but does not match our records. We want to correct
         // it and remove the mappings.
-        // TODO maybe add an auto-cleanup logic here
-        if !user_groups_remote.is_empty() {
-            warn!(
-                "Found user - group mappings for SCIM Client {} and user {} that do not match our \
-                records. Needs manual interaction: {:?}",
-                self.client_id, user_email, user_groups_remote
+        debug!("Left-Over user_groups_remote: {:?}", user_groups_remote);
+        for group_remote in user_groups_remote {
+            let mut value = HashMap::with_capacity(1);
+            value.insert(
+                "value".into(),
+                serde_json::Value::String(user_id_remote.clone()),
             );
+            let payload = ScimPatchOpWithPath {
+                operations: vec![ScimPatchOperationsWithPath {
+                    op: ScimOp::Remove,
+                    path: "members".into(),
+                    value: vec![value],
+                }],
+                ..Default::default()
+            };
+            let json = serde_json::to_string(&payload)?;
+
+            let url = format!("{}/Groups/{}", self.base_uri, group_remote.value);
+            let res = HTTP_CLIENT
+                .patch(url)
+                .header(AUTHORIZATION, self.auth_header())
+                .header(ACCEPT, APPLICATION_JSON_SCIM)
+                .header(CONTENT_TYPE, APPLICATION_JSON_SCIM)
+                .body(json)
+                .send()
+                .await?;
+            if !res.status().is_success() {
+                let err = res.json::<ScimError>().await?;
+                error!(
+                    "Error removing Group assignment for SCIM client {}: {:?}",
+                    self.client_id, err
+                );
+            }
         }
 
         Ok(())

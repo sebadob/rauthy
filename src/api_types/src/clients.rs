@@ -199,7 +199,7 @@ pub struct ScimClientRequestResponse {
     pub bearer_token: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-    pub base_endpoint: String,
+    pub base_uri: String,
     pub sync_groups: bool,
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
     #[validate(regex(path = "*RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]

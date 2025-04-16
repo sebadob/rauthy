@@ -83,7 +83,7 @@ pub struct ScimUser {
     /// Optional by RFC by mandatory in a few Service Providers
     pub name: Option<ScimName>,
     /// Optional by RFC by mandatory in a few Service Providers
-    pub display_name: String,
+    pub display_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preferred_language: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -104,7 +104,7 @@ pub struct ScimUser {
     pub groups: Option<Vec<ScimGroupValue>>,
     /// RFC does not specify how this value should look, although it is "expected" to be a String
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub roles: Option<String>,
+    pub roles: Option<Vec<ScimValue>>,
 }
 
 impl Default for ScimUser {
@@ -115,7 +115,7 @@ impl Default for ScimUser {
             external_id: None,
             user_name: String::default(),
             name: Default::default(),
-            display_name: String::default(),
+            display_name: None,
             preferred_language: None,
             locale: None,
             active: None,
@@ -134,6 +134,15 @@ impl ScimUser {
     /// SCIM Service Providers, like `email` and the users' names, even though they should only
     /// be given with the `profile` scope.
     pub fn from_user_values(user: User, values: UserValues, client_scopes: &str) -> Self {
+        let roles = user
+            .get_roles()
+            .iter()
+            .map(|r| ScimValue {
+                value: r.to_string(),
+                display: None,
+                primary: None,
+            })
+            .collect::<Vec<_>>();
         let address = if client_scopes.contains("address") {
             AddressClaim::try_build(&user, &values)
         } else {
@@ -172,7 +181,7 @@ impl ScimUser {
                 family_name: Some(user.family_name.unwrap_or_default()),
                 given_name: Some(user.given_name),
             }),
-            display_name: user.email.clone(),
+            display_name: Some(user.email.clone()),
             preferred_language,
             locale,
             active: Some(user.enabled),
@@ -200,7 +209,7 @@ impl ScimUser {
             }),
             // read-only
             groups: None,
-            roles: Some(user.roles),
+            roles: Some(roles),
         }
     }
 }
@@ -210,6 +219,7 @@ impl ScimUser {
 pub struct ScimGroup {
     pub schemas: Vec<Cow<'static, str>>,
     /// Managed by the Service Provider
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     /// Rauthy's Group ID
     pub external_id: Option<String>,
@@ -338,6 +348,23 @@ impl Default for ScimPatchOp {
     }
 }
 
+#[derive(Serialize, Debug)]
+pub struct ScimPatchOpWithPath {
+    /// `urn:ietf:params:scim:api:messages:2.0:PatchOp`
+    pub schemas: Vec<Cow<'static, str>>,
+    #[serde(rename = "Operations")]
+    pub operations: Vec<ScimPatchOperationsWithPath>,
+}
+
+impl Default for ScimPatchOpWithPath {
+    fn default() -> Self {
+        Self {
+            schemas: vec!["urn:ietf:params:scim:api:messages:2.0:PatchOp".into()],
+            operations: Vec::default(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ScimOp {
@@ -349,6 +376,12 @@ pub enum ScimOp {
 #[derive(Serialize, Debug)]
 pub struct ScimPatchOperations {
     pub op: ScimOp,
-    pub path: Option<Cow<'static, str>>,
     pub value: HashMap<Cow<'static, str>, serde_json::Value>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct ScimPatchOperationsWithPath {
+    pub op: ScimOp,
+    pub path: Cow<'static, str>,
+    pub value: Vec<HashMap<Cow<'static, str>, serde_json::Value>>,
 }

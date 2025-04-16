@@ -295,10 +295,12 @@ pub async fn put_clients(
 
     let client_id = path.into_inner();
     let (client, scim) = client::update_client(client_id, payload).await?;
+    debug!("scim: {:?}", scim);
 
     let resp = if let Some((scim, needs_sync)) = scim {
         let resp = client.into_response(Some(scim.clone()));
 
+        debug!("scim needs sync: {:?}", needs_sync);
         if needs_sync {
             // We want to sync the groups synchronous to catch possible config errors early.
             // The user sync however can take a very long time depending on he amount of users,
