@@ -26,8 +26,8 @@ use rauthy_api_types::users::{
     UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesResponse,
 };
 use rauthy_common::constants::{
-    CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
-    WEBAUTHN_NO_PASSWORD_EXPIRY,
+    CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, PUB_URL_WITH_SCHEME,
+    RAUTHY_ADMIN_ROLE, WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
@@ -611,6 +611,112 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         Self::count_inc().await?;
 
         Ok(new_user)
+    }
+
+    /// Caution: Results will only contain values necessary for SCIM syncs.
+    pub async fn find_for_scim_sync(
+        last_created_ts: i64,
+        limit: u16,
+    ) -> Result<Vec<(Self, UserValues)>, ErrorResponse> {
+        let sql = r#"
+SELECT u.id AS user_id, email, email_verified, given_name, family_name, roles, groups, enabled,
+    created_at, language, picture_id, birthdate, phone, street, zip, city, country
+FROM users u
+LEFT JOIN users_values uv ON u.id = uv.id
+WHERE u.created_at > $1
+ORDER BY created_at ASC
+LIMIT $2"#;
+
+        let mut res = Vec::with_capacity(limit as usize);
+
+        if is_hiqlite() {
+            let rows = DB::hql()
+                .query_raw(sql, params!(last_created_ts, limit))
+                .await?;
+            for mut row in rows {
+                let email_verified: bool = row.get("email_verified");
+                if !email_verified {
+                    continue;
+                }
+
+                let user = Self {
+                    id: row.get("user_id"),
+                    email: row.get("email"),
+                    given_name: row.get("given_name"),
+                    family_name: row.get("family_name"),
+                    password: None,
+                    roles: row.get("roles"),
+                    groups: row.get("groups"),
+                    enabled: row.get("enabled"),
+                    email_verified: true,
+                    password_expires: None,
+                    created_at: row.get("created_at"),
+                    last_login: None,
+                    last_failed_login: None,
+                    failed_login_attempts: None,
+                    language: Language::from(row.get::<String>("language")),
+                    webauthn_user_id: None,
+                    user_expires: None,
+                    auth_provider_id: None,
+                    federation_uid: None,
+                    picture_id: row.get("picture_id"),
+                };
+                let values = UserValues {
+                    id: user.id.clone(),
+                    birthdate: row.get("birthdate"),
+                    phone: row.get("phone"),
+                    street: row.get("street"),
+                    zip: row.get::<Option<i64>>("zip").map(|zip| zip as i32),
+                    city: row.get("city"),
+                    country: row.get("country"),
+                };
+                res.push((user, values));
+            }
+        } else {
+            let rows = DB::pg_query_rows(sql, &[&last_created_ts, &(limit as i32)], limit as usize)
+                .await?;
+            for row in rows {
+                let email_verified: bool = row.get("email_verified");
+                if !email_verified {
+                    continue;
+                }
+
+                let user = Self {
+                    id: row.get("user_id"),
+                    email: row.get("email"),
+                    given_name: row.get("given_name"),
+                    family_name: row.get("family_name"),
+                    password: None,
+                    roles: row.get("roles"),
+                    groups: row.get("groups"),
+                    enabled: row.get("enabled"),
+                    email_verified: true,
+                    password_expires: None,
+                    created_at: row.get("created_at"),
+                    last_login: None,
+                    last_failed_login: None,
+                    failed_login_attempts: None,
+                    language: Language::from(row.get::<_, String>("language")),
+                    webauthn_user_id: None,
+                    user_expires: None,
+                    auth_provider_id: None,
+                    federation_uid: None,
+                    picture_id: row.get("picture_id"),
+                };
+                let values = UserValues {
+                    id: user.id.clone(),
+                    birthdate: row.get("birthdate"),
+                    phone: row.get("phone"),
+                    street: row.get("street"),
+                    zip: row.get("zip"),
+                    city: row.get("city"),
+                    country: row.get("country"),
+                };
+                res.push((user, values));
+            }
+        }
+
+        Ok(res)
     }
 
     pub async fn provider_unlink(user_id: String) -> Result<Self, ErrorResponse> {
@@ -1490,6 +1596,15 @@ impl User {
         }
         let hash = self.password.as_ref().unwrap().to_owned();
         ComparePasswords::is_match(plain, hash).await
+    }
+
+    pub fn picture_uri(&self) -> Option<String> {
+        self.picture_id.as_ref().map(|pic_id| {
+            format!(
+                "{}/auth/v1/users/{}/picture/{}",
+                *PUB_URL_WITH_SCHEME, self.id, pic_id
+            )
+        })
     }
 
     pub fn push_group(&mut self, group: &str) {

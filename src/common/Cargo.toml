@@ -24,6 +24,7 @@ openssl-sys = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
 regex = { workspace = true }
+reqwest = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 

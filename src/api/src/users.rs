@@ -26,6 +26,7 @@ use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::password::PasswordPolicy;
@@ -49,18 +50,21 @@ use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::env;
 use std::sync::LazyLock;
+use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
 
 pub static PICTURE_PUBLIC: LazyLock<bool> = LazyLock::new(|| {
     env::var("PICTURE_PUBLIC")
-        .unwrap_or_else(|_| "false".to_string())
+        .as_deref()
+        .unwrap_or("false")
         .parse::<bool>()
         .expect("Cannot parse PICTURE_PUBLIC as bool")
 });
 pub static PICTURE_UPLOAD_LIMIT_MB: LazyLock<u16> = LazyLock::new(|| {
     env::var("PICTURE_UPLOAD_LIMIT_MB")
-        .unwrap_or_else(|_| "10".to_string())
+        .as_deref()
+        .unwrap_or("10")
         .parse::<u16>()
         .expect("Cannot parse PICTURE_UPLOAD_LIMIT_MB as u16")
 });
@@ -175,6 +179,17 @@ pub async fn post_users(
             .unwrap();
     }
 
+    let cloned = user.clone();
+    task::spawn(async move {
+        let email = cloned.email.clone();
+        if let Err(err) = ClientScim::create_update_user(cloned).await {
+            error!(
+                "Error during SCIM Client user create for {}: {:?}",
+                email, err
+            );
+        }
+    });
+
     Ok(HttpResponse::Ok().json(user.into_response(None)))
 }
 
@@ -219,6 +234,8 @@ pub async fn post_cust_attr(
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Create)?;
     payload.validate()?;
 
+    // No need for SCIM sync's - these attrs are custom and do not exist for SCIM
+
     UserAttrConfigEntity::create(payload)
         .await
         .map(|attr| HttpResponse::Ok().json(attr))
@@ -247,6 +264,8 @@ pub async fn put_cust_attr(
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)?;
     payload.validate()?;
 
+    // No need for SCIM sync's - these attrs are custom and do not exist for SCIM
+
     UserAttrConfigEntity::update(path.into_inner(), payload)
         .await
         .map(|a| HttpResponse::Ok().json(a))
@@ -270,6 +289,8 @@ pub async fn delete_cust_attr(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Delete)?;
+
+    // No need for SCIM sync's - these attrs are custom and do not exist for SCIM
 
     UserAttrConfigEntity::delete(path.into_inner()).await?;
     Ok(HttpResponse::Ok().finish())
@@ -411,11 +432,21 @@ pub async fn post_users_register_handle(
 
     data.tx_events
         .send_async(Event::new_user(
-            user.email,
+            user.email.clone(),
             real_ip_from_req(&req)?.to_string(),
         ))
         .await
         .unwrap();
+
+    task::spawn(async move {
+        let email = user.email.clone();
+        if let Err(err) = ClientScim::create_update_user(user).await {
+            error!(
+                "Error during SCIM Client user create for {}: {:?}",
+                email, err
+            );
+        }
+    });
 
     Ok(HttpResponse::NoContent()
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
@@ -548,7 +579,20 @@ pub async fn put_user_picture(
 
     content_len_limit(&req, *PICTURE_UPLOAD_LIMIT_MB)?;
 
-    UserPicture::upload(user_id, payload).await
+    let resp = UserPicture::upload(user_id.clone(), payload).await?;
+
+    let user = User::find(user_id).await?;
+    task::spawn(async move {
+        let email = user.email.clone();
+        if let Err(err) = ClientScim::create_update_user(user).await {
+            error!(
+                "Error during SCIM Client user update (picture) for {}: {:?}",
+                email, err
+            );
+        }
+    });
+
+    Ok(resp)
 }
 
 /// GET / download the user picture
@@ -654,7 +698,18 @@ pub async fn delete_user_picture(
         }
     }
 
-    UserPicture::remove(picture_id, user_id).await?;
+    UserPicture::remove(picture_id, user_id.clone()).await?;
+
+    let user = User::find(user_id).await?;
+    task::spawn(async move {
+        let email = user.email.clone();
+        if let Err(err) = ClientScim::create_update_user(user).await {
+            error!(
+                "Error during SCIM Client user update (delete picture_id) for {}: {:?}",
+                email, err
+            );
+        }
+    });
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -1058,7 +1113,8 @@ pub async fn post_webauthn_auth_finish(
 
     // We do not need to further validate the principal here.
     // All of this is done at the /start endpoint.
-    // This here will simply fail, if the secret code from the /start does not exist.
+    // This here will simply fail, if the secret code from the /start does not exist
+    // -> indirect validation through exising code.
 
     let res = webauthn::auth_finish(&data, id, payload).await?;
     Ok(res.into_response())
@@ -1104,37 +1160,6 @@ pub async fn delete_webauthn(
     }
 
     PasskeyEntity::delete(id, name).await?;
-    // // if we delete a passkey, we must check if this is the last existing one for the user
-    // let pks = PasskeyEntity::find_for_user(&data, &id).await?;
-    //
-    // let mut txn = DB::txn().await?;
-    //
-    // PasskeyEntity::delete_by_id_name(&id, &name, &mut txn).await?;
-    // if pks.len() < 2 {
-    //     let mut user = User::find(&data, id).await?;
-    //     user.webauthn_user_id = None;
-    //
-    //     // in this case, we need to check against the current password policy, if the password
-    //     // should expire again
-    //     let policy = PasswordPolicy::find(&data).await?;
-    //     if let Some(valid_days) = policy.valid_days {
-    //         if user.password.is_some() {
-    //             user.password_expires = Some(
-    //                 OffsetDateTime::now_utc()
-    //                     .add(time::Duration::days(valid_days as i64))
-    //                     .unix_timestamp(),
-    //             );
-    //         } else {
-    //             user.password_expires = None;
-    //         }
-    //     }
-    //
-    //     user.save_txn(&mut txn).await?;
-    //     txn.commit().await?;
-    // } else {
-    //     txn.commit().await?;
-    // }
-    // PasskeyEntity::clear_caches_by_id_name(&id, &name).await?;
 
     // make sure to delete any existing MFA cookie when a key is deleted
     let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
@@ -1468,6 +1493,17 @@ pub async fn put_user_by_id(
             .unwrap();
     }
 
+    let cloned = user.clone();
+    task::spawn(async move {
+        let email = cloned.email.clone();
+        if let Err(err) = ClientScim::create_update_user(cloned).await {
+            error!(
+                "Error during SCIM Client user update for {}: {:?}",
+                email, err
+            );
+        }
+    });
+
     Ok(HttpResponse::Ok().json(user.into_response(user_values)))
 }
 
@@ -1501,6 +1537,18 @@ pub async fn put_user_self(
     principal.is_user(&id)?;
 
     let (user, user_values, email_updated) = User::update_self_req(&data, id, payload).await?;
+
+    let cloned = user.clone();
+    task::spawn(async move {
+        let email = cloned.email.clone();
+        if let Err(err) = ClientScim::create_update_user(cloned).await {
+            error!(
+                "Error during SCIM Client user update (self) for {}: {:?}",
+                email, err
+            );
+        }
+    });
+
     if email_updated {
         Ok(HttpResponse::Accepted().json(user.into_response(user_values)))
     } else {
@@ -1562,6 +1610,20 @@ pub async fn delete_user_by_id(
     let user = User::find(path.into_inner()).await?;
     logout::execute_backchannel_logout(&data, None, Some(user.id.clone())).await?;
     user.delete().await?;
+
+    let clients_scim = ClientScim::find_all().await?;
+    task::spawn(async move {
+        let email = user.email.clone();
+
+        for client_scim in clients_scim {
+            if let Err(err) = client_scim.delete_user(&user).await {
+                error!(
+                    "Error during SCIM Client user delete for {}: {:?}",
+                    email, err
+                );
+            }
+        }
+    });
 
     Ok(HttpResponse::NoContent().finish())
 }

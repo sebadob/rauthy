@@ -5,6 +5,10 @@
 - greatly reduce the allowed clock skew during token validation and make it configurable
 - add `HIGHEST_COMPATIBLE_VERSION` to DB version check
 
+### SCIM
+
+- impl retry scheduler for failed tasks, just like for backchannel logout
+
 ## Stage 1 - essentials
 
 [x] finished
@@ -21,12 +25,6 @@
 - find a nice way to always expose the swagger UI for rauthy admins only without config
   current issue: when the session cookie is a non-host cookie with path restriction -> not working
   probably move from `/docs/v1` to `/auth/v1/docs`
-- prettify the UI
-- maybe get a nicer logo
-
-### `rauthy-client` TODO's
-
-- when implementing userinfo lookup, add an fn to validate the `at_hash` as well
 
 ## Stage 3 - Possible nice to haves
 

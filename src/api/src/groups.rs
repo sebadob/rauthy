@@ -4,6 +4,7 @@ use actix_web::{HttpResponse, delete, get, post, put, web};
 use rauthy_api_types::groups::GroupRequest;
 use rauthy_error::ErrorResponse;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::groups::Group;
 use validator::Validate;
 
@@ -53,9 +54,13 @@ pub async fn post_group(
     principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Create)?;
     payload.validate()?;
 
-    Group::create(payload)
-        .await
-        .map(|r| HttpResponse::Ok().json(r))
+    let group = Group::create(payload).await?;
+
+    for client in ClientScim::find_all().await? {
+        client.create_update_group(group.clone()).await?;
+    }
+
+    Ok(HttpResponse::Ok().json(group))
 }
 
 /// Modifies a groups name
@@ -82,9 +87,13 @@ pub async fn put_group(
     principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Update)?;
     payload.validate()?;
 
-    Group::update(id.into_inner(), payload.group)
-        .await
-        .map(|g| HttpResponse::Ok().json(g))
+    let group = Group::update(id.into_inner(), payload.group).await?;
+
+    for client in ClientScim::find_all().await? {
+        client.create_update_group(group.clone()).await?;
+    }
+
+    Ok(HttpResponse::Ok().json(group))
 }
 
 /// Deletes a group
@@ -110,7 +119,17 @@ pub async fn delete_group(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Delete)?;
 
-    Group::delete(id.into_inner())
-        .await
-        .map(|_| HttpResponse::Ok().finish())
+    let gid = id.into_inner();
+
+    let clients = ClientScim::find_all().await?;
+    if !clients.is_empty() {
+        let group = Group::find(gid.clone()).await?;
+        for client in clients {
+            client.delete_group(group.clone(), None).await?;
+        }
+    }
+
+    Group::delete(gid).await?;
+
+    Ok(HttpResponse::Ok().finish())
 }

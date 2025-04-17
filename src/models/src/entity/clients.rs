@@ -2,6 +2,7 @@ use crate::ListenScheme;
 use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::clients_dyn::ClientDyn;
+use crate::entity::clients_scim::ClientScim;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
@@ -14,7 +15,7 @@ use deadpool_postgres::GenericClient;
 use hiqlite::{Param, Params, params};
 use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
-    NewClientRequest,
+    NewClientRequest, ScimClientRequestResponse,
 };
 use rauthy_common::constants::{
     ADDITIONAL_ALLOWED_ORIGIN_SCHEMES, ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_TTL_APP,
@@ -1315,44 +1316,50 @@ impl Client {
     }
 }
 
-impl From<Client> for ClientResponse {
-    fn from(client: Client) -> Self {
-        let redirect_uris = client.get_redirect_uris();
-        let post_logout_redirect_uris = client.get_post_logout_uris();
-        let allowed_origins = client.get_allowed_origins();
-        let flows_enabled = client.get_flows();
-        let scopes = client.get_scopes();
-        let default_scopes = client.get_default_scopes();
-        let challenges = client.get_challenges();
-        let contacts = client.get_contacts();
+impl Client {
+    pub fn into_response(self, scim: Option<ClientScim>) -> ClientResponse {
+        let redirect_uris = self.get_redirect_uris();
+        let post_logout_redirect_uris = self.get_post_logout_uris();
+        let allowed_origins = self.get_allowed_origins();
+        let flows_enabled = self.get_flows();
+        let scopes = self.get_scopes();
+        let default_scopes = self.get_default_scopes();
+        let challenges = self.get_challenges();
+        let contacts = self.get_contacts();
 
-        let access_token_alg = JwkKeyPairAlg::from_str(&client.access_token_alg)
+        let access_token_alg = JwkKeyPairAlg::from_str(&self.access_token_alg)
             .expect("internal JwkKeyPairAlg conversion to always succeed")
             .into();
-        let id_token_alg = JwkKeyPairAlg::from_str(&client.id_token_alg)
+        let id_token_alg = JwkKeyPairAlg::from_str(&self.id_token_alg)
             .expect("internal JwkKeyPairAlg conversion to always succeed")
             .into();
 
-        Self {
-            id: client.id,
-            name: client.name,
-            enabled: client.enabled,
-            confidential: client.confidential,
+        ClientResponse {
+            id: self.id,
+            name: self.name,
+            enabled: self.enabled,
+            confidential: self.confidential,
             redirect_uris,
             post_logout_redirect_uris,
             allowed_origins,
             flows_enabled,
             access_token_alg,
             id_token_alg,
-            auth_code_lifetime: client.auth_code_lifetime,
-            access_token_lifetime: client.access_token_lifetime,
+            auth_code_lifetime: self.auth_code_lifetime,
+            access_token_lifetime: self.access_token_lifetime,
             scopes,
             default_scopes,
             challenges,
-            force_mfa: client.force_mfa,
-            client_uri: client.client_uri,
+            force_mfa: self.force_mfa,
+            client_uri: self.client_uri,
             contacts,
-            backchannel_logout_uri: client.backchannel_logout_uri,
+            backchannel_logout_uri: self.backchannel_logout_uri,
+            scim: scim.map(|scim| ScimClientRequestResponse {
+                bearer_token: scim.bearer_token,
+                base_uri: scim.base_uri,
+                sync_groups: scim.sync_groups,
+                group_sync_prefix: scim.group_sync_prefix,
+            }),
         }
     }
 }

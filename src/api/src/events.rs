@@ -9,6 +9,7 @@ use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_models::entity::failed_scim_tasks::ScimAction;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::listener::EventRouterMsg;
 use std::time::Duration;
@@ -162,6 +163,9 @@ pub async fn post_event_test(
             .send(&data.tx_events)
             .await?;
         Event::rauthy_unhealthy_db().send(&data.tx_events).await?;
+        Event::scim_task_failed("dummy_client", &ScimAction::GroupsSync, 3)
+            .send(&data.tx_events)
+            .await?;
         Event::secrets_migrated(ip).send(&data.tx_events).await?;
         Event::test(ip).send(&data.tx_events).await?;
 

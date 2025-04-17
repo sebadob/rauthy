@@ -51,6 +51,24 @@ export let I18nAdminKo: I18nAdmin = {
         forceMfa: "강제 MFA",
         generateSecret: "새 Secret 생성",
         name: "클라이언트 이름",
+        scim: {
+            baseUri: `The SCIM base URI is the one from which the sub routes like 
+                <code>{base_uri}/Users/{id}</base_uri></code> can be derived correctly.`,
+            desc: "If this client supports {{ SCIM_LINK }}, you can activate it here.",
+            enable: "Enable SCIMv2",
+            groupSync: "Synchronize Groups",
+            groupSyncPrefix: "Groups Filter Prefix",
+            groupSyncPrefixDesc: `You can filter the groups for the synchronization by an optional prefix.
+                For instance, if the groups <code>app:admins</code> and <code>app:users</code> exist, the prefix
+                 <code>app:</code> would only sync these groups, as well as only those users that are linked to at least
+                 one of these groups.`,
+            reqDesc: "A few things are required for compatibility:",
+            reqLi1: "The client must handle <code>externalId</code> correctly.",
+            reqLi2: `At least <code>/Users</code> endpoints with <code>filter=externalId eq "*"</code> and
+                <code>filter=userName eq "*"</code> must be supported.`,
+            reqLi3: `If groups should be synchronized, <code>/Groups</code> must also support 
+                <code>filter=displayName eq "*"</code>.`,
+        },
         scopes: {
             allowed: "허용된 범위",
             default: "기본 범위",

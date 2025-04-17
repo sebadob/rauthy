@@ -1,7 +1,7 @@
 use crate::cust_validation::*;
 use crate::oidc::JwkKeyPairAlg;
 use rauthy_common::constants::{
-    RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_LOWERCASE, RE_SCOPE_SPACE,
+    RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_GROUPS, RE_LOWERCASE, RE_SCOPE_SPACE,
     RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
 };
 use serde::{Deserialize, Serialize};
@@ -188,6 +188,22 @@ pub struct UpdateClientRequest {
     pub contacts: Option<Vec<String>>,
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub backchannel_logout_uri: Option<String>,
+    #[validate(nested)]
+    pub scim: Option<ScimClientRequestResponse>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema, Validate)]
+pub struct ScimClientRequestResponse {
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub bearer_token: String,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub base_uri: String,
+    pub sync_groups: bool,
+    /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
+    #[validate(regex(path = "*RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
+    pub group_sync_prefix: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -218,6 +234,8 @@ pub struct ClientResponse {
     pub contacts: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub backchannel_logout_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scim: Option<ScimClientRequestResponse>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]

@@ -21,7 +21,7 @@ pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
 
         (
             format!(
-                "{issuer}/oidc/callback,http://localhost:5173/*,https://{}:5173/*",
+                "{issuer}/oidc/callback,http://localhost:5173/auth/v1/oidc/callback,https://{}:5173/auth/v1/oidc/callback",
                 ip
             ),
             Some(origin),
@@ -33,13 +33,13 @@ pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
     // we will actually skip non-mandatory values in the query below
     let rauthy = Client {
         id: "rauthy".to_string(),
-        name: None,
+        name: Some("Rauthy".to_string()),
         enabled: true,
         confidential: false,
         secret: None,
         secret_kid: None,
-        redirect_uris: redirect_uris.clone(),
-        post_logout_redirect_uris: Some(redirect_uris),
+        redirect_uris,
+        post_logout_redirect_uris: None,
         allowed_origins,
         flows_enabled: "authorization_code".to_string(),
         access_token_alg: "EdDSA".to_string(),
@@ -58,7 +58,7 @@ pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
 
     // we are using a txn h ere to be able to re-use the already written update queries for the client
     if is_hiqlite() {
-        let mut txn = Vec::new();
+        let mut txn = Vec::with_capacity(1);
         rauthy.save_txn_append(&mut txn);
         DB::hql().txn(txn).await?;
     } else {

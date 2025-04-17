@@ -29,6 +29,7 @@ pub enum EventType {
     UserPasswordReset,
     Test,
     BackchannelLogoutFailed,
+    ScimTaskFailed,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
