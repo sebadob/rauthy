@@ -1,7 +1,9 @@
 use actix_web::web;
 use chrono::Utc;
+use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
+use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
@@ -38,75 +40,66 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
         }
 
         debug!("Running user_expiry_checker scheduler");
+        if let Err(err) = execute(&data, cleanup_after_secs).await {
+            error!("Error during user_expiry_checker: {}", err.message);
+        }
+    }
+}
 
-        match User::find_expired().await {
-            Ok(users) => {
-                let now = Utc::now().timestamp();
+async fn execute(
+    data: &web::Data<AppState>,
+    cleanup_after_secs: Option<u64>,
+) -> Result<(), ErrorResponse> {
+    let users = User::find_expired().await?;
+    if users.is_empty() {
+        return Ok(());
+    }
 
-                for user in users {
-                    debug!("Found expired user {}: {}", user.id, user.email);
+    let now = Utc::now().timestamp();
 
-                    let exp_ts = if let Some(ts) = user.user_expires {
-                        if now < ts {
-                            error!(
-                                "Got not yet expired user in user_expiry_checker - this should never happen"
-                            );
-                            continue;
-                        }
-                        ts
-                    } else {
-                        error!(
-                            "Got non-expiring user in user_expiry_checker - this should never happen"
-                        );
-                        continue;
-                    };
+    for mut user in users {
+        debug!("Found expired user {}: {}", user.id, user.email);
 
-                    if let Err(err) = Session::invalidate_for_user(&user.id).await {
-                        error!(
-                            "Error invalidating sessions for user {}: {:?}",
-                            user.id, err
-                        );
-                    }
+        let exp_ts = if let Some(ts) = user.user_expires {
+            if now < ts {
+                error!(
+                    "Got not yet expired user in user_expiry_checker - this should never happen"
+                );
+                continue;
+            }
+            ts
+        } else {
+            error!("Got non-expiring user in user_expiry_checker - this should never happen");
+            continue;
+        };
 
-                    if let Err(err) = RefreshToken::invalidate_for_user(&user.id).await {
-                        error!(
-                            "Error invalidating refresh tokens for user {}: {:?}",
-                            user.id, err
-                        );
-                    }
+        user.enabled = false;
+        user.save(None).await?;
 
-                    if let Err(err) =
-                        logout::execute_backchannel_logout(&data, None, Some(user.id.clone())).await
-                    {
-                        error!(
-                            "Error during backchannel logout because of user {} expiry: {:?}",
-                            user.id, err
-                        );
-                    }
+        Session::invalidate_for_user(&user.id).await?;
+        RefreshToken::invalidate_for_user(&user.id).await?;
+        logout::execute_backchannel_logout(data, None, Some(user.id.clone())).await?;
 
-                    // possibly auto-cleanup expired user
-                    if let Some(secs) = cleanup_after_secs {
-                        let expired_since_secs = (exp_ts - now).unsigned_abs();
-                        if expired_since_secs > secs {
-                            info!(
-                                "Auto cleanup for user {} after being expired for {} minutes",
-                                user.id,
-                                expired_since_secs / 60
-                            );
-                            if let Err(err) = user.delete().await {
-                                error!(
-                                    "Error during auto cleanup - deleting user {}: {:?}",
-                                    user.id, err
-                                );
-                            }
-                        }
-                    }
+        // possibly auto-cleanup expired user
+        if let Some(secs) = cleanup_after_secs {
+            let expired_since_secs = (exp_ts - now).unsigned_abs();
+            if expired_since_secs > secs {
+                info!(
+                    "Auto cleanup for user {} after being expired for {} minutes",
+                    user.id,
+                    expired_since_secs / 60
+                );
+                if let Err(err) = user.delete().await {
+                    error!(
+                        "Error during auto cleanup - deleting user {}: {:?}",
+                        user.id, err
+                    );
                 }
             }
+        }
 
-            Err(err) => {
-                error!("user_expiry_checker error: {}", err.message);
-            }
-        };
+        ClientScim::create_update_user(user).await?;
     }
+
+    Ok(())
 }
