@@ -3,7 +3,6 @@ use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use std::collections::HashMap;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -331,57 +330,65 @@ pub struct ScimError {
     pub status: u16,
 }
 
-#[derive(Serialize, Debug)]
-pub struct ScimPatchOp {
-    /// `urn:ietf:params:scim:api:messages:2.0:PatchOp`
-    pub schemas: Vec<Cow<'static, str>>,
-    #[serde(rename = "Operations")]
-    pub operations: Vec<ScimPatchOperations>,
-}
+// Note:
+// The Patch Operations are correctly typed, but out-commented on purpose for now.
+// As a SCIM client with the current implementation, we will always use 3 different,
+// static JSONs that are known in advance and only differ in at most 2 values.
+// It is much more efficient to build up these JSONs as Strings manually.
+// This is a bit ugly, but reduces the number of memory allocation by at least 75%
+// per loop iteration.
 
-impl Default for ScimPatchOp {
-    fn default() -> Self {
-        Self {
-            schemas: vec!["urn:ietf:params:scim:api:messages:2.0:PatchOp".into()],
-            operations: Vec::default(),
-        }
-    }
-}
-
-#[derive(Serialize, Debug)]
-pub struct ScimPatchOpWithPath {
-    /// `urn:ietf:params:scim:api:messages:2.0:PatchOp`
-    pub schemas: Vec<Cow<'static, str>>,
-    #[serde(rename = "Operations")]
-    pub operations: Vec<ScimPatchOperationsWithPath>,
-}
-
-impl Default for ScimPatchOpWithPath {
-    fn default() -> Self {
-        Self {
-            schemas: vec!["urn:ietf:params:scim:api:messages:2.0:PatchOp".into()],
-            operations: Vec::default(),
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ScimOp {
-    Add,
-    Remove,
-    Replace,
-}
-
-#[derive(Serialize, Debug)]
-pub struct ScimPatchOperations {
-    pub op: ScimOp,
-    pub value: HashMap<Cow<'static, str>, serde_json::Value>,
-}
-
-#[derive(Serialize, Debug)]
-pub struct ScimPatchOperationsWithPath {
-    pub op: ScimOp,
-    pub path: Cow<'static, str>,
-    pub value: Vec<HashMap<Cow<'static, str>, serde_json::Value>>,
-}
+// #[derive(Serialize, Debug)]
+// pub struct ScimPatchOp {
+//     /// `urn:ietf:params:scim:api:messages:2.0:PatchOp`
+//     pub schemas: Vec<Cow<'static, str>>,
+//     #[serde(rename = "Operations")]
+//     pub operations: Vec<ScimPatchOperations>,
+// }
+//
+// impl Default for ScimPatchOp {
+//     fn default() -> Self {
+//         Self {
+//             schemas: vec!["urn:ietf:params:scim:api:messages:2.0:PatchOp".into()],
+//             operations: Vec::default(),
+//         }
+//     }
+// }
+//
+// #[derive(Serialize, Debug)]
+// pub struct ScimPatchOpWithPath {
+//     /// `urn:ietf:params:scim:api:messages:2.0:PatchOp`
+//     pub schemas: Vec<Cow<'static, str>>,
+//     #[serde(rename = "Operations")]
+//     pub operations: Vec<ScimPatchOperationsWithPath>,
+// }
+//
+// impl Default for ScimPatchOpWithPath {
+//     fn default() -> Self {
+//         Self {
+//             schemas: vec!["urn:ietf:params:scim:api:messages:2.0:PatchOp".into()],
+//             operations: Vec::default(),
+//         }
+//     }
+// }
+//
+// #[derive(Debug, Serialize)]
+// #[serde(rename_all = "lowercase")]
+// pub enum ScimOp {
+//     Add,
+//     Remove,
+//     Replace,
+// }
+//
+// #[derive(Serialize, Debug)]
+// pub struct ScimPatchOperations {
+//     pub op: ScimOp,
+//     pub value: HashMap<Cow<'static, str>, serde_json::Value>,
+// }
+//
+// #[derive(Serialize, Debug)]
+// pub struct ScimPatchOperationsWithPath {
+//     pub op: ScimOp,
+//     pub path: Cow<'static, str>,
+//     pub value: Vec<HashMap<Cow<'static, str>, serde_json::Value>>,
+// }
