@@ -23,7 +23,7 @@ pub async fn spawn(data: web::Data<AppState>) {
     info!("Starting schedulers");
 
     tokio::spawn(backchannel_logout::backchannel_logout_retry(data.clone()));
-    tokio::spawn(scim_tasks::scim_task_retry());
+    tokio::spawn(scim_tasks::scim_task_retry(data.clone()));
     tokio::spawn(dyn_clients::dyn_client_cleanup());
     tokio::spawn(events::events_cleanup());
     tokio::spawn(devices::devices_cleanup());

@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::entity::failed_scim_tasks::ScimAction;
 use crate::events::{
     EVENT_LEVEL_FAILED_LOGIN, EVENT_LEVEL_FAILED_LOGINS_7, EVENT_LEVEL_FAILED_LOGINS_10,
     EVENT_LEVEL_FAILED_LOGINS_15, EVENT_LEVEL_FAILED_LOGINS_20, EVENT_LEVEL_FAILED_LOGINS_25,
@@ -164,6 +165,7 @@ pub enum EventType {
     UserPasswordReset,
     Test,
     BackchannelLogoutFailed,
+    ScimTaskFailed,
 }
 
 impl Default for EventType {
@@ -192,6 +194,7 @@ impl Display for EventType {
             Self::UserPasswordReset => write!(f, "User has reset its password"),
             Self::Test => write!(f, "TEST"),
             Self::BackchannelLogoutFailed => write!(f, "Backchannel logout failed"),
+            Self::ScimTaskFailed => write!(f, "SCIM task failed"),
         }
     }
 }
@@ -217,6 +220,7 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             rauthy_api_types::events::EventType::BackchannelLogoutFailed => {
                 Self::BackchannelLogoutFailed
             }
+            rauthy_api_types::events::EventType::ScimTaskFailed => Self::ScimTaskFailed,
         }
     }
 }
@@ -240,6 +244,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::UserPasswordReset => Self::UserPasswordReset,
             EventType::Test => Self::Test,
             EventType::BackchannelLogoutFailed => Self::BackchannelLogoutFailed,
+            EventType::ScimTaskFailed => Self::ScimTaskFailed,
         }
     }
 }
@@ -263,6 +268,7 @@ impl EventType {
             Self::UserPasswordReset => "UserPasswordReset",
             Self::Test => "TEST",
             Self::BackchannelLogoutFailed => "BackchannelLogoutFailed",
+            Self::ScimTaskFailed => "ScimTaskFailed",
         }
     }
 
@@ -287,6 +293,7 @@ impl EventType {
             EventType::UserPasswordReset => 13,
             EventType::Test => 14,
             EventType::BackchannelLogoutFailed => 15,
+            EventType::ScimTaskFailed => 16,
         }
     }
 }
@@ -310,6 +317,7 @@ impl From<String> for EventType {
             "UserPasswordReset" => Self::UserPasswordReset,
             "TEST" => Self::Test,
             "BackchannelLogoutFailed" => Self::BackchannelLogoutFailed,
+            "ScimTaskFailed" => Self::ScimTaskFailed,
             // just return test to never panic
             _ => Self::Test,
         }
@@ -341,6 +349,7 @@ impl From<i64> for EventType {
             13 => EventType::UserPasswordReset,
             14 => EventType::Test,
             15 => EventType::BackchannelLogoutFailed,
+            16 => EventType::ScimTaskFailed,
             _ => EventType::Test,
         }
     }
@@ -442,6 +451,11 @@ impl From<&Event> for Notification {
             EventType::Test => value.text.clone(),
             EventType::BackchannelLogoutFailed => Some(format!(
                 "Backchannel logout retries ({}) exceeded for: {}",
+                value.data.unwrap_or_default(),
+                value.text.as_deref().unwrap_or_default()
+            )),
+            EventType::ScimTaskFailed => Some(format!(
+                "SCIM task retries ({}) exceeded for: {}",
                 value.data.unwrap_or_default(),
                 value.text.as_deref().unwrap_or_default()
             )),
@@ -746,6 +760,16 @@ impl Event {
         )
     }
 
+    pub fn scim_task_failed(client_id: &str, action: &ScimAction, retries: i64) -> Self {
+        Self::new(
+            EventLevel::Critical,
+            EventType::BackchannelLogoutFailed,
+            None,
+            Some(retries),
+            Some(format!("{} / {:?}", client_id, action)),
+        )
+    }
+
     pub fn secrets_migrated(ip: IpAddr) -> Self {
         Self::new(
             EVENT_LEVEL_SECRETS_MIGRATED.get().cloned().unwrap(),
@@ -829,6 +853,13 @@ impl Event {
             EventType::BackchannelLogoutFailed => {
                 format!(
                     "Backchannel logout retries ({}) exceeded for: {}",
+                    self.data.unwrap_or_default(),
+                    self.text.as_deref().unwrap_or_default()
+                )
+            }
+            EventType::ScimTaskFailed => {
+                format!(
+                    "SCIM task retries ({}) exceeded for: {}",
                     self.data.unwrap_or_default(),
                     self.text.as_deref().unwrap_or_default()
                 )

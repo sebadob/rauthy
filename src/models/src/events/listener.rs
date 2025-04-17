@@ -187,6 +187,7 @@ impl EventListener {
                         EventType::UserPasswordReset => {}
                         EventType::Test => {}
                         EventType::BackchannelLogoutFailed => {}
+                        EventType::ScimTaskFailed => {}
                     }
 
                     // pre-compute the payload

@@ -1,16 +1,19 @@
+use actix_web::web;
 use rand::Rng;
 use rauthy_error::ErrorResponse;
+use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use rauthy_models::entity::groups::Group;
 use rauthy_models::entity::users::User;
+use rauthy_models::events::event::Event;
 use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 use tokio::time;
 use tracing::{error, info, warn};
 
-pub async fn scim_task_retry() {
+pub async fn scim_task_retry(data: web::Data<AppState>) {
     let retry_count = env::var("SCIM_RETRY_COUNT")
         .as_deref()
         .unwrap_or("100")
@@ -23,13 +26,13 @@ pub async fn scim_task_retry() {
         let millis = rand::thread_rng().gen_range(60_000..90_000);
         time::sleep(Duration::from_millis(millis)).await;
 
-        if let Err(err) = execute(retry_count).await {
+        if let Err(err) = execute(&data, retry_count).await {
             error!("Error during scim_task_retry: {}", err.message);
         }
     }
 }
 
-async fn execute(retry_count: u16) -> Result<(), ErrorResponse> {
+async fn execute(data: &web::Data<AppState>, retry_count: u16) -> Result<(), ErrorResponse> {
     let failures = FailedScimTask::find_all().await?;
     if failures.is_empty() {
         return Ok(());
@@ -43,13 +46,9 @@ async fn execute(retry_count: u16) -> Result<(), ErrorResponse> {
         if failure.retry_count >= retry_count as i64 {
             warn!("Retry count exceeded for scim task {:?}", failure);
 
-            // Event::backchannel_logout_failed(
-            //     &failure.client_id,
-            //     &failure.sub,
-            //     failure.retry_count as i64,
-            // )
-            // .send(&data.tx_events)
-            // .await?;
+            Event::scim_task_failed(&failure.client_id, &failure.action, failure.retry_count)
+                .send(&data.tx_events)
+                .await?;
 
             failure.delete().await?;
             continue;

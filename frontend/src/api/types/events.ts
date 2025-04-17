@@ -14,7 +14,8 @@ export type EventType = 'InvalidLogins'
     | 'UserEmailChange'
     | 'UserPasswordReset'
     | 'Test'
-    | 'BackchannelLogoutFailed';
+    | 'BackchannelLogoutFailed'
+    | 'ScimTaskFailed';
 
 export interface EventsRequest {
     /// Unix timestamp in seconds
