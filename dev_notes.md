@@ -8,6 +8,7 @@
 ### SCIM
 
 - impl retry scheduler for failed tasks, just like for backchannel logout
+- update SCIM users on scheduled disable
 
 ## Stage 1 - essentials
 

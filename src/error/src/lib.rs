@@ -26,6 +26,7 @@ pub enum ErrorResponseType {
     NotFound,
     PasswordExpired,
     PasswordRefresh,
+    Scim,
     SessionExpired,
     SessionTimeout,
     TooManyRequests(i64),

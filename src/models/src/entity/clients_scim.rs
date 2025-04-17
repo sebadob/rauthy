@@ -24,13 +24,15 @@ use tracing::{debug, error, info};
 
 static SCIM_SYNC_DELETE_GROUPS: LazyLock<bool> = LazyLock::new(|| {
     env::var("SCIM_SYNC_DELETE_GROUPS")
-        .unwrap_or_else(|_| "false".to_string())
+        .as_deref()
+        .unwrap_or("false")
         .parse::<bool>()
         .expect("Cannot parse SCIM_SYNC_DELETE_GROUPS as bool")
 });
 static SCIM_SYNC_DELETE_USERS: LazyLock<bool> = LazyLock::new(|| {
     env::var("SCIM_SYNC_DELETE_USERS")
-        .unwrap_or_else(|_| "false".to_string())
+        .as_deref()
+        .unwrap_or("false")
         .parse::<bool>()
         .expect("Cannot parse SCIM_SYNC_DELETE_USERS as bool")
 });
@@ -245,7 +247,7 @@ impl ClientScim {
                 )
                 .await?;
 
-                Err(ErrorResponse::new(ErrorResponseType::Connection, err))
+                Err(ErrorResponse::new(ErrorResponseType::Scim, err))
             }
         }
     }
@@ -266,7 +268,7 @@ impl ClientScim {
             if !res.status().is_success() {
                 let err = res.json::<ScimError>().await?;
                 return Err(ErrorResponse::new(
-                    ErrorResponseType::Connection,
+                    ErrorResponseType::Scim,
                     format!("SCIM GET /Groups errior: {:?}", err),
                 ));
             }
@@ -282,7 +284,7 @@ impl ClientScim {
                 match res {
                     ScimResource::User(_) => {
                         return Err(ErrorResponse::new(
-                            ErrorResponseType::Connection,
+                            ErrorResponseType::Scim,
                             format!(
                                 "SCIM Client {} returned a User when Group was requested",
                                 self.client_id
@@ -397,7 +399,7 @@ impl ClientScim {
                 let res = lr.resources.swap_remove(0);
                 match res {
                     ScimResource::User(_) => Err(ErrorResponse::new(
-                        ErrorResponseType::Connection,
+                        ErrorResponseType::Scim,
                         format!(
                             "Received a User from SCIM client {} when expected a Group",
                             self.client_id
@@ -407,7 +409,7 @@ impl ClientScim {
                         if let Some(ext_id) = &remote.external_id {
                             if ext_id != &group.id {
                                 return Err(ErrorResponse::new(
-                                    ErrorResponseType::Connection,
+                                    ErrorResponseType::Scim,
                                     format!(
                                         "Error for SCIM client {} with group {}: Group has an external ID which does not match ours",
                                         self.client_id, group.name
@@ -423,7 +425,7 @@ impl ClientScim {
             let err = res.json::<ScimError>().await?;
             error!("{:?}", err);
             Err(ErrorResponse::new(
-                ErrorResponseType::Connection,
+                ErrorResponseType::Scim,
                 format!(
                     "Error getting group from SCIM client {}: {:?}",
                     self.client_id, err
@@ -515,7 +517,7 @@ impl ClientScim {
                 Ok(Some(remote))
             } else {
                 Err(ErrorResponse::new(
-                    ErrorResponseType::Connection,
+                    ErrorResponseType::Scim,
                     format!(
                         "SCIM client {} has not respected our group id",
                         self.client_id
@@ -525,7 +527,7 @@ impl ClientScim {
         } else {
             let err = res.json::<ScimError>().await?;
             Err(ErrorResponse::new(
-                ErrorResponseType::Connection,
+                ErrorResponseType::Scim,
                 format!(
                     "SCIM client {} group creation failed: {:?}",
                     self.client_id, err
@@ -548,7 +550,7 @@ impl ClientScim {
             id
         } else {
             return Err(ErrorResponse::new(
-                ErrorResponseType::Internal,
+                ErrorResponseType::Scim,
                 "Remote SCIM group without an ID",
             ));
         };
@@ -590,7 +592,7 @@ impl ClientScim {
         } else {
             let err = res.json::<ScimError>().await?;
             Err(ErrorResponse::new(
-                ErrorResponseType::Connection,
+                ErrorResponseType::Scim,
                 format!(
                     "SCIM client {} group update failed: {:?}",
                     self.client_id, err
@@ -642,7 +644,7 @@ impl ClientScim {
             id
         } else {
             return Err(ErrorResponse::new(
-                ErrorResponseType::Internal,
+                ErrorResponseType::Scim,
                 "Remote SCIM group without an ID",
             ));
         };
@@ -658,7 +660,7 @@ impl ClientScim {
         } else {
             let err = res.json::<ScimError>().await?;
             Err(ErrorResponse::new(
-                ErrorResponseType::Connection,
+                ErrorResponseType::Scim,
                 format!(
                     "Error deleting group on SCIM client {}: {:?}",
                     self.client_id, err
@@ -720,13 +722,13 @@ impl ClientScim {
                                     self.client_id, user_email
                                 );
                                 error!("{}", err);
-                                return Err(ErrorResponse::new(ErrorResponseType::Connection, err));
+                                return Err(ErrorResponse::new(ErrorResponseType::Scim, err));
                             }
                         }
                         Ok(Some(*remote))
                     }
                     ScimResource::Group(_) => Err(ErrorResponse::new(
-                        ErrorResponseType::Connection,
+                        ErrorResponseType::Scim,
                         format!(
                             "Received a Group from SCIM client {} when expected a User",
                             self.client_id
@@ -738,7 +740,7 @@ impl ClientScim {
             let err = res.json::<ScimError>().await?;
             error!("{:?}", err);
             Err(ErrorResponse::new(
-                ErrorResponseType::Connection,
+                ErrorResponseType::Scim,
                 format!(
                     "Error getting user from SCIM client {}: {:?}",
                     self.client_id, err
@@ -772,7 +774,7 @@ impl ClientScim {
                 )
                 .await?;
 
-                Err(ErrorResponse::new(ErrorResponseType::Connection, err))
+                Err(ErrorResponse::new(ErrorResponseType::Scim, err))
             }
         }
     }
@@ -999,7 +1001,7 @@ impl ClientScim {
             let err = res.json::<ScimError>().await?;
             error!("{:?}", err);
             Err(ErrorResponse::new(
-                ErrorResponseType::Connection,
+                ErrorResponseType::Scim,
                 format!(
                     "Error creating user with SCIM client {}: {:?}",
                     self.client_id, err
@@ -1055,7 +1057,7 @@ impl ClientScim {
         } else {
             let err = res.json::<ScimError>().await?;
             Err(ErrorResponse::new(
-                ErrorResponseType::Connection,
+                ErrorResponseType::Scim,
                 format!(
                     "Error updating user with SCIM client {}: {:?}",
                     self.client_id, err
@@ -1092,7 +1094,7 @@ impl ClientScim {
             id
         } else {
             return Err(ErrorResponse::new(
-                ErrorResponseType::Internal,
+                ErrorResponseType::Scim,
                 "Remote SCIM user without an ID",
             ));
         };
@@ -1108,7 +1110,7 @@ impl ClientScim {
         } else {
             let err = res.json::<ScimError>().await?;
             Err(ErrorResponse::new(
-                ErrorResponseType::Connection,
+                ErrorResponseType::Scim,
                 format!(
                     "Error deleting user on SCIM client {}: {:?}",
                     self.client_id, err
@@ -1135,7 +1137,7 @@ impl ClientScim {
         let user_id_remote = match user_remote.id.clone() {
             None => {
                 return Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
+                    ErrorResponseType::Scim,
                     format!("empty remote user id for SCIM user {:?}", user_remote),
                 ));
             }
