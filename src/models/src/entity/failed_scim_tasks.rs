@@ -118,8 +118,7 @@ DO UPDATE SET retry_count = retry_count + 1"#;
     }
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        let sql =
-            "DELETE FROM failed_scim_tasks WHERE client_id = $1 AND action = $2 AND resource = $3";
+        let sql = "DELETE FROM failed_scim_tasks WHERE client_id = $1 AND action = $2";
         let action = self.action.to_string();
 
         if is_hiqlite() {

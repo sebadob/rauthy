@@ -833,7 +833,7 @@ impl ClientScim {
 
             if is_prefix_match {
                 let client = Client::find(client_scim.client_id.clone()).await?;
-                client_scim
+                if let Err(err) = client_scim
                     .create_update_user_exec(
                         user.clone(),
                         &client,
@@ -843,7 +843,18 @@ impl ClientScim {
                         &mut groups_remote,
                         !is_prefix_match,
                     )
+                    .await
+                {
+                    error!(
+                        "Error during update user {} for SCIM client {}: {:?}",
+                        user.id, client_scim.client_id, err
+                    );
+                    FailedScimTask::upsert(
+                        &ScimAction::UserCreateUpdate(user.id.clone()),
+                        &client_scim.client_id,
+                    )
                     .await?;
+                }
             } else if *SCIM_SYNC_DELETE_USERS {
                 client_scim.delete_user(&user).await?;
             }
@@ -867,9 +878,7 @@ impl ClientScim {
         let scopes = format!("{},{}", client.scopes, client.default_scopes);
         let expected_groups = user.get_groups();
 
-        let user_id = user.id.clone();
         let payload = ScimUser::from_user_values(user, user_values, &scopes);
-
         match self
             .get_user(
                 payload.external_id.as_ref().unwrap(),
@@ -879,37 +888,19 @@ impl ClientScim {
             .await?
         {
             None => {
-                if let Err(err) = self
-                    .create_user(expected_groups, payload, groups_local, groups_remote)
-                    .await
-                {
-                    error!(
-                        "Error during create user {} for SCIM client {}: {:?}",
-                        user_id, self.client_id, err
-                    );
-                    FailedScimTask::upsert(&ScimAction::UserCreateUpdate(user_id), &self.client_id)
-                        .await?;
-                }
+                self.create_user(expected_groups, payload, groups_local, groups_remote)
+                    .await?;
             }
             Some(user_remote) => {
-                if let Err(err) = self
-                    .update_user(
-                        expected_groups,
-                        payload,
-                        user_remote,
-                        groups_local,
-                        groups_remote,
-                        unlink_ext_id,
-                    )
-                    .await
-                {
-                    error!(
-                        "Error during update user {} for SCIM client {}: {:?}",
-                        user_id, self.client_id, err
-                    );
-                    FailedScimTask::upsert(&ScimAction::UserCreateUpdate(user_id), &self.client_id)
-                        .await?;
-                }
+                self.update_user(
+                    expected_groups,
+                    payload,
+                    user_remote,
+                    groups_local,
+                    groups_remote,
+                    unlink_ext_id,
+                )
+                .await?;
             }
         }
 

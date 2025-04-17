@@ -56,13 +56,15 @@ use validator::Validate;
 
 pub static PICTURE_PUBLIC: LazyLock<bool> = LazyLock::new(|| {
     env::var("PICTURE_PUBLIC")
-        .unwrap_or_else(|_| "false".to_string())
+        .as_deref()
+        .unwrap_or("false")
         .parse::<bool>()
         .expect("Cannot parse PICTURE_PUBLIC as bool")
 });
 pub static PICTURE_UPLOAD_LIMIT_MB: LazyLock<u16> = LazyLock::new(|| {
     env::var("PICTURE_UPLOAD_LIMIT_MB")
-        .unwrap_or_else(|_| "10".to_string())
+        .as_deref()
+        .unwrap_or("10")
         .parse::<u16>()
         .expect("Cannot parse PICTURE_UPLOAD_LIMIT_MB as u16")
 });
@@ -584,7 +586,7 @@ pub async fn put_user_picture(
         let email = user.email.clone();
         if let Err(err) = ClientScim::create_update_user(user).await {
             error!(
-                "Error during SCIM Client user create for {}: {:?}",
+                "Error during SCIM Client user update (picture) for {}: {:?}",
                 email, err
             );
         }
@@ -703,7 +705,7 @@ pub async fn delete_user_picture(
         let email = user.email.clone();
         if let Err(err) = ClientScim::create_update_user(user).await {
             error!(
-                "Error during SCIM Client user create for {}: {:?}",
+                "Error during SCIM Client user update (delete picture_id) for {}: {:?}",
                 email, err
             );
         }
@@ -1111,7 +1113,8 @@ pub async fn post_webauthn_auth_finish(
 
     // We do not need to further validate the principal here.
     // All of this is done at the /start endpoint.
-    // This here will simply fail, if the secret code from the /start does not exist.
+    // This here will simply fail, if the secret code from the /start does not exist
+    // -> indirect validation through exising code.
 
     let res = webauthn::auth_finish(&data, id, payload).await?;
     Ok(res.into_response())
@@ -1157,37 +1160,6 @@ pub async fn delete_webauthn(
     }
 
     PasskeyEntity::delete(id, name).await?;
-    // // if we delete a passkey, we must check if this is the last existing one for the user
-    // let pks = PasskeyEntity::find_for_user(&data, &id).await?;
-    //
-    // let mut txn = DB::txn().await?;
-    //
-    // PasskeyEntity::delete_by_id_name(&id, &name, &mut txn).await?;
-    // if pks.len() < 2 {
-    //     let mut user = User::find(&data, id).await?;
-    //     user.webauthn_user_id = None;
-    //
-    //     // in this case, we need to check against the current password policy, if the password
-    //     // should expire again
-    //     let policy = PasswordPolicy::find(&data).await?;
-    //     if let Some(valid_days) = policy.valid_days {
-    //         if user.password.is_some() {
-    //             user.password_expires = Some(
-    //                 OffsetDateTime::now_utc()
-    //                     .add(time::Duration::days(valid_days as i64))
-    //                     .unix_timestamp(),
-    //             );
-    //         } else {
-    //             user.password_expires = None;
-    //         }
-    //     }
-    //
-    //     user.save_txn(&mut txn).await?;
-    //     txn.commit().await?;
-    // } else {
-    //     txn.commit().await?;
-    // }
-    // PasskeyEntity::clear_caches_by_id_name(&id, &name).await?;
 
     // make sure to delete any existing MFA cookie when a key is deleted
     let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
@@ -1526,7 +1498,7 @@ pub async fn put_user_by_id(
         let email = cloned.email.clone();
         if let Err(err) = ClientScim::create_update_user(cloned).await {
             error!(
-                "Error during SCIM Client user create for {}: {:?}",
+                "Error during SCIM Client user update for {}: {:?}",
                 email, err
             );
         }
@@ -1571,7 +1543,7 @@ pub async fn put_user_self(
         let email = cloned.email.clone();
         if let Err(err) = ClientScim::create_update_user(cloned).await {
             error!(
-                "Error during SCIM Client user create for {}: {:?}",
+                "Error during SCIM Client user update (self) for {}: {:?}",
                 email, err
             );
         }
@@ -1639,13 +1611,17 @@ pub async fn delete_user_by_id(
     logout::execute_backchannel_logout(&data, None, Some(user.id.clone())).await?;
     user.delete().await?;
 
+    let clients_scim = ClientScim::find_all().await?;
     task::spawn(async move {
         let email = user.email.clone();
-        if let Err(err) = ClientScim::create_update_user(user).await {
-            error!(
-                "Error during SCIM Client user create for {}: {:?}",
-                email, err
-            );
+
+        for client_scim in clients_scim {
+            if let Err(err) = client_scim.delete_user(&user).await {
+                error!(
+                    "Error during SCIM Client user delete for {}: {:?}",
+                    email, err
+                );
+            }
         }
     });
 

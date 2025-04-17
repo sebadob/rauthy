@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 use tokio::time;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 pub async fn scim_task_retry(data: web::Data<AppState>) {
     let retry_count = env::var("SCIM_RETRY_COUNT")
@@ -23,9 +23,11 @@ pub async fn scim_task_retry(data: web::Data<AppState>) {
     loop {
         // We want to randomize the sleep because this scheduler should run on all cluster members.
         // This increases the chance opf success in case of a network segmentation.
-        let millis = rand::thread_rng().gen_range(60_000..90_000);
+        let millis = rand::thread_rng().gen_range(5_000..10_000);
+        // let millis = rand::thread_rng().gen_range(60_000..90_000);
         time::sleep(Duration::from_millis(millis)).await;
 
+        debug!("Running scim_task_retry scheduler");
         if let Err(err) = execute(&data, retry_count).await {
             error!("Error during scim_task_retry: {}", err.message);
         }
