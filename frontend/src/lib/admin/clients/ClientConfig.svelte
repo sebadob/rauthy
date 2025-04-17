@@ -21,6 +21,7 @@
     import type {SelectItem} from "$lib5/select_list/props.ts";
     import {slide} from "svelte/transition";
     import Options from "$lib5/Options.svelte";
+    import InputPassword from "$lib/form/InputPassword.svelte";
 
     let {
         client = $bindable(),
@@ -466,7 +467,7 @@
                         pattern={PATTERN_URI}
                         required={scimEnabled}
                 />
-                <Input
+                <InputPassword
                         bind:value={scim.bearer_token}
                         autocomplete="off"
                         label="Bearer Token"
