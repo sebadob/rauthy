@@ -2,10 +2,7 @@ use crate::database::DB;
 use crate::entity::clients::Client;
 use crate::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use crate::entity::groups::Group;
-use crate::entity::scim_types::{
-    ScimError, ScimGroup, ScimListResponse, ScimOp, ScimPatchOp, ScimPatchOpWithPath,
-    ScimPatchOperations, ScimPatchOperationsWithPath, ScimResource, ScimUser,
-};
+use crate::entity::scim_types::{ScimError, ScimGroup, ScimListResponse, ScimResource, ScimUser};
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use cryptr::EncValue;
@@ -530,28 +527,51 @@ impl ClientScim {
         };
         let url = format!("{}/Groups/{}", self.base_uri, remote_id);
 
-        let mut value_replace = HashMap::with_capacity(2);
-        if remove_ext_id_link {
-            value_replace.insert("externalId".into(), serde_json::Value::Null);
+        // let mut value_replace = HashMap::with_capacity(2);
+        // if remove_ext_id_link {
+        //     value_replace.insert("externalId".into(), serde_json::Value::Null);
+        // } else {
+        //     value_replace.insert(
+        //         "externalId".into(),
+        //         serde_json::Value::String(group_local.id),
+        //     );
+        // }
+        // value_replace.insert(
+        //     "displayName".into(),
+        //     serde_json::Value::String(group_local.name),
+        // );
+        // let payload = ScimPatchOp {
+        //     operations: vec![ScimPatchOperations {
+        //         op: ScimOp::Replace,
+        //         value: value_replace,
+        //     }],
+        //     ..Default::default()
+        // };
+        //
+        // let json = serde_json::to_string(&payload)?;
+        // debug!(
+        //     "Serialized payload for ScimPatchOp with replace:\n{}\n",
+        //     json
+        // );
+
+        // This manual json building is pretty ugly, but we can avoid quite a few unnecessary
+        // memory allocation if we use the typed builder above.
+        // We are always using the exact same json, so a static upfront string is much more efficient.
+        let json_1 = "{\"schemas\":[\"urn:ietf:params:scim:api:messages:2.0:PatchOp\"],\"Operations\":[{\"op\":\"replace\",\"value\":{\"displayName\":\"";
+        let json_2 = "\",\"externalId\":\"";
+        let json_3 = "\"}}]}";
+        let json_ext_id_null = "\",\"externalId\":null}}]}";
+
+        let json = if remove_ext_id_link {
+            format!("{json_1}{}{json_ext_id_null}", group_local.name)
         } else {
-            value_replace.insert(
-                "externalId".into(),
-                serde_json::Value::String(group_local.id),
-            );
-        }
-        value_replace.insert(
-            "displayName".into(),
-            serde_json::Value::String(group_local.name),
-        );
-        let payload = ScimPatchOp {
-            operations: vec![ScimPatchOperations {
-                op: ScimOp::Replace,
-                value: value_replace,
-            }],
-            ..Default::default()
+            format!(
+                "{json_1}{}{json_2}{}{json_3}",
+                group_local.name,
+                group_local.id.as_str()
+            )
         };
 
-        let json = serde_json::to_string(&payload)?;
         let res = HTTP_CLIENT
             .patch(url)
             .header(AUTHORIZATION, self.auth_header())
@@ -1150,24 +1170,40 @@ impl ClientScim {
                 let url = format!("{}/Groups/{}", self.base_uri, remote_group_id);
 
                 // create the user - group mapping
-                let mut value = HashMap::with_capacity(2);
-                value.insert(
-                    "value".into(),
-                    serde_json::Value::String(user_id_remote.clone()),
-                );
-                value.insert(
-                    "display".into(),
-                    serde_json::Value::String(user_email.clone()),
-                );
-                let payload = ScimPatchOpWithPath {
-                    operations: vec![ScimPatchOperationsWithPath {
-                        op: ScimOp::Add,
-                        path: "members".into(),
-                        value: vec![value],
-                    }],
-                    ..Default::default()
-                };
-                let json = serde_json::to_string(&payload)?;
+                // let mut value = HashMap::with_capacity(2);
+                // value.insert(
+                //     "value".into(),
+                //     serde_json::Value::String(user_id_remote.clone()),
+                // );
+                // value.insert(
+                //     "display".into(),
+                //     serde_json::Value::String(user_email.clone()),
+                // );
+                // let payload = ScimPatchOpWithPath {
+                //     operations: vec![ScimPatchOperationsWithPath {
+                //         op: ScimOp::Add,
+                //         path: "members".into(),
+                //         value: vec![value],
+                //     }],
+                //     ..Default::default()
+                // };
+                // let json = serde_json::to_string(&payload)?;
+                // debug!(
+                //     "Serialized payload for ScimPatchOpWithPath with add:\n{}\n",
+                //     json
+                // );
+
+                //                 let pre = r#"{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                // "Operations":[{"op":"add","path":"members","value":[{"value":"9eb2bd20-c70c-48fb-a0fb-ff1daccfa23f",
+                // "display":"test_admin@localhost.de"}]}]}"#;
+
+                // Same situation as for group patching. This "ugly" way of json creation is a pretty
+                // big efficiency gain, and we avoid many unnecessary allocations, since we have a
+                // static json that is the same each time and we know in advance.
+                let json_1 = "{\"schemas\":[\"urn:ietf:params:scim:api:messages:2.0:PatchOp\"],\"Operations\":[{\"op\":\"add\",\"path\":\"members\",\"value\":[{\"value\":\"";
+                let json_2 = "\",\"display\":\"";
+                let json_3 = "\"}]}]}";
+                let json = format!("{json_1}{}{json_2}{}{json_3}", user_id_remote, user_email);
 
                 let res = HTTP_CLIENT
                     .patch(url)
@@ -1192,20 +1228,31 @@ impl ClientScim {
         // it and remove the mappings.
         debug!("Left-Over user_groups_remote: {:?}", user_groups_remote);
         for group_remote in user_groups_remote {
-            let mut value = HashMap::with_capacity(1);
-            value.insert(
-                "value".into(),
-                serde_json::Value::String(user_id_remote.clone()),
-            );
-            let payload = ScimPatchOpWithPath {
-                operations: vec![ScimPatchOperationsWithPath {
-                    op: ScimOp::Remove,
-                    path: "members".into(),
-                    value: vec![value],
-                }],
-                ..Default::default()
-            };
-            let json = serde_json::to_string(&payload)?;
+            // let mut value = HashMap::with_capacity(1);
+            // value.insert(
+            //     "value".into(),
+            //     serde_json::Value::String(user_id_remote.clone()),
+            // );
+            // let payload = ScimPatchOpWithPath {
+            //     operations: vec![ScimPatchOperationsWithPath {
+            //         op: ScimOp::Remove,
+            //         path: "members".into(),
+            //         value: vec![value],
+            //     }],
+            //     ..Default::default()
+            // };
+            // let json = serde_json::to_string(&payload)?;
+            // debug!(
+            //     "Serialized payload for ScimPatchOpWithPath with remove:\n{}\n",
+            //     json
+            // );
+
+            //             let pre = r#"{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            // "Operations":[{"op":"remove","path":"members","value":[{"value":"9eb2bd20-c70c-48fb-a0fb-ff1daccfa23f"}]}]}"#;
+
+            let json_1 = "{\"schemas\":[\"urn:ietf:params:scim:api:messages:2.0:PatchOp\"],\"Operations\":[{\"op\":\"remove\",\"path\":\"members\",\"value\":[{\"value\":\"";
+            let json_2 = "\"}]}]}";
+            let json = format!("{json_1}{}{json_2}", user_id_remote);
 
             let url = format!("{}/Groups/{}", self.base_uri, group_remote.value);
             let res = HTTP_CLIENT
