@@ -1,6 +1,5 @@
 use crate::database::DB;
 use crate::entity::clients::Client;
-use crate::entity::failed_scim_tasks;
 use crate::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use crate::entity::groups::Group;
 use crate::entity::scim_types::{
@@ -240,12 +239,7 @@ impl ClientScim {
                 let err = format!("Error during sync groups: {}", err);
                 error!("{}", err);
 
-                FailedScimTask::upsert(
-                    &ScimAction::Sync,
-                    &failed_scim_tasks::ScimResource::Groups,
-                    &self.client_id,
-                )
-                .await?;
+                FailedScimTask::upsert(&ScimAction::GroupsSync, &self.client_id).await?;
 
                 Err(ErrorResponse::new(ErrorResponseType::Scim, err))
             }
@@ -452,38 +446,18 @@ impl ClientScim {
                         "Error during create group for SCIM client {}: {:?}",
                         self.client_id, err
                     );
-                    FailedScimTask::upsert(
-                        &ScimAction::Create,
-                        &failed_scim_tasks::ScimResource::Group(gid),
-                        &self.client_id,
-                    )
-                    .await?;
+                    FailedScimTask::upsert(&ScimAction::GroupCreateUpdate(gid), &self.client_id)
+                        .await?;
                 }
             } else if *SCIM_SYNC_DELETE_GROUPS {
-                if let Err(err) = self.delete_group(group, Some(remote)).await {
-                    error!(
-                        "Error during delete group for SCIM client {}: {:?}",
-                        self.client_id, err
-                    );
-                    FailedScimTask::upsert(
-                        &ScimAction::Delete,
-                        &failed_scim_tasks::ScimResource::Group(gid),
-                        &self.client_id,
-                    )
-                    .await?;
-                }
+                self.delete_group(group, Some(remote)).await?;
             }
         } else if let Err(err) = self.create_group(group).await {
             error!(
                 "Error during update group for SCIM client {}: {:?}",
                 self.client_id, err
             );
-            FailedScimTask::upsert(
-                &ScimAction::Update,
-                &failed_scim_tasks::ScimResource::Group(gid),
-                &self.client_id,
-            )
-            .await?;
+            FailedScimTask::upsert(&ScimAction::GroupCreateUpdate(gid), &self.client_id).await?;
         };
 
         Ok(())
@@ -612,12 +586,7 @@ impl ClientScim {
                 "Error during delete group for SCIM client {}: {:?}",
                 self.client_id, err
             );
-            FailedScimTask::upsert(
-                &ScimAction::Delete,
-                &failed_scim_tasks::ScimResource::Group(gid),
-                &self.client_id,
-            )
-            .await?;
+            FailedScimTask::upsert(&ScimAction::GroupDelete(gid), &self.client_id).await?;
         }
 
         Ok(())
@@ -767,12 +736,8 @@ impl ClientScim {
                 let err = format!("Error during sync users: {}", err);
                 error!("{}", err);
 
-                FailedScimTask::upsert(
-                    &ScimAction::Sync,
-                    &failed_scim_tasks::ScimResource::Users(last_created_ts),
-                    &self.client_id,
-                )
-                .await?;
+                FailedScimTask::upsert(&ScimAction::UsersSync(last_created_ts), &self.client_id)
+                    .await?;
 
                 Err(ErrorResponse::new(ErrorResponseType::Scim, err))
             }
@@ -828,14 +793,9 @@ impl ClientScim {
                     Err(err) => {
                         error!(
                             "Error during sync users for SCIM client {}: {:?}",
-                            self.client_id, err
+                            self.client_id, err.message
                         );
-                        FailedScimTask::upsert(
-                            &ScimAction::Sync,
-                            &failed_scim_tasks::ScimResource::Users(*last_created_ts),
-                            &self.client_id,
-                        )
-                        .await?;
+                        return Err(err);
                     }
                 }
             }
@@ -927,12 +887,8 @@ impl ClientScim {
                         "Error during create user {} for SCIM client {}: {:?}",
                         user_id, self.client_id, err
                     );
-                    FailedScimTask::upsert(
-                        &ScimAction::Create,
-                        &failed_scim_tasks::ScimResource::User(user_id),
-                        &self.client_id,
-                    )
-                    .await?;
+                    FailedScimTask::upsert(&ScimAction::UserCreateUpdate(user_id), &self.client_id)
+                        .await?;
                 }
             }
             Some(user_remote) => {
@@ -951,12 +907,8 @@ impl ClientScim {
                         "Error during update user {} for SCIM client {}: {:?}",
                         user_id, self.client_id, err
                     );
-                    FailedScimTask::upsert(
-                        &ScimAction::Update,
-                        &failed_scim_tasks::ScimResource::User(user_id),
-                        &self.client_id,
-                    )
-                    .await?;
+                    FailedScimTask::upsert(&ScimAction::UserCreateUpdate(user_id), &self.client_id)
+                        .await?;
                 }
             }
         }
@@ -1073,12 +1025,7 @@ impl ClientScim {
                 "Error during delete user {} for SCIM client {}: {:?}",
                 user_id, self.client_id, err
             );
-            FailedScimTask::upsert(
-                &ScimAction::Delete,
-                &failed_scim_tasks::ScimResource::User(user_id),
-                &self.client_id,
-            )
-            .await?;
+            FailedScimTask::upsert(&ScimAction::UserDelete(user_id), &self.client_id).await?;
         }
 
         Ok(())

@@ -9,34 +9,34 @@ use rauthy_models::events::event::Event;
 use rauthy_service::oidc::logout;
 use std::env;
 use std::str::FromStr;
-use std::string::ToString;
-use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::task::JoinSet;
 use tokio::time;
 use tracing::{error, info, warn};
 
-static BACKCHANNEL_LOGOUT_RETRY_COUNT: LazyLock<u16> = LazyLock::new(|| {
-    env::var("BACKCHANNEL_LOGOUT_RETRY_COUNT")
-        .unwrap_or_else(|_| "100".to_string())
-        .parse::<u16>()
-        .expect("Cannot parse BACKCHANNEL_LOGOUT_RETRY_COUNT as u16")
-});
-
 pub async fn backchannel_logout_retry(data: web::Data<AppState>) {
+    let retry_count = env::var("BACKCHANNEL_LOGOUT_RETRY_COUNT")
+        .as_deref()
+        .unwrap_or("100")
+        .parse::<u16>()
+        .expect("Cannot parse BACKCHANNEL_LOGOUT_RETRY_COUNT as u16");
+
     loop {
         // We want to randomize the sleep because this scheduler should run on all cluster members.
         // This increases the chance opf success in case of a network segmentation.
         let millis = rand::thread_rng().gen_range(60_000..90_000);
         time::sleep(Duration::from_millis(millis)).await;
 
-        if let Err(err) = execute_logout_retries(&data).await {
+        if let Err(err) = execute_logout_retries(&data, retry_count).await {
             error!("Error during backchannel_logout_retry: {}", err.message);
         }
     }
 }
 
-async fn execute_logout_retries(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+async fn execute_logout_retries(
+    data: &web::Data<AppState>,
+    retry_count: u16,
+) -> Result<(), ErrorResponse> {
     let failures = FailedBackchannelLogout::find_all().await?;
     if failures.is_empty() {
         return Ok(());
@@ -47,7 +47,7 @@ async fn execute_logout_retries(data: &web::Data<AppState>) -> Result<(), ErrorR
     let mut tasks = JoinSet::new();
 
     for failure in failures {
-        if failure.retry_count >= *BACKCHANNEL_LOGOUT_RETRY_COUNT as i32 {
+        if failure.retry_count >= retry_count as i32 {
             warn!("Retry count exceeded for backchannel logout {:?}", failure);
 
             Event::backchannel_logout_failed(
