@@ -42,7 +42,7 @@ pub async fn grant_type_credentials(
     })?;
     client.validate_secret(&secret, &req)?;
     client.validate_flow("client_credentials")?;
-    let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
+    let header_origin = client.get_validated_origin_header(&req)?;
 
     let mut headers = Vec::new();
     let dpop_fingerprint =

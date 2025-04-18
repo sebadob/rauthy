@@ -1,5 +1,4 @@
 use crate::api_cookie::ApiCookie;
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::auth_codes::AuthCode;
 use crate::entity::auth_provider_cust_impl;
@@ -11,10 +10,10 @@ use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::WebauthnLoginReq;
 use crate::language::Language;
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
+use actix_web::HttpRequest;
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
-use actix_web::{HttpRequest, web};
 use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
 use hiqlite::{Param, Row, params};
@@ -877,7 +876,6 @@ impl AuthProviderCallback {
 
     /// In case of any error, the callback code will be fully deleted for security reasons.
     pub async fn login_finish<'a>(
-        data: &'a web::Data<AppState>,
         req: &'a HttpRequest,
         payload: &'a ProviderCallbackRequest,
         mut session: Session,
@@ -1078,7 +1076,7 @@ impl AuthProviderCallback {
         }
         client.validate_redirect_uri(&slf.req_redirect_uri)?;
         client.validate_code_challenge(&slf.req_code_challenge, &slf.req_code_challenge_method)?;
-        let header_origin = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
+        let header_origin = client.get_validated_origin_header(req)?;
 
         // ######################################
         // all good, we can generate an auth code

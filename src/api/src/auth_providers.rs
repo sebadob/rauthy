@@ -12,7 +12,6 @@ use rauthy_api_types::generic::LogoParams;
 use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
 use rauthy_common::constants::HEADER_JSON;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, AuthProviderTemplate,
 };
@@ -180,18 +179,16 @@ pub async fn get_provider_callback_html(req: HttpRequest) -> Result<HttpResponse
     skip_all, fields(callback_id = payload.state)
 )]
 pub async fn post_provider_callback(
-    data: web::Data<AppState>,
     req: HttpRequest,
     Json(payload): Json<ProviderCallbackRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    post_provider_callback_handle(data, req, payload, principal).await
+    post_provider_callback_handle(req, payload, principal).await
 }
 
 // extracted to make it usable in `post_dev_only_endpoints()`
 #[inline(always)]
 pub async fn post_provider_callback_handle(
-    data: web::Data<AppState>,
     req: HttpRequest,
     payload: ProviderCallbackRequest,
     principal: ReqPrincipal,
@@ -201,7 +198,7 @@ pub async fn post_provider_callback_handle(
 
     let session = principal.get_session()?;
     let (auth_step, cookie) =
-        AuthProviderCallback::login_finish(&data, &req, &payload, session.clone()).await?;
+        AuthProviderCallback::login_finish(&req, &payload, session.clone()).await?;
 
     let mut resp = map_auth_step(auth_step, &req).await?;
     resp.add_cookie(&cookie).map_err(|err| {

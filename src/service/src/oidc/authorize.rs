@@ -105,7 +105,7 @@ pub async fn post_authorize(
     })?;
     client.validate_redirect_uri(&req_data.redirect_uri)?;
     client.validate_code_challenge(&req_data.code_challenge, &req_data.code_challenge_method)?;
-    let header_origin = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
+    let header_origin = client.get_validated_origin_header(req)?;
 
     // build authorization code
     let code_lifetime = if user.has_webauthn_enabled() {

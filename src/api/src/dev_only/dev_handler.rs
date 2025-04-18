@@ -97,7 +97,7 @@ pub async fn post_dev_only_endpoints(
         "providers_callback" => {
             let payload = serde_json::from_slice::<ProviderCallbackRequest>(bytes)?;
             let principal = web::ReqData::<Principal>::extract(&req).await?;
-            auth_providers::post_provider_callback_handle(data, req, payload, principal).await
+            auth_providers::post_provider_callback_handle(req, payload, principal).await
         }
         "register" => {
             let payload = serde_json::from_slice::<NewUserRegistrationRequest>(bytes)?;
