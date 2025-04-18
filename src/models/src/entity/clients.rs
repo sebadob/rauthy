@@ -1,4 +1,3 @@
-use crate::ListenScheme;
 use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::clients_dyn::ClientDyn;
@@ -21,7 +20,8 @@ use rauthy_common::constants::{
     ADDITIONAL_ALLOWED_ORIGIN_SCHEMES, ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_TTL_APP,
     CACHE_TTL_DYN_CLIENT, CACHE_TTL_EPHEMERAL_CLIENT, DYN_CLIENT_DEFAULT_TOKEN_LIFETIME,
     DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS, EPHEMERAL_CLIENTS_ALLOWED_FLOWS,
-    EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA, PROXY_MODE, RAUTHY_VERSION,
+    EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA, PUB_URL_WITH_SCHEME,
+    RAUTHY_VERSION,
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
@@ -1042,19 +1042,19 @@ impl Client {
     // `allowed_origins`. If the Origin is an external one and allowed by the config, it returns
     // the correct `ACCESS_CONTROL_ALLOW_ORIGIN` header which can then be inserted into the
     // HttpResponse.
-    pub fn validate_origin(
+    pub fn get_validated_origin_header(
         &self,
-        r: &HttpRequest,
-        listen_scheme: &ListenScheme,
-        pub_url: &str,
+        req: &HttpRequest,
     ) -> Result<Option<(HeaderName, HeaderValue)>, ErrorResponse> {
-        let (is_ext, origin) = is_origin_external(r, listen_scheme, pub_url)?;
-        if !is_ext {
-            return Ok(None);
-        }
+        let origin = match extract_external_origin(req)? {
+            Some(o) => o,
+            None => {
+                return Ok(None);
+            }
+        };
 
         let err_msg = || {
-            debug!("Client request from invalid origin");
+            debug!("Client request from invalid origin: {}", origin);
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!(
@@ -1065,33 +1065,28 @@ impl Client {
         };
 
         if self.allowed_origins.is_none() {
-            debug!("Allowed origins is None");
+            debug!("Request from external origin for client with no external origins allowed");
             return err_msg();
         }
 
-        let allowed_origins = self
+        let has_any_match = self
             .allowed_origins
             .as_ref()
             .unwrap()
             .split(',')
-            .filter(|&ao| {
-                // in this case, we should accept http and https, so we just execute .ends_with
-                if listen_scheme == &ListenScheme::HttpHttps {
-                    ao.ends_with(origin)
-                } else {
-                    ao.eq(origin)
-                }
-            })
-            .count();
-        if allowed_origins == 0 {
-            debug!("No match found for allowed origin");
-            return err_msg();
+            .any(|o| o == origin);
+        if has_any_match {
+            return Ok(Some((
+                header::ACCESS_CONTROL_ALLOW_ORIGIN,
+                HeaderValue::from_str(origin)?,
+            )));
         }
 
-        Ok(Some((
-            header::ACCESS_CONTROL_ALLOW_ORIGIN,
-            HeaderValue::from_str(origin)?,
-        )))
+        debug!(
+            "No match found for allowed origin - external origin: {} / allowed: {:?}",
+            origin, self.allowed_origins
+        );
+        err_msg()
     }
 
     pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
@@ -1569,60 +1564,35 @@ impl Client {
     }
 }
 
-/**
-Checks if the HttpRequest's `Origin` Header is an external one, which needs to be validated with
-the *Allowed-Origins* setting of the current client. Returns the origin as a `&str` if the Origin
-is external and needs further validation.
- */
-pub fn is_origin_external<'a>(
-    req: &'a HttpRequest,
-    listen_scheme: &'a ListenScheme,
-    pub_url: &'a str,
-) -> Result<(bool, &'a str), ErrorResponse> {
+#[inline]
+fn extract_external_origin(req: &HttpRequest) -> Result<Option<&str>, ErrorResponse> {
     let opt = req.headers().get(header::ORIGIN);
     if opt.is_none() {
-        return Ok((false, ""));
+        return Ok(None);
     }
     let origin = opt.unwrap().to_str().unwrap_or("");
     debug!(origin, "Origin header found:");
 
-    let (scheme, url) = origin.split_once("://").ok_or_else(|| {
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "Cannot parse ORIGIN header".to_string(),
-        )
-    })?;
+    // `Origin` will be present for same-origin requests other than `GET` / `HEAD`
+    if origin == *PUB_URL_WITH_SCHEME {
+        return Ok(None);
+    }
 
-    let scheme_ok = if *PROXY_MODE && scheme == "https" {
-        true
-    } else {
-        (match listen_scheme {
-            ListenScheme::Http => scheme == "http",
-            ListenScheme::Https => scheme == "https",
-            ListenScheme::HttpHttps => scheme == "http" || scheme == "https",
-            #[cfg(not(target_os = "windows"))]
-            ListenScheme::UnixHttp => scheme == "http",
-            #[cfg(not(target_os = "windows"))]
-            ListenScheme::UnixHttps => scheme == "https",
-        } || ADDITIONAL_ALLOWED_ORIGIN_SCHEMES
+    let (scheme, _) = origin.split_once("://").unwrap_or((origin, ""));
+    if scheme != "http" && scheme != "https" {
+        let has_any_match = ADDITIONAL_ALLOWED_ORIGIN_SCHEMES
             .iter()
-            .any(|s| s.as_str() == scheme))
-    };
-    if !scheme_ok {
-        warn!(pub_url, "Not matching scheme for HttpHeader::ORIGIN");
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "The scheme of the ORIGIN header does not match".to_string(),
-        ));
+            .any(|allowed| allowed == scheme);
+        if !has_any_match {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "invalid scheme for `Origin`",
+            ));
+        }
     }
 
-    debug!("pub_url: {}", pub_url);
-    debug!("origin: {}", origin);
-
-    if pub_url.eq(url) {
-        return Ok((false, origin));
-    }
-    Ok((true, origin))
+    debug!("External origin: {}", origin);
+    Ok(Some(origin))
 }
 
 #[cfg(test)]
@@ -1652,7 +1622,8 @@ mod tests {
             redirect_uris: "".to_string(),
             post_logout_redirect_uris: None,
             allowed_origins: Some(
-                "http://localhost:8081,http://localhost:8082,sample://localhost".to_string(),
+                "http://localhost:8081,http://localhost:8082,sample://localhost,tauri://localhost"
+                    .to_string(),
             ),
             flows_enabled: "authorization_code,password".to_string(),
             access_token_alg: "EdDSA".to_string(),
@@ -1758,15 +1729,18 @@ mod tests {
         );
 
         // validate origin
-        let listen_scheme = ListenScheme::Http;
-        let pub_url = "localhost:8080";
-        let origin = format!("{}://{}", listen_scheme, pub_url);
+        unsafe {
+            env::set_var("LISTEN_SCHEME", "http");
+            env::set_var("PUB_URL", "localhost:8080");
+            env::set_var("ADDITIONAL_ALLOWED_ORIGIN_SCHEMES", "tauri");
+        }
+        let origin = "http://localhost:8080";
 
         // same origin first
         let req = TestRequest::default()
             .insert_header((header::ORIGIN, origin))
             .to_http_request();
-        let res = client.validate_origin(&req, &listen_scheme, pub_url);
+        let res = client.get_validated_origin_header(&req);
         assert!(res.is_ok());
         assert!(res.unwrap().is_none());
 
@@ -1774,7 +1748,7 @@ mod tests {
         let req = TestRequest::default()
             .insert_header((header::ORIGIN, "http://localhost:8081"))
             .to_http_request();
-        let res = client.validate_origin(&req, &listen_scheme, pub_url);
+        let res = client.get_validated_origin_header(&req);
         assert!(res.is_ok());
         let header = res.unwrap().unwrap();
         assert_eq!(header.0, header::ACCESS_CONTROL_ALLOW_ORIGIN);
@@ -1783,7 +1757,7 @@ mod tests {
         let req = TestRequest::default()
             .insert_header((header::ORIGIN, "http://localhost:8082"))
             .to_http_request();
-        let res = client.validate_origin(&req, &listen_scheme, pub_url);
+        let res = client.get_validated_origin_header(&req);
         assert!(res.is_ok());
         let header = res.unwrap().unwrap();
         assert_eq!(header.0, header::ACCESS_CONTROL_ALLOW_ORIGIN);
@@ -1792,80 +1766,23 @@ mod tests {
         let req = TestRequest::default()
             .insert_header((header::ORIGIN, "http://localhost:8083"))
             .to_http_request();
-        let res = client.validate_origin(&req, &listen_scheme, pub_url);
+        let res = client.get_validated_origin_header(&req);
         assert!(res.is_err());
 
         let req = TestRequest::default()
             .insert_header((header::ORIGIN, "sample://localhost"))
             .to_http_request();
-        let res = client.validate_origin(&req, &listen_scheme, pub_url);
-        assert!(res.is_err());
-    }
-
-    #[test]
-    fn test_is_origin_external() {
-        let pub_url = "localhost:8443";
-        unsafe { env::set_var("PROXY_MODE", "false") };
-
-        // err without ORIGIN header
-        let req = TestRequest::default().to_http_request();
-        let (is_ext, origin) = is_origin_external(&req, &ListenScheme::Http, pub_url).unwrap();
-        assert_eq!(is_ext, false);
-        assert_eq!(origin, "");
-
-        // should return true -> url is external
-        let req = TestRequest::default()
-            .insert_header((header::ORIGIN, "http://localhost:8082"))
-            .to_http_request();
-        let (is_ext, origin) = is_origin_external(&req, &ListenScheme::Http, pub_url).unwrap();
-        assert_eq!(is_ext, true);
-        assert_eq!(origin, "http://localhost:8082");
-
-        // different protocol
-        let req = TestRequest::default()
-            .insert_header((header::ORIGIN, "https://localhost:8443"))
-            .to_http_request();
-        let res = is_origin_external(&req, &ListenScheme::Http, pub_url);
-        // scheme does not match
+        let res = client.get_validated_origin_header(&req);
         assert!(res.is_err());
 
-        // different protocol vice versa
         let req = TestRequest::default()
-            .insert_header((header::ORIGIN, "http://localhost:8443"))
+            .insert_header((header::ORIGIN, "tauri://localhost"))
             .to_http_request();
-        let res = is_origin_external(&req, &ListenScheme::Https, pub_url);
-        // scheme does not match
-        assert!(res.is_err());
-
-        // should return false -> url is NOT external
-        let req = TestRequest::default()
-            .insert_header((header::ORIGIN, format!("http://{}", pub_url)))
-            .to_http_request();
-        let (is_ext, _origin) = is_origin_external(&req, &ListenScheme::Http, pub_url).unwrap();
-        assert_eq!(is_ext, false);
-
-        // should return false -> url is NOT external
-        let req = TestRequest::default()
-            .insert_header((header::ORIGIN, format!("https://{}", pub_url)))
-            .to_http_request();
-        let (is_ext, _origin) = is_origin_external(&req, &ListenScheme::Https, pub_url).unwrap();
-        assert_eq!(is_ext, false);
-
-        // should return false -> url is NOT external
-        let req = TestRequest::default()
-            .insert_header((header::ORIGIN, format!("http://{}", pub_url)))
-            .to_http_request();
-        let (is_ext, _origin) =
-            is_origin_external(&req, &ListenScheme::HttpHttps, pub_url).unwrap();
-        assert_eq!(is_ext, false);
-
-        // should return false -> url is NOT external
-        let req = TestRequest::default()
-            .insert_header((header::ORIGIN, format!("https://{}", pub_url)))
-            .to_http_request();
-        let (is_ext, _origin) =
-            is_origin_external(&req, &ListenScheme::HttpHttps, pub_url).unwrap();
-        assert_eq!(is_ext, false);
+        let res = client.get_validated_origin_header(&req);
+        assert_eq!(
+            res.unwrap().unwrap().1.to_str().unwrap(),
+            "tauri://localhost"
+        );
     }
 
     #[test]

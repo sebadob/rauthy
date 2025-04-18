@@ -22,7 +22,6 @@ use tracing::debug;
 
 /// Validates request parameters for the authorization and refresh endpoints
 pub async fn validate_auth_req_param(
-    data: &web::Data<AppState>,
     req: &HttpRequest,
     client_id: &str,
     redirect_uri: &str,
@@ -33,7 +32,7 @@ pub async fn validate_auth_req_param(
     let client = Client::find_maybe_ephemeral(String::from(client_id)).await?;
 
     // allowed origin
-    let header = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
+    let header = client.get_validated_origin_header(req)?;
 
     // allowed redirect uris
     client.validate_redirect_uri(redirect_uri)?;
@@ -135,7 +134,7 @@ pub async fn validate_refresh_token(
             "Invalid 'azp'",
         ));
     }
-    let header_origin = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
+    let header_origin = client.get_validated_origin_header(req)?;
 
     // validate DPoP proof
     let (dpop_fingerprint, dpop_nonce) = if let Some(cnf) = claims.custom.cnf {
