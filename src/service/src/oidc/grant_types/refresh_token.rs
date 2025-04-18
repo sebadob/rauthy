@@ -1,6 +1,8 @@
 use crate::oidc::validation;
 use crate::token_set::TokenSet;
-use actix_web::http::header::{HeaderName, HeaderValue};
+use actix_web::http::header::{
+    ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
+};
 use actix_web::{HttpRequest, web};
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
@@ -44,6 +46,14 @@ pub async fn grant_type_refresh(
     let mut headers = Vec::new();
     if let Some(h) = header_origin {
         headers.push(h);
+        headers.push((
+            ACCESS_CONTROL_ALLOW_METHODS,
+            HeaderValue::from_static("POST"),
+        ));
+        headers.push((
+            ACCESS_CONTROL_ALLOW_CREDENTIALS,
+            HeaderValue::from_static("true"),
+        ));
     }
     if let Some(nonce) = dpop_none {
         headers.push((

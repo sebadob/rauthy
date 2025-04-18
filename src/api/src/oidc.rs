@@ -1,6 +1,9 @@
 use crate::{ReqPrincipal, map_auth_step};
 use actix_web::cookie::time::OffsetDateTime;
-use actix_web::http::header::{ACCEPT, CONTENT_TYPE, HeaderValue};
+use actix_web::http::header::{
+    ACCEPT, ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS,
+    ACCESS_CONTROL_ALLOW_METHODS, CONTENT_TYPE, HeaderValue,
+};
 use actix_web::http::{StatusCode, header};
 use actix_web::web::{Form, Json, Query};
 use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError, get, post, web};
@@ -225,6 +228,14 @@ pub async fn get_authorize(
         return Ok(HttpResponse::Ok()
             .cookie(cookie)
             .insert_header(o)
+            .insert_header((
+                ACCESS_CONTROL_ALLOW_METHODS,
+                HeaderValue::from_static("GET"),
+            ))
+            .insert_header((
+                ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                HeaderValue::from_static("true"),
+            ))
             .insert_header(HEADER_HTML)
             .insert_header(("content-encoding", encoding))
             .body(body_bytes));
@@ -424,7 +435,12 @@ pub async fn get_certs() -> Result<HttpResponse, ErrorResponse> {
 pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
     let kp = JwkKeyPair::find(kid.into_inner()).await?;
     let pub_key = JWKSPublicKey::from_key_pair(&kp);
-    Ok(HttpResponse::Ok().json(JWKSPublicKeyCerts::from(pub_key)))
+    Ok(HttpResponse::Ok()
+        .insert_header((
+            header::ACCESS_CONTROL_ALLOW_ORIGIN,
+            HeaderValue::from_static("*"),
+        ))
+        .json(JWKSPublicKeyCerts::from(pub_key)))
 }
 
 /// POST for starting an OAuth 2.0 Device Authorization Grant flow
@@ -984,12 +1000,21 @@ pub async fn post_token_introspect(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    match token_info::get_token_info(&data, &req, &payload.token).await {
-        Ok(info) => Ok(HttpResponse::Ok().json(info)),
-        Err(err) => {
-            error!("{:?}", err);
-            Err(err)
-        }
+    let (info, cors_header) = token_info::get_token_info(&data, &req, &payload.token).await?;
+    if let Some((n, v)) = cors_header {
+        Ok(HttpResponse::Ok()
+            .insert_header((n, v))
+            .insert_header((
+                ACCESS_CONTROL_ALLOW_METHODS,
+                HeaderValue::from_static("POST"),
+            ))
+            .insert_header((
+                ACCESS_CONTROL_ALLOW_HEADERS,
+                HeaderValue::from_static("Authorization"),
+            ))
+            .json(info))
+    } else {
+        Ok(HttpResponse::Ok().json(info))
     }
 }
 
@@ -1040,9 +1065,22 @@ pub async fn get_userinfo(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    userinfo::get_userinfo(&data, req)
-        .await
-        .map(|u| HttpResponse::Ok().json(u))
+    let (info, cors_header) = userinfo::get_userinfo(&data, req).await?;
+    if let Some((n, v)) = cors_header {
+        Ok(HttpResponse::Ok()
+            .insert_header((n, v))
+            .insert_header((
+                ACCESS_CONTROL_ALLOW_METHODS,
+                HeaderValue::from_static("GET"),
+            ))
+            .insert_header((
+                ACCESS_CONTROL_ALLOW_HEADERS,
+                HeaderValue::from_static("Authorization"),
+            ))
+            .json(info))
+    } else {
+        Ok(HttpResponse::Ok().json(info))
+    }
 }
 
 /// The userinfo endpoint for the OIDC standard.
@@ -1065,9 +1103,22 @@ pub async fn post_userinfo(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    userinfo::get_userinfo(&data, req)
-        .await
-        .map(|u| HttpResponse::Ok().json(u))
+    let (info, cors_header) = userinfo::get_userinfo(&data, req).await?;
+    if let Some((n, v)) = cors_header {
+        Ok(HttpResponse::Ok()
+            .insert_header((n, v))
+            .insert_header((
+                ACCESS_CONTROL_ALLOW_METHODS,
+                HeaderValue::from_static("POST"),
+            ))
+            .insert_header((
+                ACCESS_CONTROL_ALLOW_HEADERS,
+                HeaderValue::from_static("Authorization"),
+            ))
+            .json(info))
+    } else {
+        Ok(HttpResponse::Ok().json(info))
+    }
 }
 
 /// GET forward authentication
@@ -1098,7 +1149,7 @@ pub async fn get_forward_auth(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let info = userinfo::get_userinfo(&data, req).await?;
+    let (info, _) = userinfo::get_userinfo(&data, req).await?;
 
     if *AUTH_HEADERS_ENABLE {
         Ok(HttpResponse::Ok()

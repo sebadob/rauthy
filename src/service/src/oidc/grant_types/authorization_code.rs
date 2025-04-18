@@ -2,7 +2,9 @@ use crate::token_set::{
     AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce, TokenScopes,
     TokenSet,
 };
-use actix_web::http::header::{HeaderName, HeaderValue};
+use actix_web::http::header::{
+    ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
+};
 use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use rauthy_api_types::oidc::TokenRequest;
@@ -82,6 +84,14 @@ pub async fn grant_type_authorization_code(
         };
     if let Some(h) = header_origin {
         headers.push(h);
+        headers.push((
+            ACCESS_CONTROL_ALLOW_METHODS,
+            HeaderValue::from_static("POST"),
+        ));
+        headers.push((
+            ACCESS_CONTROL_ALLOW_CREDENTIALS,
+            HeaderValue::from_static("true"),
+        ));
     }
 
     // get the oidc code from the cache

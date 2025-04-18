@@ -1,6 +1,6 @@
 use crate::{ReqPrincipal, content_len_limit};
 use actix_web::http::StatusCode;
-use actix_web::http::header::{ACCEPT, LOCATION};
+use actix_web::http::header::{ACCEPT, HeaderName, HeaderValue, LOCATION};
 use actix_web::web::{Json, Query};
 use actix_web::{HttpRequest, HttpResponse, ResponseError, delete, get, post, put, web};
 use chrono::Utc;
@@ -616,9 +616,11 @@ pub async fn get_user_picture(
 ) -> Result<HttpResponse, ErrorResponse> {
     let (user_id, picture_id) = path.into_inner();
 
-    if !*PICTURE_PUBLIC {
-        validate_user_picture_access(&req, &data, principal, &user_id).await?;
-    }
+    let cors_header = if !*PICTURE_PUBLIC {
+        validate_user_picture_access(&req, &data, principal, &user_id).await?
+    } else {
+        None
+    };
 
     {
         let user = User::find(user_id).await?;
@@ -630,7 +632,7 @@ pub async fn get_user_picture(
         }
     }
 
-    UserPicture::download(picture_id).await
+    UserPicture::download(picture_id, cors_header).await
 }
 
 #[inline]
@@ -639,17 +641,16 @@ async fn validate_user_picture_access(
     data: &web::Data<AppState>,
     principal: Option<ReqPrincipal>,
     user_id: &str,
-) -> Result<(), ErrorResponse> {
+) -> Result<Option<(HeaderName, HeaderValue)>, ErrorResponse> {
     if let Some(principal) = principal {
         if principal.validate_user_or_admin(user_id).is_ok() {
-            return Ok(());
+            return Ok(None);
         }
-
         if principal
             .validate_api_key(AccessGroup::Users, AccessRights::Read)
             .is_ok()
         {
-            return Ok(());
+            return Ok(None);
         }
     }
 
@@ -659,7 +660,9 @@ async fn validate_user_picture_access(
             if (claims.custom.typ == JwtTokenType::Bearer || claims.custom.typ == JwtTokenType::Id)
                 && claims.subject.as_deref() == Some(user_id)
             {
-                return Ok(());
+                let client = Client::find(claims.custom.azp).await?;
+                let cors = client.get_validated_origin_header(req)?;
+                return Ok(cors);
             }
         }
     }

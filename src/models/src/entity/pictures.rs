@@ -1,8 +1,9 @@
 use crate::database::DB;
 use crate::entity::logos::Logo;
 use crate::entity::users::User;
-use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE};
-use actix_web::{HttpResponse, web};
+use actix_web::http::StatusCode;
+use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, HeaderName, HeaderValue};
+use actix_web::{HttpResponse, HttpResponseBuilder, web};
 use futures_util::StreamExt;
 use hiqlite::{Param, params};
 use image::ImageFormat;
@@ -332,16 +333,23 @@ impl UserPicture {
         Ok(())
     }
 
-    pub async fn download(id: String) -> Result<HttpResponse, ErrorResponse> {
+    pub async fn download(
+        id: String,
+        cors_origin: Option<(HeaderName, HeaderValue)>,
+    ) -> Result<HttpResponse, ErrorResponse> {
         let slf = Self::find(id).await?;
+
+        let mut resp = HttpResponseBuilder::new(StatusCode::OK);
+        resp.insert_header((CONTENT_TYPE, HeaderValue::from_str(&slf.content_type)?));
+        resp.insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE));
+        if let Some((n, v)) = cors_origin {
+            resp.insert_header((n, v));
+        }
 
         match PictureStorage::from(slf.storage.as_str()) {
             PictureStorage::DB => {
                 if let Some(data) = slf.data {
-                    Ok(HttpResponse::Ok()
-                        .insert_header((CONTENT_TYPE, slf.content_type))
-                        .insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE))
-                        .body(data))
+                    Ok(resp.body(data))
                 } else {
                     error!("PictureStorage::DB but `data` is NULL: {:?}", slf);
                     Err(ErrorResponse::new(
@@ -353,19 +361,13 @@ impl UserPicture {
             PictureStorage::File => {
                 // TODO stream from file instead of loading into memory upfront
                 let bytes = fs::read(Self::local_file_path(&slf.id, &slf.content_type)).await?;
-                Ok(HttpResponse::Ok()
-                    .insert_header((CONTENT_TYPE, slf.content_type))
-                    .insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE))
-                    .body(bytes))
+                Ok(resp.body(bytes))
             }
             PictureStorage::S3 => {
                 let res = PICTURE_S3_BUCKET
                     .get(&Self::file_name(&slf.id, &slf.content_type))
                     .await?;
-                Ok(HttpResponse::Ok()
-                    .insert_header((CONTENT_TYPE, slf.content_type))
-                    .insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE))
-                    .streaming(res.bytes_stream()))
+                Ok(resp.streaming(res.bytes_stream()))
             }
             PictureStorage::Disabled => unreachable!(),
         }

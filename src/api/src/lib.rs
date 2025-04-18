@@ -2,7 +2,9 @@
 
 #![forbid(unsafe_code)]
 
-use actix_web::http::header::{HeaderMap, HeaderValue};
+use actix_web::http::header::{
+    ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderMap, HeaderValue,
+};
 use actix_web::{HttpRequest, HttpResponse, web};
 use rauthy_api_types::users::WebauthnLoginResponse;
 use rauthy_common::constants::COOKIE_MFA;
@@ -99,6 +101,14 @@ pub async fn map_auth_step(
                 .finish();
             if let Some((name, value)) = res.header_origin {
                 resp.headers_mut().insert(name, value);
+                resp.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_METHODS,
+                    HeaderValue::from_static("POST"),
+                );
+                resp.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    HeaderValue::from_static("true"),
+                );
             }
             Ok(resp)
         }

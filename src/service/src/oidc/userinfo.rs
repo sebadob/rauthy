@@ -1,4 +1,5 @@
 use crate::oidc::{helpers, validation};
+use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, web};
 use rauthy_api_types::users::Userinfo;
 use rauthy_common::constants::{ENABLE_WEB_ID, USERINFO_STRICT};
@@ -15,7 +16,7 @@ use rauthy_models::{AddressClaim, JwtCommonClaims, JwtTokenType};
 pub async fn get_userinfo(
     data: &web::Data<AppState>,
     req: HttpRequest,
-) -> Result<Userinfo, ErrorResponse> {
+) -> Result<(Userinfo, Option<(HeaderName, HeaderValue)>), ErrorResponse> {
     let bearer = helpers::get_bearer_token_from_header(req.headers())?;
 
     let claims = validation::validate_token::<JwtCommonClaims>(data, &bearer, None).await?;
@@ -48,14 +49,14 @@ pub async fn get_userinfo(
         ));
     }
 
-    if *USERINFO_STRICT {
+    let cors_header = if *USERINFO_STRICT {
         // if the token has been issued to a device, make sure it still exists and is valid
         if let Some(device_id) = claims.custom.did {
             // just make sure it still exists
             DeviceEntity::find(&device_id).await.map_err(|_| {
                 ErrorResponse::new(
                     ErrorResponseType::WWWAuthenticate("user-device-not-found".to_string()),
-                    "The user device has not been found".to_string(),
+                    "The user device has not been found",
                 )
             })?;
         }
@@ -64,21 +65,25 @@ pub async fn get_userinfo(
         // skip this check if the client is ephemeral
         if !(claims.custom.azp.starts_with("http://") || claims.custom.azp.starts_with("https://"))
         {
-            let client = Client::find(claims.custom.azp).await.map_err(|_| {
+            let client = Client::find(claims.custom.azp.clone()).await.map_err(|_| {
                 ErrorResponse::new(
                     ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),
-                    "The client has not been found".to_string(),
+                    "The client has not been found",
                 )
             })?;
-
             if !client.enabled {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
-                    "The client has been disabled".to_string(),
+                    "The client has been disabled",
                 ));
             }
+            client.get_validated_origin_header(&req)?
+        } else {
+            None
         }
-    }
+    } else {
+        None
+    };
 
     let roles = user.get_roles();
     let groups = scope.contains("groups").then(|| user.get_groups());
@@ -164,5 +169,5 @@ pub async fn get_userinfo(
         }
     }
 
-    Ok(userinfo)
+    Ok((userinfo, cors_header))
 }

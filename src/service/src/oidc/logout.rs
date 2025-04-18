@@ -1,10 +1,13 @@
 use crate::oidc::bcl_logout_token::LogoutToken;
 use crate::oidc::validation;
 use actix_web::cookie::SameSite;
+use actix_web::http::header::{ACCESS_CONTROL_ALLOW_METHODS, HeaderValue};
 use actix_web::http::{StatusCode, header};
 use actix_web::{HttpRequest, HttpResponse, web};
 use rauthy_api_types::oidc::{BackchannelLogoutRequest, LogoutRequest};
-use rauthy_common::constants::{COOKIE_SESSION, COOKIE_SESSION_FED_CM, RAUTHY_VERSION};
+use rauthy_common::constants::{
+    COOKIE_SESSION, COOKIE_SESSION_FED_CM, EXPERIMENTAL_FED_CM_ENABLE, RAUTHY_VERSION,
+};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
@@ -135,7 +138,7 @@ pub async fn post_logout_handle(
         // should always exist in even barely modern browsers
         || req.headers().get("sec-fetch-site").is_none();
 
-    let (session, user, post_logout_redirect_uri) =
+    let (session, user, cors_header, post_logout_redirect_uri) =
         if let Some(id_token_hint) = params.id_token_hint {
             let claims = validation::validate_token::<JwtIdClaims>(
                 &data,
@@ -144,8 +147,10 @@ pub async fn post_logout_handle(
             )
             .await?;
 
+            let client = Client::find(claims.custom.azp).await?;
+            let cors_header = client.get_validated_origin_header(&req)?;
+
             let post_logout_redirect_uri = if let Some(uri) = params.post_logout_redirect_uri {
-                let client = Client::find(claims.custom.azp).await?;
                 client.validate_post_logout_redirect_uri(&uri)?;
                 Some(uri)
             } else {
@@ -154,14 +159,14 @@ pub async fn post_logout_handle(
 
             let (session, user) =
                 find_session_with_user_fallback(claims.custom.sid, claims.subject).await?;
-            (session, user, post_logout_redirect_uri)
+            (session, user, cors_header, post_logout_redirect_uri)
         } else if let Some(s) = session {
             let (session, user) = find_session_with_user_fallback(Some(s.id), s.user_id).await?;
-            (session, user, None)
+            (session, user, None, None)
         } else if let Some(token) = params.logout_token {
             let lt = LogoutToken::from_str_validated(&token).await?;
             let (session, user) = find_session_with_user_fallback(lt.sid, lt.sub).await?;
-            (session, user, None)
+            (session, user, None, None)
         } else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -193,25 +198,34 @@ pub async fn post_logout_handle(
             .unwrap_or_default();
         let loc = format!("{}{}", uri, state);
 
-        if let Some(sid) = sid {
-            let cookie_fed_cm = ApiCookie::build_with_same_site(
-                COOKIE_SESSION_FED_CM,
-                Cow::from(&sid),
-                0,
-                SameSite::None,
-            );
-            let cookie_session = ApiCookie::build(COOKIE_SESSION, &sid, 0);
+        let mut resp = HttpResponse::build(StatusCode::OK)
+            .append_header((header::LOCATION, loc))
+            .finish();
 
-            Ok(HttpResponse::build(StatusCode::OK)
-                .append_header((header::LOCATION, loc))
-                .cookie(cookie_session)
-                .cookie(cookie_fed_cm)
-                .finish())
-        } else {
-            Ok(HttpResponse::build(StatusCode::OK)
-                .append_header((header::LOCATION, loc))
-                .finish())
+        if let Some(sid) = sid {
+            let cookie_session = ApiCookie::build(COOKIE_SESSION, &sid, 0);
+            resp.add_cookie(&cookie_session)?;
+
+            if *EXPERIMENTAL_FED_CM_ENABLE {
+                let cookie_fed_cm = ApiCookie::build_with_same_site(
+                    COOKIE_SESSION_FED_CM,
+                    Cow::from(&sid),
+                    0,
+                    SameSite::None,
+                );
+                resp.add_cookie(&cookie_fed_cm)?;
+            }
         }
+
+        if let Some((n, v)) = cors_header {
+            resp.headers_mut().insert(n, v);
+            resp.headers_mut().insert(
+                ACCESS_CONTROL_ALLOW_METHODS,
+                HeaderValue::from_static("POST"),
+            );
+        }
+
+        Ok(resp)
     }
 }
 
