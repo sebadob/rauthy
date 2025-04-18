@@ -1597,18 +1597,16 @@ fn extract_external_origin(req: &HttpRequest) -> Result<Option<&str>, ErrorRespo
 
 #[cfg(test)]
 mod tests {
-    use std::thread::JoinHandle;
-    use std::time::Duration;
-    use std::{env, thread};
-
+    use super::*;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
     use actix_web::{App, HttpResponse, HttpServer};
     use pretty_assertions::assert_eq;
     use rauthy_common::constants::APPLICATION_JSON;
+    use std::thread::JoinHandle;
+    use std::time::Duration;
+    use std::{env, thread};
     use validator::Validate;
-
-    use super::*;
 
     #[test]
     fn test_client_impl() {
@@ -1622,8 +1620,7 @@ mod tests {
             redirect_uris: "".to_string(),
             post_logout_redirect_uris: None,
             allowed_origins: Some(
-                "http://localhost:8081,http://localhost:8082,sample://localhost,tauri://localhost"
-                    .to_string(),
+                "http://localhost:8082,sample://localhost,tauri://localhost".to_string(),
             ),
             flows_enabled: "authorization_code,password".to_string(),
             access_token_alg: "EdDSA".to_string(),
@@ -1731,10 +1728,10 @@ mod tests {
         // validate origin
         unsafe {
             env::set_var("LISTEN_SCHEME", "http");
-            env::set_var("PUB_URL", "localhost:8080");
+            env::set_var("PUB_URL", "localhost:8081");
             env::set_var("ADDITIONAL_ALLOWED_ORIGIN_SCHEMES", "tauri");
         }
-        let origin = "http://localhost:8080";
+        let origin = "http://localhost:8081";
 
         // same origin first
         let req = TestRequest::default()
@@ -1750,9 +1747,8 @@ mod tests {
             .to_http_request();
         let res = client.get_validated_origin_header(&req);
         assert!(res.is_ok());
-        let header = res.unwrap().unwrap();
-        assert_eq!(header.0, header::ACCESS_CONTROL_ALLOW_ORIGIN);
-        assert_eq!(header.1, "http://localhost:8081");
+        // same-origin
+        assert!(res.unwrap().is_none());
 
         let req = TestRequest::default()
             .insert_header((header::ORIGIN, "http://localhost:8082"))

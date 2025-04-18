@@ -154,7 +154,17 @@ impl From<actix_web::Error> for ErrorResponse {
         debug!("{:?}", err);
         ErrorResponse::new(
             ErrorResponseType::Internal,
-            format!("actix_web::Error Error: {}", err),
+            format!("actix_web::Error: {}", err),
+        )
+    }
+}
+
+impl From<actix_web::error::HttpError> for ErrorResponse {
+    fn from(err: actix_web::error::HttpError) -> Self {
+        debug!("{:?}", err);
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("actix_web::error::HttpError: {}", err),
         )
     }
 }

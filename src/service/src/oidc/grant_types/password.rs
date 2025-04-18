@@ -1,5 +1,7 @@
 use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenSet};
-use actix_web::http::header::{HeaderName, HeaderValue};
+use actix_web::http::header::{
+    ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
+};
 use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use rauthy_api_types::oidc::TokenRequest;
@@ -64,6 +66,14 @@ pub async fn grant_type_password(
         };
     if let Some(h) = header_origin {
         headers.push(h);
+        headers.push((
+            ACCESS_CONTROL_ALLOW_METHODS,
+            HeaderValue::from_static("POST"),
+        ));
+        headers.push((
+            ACCESS_CONTROL_ALLOW_CREDENTIALS,
+            HeaderValue::from_static("true"),
+        ));
     }
 
     // This Error must be the same if user does not exist AND passwords do not match to prevent

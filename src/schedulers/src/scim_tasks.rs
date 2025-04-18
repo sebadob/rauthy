@@ -18,13 +18,12 @@ pub async fn scim_task_retry(data: web::Data<AppState>) {
         .as_deref()
         .unwrap_or("100")
         .parse::<u16>()
-        .expect("Cannot parse BACKCHANNEL_LOGOUT_RETRY_COUNT as u16");
+        .expect("Cannot parse SCIM_RETRY_COUNT as u16");
 
     loop {
         // We want to randomize the sleep because this scheduler should run on all cluster members.
         // This increases the chance opf success in case of a network segmentation.
-        let millis = rand::thread_rng().gen_range(5_000..10_000);
-        // let millis = rand::thread_rng().gen_range(60_000..90_000);
+        let millis = rand::thread_rng().gen_range(60_000..90_000);
         time::sleep(Duration::from_millis(millis)).await;
 
         debug!("Running scim_task_retry scheduler");
