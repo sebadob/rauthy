@@ -278,6 +278,7 @@ input {
     color: hsl(var(--text));
     font-size: 1.05rem;
     outline: none;
+    transition: 150ms all;
 }
 
 input:valid {
@@ -289,7 +290,8 @@ input:invalid {
 }
 
 input:hover, input:focus {
-    background: hsla(var(--bg-high) / .15);
+    color: hsl(var(--text-high));
+    background: hsla(var(--action) / .03);
 }
 
 input:disabled {
