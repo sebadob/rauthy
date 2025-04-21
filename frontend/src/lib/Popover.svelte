@@ -86,6 +86,7 @@
             bind:ref
             role={roleButton}
             id={idButton}
+            ariaLabel={ariaLabel}
             ariaControls={idPopover}
             popovertarget={idPopover}
             {onclick}
@@ -104,6 +105,7 @@
             id={idPopover}
             aria-label={ariaLabel}
             aria-labelledby={idButton}
+            aria-expanded={isOpen}
             class="popover"
             popover="auto"
             {ontoggle}

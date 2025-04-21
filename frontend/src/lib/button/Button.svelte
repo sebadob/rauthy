@@ -126,6 +126,7 @@
 
 <button
         bind:this={ref}
+        name={ariaLabel}
         {role}
         {type}
         {id}
