@@ -28,7 +28,7 @@ pub async fn get_static_assets(
 
     match Assets::get(p.as_ref()) {
         Some(content) => HttpResponse::Ok()
-            .insert_header(("cache-control", "max-age=2592000"))
+            .insert_header(("cache-control", "max-age=15552000; public"))
             .insert_header(("content-encoding", encoding))
             .content_type(mime.first_or_octet_stream().as_ref())
             .body(content.data.into_owned()),
