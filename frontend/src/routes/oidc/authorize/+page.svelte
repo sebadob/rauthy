@@ -387,131 +387,132 @@
 <Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen}/>
 
 <Main>
-    <ContentCenter>
-        <div class="container">
-            <div class="head">
-                {#if clientId}
-                    <ClientLogo {clientId} updated={clientLogoUpdated > -1 ? clientLogoUpdated : undefined}/>
-                {/if}
-                {#if clientUri}
-                    <a class="home" href={clientUri}>
-                        <IconHome color="hsla(var(--text) / .4)"/>
-                    </a>
-                {/if}
-            </div>
-
-            <div class="name">
-                <h2>{clientName || clientId}</h2>
-            </div>
-
-            {#if mfaPurpose && userId}
-                <!--
-                TODO we could pass in an optional loginCodeExp and make sure
-                it fits inside the exp returned inside the WebauthnRequest later on
-                to output proper logs in case of misconfiguration.
-                Another approach would be to check this in the backend and emit warning logs.
-                -->
-                <WebauthnRequest
-                        {userId}
-                        purpose={mfaPurpose}
-                        onSuccess={onWebauthnSuccess}
-                        onError={onWebauthnError}
-                />
-            {/if}
-
-            {#if !clientMfaForce}
-                <Form action={authorizeUrl} {onSubmit}>
-                    <div class:emailMinHeight={!showPasswordInput}>
-                        <Input
-                                bind:ref={refEmail}
-                                typ="email"
-                                name="email"
-                                bind:value={email}
-                                autocomplete="email"
-                                label={t.common.email}
-                                placeholder={t.common.email}
-                                errMsg={t.authorize.validEmail}
-                                disabled={tooManyRequests || clientMfaForce}
-                                onInput={onEmailInput}
-                                width={inputWidth}
-                                required
-                        />
-                    </div>
-
-                    {#if showPasswordInput}
-                        <InputPassword
-                                bind:ref={refPassword}
-                                name="password"
-                                bind:value={password}
-                                autocomplete="current-password"
-                                label={t.common.password}
-                                placeholder={t.common.password}
-                                maxLength={256}
-                                disabled={tooManyRequests || clientMfaForce}
-                                width={inputWidth}
-                                required
-                        />
-
-                        {#if showResetRequest && !tooManyRequests}
-                            <div class="forgotten">
-                                <Button invisible onclick={handleShowReset}>
-                                    {t.authorize.passwordForgotten}
-                                </Button>
-                            </div>
-                        {/if}
+    <div class="outer">
+        <ContentCenter>
+            <div class="container">
+                <div class="head">
+                    {#if clientId}
+                        <ClientLogo {clientId} updated={clientLogoUpdated > -1 ? clientLogoUpdated : undefined}/>
                     {/if}
-
-                    {#if !tooManyRequests && !clientMfaForce}
-                        {#if showReset}
-                            <div class="btn flex-col">
-                                <Button onclick={requestReset}>
-                                    {t.authorize.passwordRequest}
-                                </Button>
-                            </div>
-                        {:else}
-                            <div class="btn flex-col">
-                                <Button type="submit" {isLoading}>
-                                    {t.authorize.login}
-                                </Button>
-                            </div>
-                        {/if}
-                    {/if}
-                </Form>
-
-                {#if isRegOpen && !showResetRequest && !tooManyRequests}
                     {#if clientUri}
-                        <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
-                            {t.authorize.signUp}
-                        </a>
-                    {:else}
-                        <a class="reg" href="/auth/v1/users/register" target="_blank">
-                            {t.authorize.signUp}
+                        <a class="home" href={clientUri} aria-label="Client Home Page">
+                            <IconHome color="hsla(var(--text) / .4)"/>
                         </a>
                     {/if}
+                </div>
+
+                <div class="name">
+                    <h2>{clientName || clientId}</h2>
+                </div>
+
+                {#if mfaPurpose && userId}
+                    <!--
+                    TODO we could pass in an optional loginCodeExp and make sure
+                    it fits inside the exp returned inside the WebauthnRequest later on
+                    to output proper logs in case of misconfiguration.
+                    Another approach would be to check this in the backend and emit warning logs.
+                    -->
+                    <WebauthnRequest
+                            {userId}
+                            purpose={mfaPurpose}
+                            onSuccess={onWebauthnSuccess}
+                            onError={onWebauthnError}
+                    />
                 {/if}
-            {/if}
 
-            {#if err}
-                <div class="errMsg">
-                    {err}
-                </div>
-            {/if}
+                {#if !clientMfaForce}
+                    <Form action={authorizeUrl} {onSubmit}>
+                        <div class:emailMinHeight={!showPasswordInput}>
+                            <Input
+                                    bind:ref={refEmail}
+                                    typ="email"
+                                    name="email"
+                                    bind:value={email}
+                                    autocomplete="email"
+                                    label={t.common.email}
+                                    placeholder={t.common.email}
+                                    errMsg={t.authorize.validEmail}
+                                    disabled={tooManyRequests || clientMfaForce}
+                                    onInput={onEmailInput}
+                                    width={inputWidth}
+                                    required
+                            />
+                        </div>
 
-            {#if emailSuccess}
-                <div class="success">
-                    {t.authorize.emailSentMsg}
-                </div>
-            {/if}
+                        {#if showPasswordInput}
+                            <InputPassword
+                                    bind:ref={refPassword}
+                                    name="password"
+                                    bind:value={password}
+                                    autocomplete="current-password"
+                                    label={t.common.password}
+                                    placeholder={t.common.password}
+                                    maxLength={256}
+                                    disabled={tooManyRequests || clientMfaForce}
+                                    width={inputWidth}
+                                    required
+                            />
 
-            {#if clientMfaForce}
-                <div class="btn flex-col">
-                    <Button onclick={() => window.location.href = '/auth/v1/account'}>
-                        Account
-                    </Button>
-                </div>
-            {/if}
+                            {#if showResetRequest && !tooManyRequests}
+                                <div class="forgotten">
+                                    <Button invisible onclick={handleShowReset}>
+                                        {t.authorize.passwordForgotten}
+                                    </Button>
+                                </div>
+                            {/if}
+                        {/if}
 
-            {#if !clientMfaForce && providers.length > 0}
+                        {#if !tooManyRequests && !clientMfaForce}
+                            {#if showReset}
+                                <div class="btn flex-col">
+                                    <Button onclick={requestReset}>
+                                        {t.authorize.passwordRequest}
+                                    </Button>
+                                </div>
+                            {:else}
+                                <div class="btn flex-col">
+                                    <Button type="submit" {isLoading}>
+                                        {t.authorize.login}
+                                    </Button>
+                                </div>
+                            {/if}
+                        {/if}
+                    </Form>
+
+                    {#if isRegOpen && !showResetRequest && !tooManyRequests}
+                        {#if clientUri}
+                            <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
+                                {t.authorize.signUp}
+                            </a>
+                        {:else}
+                            <a class="reg" href="/auth/v1/users/register" target="_blank">
+                                {t.authorize.signUp}
+                            </a>
+                        {/if}
+                    {/if}
+                {/if}
+
+                {#if err}
+                    <div class="errMsg">
+                        {err}
+                    </div>
+                {/if}
+
+                {#if emailSuccess}
+                    <div class="success">
+                        {t.authorize.emailSentMsg}
+                    </div>
+                {/if}
+
+                {#if clientMfaForce}
+                    <div class="btn flex-col">
+                        <Button onclick={() => window.location.href = '/auth/v1/account'}>
+                            Account
+                        </Button>
+                    </div>
+                {/if}
+
+                <!--{#if !clientMfaForce && providers.length > 0}-->
                 <div class="providers flex-col">
                     <div class="providersSeparator">
                         <div class="separator"></div>
@@ -529,18 +530,25 @@
                         />
                     {/each}
                 </div>
-            {/if}
-        </div>
+                <!--{/if}-->
+            </div>
 
-        <ThemeSwitch absolute/>
-        <LangSelector absolute/>
-    </ContentCenter>
+            <ThemeSwitch absolute/>
+            <LangSelector absolute/>
+        </ContentCenter>
+    </div>
 </Main>
 
 <style>
     .btn {
         margin: 5px 0;
         display: flex;
+    }
+
+    .outer {
+        width: 100dvw;
+        height: 100dvh;
+        background: hsla(var(--bg-high) / .25);
     }
 
     .container {
@@ -550,11 +558,12 @@
         max-width: 21rem;
         padding: 20px;
         border-radius: 5px;
-        background: hsla(var(--bg-high) / .25);
+        border: 1px solid hsl(var(--bg-high));
+        background: hsl(var(--bg));
     }
 
     .emailMinHeight {
-        min-height: 4.7rem;
+        min-height: 4.8rem;
     }
 
     .errMsg {
@@ -616,7 +625,7 @@
 
     .reg {
         margin-top: .5rem;
-        color: hsla(var(--text) / .75);
+        color: hsla(var(--text) / .85);
     }
 
     .success {
