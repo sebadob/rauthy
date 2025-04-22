@@ -108,7 +108,7 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
         // warn on prerelease usage
         if !app_version.pre.is_empty() {
             warn!(
-                "!!! Caution: you are using a prerelease version: {} !!!",
+                "!!! Caution: you are using a pre-release version: {} - DO NOT USE IN PRODUCTION !!!",
                 app_version.pre.as_str()
             );
         }

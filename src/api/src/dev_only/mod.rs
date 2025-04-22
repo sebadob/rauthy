@@ -1,4 +1,4 @@
-use actix_web::{HttpRequest, HttpResponse, get, post, web};
+use actix_web::{HttpResponse, get, post};
 use rauthy_error::ErrorResponse;
 
 #[cfg(debug_assertions)]
@@ -10,8 +10,8 @@ pub mod dev_handler;
 #[cfg(debug_assertions)]
 #[get("/template/{id}")]
 pub async fn get_template(
-    id: web::Path<String>,
-    req: HttpRequest,
+    id: actix_web::web::Path<String>,
+    req: actix_web::HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     dev_handler::get_template(id, req).await
 }
@@ -34,9 +34,9 @@ pub async fn get_template() -> Result<HttpResponse, ErrorResponse> {
 #[cfg(debug_assertions)]
 #[post("/dev/{typ}")]
 pub async fn post_dev_only_endpoints(
-    typ: web::Path<String>,
-    req: HttpRequest,
-    payload: web::Payload,
+    typ: actix_web::web::Path<String>,
+    req: actix_web::HttpRequest,
+    payload: actix_web::web::Payload,
 ) -> Result<HttpResponse, ErrorResponse> {
     dev_handler::post_dev_only_endpoints(typ, req, payload).await
 }
