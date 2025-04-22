@@ -30,6 +30,7 @@ use crate::migration::inserts;
 use hiqlite::params;
 use itertools::Itertools;
 use rauthy_common::constants::RAUTHY_VERSION;
+use rauthy_common::utils::deserialize;
 use rauthy_error::ErrorResponse;
 use semver::Version;
 use serde::Deserialize;
@@ -72,7 +73,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .query_raw_one("SELECT data FROM config WHERE id = 'db_version'", params!())
         .await?;
     let bytes: Vec<u8> = res.get("data");
-    let version = bincode::deserialize::<DbVersion>(&bytes)?.version;
+    let version = deserialize::<DbVersion>(&bytes)?.version;
     check_feature_version_migrate(version);
 
     // CONFIG
@@ -280,7 +281,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
         panic!("The MIGRATE_DB_FROM database is empty or too old");
     }
     let bytes = rows.swap_remove(0).data;
-    let version = bincode::deserialize::<DbVersion>(&bytes)?.version;
+    let version = deserialize::<DbVersion>(&bytes)?.version;
     check_feature_version_migrate(version);
 
     // CONFIG

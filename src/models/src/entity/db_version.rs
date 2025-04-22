@@ -3,6 +3,7 @@ use crate::entity::config::ConfigEntity;
 use hiqlite::{Param, params};
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::is_hiqlite;
+use rauthy_common::utils::{deserialize, serialize};
 use rauthy_error::ErrorResponse;
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -28,7 +29,7 @@ impl DbVersion {
             config.data
         };
 
-        bincode::deserialize::<Self>(&bytes).ok()
+        deserialize::<Self>(&bytes).ok()
     }
 
     pub async fn upsert(db_version: Option<Version>) -> Result<(), ErrorResponse> {
@@ -37,7 +38,7 @@ impl DbVersion {
             let slf = Self {
                 version: app_version,
             };
-            let data = bincode::serialize(&slf)?;
+            let data = serialize(&slf)?;
 
             let sql = r#"
 INSERT INTO config (id, data)

@@ -5,6 +5,7 @@ use rauthy_api_types::themes::ThemeRequestResponse;
 use rauthy_common::compression::{compress_br, compress_gzip};
 use rauthy_common::constants::BUILD_TIME;
 use rauthy_common::is_hiqlite;
+use rauthy_common::utils::{deserialize, serialize};
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
@@ -411,7 +412,7 @@ impl From<ThemeCss> for rauthy_api_types::themes::ThemeCss {
 
 impl From<&[u8]> for ThemeCss {
     fn from(value: &[u8]) -> Self {
-        bincode::deserialize(value).unwrap()
+        deserialize(value).unwrap()
     }
 }
 
@@ -457,7 +458,7 @@ impl ThemeCss {
     }
 
     pub fn as_bytes(&self) -> Vec<u8> {
-        bincode::serialize(self).unwrap()
+        serialize(self).unwrap()
     }
 
     fn default_dark() -> Self {

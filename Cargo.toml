@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.29.0-20250407"
+version = "0.29.0-20250425"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -26,8 +26,8 @@ lto = false
 strip = false
 
 [patch.crates-io]
-#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", branch = "optimized-migration-checks-in-writer", package = "hiqlite" }
-#hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
+cryptr = { git = "https://github.com/sebadob/cryptr" }
+hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
 
 [workspace.dependencies]
 accept-language = "3"
@@ -37,11 +37,12 @@ actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-lab = "0.24"
 actix-web-prom = "0.9.0"
 anyhow = "1"
+askama = "0.13.1"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
 async-trait = "0.1.74"
 base64 = "0.22.0"
-bincode = "1"
-brotli = "7.0.0"
+bincode = { version = "2", features = ["serde"] }
+brotli = "8"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 cidr = "0.3.0"
@@ -57,7 +58,7 @@ futures = "0.3"
 futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
-hiqlite = { version = "0.5", features = ["full"] }
+hiqlite = { version = "0.6.0-20250410", features = ["cache", "dashboard", "listen_notify_local"] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
@@ -79,24 +80,21 @@ openssl = { version = "0.10.72", features = ["vendored"] }
 openssl-sys = { version = "0.9.105", features = ["vendored"] }
 oxiri = "0.2.2"
 postgres-types = { version = "0.2.6", features = ["derive"] }
+# blocked by actix-web-prom
 prometheus = "0.13"
-# blocked by argon2
-rand = "0.8"
-# blocked by argon2
-rand_core = { version = "0.6", features = ["std"] }
+rand = "0.9"
+rand_core = { version = "0.9", features = ["std"] }
 refinery = { version = "0.8.14", features = ["tokio-postgres"] }
 regex = "1"
 reqwest = { version = "0.12.3", default-features = false, features = ["json", "rustls-tls"] }
 ring = "0.17.13"
-rinja = { version = "0.3.5", features = ["with-actix-web"] }
-rinja_actix = "0.3.5"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rsa = { version = "0.9.3", features = ["serde", "sha2"] }
 ruma = { version = "0.12.0", features = [
     "client-api-c", "client-ext-client-api", "client-reqwest", "markdown", "rand"
 ] }
-rusqlite = "0.33"
+rusqlite = "0.34"
 rust-embed = "8.5.0"
 rustls = { version = "0.23", default-features = false, features = ["logging", "std", "tls12", "ring"] }
 rustls-pki-types = "1.4.1"
@@ -106,10 +104,10 @@ semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_json_path = "0.7.1"
-serde_rusqlite = "0.37"
+serde_rusqlite = "0.38"
 serde_urlencoded = "0.7.1"
-spow = { version = "0.4", features = ["server"] }
-strum = { version = "0.26", features = ["derive"] }
+spow = { version = "0.5", features = ["server"] }
+strum = { version = "0.27", features = ["derive"] }
 svg-hush = "0.9.4"
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }

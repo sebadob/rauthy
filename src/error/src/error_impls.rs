@@ -179,13 +179,6 @@ impl From<argon2::Error> for ErrorResponse {
     }
 }
 
-impl From<Box<bincode::ErrorKind>> for ErrorResponse {
-    fn from(err: Box<bincode::ErrorKind>) -> Self {
-        error!("Bincode Error: {:?}", err);
-        ErrorResponse::new(ErrorResponseType::Internal, "Serialization Error")
-    }
-}
-
 impl From<chrono::ParseError> for ErrorResponse {
     fn from(value: chrono::ParseError) -> Self {
         debug!("{:?}", value);

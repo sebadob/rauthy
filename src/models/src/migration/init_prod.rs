@@ -3,13 +3,13 @@ use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::jwk::{Jwk, JwkKeyPairAlg};
 use actix_web::web;
 use argon2::password_hash::SaltString;
+use argon2::password_hash::rand_core::OsRng;
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
 use cryptr::{EncKeys, EncValue};
 use hiqlite::{Param, params};
 use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };
-use rand_core::OsRng;
 use rauthy_api_types::api_keys::ApiKeyRequest;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{base64_decode, get_rand};

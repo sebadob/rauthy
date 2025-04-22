@@ -16,14 +16,13 @@ rauthy-error = { path = "../error" }
 rauthy-notify = { path = "../notify" }
 
 accept-language = { workspace = true }
-actix = { workspace = true }
 actix-multipart = { workspace = true }
 actix-web = { workspace = true }
 actix-web-lab = { workspace = true }
 anyhow = { workspace = true }
 argon2 = { workspace = true }
+askama = { workspace = true }
 async-trait = { workspace = true }
-bincode = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }
 dotenvy = { workspace = true }
@@ -48,8 +47,6 @@ rand = { workspace = true }
 rand_core = { workspace = true }
 reqwest = { workspace = true }
 ring = { workspace = true }
-rinja = { workspace = true }
-rinja_actix = { workspace = true }
 rio_api = { workspace = true }
 rio_turtle = { workspace = true }
 rusqlite = { workspace = true }

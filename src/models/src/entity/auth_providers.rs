@@ -34,8 +34,8 @@ use rauthy_common::constants::{
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{
-    base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, get_rand,
-    new_store_id,
+    base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, deserialize,
+    get_rand, new_store_id, serialize,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
@@ -150,14 +150,14 @@ impl TryFrom<&str> for AuthProviderLinkCookie {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let bytes = base64_decode(value)?;
-        let slf = bincode::deserialize::<AuthProviderLinkCookie>(bytes.as_slice())?;
+        let slf = deserialize::<AuthProviderLinkCookie>(bytes.as_slice())?;
         Ok(slf)
     }
 }
 
 impl AuthProviderLinkCookie {
     pub fn build_cookie(&self) -> Result<Cookie<'_>, ErrorResponse> {
-        let bytes = bincode::serialize(self)?;
+        let bytes = serialize(self)?;
         let value = base64_encode(&bytes);
         Ok(ApiCookie::build(PROVIDER_LINK_COOKIE, value, 300))
     }

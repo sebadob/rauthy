@@ -1,8 +1,7 @@
 use actix_web::web;
-use argon2::password_hash::SaltString;
+use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Algorithm, Argon2, PasswordHash, PasswordHasher, PasswordVerifier, Version};
 use once_cell::sync::Lazy;
-use rand_core::OsRng;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::{env, thread};
 use tokio::time::Instant;
