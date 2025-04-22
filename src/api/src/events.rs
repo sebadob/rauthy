@@ -9,7 +9,6 @@ use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_models::entity::failed_scim_tasks::ScimAction;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::listener::EventRouterMsg;
 use std::time::Duration;
@@ -126,6 +125,7 @@ pub async fn post_event_test(
 
     #[cfg(debug_assertions)]
     if *rauthy_common::constants::DEV_MODE {
+        use rauthy_models::entity::failed_scim_tasks::ScimAction;
         use std::net::IpAddr;
 
         // in debug + dev mode, we want to generate one event of each type

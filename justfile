@@ -12,7 +12,6 @@ npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 builder_image := "ghcr.io/sebadob/rauthy-builder"
 builder_tag_date := "20250311"
-container_network := "rauthy-dev"
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
@@ -52,11 +51,6 @@ setup:
     cd frontend/
     {{ npm }} install
     cd ..
-
-    if ! {{ docker }} network inspect rauthy-dev; then
-      echo "Creating rauthy-dev container network"
-      {{ docker }} network create rauthy-dev
-    fi
 
     echo "Building the UI and static HTML"
     just build-ui
@@ -139,7 +133,6 @@ docker-buildx-setup:
 # Starts mailcrab
 mailcrab-start:
     {{ docker }} run -d \
-      --net {{ container_network }} \
       -p 1025:1025 \
       -p 1080:1080 \
       --name {{ container_mailcrab }} \
@@ -151,10 +144,6 @@ mailcrab-stop:
     {{ docker }} stop {{ container_mailcrab }}
     {{ docker }} rm {{ container_mailcrab }}
 
-# migrate the postgres database with sqlx
-migrate-postgres:
-    cargo sqlx migrate run --source migrations/sqlx_legacy
-
 # Starts mailcrab
 postgres-start:
     #!/usr/bin/env bash
@@ -163,16 +152,10 @@ postgres-start:
       -e POSTGRES_USER=rauthy \
       -e POSTGRES_PASSWORD=123SuperSafe \
       -e POSTGRES_DB=rauthy \
-      --net {{ container_network }} \
       -p 5432:5432 \
       --name {{ container_postgres }} \
       --restart unless-stopped \
       docker.io/library/postgres:17.2-alpine
-
-#    while ! just migrate-postgres; do
-#        echo "Database migrations failed - Postgres is probably still starting up"
-#        sleep 3
-#    done
 
 # Stops mailcrab
 postgres-stop:
@@ -360,14 +343,12 @@ build image="ghcr.io/sebadob/rauthy": build-ui
     # https://github.com/cross-rs/cross/security/advisories/GHSA-2r9g-5qvw-fgmf
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189
     {{ docker }} run \
-      -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
-      -v {{ invocation_directory() }}/:/work/ \
-      -w /work \
-      {{ map_docker_user }} \
-      --net {{ container_network }} \
-      -e DATABASE_URL=postgresql://rauthy:123SuperSafe@rauthy-db-postgres:5432/rauthy \
-      {{ builder_image }}:{{ builder_tag_date }} \
-      cargo build --release --target x86_64-unknown-linux-gnu
+        -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
+        -v {{ invocation_directory() }}/:/work/ \
+        -w /work \
+        {{ map_docker_user }} \
+        {{ builder_image }}:{{ builder_tag_date }} \
+        cargo build --release --target x86_64-unknown-linux-gnu
     cp target/x86_64-unknown-linux-gnu/release/rauthy out/rauthy_amd64
 
     # TODO here is potential to unify both images into a `dockerx` build which could
@@ -375,14 +356,12 @@ build image="ghcr.io/sebadob/rauthy": build-ui
     # Depending on the target arch, the `--target` would be added dynamically inside
     # the container.
     {{ docker }} run \
-      -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
-      -v {{ invocation_directory() }}/:/work/ \
-      -w /work \
-      {{ map_docker_user }} \
-      --net {{ container_network }} \
-      -e DATABASE_URL=postgresql://rauthy:123SuperSafe@rauthy-db-postgres:5432/rauthy \
-      {{ builder_image }}:{{ builder_tag_date }} \
-      cargo build --release --target aarch64-unknown-linux-gnu
+        -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
+        -v {{ invocation_directory() }}/:/work/ \
+        -w /work \
+        {{ map_docker_user }} \
+        {{ builder_image }}:{{ builder_tag_date }} \
+        cargo build --release --target aarch64-unknown-linux-gnu
     cp target/aarch64-unknown-linux-gnu/release/rauthy out/rauthy_arm64
 
     {{ docker }} buildx build \
