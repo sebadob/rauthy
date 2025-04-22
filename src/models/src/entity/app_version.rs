@@ -3,6 +3,7 @@ use chrono::Utc;
 use hiqlite::{Param, params};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_APP_VERSION, RAUTHY_VERSION};
 use rauthy_common::is_hiqlite;
+use rauthy_common::utils::{deserialize, serialize};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::ACCEPT;
 use serde::{Deserialize, Serialize};
@@ -36,7 +37,7 @@ impl LatestAppVersion {
         };
 
         if let Some(data) = res {
-            if let Ok(slf) = bincode::deserialize::<Self>(&data) {
+            if let Ok(slf) = deserialize::<Self>(&data) {
                 if let Err(err) = client
                     .put(Cache::App, IDX_APP_VERSION, &slf, CACHE_TTL_APP)
                     .await
@@ -74,7 +75,7 @@ impl LatestAppVersion {
             latest_version,
             release_url,
         };
-        let data = bincode::serialize(&slf)?;
+        let data = serialize(&slf)?;
 
         let sql = r#"
 INSERT INTO config (id, data) VALUES ('latest_version', $1)

@@ -20,7 +20,7 @@ use rauthy_common::constants::{
     WEBAUTHN_NO_PASSWORD_EXPIRY, WEBAUTHN_RENEW_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::base64_decode;
+use rauthy_common::utils::{base64_decode, deserialize, serialize};
 use rauthy_common::utils::{base64_encode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -505,7 +505,7 @@ impl WebauthnCookie {
     }
 
     pub fn build(&self) -> Result<Cookie, ErrorResponse> {
-        let ser = bincode::serialize(self)?;
+        let ser = serialize(self)?;
         let enc = EncValue::encrypt(&ser)?.into_bytes();
         let b64 = base64_encode(&enc);
 
@@ -523,7 +523,7 @@ impl WebauthnCookie {
         let cookie = cookie.as_ref().unwrap();
         let bytes = base64_decode(cookie)?;
         let dec = EncValue::try_from(bytes)?.decrypt()?;
-        let slf = bincode::deserialize::<Self>(&dec)?;
+        let slf = deserialize::<Self>(&dec)?;
 
         if slf.exp < OffsetDateTime::now_utc() {
             Err(ErrorResponse::new(

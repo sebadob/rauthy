@@ -8,6 +8,7 @@ use crate::i18n_email::password_new::I18nEmailPasswordNew;
 use crate::i18n_email::reset::I18nEmailReset;
 use crate::i18n_email::reset_info::I18nEmailResetInfo;
 use actix_web::web;
+use askama::Template;
 use chrono::DateTime;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
@@ -17,7 +18,6 @@ use rauthy_common::constants::{
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::Notification;
-use rinja_actix::Template;
 use std::env;
 use std::time::Duration;
 use tokio::sync::mpsc;

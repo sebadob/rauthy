@@ -5,7 +5,7 @@ use hiqlite::{Param, params};
 use rauthy_api_types::api_keys::ApiKeyResponse;
 use rauthy_common::constants::{API_KEY_LENGTH, CACHE_TTL_APP};
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::get_rand;
+use rauthy_common::utils::{deserialize, get_rand, serialize};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use ring::digest;
 use serde::{Deserialize, Serialize};
@@ -57,7 +57,7 @@ impl ApiKeyEntity {
             .into_bytes()
             .to_vec();
 
-        let access_bytes = bincode::serialize(&access)?;
+        let access_bytes = serialize(&access)?;
         let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
 
         let enc_key_active = &EncKeys::get_static().enc_key_active;
@@ -144,7 +144,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         let secret_enc = EncValue::encrypt(hash.as_ref())?.into_bytes().to_vec();
 
         // re-encrypt access rights with possibly new active key as well
-        let access_bytes = bincode::serialize(&api_key.access)?;
+        let access_bytes = serialize(&api_key.access)?;
         let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
 
         let enc_key_active = &EncKeys::get_static().enc_key_active;
@@ -184,7 +184,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
         let secret_enc = EncValue::encrypt(&api_key.secret)?.into_bytes().to_vec();
 
-        let access_bytes = bincode::serialize(&access)?;
+        let access_bytes = serialize(&access)?;
         let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
 
         let enc_key_active = &EncKeys::get_static().enc_key_active;
@@ -298,7 +298,7 @@ impl ApiKeyEntity {
     pub fn into_api_key(self) -> Result<ApiKey, ErrorResponse> {
         let secret = EncValue::try_from(self.secret)?.decrypt()?.to_vec();
         let access_dec = EncValue::try_from(self.access)?.decrypt()?.to_vec();
-        let access = bincode::deserialize::<Vec<ApiKeyAccess>>(&access_dec)?;
+        let access = deserialize::<Vec<ApiKeyAccess>>(&access_dec)?;
 
         Ok(ApiKey {
             name: self.name,

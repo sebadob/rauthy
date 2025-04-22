@@ -4,6 +4,7 @@ use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use chrono::Utc;
 use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
+use rauthy_common::utils::deserialize;
 use rauthy_error::ErrorResponse;
 use std::ops::Add;
 use tracing::warn;
@@ -126,13 +127,13 @@ pub async fn migrate_dev_data(issuer: &str) -> Result<(), ErrorResponse> {
     let eddsahex = "18000000000000006778646d6a6261616d516a6c43553464327453534c454447baaebc6500000000030000001000000000000000625643795473476167675679357971516200000000000000010100160000625643795473476167675679357971517a2536806a5960d51bd373a54bd1cb9691e7166bb7840a8db81be9b6744079337f9d80dad6ad3b7ab4149b9787ca5f1aefc4da11ba357293f2792c7838b73598be76eb5d2e0deb8f7d4dda4c";
 
     let mut jwks = Vec::with_capacity(4);
-    let entity = bincode::deserialize::<Jwk>(hex::decode(rs256hex).unwrap().as_slice())?;
+    let entity = deserialize::<Jwk>(hex::decode(rs256hex).unwrap().as_slice())?;
     jwks.push(entity);
-    let entity = bincode::deserialize::<Jwk>(hex::decode(rs384hex).unwrap().as_slice())?;
+    let entity = deserialize::<Jwk>(hex::decode(rs384hex).unwrap().as_slice())?;
     jwks.push(entity);
-    let entity = bincode::deserialize::<Jwk>(hex::decode(rs512hex).unwrap().as_slice())?;
+    let entity = deserialize::<Jwk>(hex::decode(rs512hex).unwrap().as_slice())?;
     jwks.push(entity);
-    let entity = bincode::deserialize::<Jwk>(hex::decode(eddsahex).unwrap().as_slice())?;
+    let entity = deserialize::<Jwk>(hex::decode(eddsahex).unwrap().as_slice())?;
     jwks.push(entity);
 
     let sql = r#"

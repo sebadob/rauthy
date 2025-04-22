@@ -5,8 +5,8 @@ use actix_web::http::header::HeaderMap;
 use base64::{Engine as _, engine, engine::general_purpose};
 use gethostname::gethostname;
 use rand::Rng;
-use rand::distributions::Alphanumeric;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::fmt::Debug;
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::{env, net::Ipv4Addr};
@@ -26,11 +26,15 @@ pub fn get_local_hostname() -> String {
 
 // Returns an alphanumeric random String with the requested length
 pub fn get_rand(count: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
+    rand::rng()
+        .sample_iter(rand::distr::Alphanumeric)
         .take(count)
         .map(char::from)
         .collect::<String>()
+}
+
+pub fn get_rand_between(lower: u64, upper: u64) -> u64 {
+    rand::rng().random_range(lower..upper)
 }
 
 #[inline(always)]
@@ -221,6 +225,34 @@ fn ip_from_cust_header(headers: &HeaderMap) -> Option<IpAddr> {
     }
 
     None
+}
+
+#[inline]
+pub fn serialize<T>(value: &T) -> Result<Vec<u8>, ErrorResponse>
+where
+    T: Debug + serde::Serialize,
+{
+    bincode::serde::encode_to_vec(value, bincode::config::legacy()).map_err(|err| {
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("Cannot serialize value: {:?}", err),
+        )
+    })
+}
+
+#[inline]
+pub fn deserialize<T>(value: &[u8]) -> Result<T, ErrorResponse>
+where
+    T: Debug + serde::de::DeserializeOwned,
+{
+    let (bytes, _) =
+        bincode::serde::decode_from_slice(value, bincode::config::legacy()).map_err(|err| {
+            ErrorResponse::new(
+                ErrorResponseType::Internal,
+                format!("Cannot deserialize value: {:?}", err),
+            )
+        })?;
+    Ok(bytes)
 }
 
 #[cfg(test)]

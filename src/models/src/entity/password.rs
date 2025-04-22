@@ -1,9 +1,9 @@
 use crate::database::{Cache, DB};
 use actix_web::web;
 use argon2::password_hash::SaltString;
+use argon2::password_hash::rand_core::OsRng;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
 use hiqlite::{Param, params};
-use rand_core::OsRng;
 use rauthy_api_types::generic::{
     PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse,
 };
@@ -11,6 +11,7 @@ use rauthy_common::constants::{
     ARGON2ID_M_COST_MIN, ARGON2ID_T_COST_MIN, CACHE_TTL_APP, IDX_PASSWORD_RULES,
 };
 use rauthy_common::is_hiqlite;
+use rauthy_common::utils::{deserialize, serialize};
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
@@ -150,7 +151,7 @@ impl PasswordPolicy {
         } else {
             DB::pg_query_one_row(sql, &[]).await?.get("data")
         };
-        let policy = bincode::deserialize::<Self>(&bytes)?;
+        let policy = deserialize::<Self>(&bytes)?;
 
         client
             .put(Cache::App, IDX_PASSWORD_RULES, &policy, CACHE_TTL_APP)
@@ -160,7 +161,7 @@ impl PasswordPolicy {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let data = bincode::serialize(&self)?;
+        let data = serialize(&self)?;
 
         let sql = "UPDATE config SET data = $1 WHERE id = 'password_policy'";
         if is_hiqlite() {

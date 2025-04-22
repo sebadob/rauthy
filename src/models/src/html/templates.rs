@@ -9,6 +9,7 @@ use crate::language::Language;
 use actix_web::cookie::Cookie;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder, web};
+use askama::Template;
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_common::constants::{
@@ -17,7 +18,6 @@ use rauthy_common::constants::{
 };
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rinja_actix::Template;
 use serde::Serialize;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};

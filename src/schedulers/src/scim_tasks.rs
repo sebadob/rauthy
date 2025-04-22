@@ -1,5 +1,5 @@
 use actix_web::web;
-use rand::Rng;
+use rauthy_common::utils::get_rand_between;
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients_scim::ClientScim;
@@ -23,7 +23,7 @@ pub async fn scim_task_retry(data: web::Data<AppState>) {
     loop {
         // We want to randomize the sleep because this scheduler should run on all cluster members.
         // This increases the chance opf success in case of a network segmentation.
-        let millis = rand::thread_rng().gen_range(60_000..90_000);
+        let millis = get_rand_between(60_000, 90_000);
         time::sleep(Duration::from_millis(millis)).await;
 
         debug!("Running scim_task_retry scheduler");
