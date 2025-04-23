@@ -131,7 +131,7 @@ async fn test_password_reset_always_ok() -> Result<(), Box<dyn Error>> {
 
     // get password reset for an existing user
     let mut payload = RequestResetRequest {
-        email: "admin@localhost.de".to_string(),
+        email: "admin@localhost".to_string(),
         redirect_uri: None,
     };
     let url = format!("{}/users/request_reset", get_backend_url());
@@ -193,13 +193,13 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
     let users = res.json::<Vec<UserResponseSimple>>().await?;
     let user_id_admin = users
         .iter()
-        .find(|u| u.email == "admin@localhost.de")
+        .find(|u| u.email == "admin@localhost")
         .unwrap()
         .id
         .clone();
     let user_id = users
         .into_iter()
-        .find(|u| u.email == "init_admin@localhost.de")
+        .find(|u| u.email == "init_admin@localhost")
         .unwrap()
         .id;
     eprintln!("user id for picture tests: {}", user_id);

@@ -52,7 +52,7 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
 
         // check if we should use manually provided bootstrap values
         let email =
-            env::var("BOOTSTRAP_ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost.de".to_string());
+            env::var("BOOTSTRAP_ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
         let hash = match env::var("BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID") {
             Ok(hash) => {
                 info!(
@@ -106,7 +106,7 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
             }
         };
 
-        let sql = "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'";
+        let sql = "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost'";
         if is_hiqlite() {
             // TODO we could grab a possibly existing `RAUTHY_ADMIN_EMAIL` and initialize a custom
             // admin
