@@ -103,7 +103,7 @@ a working SMTP, you only need to set `EVENT_EMAIL`, that's it.
 
 ```
 # The E-Mail address event notifications should be sent to.
-EVENT_EMAIL=admin@localhost.de
+EVENT_EMAIL=admin@localhost
 ```
 
 #### Matrix

@@ -286,7 +286,7 @@ HQL_S3_SECRET=s3_secret
 
 # If set, the email of the default admin will be changed
 # during the initialization of an empty production database.
-BOOTSTRAP_ADMIN_EMAIL=admin@localhost.de
+BOOTSTRAP_ADMIN_EMAIL=admin@localhost
 
 # If set, this plain text password will be used for the
 # initial admin password instead of generating a random
@@ -657,7 +657,7 @@ HQL_SECRET_API=SuperSecureSecret1337
 
 # This contact information will be added to the `rauthy`client
 # within the anti lockout rule with each new restart.
-RAUTHY_ADMIN_EMAIL="admin@localhost.de"
+RAUTHY_ADMIN_EMAIL="admin@localhost"
 
 # Will be used as the prefix for the E-Mail subject for each E-Mail 
 # that will be sent out to a client.
@@ -816,7 +816,7 @@ MAX_HASH_THREADS=1
 #####################################
 
 # The E-Mail address event notifications should be sent to.
-#EVENT_EMAIL=admin@localhost.de
+#EVENT_EMAIL=admin@localhost
 
 # Matrix variables for event notifications.
 # `EVENT_MATRIX_USER_ID` and `EVENT_MATRIX_ROOM_ID` are mandatory.

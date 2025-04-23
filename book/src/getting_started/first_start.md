@@ -32,15 +32,15 @@ If this is the case, you can delete the database / volume and just restart rauth
 ```
 
 The log message contains a link to the accounts page, where you then should log in to immediately set a new password.
-Follow the link, use as the default admin `admin@localhost.de` and as password the copied value from the log.
+Follow the link, use as the default admin `admin@localhost` and as password the copied value from the log.
 
 - When logged into the account, click `EDIT` and `CHANGE PASSWORD` to set a new password
 - Log out of the account and try to log in to the admin ui with the new password
 
 ## Custom rauthy admin user
 
-It is a good idea, to either keep the `admin@localhost.de` as a fallback user with just a very long password, or
-disable it, after a custom admin has been added.
+It is a good idea, to either keep the `admin@localhost` and rename it (to never have a default admin, which would be an
+attack vector) as a fallback user with just a very long password, or disable it, after a custom admin has been added.
 
 When logged in to the admin UI, you can add a new user. When the `SMTP` settings are correctly configured in the config,
 which we can test right now, you will receive an E-Mail with the very first password reset.
@@ -54,7 +54,7 @@ To debug this, you can set `LOG_LEVEL=debug` in the config and then watch the lo
 ### `rauthy_admin` user role
 
 The role, which allows a user to access the admin UI, is the `rauthy_admin`.  
-If the user has this role assigned, he will be seen as an admin.  
+If the user has this role assigned, he will be seen as an admin.
 
 Under the hood, rauthy itself uses the OIDC roles and groups in the same way, as all clients would do. This means you
 should not neither delete the `rauthy` default client, nor the `rauthy_admin` role. There are mechanisms to prevents

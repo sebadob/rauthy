@@ -4,7 +4,7 @@ Rauthy supports some basic bootstrapping functionality to make it easier to use 
 
 ## Admin User
 
-By default, the admin user will always be `admin@localhost.de` and the password will be auto-generated and shown
+By default, the admin user will always be `admin@localhost` and the password will be auto-generated and shown
 only once in the logs. This is the easiest way if you want to set up a new instance manually.
 
 However, you can change the default admin username and also provide a bootstrap password for this user, if Rauthy
