@@ -192,6 +192,14 @@ pub struct UpdateClientRequest {
     pub scim: Option<ScimClientRequestResponse>,
 }
 
+#[derive(Debug, Default, Validate, Deserialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(serde::Serialize))]
+pub struct ClientSecretRequest {
+    /// Validation: Value between 1 and 24
+    #[validate(range(min = 1, max = 24))]
+    pub cache_current_hours: Option<u8>,
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema, Validate)]
 pub struct ScimClientRequestResponse {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`

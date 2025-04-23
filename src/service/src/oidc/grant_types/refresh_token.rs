@@ -32,7 +32,7 @@ pub async fn grant_type_refresh(
         let secret = client_secret.ok_or_else(|| {
             ErrorResponse::new(ErrorResponseType::BadRequest, "'client_secret' is missing")
         })?;
-        client.validate_secret(&secret, &req)?;
+        client.validate_secret(&secret, &req).await?;
     }
 
     client.validate_flow("refresh_token")?;

@@ -40,7 +40,7 @@ pub async fn grant_type_credentials(
     let secret = client_secret.ok_or_else(|| {
         ErrorResponse::new(ErrorResponseType::BadRequest, "'client_secret' is missing")
     })?;
-    client.validate_secret(&secret, &req)?;
+    client.validate_secret(&secret, &req).await?;
     client.validate_flow("client_credentials")?;
     let header_origin = client.get_validated_origin_header(&req)?;
 

@@ -63,7 +63,7 @@ pub async fn grant_type_authorization_code(
             warn!("'client_secret' is missing");
             ErrorResponse::new(ErrorResponseType::BadRequest, "'client_secret' is missing")
         })?;
-        client.validate_secret(&secret, &req)?;
+        client.validate_secret(&secret, &req).await?;
     }
     client.validate_flow("authorization_code")?;
     client.validate_redirect_uri(req_data.redirect_uri.as_deref().unwrap_or_default())?;

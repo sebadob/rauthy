@@ -6,8 +6,8 @@ use actix_web::web::{Json, Query};
 use actix_web::{HttpRequest, HttpResponse, delete, get, post, put, web};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_api_types::clients::{
-    ClientResponse, ClientSecretResponse, DynamicClientRequest, DynamicClientResponse,
-    NewClientRequest, UpdateClientRequest,
+    ClientResponse, ClientSecretRequest, ClientSecretResponse, DynamicClientRequest,
+    DynamicClientResponse, NewClientRequest, UpdateClientRequest,
 };
 use rauthy_api_types::generic::LogoParams;
 use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
@@ -475,10 +475,17 @@ pub async fn delete_client_logo(
 pub async fn put_generate_client_secret(
     id: web::Path<String>,
     principal: ReqPrincipal,
+    payload: Option<Json<ClientSecretRequest>>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
+    let payload = if let Some(p) = payload {
+        p.into_inner()
+    } else {
+        Default::default()
+    };
+    payload.validate()?;
 
-    client::generate_new_secret(id.into_inner())
+    client::generate_new_secret(id.into_inner(), payload.cache_current_hours)
         .await
         .map(|r| HttpResponse::Ok().json(r))
 }

@@ -134,10 +134,15 @@ pub async fn get_client_secret(id: String) -> Result<ClientSecretResponse, Error
     })
 }
 
-pub async fn generate_new_secret(id: String) -> Result<ClientSecretResponse, ErrorResponse> {
+pub async fn generate_new_secret(
+    id: String,
+    cache_current_hours: Option<u8>,
+) -> Result<ClientSecretResponse, ErrorResponse> {
     let mut client = Client::find(id).await?;
-    let (clear, enc) = Client::generate_new_secret()?;
 
+    client.cache_current_secret(cache_current_hours).await?;
+
+    let (clear, enc) = Client::generate_new_secret()?;
     client.confidential = true;
     client.secret = Some(enc);
     client.save().await?;

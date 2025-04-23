@@ -1,9 +1,13 @@
-use crate::common::{CLIENT_SECRET, get_auth_headers, get_backend_url};
+use crate::common::{CLIENT_ID, CLIENT_SECRET, get_auth_headers, get_backend_url};
 use pretty_assertions::{assert_eq, assert_ne};
 use rauthy_api_types::clients::{
-    ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
+    ClientResponse, ClientSecretRequest, ClientSecretResponse, NewClientRequest,
+    UpdateClientRequest,
 };
-use rauthy_api_types::oidc::JwkKeyPairAlg;
+use rauthy_api_types::oidc::{JwkKeyPairAlg, TokenRequest};
+use rauthy_common::constants::APPLICATION_JSON;
+use rauthy_service::token_set::TokenSet;
+use reqwest::header::CONTENT_TYPE;
 use std::error::Error;
 
 mod common;
@@ -216,19 +220,48 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     assert!(resp.secret.is_some());
     let secret = resp.secret.unwrap();
 
+    // try to get a token with the credentials
+    let mut token_req = TokenRequest {
+        grant_type: "client_credentials".to_string(),
+        code: None,
+        redirect_uri: None,
+        client_id: Some(CLIENT_ID.to_string()),
+        client_secret: Some(secret.clone()),
+        code_verifier: None,
+        device_code: None,
+        username: None,
+        password: None,
+        refresh_token: None,
+    };
+    let url_token = format!("{}/oidc/token", backend_url);
+    let res = client.post(&url_token).form(&token_req).send().await?;
+    assert_eq!(res.status(), 200);
+    let ts = res.json::<TokenSet>().await?;
+    assert!(!ts.access_token.is_empty());
+
     // generate a new secret
     let res = client
         .put(&url)
         .headers(auth_headers.clone())
+        .header(CONTENT_TYPE, APPLICATION_JSON)
         .send()
         .await?;
     assert!(res.status().is_success());
     let resp = res.json::<ClientSecretResponse>().await?;
     assert!(resp.secret.is_some());
-    let new_secret = resp.secret.unwrap();
-    assert_ne!(new_secret, secret);
+    let secret_new = resp.secret.unwrap();
+    assert_ne!(secret_new, secret);
 
-    let url = format!("{}/clients/init_client/secret", backend_url);
+    // make sure we cannot login anymore with the old secret
+    let res = client.post(&url_token).form(&token_req).send().await?;
+    assert_eq!(res.status(), 401);
+
+    // but we should be able to log in with the new one
+    token_req.client_secret = Some(secret_new.clone());
+    let res = client.post(&url_token).form(&token_req).send().await?;
+    assert_eq!(res.status(), 200);
+
+    // make sure we get the same secret back
     let res = client
         .post(&url)
         .headers(auth_headers.clone())
@@ -237,7 +270,31 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     assert!(res.status().is_success());
     let resp = res.json::<ClientSecretResponse>().await?;
     assert!(resp.secret.is_some());
-    assert_eq!(resp.secret.unwrap(), new_secret);
+    assert_eq!(resp.secret.unwrap(), secret_new);
+
+    // rotate secret gracefully and cache the current one
+    let payload = ClientSecretRequest {
+        cache_current_hours: Some(1),
+    };
+    let res = client
+        .put(&url)
+        .headers(auth_headers.clone())
+        .json(&payload)
+        .send()
+        .await?;
+    assert!(res.status().is_success());
+    let resp = res.json::<ClientSecretResponse>().await?;
+    assert!(resp.secret.is_some());
+    let secret_rotated = resp.secret.unwrap();
+    assert_ne!(secret_rotated, secret_new);
+
+    // we should be able to use both secrets (for 1 hour) to log in
+    let res = client.post(&url_token).form(&token_req).send().await?;
+    assert_eq!(res.status(), 200);
+
+    token_req.client_secret = Some(secret_rotated);
+    let res = client.post(&url_token).form(&token_req).send().await?;
+    assert_eq!(res.status(), 200);
 
     Ok(())
 }
