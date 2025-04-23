@@ -764,6 +764,55 @@ WHERE id = $4"#;
 
         new_client.into_dynamic_client_response(data, client_dyn, *DYN_CLIENT_SECRET_AUTO_ROTATE)
     }
+
+    pub async fn cache_current_secret(
+        &self,
+        cache_current_hours: Option<u8>,
+    ) -> Result<(), ErrorResponse> {
+        if let Some(hours) = cache_current_hours {
+            if let Some(plain) = self.get_secret_cleartext()? {
+                // The original idea was to save secrets hashed. However, since the secrets are used as
+                // a key, the HashMap inside the `hiqlite` cache handler will take care of this for us,
+                // to they could not be read from memory at runtime.
+                DB::hql()
+                    .put_bytes(
+                        Cache::ClientSecret,
+                        plain,
+                        self.id.as_bytes().to_vec(),
+                        Some(hours as i64),
+                    )
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn validate_cached_secret(
+        client_id: &str,
+        secret: &str,
+    ) -> Result<(), ErrorResponse> {
+        match DB::hql().get_bytes(Cache::ClientSecret, secret).await? {
+            None => {
+                debug!("No cached secret found for client {}", client_id);
+                Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "client_secret does not exist or is invalid",
+                ))
+            }
+            Some(bytes) => {
+                if bytes == client_id.as_bytes() {
+                    debug!("Matching cached client_secret for {}", client_id);
+                    Ok(())
+                } else {
+                    debug!("Found cached client_secret, but for a different client.",);
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::Unauthorized,
+                        "client_secret does not exist or is invalid",
+                    ))
+                }
+            }
+        }
+    }
 }
 
 impl Client {
@@ -1212,7 +1261,11 @@ impl Client {
         Ok(())
     }
 
-    pub fn validate_secret(&self, secret: &str, req: &HttpRequest) -> Result<(), ErrorResponse> {
+    pub async fn validate_secret(
+        &self,
+        secret: &str,
+        req: &HttpRequest,
+    ) -> Result<(), ErrorResponse> {
         if !self.confidential {
             error!("Cannot validate 'client_secret' for public client");
             return Err(ErrorResponse::new(
@@ -1229,20 +1282,25 @@ impl Client {
         })?;
         let cleartext = EncValue::try_from(secret_enc.clone())?.decrypt()?;
 
-        if cleartext.as_ref() != secret.as_bytes() {
-            drop(cleartext);
-            warn!(
-                "Invalid login for client '{}' from '{}'",
-                self.id,
-                real_ip_from_req(req)?
-            );
-
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Invalid 'client_secret'",
-            ));
+        if cleartext.as_ref() == secret.as_bytes()
+            || Client::validate_cached_secret(&self.id, secret)
+                .await
+                .is_ok()
+        {
+            return Ok(());
         }
-        Ok(())
+        // TODO we could possibly `zeroize` here with additional implementations
+
+        warn!(
+            "Invalid login for client '{}' from '{}'",
+            self.id,
+            real_ip_from_req(req)?
+        );
+
+        Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "Invalid 'client_secret'",
+        ))
     }
 }
 

@@ -45,7 +45,6 @@ export interface I18nAdmin {
         descUri: string,
         errConfidentialPKCE: string,
         forceMfa: string,
-        generateSecret: string,
         name: string,
         scim: {
             // inserted as html
@@ -70,6 +69,13 @@ export interface I18nAdmin {
             // inserted as html
             desc: string,
         },
+        secret: {
+            doCache: string,
+            cacheDuration: string,
+            generate: string,
+            rotateDesc1: string,
+            rotateDesc2: string,
+        }
         tokenLifetime: {
             p1: string,
             p2: string,

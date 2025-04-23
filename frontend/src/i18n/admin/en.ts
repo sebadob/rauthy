@@ -53,7 +53,6 @@ export let I18nAdminEn: I18nAdmin = {
         errConfidentialPKCE: `The client must either be confidential or have at least one PKCE
             challenge activated.`,
         forceMfa: "Force MFA",
-        generateSecret: "Generate New Secret",
         name: "Client Name",
         scim: {
             baseUri: `The SCIM base URI is the one from which the sub routes like 
@@ -80,6 +79,14 @@ export let I18nAdminEn: I18nAdmin = {
             a redirect to the login when using the <code>authorization_code</code> flow. The default
             scopes will always be added to the tokens to solve some issues when using the 
             <code>password</code> for instance.`,
+        },
+        secret: {
+            doCache: "Cache Client Secret",
+            cacheDuration: "Cache Duration (hours)",
+            generate: "Generate New Secret",
+            rotateDesc1: `To make graceful updates and secret rotations possible, you have the ability to keep the
+                current secret in an in-memory cache for some time. You can enter a value between 1 and 24 hours.`,
+            rotateDesc2: "Caution: You should not cache the current secret if you had a leak!",
         },
         tokenLifetime: {
             p1: `The token lifetime applies to Access and ID tokens and is given in seconds.`,

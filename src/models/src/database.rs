@@ -41,6 +41,7 @@ pub enum Cache {
     AuthProviderCallback,
     ClientDynamic,
     ClientEphemeral,
+    ClientSecret,
     DPoPNonce,
     JwksRemote,
     ThemeTs,

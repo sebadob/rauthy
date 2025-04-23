@@ -66,6 +66,11 @@ export interface UpdateClientRequest {
     scim?: ScimClientRequestResponse,
 }
 
+export interface ClientSecretRequest {
+    /// Validation: Value between 1 and 24
+    cache_current_hours?: number,
+}
+
 export interface ClientResponse {
     id: string,
     name?: string,

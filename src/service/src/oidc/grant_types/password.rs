@@ -47,7 +47,7 @@ pub async fn grant_type_password(
         let secret = client_secret.ok_or_else(|| {
             ErrorResponse::new(ErrorResponseType::BadRequest, "Missing 'client_secret'")
         })?;
-        client.validate_secret(&secret, &req)?;
+        client.validate_secret(&secret, &req).await?;
     }
     client.validate_flow("password")?;
 

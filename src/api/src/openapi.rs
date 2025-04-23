@@ -228,6 +228,7 @@ use utoipa::{OpenApi, openapi};
             TokenRequest,
             TokenValidationRequest,
             UpdateClientRequest,
+            ClientSecretRequest,
             UpdateUserRequest,
             UpdateUserSelfRequest,
             UserValuesRequest,

@@ -120,7 +120,7 @@ async fn check_client_auth(
             ));
         }
 
-        client.validate_secret(secret, req)?;
+        client.validate_secret(secret, req).await?;
         Ok(client)
     } else {
         Err(ErrorResponse::new(
