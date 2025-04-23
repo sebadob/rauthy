@@ -94,7 +94,7 @@ I used the `rauthy` client in this example (which you should not mess with when 
   ],
   "auth_time": 1721722389,
   "at_hash": "Hd5ugcSzxwl1epF7Il3pEpq0gznnqs2SnSVZCdNw0EI",
-  "preferred_username": "admin@localhost.de",
+  "preferred_username": "admin@localhost",
   "roles": [
     "rauthy_admin",
     "admin"

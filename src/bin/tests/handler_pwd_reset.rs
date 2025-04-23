@@ -15,7 +15,7 @@ mod common;
 async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
     let user_id = "2PYV3STNz3MN7VnPjJVcPQap".to_string(); // test_admin
-    let username = "test_admin@localhost.de";
+    let username = "test_admin@localhost";
     let reset_id = "2qqdUOcXECQeypBNTs7Pnp7A2zAwr0VzynyzJiIjNR1Ua9KA95dTewM56JaPIoyj";
     let url_get = format!("{backend_url}/users/{user_id}/reset/{reset_id}");
 

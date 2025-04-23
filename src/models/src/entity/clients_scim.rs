@@ -1195,7 +1195,7 @@ impl ClientScim {
 
                 //                 let pre = r#"{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
                 // "Operations":[{"op":"add","path":"members","value":[{"value":"9eb2bd20-c70c-48fb-a0fb-ff1daccfa23f",
-                // "display":"test_admin@localhost.de"}]}]}"#;
+                // "display":"test_admin@localhost"}]}]}"#;
 
                 // Same situation as for group patching. This "ugly" way of json creation is a pretty
                 // big efficiency gain, and we avoid many unnecessary allocations, since we have a

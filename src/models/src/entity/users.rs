@@ -1757,7 +1757,7 @@ mod tests {
     fn test_session_impl() {
         let mut user = User {
             id: "123".to_string(),
-            email: "admin@localhost.de".to_string(),
+            email: "admin@localhost".to_string(),
             given_name: "Admin".to_string(),
             family_name: Some("Rauthy".to_string()),
             password: Some("SoSafeNOTHash".to_string()),
@@ -1820,7 +1820,7 @@ mod tests {
     fn test_user_impl() -> Result<(), ErrorResponse> {
         let mut user =  User {
             id: "123".to_string(),
-            email: "admin@localhost.de".to_string(),
+            email: "admin@localhost".to_string(),
             given_name: "Admin".to_string(),
             family_name: Some("Rauthy".to_string()),
             password: Some("$argon2id$v=19$m=16384,t=3,p=2$l8F0ar1wSQsce+OdPgYbhg$I2XrvC/XRW+22eI2ptBg5GQp3SHjgSQXsfstuTZne1I".to_string()),

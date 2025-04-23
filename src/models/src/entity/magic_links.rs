@@ -371,7 +371,7 @@ mod tests {
         let ml_from = MagicLinkUsage::try_from(&s).unwrap();
         assert_eq!(ml, ml_from);
 
-        let ml = MagicLinkUsage::EmailChange("admin@localhost.de".to_string());
+        let ml = MagicLinkUsage::EmailChange("admin@localhost".to_string());
         let s = ml.to_string();
         let ml_from = MagicLinkUsage::try_from(&s).unwrap();
         assert_eq!(ml, ml_from);
