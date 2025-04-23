@@ -55,7 +55,6 @@ export let I18nAdminDe: I18nAdmin = {
         errConfidentialPKCE: `Der Client muss entweder vertraulich sein oder mindestens eine PKCE
             Challenge aktiviert haben.`,
         forceMfa: "MFA Erzwingen",
-        generateSecret: "Neues Secret Generieren",
         name: "Client Name",
         scim: {
             baseUri: `Die SCIM base URI muss jene sein, von der Sub-Routen wie 
@@ -82,6 +81,15 @@ export let I18nAdminDe: I18nAdmin = {
             im <code>authorization_code</code> flow anfordern kann. Die standard Scopes werden hingegen immer
             hinzugefügt und können Probleme lösen, wenn z.B. der <code>password</code> Flow verwendet
             wird.`,
+        },
+        secret: {
+            doCache: "Client Secret cachen",
+            cacheDuration: "Cache Dauer (Stunden)",
+            generate: "Neues Secret Generieren",
+            rotateDesc1: `Um unterbrechungsfreie Updates durchfürhen zu können, ist es möglich, das bestehende Secret
+                für eine gewisse Zeit im in-memory Cache zu behalten. Es kann ein Wert zwischen 1 und 24 Stunden 
+                angegeben werden.`,
+            rotateDesc2: "Achtung: Das derzeitige Secret sollte nicht im Cache behalten werden, wenn es ein Leak gab!",
         },
         tokenLifetime: {
             p1: `Die Token Lifetime wird auf Access und ID Tokens angewandt und wird in Sekunden angegeben.`,

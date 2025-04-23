@@ -49,7 +49,6 @@ export let I18nAdminKo: I18nAdmin = {
             와일드카드로 사용할 수 있습니다.`,
         errConfidentialPKCE: `클라이언트는 기밀 또는 PKCE 챌린지 중 하나 이상 활성화되어야 합니다.`,
         forceMfa: "강제 MFA",
-        generateSecret: "새 Secret 생성",
         name: "클라이언트 이름",
         scim: {
             baseUri: `The SCIM base URI is the one from which the sub routes like 
@@ -75,6 +74,14 @@ export let I18nAdminKo: I18nAdmin = {
             desc: `허용된 범위는 <code>authorization_code</code> 플로우를 사용할 때 로그인 리디렉션 중에
                 클라이언트가 동적으로 요청할 수 있는 범위입니다. 예를 들어 <code>password</code> 를
                 사용할 때, 일부 문제를 해결하기 위해 기본 범위가 항상 토큰에 추가됩니다.`,
+        },
+        secret: {
+            doCache: "Cache Client Secret",
+            cacheDuration: "Cache Duration (hours)",
+            generate: "새 Secret 생성",
+            rotateDesc1: `To make graceful updates and secret rotations possible, you have the ability to keep the
+                current secret in an in-memory cache for some time. You can enter a value between 1 and 24 hours.`,
+            rotateDesc2: "Caution: You should not cache the current secret if you had a leak!",
         },
         tokenLifetime: {
             p1: `토큰 수명은 액세스 토큰과 ID 토큰에 적용되며, 초 단위입니다.`,
