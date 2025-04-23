@@ -109,7 +109,7 @@
                                 bind:isError={isInputErr}
                                 min="1"
                                 max="24"
-                                width="12rem"
+                                width="13rem"
                         />
                     </div>
                 {/if}
