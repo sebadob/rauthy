@@ -1,13 +1,12 @@
 <script lang="ts">
     import IconUpload from "$icons/IconUpload.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {genKey} from "$utils/helpers.ts";
+    import {useI18n} from "$state/i18n.svelte";
+    import {genKey, getCsrfToken} from "$utils/helpers";
     import type {ErrorResponse} from "$api/types/error.ts";
-    import {CSRF_TOKEN} from "$utils/constants.ts";
     import IconStop from "$icons/IconStop.svelte";
     import Button from "$lib/button/Button.svelte";
-    import {fetchDelete} from "$api/fetch.ts";
-    import {usePictureConfig} from "$state/picture_config.svelte.ts";
+    import {fetchDelete} from "$api/fetch";
+    import {usePictureConfig} from "$state/picture_config.svelte";
 
     let {
         userId,
@@ -160,7 +159,7 @@
             let res = await fetch(url, {
                 method: 'PUT',
                 headers: {
-                    'x-csrf-token': localStorage.getItem(CSRF_TOKEN) || '',
+                    'x-csrf-token': getCsrfToken(),
                 },
                 body: fd,
             });

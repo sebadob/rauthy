@@ -1,6 +1,6 @@
 export const PKCE_VERIFIER = 'pkce_verifier';
 export const PKCE_VERIFIER_UPSTREAM = 'pkce_verifier_upstream';
-export const CSRF_TOKEN = 'csrf_token';
+export const CSRF_TOKEN = 'sct';
 export const ACCESS_TOKEN = 'access_token';
 export const ID_TOKEN = 'id_token';
 export const PROVIDER_TOKEN = 'provider_token';
