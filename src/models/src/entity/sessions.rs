@@ -76,7 +76,6 @@ impl From<tokio_postgres::Row> for Session {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SessionState {
-    Open,
     Init,
     Auth,
     LoggedOut,
@@ -88,7 +87,6 @@ impl FromStr for SessionState {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let res = match s {
-            "open" => SessionState::Open,
             "init" => SessionState::Init,
             "auth" => SessionState::Auth,
             "logged_out" => SessionState::LoggedOut,
@@ -101,7 +99,6 @@ impl FromStr for SessionState {
 impl From<rauthy_api_types::sessions::SessionState> for SessionState {
     fn from(value: rauthy_api_types::sessions::SessionState) -> Self {
         match value {
-            rauthy_api_types::sessions::SessionState::Open => Self::Open,
             rauthy_api_types::sessions::SessionState::Init => Self::Init,
             rauthy_api_types::sessions::SessionState::Auth => Self::Auth,
             rauthy_api_types::sessions::SessionState::LoggedOut => Self::LoggedOut,
@@ -113,7 +110,6 @@ impl From<rauthy_api_types::sessions::SessionState> for SessionState {
 impl From<SessionState> for rauthy_api_types::sessions::SessionState {
     fn from(value: SessionState) -> Self {
         match value {
-            SessionState::Open => Self::Open,
             SessionState::Init => Self::Init,
             SessionState::Auth => Self::Auth,
             SessionState::LoggedOut => Self::LoggedOut,
@@ -125,7 +121,6 @@ impl From<SessionState> for rauthy_api_types::sessions::SessionState {
 impl SessionState {
     pub fn as_str(&self) -> &str {
         match self {
-            SessionState::Open => "open",
             SessionState::Init => "init",
             SessionState::Auth => "auth",
             SessionState::LoggedOut => "logged_out",
@@ -615,9 +610,7 @@ impl Session {
             return false;
         }
         if let Some(ip) = remote_ip {
-            if (state == SessionState::Open || state == SessionState::Auth)
-                && self.remote_ip != Some(ip.to_string())
-            {
+            if state == SessionState::Auth && self.remote_ip != Some(ip.to_string()) {
                 let session_ip = self.remote_ip.as_deref().unwrap_or("UNKNOWN");
                 warn!(
                     "Invalid access for session {} / {} with different IP: {}",

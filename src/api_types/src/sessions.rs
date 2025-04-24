@@ -3,7 +3,6 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum SessionState {
-    Open,
     Init,
     Auth,
     LoggedOut,
