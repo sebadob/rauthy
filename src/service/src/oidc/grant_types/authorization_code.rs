@@ -174,7 +174,7 @@ pub async fn grant_type_authorization_code(
         let mut session = Session::find(sid).await?;
 
         session.last_seen = Utc::now().timestamp();
-        session.state = SessionState::Auth.as_str().to_string();
+        session.state = SessionState::Auth;
         if let Err(err) = session.validate_user_expiry(&user) {
             code.delete().await?;
             return Err(err);

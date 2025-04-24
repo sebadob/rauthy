@@ -21,7 +21,7 @@ use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
 use std::ops::Add;
 use std::str::FromStr;
-use tracing::{error, warn};
+use tracing::{debug, warn};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Session {
@@ -31,7 +31,7 @@ pub struct Session {
     pub roles: Option<String>,
     pub groups: Option<String>,
     pub is_mfa: bool,
-    pub state: String,
+    pub state: SessionState,
     pub exp: i64,
     pub last_seen: i64,
     pub remote_ip: Option<String>,
@@ -41,15 +41,15 @@ impl Debug for Session {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "id: {}(...), csrf_token: {}(...), user_id: {:?}, roles: {:?}, groups: {:?}, \
-        is_mfa: {}, state: {}, exp: {}, last_seen: {}, remote_ip: {:?}",
+            "Session {{ id: {}(...), csrf_token: {}(...), user_id: {:?}, roles: {:?}, groups: {:?}, \
+        is_mfa: {}, state: {}, exp: {}, last_seen: {}, remote_ip: {:?} }}",
             &self.id[..5],
             &self.csrf_token[..5],
             self.user_id,
             self.roles,
             self.groups,
             self.is_mfa,
-            self.state,
+            self.state.as_str(),
             self.exp,
             self.last_seen,
             self.remote_ip
@@ -57,8 +57,11 @@ impl Debug for Session {
     }
 }
 
-impl From<tokio_postgres::Row> for Session {
-    fn from(row: tokio_postgres::Row) -> Self {
+impl From<hiqlite::Row<'_>> for Session {
+    fn from(mut row: hiqlite::Row<'_>) -> Self {
+        let state =
+            SessionState::from_str(&row.get::<String>("state")).unwrap_or(SessionState::Unknown);
+
         Self {
             id: row.get("id"),
             csrf_token: row.get("csrf_token"),
@@ -66,7 +69,27 @@ impl From<tokio_postgres::Row> for Session {
             roles: row.get("roles"),
             groups: row.get("groups"),
             is_mfa: row.get("is_mfa"),
-            state: row.get("state"),
+            state,
+            exp: row.get("exp"),
+            last_seen: row.get("last_seen"),
+            remote_ip: row.get("remote_ip"),
+        }
+    }
+}
+
+impl From<tokio_postgres::Row> for Session {
+    fn from(row: tokio_postgres::Row) -> Self {
+        let state =
+            SessionState::from_str(&row.get::<_, String>("state")).unwrap_or(SessionState::Unknown);
+
+        Self {
+            id: row.get("id"),
+            csrf_token: row.get("csrf_token"),
+            user_id: row.get("user_id"),
+            roles: row.get("roles"),
+            groups: row.get("groups"),
+            is_mfa: row.get("is_mfa"),
+            state,
             exp: row.get("exp"),
             last_seen: row.get("last_seen"),
             remote_ip: row.get("remote_ip"),
@@ -163,9 +186,8 @@ impl Session {
             ids
         };
 
-        let client = DB::hql();
         for id in sids {
-            client.delete(Cache::Session, id).await?;
+            DB::hql().delete(Cache::Session, id).await?;
         }
 
         Ok(())
@@ -180,7 +202,7 @@ impl Session {
 
         let sql = "SELECT * FROM sessions WHERE id = $1";
         let slf: Self = if is_hiqlite() {
-            client.query_as_one(sql, params!(id)).await?
+            client.query_map_one(sql, params!(id)).await?
         } else {
             DB::pg_query_one(sql, &[&id]).await?
         };
@@ -196,7 +218,7 @@ impl Session {
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let sql = "SELECT * FROM sessions ORDER BY exp DESC";
         let sessions = if is_hiqlite() {
-            DB::hql().query_as(sql, params!()).await?
+            DB::hql().query_map(sql, params!()).await?
         } else {
             DB::pg_query(sql, &[], 4).await?
         };
@@ -228,7 +250,7 @@ OFFSET $4"#;
 
                 let mut rows: Vec<Self> = if is_hiqlite() {
                     DB::hql()
-                        .query_as(sql, params!(token.ts, token.id, page_size, offset))
+                        .query_map(sql, params!(token.ts, token.id, page_size, offset))
                         .await?
                 } else {
                     DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
@@ -251,7 +273,7 @@ OFFSET $4"#;
 
                 let rows: Vec<Self> = if is_hiqlite() {
                     DB::hql()
-                        .query_as(sql, params!(token.ts, token.id, page_size, offset))
+                        .query_map(sql, params!(token.ts, token.id, page_size, offset))
                         .await?
                 } else {
                     DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
@@ -274,7 +296,7 @@ LIMIT $1
 OFFSET $2"#;
 
             let mut rows: Vec<Self> = if is_hiqlite() {
-                DB::hql().query_as(sql, params!(page_size, offset)).await?
+                DB::hql().query_map(sql, params!(page_size, offset)).await?
             } else {
                 DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
             };
@@ -293,7 +315,7 @@ LIMIT $1
 OFFSET $2"#;
 
             let rows: Vec<Self> = if is_hiqlite() {
-                DB::hql().query_as(sql, params!(page_size, offset)).await?
+                DB::hql().query_map(sql, params!(page_size, offset)).await?
             } else {
                 DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
             };
@@ -360,7 +382,7 @@ OFFSET $2"#;
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let state_str = &self.state;
+        let state_str = self.state.as_str();
 
         let sql = r#"
 INSERT INTO
@@ -443,7 +465,7 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
         };
 
         let res = if is_hiqlite() {
-            DB::hql().query_as(sql, params!(q, limit)).await?
+            DB::hql().query_map(sql, params!(q, limit)).await?
         } else {
             DB::pg_query(sql, &[&q, &limit], size_hint).await?
         };
@@ -465,8 +487,8 @@ impl Session {
             user_id: None,
             roles: None,
             groups: None,
-            is_mfa: false, // cannot be known at the creation stage
-            state: SessionState::Init.as_str().to_string(),
+            is_mfa: false, // cannot be known during creation
+            state: SessionState::Init,
             exp: now
                 .add(chrono::Duration::seconds(exp_in as i64))
                 .timestamp(),
@@ -513,8 +535,8 @@ impl Session {
             user_id,
             roles,
             groups,
-            is_mfa: false, // cannot be known at the creation stage
-            state: SessionState::Init.as_str().to_string(),
+            is_mfa: false, // cannot be known during creation
+            state: SessionState::Init,
             exp,
             last_seen: now.timestamp(),
             remote_ip,
@@ -589,8 +611,20 @@ impl Session {
             .map_err(|_| ErrorResponse::new(ErrorResponseType::Internal, "invalid SessionState"))
     }
 
-    /// Checks if the current session is valid: has not expired and has not timed out (last_seen)
-    pub fn is_valid(&self, session_timeout: u32, remote_ip: Option<IpAddr>) -> bool {
+    /// Checks if the current session is valid: has not expired and has not timed out (last_seen).
+    /// Also makes sure that a session in `SessionState::Init` is only allowed if the `req_path`
+    /// is included in the exceptions.
+    ///
+    /// If this returns `true` the session is valid AND authenticated, or it is in init state and
+    /// explicitly allowed for endpoints like `/auth/v1/oidc/authorize` and `/auth/v1/oidc/token`.
+    ///
+    /// Only validates `session.remote_ip` if `remote_ip` is `Some(_)`.
+    pub fn is_valid(
+        &self,
+        session_timeout: u32,
+        remote_ip: Option<IpAddr>,
+        req_path: &str,
+    ) -> bool {
         let now = Utc::now().timestamp();
         if self.exp < now {
             return false;
@@ -602,24 +636,57 @@ impl Session {
         let state = match self.state() {
             Ok(s) => s,
             Err(err) => {
-                error!("{}", err.message);
+                debug!("{}", err.message);
                 return false;
             }
         };
-        if state == SessionState::Unknown {
+
+        debug!(
+            "Validating session: {:?}\nwith remote_ip: {:?}\non path: {:?}",
+            self, remote_ip, req_path
+        );
+
+        let session_ip = self
+            .remote_ip
+            .as_ref()
+            .and_then(|ip| IpAddr::from_str(ip).ok());
+        if remote_ip == session_ip {
+            if state == SessionState::Init {
+                #[cfg(debug_assertions)]
+                let exceptions = [
+                    "/auth/v1/oidc/authorize",
+                    "/auth/v1/dev/authorize",
+                    "/auth/v1/oidc/callback",
+                    "/auth/v1/oidc/token",
+                ];
+                #[cfg(not(debug_assertions))]
+                let exceptions = [
+                    "/auth/v1/oidc/authorize",
+                    "/auth/v1/oidc/callback",
+                    "/auth/v1/oidc/token",
+                ];
+                if exceptions.contains(&req_path) {
+                    return true;
+                }
+
+                warn!(
+                    "Session in Init state used on invalid path: {:?} -> {}",
+                    self, req_path
+                );
+            }
+
+            if state == SessionState::Auth {
+                return true;
+            }
+        } else {
+            warn!(
+                "Invalid access for session {} / {:?} with different IP: {:?}",
+                self.id, session_ip, remote_ip,
+            );
             return false;
         }
-        if let Some(ip) = remote_ip {
-            if state == SessionState::Auth && self.remote_ip != Some(ip.to_string()) {
-                let session_ip = self.remote_ip.as_deref().unwrap_or("UNKNOWN");
-                warn!(
-                    "Invalid access for session {} / {} with different IP: {}",
-                    self.id, session_ip, ip,
-                );
-                return false;
-            }
-        }
-        true
+
+        false
     }
 
     pub fn groups_as_vec(&self) -> Result<Vec<&str>, ErrorResponse> {
@@ -703,4 +770,38 @@ pub fn get_header_value<'a>(
         )
     })?;
     Ok(res)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::entity::sessions::{Session, SessionState};
+    use rauthy_error::ErrorResponse;
+    use std::net::IpAddr;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_session_validation() -> Result<(), ErrorResponse> {
+        let mut s = Session::new(3600, None);
+
+        // New sessions are always in init state. Make sure they are correctly validated.
+        let path_exep_1 = "/auth/v1/oidc/authorize";
+        let path_exep_2 = "/auth/v1/oidc/token";
+
+        assert!(s.is_valid(600, None, path_exep_1));
+        assert!(s.is_valid(600, None, path_exep_2));
+
+        let ip = IpAddr::from_str("192.168.1.100").unwrap();
+        s.remote_ip = Some(ip.to_string());
+        assert!(s.is_valid(600, Some(ip), path_exep_1));
+        assert!(s.is_valid(600, Some(ip), path_exep_2));
+
+        // only exact path matches may be exceptions, so anything else will be invalid
+        assert!(!s.is_valid(600, Some(ip), "/"));
+
+        // check authenticated sessions
+        s.state = SessionState::Auth;
+        assert!(s.is_valid(600, Some(ip), "/"));
+
+        Ok(())
+    }
 }

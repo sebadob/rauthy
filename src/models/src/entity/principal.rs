@@ -219,24 +219,6 @@ impl Principal {
     }
 
     #[inline(always)]
-    pub fn validate_session_init(&self) -> Result<(), ErrorResponse> {
-        if self
-            .session
-            .as_ref()
-            .map(|s| s.state == SessionState::Init.as_str())
-            .unwrap_or(false)
-        {
-            Ok(())
-        } else {
-            trace!("Validating the session failed - was not in init state");
-            Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Session in Init state mandatory",
-            ))
-        }
-    }
-
-    #[inline(always)]
     pub fn validate_session_csrf_exception(&self, req: &HttpRequest) -> Result<(), ErrorResponse> {
         let s = self.get_session()?;
         s.validate_csrf(req)?;

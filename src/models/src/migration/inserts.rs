@@ -821,7 +821,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                         b.roles,
                         b.groups,
                         b.is_mfa,
-                        b.state,
+                        b.state.as_str(),
                         b.exp,
                         b.last_seen
                     ),
@@ -840,7 +840,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                     &b.roles,
                     &b.groups,
                     &b.is_mfa,
-                    &b.state,
+                    &b.state.as_str(),
                     &b.exp,
                     &b.last_seen,
                 ],
