@@ -70,11 +70,11 @@ export const saveCsrfToken = (csrf: string) => {
 }
 
 export const getCsrfToken = () => {
-    let obfs = localStorage.getItem(CSRF_TOKEN);
-    if (obfs && obfs.startsWith('o/')) {
+    let obfs = localStorage.getItem(CSRF_TOKEN) || '';
+    if (obfs.startsWith('o/')) {
         return obfs.slice(41, obfs.length - 43);
     }
-    return '';
+    return obfs;
 }
 
 export const saveIdToken = (token: string) => {
