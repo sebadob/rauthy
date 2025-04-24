@@ -101,12 +101,7 @@
 
 <svelte:window bind:innerWidth/>
 
-<div
-        role="none"
-        id="events"
-        class:wide
-        class:narrow={!wide}
->
+<div id="events" class:wide class:narrow={!wide}>
     <div class="upper">
         <div class="header">
             <div class="flex gap-10">

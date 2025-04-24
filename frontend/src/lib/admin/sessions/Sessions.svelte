@@ -223,6 +223,11 @@
 </ContentAdmin>
 
 <style>
+    #sessions {
+        max-height: calc(100dvh - 7rem);
+        overflow-y: auto;
+    }
+
     .btn {
         margin: 0 .25rem;
     }

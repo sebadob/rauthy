@@ -131,14 +131,33 @@
                 No events found
             </div>
         {:else}
-            {#each eventsFiltered as event (event.id)}
-                <Event {event} inline/>
-            {/each}
+            <div class="eventsList">
+                {#each eventsFiltered as event (event.id)}
+                    <Event {event} inline/>
+                {/each}
+            </div>
         {/if}
     </div>
 </ContentAdmin>
 
 <style>
+    .eventsList {
+        max-height: calc(100dvh - 11.5rem);
+        overflow-y: auto;
+    }
+
+    @media (max-width: 39rem) {
+        .eventsList {
+            max-height: calc(100dvh - 13.5rem);
+        }
+    }
+
+    @media (max-width: 32rem) {
+        .eventsList {
+            max-height: calc(100dvh - 17.5rem);
+        }
+    }
+
     .filters {
         display: flex;
         align-items: center;

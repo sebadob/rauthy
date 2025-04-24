@@ -95,12 +95,13 @@
     />
 
     {#snippet buttonTiles()}
-        <div style:height=".5rem"></div>
-        {#each rolesFiltered as role (role.id)}
-            <NavButtonTile onclick={() => rid.set(role.id)} selected={rid.get() === role.id}>
-                {role.name}
-            </NavButtonTile>
-        {/each}
+        <div class="rolesList">
+            {#each rolesFiltered as role (role.id)}
+                <NavButtonTile onclick={() => rid.set(role.id)} selected={rid.get() === role.id}>
+                    {role.name}
+                </NavButtonTile>
+            {/each}
+        </div>
     {/snippet}
 </NavSub>
 
@@ -117,3 +118,11 @@
         {/if}
     </div>
 </ContentAdmin>
+
+<style>
+    .rolesList {
+        max-height: calc(100dvh - 9.5rem);
+        margin-top: .5rem;
+        overflow-y: auto;
+    }
+</style>

@@ -95,12 +95,13 @@
     />
 
     {#snippet buttonTiles()}
-        <div style:height=".5rem"></div>
-        {#each groupsFiltered as group (group.id)}
-            <NavButtonTile onclick={() => gid.set(group.id)} selected={gid.get() === group.id}>
-                {group.name}
-            </NavButtonTile>
-        {/each}
+        <div class="groupsList">
+            {#each groupsFiltered as group (group.id)}
+                <NavButtonTile onclick={() => gid.set(group.id)} selected={gid.get() === group.id}>
+                    {group.name}
+                </NavButtonTile>
+            {/each}
+        </div>
     {/snippet}
 </NavSub>
 
@@ -117,3 +118,11 @@
         {/if}
     </div>
 </ContentAdmin>
+
+<style>
+    .groupsList {
+        max-height: calc(100dvh - 9.5rem);
+        margin-top: .5rem;
+        overflow-y: auto;
+    }
+</style>

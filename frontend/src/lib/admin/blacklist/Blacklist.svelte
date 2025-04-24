@@ -178,15 +178,17 @@
                 </div>
             {/snippet}
 
-            {#if blacklist.length > blacklistThreshold}
-                {#each blacklistPaginated as entry (entry.ip)}
-                    {@render row(entry)}
-                {/each}
-            {:else}
-                {#each blacklistFiltered as entry (entry.ip)}
-                    {@render row(entry)}
-                {/each}
-            {/if}
+            <div class="blacklist">
+                {#if blacklist.length > blacklistThreshold}
+                    {#each blacklistPaginated as entry (entry.ip)}
+                        {@render row(entry)}
+                    {/each}
+                {:else}
+                    {#each blacklistFiltered as entry (entry.ip)}
+                        {@render row(entry)}
+                    {/each}
+                {/if}
+            </div>
         {/if}
     </div>
 
@@ -202,6 +204,11 @@
 <style>
     .addNew {
         min-height: 12rem;
+    }
+
+    .blacklist {
+        max-height: calc(100dvh - 5.5rem);
+        overflow-y: auto;
     }
 
     .blacklisted {

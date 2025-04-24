@@ -51,7 +51,7 @@
         {#snippet summary()}
             <div class="header">
                 <Tooltip text="User ID">
-                    <div class="uid font-mono" style:margin-left={session.user_id ? '' : '.5rem'}>
+                    <div class="uid font-mono" style:margin-left={session.user_id ? '' : '.35rem'}>
                         {session.user_id}
                     </div>
                 </Tooltip>
@@ -108,7 +108,7 @@
             </LabeledValue>
 
             <LabeledValue label="MFA">
-                <CheckIcon check={session.is_mfa}/>
+                <CheckIcon checked={session.is_mfa}/>
             </LabeledValue>
 
             <Button level={-1} onclick={deleteSession}>
