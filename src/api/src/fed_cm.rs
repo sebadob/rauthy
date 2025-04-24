@@ -447,7 +447,11 @@ async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) 
                 }
             };
 
-            if session.is_valid(*SESSION_TIMEOUT_FED_CM, real_ip_from_req(req).ok()) {
+            if session.is_valid(
+                *SESSION_TIMEOUT_FED_CM,
+                real_ip_from_req(req).ok(),
+                req.path(),
+            ) {
                 (
                     FedCMLoginStatus::LoggedIn,
                     session.user_id.unwrap_or_default(),

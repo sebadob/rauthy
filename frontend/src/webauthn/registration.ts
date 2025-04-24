@@ -1,8 +1,6 @@
-import {fetchPost} from "$api/fetch.ts";
 import {arrBufToBase64UrlSafe, base64UrlSafeToArrBuf} from "./utils";
 import type {WebauthnRegFinishRequest, WebauthnRegStartRequest} from "$webauthn/types.ts";
-import {promiseTimeout} from "$utils/helpers.ts";
-import {CSRF_TOKEN} from "$utils/constants.ts";
+import {getCsrfToken, promiseTimeout} from "$utils/helpers";
 
 export interface WebauthnRegResult {
     error?: string,
@@ -27,7 +25,7 @@ export async function webauthnReg(
     if (pwdCsrfToken) {
         headers['x-pwd-csrf-token'] = pwdCsrfToken;
     } else {
-        headers['x-csrf-token'] = localStorage.getItem(CSRF_TOKEN) || '';
+        headers['x-csrf-token'] = getCsrfToken();
     }
 
     let resStart = await fetch(`/auth/v1/users/${userId}/webauthn/register/start`, {

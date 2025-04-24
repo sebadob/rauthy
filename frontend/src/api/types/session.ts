@@ -1,4 +1,4 @@
-export type SessionState = 'Open' | 'Init' | 'Auth' | 'LoggedOut' | 'Unknown';
+export type SessionState = 'Init' | 'Auth' | 'LoggedOut' | 'Unknown';
 
 export interface SessionResponse {
     id: string,

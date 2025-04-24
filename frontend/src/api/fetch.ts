@@ -1,6 +1,5 @@
-import {CSRF_TOKEN} from "../utils/constants";
-import {type ErrorResponse} from "$api/types/error.ts";
-import {getCsrfToken} from "$utils/helpers.ts";
+import {type ErrorResponse} from "$api/types/error";
+import {getCsrfToken} from "$utils/helpers";
 
 export interface IResponse<T> {
     body: undefined | T,
@@ -28,7 +27,7 @@ function buildHeaders(
     }
 
     if (method !== 'GET') {
-        headers['x-csrf-token'] = localStorage.getItem(CSRF_TOKEN);
+        headers['x-csrf-token'] = getCsrfToken();
     }
 
     return headers;
@@ -197,7 +196,7 @@ export async function uploadFile<T>(method: 'POST' | 'PUT', url: string, file: F
     const res = await fetch(url, {
         method: method,
         headers: {
-            'x-csrf-token': localStorage.getItem(CSRF_TOKEN) || '',
+            'x-csrf-token': getCsrfToken(),
         },
         body: formData,
     });

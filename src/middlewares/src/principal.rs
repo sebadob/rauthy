@@ -3,6 +3,7 @@ use actix_web::{
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
     http, web,
 };
+use chrono::Utc;
 use futures::future::LocalBoxFuture;
 use rauthy_common::constants::{COOKIE_SESSION, SESSION_VALIDATE_IP, TOKEN_API_KEY};
 use rauthy_common::utils::real_ip_from_svc_req;
@@ -14,7 +15,6 @@ use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
 use std::future::{Ready, ready};
 use std::rc::Rc;
-use time::OffsetDateTime;
 use tracing::debug;
 
 pub struct RauthyPrincipalMiddleware;
@@ -139,8 +139,9 @@ async fn get_session_from_cookie(
             } else {
                 None
             };
-            if session.is_valid(data.session_timeout, remote_ip) {
-                let now = OffsetDateTime::now_utc().unix_timestamp();
+
+            if session.is_valid(data.session_timeout, remote_ip, req.path()) {
+                let now = Utc::now().timestamp();
                 // only update the last_seen, if it is older than 10 seconds
                 if session.last_seen < now - 10 {
                     session.last_seen = now;
@@ -157,7 +158,7 @@ async fn get_session_from_cookie(
                     Ok(None)
                 }
             } else {
-                debug!("Access to {} with invalid Session Peer IP", req.path());
+                debug!("Access to {} with invalid Session", req.path());
                 Ok(None)
             }
         }

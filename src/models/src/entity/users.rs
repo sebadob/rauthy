@@ -1787,13 +1787,13 @@ mod tests {
         user.user_expires = None;
         let session = Session::try_new(&user, 1, None).unwrap();
 
-        assert_eq!(session.is_valid(10, None), true);
+        assert_eq!(session.is_valid(10, None, "/auth/v1/oidc/authorize"), true);
         // sessions are validated with second accuracy
         std::thread::sleep(core::time::Duration::from_secs(2));
-        assert_eq!(session.is_valid(10, None), false);
+        assert_eq!(session.is_valid(10, None, "/auth/v1/oidc/authorize"), false);
 
         // new sessions should always be in state 1 -> initializing
-        assert_eq!(session.state, SessionState::Init.as_str());
+        assert_eq!(session.state, SessionState::Init);
 
         assert!(session.csrf_token.len() > 0);
 

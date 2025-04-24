@@ -48,11 +48,33 @@ export const redirectToLogout = () => {
 };
 
 export const saveCsrfToken = (csrf: string) => {
-    localStorage.setItem(CSRF_TOKEN, csrf);
+    // This obfuscation is neither special nor any real protection.
+    // The only thing it prevents is grabbing the token as it is in
+    // plaintext from the storage without even thinking about it.
+    // With this very simple obfuscation, you can only grab a valid
+    // token if you forge a targeted attack against Rauthy specifically.
+    //
+    // Apart from that, there are other ways to handel a CSRF token, but
+    // all of them have their downsides and none is fully secure against
+    // browser extensions grabbing them, apart from managing it in a
+    // WebWorker, which will have huge UX downsides.
+    //
+    // In the end, this token is only an additional defense in depth
+    // in combination with many other methods applied in the backend
+    // and on cookie level, and everything would be secure even without
+    // this token at all.
+    localStorage.setItem(CSRF_TOKEN, 'o/' + genKey(39) + csrf + genKey(43));
+    // if (csrf != getCsrfToken()) {
+    //     console.error('csrf deobfuscation went wrong!');
+    // }
 }
 
 export const getCsrfToken = () => {
-    return localStorage.getItem(CSRF_TOKEN) || '';
+    let obfs = localStorage.getItem(CSRF_TOKEN) || '';
+    if (obfs.startsWith('o/')) {
+        return obfs.slice(41, obfs.length - 43);
+    }
+    return obfs;
 }
 
 export const saveIdToken = (token: string) => {
@@ -86,6 +108,8 @@ export const deleteVerifierFromStorage = () => {
 };
 
 export const purgeStorage = () => {
+    // the old value, keep around for a while until it's cleaned up everywhere
+    localStorage.removeItem('csrf_token');
     localStorage.removeItem(CSRF_TOKEN);
     localStorage.removeItem(ID_TOKEN);
     localStorage.removeItem(ACCESS_TOKEN);

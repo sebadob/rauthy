@@ -46,12 +46,12 @@
         if (body.error) {
             err = body.error.toString();
         } else if (body.access_token) {
-            // Save the access token in case we need to fetch a fresh CSRF token
-            saveAccessToken(body.access_token);
-            // ID Token is saved for the automatic logout with 'token_hint'
-            if (body.id_token) {
-                saveIdToken(body.id_token);
-            }
+            // // Save the access token in case we need to fetch a fresh CSRF token
+            // saveAccessToken(body.access_token);
+            // // ID Token is saved for the automatic logout with 'token_hint'
+            // if (body.id_token) {
+            //     saveIdToken(body.id_token);
+            // }
 
             let resXsrf = await fetch('/auth/v1/oidc/sessioninfo/xsrf', {
                 method: 'GET',
