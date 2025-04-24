@@ -224,16 +224,17 @@
     />
 
     {#snippet buttonTiles()}
-        <div style:height=".5rem"></div>
-        {#if firstFetchHeaders}
-            {#each users as user}
-                {@render navTile(user)}
-            {/each}
-        {:else}
-            {#each usersPaginated as user (user.id)}
-                {@render navTile(user)}
-            {/each}
-        {/if}
+        <div class="usersList">
+            {#if firstFetchHeaders}
+                {#each users as user}
+                    {@render navTile(user)}
+                {/each}
+            {:else}
+                {#each usersPaginated as user (user.id)}
+                    {@render navTile(user)}
+                {/each}
+            {/if}
+        </div>
 
         {#if firstFetchHeaders}
             <PaginationServerSide
@@ -282,6 +283,12 @@
         display: flex;
         align-items: center;
         gap: .5rem;
+    }
+
+    .usersList {
+        margin-top: .5rem;
+        max-height: calc(100dvh - 11.5rem);
+        overflow-y: auto;
     }
 
     .tile {

@@ -91,12 +91,13 @@
     />
 
     {#snippet buttonTiles()}
-        <div style:height=".5rem"></div>
-        {#each attrsFiltered as attr (attr.name)}
-            <NavButtonTile onclick={() => an.set(attr.name)} selected={an.get() === attr.name}>
-                {attr.name}
-            </NavButtonTile>
-        {/each}
+        <div class="attrsList">
+            {#each attrsFiltered as attr (attr.name)}
+                <NavButtonTile onclick={() => an.set(attr.name)} selected={an.get() === attr.name}>
+                    {attr.name}
+                </NavButtonTile>
+            {/each}
+        </div>
     {/snippet}
 </NavSub>
 
@@ -113,3 +114,11 @@
         {/if}
     </div>
 </ContentAdmin>
+
+<style>
+    .attrsList {
+        max-height: calc(100dvh - 9.5rem);
+        margin-top: .5rem;
+        overflow-y: auto;
+    }
+</style>

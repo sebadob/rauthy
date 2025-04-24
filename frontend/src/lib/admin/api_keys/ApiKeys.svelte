@@ -89,12 +89,13 @@
     />
 
     {#snippet buttonTiles()}
-        <div style:height=".5rem"></div>
-        {#each keysFiltered as key (key.name)}
-            <NavButtonTile onclick={() => kid.set(key.name)} selected={kid.get() === key.name}>
-                {key.name}
-            </NavButtonTile>
-        {/each}
+        <div class="keysList">
+            {#each keysFiltered as key (key.name)}
+                <NavButtonTile onclick={() => kid.set(key.name)} selected={kid.get() === key.name}>
+                    {key.name}
+                </NavButtonTile>
+            {/each}
+        </div>
     {/snippet}
 </NavSub>
 
@@ -105,3 +106,11 @@
         {/if}
     </div>
 </ContentAdmin>
+
+<style>
+    .keysList {
+        max-height: calc(100dvh - 9.5rem);
+        margin-top: .5rem;
+        overflow-y: auto;
+    }
+</style>

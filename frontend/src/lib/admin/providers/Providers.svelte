@@ -52,12 +52,13 @@
     </ButtonAddModal>
 
     {#snippet buttonTiles()}
-        <div style:height=".5rem"></div>
-        {#each providers as provider (provider.id)}
-            <NavButtonTile onclick={() => pid.set(provider.id)} selected={pid.get() === provider.id}>
-                {provider.name}
-            </NavButtonTile>
-        {/each}
+        <div class="providersList">
+            {#each providers as provider (provider.id)}
+                <NavButtonTile onclick={() => pid.set(provider.id)} selected={pid.get() === provider.id}>
+                    {provider.name}
+                </NavButtonTile>
+            {/each}
+        </div>
     {/snippet}
 </NavSub>
 
@@ -74,3 +75,11 @@
         </div>
     {/if}
 </ContentAdmin>
+
+<style>
+    .providersList {
+        max-height: calc(100dvh - 9.5rem);
+        margin-top: .5rem;
+        overflow-y: auto;
+    }
+</style>

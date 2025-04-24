@@ -109,17 +109,18 @@
     />
 
     {#snippet buttonTiles()}
-        <div style:height=".5rem"></div>
-        {#each scopesFiltered as scope (scope.id)}
-            <NavButtonTile onclick={() => sid.set(scope.id)} selected={sid.get() === scope.id}>
-                {scope.name}
-                {#if isDefaultScope(scope.name)}
+        <div class="scopesList">
+            {#each scopesFiltered as scope (scope.id)}
+                <NavButtonTile onclick={() => sid.set(scope.id)} selected={sid.get() === scope.id}>
+                    {scope.name}
+                    {#if isDefaultScope(scope.name)}
                     <span class="default">
                         <i>default</i>
                     </span>
-                {/if}
-            </NavButtonTile>
-        {/each}
+                    {/if}
+                </NavButtonTile>
+            {/each}
+        </div>
     {/snippet}
 </NavSub>
 
@@ -141,5 +142,11 @@
     .default {
         font-size: .8rem;
         color: hsla(var(--text) / .5);
+    }
+
+    .scopesList {
+        max-height: calc(100dvh - 9.5rem);
+        margin-top: .5rem;
+        overflow-y: auto;
     }
 </style>

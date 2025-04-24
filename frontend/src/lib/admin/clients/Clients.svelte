@@ -103,17 +103,18 @@
     />
 
     {#snippet buttonTiles()}
-        <div style:height=".5rem"></div>
-        {#each clientsFiltered as client (client.id)}
-            <NavButtonTile onclick={() => cid.set(client.id)} selected={cid.get() === client.id}>
-                <div class="tile">
-                    {client.id}
-                    <div class="muted">
-                        {client.name}
+        <div class="clientsList">
+            {#each clientsFiltered as client (client.id)}
+                <NavButtonTile onclick={() => cid.set(client.id)} selected={cid.get() === client.id}>
+                    <div class="tile">
+                        {client.id}
+                        <div class="muted">
+                            {client.name}
+                        </div>
                     </div>
-                </div>
-            </NavButtonTile>
-        {/each}
+                </NavButtonTile>
+            {/each}
+        </div>
     {/snippet}
 </NavSub>
 
@@ -132,6 +133,12 @@
 </ContentAdmin>
 
 <style>
+    .clientsList {
+        max-height: calc(100dvh - 10rem);
+        margin-top: .5rem;
+        overflow-y: auto;
+    }
+
     .muted {
         height: .8rem;
         opacity: .5;
