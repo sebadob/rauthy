@@ -344,6 +344,9 @@ export let I18nAdminDe: I18nAdmin = {
         forceLogout: `Sollen sämtliche, für diesen Benutzer existierenden Sessions invalidiert und 
             Refresh Tokens gelöscht werden?`,
         lastLogin: "Letzter Login",
+        manualInitDesc: `Der Benutzer kann jedoch ebenfalls hier initialisiert werden. In diesem Fall muss das
+            Passwort allerdings direkt kommuniziert werden.`,
+        manualInit: "Manuell Initialisieren",
         mfaDelete1: "Die Passkeys dieses Nutzers können gelöscht werden.",
         mfaDelete2: `Vorsicht! Das Löschen eines Keys <b>kann nicht rückgängig gemacht werden</b>, ohne
             dass der Benutzer die Registrierung erneut durchführt.`,

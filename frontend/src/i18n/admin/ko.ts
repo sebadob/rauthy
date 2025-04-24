@@ -320,6 +320,9 @@ export let I18nAdminKo: I18nAdmin = {
         descAttr: `사용자 지정 속성을 설정합니다. 모든 키/값 쌍은 문자열/JSON 값으로 처리됩니다.`,
         forceLogout: `기존 세션을 모두 삭제하고, 이 사용자의 모든 Refresh 토큰을 삭제하시겠습니까?`,
         lastLogin: "마지막 로그인",
+        manualInitDesc: `The user can also be initialized here, In this case though, you need to communicate the 
+            password directly.`,
+        manualInit: "Manual Initialization",
         mfaDelete1: "이 사용자의 패스키를 삭제할 수 있습니다.",
         mfaDelete2: `이 작업은 되돌릴 수 없습니다!`,
         noMfaKeys: "등록된 패스키 없음",

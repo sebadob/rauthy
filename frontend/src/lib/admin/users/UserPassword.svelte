@@ -32,6 +32,7 @@
 
     let policy: undefined | PasswordPolicyResponse = $state();
     let accepted = $state(false);
+    let manualInit = $state(false);
 
     let pwdNew = $state('');
     let pwdVerify = $state('');
@@ -53,6 +54,7 @@
         if (user.id) {
             pwdNew = '';
             pwdVerify = '';
+            manualInit = false;
         }
     });
 
@@ -134,12 +136,17 @@
 
 </script>
 
-{#if user.account_type === "new"}
+{#if user.account_type === "new" && !manualInit}
     <p><b>{ta.users.pwdNoInit}</b></p>
     <p>{ta.users.pwdSendEmailDesc}</p>
 
     <Button onclick={sendEmail} {isLoading}>
         {ta.users.pwdSendEmailBtn}
+    </Button>
+
+    <p style:margin-top="1rem">{ta.users.manualInitDesc}</p>
+    <Button level={2} onclick={() => manualInit = true}>
+        {ta.users.manualInit}
     </Button>
 {:else if user.account_type === "passkey" || user.account_type === 'federated_passkey'}
     <div class="desc">

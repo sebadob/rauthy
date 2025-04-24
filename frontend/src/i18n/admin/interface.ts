@@ -287,6 +287,8 @@ export interface I18nAdmin {
         descAttr: string,
         forceLogout: string,
         lastLogin: string,
+        manualInitDesc: string,
+        manualInit: string,
         mfaDelete1: string,
         // inserted as html
         mfaDelete2: string,
