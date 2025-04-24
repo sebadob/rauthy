@@ -512,25 +512,25 @@
                     </div>
                 {/if}
 
-                <!--{#if !clientMfaForce && providers.length > 0}-->
-                <div class="providers flex-col">
-                    <div class="providersSeparator">
-                        <div class="separator"></div>
-                        <div class="loginWith">
-                            <div>
-                                {t.authorize.orLoginWith}
+                {#if !clientMfaForce && providers.length > 0}
+                    <div class="providers flex-col">
+                        <div class="providersSeparator">
+                            <div class="separator"></div>
+                            <div class="loginWith">
+                                <div>
+                                    {t.authorize.orLoginWith}
+                                </div>
                             </div>
                         </div>
+                        {#each providers as provider (provider.id)}
+                            <ButtonAuthProvider
+                                    ariaLabel={`Login: ${provider.name}`}
+                                    {provider}
+                                    onclick={providerLogin}
+                            />
+                        {/each}
                     </div>
-                    {#each providers as provider (provider.id)}
-                        <ButtonAuthProvider
-                                ariaLabel={`Login: ${provider.name}`}
-                                {provider}
-                                onclick={providerLogin}
-                        />
-                    {/each}
-                </div>
-                <!--{/if}-->
+                {/if}
             </div>
 
             <ThemeSwitch absolute/>
