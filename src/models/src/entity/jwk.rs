@@ -11,20 +11,17 @@ use jwt_simple::algorithms::{
 use postgres_types::Type;
 use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
 use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_TTL_APP, COOKIE_MODE, CookieMode, DEV_MODE, IDX_JWK_KID,
-    IDX_JWK_LATEST, IDX_JWKS,
+    APPLICATION_JSON, CACHE_TTL_APP, IDX_JWK_KID, IDX_JWK_LATEST, IDX_JWKS,
 };
-use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, get_rand};
+use rauthy_common::{HTTP_CLIENT, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
-use reqwest::tls;
 use rsa::BigUint;
 use serde::{Deserialize, Serialize};
 use std::default::Default;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
-use std::time::Duration;
 use time::OffsetDateTime;
 
 use tracing::{error, info};
@@ -488,19 +485,7 @@ impl JWKSPublicKey {
             return res;
         }
 
-        // TODO use unified `LazyLock`ed client for this
-        let client = reqwest::Client::builder()
-            // TODO add proper config variable
-            .https_only(!(*DEV_MODE || *COOKIE_MODE == CookieMode::DangerInsecure))
-            .timeout(Duration::from_secs(5))
-            .connect_timeout(Duration::from_secs(5))
-            .min_tls_version(tls::Version::TLS_1_2)
-            .user_agent("Rauthy OIDC JWKS Client")
-            // TODO add proper config variable
-            .danger_accept_invalid_certs(*DEV_MODE || *COOKIE_MODE == CookieMode::DangerInsecure)
-            .build()?;
-
-        let res = match client
+        let res = match HTTP_CLIENT
             .get(jwks_uri)
             .header(CONTENT_TYPE, APPLICATION_JSON)
             .send()
