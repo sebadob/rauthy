@@ -91,23 +91,30 @@ pub const IDX_USERS_VALUES: &str = "users_values_";
 pub const IDX_USER_ATTR_CONFIG: &str = "user_attrs_";
 pub const IDX_WEBAUTHN: &str = "webauthn_";
 
+pub static APP_START: LazyLock<DateTime<Utc>> = LazyLock::new(Utc::now);
+
+pub static CACHE_TTL_AUTH_CODE: LazyLock<Option<i64>> =
+    LazyLock::new(|| Some(300 + *WEBAUTHN_REQ_EXP as i64));
+pub static CACHE_TTL_DEVICE_CODE: LazyLock<Option<i64>> =
+    LazyLock::new(|| Some(*DEVICE_GRANT_CODE_LIFETIME as i64));
+pub static CACHE_TTL_DYN_CLIENT: LazyLock<Option<i64>> =
+    LazyLock::new(|| Some(*DYN_CLIENT_RATE_LIMIT_SEC as i64));
+pub static CACHE_TTL_EPHEMERAL_CLIENT: LazyLock<Option<i64>> = LazyLock::new(|| {
+    Some(
+        env::var("EPHEMERAL_CLIENTS_CACHE_LIFETIME")
+            .as_deref()
+            .unwrap_or("3600")
+            .parse::<i64>()
+            .expect("EPHEMERAL_CLIENTS_CACHE_LIFETIME cannot be parsed to i64 - bad format"),
+    )
+});
+pub static CACHE_TTL_WEBAUTHN: LazyLock<Option<i64>> =
+    LazyLock::new(|| Some(*WEBAUTHN_REQ_EXP as i64));
+pub static CACHE_TTL_WEBAUTHN_DATA: LazyLock<Option<i64>> =
+    LazyLock::new(|| Some(*WEBAUTHN_DATA_EXP as i64));
+
 // TODO drop `lazy_static` and use rust 1.80 built-in features
 lazy_static! {
-    pub static ref APP_START: DateTime<Utc> = Utc::now();
-
-    pub static ref CACHE_TTL_AUTH_CODE: Option<i64> = Some(300 + *WEBAUTHN_REQ_EXP as i64);
-    pub static ref CACHE_TTL_DEVICE_CODE: Option<i64> = Some(*DEVICE_GRANT_CODE_LIFETIME as i64);
-    pub static ref CACHE_TTL_DYN_CLIENT: Option<i64> = Some(*DYN_CLIENT_RATE_LIMIT_SEC as i64);
-    pub static ref CACHE_TTL_DPOP_NONCE: Option<i64> = Some(*DPOP_NONCE_EXP as i64);
-    pub static ref CACHE_TTL_EPHEMERAL_CLIENT: Option<i64> = Some(env::var("EPHEMERAL_CLIENTS_CACHE_LIFETIME")
-            .unwrap_or_else(|_| String::from("3600"))
-            .parse::<i64>()
-            .expect("EPHEMERAL_CLIENTS_CACHE_LIFETIME cannot be parsed to i64 - bad format"));
-    pub static ref CACHE_TTL_IP_RATE_LIMIT: Option<i64> = (*DEVICE_GRANT_RATE_LIMIT).map(|i| i as i64);
-    pub static ref CACHE_TTL_POW: Option<i64> = Some(*POW_EXP as i64);
-    pub static ref CACHE_TTL_WEBAUTHN: Option<i64> = Some(*WEBAUTHN_REQ_EXP as i64);
-    pub static ref CACHE_TTL_WEBAUTHN_DATA: Option<i64> = Some(*WEBAUTHN_DATA_EXP as i64);
-
     pub static ref RAUTHY_ADMIN_ROLE: String = "rauthy_admin".to_string();
 
     pub static ref DATABASE_URL: Option<String> = env::var("DATABASE_URL").ok();
@@ -156,7 +163,6 @@ lazy_static! {
         };
         Regex::new(&pattern).unwrap()
     };
-    pub static ref RE_PEM: Regex = Regex::new(r"^(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)$").unwrap();
     pub static ref RE_PHONE: Regex = Regex::new(r"^\+[0-9]{0,32}$").unwrap();
     // we have a pretty high upper limit for characters here just to be sure that even if
     // multiple values like 'urn:ietf:params:oauth:grant-type:device_code' would not fail

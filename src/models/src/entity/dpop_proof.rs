@@ -4,8 +4,7 @@ use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, http};
 use chrono::{DateTime, Utc};
 use rauthy_common::constants::{
-    CACHE_TTL_DPOP_NONCE, DPOP_FORCE_NONCE, DPOP_NONCE_EXP, DPOP_TOKEN_ENDPOINT, RE_TOKEN_68,
-    TOKEN_DPOP,
+    DPOP_FORCE_NONCE, DPOP_NONCE_EXP, DPOP_TOKEN_ENDPOINT, RE_TOKEN_68, TOKEN_DPOP,
 };
 use rauthy_common::utils::{base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -38,7 +37,12 @@ impl DPoPNonce {
 
         let client = DB::hql();
         client
-            .put(Cache::DPoPNonce, "latest", &slf, *CACHE_TTL_DPOP_NONCE)
+            .put(
+                Cache::DPoPNonce,
+                "latest",
+                &slf,
+                Some(*DPOP_NONCE_EXP as i64),
+            )
             .await?;
 
         // we need by its own value additionally, because the "latest" may be overwritten
@@ -48,7 +52,7 @@ impl DPoPNonce {
                 Cache::DPoPNonce,
                 slf.value.clone(),
                 &slf,
-                *CACHE_TTL_DPOP_NONCE,
+                Some(*DPOP_NONCE_EXP as i64),
             )
             .await?;
 
