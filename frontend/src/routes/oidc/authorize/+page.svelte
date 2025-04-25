@@ -305,6 +305,10 @@
     }
 
     async function providerLoginPkce(id: string, pkce_challenge: string) {
+        // make sure to reset input fields to not trigger a failing validation
+        email = '';
+        password = '';
+
         if (!clientId) {
             console.error('clientId is undefined');
             return;

@@ -3,12 +3,10 @@
     import Button from "$lib5/button/Button.svelte";
     import Input from "$lib5/form/Input.svelte";
     import CheckIcon from "$lib5/CheckIcon.svelte";
-    import JsonPathDesc from "$lib5/admin/providers/JsonPathDesc.svelte";
-    import {fetchPost} from "$api/fetch.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {fetchPost} from "$api/fetch";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import Options from "$lib5/Options.svelte";
     import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
-    import InputArea from "$lib5/form/InputArea.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
     import type {
@@ -17,12 +15,9 @@
         ProviderLookupResponse,
         ProviderRequest
     } from "$api/types/auth_provider.ts";
-    import InputPassword from "$lib5/form/InputPassword.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {slide} from "svelte/transition";
-    import {PATTERN_CLIENT_NAME, PATTERN_PEM, PATTERN_SCOPE_SPACE, PATTERN_URI} from "$utils/patterns.ts";
+    import {useI18n} from "$state/i18n.svelte";
+    import {PATTERN_URI} from "$utils/patterns";
     import Form from "$lib5/form/Form.svelte";
-    import ProviderConfigRootCA from "$lib/admin/providers/blocks/ProviderConfigRootCA.svelte";
     import ProviderConfigURLs from "$lib/admin/providers/blocks/ProviderConfigURLs.svelte";
     import ProviderConfigClientInfo from "$lib/admin/providers/blocks/ProviderConfigClientInfo.svelte";
 
@@ -38,13 +33,9 @@
     let lookupSuccess = $state(false);
     let success = $state(false);
 
-    let showRootPem = $state(false);
-
     let configLookup: ProviderLookupRequest = $state({
         issuer: '',
         metadata_url: '',
-        danger_allow_insecure: false,
-        root_pem: '',
     });
     let config: ProviderRequest = $state({
         enabled: true,
@@ -52,7 +43,6 @@
 
         // fixed values after lookup
         issuer: '',
-        danger_allow_insecure: false,
         authorization_endpoint: '',
         token_endpoint: '',
         token_auth_method_basic: false,
@@ -66,7 +56,6 @@
         client_id: '',
         client_secret: '',
         scope: '',
-        root_pem: '',
 
         admin_claim_path: '',
         admin_claim_value: '',
@@ -93,8 +82,6 @@
             configLookup = {
                 issuer: '',
                 metadata_url: '',
-                danger_allow_insecure: false,
-                root_pem: '',
             };
 
             switch (mode) {
@@ -106,7 +93,6 @@
                         // fixed values after lookup
                         issuer: 'github.com',
                         typ: 'github',
-                        danger_allow_insecure: false,
                         authorization_endpoint: 'https://github.com/login/oauth/authorize',
                         token_endpoint: 'https://github.com/login/oauth/access_token',
                         client_secret_basic: true,
@@ -119,7 +105,6 @@
                         client_id: '',
                         client_secret: '',
                         scope: 'user:email',
-                        root_pem: '',
 
                         admin_claim_path: '',
                         admin_claim_value: '',
@@ -134,8 +119,6 @@
                     configLookup = {
                         issuer: 'accounts.google.com',
                         metadata_url: '',
-                        danger_allow_insecure: false,
-                        root_pem: '',
                     }
                     untrack(() => {
                         onSubmitLookup(urlLookup);
@@ -148,7 +131,6 @@
                         // fixed values after lookup
                         issuer: '',
                         typ: 'oidc',
-                        danger_allow_insecure: false,
                         authorization_endpoint: '',
                         token_endpoint: '',
                         client_secret_basic: true,
@@ -161,7 +143,6 @@
                         client_id: '',
                         client_secret: '',
                         scope: '',
-                        root_pem: '',
 
                         admin_claim_path: '',
                         admin_claim_value: '',
@@ -213,7 +194,6 @@
             token_endpoint: config.token_endpoint,
             userinfo_endpoint: config.userinfo_endpoint,
 
-            danger_allow_insecure: showRootPem && config.root_pem ? false : config.danger_allow_insecure,
             use_pkce: config.use_pkce,
             client_secret_basic: config.client_secret_basic,
             client_secret_post: config.client_secret_post,
@@ -221,7 +201,6 @@
             client_id: config.client_id,
             client_secret: config.client_secret,
             scope: config.scope.trim(),
-            root_pem: showRootPem && config.root_pem ? config.root_pem.trim() : undefined,
 
             admin_claim_path: config.admin_claim_path || undefined,
             admin_claim_value: config.admin_claim_value || undefined,
@@ -254,14 +233,11 @@
         let payload: ProviderLookupRequest = {
             issuer: configLookup.issuer || undefined,
             metadata_url: configLookup.metadata_url || undefined,
-            danger_allow_insecure: configLookup.danger_allow_insecure,
-            root_pem: configLookup.root_pem || undefined,
         }
         let res = await fetchPost<ProviderLookupResponse>(url, payload);
         if (res.body) {
             config.issuer = res.body.issuer;
             config.authorization_endpoint = res.body.authorization_endpoint;
-            config.danger_allow_insecure = res.body.danger_allow_insecure;
             config.token_endpoint = res.body.token_endpoint;
             config.userinfo_endpoint = res.body.userinfo_endpoint;
             config.client_secret_basic = res.body.client_secret_basic;
@@ -271,7 +247,6 @@
             // we want to res.enable basic only if it is supported for better compatibility out of the box
             config.client_secret_post = !res.body.client_secret_basic && res.body.client_secret_post;
             config.scope = res.body.scope;
-            config.root_pem = res.body.root_pem;
 
             lookupSuccess = true;
         } else if (res.error) {
@@ -289,14 +264,11 @@
         configLookup = {
             issuer: '',
             metadata_url: '',
-            danger_allow_insecure: false,
-            root_pem: '',
         };
         config = {
             enabled: true,
             issuer: '',
             typ: 'oidc',
-            danger_allow_insecure: false,
             authorization_endpoint: '',
             token_endpoint: '',
             userinfo_endpoint: '',
@@ -306,7 +278,6 @@
             client_secret_basic: true,
             client_secret_post: false,
             scope: '',
-            root_pem: '',
             admin_claim_path: '',
             admin_claim_value: '',
             mfa_claim_path: '',
@@ -314,7 +285,6 @@
         }
         success = false;
         lookupSuccess = false;
-        showRootPem = false;
     }
 </script>
 
@@ -323,20 +293,6 @@
     <div style:height=".5rem"></div>
 
     <Form action={formAction} {onSubmit}>
-        {#if isCustom}
-            <ProviderConfigRootCA
-                    bind:dangerAllowInsecure={config.danger_allow_insecure}
-                    bind:showRootPem
-                    bind:rootPemCert={config.root_pem}
-            />
-        {:else if !lookupSuccess}
-            <ProviderConfigRootCA
-                    bind:dangerAllowInsecure={configLookup.danger_allow_insecure}
-                    bind:showRootPem
-                    bind:rootPemCert={configLookup.root_pem}
-            />
-        {/if}
-
         {#if isOidc && !lookupSuccess}
             <Input
                     name="issuer"

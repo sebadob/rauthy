@@ -1,23 +1,16 @@
 <script lang="ts">
     import Button from "$lib5/button/Button.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import JsonPathDesc from "$lib5/admin/providers/JsonPathDesc.svelte";
     import ProviderLogo from "../../ProviderLogo.svelte";
     import type {ProviderRequest, ProviderResponse} from "$api/types/auth_provider.ts";
     import IconCheck from "$icons/IconCheck.svelte";
-    import InputArea from "$lib5/form/InputArea.svelte";
-    import InputPassword from "$lib5/form/InputPassword.svelte";
     import Form from "$lib5/form/Form.svelte";
-    import {fetchPut, uploadFile} from "$api/fetch.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {fetchPut} from "$api/fetch";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import {useI18n} from "$state/i18n.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
-    import {PATTERN_CLIENT_NAME, PATTERN_PEM, PATTERN_SCOPE_SPACE, PATTERN_URI} from "$utils/patterns.ts";
-    import {slide} from "svelte/transition";
     import InputFile from "$lib5/form/InputFile.svelte";
-    import {genKey} from "$utils/helpers.ts";
-    import ProviderConfigRootCA from "$lib/admin/providers/blocks/ProviderConfigRootCA.svelte";
+    import {genKey} from "$utils/helpers";
     import ProviderConfigURLs from "$lib/admin/providers/blocks/ProviderConfigURLs.svelte";
     import ProviderConfigClientInfo from "$lib/admin/providers/blocks/ProviderConfigClientInfo.svelte";
 
@@ -37,7 +30,6 @@
     let isLoading = $state(false);
     let err = $state('');
     let success = $state(false);
-    let showRootPem = $state(!!provider.root_pem);
     let logoKey = $state(genKey());
 
     $effect(() => {
@@ -47,7 +39,6 @@
             provider.admin_claim_value = provider.admin_claim_value || '';
             provider.mfa_claim_path = provider.mfa_claim_path || '';
             provider.mfa_claim_value = provider.mfa_claim_value || '';
-            provider.root_pem = provider.root_pem || '';
         }
     });
 
@@ -79,7 +70,6 @@
             token_endpoint: provider.token_endpoint,
             userinfo_endpoint: provider.userinfo_endpoint,
 
-            danger_allow_insecure: showRootPem && provider.root_pem ? false : provider.danger_allow_insecure,
             use_pkce: provider.use_pkce,
             client_secret_basic: provider.client_secret_basic,
             client_secret_post: provider.client_secret_post,
@@ -87,7 +77,6 @@
             client_id: provider.client_id,
             client_secret: provider.client_secret || undefined,
             scope: provider.scope.trim(),
-            root_pem: showRootPem && provider.root_pem ? provider.root_pem.trim() : undefined,
 
             admin_claim_path: provider.admin_claim_path || undefined,
             admin_claim_value: provider.admin_claim_value || undefined,
@@ -120,12 +109,6 @@
                 {ta.common.enabled}
             </InputCheckbox>
         </div>
-
-        <ProviderConfigRootCA
-                bind:dangerAllowInsecure={provider.danger_allow_insecure}
-                bind:showRootPem
-                bind:rootPemCert={provider.root_pem}
-        />
 
         <ProviderConfigURLs
                 bind:issuer={provider.issuer}

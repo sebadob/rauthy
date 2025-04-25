@@ -17,7 +17,6 @@ export interface ProviderRequest {
     /// Validation: PATTERN_URI
     userinfo_endpoint: string,
 
-    danger_allow_insecure: boolean,
     use_pkce: boolean,
     client_secret_basic: boolean,
     client_secret_post: boolean,
@@ -28,8 +27,6 @@ export interface ProviderRequest {
     client_secret?: string,
     /// Validation: PATTERN_SCOPE_SPACE
     scope: string,
-    /// Validation: PATTERN_PEM
-    root_pem?: string,
 
     /// Validation: PATTERN_URI
     admin_claim_path?: string,
@@ -82,9 +79,6 @@ export interface ProviderLookupRequest {
     issuer?: string,
     /// Validation: PATTERN_URI
     metadata_url?: string,
-    danger_allow_insecure: boolean,
-    // no validation since it will throw an error later if not correctly formed
-    root_pem?: string,
 }
 
 export interface ProviderResponse {
@@ -103,11 +97,9 @@ export interface ProviderResponse {
     admin_claim_value?: string,
     mfa_claim_path?: string,
     mfa_claim_value?: string,
-    danger_allow_insecure: boolean,
     use_pkce: boolean,
     client_secret_basic: boolean,
     client_secret_post: boolean,
-    root_pem?: string,
 }
 
 export interface ProviderLinkedUserResponse {
@@ -121,9 +113,7 @@ export interface ProviderLookupResponse {
     token_endpoint: string,
     userinfo_endpoint: string,
     scope: string,
-    root_pem?: string,
     use_pkce: boolean,
     client_secret_basic: boolean,
     client_secret_post: boolean,
-    danger_allow_insecure: boolean,
 }
