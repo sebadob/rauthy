@@ -1,4 +1,5 @@
 use crate::entity::auth_providers::AuthProviderIdClaims;
+use rauthy_common::HTTP_CLIENT;
 use rauthy_common::constants::APPLICATION_JSON;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
@@ -26,13 +27,12 @@ struct GithubEmailPrivateResponse {
 /// would get super messy. If the Github API ever updates, we just need to update
 /// the URL here as well.
 pub async fn get_github_private_email(
-    client: &reqwest::Client,
     access_token: &str,
     claims: &mut AuthProviderIdClaims<'_>,
 ) -> Result<(), ErrorResponse> {
     debug!("Trying to get User E-Mail via Github /user/emails endpoint");
 
-    let res = client
+    let res = HTTP_CLIENT
         .get("https://api.github.com/user/emails")
         .header(AUTHORIZATION, format!("Bearer {}", access_token))
         .header(ACCEPT, APPLICATION_JSON)

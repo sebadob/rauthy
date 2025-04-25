@@ -10,7 +10,7 @@ use rauthy_common::constants::{
     BUILD_TIME, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
 };
 use rauthy_common::utils::UseDummyAddress;
-use rauthy_common::{is_sqlite, password_hasher};
+use rauthy_common::{HTTP_CLIENT, is_sqlite, password_hasher};
 use rauthy_handlers::generic::I18N_CONFIG;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
@@ -232,6 +232,7 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
     // trigger config builds to have them fast-failing on invalid config
     {
         debug!("I18n Config: {:?}", *I18N_CONFIG);
+        debug!("{:?}", *HTTP_CLIENT);
     }
 
     if args.len() > 1 && args[1] == "dummy-data" {

@@ -21,23 +21,18 @@ use rauthy_common::constants::{
     CACHE_TTL_DYN_CLIENT, CACHE_TTL_EPHEMERAL_CLIENT, DYN_CLIENT_DEFAULT_TOKEN_LIFETIME,
     DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS, EPHEMERAL_CLIENTS_ALLOWED_FLOWS,
     EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA, PUB_URL_WITH_SCHEME,
-    RAUTHY_VERSION,
 };
-use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
+use rauthy_common::{HTTP_CLIENT, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use reqwest::Url;
 use reqwest::header::CONTENT_TYPE;
-use reqwest::{Url, tls};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
-use std::sync::OnceLock;
-use std::time::Duration;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
-
-static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
 static SQL_SAVE: &str = r#"
 UPDATE clients
@@ -1306,21 +1301,7 @@ impl Client {
 
 impl Client {
     async fn ephemeral_from_url(value: &str) -> Result<Self, ErrorResponse> {
-        let client = HTTP_CLIENT.get_or_init(|| {
-            reqwest::Client::builder()
-                .connect_timeout(Duration::from_secs(10))
-                .timeout(Duration::from_secs(10))
-                .user_agent(format!(
-                    "Rauthy v{} Ephemeral Client Resolver",
-                    RAUTHY_VERSION
-                ))
-                .min_tls_version(tls::Version::TLS_1_2)
-                .pool_idle_timeout(Duration::from_secs(600))
-                .build()
-                .unwrap()
-        });
-
-        let res = client
+        let res = HTTP_CLIENT
             .get(value)
             .header(CONTENT_TYPE, APPLICATION_JSON)
             .send()

@@ -658,12 +658,17 @@ impl Session {
                     "/auth/v1/dev/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
+                    "/auth/v1/providers/login",
+                    "/auth/v1/providers/callback",
+                    "/auth/v1/dev/providers_callback",
                 ];
                 #[cfg(not(debug_assertions))]
                 let exceptions = [
                     "/auth/v1/oidc/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
+                    "/auth/v1/providers/login",
+                    "/auth/v1/providers/callback",
                 ];
                 if exceptions.contains(&req_path) {
                     return true;

@@ -95,6 +95,7 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
     }
 
     pub async fn lookup() -> Result<(semver::Version, String), ErrorResponse> {
+        // it makes no sense to use the glopbal client here - no benefit from connection pooling
         let client = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(10))
             .timeout(Duration::from_secs(10))

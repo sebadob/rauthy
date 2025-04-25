@@ -29,17 +29,16 @@ use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
     IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI,
-    PROVIDER_CALLBACK_URI_ENCODED, PROVIDER_LINK_COOKIE, RAUTHY_VERSION,
-    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
+    PROVIDER_CALLBACK_URI_ENCODED, PROVIDER_LINK_COOKIE, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
+    WEBAUTHN_REQ_EXP,
 };
-use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, deserialize,
     get_rand, new_store_id, serialize,
 };
+use rauthy_common::{HTTP_CLIENT, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
-use reqwest::tls;
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use serde_json::value;
@@ -47,7 +46,6 @@ use serde_json_path::JsonPath;
 use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
-use std::time::Duration;
 use time::OffsetDateTime;
 
 use tracing::{debug, error};
@@ -190,9 +188,7 @@ pub struct AuthProvider {
     pub mfa_claim_path: Option<String>,
     pub mfa_claim_value: Option<String>,
 
-    pub allow_insecure_requests: bool,
     pub use_pkce: bool,
-    pub root_pem: Option<String>,
     pub client_secret_basic: bool,
     pub client_secret_post: bool,
 }
@@ -219,9 +215,7 @@ impl<'r> From<hiqlite::Row<'r>> for AuthProvider {
             admin_claim_value: row.get("admin_claim_value"),
             mfa_claim_path: row.get("mfa_claim_path"),
             mfa_claim_value: row.get("mfa_claim_value"),
-            allow_insecure_requests: row.get("allow_insecure_requests"),
             use_pkce: row.get("use_pkce"),
-            root_pem: row.get("root_pem"),
             client_secret_basic: row.get("client_secret_basic"),
             client_secret_post: row.get("client_secret_post"),
         }
@@ -250,9 +244,7 @@ impl From<tokio_postgres::Row> for AuthProvider {
             admin_claim_value: row.get("admin_claim_value"),
             mfa_claim_path: row.get("mfa_claim_path"),
             mfa_claim_value: row.get("mfa_claim_value"),
-            allow_insecure_requests: row.get("allow_insecure_requests"),
             use_pkce: row.get("use_pkce"),
-            root_pem: row.get("root_pem"),
             client_secret_basic: row.get("client_secret_basic"),
             client_secret_post: row.get("client_secret_post"),
         }
@@ -268,10 +260,9 @@ impl AuthProvider {
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, jwks_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
-mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic,
-client_secret_post)
+mfa_claim_path, mfa_claim_value, use_pkce, client_secret_basic, client_secret_post)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#;
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -294,9 +285,7 @@ VALUES
                         &slf.admin_claim_value,
                         &slf.mfa_claim_path,
                         &slf.mfa_claim_value,
-                        slf.allow_insecure_requests,
                         slf.use_pkce,
-                        &slf.root_pem,
                         slf.client_secret_basic,
                         slf.client_secret_post
                     ),
@@ -322,9 +311,7 @@ VALUES
                     &slf.admin_claim_value,
                     &slf.mfa_claim_path,
                     &slf.mfa_claim_value,
-                    &slf.allow_insecure_requests,
                     &slf.use_pkce,
-                    &slf.root_pem,
                     &slf.client_secret_basic,
                     &slf.client_secret_post,
                 ],
@@ -433,9 +420,8 @@ UPDATE auth_providers
 SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
 token_endpoint = $6, userinfo_endpoint = $7, jwks_endpoint = $8, client_id = $9, secret = $10,
 scope = $11, admin_claim_path = $12, admin_claim_value = $13, mfa_claim_path = $14,
-mfa_claim_value = $15, allow_insecure_requests = $16, use_pkce = $17, root_pem = $18,
-client_secret_basic = $19, client_secret_post = $20
-WHERE id = $21"#;
+mfa_claim_value = $15, use_pkce = $16, client_secret_basic = $17, client_secret_post = $18
+WHERE id = $19"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -457,9 +443,7 @@ WHERE id = $21"#;
                         self.admin_claim_value.clone(),
                         self.mfa_claim_path.clone(),
                         self.mfa_claim_value.clone(),
-                        self.allow_insecure_requests,
                         self.use_pkce,
-                        self.root_pem.clone(),
                         self.client_secret_basic,
                         self.client_secret_post,
                         self.id.clone()
@@ -485,9 +469,7 @@ WHERE id = $21"#;
                     &self.admin_claim_value,
                     &self.mfa_claim_path,
                     &self.mfa_claim_value,
-                    &self.allow_insecure_requests,
                     &self.use_pkce,
-                    &self.root_pem,
                     &self.client_secret_basic,
                     &self.client_secret_post,
                     &self.id,
@@ -520,40 +502,6 @@ impl AuthProvider {
             .join("+")
     }
 
-    fn build_client(
-        danger_allow_insecure: bool,
-        root_pem: Option<&str>,
-    ) -> Result<reqwest::Client, ErrorResponse> {
-        let client = if danger_allow_insecure {
-            reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .connect_timeout(Duration::from_secs(10))
-                .tcp_keepalive(Duration::from_secs(30))
-                .user_agent(format!("Rauthy Auth Provider Client v{}", RAUTHY_VERSION))
-                .https_only(false)
-                .danger_accept_invalid_certs(true)
-                .build()?
-        } else {
-            let mut builder = reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .connect_timeout(Duration::from_secs(10))
-                .tcp_keepalive(Duration::from_secs(30))
-                .min_tls_version(tls::Version::TLS_1_2)
-                .tls_built_in_root_certs(true)
-                .user_agent(format!("Rauthy Auth Provider Client v{}", RAUTHY_VERSION))
-                .https_only(true);
-            if let Some(pem) = root_pem {
-                let root_cert = reqwest::tls::Certificate::from_pem(pem.as_bytes())?;
-                builder = builder.add_root_certificate(root_cert);
-            }
-            builder.build()?
-        };
-
-        // TODO it would probably make sense to have a `LazyLock`ed client here
-
-        Ok(client)
-    }
-
     fn try_from_id_req(id: String, req: ProviderRequest) -> Result<Self, ErrorResponse> {
         let scope = Self::cleanup_scope(&req.scope);
         let secret = Self::secret_encrypted(&req.client_secret)?;
@@ -578,9 +526,7 @@ impl AuthProvider {
             mfa_claim_path: req.mfa_claim_path,
             mfa_claim_value: req.mfa_claim_value,
 
-            allow_insecure_requests: req.danger_allow_insecure.unwrap_or(false),
             use_pkce: req.use_pkce,
-            root_pem: req.root_pem,
             client_secret_basic: req.client_secret_basic,
             client_secret_post: req.client_secret_post,
         })
@@ -599,11 +545,6 @@ impl AuthProvider {
     pub async fn lookup_config(
         payload: &ProviderLookupRequest,
     ) -> Result<ProviderLookupResponse, ErrorResponse> {
-        let client = Self::build_client(
-            payload.danger_allow_insecure.unwrap_or(false),
-            payload.root_pem.as_deref(),
-        )?;
-
         let url = if let Some(url) = &payload.metadata_url {
             Cow::from(url)
         } else if let Some(iss) = &payload.issuer {
@@ -627,7 +568,7 @@ impl AuthProvider {
         };
 
         debug!("AuthProvider lookup to {}", config_url);
-        let res = client.get(config_url.as_ref()).send().await?;
+        let res = HTTP_CLIENT.get(config_url.as_ref()).send().await?;
         let status = res.status();
         if !status.is_success() {
             let body = res.text().await?;
@@ -685,14 +626,12 @@ impl AuthProvider {
             token_endpoint: well_known.token_endpoint,
             userinfo_endpoint: well_known.userinfo_endpoint,
             jwks_endpoint: Some(well_known.jwks_uri),
-            root_pem: &payload.root_pem,
             use_pkce: well_known
                 .code_challenge_methods_supported
                 .iter()
                 .any(|c| c == "S256"),
             client_secret_basic,
             client_secret_post,
-            danger_allow_insecure: payload.danger_allow_insecure.unwrap_or(false),
             scope,
             // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI
             // instead of typing them in?
@@ -742,11 +681,9 @@ impl TryFrom<AuthProvider> for ProviderResponse {
             admin_claim_value: value.admin_claim_value,
             mfa_claim_path: value.mfa_claim_path,
             mfa_claim_value: value.mfa_claim_value,
-            danger_allow_insecure: value.allow_insecure_requests,
             use_pkce: value.use_pkce,
             client_secret_basic: value.client_secret_basic,
             client_secret_post: value.client_secret_post,
-            root_pem: value.root_pem,
         })
     }
 }
@@ -929,10 +866,6 @@ impl AuthProviderCallback {
 
         // request is valid -> fetch token for the user
         let provider = AuthProvider::find(&slf.provider_id).await?;
-        let client = AuthProvider::build_client(
-            provider.allow_insecure_requests,
-            provider.root_pem.as_deref(),
-        )?;
         let mut payload = OidcCodeRequestParams {
             // a client MAY add the `client_id`, but it MUST add it when it's public
             client_id: &provider.client_id,
@@ -947,7 +880,7 @@ impl AuthProviderCallback {
         }
 
         let res = {
-            let mut builder = client
+            let mut builder = HTTP_CLIENT
                 .post(&provider.token_endpoint)
                 .header(ACCEPT, APPLICATION_JSON);
 
@@ -1010,7 +943,7 @@ impl AuthProviderCallback {
                     // the id_token only exists, if we actually have an OIDC provider.
                     // If we only get an access token, we need to do another request to the
                     // userinfo endpoint
-                    let res = client
+                    let res = HTTP_CLIENT
                         .get(&provider.userinfo_endpoint)
                         .header(AUTHORIZATION, format!("Bearer {}", access_token))
                         .header(ACCEPT, APPLICATION_JSON)
@@ -1025,7 +958,6 @@ impl AuthProviderCallback {
 
                     if claims.email.is_none() && provider.typ == AuthProviderType::Github {
                         auth_provider_cust_impl::get_github_private_email(
-                            &client,
                             &access_token,
                             &mut claims,
                         )
