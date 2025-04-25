@@ -1,10 +1,8 @@
 use crate::cust_validation::validate_vec_scopes;
 use rauthy_common::constants::{
-    RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_PEM, RE_SCOPE_SPACE,
-    RE_URI,
+    RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_SCOPE_SPACE, RE_URI,
 };
 use serde::{Deserialize, Serialize};
-
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -41,7 +39,6 @@ pub struct ProviderRequest {
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
     pub jwks_endpoint: Option<String>,
 
-    pub danger_allow_insecure: Option<bool>,
     pub use_pkce: bool,
     pub client_secret_basic: bool,
     pub client_secret_post: bool,
@@ -57,12 +54,6 @@ pub struct ProviderRequest {
     /// Validation: `[a-z0-9-_/:\s*]{0,512}`
     #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
     pub scope: String,
-    /// Validation: `(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)`
-    #[validate(regex(
-        path = "*RE_PEM",
-        code = "(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)"
-    ))]
-    pub root_pem: Option<String>,
 
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
@@ -142,9 +133,6 @@ pub struct ProviderLookupRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
     pub metadata_url: Option<String>,
-    pub danger_allow_insecure: Option<bool>,
-    // no validation since it will throw an error later if not correctly formed
-    pub root_pem: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -169,12 +157,9 @@ pub struct ProviderResponse {
     pub mfa_claim_path: Option<String>,
     pub mfa_claim_value: Option<String>,
 
-    pub danger_allow_insecure: bool,
     pub use_pkce: bool,
     pub client_secret_basic: bool,
     pub client_secret_post: bool,
-
-    pub root_pem: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -193,16 +178,14 @@ impl From<tokio_postgres::Row> for ProviderLinkedUserResponse {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-pub struct ProviderLookupResponse<'a> {
+pub struct ProviderLookupResponse {
     pub issuer: String,
     pub authorization_endpoint: String,
     pub token_endpoint: String,
     pub userinfo_endpoint: String,
     pub jwks_endpoint: Option<String>,
     pub scope: String,
-    pub root_pem: &'a Option<String>,
     pub use_pkce: bool,
     pub client_secret_basic: bool,
     pub client_secret_post: bool,
-    pub danger_allow_insecure: bool,
 }
