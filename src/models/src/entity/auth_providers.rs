@@ -1025,7 +1025,6 @@ impl AuthProviderCallback {
 
                     if claims.email.is_none() && provider.typ == AuthProviderType::Github {
                         auth_provider_cust_impl::get_github_private_email(
-                            &client,
                             &access_token,
                             &mut claims,
                         )
