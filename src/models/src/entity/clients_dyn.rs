@@ -4,7 +4,7 @@ use actix_web::web;
 use chrono::Utc;
 use cryptr::EncValue;
 use hiqlite::{Param, params};
-use rauthy_common::constants::{CACHE_TTL_DYN_CLIENT, CACHE_TTL_IP_RATE_LIMIT};
+use rauthy_common::constants::{CACHE_TTL_DYN_CLIENT, DEVICE_GRANT_RATE_LIMIT};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -109,7 +109,7 @@ impl ClientDyn {
                         Cache::IPRateLimit,
                         ip.to_string(),
                         &now,
-                        *CACHE_TTL_IP_RATE_LIMIT,
+                        (*DEVICE_GRANT_RATE_LIMIT).map(|i| i as i64),
                     )
                     .await?;
             }

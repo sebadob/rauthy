@@ -1,15 +1,16 @@
 use actix_web::{
     Error, HttpMessage,
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
-    http, web,
+    http,
 };
 use chrono::Utc;
 use futures::future::LocalBoxFuture;
-use rauthy_common::constants::{COOKIE_SESSION, SESSION_VALIDATE_IP, TOKEN_API_KEY};
+use rauthy_common::constants::{
+    COOKIE_SESSION, SESSION_TIMEOUT, SESSION_VALIDATE_IP, TOKEN_API_KEY,
+};
 use rauthy_common::utils::real_ip_from_svc_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{ApiKey, ApiKeyEntity};
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
@@ -61,14 +62,13 @@ where
 
         Box::pin(async move {
             // let mut session = None;
-            let mut principal = Principal::default();
+            let mut principal = Principal {
+                session: None,
+                api_key: get_api_key_from_headers(&req).await?,
+                roles: vec![],
+            };
 
-            let data = req
-                .app_data::<web::Data<AppState>>()
-                .expect("Error getting AppData inside session middleware");
-
-            principal.api_key = get_api_key_from_headers(&req).await?;
-            if let Some(s) = get_session_from_cookie(&req, data).await? {
+            if let Some(s) = get_session_from_cookie(&req).await? {
                 principal.roles = s.roles_as_vec().unwrap_or_default();
                 principal.session = Some(s);
             }
@@ -121,10 +121,7 @@ async fn get_api_key_from_headers(req: &ServiceRequest) -> Result<Option<ApiKey>
 }
 
 #[inline(always)]
-async fn get_session_from_cookie(
-    req: &ServiceRequest,
-    data: &web::Data<AppState>,
-) -> Result<Option<Session>, ErrorResponse> {
+async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>, ErrorResponse> {
     let session_id = match ApiCookie::from_svc_req(req, COOKIE_SESSION) {
         None => {
             return Ok(None);
@@ -140,7 +137,7 @@ async fn get_session_from_cookie(
                 None
             };
 
-            if session.is_valid(data.session_timeout, remote_ip, req.path()) {
+            if session.is_valid(*SESSION_TIMEOUT, remote_ip, req.path()) {
                 let now = Utc::now().timestamp();
                 // only update the last_seen, if it is older than 10 seconds
                 if session.last_seen < now - 10 {

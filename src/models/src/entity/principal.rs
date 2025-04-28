@@ -45,7 +45,7 @@ impl Principal {
 
     #[inline(always)]
     pub fn is_admin(&self) -> bool {
-        self.roles.contains(&*RAUTHY_ADMIN_ROLE)
+        self.roles.iter().any(|r| r.as_str() == RAUTHY_ADMIN_ROLE)
     }
 
     #[inline(always)]

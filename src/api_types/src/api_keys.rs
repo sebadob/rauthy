@@ -1,4 +1,4 @@
-use rauthy_common::constants::RE_API_KEY;
+use rauthy_common::regex::RE_API_KEY;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;

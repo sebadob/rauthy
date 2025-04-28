@@ -23,6 +23,7 @@ use rauthy_common::constants::{
     AUTH_HEADER_USER, AUTH_HEADERS_ENABLE, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
     DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, EXPERIMENTAL_FED_CM_ENABLE,
     GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
+    SESSION_TIMEOUT,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -775,17 +776,14 @@ pub async fn rotate_jwk(
     ),
 )]
 #[post("/oidc/session")]
-pub async fn post_session(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn post_session(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req).ok());
     session.save().await?;
     let cookie = session.client_cookie();
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(data.session_timeout as i64));
+        .add(::time::Duration::seconds(*SESSION_TIMEOUT as i64));
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
@@ -820,7 +818,7 @@ pub async fn post_session(
     ),
 )]
 #[get("/oidc/sessioninfo")]
-pub async fn get_session_info(data: web::Data<AppState>, principal: ReqPrincipal) -> HttpResponse {
+pub async fn get_session_info(principal: ReqPrincipal) -> HttpResponse {
     if let Err(err) = principal.validate_session_auth() {
         return HttpResponse::Unauthorized()
             .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
@@ -843,7 +841,7 @@ pub async fn get_session_info(data: web::Data<AppState>, principal: ReqPrincipal
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(data.session_timeout as i64));
+        .add(::time::Duration::seconds(*SESSION_TIMEOUT as i64));
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: None,
@@ -886,16 +884,13 @@ pub async fn get_session_info(data: web::Data<AppState>, principal: ReqPrincipal
     ),
 )]
 #[get("/oidc/sessioninfo/xsrf")]
-pub async fn get_session_xsrf(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
     let session = principal.get_session()?;
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(data.session_timeout as i64));
+        .add(::time::Duration::seconds(*SESSION_TIMEOUT as i64));
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),

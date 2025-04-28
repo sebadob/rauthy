@@ -1,4 +1,4 @@
-use rauthy_common::constants::{RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_URI};
+use rauthy_common::regex::{RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_URI};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;

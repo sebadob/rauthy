@@ -20,7 +20,6 @@ chrono = { workspace = true }
 cryptr = { workspace = true }
 dotenvy = { workspace = true }
 flume = { workspace = true }
-hiqlite = { workspace = true }
 num_cpus = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
@@ -30,11 +29,9 @@ rustls-pki-types = { workspace = true }
 rustls-pemfile = { workspace = true }
 serde_json = { workspace = true }
 spow = { workspace = true }
-tokio-postgres = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
-utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 
 [dev-dependencies]

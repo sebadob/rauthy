@@ -5,21 +5,22 @@ use actix_web::{
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
 };
 use futures::future::LocalBoxFuture;
-use lazy_static::lazy_static;
 use rauthy_common::utils::real_ip_from_svc_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::env;
 use std::future::{Ready, ready};
 use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::LazyLock;
 use tracing::{debug, info};
 
-lazy_static! {
-    static ref LOG_LEVEL_ACCESS: LogLevelAccess = env::var("LOG_LEVEL_ACCESS")
-        .unwrap_or_else(|_| "Modifying".to_string())
+static LOG_LEVEL_ACCESS: LazyLock<LogLevelAccess> = LazyLock::new(|| {
+    env::var("LOG_LEVEL_ACCESS")
+        .as_deref()
+        .unwrap_or("Modifying")
         .parse::<LogLevelAccess>()
-        .expect("Cannot parse LOG_LEVEL_ACCESS");
-}
+        .expect("Cannot parse LOG_LEVEL_ACCESS")
+});
 
 #[derive(Debug, PartialEq, Eq)]
 enum LogLevelAccess {

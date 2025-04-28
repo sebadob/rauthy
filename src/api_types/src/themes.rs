@@ -1,4 +1,4 @@
-use rauthy_common::constants::{RE_CLIENT_ID_EPHEMERAL, RE_CSS_VALUE_LOOSE};
+use rauthy_common::regex::{RE_CLIENT_ID_EPHEMERAL, RE_CSS_VALUE_LOOSE};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
