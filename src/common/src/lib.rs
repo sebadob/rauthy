@@ -1,8 +1,5 @@
 // Copyright 2025 Sebastian Dobe <sebastiandobe@mailbox.org>
 
-// needed because the lazy_static! initialization of constants grew quite a bit
-#![recursion_limit = "512"]
-
 use crate::constants::{DB_TYPE, DEV_MODE, RAUTHY_VERSION};
 use reqwest::tls;
 use std::env;
