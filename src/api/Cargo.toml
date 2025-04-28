@@ -25,7 +25,6 @@ openssl-sys = { workspace = true }
 rust-embed = { workspace = true }
 semver = { workspace = true }
 spow = { workspace = true }
-serde = { workspace = true }
 serde_json = { workspace = true }
 serde_urlencoded = { workspace = true }
 time = { workspace = true }

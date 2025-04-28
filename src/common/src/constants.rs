@@ -505,7 +505,7 @@ pub static SESSION_LIFETIME_FED_CM: LazyLock<i64> = LazyLock::new(|| {
 pub static SESSION_TIMEOUT: LazyLock<u32> = LazyLock::new(|| {
     env::var("SESSION_TIMEOUT")
         .as_deref()
-        .unwrap_or("259200")
+        .unwrap_or("5400")
         .parse::<u32>()
         .expect("SESSION_TIMEOUT cannot be parsed as u32")
 });
