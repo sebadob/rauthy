@@ -357,6 +357,10 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             // collecting, apart from specifying the whole server builder twice at this point.
             // This is due to the very strict typing. Maybe we can extract most builders into
             // separate functions somehow to get rid of it with disabled metrics.
+            //
+            // It is most probably possible to define `app` with some form of `Box<dyn ...>` to be
+            // able to build 2 different versions of `app` at this point, but I have not figured
+            // out the correct type yet.
             .wrap(pub_metrics.clone())
             .service(oidc::get_well_known)
             .service(fed_cm::get_fed_cm_well_known)
