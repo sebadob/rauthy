@@ -1572,7 +1572,9 @@ impl User {
     }
 
     pub fn is_admin(&self) -> bool {
-        self.get_roles().contains(&RAUTHY_ADMIN_ROLE)
+        self.get_roles()
+            .iter()
+            .any(|r| r.as_str() == RAUTHY_ADMIN_ROLE)
     }
 
     async fn is_email_free(email: String) -> Result<(), ErrorResponse> {
