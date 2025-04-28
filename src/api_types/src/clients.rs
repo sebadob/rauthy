@@ -1,6 +1,6 @@
 use crate::cust_validation::*;
 use crate::oidc::JwkKeyPairAlg;
-use rauthy_common::constants::{
+use rauthy_common::regex::{
     RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_GROUPS, RE_LOWERCASE, RE_SCOPE_SPACE,
     RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
 };

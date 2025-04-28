@@ -3,9 +3,8 @@ use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, http};
 use chrono::{DateTime, Utc};
-use rauthy_common::constants::{
-    DPOP_FORCE_NONCE, DPOP_NONCE_EXP, DPOP_TOKEN_ENDPOINT, RE_TOKEN_68, TOKEN_DPOP,
-};
+use rauthy_common::constants::{DPOP_FORCE_NONCE, DPOP_NONCE_EXP, DPOP_TOKEN_ENDPOINT, TOKEN_DPOP};
+use rauthy_common::regex::RE_TOKEN_68;
 use rauthy_common::utils::{base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};

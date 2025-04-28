@@ -1,4 +1,4 @@
-use rauthy_common::constants::RE_GROUPS;
+use rauthy_common::regex::RE_GROUPS;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;

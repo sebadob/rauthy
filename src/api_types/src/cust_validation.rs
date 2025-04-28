@@ -1,4 +1,4 @@
-use rauthy_common::constants::{
+use rauthy_common::regex::{
     RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GRANT_TYPES, RE_GROUPS, RE_ORIGIN, RE_URI,
 };
 use validator::ValidationError;

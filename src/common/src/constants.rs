@@ -1,8 +1,8 @@
 use crate::DbType;
+use crate::regex::RE_GRANT_TYPES_EPHEMERAL;
 use crate::utils::build_trusted_proxies;
 use actix_web::http::Uri;
 use chrono::{DateTime, Utc};
-use regex::Regex;
 use std::env;
 use std::ops::Not;
 use std::str::FromStr;
@@ -114,95 +114,6 @@ pub static CACHE_TTL_WEBAUTHN: LazyLock<Option<i64>> =
 pub static CACHE_TTL_WEBAUTHN_DATA: LazyLock<Option<i64>> =
     LazyLock::new(|| Some(*WEBAUTHN_DATA_EXP as i64));
 
-// validation regexes
-pub static RE_ALNUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]+$").unwrap());
-// TODO maybe drop all 24, 48, 64 and validate only with ALNUM to have fewer regexes
-pub static RE_ALNUM_24: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{24}$").unwrap());
-pub static RE_ALNUM_48: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap());
-pub static RE_ALNUM_64: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{64}$").unwrap());
-pub static RE_ALNUM_SPACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9\s]+$").unwrap());
-pub static RE_API_KEY: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9_/-]{2,24}$").unwrap());
-pub static RE_APP_ID: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{12}$").unwrap());
-pub static RE_ATTR: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/]{2,32}$").unwrap());
-pub static RE_ATTR_DESC: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/\s]{0,128}$").unwrap());
-pub static RE_BASE64: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9+/=]{4}$").unwrap());
-// TODO would be more efficient to impl a custom fn validator
-pub static RE_CODE_CHALLENGE_METHOD: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(plain|S256)$").unwrap());
-pub static RE_CITY: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-]{0,48}$").unwrap());
-// TODO could probably be simplified to just URL
-pub static RE_CLIENT_ID_EPHEMERAL: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$").unwrap());
-pub static RE_CLIENT_NAME: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[a-zA-Z0-9À-ɏ-\s\x{3041}-\x{3096}\x{30A0}-\x{30FF}\x{3400}-\x{4DB5}\x{4E00}-\x{9FCB}\x{F900}-\x{FA6A}\x{2E80}-\x{2FD5}\x{FF66}-\x{FF9F}\x{FFA1}-\x{FFDC}\x{31F0}-\x{31FF}]{2,128}$").unwrap()
-});
-// TODO we could probably just drop this regex and validate directly - never used anywhere else
-pub static RE_CODE_CHALLENGE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~]{43,128}$").unwrap());
-pub static RE_CODE_VERIFIER: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~+/=]+$").unwrap());
-pub static RE_CONTACT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9+.@/:]{0,48}$").unwrap());
-pub static RE_CSS_VALUE_LOOSE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z0-9-,.#()%/\s]+$").unwrap());
-pub static RE_DATE_STR: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$").unwrap());
-// TODO maybe drop it and validate indirectly via match - is probably be done anyway already
-pub static RE_GRANT_TYPES: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$").unwrap()
-});
-// TODO maybe drop it and validate indirectly via match - is probably be done anyway already
-pub static RE_GRANT_TYPES_EPHEMERAL: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap()
-});
-// TODO rename to GROUPS_ROLES_SCROPES as it is used for all of them
-pub static RE_GROUPS: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z0-9-_/,:*]{2,64}$").unwrap());
-pub static RE_LOWERCASE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z0-9-_/]{2,128}$").unwrap());
-pub static RE_LOWERCASE_SPACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z0-9-_/\s]{2,128}$").unwrap());
-// TODO maybe drop it and only validate by min + max -> more efficient
-pub static RE_MFA_CODE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap());
-pub static RE_ORIGIN: LazyLock<Regex> = LazyLock::new(|| {
-    let additional_schemes = ADDITIONAL_ALLOWED_ORIGIN_SCHEMES.join("|");
-    let pattern = if additional_schemes.is_empty() {
-        r"^(http|https)://[a-z0-9.:-]+$".to_string()
-    } else {
-        format!("^(http|https|{})://[a-z0-9.:-]+$", additional_schemes)
-    };
-    Regex::new(&pattern).unwrap()
-});
-pub static RE_PHONE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+[0-9]{0,32}$").unwrap());
-pub static RE_SCOPE_SPACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z0-9-_/:\s*]{0,512}$").unwrap());
-pub static RE_SEARCH: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+$").unwrap());
-pub static RE_STREET: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-.\s]{0,48}$").unwrap());
-pub static RE_URI: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$").unwrap());
-// TODO double check that this is the same as CLIENT_NAME and only use one of them
-pub static RE_USER_NAME: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[a-zA-Z0-9À-ɏ-\s\x{3041}-\x{3096}\x{30A0}-\x{30FF}\x{3400}-\x{4DB5}\x{4E00}-\x{9FCB}\x{F900}-\x{FA6A}\x{2E80}-\x{2FD5}\x{FF66}-\x{FF9F}\x{FFA1}-\x{FFDC}\x{31F0}-\x{31FF}]{1,32}$").unwrap()
-});
-pub static RE_TOKEN_68: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap());
-// TODO indirect validation without regex would be more efficient
-pub static RE_TOKEN_ENDPOINT_AUTH_METHOD: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(client_secret_post|client_secret_basic|none)$").unwrap());
-
-// global variables
 pub static ADDITIONAL_ALLOWED_ORIGIN_SCHEMES: LazyLock<Vec<String>> = LazyLock::new(|| {
     env::var("ADDITIONAL_ALLOWED_ORIGIN_SCHEMES")
         .as_deref()

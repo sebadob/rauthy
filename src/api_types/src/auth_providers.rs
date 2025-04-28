@@ -1,5 +1,5 @@
 use crate::cust_validation::validate_vec_scopes;
-use rauthy_common::constants::{
+use rauthy_common::regex::{
     RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_SCOPE_SPACE, RE_URI,
 };
 use serde::{Deserialize, Serialize};

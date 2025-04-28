@@ -13,6 +13,7 @@ use tracing::{debug, warn};
 pub mod compression;
 pub mod constants;
 pub mod password_hasher;
+pub mod regex;
 pub mod utils;
 
 /// TODO make sure that in (almost) all places, this single client is being used for all outgoing

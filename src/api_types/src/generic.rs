@@ -1,4 +1,4 @@
-use rauthy_common::constants::{RE_ALNUM, RE_SEARCH};
+use rauthy_common::regex::{RE_ALNUM, RE_SEARCH};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
