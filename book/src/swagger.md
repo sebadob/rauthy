@@ -57,8 +57,8 @@ You can change the internal exposing or port as well. The metrics and internal S
 
 ```
 # To enable or disable the additional HTTP server to expose the /metrics endpoint
-# default: true
-#METRICS_ENABLE=true
+# default: false
+#METRICS_ENABLE=false
 
 # The IP address to listen on for the /metrics endpoint.
 # You do not want to expose your metrics on a publicly reachable endpoint!
