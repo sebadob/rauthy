@@ -125,23 +125,23 @@ impl AppState {
             .unwrap_or_else(|_| String::from("14400"))
             .trim()
             .parse::<u32>()
-            .expect("SESSION_LIFETIME cannot be parsed to u32 - bad format");
+            .expect("SESSION_LIFETIME cannot be parsed as u32");
         let session_timeout = env::var("SESSION_TIMEOUT")
             .unwrap_or_else(|_| String::from("5400"))
             .trim()
             .parse::<u32>()
-            .expect("SESSION_TIMEOUT cannot be parsed to u32 - bad format");
+            .expect("SESSION_TIMEOUT cannot be parsed as u32");
 
         let ml_lt_pwd_first = env::var("ML_LT_PWD_FIRST")
             .unwrap_or_else(|_| String::from("4320"))
             .trim()
             .parse::<u32>()
-            .expect("ML_LT_PWD_FIRST cannot be parsed to u32 - bad format");
+            .expect("ML_LT_PWD_FIRST cannot be parsed as u32");
         let ml_lt_pwd_reset = env::var("ML_LT_PWD_RESET")
             .unwrap_or_else(|_| String::from("30"))
             .trim()
             .parse::<u32>()
-            .expect("ML_LT_PWD_RESET cannot be parsed to u32 - bad format");
+            .expect("ML_LT_PWD_RESET cannot be parsed as u32");
 
         let rp_id = env::var("RP_ID").unwrap_or_else(|_| String::from("localhost"));
         let rp_origin_str =

@@ -58,7 +58,7 @@ pub async fn dyn_client_cleanup() {
             }
         };
 
-        let threshold = Utc::now().timestamp() - *DYN_CLIENT_CLEANUP_MINUTES;
+        let threshold = Utc::now().timestamp() - *DYN_CLIENT_CLEANUP_MINUTES as i64;
         let mut cleaned_up = 0;
         for client in clients {
             if client.created < threshold {
