@@ -610,7 +610,6 @@ pub static USER_REG_DOMAIN_BLACKLIST: LazyLock<Option<Vec<String>>> = LazyLock::
             .collect()
     })
 });
-// TODO should we maybe completely remove this? There is no real need for this anymore.
 pub static USER_REG_OPEN_REDIRECT: LazyLock<bool> = LazyLock::new(|| {
     env::var("USER_REG_DOMAIN_BLACKLIST")
         .as_deref()
