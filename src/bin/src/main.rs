@@ -275,7 +275,8 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
 
     // Prometheus metrics
     let metrics_enable = env::var("METRICS_ENABLE")
-        .unwrap_or_else(|_| "true".to_string())
+        .as_deref()
+        .unwrap_or("false")
         .parse::<bool>()
         .expect("Cannot parse METRICS_ENABLE to bool");
     let pub_metrics = if metrics_enable {

@@ -1159,8 +1159,8 @@ PROXY_MODE=false
 #ADDITIONAL_ALLOWED_ORIGIN_SCHEMES="tauri myapp"
 
 # To enable or disable the additional HTTP server to expose the /metrics endpoint
-# default: true
-#METRICS_ENABLE=true
+# default: false
+#METRICS_ENABLE=false
 
 # The IP address to listen on for the /metrics endpoint.
 # You do not want to expose your metrics on a publicly reachable endpoint!
