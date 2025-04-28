@@ -94,6 +94,7 @@ pub async fn get_authorize(
     {
         Ok(res) => res,
         Err(err) => {
+            error!("Client used invalid request parameters: {:?}", err.message);
             let status = err.status_code();
             let body = Error1Html::build(
                 &lang,
