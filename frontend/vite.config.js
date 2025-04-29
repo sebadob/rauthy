@@ -1,13 +1,15 @@
 import {sveltekit} from '@sveltejs/kit/vite';
 import wasm from "vite-plugin-wasm";
-import topLevelAwait from "vite-plugin-top-level-await";
-import fs from 'fs';
+// import fs from 'fs';
 
 const backend = 'http://127.0.0.1:8080';
 
 /** @type {import('vite').UserConfig} */
 const config = {
-    plugins: [wasm(), topLevelAwait(), sveltekit()],
+    build: {
+        target: 'esnext',
+    },
+    plugins: [wasm(), sveltekit()],
     server: {
         // If you want to run with dev TLS certificates, for instance when you use a remote host, uncomment the following
         // lines. Do not forget to adjust the `PUB_URL` in `rauthy.cfg` accordingly to allow the `redirect_uri`, for instance:
@@ -57,7 +59,11 @@ const config = {
             '/auth/v1/update_language': backend,
             '/auth/v1/version': backend,
             '/docs/v1/': backend,
-        }
+        },
+    },
+    worker: {
+        format: 'es',
+        plugins: [wasm()],
     }
 };
 
