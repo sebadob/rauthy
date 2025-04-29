@@ -1,7 +1,7 @@
 <script lang="ts">
     import type {Snippet} from "svelte";
     import Button from "$lib5/button/Button.svelte";
-    import {genKey} from "../utils/helpers.ts";
+    import {genKey} from "../utils/helpers";
 
     let {
         ref = $bindable(),

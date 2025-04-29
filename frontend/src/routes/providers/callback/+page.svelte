@@ -11,9 +11,9 @@
     import {useParam} from "$state/param.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import {fetchPost} from "$api/fetch.ts";
+    import {fetchPost} from "$api/fetch";
     import type {WebauthnLoginResponse} from "$api/types/authorize.ts";
-    import {useIsDev} from "$state/is_dev.svelte.ts";
+    import {useIsDev} from "$state/is_dev.svelte";
     import type {ProviderCallbackRequest} from "$api/types/auth_provider.ts";
 
     let t = useI18n();

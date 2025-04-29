@@ -1,8 +1,8 @@
 <script lang="ts">
     import type {Snippet} from "svelte";
-    import {fetchSolvePow} from "$utils/pow.ts";
-    import {unixTsFromLocalDate} from "$utils/form.ts";
-    import {errorFromResponse, fetchForm} from "$api/fetch.ts";
+    import {fetchSolvePow} from "$utils/pow";
+    import {unixTsFromLocalDate} from "$utils/form";
+    import {errorFromResponse, fetchForm} from "$api/fetch";
 
     type T = $$Generic;
 

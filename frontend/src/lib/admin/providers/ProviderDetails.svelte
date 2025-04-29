@@ -3,7 +3,7 @@
     import ProviderConfig from "./ProviderConfig.svelte";
     import ProviderDelete from "./ProviderDelete.svelte";
     import Tabs from "$lib5/tabs/Tabs.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
 
     let {
         provider = $bindable(),

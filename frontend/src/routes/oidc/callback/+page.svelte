@@ -2,9 +2,7 @@
     import {
         deleteVerifierFromStorage,
         getVerifierFromStorage,
-        saveAccessToken,
         saveCsrfToken,
-        saveIdToken
     } from "$utils/helpers.js";
     import {onMount} from "svelte";
     import {

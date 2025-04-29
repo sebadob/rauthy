@@ -2,13 +2,13 @@
     import Button from "$lib5/button/Button.svelte";
     import {fade, slide} from 'svelte/transition';
     import Switch from "$lib5/Switch.svelte";
-    import {buildWebIdUri} from "$utils/helpers.ts";
+    import {buildWebIdUri} from "$utils/helpers";
     import {useI18n} from "$state/i18n.svelte.js";
     import type {WebIdResponse} from "$api/types/web_id.ts";
     import A from "$lib5/A.svelte";
     import InputArea from "$lib5/form/InputArea.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
-    import {fetchPut} from "$api/fetch.ts";
+    import {fetchPut} from "$api/fetch";
 
     let {
         webIdData = $bindable(),

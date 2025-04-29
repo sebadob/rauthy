@@ -1,6 +1,6 @@
 <script lang="ts">
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import Tabs from "$lib5/tabs/Tabs.svelte";
     import type {ClientResponse} from "$api/types/clients.ts";
     import ClientConfig from "$lib5/admin/clients/ClientConfig.svelte";

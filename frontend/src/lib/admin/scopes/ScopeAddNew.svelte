@@ -1,12 +1,12 @@
 <script lang="ts">
     import Button from "$lib5/button/Button.svelte";
     import Input from "$lib5/form/Input.svelte";
-    import {PATTERN_GROUP} from "$utils/patterns.ts";
+    import {PATTERN_GROUP} from "$utils/patterns";
     import Form from "$lib5/form/Form.svelte";
     import type {ScopeRequest, ScopeResponse} from "$api/types/scopes.ts";
-    import {fetchPost} from "$api/fetch.ts";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {fetchPost} from "$api/fetch";
+    import {useI18n} from "$state/i18n.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
 
     let {
         scopes,

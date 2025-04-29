@@ -7,10 +7,10 @@
     import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
     import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
     import type {ApiKeyAccess, ApiKeyRequest, ApiKeyResponse} from "$api/types/api_keys.ts";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import {fmtDateInput, fmtTimeInput} from "$utils/form.ts";
-    import {fetchPut} from "$api/fetch.ts";
+    import {useI18n} from "$state/i18n.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import {fmtDateInput, fmtTimeInput} from "$utils/form";
+    import {fetchPut} from "$api/fetch";
     import ApiKeyMatrix from "$lib5/admin/api_keys/ApiKeyMatrix.svelte";
 
     let {

@@ -1,17 +1,17 @@
 <script lang="ts">
     import Button from "$lib5/button/Button.svelte";
     import Input from "$lib5/form/Input.svelte";
-    import {PATTERN_USER_NAME} from "$utils/patterns.ts";
+    import {PATTERN_USER_NAME} from "$utils/patterns";
     import Form from "$lib5/form/Form.svelte";
-    import {fetchPost} from "$api/fetch.ts";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {fetchPost} from "$api/fetch";
+    import {useI18n} from "$state/i18n.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import type {Language} from "$api/types/i18n.ts";
     import type {NewUserRequest, UserResponse} from "$api/types/user.ts";
     import Options from "$lib5/Options.svelte";
     import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
     import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
-    import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from "$utils/form.ts";
+    import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from "$utils/form";
     import {slide} from "svelte/transition";
     import type {RoleResponse} from "$api/types/roles.ts";
     import type {GroupResponse} from "$api/types/groups.ts";
@@ -19,7 +19,7 @@
     import type {SelectItem} from "$lib5/select_list/props.ts";
     import {untrack} from "svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
-    import {useI18nConfig} from "$state/i18n_config.svelte.ts";
+    import {useI18nConfig} from "$state/i18n_config.svelte";
 
     let {
         onSave,

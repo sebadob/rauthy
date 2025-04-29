@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {purgeStorage, saveCsrfToken} from "$utils/helpers.ts";
+    import {purgeStorage, saveCsrfToken} from "$utils/helpers";
     import Button from "$lib5/button/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Main from "$lib5/Main.svelte";
@@ -7,11 +7,11 @@
     import LangSelector from "$lib5/LangSelector.svelte";
     import type {LogoutParams} from "$api/types/logout.ts";
     import Template from "$lib5/Template.svelte";
-    import {TPL_CSRF_TOKEN} from "$utils/constants.ts";
-    import {useParam} from "$state/param.svelte.ts";
+    import {TPL_CSRF_TOKEN} from "$utils/constants";
+    import {useParam} from "$state/param.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
-    import {fetchPost} from "$api/fetch.ts";
-    import {useIsDev} from "$state/is_dev.svelte.ts";
+    import {fetchPost} from "$api/fetch";
+    import {useIsDev} from "$state/is_dev.svelte";
 
     let t = useI18n();
     let err = '';

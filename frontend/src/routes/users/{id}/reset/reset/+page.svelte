@@ -6,21 +6,21 @@
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import {slide} from "svelte/transition";
     import LangSelector from "$lib5/LangSelector.svelte";
-    import {TPL_PASSWORD_RESET} from "$utils/constants.ts";
+    import {TPL_PASSWORD_RESET} from "$utils/constants";
     import {useI18n} from "$state/i18n.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import type {PasswordResetTemplate} from "$api/templates/PasswordReset";
     import Template from "$lib5/Template.svelte";
-    import {useParam} from "$state/param.svelte.ts";
+    import {useParam} from "$state/param.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import A from "$lib5/A.svelte";
-    import {useIsDev} from "$state/is_dev.svelte.ts";
-    import {webauthnReg} from "$webauthn/registration.ts";
+    import {useIsDev} from "$state/is_dev.svelte";
+    import {webauthnReg} from "$webauthn/registration";
     import Form from "$lib5/form/Form.svelte";
-    import {PATTERN_USER_NAME} from "$utils/patterns.ts";
+    import {PATTERN_USER_NAME} from "$utils/patterns";
     import type {PasswordResetRequest} from "$api/types/password_reset.ts";
 
     const inputWidth = '20rem';

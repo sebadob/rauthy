@@ -1,19 +1,18 @@
 <script lang="ts">
     import type {ClientResponse} from "$api/types/clients.ts";
-    import {fetchDelete, fetchPost, fetchPut} from "$api/fetch.ts";
+    import {fetchDelete, fetchPost, fetchPut} from "$api/fetch";
     import type {ThemeRequestResponse} from "$api/types/themes.ts";
     import Form from "$lib5/form/Form.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
     import Button from "$lib5/button/Button.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import Input from "$lib5/form/Input.svelte";
-    import {PATTERN_CSS_VALUE_LOOSE} from "$utils/patterns.ts";
+    import {PATTERN_CSS_VALUE_LOOSE} from "$utils/patterns";
     import BrandingMode from "$lib5/admin/clients/branding/BrandingMode.svelte";
     import BrandingPreviewWrapper from "$lib5/admin/clients/branding/BrandingPreviewWrapper.svelte";
-    import {genKey} from "$utils/helpers.ts";
+    import {genKey} from "$utils/helpers";
     import InputFile from "$lib5/form/InputFile.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
-    import {useIsDev} from "$state/is_dev.svelte.ts";
 
     let {
         client,

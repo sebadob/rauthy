@@ -1,6 +1,6 @@
 <script lang="ts">
     import {useI18n} from "$state/i18n.svelte.js";
-    import {fetchGet} from "$api/fetch.ts";
+    import {fetchGet} from "$api/fetch";
     import type {DeviceResponse} from "$api/types/device.ts";
     import Device from "./Device.svelte";
 

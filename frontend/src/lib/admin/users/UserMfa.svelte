@@ -1,8 +1,8 @@
 <script lang="ts">
     import type {UserResponse} from "$api/types/user.ts";
-    import {fetchDelete, fetchGet} from "$api/fetch.ts";
+    import {fetchDelete, fetchGet} from "$api/fetch";
     import type {PasskeyResponse} from "$api/types/webauthn.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import UserPasskey from "$lib5/UserPasskey.svelte";
 
     let {

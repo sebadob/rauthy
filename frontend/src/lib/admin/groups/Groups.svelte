@@ -1,13 +1,13 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import ButtonAddModal from "$lib5/button/ButtonAddModal.svelte";
     import ContentAdmin from "$lib5/ContentAdmin.svelte";
     import NavButtonTile from "$lib5/nav/NavButtonTile.svelte";
     import NavSub from "$lib5/nav/NavSub.svelte";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
-    import {fetchGet} from "$api/fetch.ts";
-    import {useParam} from "$state/param.svelte.ts";
+    import {fetchGet} from "$api/fetch";
+    import {useParam} from "$state/param.svelte";
     import type {GroupResponse} from "$api/types/groups.ts";
     import GroupAddNew from "$lib5/admin/groups/GroupAddNew.svelte";
     import GroupDetails from "$lib5/admin/groups/GroupDetails.svelte";

@@ -3,13 +3,13 @@
     import Input from "$lib5/form/Input.svelte";
     import {slide} from "svelte/transition";
     import {formatUtcTsFromDateInput} from "$utils/helpers.js";
-    import {fmtDateInput, fmtTimeInput} from "$utils/form.ts";
+    import {fmtDateInput, fmtTimeInput} from "$utils/form";
     import type {ApiKeyAccess, ApiKeyRequest, ApiKeyResponse} from "$api/types/api_keys.ts";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import ApiKeyMatrix from "$lib5/admin/api_keys/ApiKeyMatrix.svelte";
-    import {fetchPost} from "$api/fetch.ts";
-    import {PATTERN_API_KEY} from "$utils/patterns.ts";
+    import {fetchPost} from "$api/fetch";
+    import {PATTERN_API_KEY} from "$utils/patterns";
     import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
     import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
     import Form from "$lib5/form/Form.svelte";

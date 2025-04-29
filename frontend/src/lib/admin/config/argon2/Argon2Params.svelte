@@ -1,9 +1,9 @@
 <script lang="ts">
     import {onMount} from "svelte";
     import Argon2Utility from "$lib5/admin/config/argon2/Argon2Utility.svelte";
-    import {fetchGet} from "$api/fetch.ts";
+    import {fetchGet} from "$api/fetch";
     import type {Argon2ParamsResponse, LoginTimeResponse} from "$api/types/login_times.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
 
     let ta = useI18nAdmin();
 

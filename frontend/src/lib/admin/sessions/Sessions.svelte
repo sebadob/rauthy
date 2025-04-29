@@ -1,18 +1,18 @@
 <script lang="ts">
     import {onMount, untrack} from "svelte";
-    import {redirectToLogin} from "$utils/helpers.ts";
+    import {redirectToLogin} from "$utils/helpers";
     import Button from "$lib5/button/Button.svelte";
     import Pagination from "$lib5/pagination/Pagination.svelte";
     import SessionRow from "./SessionRow.svelte";
     import type {SessionResponse} from "$api/types/session.ts";
     import ContentAdmin from "$lib5/ContentAdmin.svelte";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
-    import {fetchDelete, fetchGet} from "$api/fetch.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import {useSession} from "$state/session.svelte.ts";
+    import {fetchDelete, fetchGet} from "$api/fetch";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import {useSession} from "$state/session.svelte";
     import PaginationServerSide from "$lib5/pagination/PaginationServerSide.svelte";
-    import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props.ts";
-    import {fetchSearchServer, type SearchParamsIdxSession} from "$utils/search.ts";
+    import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props";
+    import {fetchSearchServer, type SearchParamsIdxSession} from "$utils/search";
 
     let ta = useI18nAdmin();
 

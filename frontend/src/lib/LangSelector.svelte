@@ -1,12 +1,12 @@
 <script lang="ts">
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
     import {untrack} from "svelte";
-    import {getCookie} from "$utils/helpers.ts";
+    import {getCookie} from "$utils/helpers";
     import Options from "$lib5/Options.svelte";
-    import {fetchPost} from "$api/fetch.ts";
+    import {fetchPost} from "$api/fetch";
     import {page} from "$app/state";
     import type {Language} from "$api/types/i18n.ts";
-    import {useI18nConfig} from "$state/i18n_config.svelte.ts";
+    import {useI18nConfig} from "$state/i18n_config.svelte";
 
     let {
         absolute,

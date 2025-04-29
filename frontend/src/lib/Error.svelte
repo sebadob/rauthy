@@ -4,7 +4,7 @@
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte.js";
     import Template from "$lib5/Template.svelte";
-    import {TPL_ERROR_TEXT, TPL_STATUS_CODE} from "$utils/constants.ts";
+    import {TPL_ERROR_TEXT, TPL_STATUS_CODE} from "$utils/constants";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import Expandable from "$lib5/Expandable.svelte";
 

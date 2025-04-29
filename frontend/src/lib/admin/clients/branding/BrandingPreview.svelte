@@ -3,8 +3,6 @@
     import Button from "$lib5/button/Button.svelte";
     import Input from "$lib5/form/Input.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
-    import {preventDefault} from "svelte/legacy";
-    import ClientLogo from "$lib/ClientLogo.svelte";
     import RauthyLogo from "$lib/RauthyLogo.svelte";
 
     let {

@@ -2,9 +2,9 @@
     import Button from "$lib5/button/Button.svelte";
     import InputDate from "$lib5/form/InputDate.svelte";
     import IconStop from "$icons/IconStop.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
     import type {PropsInputDateCombo} from "$lib5/form/props.ts";
-    import {fmtDateInput, fmtTimeInput} from "$utils/form.ts";
+    import {fmtDateInput, fmtTimeInput} from "$utils/form";
     import InputTime from "$lib5/form/InputTime.svelte";
 
     let {

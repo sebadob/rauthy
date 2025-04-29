@@ -1,15 +1,15 @@
 <script lang="ts">
     import type {DeviceRequest, DeviceResponse} from "$api/types/device.ts";
-    import {formatDateFromTs} from "$utils/helpers.ts";
+    import {formatDateFromTs} from "$utils/helpers";
     import IconStop from "$icons/IconStop.svelte";
     import Input from "$lib5/form/Input.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
     import {untrack} from "svelte";
     import Expandable from "$lib5/Expandable.svelte";
-    import {PATTERN_CLIENT_NAME} from "$utils/patterns.ts";
+    import {PATTERN_CLIENT_NAME} from "$utils/patterns";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import Button from "$lib5/button/Button.svelte";
-    import {fetchDelete, fetchPut} from "$api/fetch.ts";
+    import {fetchDelete, fetchPut} from "$api/fetch";
 
     let {
         device = $bindable(),

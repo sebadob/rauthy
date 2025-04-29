@@ -1,18 +1,18 @@
 <script lang="ts">
-    import {isDefaultScope} from "$utils/helpers.ts";
+    import {isDefaultScope} from "$utils/helpers";
     import Button from "$lib5/button/Button.svelte";
     import Input from "$lib5/form/Input.svelte";
     import type {UserAttrConfigValueResponse} from "$api/types/user_attrs.ts";
     import type {ScopeRequest, ScopeResponse} from "$api/types/scopes.ts";
     import IconCheck from "$icons/IconCheck.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import {fetchPut} from "$api/fetch.ts";
+    import {useI18n} from "$state/i18n.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import {fetchPut} from "$api/fetch";
     import Form from "$lib5/form/Form.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import type {SelectItem} from "$lib5/select_list/props.ts";
     import SelectList from "$lib5/select_list/SelectList.svelte";
-    import {PATTERN_GROUP} from "$utils/patterns.ts";
+    import {PATTERN_GROUP} from "$utils/patterns";
 
     let {
         attrs,

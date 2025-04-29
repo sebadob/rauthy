@@ -1,5 +1,3 @@
-import {PATTERN_API_KEY} from "$utils/patterns.ts";
-
 export type AccessGroup = 'Blacklist'
     | 'Clients'
     | 'Events'

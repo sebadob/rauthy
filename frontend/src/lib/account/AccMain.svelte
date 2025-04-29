@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {redirectToLogout} from "$utils/helpers.ts";
+    import {redirectToLogout} from "$utils/helpers";
     import AccInfo from "$lib5/account/AccInfo.svelte";
     import AccEdit from "$lib5/account/AccEdit.svelte";
     import AccMFA from "./AccMFA.svelte";
@@ -8,11 +8,11 @@
     import AccDevices from "$lib5/account/AccDevices.svelte";
     import {useI18n} from "$state/i18n.svelte.js";
     import type {UserResponse} from "$api/types/user.ts";
-    import {TPL_AUTH_PROVIDERS} from "$utils/constants.ts";
+    import {TPL_AUTH_PROVIDERS} from "$utils/constants";
     import Template from "$lib5/Template.svelte";
     import type {AuthProvidersTemplate} from "$api/templates/AuthProvider.ts";
     import {onMount} from "svelte";
-    import {useParam} from "$state/param.svelte.ts";
+    import {useParam} from "$state/param.svelte";
     import Tabs from "$lib5/tabs/Tabs.svelte";
     import Devices from "$lib5/devices/Devices.svelte";
     import type {WebIdResponse} from "$api/types/web_id.ts";

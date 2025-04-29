@@ -4,7 +4,7 @@
     import IconEyeSlash from "$icons/IconEyeSlash.svelte";
     import IconEye from "$icons/IconEye.svelte";
     import {slide} from "svelte/transition";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
     import Button from "$lib5/button/Button.svelte";
 
     let {

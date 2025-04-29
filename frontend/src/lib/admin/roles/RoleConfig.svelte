@@ -2,13 +2,13 @@
     import Button from "$lib5/button/Button.svelte";
     import Input from "$lib5/form/Input.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import {fetchPut} from "$api/fetch.ts";
+    import {useI18n} from "$state/i18n.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import {fetchPut} from "$api/fetch";
     import Form from "$lib5/form/Form.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import type {RoleRequest, RoleResponse} from "$api/types/roles.ts";
-    import {PATTERN_GROUP} from "$utils/patterns.ts";
+    import {PATTERN_GROUP} from "$utils/patterns";
 
     let {
         role,

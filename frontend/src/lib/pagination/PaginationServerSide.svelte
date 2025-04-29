@@ -1,9 +1,9 @@
 <script lang="ts">
     import IconChevronRight from "$icons/IconChevronRight.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
     import Button from "$lib5/button/Button.svelte";
     import Options from "$lib5/Options.svelte";
-    import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props.ts";
+    import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props";
     import {onMount, untrack} from "svelte";
 
     const options: PageSize[] = [5, 10, 20, 30, 50, 100];

@@ -4,7 +4,7 @@
     import IconEyeSlash from "$icons/IconEyeSlash.svelte";
     import Button from "$lib5/button/Button.svelte";
     import {onMount} from "svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
 
     let {
         ariaLabel = '',

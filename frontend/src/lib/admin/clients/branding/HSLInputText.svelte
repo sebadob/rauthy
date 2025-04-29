@@ -1,7 +1,7 @@
 <script lang="ts">
-    import {PATTERN_CSS_VALUE_LOOSE} from "$utils/patterns.ts";
+    import {PATTERN_CSS_VALUE_LOOSE} from "$utils/patterns";
     import Input from "$lib5/form/Input.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
 
     let {
         label,
