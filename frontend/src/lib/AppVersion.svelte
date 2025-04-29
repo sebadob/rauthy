@@ -1,6 +1,6 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {fetchGet} from "$api/fetch.ts";
+    import {fetchGet} from "$api/fetch";
     import type {AppVersionResponse} from "$api/types/api_version.ts";
 
     let version: undefined | AppVersionResponse = $state();

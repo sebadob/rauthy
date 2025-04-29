@@ -1,6 +1,6 @@
 <script lang="ts">
-    import {eventColor} from "$utils/helpers.ts";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {eventColor} from "$utils/helpers";
+    import {useI18n} from "$state/i18n.svelte";
 
     let {wide}: { wide: boolean } = $props();
 

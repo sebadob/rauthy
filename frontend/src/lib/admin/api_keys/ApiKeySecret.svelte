@@ -3,9 +3,9 @@
     import {slide} from "svelte/transition";
     import HiddenValueArea from "$lib5/HiddenValueArea.svelte";
     import type {ApiKeyResponse} from "$api/types/api_keys.ts";
-    import {fetchPut} from "$api/fetch.ts";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {fetchPut} from "$api/fetch";
+    import {useI18n} from "$state/i18n.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import InputPassword from "$lib5/form/InputPassword.svelte";
 
     let {

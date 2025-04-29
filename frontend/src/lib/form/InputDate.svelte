@@ -2,7 +2,7 @@
     import {slide} from "svelte/transition";
     import {dayToString, fmtDateInput, getWeeksInMonth, type Day} from "$utils/form";
     import {untrack} from "svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
     import {CalendarDate, getDayOfWeek, parseDate} from "@internationalized/date";
     import Popover from "$lib5/Popover.svelte";
     import Options from "$lib5/Options.svelte";

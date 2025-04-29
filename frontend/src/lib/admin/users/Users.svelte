@@ -1,6 +1,6 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {fetchGet} from "$api/fetch.ts";
+    import {fetchGet} from "$api/fetch";
     import type {UserResponse, UserResponseSimple} from "$api/types/user.ts";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
     import type {GroupResponse} from "$api/types/groups.ts";
@@ -8,14 +8,14 @@
     import Pagination from "$lib5/pagination/Pagination.svelte";
     import NavSub from "$lib5/nav/NavSub.svelte";
     import ButtonAddModal from "$lib5/button/ButtonAddModal.svelte";
-    import {useParam} from "$state/param.svelte.ts";
+    import {useParam} from "$state/param.svelte";
     import NavButtonTile from "$lib5/nav/NavButtonTile.svelte";
     import ContentAdmin from "$lib5/ContentAdmin.svelte";
     import UserAddNew from "$lib5/admin/users/UserAddNew.svelte";
     import UserDetails from "$lib5/admin/users/UserDetails.svelte";
     import PaginationServerSide from "$lib5/pagination/PaginationServerSide.svelte";
-    import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props.ts";
-    import {fetchSearchServer, type SearchParamsIdxUser} from "$utils/search.ts";
+    import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props";
+    import {fetchSearchServer, type SearchParamsIdxUser} from "$utils/search";
     import UserPicture from "$lib/UserPicture.svelte";
 
     let closeModal: undefined | (() => void) = $state();

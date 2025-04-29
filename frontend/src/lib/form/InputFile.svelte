@@ -1,9 +1,9 @@
 <script lang="ts">
-    import {genKey} from "$utils/helpers.ts";
+    import {genKey} from "$utils/helpers";
     import Loading from "$lib5/Loading.svelte";
     import IconUpload from "$icons/IconUpload.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import {uploadFile} from "$api/fetch.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import {uploadFile} from "$api/fetch";
 
     let {
         // typ,

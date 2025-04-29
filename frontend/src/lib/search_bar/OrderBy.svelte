@@ -4,7 +4,7 @@
     import Button from "$lib5/button/Button.svelte";
     import Tooltip from "$lib5/Tooltip.svelte";
     import Options from "$lib5/Options.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
 
     let {
         onChange,

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {PATTERN_URI} from "$utils/patterns.ts";
+    import {PATTERN_URI} from "$utils/patterns";
     import Input from "$lib/form/Input.svelte";
 
     let {

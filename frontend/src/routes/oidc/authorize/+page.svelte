@@ -28,8 +28,8 @@
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import {fetchPost, type IResponse} from "$api/fetch.ts";
-    import {useIsDev} from "$state/is_dev.svelte.ts";
+    import {fetchPost, type IResponse} from "$api/fetch";
+    import {useIsDev} from "$state/is_dev.svelte";
     import type {
         CodeChallengeMethod,
         LoginRefreshRequest,

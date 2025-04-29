@@ -10,9 +10,9 @@
         PATTERN_PHONE,
         PATTERN_STREET,
         PATTERN_USER_NAME,
-    } from "$utils/patterns.ts";
+    } from "$utils/patterns";
     import IconCheck from "$icons/IconCheck.svelte";
-    import {fetchPut} from "$api/fetch.ts";
+    import {fetchPut} from "$api/fetch";
     import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
 
     let {

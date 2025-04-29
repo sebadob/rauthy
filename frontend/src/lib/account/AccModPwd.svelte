@@ -1,12 +1,12 @@
 <script lang="ts">
     import PasswordPolicy from "$lib5/PasswordPolicy.svelte";
     import {onMount} from "svelte";
-    import {generatePassword} from "$utils/helpers.ts";
+    import {generatePassword} from "$utils/helpers";
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import Button from "$lib5/button/Button.svelte";
     import {useI18n} from "$state/i18n.svelte.js";
     import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
-    import {fetchGet} from "$api/fetch.ts";
+    import {fetchGet} from "$api/fetch";
     import type {PropsPassword} from "./props.ts";
 
     let {
@@ -44,7 +44,7 @@
 
     export function isPwdValid(): boolean {
         err = '';
-        
+
         if (!hideCurrentPassword && !passwords.current) {
             err = t.account.passwordCurrReq;
             return false;

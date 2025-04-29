@@ -1,13 +1,13 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {fetchGet} from "$api/fetch.ts";
+    import {fetchGet} from "$api/fetch";
     import type {ApiKeyResponse, ApiKeysResponse} from "$api/types/api_keys.ts";
     import ContentAdmin from "$lib5/ContentAdmin.svelte";
     import NavButtonTile from "$lib5/nav/NavButtonTile.svelte";
     import NavSub from "$lib5/nav/NavSub.svelte";
     import ButtonAddModal from "$lib5/button/ButtonAddModal.svelte";
-    import {useParam} from "$state/param.svelte.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useParam} from "$state/param.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
     import ApiKeyDetails from "$lib5/admin/api_keys/ApiKeyDetails.svelte";
     import ApiKeyAddNew from "$lib5/admin/api_keys/ApiKeyAddNew.svelte";

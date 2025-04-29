@@ -2,11 +2,11 @@
     import {onMount} from "svelte";
     import Button from "$lib5/button/Button.svelte";
     import Input from "$lib5/form/Input.svelte";
-    import {fetchGet, fetchPut} from "$api/fetch.ts";
+    import {fetchGet, fetchPut} from "$api/fetch";
     import type {PasswordPolicyRequest, PasswordPolicyResponse} from "$api/types/password_policy.ts";
     import Form from "$lib5/form/Form.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import {useI18n} from "$state/i18n.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
 
     const inputWidth = '160px';

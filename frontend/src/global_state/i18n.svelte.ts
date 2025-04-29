@@ -1,9 +1,9 @@
-import {useLang} from "$state/language.svelte.ts";
-import {type I18n} from "../i18n/common/interface.ts";
-import {I18nEn} from "../i18n/common/en.ts";
-import {I18nDe} from "../i18n/common/de.ts";
-import {I18nKo} from "../i18n/common/ko.ts";
-import {I18nZh} from "../i18n/common/zh.ts";
+import {useLang} from "$state/language.svelte";
+import {type I18n} from "../i18n/common/interface";
+import {I18nEn} from "../i18n/common/en";
+import {I18nDe} from "../i18n/common/de";
+import {I18nKo} from "../i18n/common/ko";
+import {I18nZh} from "../i18n/common/zh";
 
 // This hack makes typescript happy and is fine as long as
 // we `initI18n()` as the very first thing in +layout

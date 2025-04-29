@@ -8,21 +8,21 @@
     import type {RoleResponse} from "$api/types/roles.ts";
     import type {GroupResponse} from "$api/types/groups.ts";
     import type {SelectItem} from "$lib5/select_list/props.ts";
-    import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from "$utils/form.ts";
-    import {fetchPut} from "$api/fetch.ts";
+    import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from "$utils/form";
+    import {fetchPut} from "$api/fetch";
     import Form from "$lib5/form/Form.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
-    import {PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME} from "$utils/patterns.ts";
+    import {PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME} from "$utils/patterns";
     import Options from "$lib5/Options.svelte";
     import SelectList from "$lib5/select_list/SelectList.svelte";
     import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
     import {slide} from "svelte/transition";
     import type {Language} from "$api/types/i18n.ts";
-    import {useI18nConfig} from "$state/i18n_config.svelte.ts";
+    import {useI18nConfig} from "$state/i18n_config.svelte";
     import UserPicture from "$lib/UserPicture.svelte";
 
     let {

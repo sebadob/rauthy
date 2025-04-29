@@ -1,6 +1,6 @@
 <script lang="ts">
     import Button from "$lib5/button/Button.svelte";
-    import {TPL_RESTRICTED_EMAIL_DOMAIN} from "$utils/constants.ts";
+    import {TPL_RESTRICTED_EMAIL_DOMAIN} from "$utils/constants";
     import Input from "$lib5/form/Input.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import Main from "$lib5/Main.svelte";
@@ -10,10 +10,10 @@
     import {useParam} from "$state/param.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import Form from "$lib5/form/Form.svelte";
-    import {useIsDev} from "$state/is_dev.svelte.ts";
-    import {PATTERN_USER_NAME} from "$utils/patterns.ts";
+    import {useIsDev} from "$state/is_dev.svelte";
+    import {PATTERN_USER_NAME} from "$utils/patterns";
     import type {NewUserRegistrationRequest} from "$api/types/register.ts";
-    import {fetchPost} from "$api/fetch.ts";
+    import {fetchPost} from "$api/fetch";
 
     let t = useI18n();
     let isDev = useIsDev();

@@ -2,9 +2,9 @@
     import {slide} from "svelte/transition";
     import Options from "$lib5/Options.svelte";
     import Popover from "$lib5/Popover.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
     import {untrack} from "svelte";
-    import {fmtTimeInput} from "$utils/form.ts";
+    import {fmtTimeInput} from "$utils/form";
     import IconClock from "$icons/IconClock.svelte";
 
     let {

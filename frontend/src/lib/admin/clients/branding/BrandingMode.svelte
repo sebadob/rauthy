@@ -1,6 +1,6 @@
 <script lang="ts">
     import type {ThemeCss} from "$api/types/themes.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import HSLInputRange from "$lib5/admin/clients/branding/HSLInputRange.svelte";
     import HSLInputText from "$lib5/admin/clients/branding/HSLInputText.svelte";
 

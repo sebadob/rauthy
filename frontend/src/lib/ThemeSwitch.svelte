@@ -1,7 +1,7 @@
 <script lang="ts">
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
     import Button from "$lib5/button/Button.svelte";
-    import {useTheme} from "$state/theme.svelte.ts";
+    import {useTheme} from "$state/theme.svelte";
 
     let {absolute}: { absolute?: boolean } = $props();
 

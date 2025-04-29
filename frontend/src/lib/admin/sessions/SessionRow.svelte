@@ -1,15 +1,15 @@
 <script lang="ts">
-    import {formatDateFromTs} from "$utils/helpers.ts";
+    import {formatDateFromTs} from "$utils/helpers";
     import type {SessionResponse} from "$api/types/session.ts";
     import CheckIcon from "$lib5/CheckIcon.svelte";
     import Expandable from "$lib5/Expandable.svelte";
     import Tooltip from "$lib5/Tooltip.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
     import Button from "$lib5/button/Button.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import IconTrash from "$icons/IconTrash.svelte";
-    import {fetchDelete} from "$api/fetch.ts";
+    import {fetchDelete} from "$api/fetch";
 
     let {
         session,

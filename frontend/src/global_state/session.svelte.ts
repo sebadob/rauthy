@@ -1,6 +1,6 @@
 import {fetchGet} from "$api/fetch";
 import type {SessionInfoResponse} from "$api/types/session";
-import {isBrowser, redirectToLogin} from "$utils/helpers.ts";
+import {isBrowser, redirectToLogin} from "$utils/helpers";
 
 let _session: undefined | SessionInfoResponse = $state();
 

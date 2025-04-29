@@ -1,7 +1,7 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {useIsDev} from "$state/is_dev.svelte.ts";
-    import {fetchGet} from "$api/fetch.ts";
+    import {useIsDev} from "$state/is_dev.svelte";
+    import {fetchGet} from "$api/fetch";
 
     type T = $$Generic;
 

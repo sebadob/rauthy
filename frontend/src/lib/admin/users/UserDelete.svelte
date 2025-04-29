@@ -1,8 +1,8 @@
 <script lang="ts">
     import Button from "$lib5/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {fetchDelete} from "$api/fetch.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
+    import {fetchDelete} from "$api/fetch";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
 
     let {
         userId,

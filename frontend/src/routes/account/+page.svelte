@@ -1,15 +1,15 @@
 <script lang="ts">
     import AccMain from "$lib5/account/AccMain.svelte";
-    import {redirectToLogin} from "$utils/helpers.ts";
+    import {redirectToLogin} from "$utils/helpers";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
-    import {type UserResponse} from "$api/types/user.ts";
+    import {type UserResponse} from "$api/types/user";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
-    import {fetchGet} from "$api/fetch.ts";
+    import {fetchGet} from "$api/fetch";
     import type {WebIdResponse} from "$api/types/web_id.ts";
     import LangSelector from "$lib5/LangSelector.svelte";
-    import {useSession} from "$state/session.svelte.ts";
+    import {useSession} from "$state/session.svelte";
     import type {SessionInfoResponse} from "$api/types/session.ts";
 
     let t = useI18n();

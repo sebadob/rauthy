@@ -3,7 +3,7 @@
     import ApiKeySecret from "./ApiKeySecret.svelte";
     import Tabs from "$lib5/tabs/Tabs.svelte";
     import type {ApiKeyResponse} from "$api/types/api_keys.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import ApiKeyDelete from "$lib5/admin/api_keys/ApiKeyDelete.svelte";
 
     let {

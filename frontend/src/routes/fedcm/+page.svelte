@@ -7,7 +7,7 @@
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {PATTERN_URI} from "$utils/patterns";
     import Form from "$lib5/form/Form.svelte";
-    import {genKey} from "$utils/helpers.ts";
+    import {genKey} from "$utils/helpers";
 
     let isSupported = $state(false);
     let isLoggedIn = $state(false);

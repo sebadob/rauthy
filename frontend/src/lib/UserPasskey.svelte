@@ -1,10 +1,10 @@
 <script lang="ts">
     import type {PasskeyResponse} from "$api/types/webauthn.ts";
-    import {formatDateFromTs} from "$utils/helpers.ts";
+    import {formatDateFromTs} from "$utils/helpers";
     import IconFingerprint from "$icons/IconFingerprint.svelte";
     import Tooltip from "$lib5/Tooltip.svelte";
     import Button from "$lib5/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
 
     let {
         passkey,

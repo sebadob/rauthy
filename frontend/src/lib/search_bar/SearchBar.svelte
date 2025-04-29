@@ -1,11 +1,11 @@
 <script lang="ts">
-    import {genKey} from "$utils/helpers.ts";
+    import {genKey} from "$utils/helpers";
     import Button from "$lib5/button/Button.svelte";
     import IconMagnify from "$icons/IconMagnify.svelte";
     import Options from "$lib5/Options.svelte";
     import IconBackspace from "$icons/IconBackspace.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import {useI18n} from "$state/i18n.svelte";
 
     let t = useI18n();
     let ta = useI18nAdmin();

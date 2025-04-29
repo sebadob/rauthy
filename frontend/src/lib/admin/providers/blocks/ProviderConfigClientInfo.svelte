@@ -1,6 +1,6 @@
 <script lang="ts">
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import {PATTERN_CLIENT_NAME, PATTERN_SCOPE_SPACE, PATTERN_URI} from "$utils/patterns.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import {PATTERN_CLIENT_NAME, PATTERN_SCOPE_SPACE, PATTERN_URI} from "$utils/patterns";
     import Input from "$lib/form/Input.svelte";
     import JsonPathDesc from "$lib/admin/providers/JsonPathDesc.svelte";
     import InputPassword from "$lib/form/InputPassword.svelte";

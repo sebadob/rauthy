@@ -9,7 +9,7 @@
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
     import IconCheck from "$icons/IconCheck.svelte";
     import type {PropsPassword} from "./props.ts";
-    import {fetchGet, fetchPost, fetchPut} from "$api/fetch.ts";
+    import {fetchGet, fetchPost, fetchPut} from "$api/fetch";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
     import type {PasskeyResponse} from "$api/types/webauthn.ts";
     import {onMount} from "svelte";

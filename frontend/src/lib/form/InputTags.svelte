@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {genKey} from "$utils/helpers.ts";
+    import {genKey} from "$utils/helpers";
     import Button from "$lib5/button/Button.svelte";
     import IconStop from "$icons/IconStop.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte";
 
     let {
         ref = $bindable(),

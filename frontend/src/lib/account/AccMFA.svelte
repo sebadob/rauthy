@@ -4,11 +4,11 @@
     import Input from "$lib5/form/Input.svelte";
     import {useI18n} from "$state/i18n.svelte.js";
     import {useSession} from "$state/session.svelte.js";
-    import {fetchDelete, fetchGet} from "$api/fetch.ts";
+    import {fetchDelete, fetchGet} from "$api/fetch";
     import type {PasskeyResponse} from "$api/types/webauthn.ts";
     import type {UserResponse} from "$api/types/user.ts";
-    import {PATTERN_USER_NAME} from "$utils/patterns.ts";
-    import {webauthnReg} from "$webauthn/registration.ts";
+    import {PATTERN_USER_NAME} from "$utils/patterns";
+    import {webauthnReg} from "$webauthn/registration";
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
     import UserPasskey from "$lib5/UserPasskey.svelte";

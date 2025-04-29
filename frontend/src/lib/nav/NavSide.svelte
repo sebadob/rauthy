@@ -21,9 +21,9 @@
     import IconWrenchScrew from "$icons/IconWrenchScrew.svelte";
     import IconBookOpen from "$icons/IconBookOpen.svelte";
     import IconCheckBadge from "$icons/IconCheckBadge.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import IconLogout from "$icons/IconLogout.svelte";
-    import {redirectToLogout} from "$utils/helpers.ts";
+    import {redirectToLogout} from "$utils/helpers";
     import Tooltip from "$lib5/Tooltip.svelte";
 
     let ta = useI18nAdmin();
