@@ -416,11 +416,15 @@ pub static POW_EXP: LazyLock<u32> = LazyLock::new(|| {
         .expect("POW_EXP cannot be parsed as u32")
 });
 pub static POW_DIFFICULTY: LazyLock<u8> = LazyLock::new(|| {
-    env::var("POW_DIFFICULTY")
-        .as_deref()
-        .unwrap_or("20")
-        .parse::<u8>()
-        .expect("POW_DIFFICULTY cannot be parsed as u8")
+    if *DEV_MODE {
+        10
+    } else {
+        env::var("POW_DIFFICULTY")
+            .as_deref()
+            .unwrap_or("20")
+            .parse::<u8>()
+            .expect("POW_DIFFICULTY cannot be parsed as u8")
+    }
 });
 pub static POW_IT: LazyLock<u64> = LazyLock::new(|| {
     env::var("POW_IT")
