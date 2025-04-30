@@ -2,6 +2,102 @@
 
 ## UNRELEASED
 
+### Breaking
+
+#### Postgres: `sqlx` dropped in favor of `tokio-postgres`
+
+Internally, quite a big has happened. `sqlx` has been completely dropped in favor of `tokio-postgres` in combination
+with some other dependencies. This solved a few issues.
+
+`sqlx` has been blocking updates quite a few times in the past. It pulls in a huge amount of dependencies, even if they
+are not used, which often block other crates. It's also pretty slow with updates, which means you might be forced to
+stick with older versions for several months, and it has some other limitations I don't like.
+
+Even though the compile-time checked queries are the best feature of `sqlx`, they also produced a lot of issues and
+confusion when other people were trying to build from source, and so on.
+
+The bonus for everyone not working with the code directly is, that `tokio-postgres` has about half the latency of `sqlx`
+in my testing.
+
+The breaking changes that comes with this internal change is actually a good one:
+
+You don't specify the `DATABASE_URL` like before. `DATABASE_URL` and `DATABASE_MAX_CONN` have been completely removed.
+Instead, you now have separate config vars for each part of the URL. This removes the limitation that you could only
+have alphanumeric characters inside your password (otherwise the URL would be invalid).
+
+One additional thing is, that `sqlx` silently ignored TLS certificate validation if it failed, which is actually a
+pretty bad behavior. If you are running a Postgres with self-signed certificates, you need to explicitly allow this.
+
+You now need to provide the following values, if you are using Postgres:
+
+```
+# If you set `HIQLITE=false` and want to use Postgres as your database,
+# you need to set the following variables:
+PG_HOST=
+# default: 5432
+#PG_PORT=5432
+PG_USER=
+PG_PASSWORD=
+# default: rauthy
+#PG_DB_NAME=rauthy
+
+# If your database uses a self-signed certificate, which cannot
+# be verified, you might want to set this to `true`.
+# default: false
+#PG_TLS_NO_VERIFY=false
+
+# Max DB connections for the Postgres pool.
+# default: 20
+#PG_MAX_CONN=20
+```
+
+**CAUTION:** This is a pretty big change, because existing `sqlx` migrations will be converted manually. Just to be
+safe, you should probably do a database backup before starting `v0.29`!
+
+[#822](https://github.com/sebadob/rauthy/pull/822)
+
+#### Default Admin change
+
+The default admin has been changed from `admin@localhost.de` to just `admin@localhost`. This is due to the fact that
+`localhost.de` is a real domain with a valid TLD and it could introduce issues, if these users exist on a Rauthy
+instance.
+
+If you still had an `admin@localhost.de` around in your database, this will also be changed even for an existing
+deployment! You will see a `warn!` logging during the whole `v0.29` release to make you aware of this. After the new
+version has been started up, your default admin will be `admin@localhost`.
+
+[#866](https://github.com/sebadob/rauthy/pull/866)
+
+#### Additional PoW requirements
+
+If you have been providing your own, custom login UI, be aware of the fact that the `LoginRequest` +
+`ProviderLoginRequest` now require a solved PoW inside the request body. For further information about this, see the
+notes down below -> *Defense in depth*;
+
+[#883](https://github.com/sebadob/rauthy/pull/883)
+
+#### Internal Metrics now opt-in
+
+The internal `/metrics` HTTP server is not used by most people, but it has been enabled by default, while using ~10mb
+of memory in idle and adding the overhead to each API request that metrics are actually collected internally. For this
+reason, the internal metrics (and therefore also internal Swagger UI) are not opt-in instead of opt-out. If you are
+using prometheus metrics right now, make sure that you explicitly set
+
+```
+METRICS_ENABLE=true
+```
+
+[#876](https://github.com/sebadob/rauthy/pull/876)
+
+#### Removed Custom CA from Auth Providers
+
+The custom root CA option has been removed from Upstream Auth Providers. This was due to performance and efficiency
+optimizations. There is a new global HTTP client (mentioned below) which will handle custom root CAs and will be used
+for auth providers as well.
+
+If you are currently using an upstream auth provider with a custom root CA, make sure to add this CA to
+`HTTP_CUST_ROOT_CA_BUNDLE` as mentioned further down below`
+
 ### Changes
 
 #### OpenID Connect Backchannel Logout
@@ -10,7 +106,7 @@ Rauthy now supports [OpenID Connect Backchannel Logout](https://openid.net/specs
 
 If downstream clients support it, you can now provide a `backchannel_logout_uri` in the config view via the Admin UI.
 Rauthy itself can act as a downstream client for an upstream as well. The default `/auth/v1/oidc/logout` endpoint now
-optionally accepts the `logout_token` and will propagate backchannel logouts, if the token is actually coming from a
+optionally accepts the `logout_token` and will propagate Backchannel Logouts, if the token is actually coming from a
 valid, configured upstream auth provider.  
 Backchannel Logouts will of course also be triggered in other situations like forced session invalidation by an admin,
 user expiration, or deletion, and so on.
@@ -31,6 +127,176 @@ provide a complete package.
 [#794](https://github.com/sebadob/rauthy/pull/794)
 [#806](https://github.com/sebadob/rauthy/pull/806)
 
+#### SCIM
+
+This version brings SCIM support to Rauthy.
+
+You can define a custom SCIM base uri per client. The client must support SCIM v2 and the `filter` parameter. Groups
+syncing is optional.
+
+You can also define a group prefix which will act as a filter for the to-be-synced data.
+For instance, if you define a prefix of `myapp:`, only the groups starting with it will be synced, like e.g.
+`myapp:admin`, `myapp:user`. Additionally, only users that are assigned to at least one of these filtered groups will
+by synced, while others are skipped.  
+The advantage of this is, let's say you have an application with limited seats, or where each existing user costs a
+license (Gitlab Enterprise would be an example). You need to pay for each registered user. If you now have split your
+users into groups and only your developers need to exist on that instance, you can assign a group like `dev:*` and only
+sync the `dev:` groups via SCIM.
+
+The SCIM impl is not integration tested, as this usually requires an external deployment. For the future, the idea is
+to implement the client side into the `rauthy-client` and use this for integration testing against itself. However, I
+followed the RFC closely and tested all operations manually against https://scim.dev/ .
+
+Just as for the OIDC Backchannel Logout, this feature can be seen as in beta state now. We need some real world testing
+next, but I think it should be just fine.
+
+[#666](https://github.com/sebadob/rauthy/issues/666)
+
+#### Defense in depth
+
+Small improvements have been done in various location inside the code to have additional defense in depth or safety-nets
+during maintenance and development.
+
+The `LoginRequest` during `POST /authorize`, as well as the `ProviderLoginRequest` require a
+solved [Proof of Work](https://github.com/sebadob/spow) from the frontend now. This is an additional DoS protection, and
+it mitigates any automated login checks / brute-force by bots or even tools like burp suite, in additional to the
+already existing login rate-limiting.  
+As an additional UX optimization, all PoW calculations have been removed from the JS main thread and pushed into a
+Web Worker. This keeps the UI responsive, even if you set a higher difficulty which takes a bit longer to compute.
+
+Even though not necessary from a security point of view, the `redirect_uri` during an `authorization_code` flow is
+checked multiple times between requests. Rauthy validates the URI at the very first possibility and makes it impossible
+to change it during the flow, but additional verification is a nice addition.
+
+To make future maintenance tasks a bit more safe, the session state is being checked in 2 different locations now. This
+is a tiny overhead of 1 additional `if` clause, but you get a safety net on all API endpoints.
+
+[#834](https://github.com/sebadob/rauthy/pull/834)
+[#881](https://github.com/sebadob/rauthy/pull/881)
+
+#### Graceful Client Secret Rotation
+
+To be able to follow security best practices, you can now rotate client secrets gracefully.
+
+Rauthy does not allow multiple client secrets, and up until now, if you generated a new one, the old one would be gone
+immediately. Now, when you generate a new secret, you have the option to cache the hash of the current one in-memory.
+You can also enter a time between 1 and 24 hours. This makes it possible to rotate secrets as a best practice without
+any interruption in service.  
+If you however need to generate a new secret because of a leak somewhere, you should of course not enable this option.
+
+[#867](https://github.com/sebadob/rauthy/pull/867)
+
+#### UI Accessibility
+
+Some minor improvements for the accessibility have been made. For instance, some missing `aria-*` labels have been added
+and the colors from the scheme have been switched around slightly in some situations to provide a better contrast out
+of the box without giving up the look.
+
+[#861](https://github.com/sebadob/rauthy/pull/861)
+[#862](https://github.com/sebadob/rauthy/pull/862)
+
+#### Manual Admin-Initiated user init
+
+When an admin created a user manually, it is now possible to initialize this user manually and set a password, even if
+the user never used or received the initial password reset E-Mail.
+
+[#815](https://github.com/sebadob/rauthy/issues/815)
+
+#### Additional CORS headers
+
+Additional CORS headers and validation have been added to a few different endpoints, where it made sense, like e.g.
+the `/userinfo` or `/introspect` endpoints. Internally, the Origin header extraction and validation has been simplified
+as well to make it a bit easier to maintain.
+
+[#855](https://github.com/sebadob/rauthy/pull/855)
+[#856](https://github.com/sebadob/rauthy/pull/856)
+
+#### Global HTTP Client
+
+To optimize memory usage a little bit, Rauthy now only uses a global, lazily initialized HTTP client for for outgoing
+requests (except for Matrix notifications). This static client makes use of connection pooling and keepalives under the
+hood to reduce the overall amount of TLS handshakes and latency during daily operation for a few tasks.
+
+Apart from Matrix event notifications, if you need any custom root CA, you need to add it to this client. You can add
+as many as you like, just statically upfront. The dynamic approach from before like for instance for upstream auth
+providers had a huge drawback, which was that the client had to be created dynamically for each request depending on
+the database state. This was very inefficient and a custom root CA usually changes like every 10 years, so it's not any
+issue at all to define them via the configuration.
+
+With these changes, you also have access to way more configuration options for the HTTP client and a whole new section
+in the config:
+
+```
+#####################################
+########### HTTP CLIENT #############
+#####################################
+
+## In this section, you can configure the HTTP Client
+## that Rauthy uses for all different kind's of tasks,
+## like e.g. fetching ephemeral client information,
+## remote JWKS, connecting to Upstream Auth Providers,
+## or for Slack notifications.
+##
+## NOTE: The only exception is the Matrix Event
+## Notification client, if you have this configured.
+## Because of the internal structure of Matrix dependencies,
+## this cannot easily re-use the global client!
+##
+## Rauthy creates a single Lazily Initialized instance
+## with connection pooling to reduce the amount of TLS
+## handshakes necessary, especially during high traffic.
+
+# The connect timeout in seconds for new connections.
+# default: 10
+#HTTP_CONNECT_TIMEOUT=10
+
+# The total request timeout in seconds for all outgoing
+# requests.
+# default: 10
+#HTTP_REQUEST_TIMEOUT=10
+
+# Set the min TLS version for all outgoing connections.
+# Allowed values: '1.3', '1.2', '1.1', '1.0'
+# default: 1.3
+#HTTP_MIN_TLS=1.3
+
+# The duration in seconds for idle connections in the pool.
+# To reduce memory consumption slightly, you may reduce
+# this value at the cost of needing more TLS handshakes
+# and re-connecting more often.
+# default: 900
+#HTTP_IDLE_TIMEOUT=900
+
+# By default, the HTTP Client will enforce HTTPS and
+# simply fail if an unencrypted HTTP URL is given
+# anywhere.
+# However, you can allow this by setting `true`.
+# default: false
+#HTTP_DANGER_UNENCRYPTED=false
+
+# By default, the HTTP Client will enforce valid TLS
+# certificates and simply fail if an invalid certificate
+# is used anywhere.
+# However, you can allow this by setting `true`.
+# default: false
+#HTTP_DANGER_INSECURE=false
+
+# You can provide a root certificate bundle, if you
+# are running servers / clients Rauthy needs to connect
+# to with self-signed certificates.
+# The certificates need to be in PEM format.
+#HTTP_CUST_ROOT_CA_BUNDLE="
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#"
+```
+
+[#874](https://github.com/sebadob/rauthy/pull/874)
+
 #### Additional safeguards for `MIGRATE_DB_FROM`
 
 Rauthy can migrate between Hiqlite and Postgres on the fly. This feature is only supported as long as you do not bump
@@ -39,12 +305,41 @@ doing trying this by accident.
 
 [#811](https://github.com/sebadob/rauthy/pull/811)
 
+#### Hiqlite optimizations
+
+After `sqlx` was dropped, I could finally upgrade `hiqlite` to the latest version with quite a few improvements in
+terms of shutdown speed and stability.
+
+Before, it was possible that you could get into a state with a HA deployment, where the cache leader election got stuck
+after a rolling release e.g. inside Kubernetes. This was already fixed in a new version, but `sqlx` blocked the upgrade
+for a few months. During that time, I have been able to improve the shutdown behavior even more, and the shutdown time
+in HA deployments has been cut in half. For a single instance, it is gone completely now.
+
+Because of many improvements of `hiqlite`s codebase, I was also able to improve the throughput by another ~28%. The
+database would never be the bottleneck for a Rauthy deployment (this will always be password hashing, which has to be
+slow and expensive on purpose, to make it secure), but it's a nice to have.
+
+#### `SMTP_PORT`
+
+You can now specify a custom `SMTP_PORT` in production. `SMTP_DANGER_INSECURE_PORT` has been dropped in favor of just
+`SMTP_PORT`, which will now also be applied on secure connections in production, not just during local development.
+
+[#840](https://github.com/sebadob/rauthy/pull/840)
+
+#### Latin Extended-B
+
+The `user.given_name`, `user.familiy_name` and `client.name` now also allow characters from the Latin Extended-B.
+
+[#873](https://github.com/sebadob/rauthy/pull/873)
+
 ### Bugfix
 
 - If wrong credentials for the SMTP server have been provided, the optional inner error has been masked.
   [#803](https://github.com/sebadob/rauthy/pull/803)
 - The page title for the user registration page has been broken.
   [#812](https://github.com/sebadob/rauthy/pull/812)
+- A bug in the Admin UI could get you into situations, where you would not see a scrollbar for the user navigation.
+  [#869](https://github.com/sebadob/rauthy/pull/869)
 
 ## v0.28.3
 

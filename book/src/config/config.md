@@ -404,40 +404,28 @@ HQL_SECRET_API=SuperSecureSecret1337
 ############ DATABASE ###############
 #####################################
 
-# Connection string to connect to a Postgres database.
-# This will be ignored as long as `HIQLITE=true`.
-#
-# Format: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
-#
-# NOTE: The password in this case should be alphanumeric.
-# Special characters could cause problems in the connection string.
-#
-# CAUTION: To make the automatic migrations work with Postgres 15+,
-# when you do not want to just use the `postgres` user, You need
-# to have a user with the same name as the DB / schema. For instance,
-# the following would work without granting extra access to the
-# `public` schema which is disabled by default since PG15:
-# database: rauthy
-# user: rauthy
-# schema: rauthy with owner rauthy
-#
-#DATABASE_URL=postgresql://rauthy:123SuperSafe@localhost:5432/rauthy
-
-# Max DB connections for the Postgres pool.
-# Irrelevant for Hiqlite.
-# default: 20
-#DATABASE_MAX_CONN=20
-
 # If specified, the currently configured Database will be
 # DELETED and OVERWRITTEN with a migration from the given
 # database with this variable. Can be used to migrate between
 # different databases.
-# To migrate from Hiqlite, use the `sqlite:` prefix.
+# To migrate from Hiqlite, use the `sqlite:path/to/database.sqlite` format.
+# To migrate from postgres, just set `postgres` and then all the
+# `MIGRATE_PG_*` values below.
 #
 # !!! USE WITH CARE !!!
 #
 #MIGRATE_DB_FROM=sqlite:data/state_machine/db/hiqlite.db
-#MIGRATE_DB_FROM=postgresql://postgres:123SuperSafe@localhost:5432/rauthy
+#MIGRATE_DB_FROM=postgres
+
+# If `MIGRATE_DB_FROM=postgres`, these values are mandatory to open the
+# database connection to the Postgres database you want to migrate away from.
+MIGRATE_PG_HOST=
+# default: 5432
+#MIGRATE_PG_PORT=5432
+MIGRATE_PG_USER=
+MIGRATE_PG_PASSWORD=
+# default: rauthy
+#MIGRATE_PG_DB_NAME=rauthy
 
 # Hiqlite is the default database for Rauthy.
 # You can opt-out and use Postgres instead by setting the proper
@@ -507,6 +495,26 @@ HQL_SECRET_API=SuperSecureSecret1337
 #
 # default: 30
 #HEALTH_CHECK_DELAY_SECS=30
+
+# If you set `HIQLITE=false` and want to use Postgres as your database,
+# you need to set the following variables.
+# These will be ignored as long as `HIQLITE=true`.
+PG_HOST=
+# default: 5432
+#PG_PORT=5432
+PG_USER=
+PG_PASSWORD=
+# default: rauthy
+#PG_DB_NAME=rauthy
+
+# If your database uses a self-signed certificate, which cannot
+# be verified, you might want to set this to `true`.
+# default: false
+#PG_TLS_NO_VERIFY=false
+
+# Max DB connections for the Postgres pool.
+# default: 20
+PG_MAX_CONN=20
 
 # Disables the housekeeping schedulers (default: false)
 #SCHED_DISABLE=true
@@ -670,6 +678,8 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 # You might want to set `SMTP_DANGER_INSECURE=true` if you
 # need this for local dev.
 #SMTP_URL=
+# optional, default will be used depending on TLS / STARTTLS
+#SMTP_PORT=
 #SMTP_USERNAME=
 #SMTP_PASSWORD=
 # Format: "Rauthy <rauthy@localhost.de>"
@@ -692,12 +702,6 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 # `SMTP_DANGER_INSECURE_PORT`.
 # default: false
 #SMTP_DANGER_INSECURE=false
-
-# The port for an insecure SMTP relay.
-# This will most likely be used for testing only.
-# It will only be taken into account if `SMTP_DANGER_INSECURE=true` is set.
-# default: 1025
-#SMTP_DANGER_INSECURE_PORT=1025
 
 #####################################
 ###### ENCRYPTION / HASHING #########
@@ -973,6 +977,73 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # lifetime set with _FED_CM.
 # default: 259200
 #SESSION_TIMEOUT_FED_CM=259200
+
+#####################################
+########### HTTP CLIENT #############
+#####################################
+
+## In this section, you can configure the HTTP Client
+## that Rauthy uses for all different kind's of tasks,
+## like e.g. fetching ephemeral client information,
+## remote JWKS, connecting to Upstream Auth Providers,
+## or for Slack notifications.
+##
+## NOTE: The only exception is the Matrix Event
+## Notification client, if you have this configured.
+## Because of the internal structure of Matrix dependencies,
+## this cannot easily re-use the global client!
+##
+## Rauthy creates a single Lazily Initialized instance
+## with connection pooling to reduce the amount of TLS
+## handshakes necessary, especially during high traffic.
+
+# The connect timeout in seconds for new connections.
+# default: 10
+#HTTP_CONNECT_TIMEOUT=10
+
+# The total request timeout in seconds for all outgoing
+# requests.
+# default: 10
+#HTTP_REQUEST_TIMEOUT=10
+
+# Set the min TLS version for all outgoing connections.
+# Allowed values: '1.3', '1.2', '1.1', '1.0'
+# default: 1.3
+#HTTP_MIN_TLS=1.3
+
+# The duration in seconds for idle connections in the pool.
+# To reduce memory consumption slightly, you may reduce
+# this value at the cost of needing more TLS handshakes
+# and re-connecting more often.
+# default: 900
+#HTTP_IDLE_TIMEOUT=900
+
+# By default, the HTTP Client will enforce HTTPS and
+# simply fail if an unencrypted HTTP URL is given
+# anywhere.
+# However, you can allow this by setting `true`.
+# default: false
+#HTTP_DANGER_UNENCRYPTED=false
+
+# By default, the HTTP Client will enforce valid TLS
+# certificates and simply fail if an invalid certificate
+# is used anywhere.
+# However, you can allow this by setting `true`.
+# default: false
+#HTTP_DANGER_INSECURE=false
+
+# You can provide a root certificate bundle, if you
+# are running servers / clients Rauthy needs to connect
+# to with self-signed certificates.
+# The certificates need to be in PEM format.
+#HTTP_CUST_ROOT_CA_BUNDLE="
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#"
 
 #####################################
 ############### I18n ################

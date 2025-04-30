@@ -4,7 +4,7 @@ use crate::logging::setup_logging;
 use actix_web::web;
 use cryptr::EncKeys;
 use rauthy_common::constants::{BUILD_TIME, RAUTHY_VERSION};
-use rauthy_common::{HTTP_CLIENT, is_sqlite, password_hasher};
+use rauthy_common::{HTTP_CLIENT, password_hasher};
 use rauthy_handlers::generic::I18N_CONFIG;
 use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
@@ -104,37 +104,6 @@ https://sebadob.github.io/rauthy/config/encryption.html"#
         }
     }
 
-    // TODO Keep this check in place until v0.28.0 as info for migrations from older versions.
-    debug!("Starting the persistence layer");
-    if is_sqlite() {
-        // Hiqlite migration has been finished.
-        panic!(
-            r#"
-
-A direct SQLite connection is not supported anymore. The `DATABASE_URL` is only used for
-Postgres connections. You can migrate your SQLite database to either Postgres or Hiqlite.
-Hiqlite uses SQLite under the hood, but provides a Raft layer on top to make it highly available,
-faster, and more resilient.
-
-You can migrate your existing SQLite database using the `MIGRATE_DB_FROM` config variable:
-
-    # If specified, the currently configured Database will be DELETED and OVERWRITTEN with a
-    # migration from the given database with this variable. Can be used to migrate between
-    # different databases.
-    # !!! USE WITH CARE !!!
-    #MIGRATE_DB_FROM=sqlite:data/rauthy.db
-
-To migrate to Postgres, simply set the `DATABASE_URL` to a Postgres database.
-To migrate to Hiqlite, there are a few new config variables you can set. The most important is
-to set
-
-        HIQLITE=true
-
-Take a look at the release notes for more detailed information:
-https://github.com/sebadob/rauthy/releases/tag/v0.27.0
-"#
-        );
-    }
     DB::init()
         .await
         .expect("Error starting the database / cache layer");

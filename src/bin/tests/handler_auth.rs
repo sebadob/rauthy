@@ -1,6 +1,7 @@
 use crate::common::{
     CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, check_status, code_state_from_headers,
-    cookie_csrf_headers_from_res, get_auth_headers, get_backend_url, init_client_bcl_uri,
+    cookie_csrf_headers_from_res, get_auth_headers, get_backend_url, get_solved_pow,
+    init_client_bcl_uri,
 };
 use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
@@ -99,6 +100,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     let mut req_login = LoginRequest {
         email: USERNAME.to_string(),
         password: Some("IAmSoWrong1337".to_string()),
+        pow: get_solved_pow().await,
         client_id: CLIENT_ID.to_string(),
         redirect_uri: redirect_uri.to_owned(),
         scopes: None,
@@ -420,6 +422,7 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
     let mut req_login = LoginRequest {
         email: USERNAME.to_string(),
         password: Some("IAmSoWrong1337".to_string()),
+        pow: get_solved_pow().await,
         client_id: CLIENT_ID.to_string(),
         redirect_uri: redirect_uri.to_owned(),
         scopes: None,
@@ -779,6 +782,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     let req_login = LoginRequest {
         email: USERNAME.to_string(),
         password: Some(PASSWORD.to_string()),
+        pow: get_solved_pow().await,
         client_id: client_id.to_string(),
         redirect_uri: redirect_uri.to_owned(),
         scopes: None,

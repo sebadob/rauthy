@@ -7,6 +7,7 @@ use rauthy_service::token_set::TokenSet;
 use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Response, header};
 use ring::digest;
+use spow::pow::Pow;
 use std::env;
 use std::error::Error;
 use std::sync::OnceLock;
@@ -131,6 +132,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let req_login = LoginRequest {
         email: USERNAME.to_string(),
         password: Some(PASSWORD.to_string()),
+        pow: get_solved_pow().await,
         client_id: "rauthy".to_string(),
         redirect_uri: redirect_uri.to_owned(),
         scopes: None,
@@ -281,4 +283,11 @@ where
 pub fn init_client_bcl_uri() -> String {
     let host = env::var("PUB_URL").expect("PUB_URL env var is not set");
     format!("http://{host}/auth/v1/dev/backchannel_logout")
+}
+
+pub async fn get_solved_pow() -> String {
+    let url = format!("{}/pow", get_backend_url());
+    let res = reqwest::Client::new().post(&url).send().await.unwrap();
+    let pow = res.text().await.unwrap();
+    Pow::work(&pow).unwrap()
 }

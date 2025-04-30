@@ -188,8 +188,7 @@ pub static DANGER_DISABLE_INTROSPECT_AUTH: LazyLock<bool> = LazyLock::new(|| {
         .parse::<bool>()
         .expect("DANGER_DISABLE_INTROSPECT_AUTH cannot be parsed as bool")
 });
-pub static DATABASE_URL: LazyLock<Option<String>> = LazyLock::new(|| env::var("DATABASE_URL").ok());
-pub static DB_TYPE: LazyLock<DbType> = LazyLock::new(|| DbType::from_str(DATABASE_URL.as_deref()));
+pub static DB_TYPE: LazyLock<DbType> = LazyLock::new(DbType::build);
 
 pub static DEV_MODE: LazyLock<bool> = LazyLock::new(|| {
     env::var("DEV_MODE")

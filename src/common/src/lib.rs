@@ -35,8 +35,24 @@ pub static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     let tls_version = match env::var("HTTP_MIN_TLS").as_deref().unwrap_or("1.3") {
         "1.3" => tls::Version::TLS_1_3,
         "1.2" => tls::Version::TLS_1_2,
-        "1.1" => tls::Version::TLS_1_1,
-        "1.0" => tls::Version::TLS_1_0,
+        "1.1" => {
+            warn!(
+                r#"
+    You are allowing TLS 1.1 for the global HTTP client.
+    Only do this, if you know what you are doing!
+    "#
+            );
+            tls::Version::TLS_1_1
+        }
+        "1.0" => {
+            warn!(
+                r#"
+    You are allowing TLS 1.0 for the global HTTP client.
+    Only do this, if you know what you are doing!
+    "#
+            );
+            tls::Version::TLS_1_0
+        }
         _ => panic!("Invalid value for HTTP_MIN_TLS, allowed: '1.3', '1.2', '1.1', '1.0'"),
     };
 
@@ -85,35 +101,21 @@ pub static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DbType {
-    Sqlite,
     Postgres,
     Hiqlite,
 }
 
 impl DbType {
-    fn from_str(db_url: Option<&str>) -> Self {
+    fn build() -> Self {
         let use_hiqlite = env::var("HIQLITE")
             .unwrap_or_else(|_| "true".to_string())
             .parse::<bool>()
             .expect("Cannot parse HIQLITE as bool");
 
         if use_hiqlite {
-            return DbType::Hiqlite;
-        }
-
-        if let Some(db_url) = db_url {
-            if db_url.starts_with("sqlite:") {
-                panic!(
-                    "SQLite support has been dropped with v0.27.0 - please migrate to Hiqlite:\n\
-                https://github.com/sebadob/rauthy/blob/main/CHANGELOG.md#dropped-sqlx-sqlite-in-favor-of-hiqlite"
-                )
-            } else if db_url.starts_with("postgresql://") {
-                Self::Postgres
-            } else {
-                panic!("You provided an unknown database type, please check the DATABASE_URL");
-            }
+            DbType::Hiqlite
         } else {
-            panic!("HIQLITE is disabled and no DATABASE_URL given");
+            Self::Postgres
         }
     }
 }
@@ -121,11 +123,6 @@ impl DbType {
 #[inline(always)]
 pub fn is_hiqlite() -> bool {
     *DB_TYPE == DbType::Hiqlite
-}
-
-#[inline(always)]
-pub fn is_sqlite() -> bool {
-    *DB_TYPE == DbType::Sqlite
 }
 
 #[inline(always)]
