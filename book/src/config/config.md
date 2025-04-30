@@ -404,40 +404,28 @@ HQL_SECRET_API=SuperSecureSecret1337
 ############ DATABASE ###############
 #####################################
 
-# Connection string to connect to a Postgres database.
-# This will be ignored as long as `HIQLITE=true`.
-#
-# Format: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
-#
-# NOTE: The password in this case should be alphanumeric.
-# Special characters could cause problems in the connection string.
-#
-# CAUTION: To make the automatic migrations work with Postgres 15+,
-# when you do not want to just use the `postgres` user, You need
-# to have a user with the same name as the DB / schema. For instance,
-# the following would work without granting extra access to the
-# `public` schema which is disabled by default since PG15:
-# database: rauthy
-# user: rauthy
-# schema: rauthy with owner rauthy
-#
-#DATABASE_URL=postgresql://rauthy:123SuperSafe@localhost:5432/rauthy
-
-# Max DB connections for the Postgres pool.
-# Irrelevant for Hiqlite.
-# default: 20
-#DATABASE_MAX_CONN=20
-
 # If specified, the currently configured Database will be
 # DELETED and OVERWRITTEN with a migration from the given
 # database with this variable. Can be used to migrate between
 # different databases.
-# To migrate from Hiqlite, use the `sqlite:` prefix.
+# To migrate from Hiqlite, use the `sqlite:path/to/database.sqlite` format.
+# To migrate from postgres, just set `postgres` and then all the
+# `MIGRATE_PG_*` values below.
 #
 # !!! USE WITH CARE !!!
 #
 #MIGRATE_DB_FROM=sqlite:data/state_machine/db/hiqlite.db
-#MIGRATE_DB_FROM=postgresql://postgres:123SuperSafe@localhost:5432/rauthy
+#MIGRATE_DB_FROM=postgres
+
+# If `MIGRATE_DB_FROM=postgres`, these values are mandatory to open the
+# database connection to the Postgres database you want to migrate away from.
+MIGRATE_PG_HOST=
+# default: 5432
+#MIGRATE_PG_PORT=5432
+MIGRATE_PG_USER=
+MIGRATE_PG_PASSWORD=
+# default: rauthy
+#MIGRATE_PG_DB_NAME=rauthy
 
 # Hiqlite is the default database for Rauthy.
 # You can opt-out and use Postgres instead by setting the proper
@@ -507,6 +495,21 @@ HQL_SECRET_API=SuperSecureSecret1337
 #
 # default: 30
 #HEALTH_CHECK_DELAY_SECS=30
+
+# If you set `HIQLITE=false` and want to use Postgres as your database,
+# you need to set the following variables.
+# These will be ignored as long as `HIQLITE=true`.
+PG_HOST=localhost
+# default: 5432
+PG_PORT=5432
+PG_USER=rauthy
+PG_PASSWORD=123SuperSafe
+# default: rauthy
+PG_DB_NAME=rauthy
+
+# Max DB connections for the Postgres pool.
+# default: 20
+PG_MAX_CONN=20
 
 # Disables the housekeeping schedulers (default: false)
 #SCHED_DISABLE=true

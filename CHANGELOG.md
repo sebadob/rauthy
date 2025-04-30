@@ -4,6 +4,47 @@
 
 ### Breaking
 
+#### Postgres: `sqlx` dropped in favor of `tokio-postgres`
+
+Internally, quite a big has happened. `sqlx` has been completely dropped in favor of `tokio-postgres` in combination
+with some other dependencies. This solved a few issues.
+
+`sqlx` has been blocking updates quite a few times in the past. It pulls in a huge amount of dependencies, even if they
+are not used, which often block other crates. It's also pretty slow with updates, which means you might be forced to
+stick with older versions for several months, and it has some other limitations I don't like.
+
+Even though the compile-time checked queries are the best feature of `sqlx`, they also produced a lot of issues and
+confusion when other people were trying to build from source, and so on.
+
+The bonus for everyone not working with the code directly is, that `tokio-postgres` has about half the latency of `sqlx`
+in my testing.
+
+The breaking changes that comes with this internal change is actually a good one:
+
+You don't specify the `DATABASE_URL` like before. `DATABASE_URL` and `DATABASE_MAX_CONN` have been completely removed.
+Instead, you now have separate config vars for each part of the URL. This removes the limitation that you could only
+have alphanumeric characters inside your password (otherwise the URL would be invalid).
+
+This means, you now need to provide the following, if you are using postgres:
+
+```
+# If you set `HIQLITE=false` and want to use Postgres as your database,
+# you need to set the following variables:
+PG_HOST=
+# default: 5432
+PG_PORT=5432
+PG_USER=
+PG_PASSWORD=
+# default: rauthy
+PG_DB_NAME=rauthy
+
+# Max DB connections for the Postgres pool.
+# default: 20
+#PG_MAX_CONN=20
+```
+
+[#822](https://github.com/sebadob/rauthy/pull/822)
+
 #### Default Admin change
 
 The default admin has been changed from `admin@localhost.de` to just `admin@localhost`. This is due to the fact that
@@ -142,23 +183,6 @@ of the box without giving up the look.
 
 [#861](https://github.com/sebadob/rauthy/pull/861)
 [#862](https://github.com/sebadob/rauthy/pull/862)
-
-#### Internal code changes
-
-Internally, quite a big has happened. `sqlx` has been completely dropped in favor of `tokio-postgres` in combination
-with some other dependencies. This solved a few issues, but most internally.
-
-`sqlx` has been blocking updates quite a few times in the past. It pulls in a huge amount of dependencies, even if they
-are not used, which often block other crates. It's also pretty slow with updates, which means you might be forced to
-stick with older versions for several months.
-
-Even though the compile-time checked queries are the best feature of `sqlx`, they also produced a lot of issues and
-confusion when other people were trying to build from source, and so on.
-
-The bonus for everyone not working with the code directly is, that `tokio-postgres` has about half the latency of `sqlx`
-in my testing.
-
-[#822](https://github.com/sebadob/rauthy/pull/822)
 
 #### Manual Admin-Initiated user init
 
