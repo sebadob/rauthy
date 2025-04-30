@@ -101,35 +101,21 @@ pub static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DbType {
-    Sqlite,
     Postgres,
     Hiqlite,
 }
 
 impl DbType {
-    fn from_str(db_url: Option<&str>) -> Self {
+    fn build() -> Self {
         let use_hiqlite = env::var("HIQLITE")
             .unwrap_or_else(|_| "true".to_string())
             .parse::<bool>()
             .expect("Cannot parse HIQLITE as bool");
 
         if use_hiqlite {
-            return DbType::Hiqlite;
-        }
-
-        if let Some(db_url) = db_url {
-            if db_url.starts_with("sqlite:") {
-                panic!(
-                    "SQLite support has been dropped with v0.27.0 - please migrate to Hiqlite:\n\
-                https://github.com/sebadob/rauthy/blob/main/CHANGELOG.md#dropped-sqlx-sqlite-in-favor-of-hiqlite"
-                )
-            } else if db_url.starts_with("postgresql://") {
-                Self::Postgres
-            } else {
-                panic!("You provided an unknown database type, please check the DATABASE_URL");
-            }
+            DbType::Hiqlite
         } else {
-            panic!("HIQLITE is disabled and no DATABASE_URL given");
+            Self::Postgres
         }
     }
 }
@@ -137,11 +123,6 @@ impl DbType {
 #[inline(always)]
 pub fn is_hiqlite() -> bool {
     *DB_TYPE == DbType::Hiqlite
-}
-
-#[inline(always)]
-pub fn is_sqlite() -> bool {
-    *DB_TYPE == DbType::Sqlite
 }
 
 #[inline(always)]
