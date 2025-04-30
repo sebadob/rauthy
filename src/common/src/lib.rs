@@ -35,8 +35,24 @@ pub static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     let tls_version = match env::var("HTTP_MIN_TLS").as_deref().unwrap_or("1.3") {
         "1.3" => tls::Version::TLS_1_3,
         "1.2" => tls::Version::TLS_1_2,
-        "1.1" => tls::Version::TLS_1_1,
-        "1.0" => tls::Version::TLS_1_0,
+        "1.1" => {
+            warn!(
+                r#"
+    You are allowing TLS 1.1 for the global HTTP client.
+    Only do this, if you know what you are doing!
+    "#
+            );
+            tls::Version::TLS_1_1
+        }
+        "1.0" => {
+            warn!(
+                r#"
+    You are allowing TLS 1.0 for the global HTTP client.
+    Only do this, if you know what you are doing!
+    "#
+            );
+            tls::Version::TLS_1_0
+        }
         _ => panic!("Invalid value for HTTP_MIN_TLS, allowed: '1.3', '1.2', '1.1', '1.0'"),
     };
 
