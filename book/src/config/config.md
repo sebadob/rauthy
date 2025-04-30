@@ -670,6 +670,8 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 # You might want to set `SMTP_DANGER_INSECURE=true` if you
 # need this for local dev.
 #SMTP_URL=
+# optional, default will be used depending on TLS / STARTTLS
+#SMTP_PORT=
 #SMTP_USERNAME=
 #SMTP_PASSWORD=
 # Format: "Rauthy <rauthy@localhost.de>"
@@ -692,12 +694,6 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 # `SMTP_DANGER_INSECURE_PORT`.
 # default: false
 #SMTP_DANGER_INSECURE=false
-
-# The port for an insecure SMTP relay.
-# This will most likely be used for testing only.
-# It will only be taken into account if `SMTP_DANGER_INSECURE=true` is set.
-# default: 1025
-#SMTP_DANGER_INSECURE_PORT=1025
 
 #####################################
 ###### ENCRYPTION / HASHING #########
@@ -973,6 +969,73 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # lifetime set with _FED_CM.
 # default: 259200
 #SESSION_TIMEOUT_FED_CM=259200
+
+#####################################
+########### HTTP CLIENT #############
+#####################################
+
+## In this section, you can configure the HTTP Client
+## that Rauthy uses for all different kind's of tasks,
+## like e.g. fetching ephemeral client information,
+## remote JWKS, connecting to Upstream Auth Providers,
+## or for Slack notifications.
+##
+## NOTE: The only exception is the Matrix Event
+## Notification client, if you have this configured.
+## Because of the internal structure of Matrix dependencies,
+## this cannot easily re-use the global client!
+##
+## Rauthy creates a single Lazily Initialized instance
+## with connection pooling to reduce the amount of TLS
+## handshakes necessary, especially during high traffic.
+
+# The connect timeout in seconds for new connections.
+# default: 10
+#HTTP_CONNECT_TIMEOUT=10
+
+# The total request timeout in seconds for all outgoing
+# requests.
+# default: 10
+#HTTP_REQUEST_TIMEOUT=10
+
+# Set the min TLS version for all outgoing connections.
+# Allowed values: '1.3', '1.2', '1.1', '1.0'
+# default: 1.3
+#HTTP_MIN_TLS=1.3
+
+# The duration in seconds for idle connections in the pool.
+# To reduce memory consumption slightly, you may reduce
+# this value at the cost of needing more TLS handshakes
+# and re-connecting more often.
+# default: 900
+#HTTP_IDLE_TIMEOUT=900
+
+# By default, the HTTP Client will enforce HTTPS and
+# simply fail if an unencrypted HTTP URL is given
+# anywhere.
+# However, you can allow this by setting `true`.
+# default: false
+#HTTP_DANGER_UNENCRYPTED=false
+
+# By default, the HTTP Client will enforce valid TLS
+# certificates and simply fail if an invalid certificate
+# is used anywhere.
+# However, you can allow this by setting `true`.
+# default: false
+#HTTP_DANGER_INSECURE=false
+
+# You can provide a root certificate bundle, if you
+# are running servers / clients Rauthy needs to connect
+# to with self-signed certificates.
+# The certificates need to be in PEM format.
+#HTTP_CUST_ROOT_CA_BUNDLE="
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#"
 
 #####################################
 ############### I18n ################
