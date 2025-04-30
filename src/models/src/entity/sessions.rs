@@ -670,7 +670,7 @@ impl Session {
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
                 ];
-                if exceptions.contains(&req_path) {
+                if exceptions.contains(&req_path) || req_path.contains("/webauthn/auth/") {
                     return true;
                 }
 
