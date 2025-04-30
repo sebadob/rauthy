@@ -4216,6 +4216,7 @@ dependencies = [
  "validator",
  "webauthn-rs",
  "webauthn-rs-proto",
+ "webpki-roots",
 ]
 
 [[package]]

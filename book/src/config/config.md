@@ -499,13 +499,18 @@ MIGRATE_PG_PASSWORD=
 # If you set `HIQLITE=false` and want to use Postgres as your database,
 # you need to set the following variables.
 # These will be ignored as long as `HIQLITE=true`.
-PG_HOST=localhost
+PG_HOST=
 # default: 5432
-PG_PORT=5432
-PG_USER=rauthy
-PG_PASSWORD=123SuperSafe
+#PG_PORT=5432
+PG_USER=
+PG_PASSWORD=
 # default: rauthy
-PG_DB_NAME=rauthy
+#PG_DB_NAME=rauthy
+
+# If your database uses a self-signed certificate, which cannot
+# be verified, you might want to set this to `true`.
+# default: false
+#PG_TLS_NO_VERIFY=false
 
 # Max DB connections for the Postgres pool.
 # default: 20

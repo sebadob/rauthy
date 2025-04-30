@@ -121,3 +121,4 @@ webauthn-rs = { version = "0.5", features = [
     "danger-allow-state-serialisation", "danger-credential-internals"
 ] }
 webauthn-rs-proto = "0.5"
+webpki-roots = "0.26.9"

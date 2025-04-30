@@ -130,14 +130,17 @@ impl DB {
         config.load_balance_hosts(LoadBalanceHosts::Random);
         config.ssl_mode(SslMode::Prefer);
 
-        let tls_config = if let Some("true") = env::var("DATABASE_TLS_NO_VERIFY").ok().as_deref() {
+        let tls_config = if let Some("true") = env::var("PG_TLS_NO_VERIFY").ok().as_deref() {
             rustls::ClientConfig::builder()
                 .dangerous()
                 .with_custom_certificate_verifier(Arc::new(NoTlsVerifier {}))
                 .with_no_client_auth()
         } else {
+            let root_store = rustls::RootCertStore {
+                roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
+            };
             rustls::ClientConfig::builder()
-                .with_root_certificates(rustls::RootCertStore::empty())
+                .with_root_certificates(root_store)
                 .with_no_client_auth()
         };
         let tls = tokio_postgres_rustls::MakeRustlsConnect::new(tls_config);

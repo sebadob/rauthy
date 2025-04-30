@@ -76,6 +76,7 @@ postgres-types = { workspace = true }
 refinery = { workspace = true }
 tokio-postgres = { workspace = true }
 tokio-postgres-rustls = { workspace = true }
+webpki-roots = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1"
