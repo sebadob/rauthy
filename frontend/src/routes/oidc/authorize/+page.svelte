@@ -43,6 +43,7 @@
     import type {SessionInfoResponse} from "$api/types/session.ts";
     import ClientLogo from "$lib5/ClientLogo.svelte";
     import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
+    import {fetchSolvePow} from "$utils/pow";
 
     const inputWidth = "18rem";
 
@@ -191,14 +192,18 @@
             return;
         }
 
+        let pow = await fetchSolvePow() || '';
+
         const payload: LoginRequest = {
             email,
+            pow,
             client_id: clientId,
             redirect_uri: redirectUri,
             state: stateParam,
             nonce: nonce,
             scopes,
         };
+        console.log(payload);
         if (challenge && challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
             payload.code_challenge = challenge;
             payload.code_challenge_method = challengeMethod;
@@ -247,6 +252,8 @@
             } else {
                 console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
             }
+        } else if (res.status === 400) {
+            err = res.error?.message || '';
         } else if (res.status === 406) {
             // 406 -> client forces MFA while the user has none
             err = t.authorize.clientForceMfa;
@@ -318,6 +325,8 @@
             return;
         }
 
+        let pow = await fetchSolvePow() || '';
+
         let payload: ProviderLoginRequest = {
             email: email || undefined,
             client_id: clientId,
@@ -329,6 +338,7 @@
             code_challenge_method: challengeMethod,
             provider_id: id,
             pkce_challenge,
+            pow,
         };
 
         let res = await fetchPost<string>('/auth/v1/providers/login', payload);

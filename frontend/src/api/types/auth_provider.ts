@@ -72,6 +72,8 @@ export interface ProviderLoginRequest {
     provider_id: string,
     /// Validation: PATTERN_URI
     pkce_challenge: string,
+    
+    pow: string,
 }
 
 export interface ProviderLookupRequest {

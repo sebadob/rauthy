@@ -121,6 +121,12 @@ pub struct LoginRequest {
         path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
+    pub pow: String,
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "*RE_CLIENT_ID_EPHEMERAL",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]

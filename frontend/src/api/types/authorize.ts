@@ -6,6 +6,7 @@ export interface LoginRequest {
     email: string,
     /// Validation: max 256
     password?: string,
+    pow: string,
     /// Validation: PATTERN_CLIENT_ID_EPHEMERAL
     client_id: string,
     /// Validation: PATTERN_URI
@@ -45,13 +46,13 @@ export interface RequestResetRequest {
     redirect_uri?: string,
 }
 
-export interface TokenSet {
-    access_token: string,
-    token_type: JwtTokenType,
-    id_token?: string,
-    expires_in: number,
-    refresh_token?: string,
-}
+// export interface TokenSet {
+//     access_token: string,
+//     token_type: JwtTokenType,
+//     id_token?: string,
+//     expires_in: number,
+//     refresh_token?: string,
+// }
 
 export interface WebauthnLoginResponse {
     code: string,

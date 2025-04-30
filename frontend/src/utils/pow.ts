@@ -1,6 +1,6 @@
 import {fetchPost} from "$api/fetch";
 
-export async function fetchSolvePow() {
+export async function fetchSolvePow(): Promise<string | undefined> {
     // spawn the worker in advance so it can async load the wasm already
     let worker = new Worker(new URL("powWorker.ts", import.meta.url));
 
