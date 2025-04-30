@@ -92,25 +92,6 @@ stringData:
   # directly for some reasons.
   #HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ==
 
-  # Connection string to connect to a Postgres database.
-  # This will be ignored as long as `HIQLITE=true`.
-  #
-  # Format: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
-  #
-  # NOTE: The password in this case should be alphanumeric.
-  # Special characters could cause problems in the connection string.
-  #
-  # CAUTION: To make the automatic migrations work with Postgres 15+,
-  # when you do not want to just use the `postgres` user, You need
-  # to have a user with the same name as the DB / schema. For instance,
-  # the following would work without granting extra access to the
-  # `public` schema which is disabled by default since PG15:
-  # database: rauthy
-  # user: rauthy
-  # schema: rauthy with owner rauthy
-  #
-  #DATABASE_URL: postgresql://rauthy:123SuperSafe@localhost:5432/rauthy
-
   # You need to define at least one valid encryption key.
   # These keys are used in various places, like for instance
   # encrypting confidential client secrets in the database, or
@@ -150,6 +131,9 @@ stringData:
   #EVENT_MATRIX_ROOM_ID=
   #EVENT_MATRIX_ACCESS_TOKEN=
   #EVENT_MATRIX_USER_PASSWORD=
+
+  #PG_USER=
+  #PG_PASSWORD=
 ```
 
 All variables specified here should be out-commented in the `rauthy-config` from above.  
@@ -255,6 +239,16 @@ spec:
       labels:
         app: rauthy
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - rauthy
+              topologyKey: "kubernetes.io/hostname"
       securityContext:
         fsGroup: 10001
       containers:

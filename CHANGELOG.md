@@ -25,23 +25,34 @@ You don't specify the `DATABASE_URL` like before. `DATABASE_URL` and `DATABASE_M
 Instead, you now have separate config vars for each part of the URL. This removes the limitation that you could only
 have alphanumeric characters inside your password (otherwise the URL would be invalid).
 
-This means, you now need to provide the following, if you are using postgres:
+One additional thing is, that `sqlx` silently ignored TLS certificate validation if it failed, which is actually a
+pretty bad behavior. If you are running a Postgres with self-signed certificates, you need to explicitly allow this.
+
+You now need to provide the following values, if you are using Postgres:
 
 ```
 # If you set `HIQLITE=false` and want to use Postgres as your database,
 # you need to set the following variables:
 PG_HOST=
 # default: 5432
-PG_PORT=5432
+#PG_PORT=5432
 PG_USER=
 PG_PASSWORD=
 # default: rauthy
-PG_DB_NAME=rauthy
+#PG_DB_NAME=rauthy
+
+# If your database uses a self-signed certificate, which cannot
+# be verified, you might want to set this to `true`.
+# default: false
+#PG_TLS_NO_VERIFY=false
 
 # Max DB connections for the Postgres pool.
 # default: 20
 #PG_MAX_CONN=20
 ```
+
+**CAUTION:** This is a pretty big change, because existing `sqlx` migrations will be converted manually. Just to be
+safe, you should probably do a database backup before starting `v0.29`!
 
 [#822](https://github.com/sebadob/rauthy/pull/822)
 
