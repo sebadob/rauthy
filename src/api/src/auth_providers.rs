@@ -19,6 +19,7 @@ use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::users::User;
 use rauthy_models::html::HtmlCached;
+use spow::pow::Pow;
 use tracing::debug;
 use validator::Validate;
 
@@ -140,6 +141,8 @@ pub async fn post_provider_login(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
+
+    Pow::validate(&payload.pow)?;
 
     let (cookie, xsrf_token, location) = AuthProviderCallback::login_start(payload).await?;
 

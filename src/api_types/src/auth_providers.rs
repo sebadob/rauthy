@@ -115,6 +115,12 @@ pub struct ProviderLoginRequest {
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub code_challenge_method: Option<String>,
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "*RE_CLIENT_ID_EPHEMERAL",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
+    pub pow: String,
 
     // values for the callback from upstream
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`

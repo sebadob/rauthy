@@ -304,10 +304,11 @@ pub async fn post_authorize_handle(
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
-    // TODO refactor login delay to use Instant, which is a bit cleaner
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
     let session = principal.get_session()?;
+
+    Pow::validate(&payload.pow)?;
 
     let mut has_password_been_hashed = false;
     let mut add_login_delay = true;
