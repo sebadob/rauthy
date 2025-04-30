@@ -28,7 +28,7 @@ values ('3kv6Yokr3qsgepwQWyXJWLzs', 'admin'),
        ('JJsvMJH7ZJXC3xRbocw8E7Um', 'rauthy_admin')
 on conflict (id) do nothing;
 
-insert into public.scopes (id, name, attr_include_access, attr_include_id)
+insert into scopes (id, name, attr_include_access, attr_include_id)
 values ('26D4MoZBSUTZb2pnDP9r24tn', 'email', null, null),
        ('XpQDpteCrvByhXYcnf9n2gyN', 'openid', null, null),
        ('YKZvMGRaE6zEdgk4jabQNfDY', 'profile', null, null),
@@ -37,7 +37,7 @@ values ('26D4MoZBSUTZb2pnDP9r24tn', 'email', null, null),
        ('ImGlzlvfeOrJ9iY394AVeJgJ', 'phone', null, null)
 on conflict (id) do nothing;
 
-insert into public.users (id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
+insert into users (id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
                           password_expires, created_at, last_login, last_failed_login, failed_login_attempts, language,
                           webauthn_user_id, user_expires, auth_provider_id, federation_uid, picture_id)
 values ('2PYV3STNz3MN7VnPjJVcPQap', 'test_admin@localhost.de', 'Admin', 'Test', null, 'rauthy_admin', 'admin', true,
