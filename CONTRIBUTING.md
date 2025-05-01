@@ -25,79 +25,81 @@ This document should help you to contribute to Rauthy and setting up your local 
 
 ### Prerequisites
 
-To work with this project, you need to have a few things available on your system. Most tools can be installed
-automatically. As a prerequisite though, you need at least to have
+To work with this project, you need to have the following tools available on your system:
 
-- [just](https://github.com/casey/just)
 - a BASH shell
+- [just](https://github.com/casey/just)
 - at least Rust v1.85
 - `npm`
+- `docker` / `podman`
 
 ### Building from source
 
 If you just want to build from source yourself without doing any development, all necessary files have been checked into
-version control to make this possible. This means a version of the pre-compiled static HTML, as well as prepared queries
-for compile-time checks do exists and you should be able to build directly after cloning with just:
+version control to make this possible. In some environments, `just build-ui` does not work (like FreeBSD e.g.). To still
+be able to build from source on those systems, the pre-built static HTML has been checked into version control.
 
 ```
 cargo build --release
 ```
 
+#### CAUTION
+
+If you are building from source, either for production or without rebuilding the UI, you MUST always build
+from a stable release tag and never from main. To not have messy PRs, the UI will only be rebuilt during releases or
+in special occasions.  
+You also MUST NEVER use a build from `main` in production. The `main` branch might contain unstable database migrations.
+If these are applied to your production database and needed changes before the next release, it will produce a conflict
+that is impossible to be solved automatically. You either need to roll back and apply an older DB backup, or undo the
+unstable migrations manually. Just don't ever use `main` or any nightly images you might find in production.
+
 ### Initial Development Setup
 
-The internal setup of this project is a bit more complex because of support for different databases and compile-time
-checked queries for each of these. This means you will not be able to easily do something like `cargo run` (mostly).
-Instead, you will use [just](https://github.com/casey/just) for everything, which will handle all the additional
-stuff behind the scenes for you.
+A lot of work has been put into simplifying the development setup lately. The minimum need to do is:
 
-Because the initial setup requires a few tools and install steps, there is a `setup` just recipe which does all the
-work for you. After a fresh clone, you can type
+- `just backend-start`
+- `just build-ui`
 
-```
-just
-```
+`just backend-start` will start the Mailcrab and Postgres containers. You might see errors when you run this multiple
+times, if the containers are already running, but these can be ignored. You don't strictly need the Postgres if you
+are only developing with `hiqlite`. If you want to save the resources, instead of `just backend-start`, you could only
+do `just mailcrab-start` to start the local email test server.
 
-to see all available public recipes. Internal ones do exist as well, but you most likely don't need to care about these.
+Even though pre-built static HTML files are checked into version control to make building from source possible on some
+systems, where the UI cannot be built, you MUST always rebuild it, when you are developing locally. This is done with
+`just build-ui`. The pre-built files checked into version control are usually only updated during releases to not have
+messy PRs all the time.
 
-Rauthy is using compile-time checked templating with [askama](https://crates.io/crates/askama) and the UI will be
-compiled into static HTML files during the build process. To make the initial database migrations (and therefore the
-compiler) happy, the first thing we need to do is to build the HTML files. This is kind of a chicken-and-egg problem.
-You also need a local dev mail server to receive E-Mails / Events and a Postgres instance.
+Rauthy is using compile-time checked templating with [askama](https://crates.io/crates/askama). If you ever see any
+templating related errors from `askama`, you most like just need to rebuild the UI with another `just build-ui`.
 
-All of this setup is done automatically by simply calling
-
-```
-just setup
-```
-
-The `setup` recipe will install all necessary tools and dependencies:
-
-- `just`
-- `sd`
-- `mdbook` + `mdbook-admonish`
-- `sqlx-cli`
-
-It will then compile the frontend to static HTML to make the templating engine happy.
-Afterward, it will create a docker network named `rauthy-dev` and start `mailcrab` and `postgres` containers.
-
-As the last step, it will do a `cargo build` to make sure there are not compile errors.
-
-> If you want to use a Postgres other than the one created by `just setup`, you most probably need to provide a
-> different `DATABASE_URL` than the default in `rauthy.cfg`.
+> If you want to use a Postgres other than the one created by `just postgres-start`, you need to provide the proper
+> PG_* config values.
 
 ### Config
 
-The default config file is the `rauthy.cfg`. This has reasonable defaults for local dev.
-Additionally, Rauthy will read from a `.env` file, which has been added to the `.gitignore`.
-This will prevent you from accidentally pushing sensitive information into git.
+The default config file is the `rauthy.cfg`. This has reasonable defaults for local dev and should work out of the box
+in most scenarios. If you want to modify any values to adjust to your setup, you should create a `./.env` file and
+only configure here. You can even safely put secrets into it. It has been added to the `.gitignore` and cannot be
+(automatically) checked into version control by accident.
 
-It's recommended to set custom values in a `.env` file only instead of modifying the `rauthy.cfg` to fit your needs.
-Values in `.env` always have a higher priority than the ones from the `rauthy.cfg`.
+Any values specified inside `.env` or via inline env vars will always have the highest priority and overwrite defaults
+or values that are specified in `rauthy.cfg`.
+
+Just as an example, let's say you want to develop against a remote Postgres database. To do so, create your `.env` file,
+paste and adjust all the `PG_*` values from the `DATABASE` section in the `rauthy.cfg`.
+
+> The default config is set up in a way that local development with a UI served on port `5173` will work properly. If
+> you want to work with pre-built HTML from the backend only, you probably need to adjust:
+> - `PUB_URL`
+> - `RP_ORIGIN`
+> - `DEV_MODE_PROVIDER_CALLBACK_URL`
+> - `COOKIE_MODE`
 
 #### CAUTION
 
 If you use a remote host, a dev container, or basically anything else than `localhost` for development, you need to
-enable TLS, especially in the browser to get access to the Web Crypto API.
+enable TLS to get access to the Web Crypto API inside the browser.
 
 ##### TLS for the backend
 
@@ -114,7 +116,7 @@ If you use a container for development, you need to expose port `8443` instead o
 
 If you need to work on the UI, you will later on start it via `npm`. On anything else than `localhost`, you need to
 enable TLS for the Web Crypto API. To do this, out-comment the `https` section in `frontend/vite.config.js` and you
-may need to update the `const backend` variable in the same file.
+may need to update the `const backend` variable in the same file and adjust it to your setup.
 
 ### Get it up and running
 
@@ -124,8 +126,8 @@ Once prerequisites are met, the rest should be really simple:
 just run
 ```
 
-will start Rauthy with a Hiqlite backend serving the statically built HTML UI, all on port `8443` by default.
-If you want to work on the frontend too, execute in another terminal:
+will start Rauthy with a Hiqlite backend serving the statically built HTML UI, all on port `8080` by default.
+The default config expects you to work with the development UI though, so in another terminal, execute
 
 ```
 just run ui
@@ -139,87 +141,107 @@ If you want to test against Postgres, instead of the above `just run`, simply ex
 just run postgres
 ```
 
-If you don't use passkeys, it should work right away. If you however want to test passkeys with the local dev ui, you
-need to adjust the port for `RP_ORIGIN`.
-
-If you want to work on Upstream Auth Providers in local dev, you need to change
-`DEV_MODE_PROVIDER_CALLBACK_URL="localhost:5173"`. This will adopt the `redirect_uri` for an upstream login call
-to point back to the UI in dev mode.
-
-#### Note
-
-The whole dev setup and pipelines have gotten a full rework just recently.
-It should be working right away (hopefully), but I am pretty sure that there are still some rough edges in some cases.
-Please let me know if you have problems somewhere.
-
 ### Default Credentials
 
 When `DEV_MODE=true` (which is the default for local dev), Rauthy will do some programmatic DB migrations. For instance
-the JWKS will always be the same for faster startup, as well as the credentials.
+the JWKS will always be the same for faster startup, as well as the credentials. It will also allow some insecure
+settings in different places to make local development easier.
 
 The default admin and password with `DEV_MODE=true` are always:
 
 ```
-admin@localhost.de
+admin@localhost
 123SuperSafe
 ```
 
 ### Dev Backend
 
-Everything necessary for local dev is handled by the `just setup` step above. However, to start the test / dev backend
-after you have stopped it maybe, you can
+If you want to stop the dev containers, `just backend-stop` will take care of this. If you are working on DB migrations
+and are still changing your new migration, you probably need to clean upt he DB while tuning, because of hash
+mismatches. For Postgres, `just postgres-stop` and `just postgres-start`. For Hiqlite, `just delete-hiqlite`.
 
-```
-just backend-start
-```
+Your local email test server [mailcrab](https://github.com/tweedegolf/mailcrab) will be available on `localhost:1080`.
+It will intercept and grab any outgoing emails in the default configuration. Even addresses that don't exist will be
+grabbed successfully.
 
-which will start a [mailcrab](https://github.com/tweedegolf/mailcrab) container, so you can receive E-Mails from Rauthy
-without the need to set up any additional SMTP server. You can access the UI via `http://<your_host_ip>:1080`.
-It will also start a Postgres database in another container. You can access it with the user `rauthy` and default
-password `123SuperSafe`, but the access is already pre-configured.
-
-This command will also apply all existing database migrations to both a local SQLite file and the newly started
-Postgres container. This is the reason we needed to build the UI files beforehand.
+If you want to connect to the Postgres during development, the default user and password are `rauthy / 123SuperSafe`.
+To connect to Hiqlite, you can ignore the Raft log and use any SQLite client to open `data/state_machine/db/hiqlite.db`.
 
 ### Rebuilding the UI
 
-If you are working with the UI, you need to
+The UI during local dev is available on 2 different ports, which may seem confusing at first.
 
-```
-just run
-```
+On port `5173`, after `just run-ui`, you will have the dev UI served by NodeJS dynamically. You basically always want
+to use this during development. However, on Rauthys "real" port `8080`, you will have it available too. Here you will
+get the pre-built static HTML and NOT anything that you might see or do in `frontend/`!
 
-to start the backend, and do another
+If you `just build-ui`, the current UI from `frontend/` will be built and made available as static HTML. After you
+rebuilt the UI, you will have the static HTML files updates, and you see the latest state on port `8080` as well.
 
-```
-just run ui
-```
-
-in another terminal to start the `npm` dev server. The UI will then be available on port `5173` during local
-development. To test the UI served via the backend after you are finished, you can
-
-```
-just build-ui
-```
-
-which will build the UI into static HTML files and populate the `templates/html` folder to make the `askama`
-templating engine happy.
+> Like mentioned above, if you, for whatever reason, ever end up in a state where `askama` in the backend complains
+> about template errors and issues, you need to rebuild the UI. This can happen if you for instance `just build-ui`, but
+> it fails because of some issue. At that point, the pre-built HTML will be cleaned up already, but the new files are
+> not added of course because of the UI error.
+> You need to fix the UI error first, then rebuild it, and then the `askama` template errors will go away.
 
 ## Known Limitations
 
-Rauthys setup is a bit complex during local development, as mentioned already. It builds the UI into static HTML which
-will be used by a templating engine to inject `<template>` blocks for a better UX in production. However, since the
-DEV UI is being served by NodeJS, it comes with a few workarounds and limitations during local development.
+Rauthys setup is a bit complex during local development. It builds the UI into static HTML which will be used by a
+templating engine (`askama`) to inject `<template>` blocks for a better UX in production. However, since the DEV UI is
+being served by NodeJS, it comes with a few workarounds and limitations during local development.
 
-You mostly don't need to worry about anything of this, as the `<Template>` component that already exists handles
+You mostly don't need to worry about anything of this, as the Svelte `<Template>` component that already exists handles
 everything for you. However, if you for instance want to use the password reset form during local development, it will
 not work as expected. It will require an already existing session (most probably for the default admin) and reset the
 password for the current session instead of for the user from the magic link. This is due to not being able to properly
-extract and inject some necessary values in that form during local dev.
-This is a compromise for improved DX actually, because the backend auto-creates a new magic link when working on that
-form during local development and uses information from the session to do this. Because of this, you don't need to send
-out a new magic link each time just because you want to test something. If you really want to use the password reset
-form properly, you need to disable `DEV_MODE` and use the static HTML served by Rauthy instead of the NodeJS one.
+extract and inject some necessary values in that form during local dev. Usually, you would need to click a magic link to
+get this information.
+This is a compromise for improved DX, because the backend auto-creates a new magic link when working on that form during
+local development and uses information from the session to do this. Because of this, you don't need to send out a new
+one each time just because you want to test something. If you really want to use the password reset form properly, you
+need to disable `DEV_MODE` and use the static HTML served by Rauthy instead of the NodeJS one, with all the additional
+requirements mentioned above.
+
+## Test Debugging
+
+If you are adding a new test and want to debug it, it depends on the type of test how to do that best.
+
+If it's a unit test, it's pretty straight forward, `just test your_unit_test`.  
+If it's an integration test however, you may not always want to execute the whole range of tests with
+`just test-hiqlite` or `just test-posgtres`, because it takes quite some time.
+
+In such a case, you can `just test-backend`, which will start the test backend with `hiqlite`. If you then
+`just test your_unit_test`, it will only run the single integration test without starting the backend automatically.
+
+## Building a Container Image
+
+If you want to build a container image for testing, you cannot `just build`, because you won't have access to the Rauthy
+registry. If you have your own one, `just build your/registry/rauthy` should be working fine. The container image will
+be built twice. One version for `x86_64` and one for `arm64`. If you don't have a registry available, you can also
+disable auto-push with for instance `just build rauthy load` and load the image after building into
+your local registry.
+
+> The optimizations for a release build are pretty heavy and depending on your machine, it can take a very long time to
+> do a release build, especially twice. Just as a reference, on my Ryzen 9950X it currently takes ~10 minutes.
+
+> There is a `just build-builder` recipe, which you don't need to worry about. A new builder is only built when e.g. a
+> new Rust version needs to be used. Just use the existing builder image from Github, which is the default anyway.
+
+## Updating the Book
+
+You are welcome to update the documentation in the Rauthy book. You will need `mdbook` and `mdbook-admonish`.
+If you don't have them:
+
+- `cargo install mdbook`
+- `cargo install mdbook-admonish`
+
+Once installed:
+
+- `cd book`
+- `mdbook serve --open`
+
+You can then update the `*.md` files in `book/src`. It should be pretty self-explanatory.
+`just build-docs` will rebuild them and make them available on Github after merging.
 
 ## Before Submitting a PR
 
@@ -243,3 +265,8 @@ Since FreeBSD uses some cargo mechanism at build time differently, you may also 
 build host.
 
 If you stumble about other limitations, please do not hesitate to submit a PR and update this section.
+
+## Not working `just` recipes
+
+There are a few recipes that will not work for you, since you need to have access to the Rauthy repo. These are for
+instance `just build` (without the above-mentioned options), `just publish`, `just publish-latest` and `just release`.
