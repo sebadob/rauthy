@@ -61,21 +61,18 @@ pub async fn validate_auth_req_param(
 
 /// Validates a given JWT Token.
 ///
-/// Does NOT validate the `aud` claim. This function should only be used in testing and on the
-/// `/userinfo` endpoint. In this case, `aud` validation is not necessary, because if we can
-/// validate the signature, we can be sure, that it came from Rauthy anyway.
+/// Does NOT validate the `aud` claim. If we can validate the signature, we can be sure, that it
+/// came from Rauthy.
 pub async fn validate_token<T: serde::Serialize + for<'de> ::serde::Deserialize<'de>>(
     data: &web::Data<AppState>,
     token: &str,
     // aud: &str,
     time_tolerance_seconds: Option<u64>,
-) -> Result<claims::JWTClaims<T>, ErrorResponse> {
-    let options = jwt_simple::prelude::VerificationOptions {
+) -> Result<JWTClaims<T>, ErrorResponse> {
+    let options = VerificationOptions {
         // allowed_audiences: Some(HashSet::from_strings(&[aud])),
         allowed_issuers: Some(HashSet::from_strings(&[&data.issuer])),
-        time_tolerance: Some(coarsetime::Duration::from_secs(
-            time_tolerance_seconds.unwrap_or(10),
-        )),
+        time_tolerance: Some(Duration::from_secs(time_tolerance_seconds.unwrap_or(10))),
         ..Default::default()
     };
 
@@ -100,6 +97,7 @@ pub async fn validate_refresh_token(
     let options = VerificationOptions {
         // allowed_audiences: Some(HashSet::from_strings(&[&])), // TODO change after making client non-opt
         allowed_issuers: Some(HashSet::from_strings(&[&data.issuer])),
+        time_tolerance: Some(Duration::from_secs(1)),
         ..Default::default()
     };
 

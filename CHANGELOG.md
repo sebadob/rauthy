@@ -115,6 +115,65 @@ The feature can be seen as in beta state now. Everything has been implemented fo
 tests exist as well. However, to catch some weird edge cases, it needs testing in the real world as well. If you have
 any problems using it, please open an issue about it.
 
+There are some new config variables as well:
+
+```
+#####################################
+######## BACKCHANNEL LOGOUT #########
+#####################################
+
+# The maximum amount of retries made for a failed backchannel logout.
+# Failed backchannel logouts will be retried every 60 - 90 seconds
+# from all cluster nodes. The timeout between retries is randomized
+# to avoid overloading clients. It will be executed on each cluster
+# member to increase the chance of a successful logout in case of
+# network segmentations.
+# default: 100
+#BACKCHANNEL_LOGOUT_RETRY_COUNT=100
+
+# Can be set to `true` to allow plain HTTP backchannel
+# logout requests.
+# default: false
+#BACKCHANNEL_DANGER_ALLOW_HTTP=false
+
+# Can be set to `true` to allow insecure HTTPS logout requests.
+# This will disable TLS certificate validation.
+# default: false
+#BACKCHANNEL_DANGER_ALLOW_INSECURE=false
+
+# The lifetime / validity for Logout Tokens in seconds.
+# These Logout Tokens are being generated during OIDC
+# Backchannel Logout requests to configured clients.
+# The token lifetime should be as short as possible and
+# at most 120 seconds.
+# default: 30
+#LOGOUT_TOKEN_LIFETIME=30
+
+# You can allow a clock skew during the validation of
+# Logout Tokens, when Rauthy is being used as a client
+# for an upstream auth provider that uses backchannel
+# logout.
+#
+# The allowed skew will be in seconds and a value of
+# e.g. 5 would mean, that 5 seconds are added to the
+# `iat` and `exp` claim validations and expand the range.
+#
+# default: 5
+#LOGOUT_TOKEN_ALLOW_CLOCK_SKEW=5
+
+# The maximum allowed lifetime for Logout Tokens.
+# This value is a security check for upstream auth
+# providers. If Rauthy receives a Logout Token, it will
+# check and validate, that the difference between `iat`
+# and `exp` is not greater than LOGOUT_TOKEN_ALLOWED_LIFETIME.
+# This means Rauthy will reject Logout Tokens from clients
+# with a way too long validity and therefore poor
+# implementations. The RFC states that tokens should
+# be valid for at most 120 seconds.
+# default: 120
+#LOGOUT_TOKEN_ALLOWED_LIFETIME=120
+```
+
 [#794](https://github.com/sebadob/rauthy/pull/794)
 [#819](https://github.com/sebadob/rauthy/pull/819)
 
@@ -149,6 +208,39 @@ followed the RFC closely and tested all operations manually against https://scim
 
 Just as for the OIDC Backchannel Logout, this feature can be seen as in beta state now. We need some real world testing
 next, but I think it should be just fine.
+
+```
+#####################################
+############### SCIM ################
+#####################################
+
+# If set to `true`, already possibly synced groups / users on a
+# SCIM server may be deleted if either sync if disabled further
+# down the road.
+# Depending on your clients specifically, deleting a group / user
+# can have a major impact, like e.g. maybe the user had important
+# data inside that application that would be deleted automatically
+# as well. Depending on your use case, you may want to handle
+# deletions manually.
+#
+# If set to false, only the `externalId` field would be removed
+# for the targeted resources, but they would not be fully deleted.
+# This will basically unlink the resource from Rauthy, leaving it
+# behind independent.
+#
+# default: false
+#SCIM_SYNC_DELETE_GROUPS=false
+#SCIM_SYNC_DELETE_USERS=false
+
+# The maximum amount of retries made for a failed SCIM task.
+# Failed tasks will be retried every 60 - 90 seconds from all
+# cluster nodes. The timeout between retries is randomized to
+# avoid overloading clients. It will be executed on each cluster
+# member to increase the chance of a update in case of network
+# segmentations.
+# default: 100
+#SCIM_RETRY_COUNT=100
+```
 
 [#666](https://github.com/sebadob/rauthy/issues/666)
 
