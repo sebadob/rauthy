@@ -6,7 +6,7 @@ use actix_web::cookie::SameSite;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, cookie, web};
 use chrono::Utc;
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_common::constants::{
     CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER, SESSION_LIFETIME_FED_CM,

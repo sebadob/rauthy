@@ -5,7 +5,7 @@ use actix_web::http::StatusCode;
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, HeaderName, HeaderValue};
 use actix_web::{HttpResponse, HttpResponseBuilder, web};
 use futures_util::StreamExt;
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use image::ImageFormat;
 use image::imageops::FilterType;
 use rauthy_common::is_hiqlite;

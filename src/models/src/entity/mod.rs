@@ -1,5 +1,5 @@
 use crate::database::DB;
-use hiqlite::params;
+use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 
 pub mod api_keys;

@@ -3,7 +3,7 @@ use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use rauthy_api_types::generic::{
     PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse,
 };

@@ -3,7 +3,7 @@ use crate::database::{Cache, DB};
 use actix_web::web;
 use chrono::Utc;
 use cryptr::EncValue;
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use rauthy_common::constants::{CACHE_TTL_DYN_CLIENT, DEVICE_GRANT_RATE_LIMIT};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};

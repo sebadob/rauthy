@@ -6,6 +6,7 @@ use crate::sqlx_refinery_migration::migrate_sqlx_to_refinery;
 use actix_web::web;
 use futures_util::StreamExt;
 use hiqlite::NodeConfig;
+use hiqlite::cache_idx::CacheIndex;
 use rauthy_common::constants::{DEV_MODE, RAUTHY_VERSION};
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
@@ -33,7 +34,7 @@ mod migrations_postgres {
 struct MigrationsHiqlite;
 
 /// Cache Index for the `hiqlite` cache layer
-#[derive(Debug, Serialize, Deserialize, hiqlite::EnumIter, hiqlite::ToPrimitive)]
+#[derive(Debug, Serialize, Deserialize, strum::EnumIter)]
 pub enum Cache {
     App,
     AuthCode,
@@ -51,6 +52,12 @@ pub enum Cache {
     PoW,
     User,
     Webauthn,
+}
+
+impl CacheIndex for Cache {
+    fn to_usize(self) -> usize {
+        self as usize
+    }
 }
 
 pub struct DB;

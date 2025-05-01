@@ -10,7 +10,8 @@ use actix_web::{HttpResponse, web};
 use chrono::Utc;
 use cryptr::EncValue;
 use deadpool_postgres::GenericClient;
-use hiqlite::{Param, Params, params};
+use hiqlite::Params;
+use hiqlite_macros::params;
 use rauthy_api_types::users::{
     MfaPurpose, PasskeyResponse, WebauthnAuthFinishRequest, WebauthnAuthStartResponse,
     WebauthnLoginFinishResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,

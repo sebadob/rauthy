@@ -1,6 +1,6 @@
 use crate::database::{Cache, DB};
 use chrono::Utc;
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_APP_VERSION, RAUTHY_VERSION};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{deserialize, serialize};

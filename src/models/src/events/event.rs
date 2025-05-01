@@ -9,7 +9,8 @@ use crate::events::{
     EVENT_LEVEL_USER_EMAIL_CHANGE, EVENT_LEVEL_USER_PASSWORD_RESET,
 };
 use chrono::{DateTime, Timelike, Utc};
-use hiqlite::{Param, Row, params};
+use hiqlite::Row;
+use hiqlite_macros::params;
 use rauthy_api_types::events::EventResponse;
 use rauthy_common::constants::EMAIL_SUB_PREFIX;
 use rauthy_common::is_hiqlite;

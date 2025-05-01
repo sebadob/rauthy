@@ -1,7 +1,8 @@
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
 use deadpool_postgres::GenericClient;
-use hiqlite::{Param, Params, params};
+use hiqlite::Params;
+use hiqlite_macros::params;
 use rauthy_api_types::roles::RoleRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_ROLES};
 use rauthy_common::is_hiqlite;

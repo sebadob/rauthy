@@ -2,7 +2,8 @@ use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use deadpool_postgres::GenericClient;
-use hiqlite::{Param, Params, params};
+use hiqlite::Params;
+use hiqlite_macros::params;
 use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigValueResponse, UserAttrValueResponse,
     UserAttrValuesUpdateRequest,

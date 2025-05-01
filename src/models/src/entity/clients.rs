@@ -11,7 +11,8 @@ use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use cryptr::{EncKeys, EncValue, utils};
 use deadpool_postgres::GenericClient;
-use hiqlite::{Param, Params, params};
+use hiqlite::Params;
+use hiqlite_macros::params;
 use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest, ScimClientRequestResponse,

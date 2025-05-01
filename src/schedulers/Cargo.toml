@@ -15,6 +15,7 @@ actix-web = { workspace = true }
 chrono = { workspace = true }
 cron = { workspace = true }
 hiqlite = { workspace = true }
+hiqlite-macros = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
 semver = { workspace = true }

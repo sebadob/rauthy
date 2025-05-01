@@ -16,7 +16,8 @@ use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
 use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
-use hiqlite::{Param, Row, params};
+use hiqlite::Row;
+use hiqlite_macros::params;
 use image::EncodableLayout;
 use itertools::Itertools;
 use rauthy_api_types::auth_providers::{
