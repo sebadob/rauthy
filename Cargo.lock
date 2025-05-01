@@ -563,7 +563,7 @@ dependencies = [
  "memchr",
  "serde",
  "serde_derive",
- "winnow 0.7.7",
+ "winnow 0.7.8",
 ]
 
 [[package]]
@@ -694,9 +694,9 @@ dependencies = [
 
 [[package]]
 name = "axum"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de45108900e1f9b9242f7f2e254aa3e2c029c921c258fe9e6b4217eeebd54288"
+checksum = "021e862c184ae977658b36c4500f7feac3221ca5da43e3f25bd04ab6c79a29b5"
 dependencies = [
  "axum-core",
  "bytes",
@@ -1505,9 +1505,9 @@ dependencies = [
 
 [[package]]
 name = "ct-codecs"
-version = "1.1.3"
+version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b916ba8ce9e4182696896f015e8a5ae6081b305f74690baa8465e35f5a142ea4"
+checksum = "e994091bae428316ad612b1d563e7bd917141ba942963f65251bb07c0f31cc55"
 
 [[package]]
 name = "darling"
@@ -2121,11 +2121,11 @@ dependencies = [
 
 [[package]]
 name = "gethostname"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed7131e57abbde63513e0e6636f76668a1ca9798dcae2df4e283cae9ee83859e"
+checksum = "fc257fdb4038301ce4b9cd1b3b51704509692bb3ff716a410cbd07925d9dae55"
 dependencies = [
- "rustix 1.0.5",
+ "rustix 1.0.7",
  "windows-targets 0.52.6",
 ]
 
@@ -2244,9 +2244,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.15.2"
+version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf151400ff0baff5465007dd2f3e717f3fe502074ca563069ce3a6629d07b289"
+checksum = "84b26c544d002229e640969970a2e74021aadf6e2f96372b9c58eff97de08eb3"
 dependencies = [
  "foldhash",
 ]
@@ -2257,7 +2257,7 @@ version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7382cf6263419f2d8df38c55d7da83da5c18aef87fc7a7fc1fb1e344edfe14c1"
 dependencies = [
- "hashbrown 0.15.2",
+ "hashbrown 0.15.3",
 ]
 
 [[package]]
@@ -2284,7 +2284,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.6.0-20250410"
-source = "git+https://github.com/sebadob/hiqlite.git#2acc7876e6f974d85b8d1b3a92bbbe6459f65b11"
+source = "git+https://github.com/sebadob/hiqlite.git#0aea63285f1eb3f054a610b407d4ac8c04269e52"
 dependencies = [
  "argon2",
  "axum",
@@ -2310,8 +2310,6 @@ dependencies = [
  "lazy_static",
  "lz4-sys",
  "mime_guess",
- "num-derive",
- "num-traits",
  "openraft",
  "reqwest",
  "rocksdb",
@@ -2323,7 +2321,7 @@ dependencies = [
  "serde_json",
  "serde_rusqlite",
  "sha2",
- "spow 0.4.0",
+ "spow",
  "strum",
  "thiserror 2.0.12",
  "tokio",
@@ -2334,6 +2332,15 @@ dependencies = [
  "tower-service",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "hiqlite-macros"
+version = "0.6.0-20250410"
+source = "git+https://github.com/sebadob/hiqlite.git#0aea63285f1eb3f054a610b407d4ac8c04269e52"
+dependencies = [
+ "hiqlite",
+ "rust-embed",
 ]
 
 [[package]]
@@ -2721,7 +2728,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cea70ddb795996207ad57735b50c5982d8844f38ba9ee5f1aedcfb708a2aa11e"
 dependencies = [
  "equivalent",
- "hashbrown 0.15.2",
+ "hashbrown 0.15.3",
  "serde",
 ]
 
@@ -3247,17 +3254,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
 
 [[package]]
-name = "num-derive"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.101",
-]
-
-[[package]]
 name = "num-integer"
 version = "0.1.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3409,9 +3405,9 @@ dependencies = [
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.107"
+version = "0.9.108"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8288979acd84749c744a9014b4382d42b8f7b2592847b5afb2ed29e5d16ede07"
+checksum = "e145e1651e858e820e4860f7b9c5e169bc1d8ce1c86043be79fa7b7634821847"
 dependencies = [
  "cc",
  "libc",
@@ -3880,9 +3876,9 @@ dependencies = [
 
 [[package]]
 name = "quinn-udp"
-version = "0.5.11"
+version = "0.5.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "541d0f57c6ec747a90738a52741d3221f7960e8ac2f0ff4b1a63680e033b4ab5"
+checksum = "ee4e529991f949c5e25755532370b8af5d114acae52326361d68d47af64aa842"
 dependencies = [
  "cfg_aliases",
  "libc",
@@ -4010,7 +4006,7 @@ dependencies = [
  "rustls-pki-types",
  "serde",
  "serde_json",
- "spow 0.6.0",
+ "spow",
  "tokio",
  "tokio-test",
  "tracing",
@@ -4090,7 +4086,7 @@ dependencies = [
  "serde_json",
  "serde_json_path",
  "serde_urlencoded",
- "spow 0.6.0",
+ "spow",
  "svg-hush",
  "time",
  "tokio-postgres",
@@ -4122,7 +4118,7 @@ dependencies = [
  "semver",
  "serde_json",
  "serde_urlencoded",
- "spow 0.6.0",
+ "spow",
  "time",
  "tokio",
  "tracing",
@@ -4168,6 +4164,7 @@ dependencies = [
  "futures-util",
  "hex",
  "hiqlite",
+ "hiqlite-macros",
  "hmac-sha256",
  "hmac-sha512",
  "image",
@@ -4175,7 +4172,6 @@ dependencies = [
  "jwt-simple",
  "lettre",
  "mime",
- "num-traits",
  "num_cpus",
  "once_cell",
  "openssl",
@@ -4203,7 +4199,7 @@ dependencies = [
  "serde_json",
  "serde_json_path",
  "serde_rusqlite",
- "spow 0.6.0",
+ "spow",
  "strum",
  "svg-hush",
  "time",
@@ -4243,6 +4239,7 @@ dependencies = [
  "chrono",
  "cron",
  "hiqlite",
+ "hiqlite-macros",
  "openssl",
  "openssl-sys",
  "rauthy-common",
@@ -4840,9 +4837,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "1.0.5"
+version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d97817398dd4bb2e6da002002db259209759911da105da92bec29ccb12cf58bf"
+checksum = "c71e83d6afe7ff64890ec6b71d6a69bb8a610ab78ce364b3352876bb4c801266"
 dependencies = [
  "bitflags 2.9.0",
  "errno",
@@ -5150,9 +5147,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.8"
+version = "0.10.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "793db75ad2bcafc3ffa7c68b215fee268f537982cd901d132f89c6343f3a3dc8"
+checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -5253,21 +5250,6 @@ checksum = "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d"
 dependencies = [
  "base64ct",
  "der",
-]
-
-[[package]]
-name = "spow"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "548bee0698ca6c33ad52f4df9d60833109eaefa406ebb7b16e5b6ab6d3909f5f"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "getrandom 0.2.16",
- "nom 7.1.3",
- "serde",
- "sha2",
- "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -5415,9 +5397,9 @@ dependencies = [
 
 [[package]]
 name = "synstructure"
-version = "0.13.1"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8af7666ab7b6390ab78131fb5b0fce11d6b7a6951602017c35fa82800708971"
+checksum = "728a70f3dbaf5bab7f0c4b1ac8d7ae5ea60a4b5549c8a5914361c99147a709d2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5439,7 +5421,7 @@ dependencies = [
  "fastrand",
  "getrandom 0.3.2",
  "once_cell",
- "rustix 1.0.5",
+ "rustix 1.0.7",
  "windows-sys 0.59.0",
 ]
 
@@ -5721,7 +5703,7 @@ dependencies = [
  "serde_spanned",
  "toml_datetime",
  "toml_write",
- "winnow 0.7.7",
+ "winnow 0.7.8",
 ]
 
 [[package]]
@@ -6325,9 +6307,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
-version = "0.26.9"
+version = "0.26.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29aad86cec885cafd03e8305fd727c418e970a521322c91688414d5b8efba16b"
+checksum = "37493cadf42a2a939ed404698ded7fb378bf301b5011f973361779a3a74f8c93"
 dependencies = [
  "rustls-pki-types",
 ]
@@ -6628,9 +6610,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "0.7.7"
+version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6cb8234a863ea0e8cd7284fcdd4f145233eb00fee02bbdd9861aec44e6477bc5"
+checksum = "9e27d6ad3dac991091e4d35de9ba2d2d00647c5d0fc26c5496dee55984ae111b"
 dependencies = [
  "memchr",
 ]

@@ -1,7 +1,7 @@
 use crate::database::{Cache, DB};
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use chrono::{DateTime, Utc};
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use rauthy_api_types::users::DeviceResponse;
 use rauthy_common::constants::{
     CACHE_TTL_DEVICE_CODE, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_USER_CODE_LENGTH,

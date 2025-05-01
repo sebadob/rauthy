@@ -1,5 +1,5 @@
 use chrono::Utc;
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_models::database::DB;
 use std::env;

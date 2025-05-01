@@ -3,7 +3,7 @@ use crate::database::{Cache, DB};
 use crate::events::event::Event;
 use actix_web::web;
 use cryptr::{EncKeys, EncValue};
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use jwt_simple::algorithms;
 use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,

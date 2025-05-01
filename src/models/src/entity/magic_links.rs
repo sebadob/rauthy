@@ -2,7 +2,7 @@ use crate::api_cookie::ApiCookie;
 use crate::database::DB;
 use actix_web::HttpRequest;
 use chrono::Utc;
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use rauthy_common::constants::{PASSWORD_RESET_COOKIE_BINDING, PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};

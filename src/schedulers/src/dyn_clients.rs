@@ -1,5 +1,5 @@
 use chrono::Utc;
-use hiqlite::params;
+use hiqlite_macros::params;
 use rauthy_common::constants::{
     DYN_CLIENT_CLEANUP_INTERVAL, DYN_CLIENT_CLEANUP_MINUTES, DYN_CLIENT_REG_TOKEN,
     ENABLE_DYN_CLIENT_REG,

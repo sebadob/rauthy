@@ -1,6 +1,6 @@
 use crate::database::DB;
 use crate::entity::config::ConfigEntity;
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{deserialize, serialize};

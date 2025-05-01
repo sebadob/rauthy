@@ -27,7 +27,7 @@ use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::migration::inserts;
-use hiqlite::params;
+use hiqlite_macros::params;
 use itertools::Itertools;
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::utils::deserialize;

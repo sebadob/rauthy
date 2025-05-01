@@ -19,7 +19,8 @@ use crate::language::Language;
 use actix_web::{HttpRequest, web};
 use argon2::PasswordHash;
 use chrono::Utc;
-use hiqlite::{Param, Params, params};
+use hiqlite::Params;
+use hiqlite_macros::params;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,

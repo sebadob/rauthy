@@ -6,7 +6,7 @@ use crate::entity::scim_types::{ScimError, ScimGroup, ScimListResponse, ScimReso
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use cryptr::EncValue;
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use rauthy_common::constants::APPLICATION_JSON_SCIM;
 use rauthy_common::{HTTP_CLIENT, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};

@@ -1,7 +1,7 @@
 use crate::sleep_schedule_next;
 use actix_web::web;
 use chrono::Utc;
-use hiqlite::{Param, params};
+use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
