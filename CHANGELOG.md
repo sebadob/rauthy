@@ -139,13 +139,13 @@ For instance, if you define a prefix of `myapp:`, only the groups starting with 
 `myapp:admin`, `myapp:user`. Additionally, only users that are assigned to at least one of these filtered groups will
 by synced, while others are skipped.  
 The advantage of this is, let's say you have an application with limited seats, or where each existing user costs a
-license (Gitlab Enterprise would be an example). You need to pay for each registered user. If you now have split your
+license (Gitlab Enterprise would be an example), you need to pay for each registered user. If you now split your
 users into groups and only your developers need to exist on that instance, you can assign a group like `dev:*` and only
 sync the `dev:` groups via SCIM.
 
 The SCIM impl is not integration tested, as this usually requires an external deployment. For the future, the idea is
 to implement the client side into the `rauthy-client` and use this for integration testing against itself. However, I
-followed the RFC closely and tested all operations manually against https://scim.dev/ .
+followed the RFC closely and tested all operations manually against https://scim.dev .
 
 Just as for the OIDC Backchannel Logout, this feature can be seen as in beta state now. We need some real world testing
 next, but I think it should be just fine.
@@ -159,7 +159,7 @@ during maintenance and development.
 
 The `LoginRequest` during `POST /authorize`, as well as the `ProviderLoginRequest` require a
 solved [Proof of Work](https://github.com/sebadob/spow) from the frontend now. This is an additional DoS protection, and
-it mitigates any automated login checks / brute-force by bots or even tools like burp suite, in additional to the
+it mitigates any automated login checks / brute-force by bots or even tools like burp suite, in addition to the
 already existing login rate-limiting.  
 As an additional UX optimization, all PoW calculations have been removed from the JS main thread and pushed into a
 Web Worker. This keeps the UI responsive, even if you set a higher difficulty which takes a bit longer to compute.

@@ -28,25 +28,6 @@ setup:
     set -euxo pipefail
     clear
 
-    echo "Installing necessary tools: sd, mdbook, mdbook-admonish, sqlx-cli"
-    readarray -t cargopkgs < <(cargo install --list | cut -d' ' -f1 | sort | uniq)
-    for pkg in sd mdbook mdbook-admonish; do
-        if command -v "$pkg" &>/dev/null; then
-            if ! printf '%s\0' "${cargopkgs[@]}" | grep -qw "$pkg"; then
-                cargo install "$pkg"
-            fi
-        else
-            cargo install "$pkg"
-        fi
-    done
-    if command -v sqlx &>/dev/null; then
-        if ! printf '%s\0' "${cargopkgs[@]}" | grep -qw sqlx-cli; then
-            cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
-        fi
-    else
-        cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
-    fi
-
     echo "npm install to set up the frontend"
     cd frontend/
     {{ npm }} install
@@ -57,8 +38,6 @@ setup:
 
     echo "Starting Postgres and Mailcrab containers"
     just backend-start
-
-    cargo build
 
 # start the backend containers for local dev
 @backend-start:
@@ -288,20 +267,12 @@ build-ui:
     #!/usr/bin/env bash
     set -euxo pipefail
 
+    mkdir -p templates/html
+    mkdir -p static/v1
+
     # cleanup old files
     rm -rf static/v1/*
     rm -rf templates/html/*
-
-    # make sure all output FOLDERS exist
-    FOLDERS=(
-    "templates/html"
-    "static/v1"
-    )
-    for folder in "${FOLDERS[@]}"; do
-      if [ ! -d "$folder" ]; then
-          mkdir -p "$folder"
-      fi
-    done
 
     # build the frontend
     cd frontend
@@ -315,6 +286,19 @@ build-ui:
 build-docs:
     #!/usr/bin/env bash
     set -euxo pipefail
+
+    # make sure tools are installed
+    readarray -t cargopkgs < <(cargo install --list | cut -d' ' -f1 | sort | uniq)
+    for pkg in mdbook mdbook-admonish; do
+        if command -v "$pkg" &>/dev/null; then
+            if ! printf '%s\0' "${cargopkgs[@]}" | grep -qw "$pkg"; then
+                cargo install "$pkg"
+            fi
+        else
+            cargo install "$pkg"
+        fi
+    done
+
     cd book
     mdbook build -d ../docs
     git add ../docs/*
@@ -329,7 +313,7 @@ build-profiling:
     echo "You can analyze the application via: heaptrack ./target/profiling/rauthy"
 
 # Build the final container image.
-build image="ghcr.io/sebadob/rauthy": build-ui
+build image="ghcr.io/sebadob/rauthy" push="push": build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -364,11 +348,19 @@ build image="ghcr.io/sebadob/rauthy": build-ui
         cargo build --release --target aarch64-unknown-linux-gnu
     cp target/aarch64-unknown-linux-gnu/release/rauthy out/rauthy_arm64
 
-    {{ docker }} buildx build \
-        -t {{ image }}:$TAG \
-        --platform linux/amd64,linux/arm64 \
-        --push \
-        .
+    if [[ {{ push }} == "push" ]]; then
+        {{ docker }} buildx build \
+            -t {{ image }}:$TAG \
+            --platform linux/amd64,linux/arm64 \
+            --push \
+            .
+    else
+        {{ docker }} buildx build \
+            -t {{ image }}:$TAG \
+            --platform linux/amd64,linux/arm64 \
+            --load \
+            .
+    fi
 
     rm -rf out/
 
