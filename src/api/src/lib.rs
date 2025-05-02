@@ -16,7 +16,7 @@ use rauthy_models::entity::fed_cm::FedCMLoginStatus;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::webauthn::WebauthnCookie;
-use rust_embed::RustEmbed;
+use rust_embed::Embed;
 use tracing::error;
 
 pub mod api_keys;
@@ -79,7 +79,7 @@ impl AcceptEncoding {
     }
 }
 
-#[derive(RustEmbed)]
+#[derive(Embed)]
 #[folder = "../../static/v1/"]
 struct Assets;
 

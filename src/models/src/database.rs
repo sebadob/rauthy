@@ -7,10 +7,10 @@ use actix_web::web;
 use futures_util::StreamExt;
 use hiqlite::NodeConfig;
 use hiqlite::cache_idx::CacheIndex;
+use hiqlite_macros::embed::*;
 use rauthy_common::constants::{DEV_MODE, RAUTHY_VERSION};
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
-use serde::{Deserialize, Serialize};
 use std::env;
 use std::ops::DerefMut;
 use std::sync::{Arc, OnceLock};
@@ -29,12 +29,12 @@ mod migrations_postgres {
     refinery::embed_migrations!("../../migrations/postgres");
 }
 
-#[derive(rust_embed::Embed)]
+#[derive(Embed)]
 #[folder = "../../migrations/hiqlite"]
 struct MigrationsHiqlite;
 
 /// Cache Index for the `hiqlite` cache layer
-#[derive(Debug, Serialize, Deserialize, strum::EnumIter)]
+#[derive(Debug, strum::EnumIter)]
 pub enum Cache {
     App,
     AuthCode,

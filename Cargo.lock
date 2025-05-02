@@ -852,15 +852,6 @@ dependencies = [
 
 [[package]]
 name = "bincode"
-version = "1.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "bincode"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36eaf5d7b090263e8150820482d5d93cd964a81e4019913c972f4edcc6edb740"
@@ -1421,44 +1412,15 @@ dependencies = [
 
 [[package]]
 name = "cryptr"
-version = "0.5.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9c2b9e47752779aac395e3f3b8ef72e5dde166440544a3ce947a026d520fada"
+checksum = "d74943d4f58e09e78857206ae6dc505cce2f737898ac16dc2b6150b13ac7ad35"
 dependencies = [
  "argon2",
  "async-stream",
  "async-trait",
  "base64 0.22.1",
- "bincode 1.3.3",
- "bytes",
- "chacha20poly1305",
- "dotenvy",
- "flume",
- "futures",
- "lazy_static",
- "rand 0.8.5",
- "regex",
- "reqwest",
- "s3-simple",
- "serde",
- "thiserror 1.0.69",
- "tokio",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
-name = "cryptr"
-version = "0.6.0-20250422"
-source = "git+https://github.com/sebadob/cryptr#96bce64d6764ffb6f5eb839dd65d205be8df00e4"
-dependencies = [
- "argon2",
- "async-stream",
- "async-trait",
- "base64 0.22.1",
- "bincode 2.0.1",
+ "bincode",
  "bytes",
  "chacha20poly1305",
  "dotenvy",
@@ -2283,19 +2245,20 @@ dependencies = [
 
 [[package]]
 name = "hiqlite"
-version = "0.6.0-20250410"
-source = "git+https://github.com/sebadob/hiqlite.git#0aea63285f1eb3f054a610b407d4ac8c04269e52"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "49811441d4831d1f4ca66c071dbcef51a6ad5d121b3d75efb42c9ad40b40bf3e"
 dependencies = [
  "argon2",
  "axum",
  "axum-extra",
  "axum-server",
- "bincode 2.0.1",
+ "bincode",
  "byteorder",
  "bytes",
  "chrono",
  "cron",
- "cryptr 0.5.1",
+ "cryptr",
  "deadpool",
  "dotenvy",
  "fastwebsockets",
@@ -2336,8 +2299,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite-macros"
-version = "0.6.0-20250410"
-source = "git+https://github.com/sebadob/hiqlite.git#0aea63285f1eb3f054a610b407d4ac8c04269e52"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1744cad3d1d807d3ee7ab050f296367bbdb6bb6a24cebcb99d3443632f67f48"
 dependencies = [
  "hiqlite",
  "rust-embed",
@@ -3981,7 +3945,7 @@ dependencies = [
  "actix-web",
  "actix-web-prom",
  "chrono",
- "cryptr 0.6.0-20250422",
+ "cryptr",
  "dotenvy",
  "ed25519-compact",
  "flume",
@@ -4039,7 +4003,7 @@ dependencies = [
  "actix-web",
  "argon2",
  "base64 0.22.1",
- "bincode 2.0.1",
+ "bincode",
  "brotli 8.0.0",
  "chrono",
  "cidr",
@@ -4069,7 +4033,7 @@ dependencies = [
  "argon2",
  "chacha20poly1305",
  "chrono",
- "cryptr 0.6.0-20250422",
+ "cryptr",
  "css-color",
  "deadpool",
  "hiqlite",
@@ -4103,7 +4067,7 @@ dependencies = [
  "actix-web",
  "actix-web-lab",
  "chrono",
- "cryptr 0.6.0-20250422",
+ "cryptr",
  "futures",
  "mime_guess",
  "num_cpus",
@@ -4155,7 +4119,7 @@ dependencies = [
  "askama",
  "async-trait",
  "chrono",
- "cryptr 0.6.0-20250422",
+ "cryptr",
  "deadpool",
  "deadpool-postgres",
  "dotenvy",
@@ -4191,7 +4155,6 @@ dependencies = [
  "rsa",
  "rstest",
  "rusqlite",
- "rust-embed",
  "rustls",
  "s3-simple",
  "semver",
@@ -4257,7 +4220,7 @@ version = "0.29.0-20250430"
 dependencies = [
  "actix-web",
  "chrono",
- "cryptr 0.6.0-20250422",
+ "cryptr",
  "jwt-simple",
  "openssl",
  "openssl-sys",
