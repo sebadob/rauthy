@@ -199,7 +199,7 @@
                 pageSize={30}
         />
     {/if}
-</ContentAdmin>w
+</ContentAdmin>
 
 <style>
     .addNew {
