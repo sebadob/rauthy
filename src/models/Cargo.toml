@@ -50,7 +50,6 @@ rio_api = { workspace = true }
 rio_turtle = { workspace = true }
 rusqlite = { workspace = true }
 rustls = { workspace = true }
-rust-embed = { workspace = true }
 rsa = { workspace = true }
 s3-simple = { workspace = true }
 semver = { workspace = true }
