@@ -13,6 +13,7 @@
     import {fetchDelete, fetchPost} from "$api/fetch";
     import ButtonAuthProvider from "../ButtonAuthProvider.svelte";
     import UserPicture from "$lib/UserPicture.svelte";
+    import {fetchSolvePow} from "$utils/pow";
 
     let {
         user = $bindable(),
@@ -39,6 +40,8 @@
     let classRow: 'rowPhone' | 'row' = $derived(viewModePhone ? 'rowPhone' : 'row');
     let classLabel: 'labelPhone' | 'label' = $derived(viewModePhone ? 'labelPhone' : 'label');
 
+    let isLoading = $state(false);
+
     let fallbackCharacters = $derived.by(() => {
         let chars = user.given_name[0];
         if (user.family_name && user.family_name.length > 0) {
@@ -57,8 +60,12 @@
     }
 
     async function providerLoginPkce(id: string, pkce_challenge: string) {
+        isLoading = true;
+
+        let pow = await fetchSolvePow() || '';
         let payload: ProviderLoginRequest = {
             email: user.email,
+            pow,
             client_id: 'rauthy',
             redirect_uri: window.location.href,
             provider_id: id,
@@ -66,6 +73,8 @@
         };
 
         let res = await fetchPost<string>(`/auth/v1/providers/${id}/link`, payload);
+        isLoading = false;
+
         if (res.text) {
             saveProviderToken(res.text);
             let loc = res.headers.get('location');
