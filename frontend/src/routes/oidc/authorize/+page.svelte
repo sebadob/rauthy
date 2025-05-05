@@ -192,6 +192,8 @@
             return;
         }
 
+        isLoading = true;
+
         let pow = await fetchSolvePow() || '';
 
         const payload: LoginRequest = {
@@ -203,7 +205,6 @@
             nonce: nonce,
             scopes,
         };
-        console.log(payload);
         if (challenge && challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
             payload.code_challenge = challenge;
             payload.code_challenge_method = challengeMethod;
@@ -212,16 +213,16 @@
         if (needsPassword && email !== existingMfaUser) {
             if (!password) {
                 err = t.authorize.passwordRequired;
+                isLoading = false;
                 return;
             }
             if (password.length > 256) {
                 err = 'max 256';
+                isLoading = false;
                 return;
             }
             payload.password = password;
         }
-
-        isLoading = true;
 
         let url = '/auth/v1/oidc/authorize';
         if (useIsDev().get()) {
