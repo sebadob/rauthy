@@ -1,20 +1,19 @@
-# Introduction
+![Rauthy Logo](./rauthy_grey_small.png)
 
-```admonish caution
-There has not been any third party security audit for this project.  
-Use this software at your own risk!
-```
+# Rauthy
 
-```admonish info
-This project is currently pre v1.0, which means, even though it is not expected, breaking changes might come
-with new versions.
-
-The docs are not fully complete yet, some parts are missing and are being worked on.
-```
+Rauthy - OpenID Connect Single Sign-On Identity & Access Management
 
 ## What it is
 
-Rauthy is an OpenID Connect (OIDC) Provider and Single Sign-On solution written in Rust.
+Rauthy is a lightweight and easy to use OpenID Connect Identity Provider. It aims to be simple to both set up and
+operate, with very secure defaults and lots of config options, if you need the flexibility. It puts heavy emphasis on
+Passkeys and a very strong security in general. The project is written in Rust to be as memory efficient, secure and
+fast as possible, and it can run on basically any hardware. If you need Single Sign-On support for IoT or headless
+CLI tools, it's got you covered as well.  
+You get High-Availability, client branding, UI translation, a nice Admin UI, Events and Auditing, and many more
+features. By default, it runs on top of [Hiqlite](https://github.com/sebadob/hiqlite) and does not depend on an external
+database (Postgres as an alternative) to make it even simpler to operate, while scaling up to millions of users easily.
 
 ### Secure by default
 
@@ -37,12 +36,10 @@ Rauthy supports Passkey-Only-Accounts: you basically just provide your E-Mail ad
 your FIDO 2 Passkey. Your account will not even have / need a password. This login flow is restricted though to only
 those passkeys, that can provide User Verification (UV) to always have at least 2FA security.
 
-```admonish note
-Discoverable credentials are discouraged with Rauthy (for good reason). This means you will need to enter your E-Mail
-for the login (which will be autofilled after the first one), but Rauthy passkeys do not use any storage on your
-device. For instance when you have a Yubikey which can store 25 passkeys, it will not use a single slot there even
-having full support.
-```
+> Discoverable credentials are discouraged with Rauthy (for good reason). This means you will need to enter your E-Mail
+> for the login (which will be autofilled after the first one), but Rauthy passkeys do not use any storage on your
+> device. For instance when you have a Yubikey which can store 25 passkeys, it will not use a single slot there even
+> having full support.
 
 ### Fast and efficient
 
@@ -52,31 +49,30 @@ makes extensive use of caching for everything used in the authentication chain t
 are even cached for several hours and special care has been taken into account in case of cache eviction and
 invalidation.
 
-Rauthy comes in 2 flavors: with embedded [Hiqlite](https://github.com/sebadob/hiqlite), which is the default setting,
-or you can optionally use a Postgres as your database, if you already have an instance running anyway.
+Rauthy comes with two database options:
 
-A deployment with the embedded [Hiqlite](https://github.com/sebadob/hiqlite), filled caches / buffers and a small set of
-clients and users configured typically settles around 61MB of memory. Using Postgres, it will end up at ~36MB, but then
-you have of course your Postgres consuming additional resources. This is pretty awesome when comparing it to other
-existing solutions out there. If a password from a login is hashed, the memory consumption will of course go up way
-higher than this, depending on your configured Argon2ID parameters.
+- with embedded [Hiqlite](https://github.com/sebadob/hiqlite), which is the default setting
+- or you can optionally use a Postgres as your database, if you already have an instance running anyway.
 
-For achieving the speed and efficiency, some additional design tradeoffs were made. For instance, some things you
-configure statically via config file and not dynamically via UI, while most of them are configured once and then never
-touched again.
+The resource usage depends a lot on your setup (Hiqlite, Postgres, HA deployment, amount of users, ...), but for a small
+set of users, it is usually below 100mb of memory even with the very aggressive, in-memory caching Rauthy uses, and in
+some cases even below 50mb.
 
 ### Highly Available
 
 Even though it makes extensive use of caching, you can run it in HA mode. [Hiqlite](https://github.com/sebadob/hiqlite)
-creates its own embedded HA cache layer. A HA deployment is available with
+creates its own embedded HA cache and persistence layer. Such a deployment is possible with
 both [Hiqlite](https://github.com/sebadob/hiqlite) and Postgres.
 
 ### Admin UI + User Account Dashboard
 
 Rauthy does have an Admin UI which can be used to basically do almost any operation you might need to administrate the
 whole application and its users. There is also an account dashboard for each individual user, where users will get a
-basic overview over their account and can self-manage som values, password, passkeys, and so on.  
-Some Screenshots and further introduction will follow in the future.
+basic overview over their account and can self-manage som values, password, passkeys, and so on.
+
+![Admin UI](https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/users.png)
+
+![Account Dashboard](https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/account.png)
 
 ### Client Branding
 
@@ -84,15 +80,17 @@ You have a simple way to create a branding or stylized look for the Login page f
 can be changed and each client can have its own custom logo. Additionally, if you modify the branding for the default
 `rauthy` client, it will not only change the look for the Login page, but also for the Account and Admin page.
 
+![Client Branding](https://github.com/sebadob/rauthy/blob/c10e9421e65f386718528b15e3d0ace37aff1158/frontend/screenshots/branding.png)
+
 ### Events and Auditing
 
 Rauthy comes with an Event- and Alerting-System. Events are generated in all kinds of scenarios. They can be sent via
-E-Mail, Matrix or Slack, depending on the severity and the configured level. You will see them in the Admin UI in real
-time, or you can subscribe to the events stream and externally handle them depending on your own business logic.
+E-Mail, Matrix or Slack, depending on the severity and the configured level. You will see them in the Admin UI in
+real-time, or you can subscribe to the events stream and externally handle them depending on your own business logic.
 
 ### Brute-Force and basic DoS protection
 
-Rauthy has brute force and basic DoS protection for the login endpoint. Your timeout will be artificially delayed after
+Rauthy has brute-force and basic DoS protection for the login endpoint. The timeout will be artificially delayed after
 enough invalid logins. It auto-blacklists IPs that exceeded too many invalid logins, with automatic expiry of the
 blacklisting. You can, if you like, manually blacklist certain IPs as well via the Admin UI.
 
@@ -106,25 +104,18 @@ has everything built-in and ready, if you want to use Rust on the IoT devices as
 
 ### Scales to millions of users
 
-Benchmarks for v1.0.0 have not been done yet, but after some first basic tests and generating a lot of dummy data, I
-can confirm that Rauthy has no issues handling millions of users. The first very basic tests have been done with SQLite
-and ~11 million users. All parts and functions kept being fast and responsive with the only exception that the
-user-search in the admin UI was slowed down with such a high user count. It took ~2-3 seconds at that point to get a
-result, which should be no issue at all so far (Postgres tests have not been done yet).
+Rauthy has no issue handling even millions of users. Everything keeps being fast and responsive, apart from the search
+function for users in der Admin UI when you reach the 10+ million users, where searching usually takes ~3 seconds
+(depending on your server of course).  
 The only limiting factor at that point will be your configuration and needs for password hashing security. It really
 depends on how many resources you want to use for hashing (more resources == more secure) and how many concurrent logins
 at the exact same time you need to support.
-
-### Already in production
-
-Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an
-open source project for quite some time.
 
 ### Features List
 
 - [x] Fully working OIDC provider
 - [x] [Hiqlite](https://github.com/sebadob/hiqlite) or Postgres as database
-- [x] Fast and efficient with minimal footprint
+- [x] Fast and efficient with low footprint
 - [x] Secure default values
 - [x] Highly configurable
 - [x] High-Availability
@@ -132,10 +123,13 @@ open source project for quite some time.
 - [x] Dedicated Admin UI
 - [x] Account dashboard UI for each user with self-service
 - [x] OpenID Connect Dynamic Client Registration
+- [x] OpenID Connect RP Initiated Logout
+- [x] OpenID Connect Backchannel Logout
 - [x] OAuth 2.0 Device Authorization Grant flow
 - [x] Upstream Authentication Providers (Login with ...)
-- [x] Supports DPoP tokens for decentralized login flows
-- [x] Supports ephemeral, dynamic clients for decentralized login flows
+- [x] DPoP tokens for decentralized login flows
+- [x] Ephemeral, dynamic clients for decentralized login flows
+- [x] SCIM v2 for downstream clients
 - [x] All End-User facing sites support i18n server-side translation
   with the possibility to add more languages
 - [x] Simple per client branding for the login page
