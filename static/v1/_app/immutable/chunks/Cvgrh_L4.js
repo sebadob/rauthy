@@ -1,0 +1,1 @@
+import{j as n,k as m,l as i}from"./DXTz3Rbt.js";import{f}from"./QS8tP13U.js";import{i as a}from"./Cx6cA6Ki.js";let o=m(void 0);function d(){return!n(o)&&a()&&f("/auth/v1/i18n_config").then(t=>{if(t.body){let r=t.body;r.common=t.body.common.map(e=>e==="zhhans"?"zh":e),i(o,r,!0)}}),{admin(){return n(o)?.admin},common(){return n(o)?.common}}}export{d as u};

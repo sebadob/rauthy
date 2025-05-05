@@ -1,0 +1,1 @@
+import{d as f,E as u,g as c,a7 as d,_ as l,h as p,i as g,l as s,k as m,j as _}from"./DXTz3Rbt.js";function E(i,o,...r){var a=i,n=d,e;f(()=>{n!==(n=o())&&(e&&(l(e),e=null),e=c(()=>n(a,...r)))},u),p&&(a=g)}let t=m("");function y(){typeof document<"u"?s(t,document.documentElement.lang.slice(0,2).toLowerCase(),!0):s(t,"en")}function v(){return _(t)}export{y as i,E as s,v as u};
