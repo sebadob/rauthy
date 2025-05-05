@@ -215,12 +215,12 @@ impl Session {
     }
 
     // not cached -> only used in the admin ui and can get very big
-    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let sql = "SELECT * FROM sessions ORDER BY exp DESC";
+    pub async fn find_all(state: SessionState) -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM sessions WHERE state = $1 ORDER BY exp DESC";
         let sessions = if is_hiqlite() {
-            DB::hql().query_map(sql, params!()).await?
+            DB::hql().query_map(sql, params!(state.as_str())).await?
         } else {
-            DB::pg_query(sql, &[], 4).await?
+            DB::pg_query(sql, &[&state.as_str()], 4).await?
         };
         Ok(sessions)
     }
@@ -230,7 +230,10 @@ impl Session {
         page_size: i64,
         offset: i64,
         backwards: bool,
+        state: SessionState,
     ) -> Result<(Vec<Self>, Option<ContinuationToken>), ErrorResponse> {
+        let state = state.as_str();
+
         // Allowing this unused assignment here makes the type conflicts
         // from sqlx later easier to handle.
         #[allow(unused_assignments)]
@@ -243,18 +246,22 @@ impl Session {
                 let sql = r#"
 SELECT *
 FROM sessions
-WHERE exp >= $1 AND id != $2
+WHERE exp >= $1 AND id != $2 AND state = $3
 ORDER BY exp ASC
-LIMIT $3
-OFFSET $4"#;
+LIMIT $4
+OFFSET $5"#;
 
                 let mut rows: Vec<Self> = if is_hiqlite() {
                     DB::hql()
-                        .query_map(sql, params!(token.ts, token.id, page_size, offset))
+                        .query_map(sql, params!(token.ts, token.id, state, page_size, offset))
                         .await?
                 } else {
-                    DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
-                        .await?
+                    DB::pg_query(
+                        sql,
+                        &[&token.ts, &token.id, &state, &page_size, &offset],
+                        size_hint,
+                    )
+                    .await?
                 };
 
                 rows.reverse();
@@ -266,18 +273,22 @@ OFFSET $4"#;
                 let sql = r#"
 SELECT *
 FROM sessions
-WHERE exp <= $1 AND id != $2
+WHERE exp <= $1 AND id != $2 AND state = $3
 ORDER BY exp DESC
-LIMIT $3
-OFFSET $4"#;
+LIMIT $4
+OFFSET $5"#;
 
                 let rows: Vec<Self> = if is_hiqlite() {
                     DB::hql()
-                        .query_map(sql, params!(token.ts, token.id, page_size, offset))
+                        .query_map(sql, params!(token.ts, token.id, state, page_size, offset))
                         .await?
                 } else {
-                    DB::pg_query(sql, &[&token.ts, &token.id, &page_size, &offset], size_hint)
-                        .await?
+                    DB::pg_query(
+                        sql,
+                        &[&token.ts, &token.id, &state, &page_size, &offset],
+                        size_hint,
+                    )
+                    .await?
                 };
 
                 if let Some(s) = rows.last() {
@@ -291,14 +302,17 @@ OFFSET $4"#;
             let sql = r#"
 SELECT *
 FROM sessions
+WHERE state = $1
 ORDER BY exp ASC
-LIMIT $1
-OFFSET $2"#;
+LIMIT $2
+OFFSET $3"#;
 
             let mut rows: Vec<Self> = if is_hiqlite() {
-                DB::hql().query_map(sql, params!(page_size, offset)).await?
+                DB::hql()
+                    .query_map(sql, params!(state, page_size, offset))
+                    .await?
             } else {
-                DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
+                DB::pg_query(sql, &[&state, &page_size, &offset], size_hint).await?
             };
 
             rows.reverse();
@@ -310,14 +324,17 @@ OFFSET $2"#;
             let sql = r#"
 SELECT *
 FROM sessions
+WHERE state = $1
 ORDER BY exp DESC
-LIMIT $1
-OFFSET $2"#;
+LIMIT $2
+OFFSET $3"#;
 
             let rows: Vec<Self> = if is_hiqlite() {
-                DB::hql().query_map(sql, params!(page_size, offset)).await?
+                DB::hql()
+                    .query_map(sql, params!(state, page_size, offset))
+                    .await?
             } else {
-                DB::pg_query(sql, &[&page_size, &offset], size_hint).await?
+                DB::pg_query(sql, &[&state, &page_size, &offset], size_hint).await?
             };
 
             if let Some(s) = rows.last() {

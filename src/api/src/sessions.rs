@@ -2,10 +2,11 @@ use crate::ReqPrincipal;
 use actix_web::web::Query;
 use actix_web::{HttpResponse, delete, get, web};
 use rauthy_api_types::generic::PaginationParams;
-use rauthy_api_types::sessions::{SessionResponse, SessionState};
+use rauthy_api_types::sessions::SessionResponse;
 use rauthy_common::constants::SSP_THRESHOLD;
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
+use rauthy_models::entity;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
@@ -41,6 +42,12 @@ pub async fn get_sessions(
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Read)?;
     params.validate()?;
 
+    let state = entity::sessions::SessionState::from(
+        params
+            .session_state
+            .unwrap_or(rauthy_api_types::sessions::SessionState::Auth),
+    );
+
     // sessions will be dynamically paginated based on the same setting as users
     let user_count = User::count().await?;
     if user_count >= *SSP_THRESHOLD as i64 {
@@ -56,7 +63,8 @@ pub async fn get_sessions(
         };
 
         let (users, continuation_token) =
-            Session::find_paginated(continuation_token, page_size, offset, backwards).await?;
+            Session::find_paginated(continuation_token, page_size, offset, backwards, state)
+                .await?;
         let x_page_count = (user_count as f64 / page_size as f64).ceil() as u32;
 
         if let Some(token) = continuation_token {
@@ -74,7 +82,7 @@ pub async fn get_sessions(
                 .json(users))
         }
     } else {
-        let sessions = Session::find_all().await?;
+        let sessions = Session::find_all(state).await?;
 
         let mut resp = Vec::with_capacity(sessions.len());
         for s in &sessions {
@@ -82,7 +90,7 @@ pub async fn get_sessions(
                 id: &s.id,
                 user_id: s.user_id.as_deref(),
                 is_mfa: s.is_mfa,
-                state: SessionState::from(
+                state: rauthy_api_types::sessions::SessionState::from(
                     s.state()
                         .unwrap_or(rauthy_models::entity::sessions::SessionState::Unknown),
                 ),
