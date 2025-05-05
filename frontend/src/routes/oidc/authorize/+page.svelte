@@ -234,6 +234,8 @@
     }
 
     async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse>) {
+        isLoading = false;
+
         if (res.status === 202) {
             // -> all good
             let loc = res.headers.get('location');
@@ -290,7 +292,6 @@
             err = t.authorize.invalidCredentials;
             showResetRequest = true;
         }
-        isLoading = false;
     }
 
     function onEmailInput() {
@@ -326,6 +327,7 @@
             return;
         }
 
+        isLoading = true;
         let pow = await fetchSolvePow() || '';
 
         let payload: ProviderLoginRequest = {
@@ -343,6 +345,8 @@
         };
 
         let res = await fetchPost<string>('/auth/v1/providers/login', payload);
+        isLoading = false;
+
         if (res.text) {
             saveProviderToken(res.text);
 
