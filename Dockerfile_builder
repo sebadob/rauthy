@@ -1,6 +1,4 @@
-ARG IMAGE
-
-FROM $IMAGE
+FROM rust:1.86-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 

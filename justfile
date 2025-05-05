@@ -11,7 +11,7 @@ map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
 npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 builder_image := "ghcr.io/sebadob/rauthy-builder"
-builder_tag_date := "20250311"
+builder_tag_date := "20250505"
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
@@ -372,7 +372,6 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
     {{ docker }} build \
           -t {{ image }}:$TODAY \
           -f Dockerfile_builder \
-          --build-arg="IMAGE=rust:1.85-bookworm" \
           .
     {{ docker }} push {{ image }}:$TODAY
 
