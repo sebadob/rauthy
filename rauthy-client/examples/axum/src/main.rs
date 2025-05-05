@@ -62,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
     };
     // The redirect_uri here must match the URI of this application, where we accept and handle
     // the callback after a successful login.
-    OidcProvider::setup_from_config(config, "http://localhost:3000/callback").await?;
+    OidcProvider::setup_from_config(config, "http://localhost:3000/callback".to_string()).await?;
 
     let config = Config::new().await?;
 
