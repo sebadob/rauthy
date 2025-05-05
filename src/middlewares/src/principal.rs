@@ -61,7 +61,10 @@ where
         let service = Rc::clone(&self.service);
 
         Box::pin(async move {
-            // let mut session = None;
+            if req.path().starts_with("/auth/v1/_app/") || req.path() == "/auth/v1/" {
+                return service.call(req).await;
+            }
+
             let mut principal = Principal {
                 session: None,
                 api_key: get_api_key_from_headers(&req).await?,
