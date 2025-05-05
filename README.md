@@ -188,7 +188,7 @@ the application yourself with docker on your localhost. Rauthy comes with a sett
 testing and taking a first look. By setting `LOCAL_TEST=true`, an (insecure) demo config is being loaded at startup.
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8080:8080 ghcr.io/sebadob/rauthy:0.28.3
+docker run -it --rm -e LOCAL_TEST=true -p 8080:8080 ghcr.io/sebadob/rauthy:0.29.0
 ```
 
 This config **will only work on localhost** though. If you want to use a remote machine for testing, you need to use TLS
@@ -203,7 +203,7 @@ docker run -it --rm \
   -e LISTEN_SCHEME=https \
   -e PUB_URL=example.com:8443 \
   -p 8443:8443 \
-  ghcr.io/sebadob/rauthy:0.28.3
+  ghcr.io/sebadob/rauthy:0.29.0
 ```
 
 ## Support
