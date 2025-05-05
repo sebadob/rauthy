@@ -674,7 +674,7 @@ impl Session {
                     return true;
                 }
 
-                warn!(
+                debug!(
                     "Session in Init state used on invalid path: {:?} -> {}",
                     self, req_path
                 );
