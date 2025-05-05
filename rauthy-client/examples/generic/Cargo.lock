@@ -1889,7 +1889,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-client"
-version = "0.7.0-20240311"
+version = "0.7.0"
 dependencies = [
  "base64 0.22.0",
  "bincode",

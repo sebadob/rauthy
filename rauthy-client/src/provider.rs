@@ -57,6 +57,7 @@ impl OidcProviderConfig {
         let verification_options = VerificationOptions {
             allowed_audiences: Some(allowed_audiences),
             allowed_issuers: Some(HashSet::from([iss])),
+            time_tolerance: None,
             ..Default::default()
         };
 

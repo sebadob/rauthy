@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.7.0
 
 ### Breaking
 
@@ -9,7 +9,7 @@ instead of `&str`.
 
 ### Changes
 
-External dependencies have been bumped and the MSRV to `1.85.0`. `ring`, which is a pretty heavy weight dependency, has
+External dependencies have been bumped, and the MSRV to `1.85.0`. `ring`, which is a pretty heavy-weight dependency, has
 been dropped in favor of `sha2`. `ring` was used only for S256 PKCE hashes.
 
 ### Bugfix
