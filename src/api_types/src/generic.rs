@@ -1,3 +1,4 @@
+use crate::sessions::SessionState;
 use rauthy_common::regex::{RE_ALNUM, RE_SEARCH};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -51,6 +52,8 @@ pub struct PaginationParams {
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub continuation_token: Option<String>,
+    /// Ignored for anything else than `/sessions`. Defaults to `SessionState::Auth`.
+    pub session_state: Option<SessionState>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
