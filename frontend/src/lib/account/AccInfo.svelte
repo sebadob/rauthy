@@ -158,6 +158,7 @@
                                     ariaLabel={`${t.account.providerLink}: ${provider.name}`}
                                     {provider}
                                     onclick={linkProvider}
+                                    {isLoading}
                             />
                         {/each}
                     </div>

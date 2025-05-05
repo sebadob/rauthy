@@ -6,17 +6,19 @@
         ariaLabel,
         provider,
         onclick,
+        isLoading,
     }: {
         ariaLabel: string,
         provider: AuthProviderTemplate,
         onclick: (providerId: string) => void,
+        isLoading: boolean,
     } = $props();
 
     let showIcon = $state(false);
 
 </script>
 
-<Button {ariaLabel} level={2} onclick={() => onclick(provider.id)}>
+<Button {ariaLabel} level={2} onclick={() => onclick(provider.id)} {isLoading}>
     <div class="inline">
         <img
                 src="{`/auth/v1/providers/${provider.id}/img?updated=${provider.updated}`}"
