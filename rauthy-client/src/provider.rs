@@ -48,8 +48,9 @@ impl OidcProviderConfig {
         JwksMsg::NewJwksUri(provider.jwks_uri.clone()).send()?;
 
         let auth_endpoint = &provider.authorization_endpoint;
+        let redirect_uri_encoded = redirect_uri.replace(':', "%3A").replace('/', "%2F");
         let auth_url_base = format!(
-            "{auth_endpoint}?client_id={client_id}&redirect_uri={redirect_uri}&\
+            "{auth_endpoint}?client_id={client_id}&redirect_uri={redirect_uri_encoded}&\
             response_type=code&code_challenge_method=S256&scope={scope}"
         );
 
@@ -118,12 +119,11 @@ impl OidcProvider {
 
     pub async fn setup_from_config(
         config: RauthyConfig,
-        redirect_uri: &str,
+        redirect_uri: String,
     ) -> Result<(), RauthyError> {
-        let callback = redirect_uri.replace(':', "%3A").replace('/', "%2F");
         let scope = config.scope.join("+");
         let config = OidcProviderConfig::build_from_values(
-            callback,
+            redirect_uri,
             config.iss,
             scope,
             config.client_id,

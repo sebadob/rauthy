@@ -17,13 +17,13 @@
 use crate::provider::OidcProvider;
 use base64::{engine, engine::general_purpose, Engine as _};
 use rand::{distr, Rng};
-use ring::digest;
 use tracing::{error, warn};
 
 use crate::handler::OidcCookieInsecure;
 use crate::jwks::jwks_handler;
 use crate::rauthy_error::RauthyError;
 pub use reqwest::Certificate as RootCertificate;
+use sha2::{Digest, Sha256};
 
 /// Handles the encrypted OIDC state cookie for the login flow
 pub mod cookie_state;
@@ -137,7 +137,9 @@ where
 #[inline]
 pub fn generate_pkce_challenge() -> (String, String) {
     let plain = secure_random(32);
-    let s256 = digest::digest(&digest::SHA256, plain.as_bytes());
+    let mut hasher = Sha256::new();
+    hasher.update(plain.as_bytes());
+    let s256 = hasher.finalize();
     let challenge = base64_url_encode(s256.as_ref());
     (plain, challenge)
 }

@@ -2,8 +2,20 @@
 
 ## UNRELEASED
 
-External dependencies have been bumped, mostly to fix [CWE-770](https://github.com/advisories/GHSA-4p46-pwfr-66x6) for
-`ring`. At the same time, `bindode` has been bumped to `v2` in combination with the MSRV to `1.85.0`
+### Breaking
+
+The function signature for `OidcProviderConfig::setup_from_config()` now expects the `redirect_uri` as a `String`
+instead of `&str`.
+
+### Changes
+
+External dependencies have been bumped and the MSRV to `1.85.0`. `ring`, which is a pretty heavy weight dependency, has
+been dropped in favor of `sha2`. `ring` was used only for S256 PKCE hashes.
+
+### Bugfix
+
+- The `redirect_uri` during the `/token` request has been URL encoded, which should not be the case and could lead to
+  errors like `invalid redirect_uri`
 
 ## v0.6.1
 
