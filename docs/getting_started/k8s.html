@@ -24,18 +24,19 @@
         <link rel="stylesheet" href="../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="../highlight.css">
-        <link rel="stylesheet" href="../tomorrow-night.css">
-        <link rel="stylesheet" href="../ayu-highlight.css">
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         <link rel="stylesheet" href=".././mdbook-admonish.css">
 
 
-        <!-- Provide site root to javascript -->
+        <!-- Provide site root and default themes to javascript -->
         <script>
-            var path_to_root = "../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc.js"></script>
@@ -45,8 +46,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                var theme = localStorage.getItem('mdbook-theme');
-                var sidebar = localStorage.getItem('mdbook-sidebar');
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -60,7 +61,8 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            var theme;
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -73,8 +75,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var sidebar = null;
-            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -110,6 +112,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -240,25 +243,6 @@ stringData:
   # directly for some reasons.
   #HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ==
 
-  # Connection string to connect to a Postgres database.
-  # This will be ignored as long as `HIQLITE=true`.
-  #
-  # Format: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
-  #
-  # NOTE: The password in this case should be alphanumeric.
-  # Special characters could cause problems in the connection string.
-  #
-  # CAUTION: To make the automatic migrations work with Postgres 15+,
-  # when you do not want to just use the `postgres` user, You need
-  # to have a user with the same name as the DB / schema. For instance,
-  # the following would work without granting extra access to the
-  # `public` schema which is disabled by default since PG15:
-  # database: rauthy
-  # user: rauthy
-  # schema: rauthy with owner rauthy
-  #
-  #DATABASE_URL: postgresql://rauthy:123SuperSafe@localhost:5432/rauthy
-
   # You need to define at least one valid encryption key.
   # These keys are used in various places, like for instance
   # encrypting confidential client secrets in the database, or
@@ -298,6 +282,9 @@ stringData:
   #EVENT_MATRIX_ROOM_ID=
   #EVENT_MATRIX_ACCESS_TOKEN=
   #EVENT_MATRIX_USER_PASSWORD=
+
+  #PG_USER=
+  #PG_PASSWORD=
 </code></pre>
 <p>All variables specified here should be out-commented in the <code>rauthy-config</code> from above.<br />
 Make sure that things like <code>CACHE_AUTH_TOKEN</code> and <code>ENC_KEYS</code> are generated in a secure random way.</p>
@@ -386,11 +373,21 @@ spec:
       labels:
         app: rauthy
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - rauthy
+              topologyKey: "kubernetes.io/hostname"
       securityContext:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.28.3
+          image: ghcr.io/sebadob/rauthy:0.29.0
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for

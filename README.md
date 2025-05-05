@@ -54,14 +54,9 @@ Rauthy comes with two database options:
 - with embedded [Hiqlite](https://github.com/sebadob/hiqlite), which is the default setting
 - or you can optionally use a Postgres as your database, if you already have an instance running anyway.
 
-A deployment with the embedded [Hiqlite](https://github.com/sebadob/hiqlite), filled caches / buffers and a small set of
-clients and users configured typically settles around 65MB of memory. Using Postgres, it will end up at ~45MB, but then
-you have of course your Postgres consuming additional resources. If a password from a login is hashed, the memory
-consumption will of course go up way higher than this, depending on your configured Argon2ID parameters.
-
-For achieving the speed and efficiency, some additional design tradeoffs were made. For instance, some things can only
-be statically set via config file and not dynamically via UI, because most of them are configured once and then never
-touched again.
+The resource usage depends a lot on your setup (Hiqlite, Postgres, HA deployment, amount of users, ...), but for a small
+set of users, it is usually below 100mb of memory even with the very aggressive, in-memory caching Rauthy uses, and in
+some cases even below 50mb.
 
 ### Highly Available
 
@@ -109,25 +104,18 @@ has everything built-in and ready, if you want to use Rust on the IoT devices as
 
 ### Scales to millions of users
 
-Benchmarks for v1.0.0 have not been done yet, but after some first basic tests and generating a lot of dummy data, I
-can confirm that Rauthy has no issues handling millions of users. The first very basic tests have been done with SQLite
-and ~11 million users. All parts and functions kept being fast and responsive with the only exception that the
-user-search in the admin UI was slowed down with such a high user count. It took ~2-3 seconds at that point to get a
-result, which should be no issue at all so far (Postgres tests have not been done yet).
+Rauthy has no issue handling even millions of users. Everything keeps being fast and responsive, apart from the search
+function for users in der Admin UI when you reach the 10+ million users, where searching usually takes ~3 seconds
+(depending on your server of course).  
 The only limiting factor at that point will be your configuration and needs for password hashing security. It really
 depends on how many resources you want to use for hashing (more resources == more secure) and how many concurrent logins
 at the exact same time you need to support.
-
-### Already in production
-
-Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an
-open source project for quite some time.
 
 ### Features List
 
 - [x] Fully working OIDC provider
 - [x] [Hiqlite](https://github.com/sebadob/hiqlite) or Postgres as database
-- [x] Fast and efficient with minimal footprint
+- [x] Fast and efficient with low footprint
 - [x] Secure default values
 - [x] Highly configurable
 - [x] High-Availability
@@ -135,10 +123,13 @@ open source project for quite some time.
 - [x] Dedicated Admin UI
 - [x] Account dashboard UI for each user with self-service
 - [x] OpenID Connect Dynamic Client Registration
+- [x] OpenID Connect RP Initiated Logout
+- [x] OpenID Connect Backchannel Logout
 - [x] OAuth 2.0 Device Authorization Grant flow
 - [x] Upstream Authentication Providers (Login with ...)
-- [x] Supports DPoP tokens for decentralized login flows
-- [x] Supports ephemeral, dynamic clients for decentralized login flows
+- [x] DPoP tokens for decentralized login flows
+- [x] Ephemeral, dynamic clients for decentralized login flows
+- [x] SCIM v2 for downstream clients
 - [x] All End-User facing sites support i18n server-side translation
   with the possibility to add more languages
 - [x] Simple per client branding for the login page
@@ -188,7 +179,7 @@ the application yourself with docker on your localhost. Rauthy comes with a sett
 testing and taking a first look. By setting `LOCAL_TEST=true`, an (insecure) demo config is being loaded at startup.
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8080:8080 ghcr.io/sebadob/rauthy:0.28.3
+docker run -it --rm -e LOCAL_TEST=true -p 8080:8080 ghcr.io/sebadob/rauthy:0.29.0
 ```
 
 This config **will only work on localhost** though. If you want to use a remote machine for testing, you need to use TLS
@@ -203,7 +194,7 @@ docker run -it --rm \
   -e LISTEN_SCHEME=https \
   -e PUB_URL=example.com:8443 \
   -p 8443:8443 \
-  ghcr.io/sebadob/rauthy:0.28.3
+  ghcr.io/sebadob/rauthy:0.29.0
 ```
 
 ## Support

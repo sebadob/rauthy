@@ -526,9 +526,9 @@ checksum = "9dbc3a507a82b17ba0d98f6ce8fd6954ea0c8152e98009d36a40d8dcc8ce078a"
 
 [[package]]
 name = "askama"
-version = "0.13.1"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d4744ed2eef2645831b441d8f5459689ade2ab27c854488fbab1fbe94fce1a7"
+checksum = "f75363874b771be265f4ffe307ca705ef6f3baa19011c149da8674a87f1b75c4"
 dependencies = [
  "askama_derive",
  "itoa",
@@ -539,9 +539,9 @@ dependencies = [
 
 [[package]]
 name = "askama_derive"
-version = "0.13.1"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d661e0f57be36a5c14c48f78d09011e67e0cb618f269cca9f2fd8d15b68c46ac"
+checksum = "129397200fe83088e8a68407a8e2b1f826cf0086b21ccdb866a722c8bcd3a94f"
 dependencies = [
  "askama_parser",
  "basic-toml",
@@ -556,14 +556,14 @@ dependencies = [
 
 [[package]]
 name = "askama_parser"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf315ce6524c857bb129ff794935cf6d42c82a6cff60526fe2a63593de4d0d4f"
+checksum = "d6ab5630b3d5eaf232620167977f95eb51f3432fc76852328774afbd242d4358"
 dependencies = [
  "memchr",
  "serde",
  "serde_derive",
- "winnow 0.7.8",
+ "winnow 0.7.9",
 ]
 
 [[package]]
@@ -617,7 +617,7 @@ version = "0.4.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b37fc50485c4f3f736a4fb14199f6d5f5ba008d7f28fe710306c92780f004c07"
 dependencies = [
- "brotli 8.0.0",
+ "brotli 8.0.1",
  "futures-core",
  "memchr",
  "pin-project-lite",
@@ -988,9 +988,9 @@ dependencies = [
 
 [[package]]
 name = "brotli"
-version = "8.0.0"
+version = "8.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf19e729cdbd51af9a397fb9ef8ac8378007b797f8273cfbfdf45dcaa316167b"
+checksum = "9991eea70ea4f293524138648e41ee89b0b2b12ddef3b255effa43c8056e0e0d"
 dependencies = [
  "alloc-no-stdlib",
  "alloc-stdlib",
@@ -1101,9 +1101,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.20"
+version = "1.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04da6a0d40b948dfc4fa8f5bbf402b0fc1a64a28dbf7d12ffd683550f2c1b63a"
+checksum = "8691782945451c1c383942c4874dbe63814f61cb57ef773cda2972682b7bb3c0"
 dependencies = [
  "jobserver",
  "libc",
@@ -1467,9 +1467,9 @@ dependencies = [
 
 [[package]]
 name = "ct-codecs"
-version = "1.1.4"
+version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e994091bae428316ad612b1d563e7bd917141ba942963f65251bb07c0f31cc55"
+checksum = "dd0d274c65cbc1c34703d2fc2ce0fb892ff68f4516b677671a2f238a30b9b2b2"
 
 [[package]]
 name = "darling"
@@ -2958,9 +2958,9 @@ dependencies = [
 
 [[package]]
 name = "libm"
-version = "0.2.13"
+version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9627da5196e5d8ed0b0495e61e518847578da83483c37288316d9b2e03a7f72"
+checksum = "a25169bd5913a4b437588a7e3d127cd6e90127b60e0ffbd834a38f1599e016b8"
 
 [[package]]
 name = "librocksdb-sys"
@@ -3940,7 +3940,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.29.0-20250430"
+version = "0.29.0"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -3980,7 +3980,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.29.0-20250430"
+version = "0.29.0"
 dependencies = [
  "actix-web",
  "openssl",
@@ -3998,13 +3998,13 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.29.0-20250430"
+version = "0.29.0"
 dependencies = [
  "actix-web",
  "argon2",
  "base64 0.22.1",
  "bincode",
- "brotli 8.0.0",
+ "brotli 8.0.1",
  "chrono",
  "cidr",
  "flume",
@@ -4026,7 +4026,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.29.0-20250430"
+version = "0.29.0"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4061,7 +4061,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.29.0-20250430"
+version = "0.29.0"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4092,7 +4092,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.29.0-20250430"
+version = "0.29.0"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4108,7 +4108,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.29.0-20250430"
+version = "0.29.0"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -4180,7 +4180,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.29.0-20250430"
+version = "0.29.0"
 dependencies = [
  "async-trait",
  "openssl",
@@ -4196,7 +4196,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.29.0-20250430"
+version = "0.29.0"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4216,7 +4216,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.29.0-20250430"
+version = "0.29.0"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4239,9 +4239,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.5.11"
+version = "0.5.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2f103c6d277498fbceb16e84d317e2a400f160f46904d5f5410848c829511a3"
+checksum = "928fca9cf2aa042393a8325b9ead81d2f0df4cb12e1e24cef072922ccd99c5af"
 dependencies = [
  "bitflags 2.9.0",
 ]
@@ -5666,7 +5666,7 @@ dependencies = [
  "serde_spanned",
  "toml_datetime",
  "toml_write",
- "winnow 0.7.8",
+ "winnow 0.7.9",
 ]
 
 [[package]]
@@ -6573,9 +6573,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "0.7.8"
+version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e27d6ad3dac991091e4d35de9ba2d2d00647c5d0fc26c5496dee55984ae111b"
+checksum = "d9fb597c990f03753e08d3c29efbfcf2019a003b4bf4ba19225c158e1549f0f3"
 dependencies = [
  "memchr",
 ]

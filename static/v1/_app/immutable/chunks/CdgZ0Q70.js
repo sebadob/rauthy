@@ -1,0 +1,1 @@
+import{d as e,a as f}from"./DVyqXkF9.js";import{p as i,f as p,a as n}from"./DXTz3Rbt.js";import{i as l}from"./Dnzfvyee.js";import{I as h}from"./COZs6rVX.js";import{I as v}from"./Dq38G47T.js";function _(c,r){i(r,!0);var a=e(),s=p(a);{var m=o=>{h(o,{color:"hsl(var(--action))"})},t=o=>{v(o,{color:"hsl(var(--error))"})};l(s,o=>{r.checked?o(m):o(t,!1)})}f(c,a),n()}export{_ as C};
