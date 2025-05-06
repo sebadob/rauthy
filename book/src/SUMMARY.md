@@ -33,6 +33,7 @@
     - [IP Blacklisting](work/ip_blacklist.md)
     - [JSON Web Keys](work/jwks.md)
     - [I18n](work/i18n.md)
+    - [User Logout](work/logout.md)
 
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)
