@@ -94,7 +94,7 @@ Rauthy has the following Event targets built-in:
 - Matrix
 - Slack
 
-[//]: # (You can see the full set of config option in the `EVENTS / AUDIT` in the [Reference Config]&#40;config.md&#41;.)
+You can see the full set of config option in the `EVENTS / AUDIT` in the [Reference Config](config.md).
 
 #### E-Mail
 
