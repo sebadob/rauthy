@@ -1,0 +1,355 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>User Logout - Rauthy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href=".././mdbook-admonish.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Rauthy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="user-logout"><a class="header" href="#user-logout">User Logout</a></h1>
+<p>User logout can mean quite a few different things and there are multiple ways for logging out users.</p>
+<h2 id="user-initiated-logout"><a class="header" href="#user-initiated-logout">User Initiated Logout</a></h2>
+<p>This is the most straight forward logging out. If a user (or an admin in the Admin UI) clicks the logout button and
+confirms the logout, the associated Rauthy session will be logged out. This means, to access any Rauthy UI's again, the
+user needs to do a fresh login.</p>
+<p>If you have OIDC Backchannel Logout (mentioned below) configured for any clients, this will trigger it for the Session
+ID <code>sid</code> only. This means only clients where the user logged in in the past that are associated with this <code>sid</code> will
+receive a Logout Token. All others will not. This is NOT a global user logout, only for this very session.</p>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-caution"></a>
+</div>
+<div>
+<p>The User Initiated Logout does NOT affect already signed and issue stateless(!) tokens. A stateless token, once singned,
+cannot be revoked by design, even though you might read things like this in many places on the internet.</p>
+<p>It is impossible to revoke a stateless JWT token.</p>
+</div>
+</div>
+<h2 id="admin-forced-user-logout"><a class="header" href="#admin-forced-user-logout">Admin-Forced User Logout</a></h2>
+<p>An admin can of course force-logout users via the Admin UI as well. This can be done in 2 places:</p>
+<ul>
+<li>Admin UI -&gt; Sessions -&gt; click delete on a specific session or <code>Invalidate All Sessions</code></li>
+<li>Admin UI -&gt; Users -&gt; select user -&gt; Logout Tab -&gt; Logout</li>
+</ul>
+<p>The first session-targeted logout / invalidation will only trigger Backchannel Logouts for this specific session only.
+If you log out a user via the Logout Tab for a selected user, it will be a global User Logout everywhere. This will
+delete all existing sessions on all devices, delete all refresh tokens and trigger a Backchannel Logout for the whole
+user for all configured clients.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
+</div>
+<div>
+<p>The global, forced user logout does NOT affect logged in devices via the device flow, which are usually either IoT
+devices or maybe a CLI tool on a headless server. If you also want to remove access for all of these, do this
+additionally via the Admin UI -&gt; Users -&gt; select user -&gt; Devices Tab.</p>
+</div>
+</div>
+<h2 id="rp-initiated-logout"><a class="header" href="#rp-initiated-logout">RP Initiated Logout</a></h2>
+<p>An RP Initiated Logout can be done by any client, that has a valid <code>id_token</code> for a given user. This logout provides
+the best UX and makes it possible to redirect the user back to the downstream client afterward instead of Rauthy itself.</p>
+<p>To make this possible, you first need to make sure, that you set a proper <code>Redirect URI</code> for your client in the Admin
+UI -&gt; Client Config. Only URLs added here upfront will be allowed for the automated redirect. This logout procedure also
+does not ask for Logout validation and the whole process works without any user interaction.</p>
+<p>If you added a redirect URI, you can do this logout in 2 ways:</p>
+<ul>
+<li>Use the users browser, for instance after clicking a <em>Logout</em> button in the downstream client app</li>
+<li>Do it in the background without the user knowing</li>
+</ul>
+<p>Via the browser is pretty simple:</p>
+<ul>
+<li>Redirect the user to Rauthy's logout endpoint, which is <code>/auth/v1/oidc/logout</code> and provide a valid <code>id_token</code> via the
+<code>id_token_hint</code> URL parameter. If this contains a valid <code>id_token</code>, Rauthy will not ask for Logout confirmation and
+it will accept an optionally given, valid redirect URI.</li>
+<li>Add the <code>post_logout_redirect_uri</code> param and provide a URI, that has been allowed for this client upfront to avoid
+open redirects.</li>
+<li>You may also add a <code>state</code> parameter if you need to provide any information back to your client. This <code>state</code> will be
+appended to the <code>post_logout_redirect_uri</code>, if it exists.</li>
+</ul>
+<p>Via the backend without user interaction, an RP can initiate a logout in the same way. This a lot simpler though. You
+only would do a <code>POST /auth/v1/oidc/logout?id_token_hint=pasteAValidIdTokenHere</code>. It will work in the exact same way
+with the exception, that you of course don't need any redirect or state, because your backend would do this request
+directly.</p>
+<p>In both situations, you at least need a valid <code>id_token</code> which has been returned in the past via the <code>/token</code> endpoint
+after a successful login or token refresh.</p>
+<p>The <em>RP Initiated Logout</em> will always trigger a Backchannel Logout on configured clients that are associated to the
+<code>sid</code> from the <code>id_token</code>.</p>
+<h2 id="backchannel-logout---client-side"><a class="header" href="#backchannel-logout---client-side">Backchannel Logout - Client Side</a></h2>
+<p>A Backchannel Logout is sent from Rauthy to your downstream client application, if you configured it to do so. You can
+configure it in the <code>Admin UI -&gt; Clients -&gt; select your client -&gt; Backchannel Logout</code>.</p>
+<p>Either your client application already
+supports <a href="https://openid.net/specs/openid-connect-backchannel-1_0.html">OIDC Backchannel Logout</a>, or you might need to
+implement it on your own. Accepting these logout requests is pretty straight forward, if you just take a look at the
+RFC.</p>
+<p>The <code>rauthy-client</code> will provide all the necessary tools for this in a future version as well.</p>
+<h2 id="backchannel-logout---rauthys-side"><a class="header" href="#backchannel-logout---rauthys-side">Backchannel Logout - Rauthy's Side</a></h2>
+<p>An <a href="https://openid.net/specs/openid-connect-backchannel-1_0.html">OIDC Backchannel Logout</a> can be done as well against
+Rauthy. You usually never implement it yourself though. Rauthy only accepts these backchannel logouts from configured
+Upstream Auth Providers. These will provide a <code>logout_token</code> on the logout endpoint, which Rauthy will validate and on
+success, forward the backchannel logout to all configured and associated clients.</p>
+<p>You have quite a few config options regarding Backchannel Logout. All these values have reasonable defaults, but you
+might take a look at them if you have issues like e.g. an upstream provider with self-signed certificates or inside
+test environments.</p>
+<pre><code>#####################################
+######## BACKCHANNEL LOGOUT #########
+#####################################
+
+# The maximum amount of retries made for a failed backchannel logout.
+# Failed backchannel logouts will be retried every 60 - 90 seconds
+# from all cluster nodes. The timeout between retries is randomized
+# to avoid overloading clients. It will be executed on each cluster
+# member to increase the chance of a successful logout in case of
+# network segmentations.
+# default: 100
+#BACKCHANNEL_LOGOUT_RETRY_COUNT=100
+
+# Can be set to `true` to allow plain HTTP backchannel
+# logout requests.
+# default: false
+#BACKCHANNEL_DANGER_ALLOW_HTTP=false
+
+# Can be set to `true` to allow insecure HTTPS logout requests.
+# This will disable TLS certificate validation.
+# default: false
+#BACKCHANNEL_DANGER_ALLOW_INSECURE=false
+
+# The lifetime / validity for Logout Tokens in seconds.
+# These Logout Tokens are being generated during OIDC
+# Backchannel Logout requests to configured clients.
+# The token lifetime should be as short as possible and
+# at most 120 seconds.
+# default: 30
+#LOGOUT_TOKEN_LIFETIME=30
+
+# You can allow a clock skew during the validation of
+# Logout Tokens, when Rauthy is being used as a client
+# for an upstream auth provider that uses backchannel
+# logout.
+#
+# The allowed skew will be in seconds and a value of
+# e.g. 5 would mean, that 5 seconds are added to the
+# `iat` and `exp` claim validations and expand the range.
+#
+# default: 5
+#LOGOUT_TOKEN_ALLOW_CLOCK_SKEW=5
+
+# The maximum allowed lifetime for Logout Tokens.
+# This value is a security check for upstream auth
+# providers. If Rauthy receives a Logout Token, it will
+# check and validate, that the difference between `iat`
+# and `exp` is not greater than LOGOUT_TOKEN_ALLOWED_LIFETIME.
+# This means Rauthy will reject Logout Tokens from clients
+# with a way too long validity and therefore poor
+# implementations. The RFC states that tokens should
+# be valid for at most 120 seconds.
+# default: 120
+#LOGOUT_TOKEN_ALLOWED_LIFETIME=120
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../work/i18n.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../config/config.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../work/i18n.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../config/config.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
