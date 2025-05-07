@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.29.1
+
+### Bugfix
+
+- Because of the default admin renaming with `0.29.0`, the 2 test admin accounts have not been deleted when starting up
+  a new production instance.
+  [#909](https://github.com/sebadob/rauthy/pull/909)
+- Error logs with an invalid `rauthy.cfg` have been emitted as tracing logs instead of `eprintln`, when logging was not
+  initialized yet.
+  [#910](https://github.com/sebadob/rauthy/pull/910)
+- Because of the new session validation rework and additional safety-nets, a login was impossible when
+  `SESSION_VALIDATE_IP=false`
+  [#911](https://github.com/sebadob/rauthy/pull/911)
+
 ## v0.29.0
 
 ### Breaking
