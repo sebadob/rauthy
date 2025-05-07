@@ -48,13 +48,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             );
             dotenvy::from_filename("rauthy-local_test.cfg")
                 .expect("'rauthy-local_test.cfg' not found");
-        } else if dotenvy::from_filename("rauthy.cfg").is_err() {
+        } else if let Err(err) = dotenvy::from_filename("rauthy.cfg") {
             let cwd = env::current_dir()
                 .map(|pb| pb.to_str().unwrap_or_default().to_string())
                 .unwrap_or_default();
             eprintln!(
-                "'{}/rauthy.cfg' not found, using environment variables only for configuration",
-                cwd
+                "'{}/rauthy.cfg' not found, using environment variables only for configuration: {:?}",
+                cwd, err
             );
         }
 
