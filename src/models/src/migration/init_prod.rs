@@ -40,7 +40,8 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
 
         // cleanup
         let sql_1 = "DELETE FROM clients WHERE id = 'init_client'";
-        let sql_2 = "DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')";
+        let sql_2 =
+            "DELETE FROM users WHERE email IN ('init_admin@localhost', 'test_admin@localhost')";
 
         if is_hiqlite() {
             DB::hql().execute(sql_1, params!()).await?;
