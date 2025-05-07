@@ -8,10 +8,9 @@ Rauthy has pretty strict cookie settings and not all browsers treat `localhost` 
 allow insecure cookies for testing locally:
 
 ```
-docker run --rm \
-    -e COOKIE_MODE=danger-insecure \
+docker run -it --rm \
+    -e LOCAL_TEST=true \
     -p 8080:8080 \
-    --name rauthy \
     ghcr.io/sebadob/rauthy:0.29.0
 ```
 
@@ -22,7 +21,7 @@ If you want to test a bit more in depth, you can keep the container between rest
 
 ```
 docker run -d \
-    -e COOKIE_MODE=danger-insecure \
+    -e LOCAL_TEST=true \
     -p 8080:8080 \
     --name rauthy \
     ghcr.io/sebadob/rauthy:0.29.0
