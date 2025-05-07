@@ -162,17 +162,16 @@
 The image contains a basic default config which is sufficient for local testing (please don't use it in production).
 Rauthy has pretty strict cookie settings and not all browsers treat <code>localhost</code> as being secure, therefore you should
 allow insecure cookies for testing locally:</p>
-<pre><code>docker run --rm \
-    -e COOKIE_MODE=danger-insecure \
+<pre><code>docker run -it --rm \
+    -e LOCAL_TEST=true \
     -p 8080:8080 \
-    --name rauthy \
     ghcr.io/sebadob/rauthy:0.29.0
 </code></pre>
 <p>This will start the container in interactive mode with the <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> database. Just
 take a look at the log at the logs to see the Account Dashboard URL and new admin password, to get access.</p>
 <p>If you want to test a bit more in depth, you can keep the container between restarts:</p>
 <pre><code>docker run -d \
-    -e COOKIE_MODE=danger-insecure \
+    -e LOCAL_TEST=true \
     -p 8080:8080 \
     --name rauthy \
     ghcr.io/sebadob/rauthy:0.29.0
