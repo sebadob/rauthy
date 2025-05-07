@@ -663,6 +663,10 @@ impl Session {
             self, remote_ip, req_path
         );
 
+        if remote_ip.is_none() {
+            return true;
+        }
+
         let session_ip = self
             .remote_ip
             .as_ref()
