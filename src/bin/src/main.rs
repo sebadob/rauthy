@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let cwd = env::current_dir()
                 .map(|pb| pb.to_str().unwrap_or_default().to_string())
                 .unwrap_or_default();
-            warn!(
+            eprintln!(
                 "'{}/rauthy.cfg' not found, using environment variables only for configuration",
                 cwd
             );
