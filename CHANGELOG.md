@@ -11,7 +11,7 @@
   initialized yet.
   [#910](https://github.com/sebadob/rauthy/pull/910)
 - Because of the new session validation rework and additional safety-nets, a login was impossible when
-  `SESSION_VALIDATE_IP=true`
+  `SESSION_VALIDATE_IP=false`
   [#911](https://github.com/sebadob/rauthy/pull/911)
 
 ## v0.29.0
