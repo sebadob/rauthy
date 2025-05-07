@@ -59,22 +59,6 @@ deploying with Kubernetes, extract these values into Kubernetes Secrets.
 # default: true
 #USERINFO_STRICT=true
 
-# If set to true, the `/userinfo` endpoint will do additional validations.
-# The non-strict mode will fetch the user by id from the `sub` claim and make
-# sure it still exists and is enabled. The strict validation will do additional
-# database fetches and validates every possible value.
-# Additionally, it will look up a possibly linked user device from the `did` claim
-# and make sure it still exists. It will also extract the `client_id` the token
-# has been originally issued for from the `azp` claim, fetch it and make sure it
-# still exists and is enabled.
-#
-# If you need CORS headers on the /userinfo endpoint, you must enable strict mode,
-# because otherwise the additional data would be missing.
-#
-# If you don't need the extra validations, you can set this to `false` to
-# save some resources, if your clients to a lot of `/userinfo` lookups.
-# default: true
-
 # Can be set to `true` to disable authorization on `/oidc/introspect`.
 # This should usually never be done, but since the auth on that endpoint is not
 # really standardized, you may run into issues with your client app.
