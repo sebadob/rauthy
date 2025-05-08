@@ -18,7 +18,7 @@ use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
 use crate::entity::scopes::Scope;
 use crate::entity::sessions::{Session, SessionState};
-use crate::entity::theme::ThemeCssFull;
+use crate::entity::theme::{ThemeCss, ThemeCssFull};
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::user_login_states::UserLoginState;
 use crate::entity::users::User;
@@ -260,7 +260,29 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // THEMES
     debug!("Migrating table: themes");
-    let before = query_sqlite::<ThemeCssFull>(&conn, "SELECT * FROM themes").await?;
+    let mut stmt = conn.prepare("SELECT * FROM themes")?;
+    let before = stmt
+        .query_map([], |row| {
+            let version: i64 = row.get("version")?;
+            let (light, dark) = if version == 1 {
+                let light = ThemeCss::from(row.get::<_, Vec<u8>>("light")?.as_slice());
+                let dark = ThemeCss::from(row.get::<_, Vec<u8>>("dark")?.as_slice());
+                (light, dark)
+            } else {
+                (ThemeCss::default_light(), ThemeCss::default_dark())
+            };
+
+            Ok(ThemeCssFull {
+                client_id: row.get("client_id")?,
+                last_update: row.get("last_update")?,
+                version,
+                light,
+                dark,
+                border_radius: row.get("border_radius")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
     inserts::themes(before).await?;
 
     // WEBIDS

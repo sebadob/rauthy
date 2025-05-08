@@ -866,7 +866,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
                 &[
                     &b.client_id,
                     &b.last_update,
-                    &b.version,
+                    &(b.version as i32),
                     &b.light.as_bytes(),
                     &b.dark.as_bytes(),
                     &b.border_radius,
