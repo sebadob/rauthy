@@ -65,6 +65,11 @@ impl JwkPublicKey {
             .key_id()
             .ok_or(RauthyError::InvalidClaims("No 'kid' in JWT token header"))?;
 
+        Self::get_for_kid(kid).await
+    }
+
+    #[inline]
+    pub(crate) async fn get_for_kid(kid: &str) -> Result<Self, RauthyError> {
         let (tx, rx) = oneshot::channel();
         JwksMsg::Get((kid.to_string(), tx)).send()?;
         rx.await

@@ -25,8 +25,17 @@ use crate::rauthy_error::RauthyError;
 pub use reqwest::Certificate as RootCertificate;
 use sha2::{Digest, Sha256};
 
+/// OIDC Backchannel Logout
+#[cfg(feature = "backchannel-logout")]
+pub mod backchannel_logout;
+
 /// Handles the encrypted OIDC state cookie for the login flow
 pub mod cookie_state;
+
+/// Device Code Flow: urn:ietf:params:oauth:grant-type:device_code
+#[cfg(feature = "device-code")]
+pub mod device_code;
+
 /// The api which need to be called from your endpoints
 pub mod handler;
 mod jwks;
@@ -39,9 +48,6 @@ pub mod provider;
 /// Provides everything necessary to extract and validate JWT token claims
 pub mod token_set;
 
-#[cfg(feature = "device-code")]
-pub mod device_code;
-
 pub mod rauthy_error;
 
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -51,8 +57,7 @@ const B64_URL_SAFE_NO_PAD: engine::GeneralPurpose = general_purpose::URL_SAFE_NO
 /// Decodes a base64 value
 #[allow(dead_code)]
 pub(crate) fn b64_decode(value: &str) -> Result<Vec<u8>, RauthyError> {
-    let b = general_purpose::STANDARD.decode(value)?;
-    Ok(b)
+    Ok(general_purpose::STANDARD.decode(value)?)
 }
 
 /// Returns the given input as a base64 encoded String

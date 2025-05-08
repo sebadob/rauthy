@@ -37,7 +37,8 @@ impl OidcTokenSet {
 
     /// This function will return the claims from a given JWT token.
     /// CAUTION: It does NOT VALIDATE the token signature or any other values!
-    /// It will only try to decode the payload into the target struct.
+    /// It will only try to decode the payload into the target
+    #[cfg(feature = "axum")]
     pub fn danger_claims_unvalidated<T>(token: &str) -> Result<T, RauthyError>
     where
         T: Debug + for<'a> serde::de::Deserialize<'a>,
@@ -76,6 +77,8 @@ pub enum JwtTokenType {
     DPoP,
     Id,
     Refresh,
+    #[cfg(feature = "backchannel-logout")]
+    Logout,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
