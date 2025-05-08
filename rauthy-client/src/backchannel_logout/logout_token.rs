@@ -40,7 +40,7 @@ struct LogoutTokenRaw {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LogoutToken {
-    pub jti: String,
+    pub jti: Option<String>,
     pub sub: Option<String>,
     pub sid: Option<String>,
 }
@@ -49,19 +49,22 @@ impl LogoutToken {
     /// Parse and validate the token as specified in
     /// https://openid.net/specs/openid-connect-backchannel-1_0.html#Validation
     pub async fn from_str_validated(logout_token: &str) -> Result<Self, RauthyError> {
-        let (header, slf) = LogoutTokenRaw::build_from_str(logout_token)?;
-        let kid = slf.validate_claims(header)?;
+        let (header, lt_raw) = LogoutTokenRaw::build_from_str(logout_token)?;
+        let kid = lt_raw.validate_claims(header)?;
 
         let jwk = JwkPublicKey::get_for_kid(&kid).await?;
         let config = OidcProvider::config()?;
-        let slf: claims::JWTClaims<LogoutToken> = validate_jwt!(
+        let claims: claims::JWTClaims<LogoutToken> = validate_jwt!(
             LogoutToken,
             jwk,
             logout_token,
             config.verification_options.clone()
         )?;
 
-        Ok(slf.custom)
+        let mut lt = claims.custom;
+        lt.jti = claims.jwt_id;
+
+        Ok(lt)
     }
 }
 

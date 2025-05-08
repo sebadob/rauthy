@@ -8,7 +8,6 @@ use axum_extra::extract::CookieJar;
 use rauthy_client::backchannel_logout::logout_token::LogoutToken;
 use rauthy_client::handler::{OidcCallbackParams, OidcCookieInsecure, OidcSetRedirectStatus};
 use rauthy_client::principal::PrincipalOidc;
-use rauthy_client::secure_random;
 use std::sync::Arc;
 use tracing::{error, info};
 
@@ -96,14 +95,22 @@ pub async fn get_callback(
         .replace("{{ URI }}", "/");
 
     // Build our very simple Session
-    let sid = secure_random(48);
+    // let sid = id_claims.
     // CAUTION: NEVER build an insecure cookie like this. ALWAYS set the `Secure` flag.
     // This is only for the example.
+    //
+    // We are just re-using Rauthy's `sid` here, again, for simplicity.
+    // In production, you really should use a separate one for security reasons, and save a mapping
+    // to Rauthy's `sid` in your DB or just log out the whole user if you cannot resolve an `sid`.
+    let sid = id_claims.sid.unwrap();
     let session_cookie =
         format!("{SESSION_COOKIE_KEY}={sid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600");
     {
-        let mut lock = config.sessions.write().await;
-        lock.push((sid, id_claims.sub.unwrap()));
+        config
+            .sessions
+            .write()
+            .await
+            .push((sid, id_claims.sub.unwrap()));
     }
 
     Response::builder()
@@ -132,13 +139,13 @@ pub async fn post_logout(config: ConfigExt, logout_token: LogoutToken) -> Respon
     // You may optionally cache the `jti` to prevent token replays, but in reality, this cannot
     // happen anyway as long as you are using TLS, which you should always do anyway.
 
-    let mut lock = config.sessions.write().await;
+    // let mut sessions = config.sessions.write().await;
     if let Some(sub) = logout_token.sub {
         info!("Received a Logout Token for user ID {sub}");
-        lock.retain(|(_, uid)| uid != &sub);
+        config.sessions.write().await.retain(|(_, uid)| uid != &sub);
     } else if let Some(sid) = logout_token.sid {
         info!("Received a Logout Token for Session ID {sid}");
-        lock.retain(|(id, _)| id != &sid);
+        config.sessions.write().await.retain(|(id, _)| id != &sid);
     }
 
     Response::default()
@@ -190,8 +197,8 @@ pub async fn get_session(config: ConfigExt, jar: CookieJar) -> Response {
             let sid = cookie.value();
             info!("Session ID from Cookie: {sid}");
 
-            let lock = config.sessions.read().await;
-            if !lock.iter().any(|(id, _)| id == sid) {
+            let sessions = config.sessions.read().await;
+            if !sessions.iter().any(|(id, _)| id == sid) {
                 return Response::builder()
                     .status(401)
                     .body(Body::empty())
