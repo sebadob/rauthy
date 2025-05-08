@@ -1,8 +1,8 @@
 use crate::{ReqPrincipal, map_auth_step};
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::{
-    ACCEPT, ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS,
-    ACCESS_CONTROL_ALLOW_METHODS, CONTENT_TYPE, HeaderValue,
+    ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS,
+    CONTENT_TYPE, HeaderValue,
 };
 use actix_web::http::{StatusCode, header};
 use actix_web::web::{Form, Json, Query};
@@ -665,19 +665,7 @@ pub async fn get_logout(
         return Ok(ErrorResponse::from(err).error_response());
     }
 
-    let is_backchannel = !req.headers().get(ACCEPT).map(|v| v.to_str().unwrap_or_default().contains("text/html")).unwrap_or(false)
-        || principal.as_ref().map(|p| p.session.is_none()) == Some(true)
-        // should always exist in even barely modern browsers
-        || req.headers().get("sec-fetch-site").is_none();
-
-    if is_backchannel {
-        if params.id_token_hint.is_none() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "at least 'id_token_hint' must be given for an RP initiated logout",
-            ));
-        }
-
+    if params.id_token_hint.is_some() {
         logout::post_logout_handle(req, data, params, None).await
     } else if let Some(principal) = principal {
         // If we get any logout errors, maybe because there is no session anymore or whatever happens,
