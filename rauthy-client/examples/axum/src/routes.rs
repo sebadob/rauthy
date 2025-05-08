@@ -4,19 +4,27 @@ use axum::body::Body;
 use axum::extract::Query;
 use axum::http::header::{CONTENT_TYPE, SET_COOKIE};
 use axum::response::{IntoResponse, Response};
+use axum_extra::extract::CookieJar;
+use rauthy_client::backchannel_logout::logout_token::LogoutToken;
 use rauthy_client::handler::{OidcCallbackParams, OidcCookieInsecure, OidcSetRedirectStatus};
 use rauthy_client::principal::PrincipalOidc;
-use rauthy_client::rauthy_error::RauthyError;
+use rauthy_client::secure_random;
 use std::sync::Arc;
+use tracing::{error, info};
 
 type ConfigExt = axum::extract::State<Arc<Config>>;
 
+static SESSION_COOKIE_KEY: &str = "ExampleSession";
+
 /// Index HTML
-pub async fn get_index() -> Response<Body> {
+pub async fn get_index(config: ConfigExt) -> Response<Body> {
+    let logout_uri = format!("{}/oidc/logout", config.iss);
+    let body = templates::HTML_INDEX.replace("{{ LOGOUT_URI }}", &logout_uri);
+
     Response::builder()
         .status(200)
         .header(CONTENT_TYPE, "text/html")
-        .body(Body::from(templates::HTML_INDEX))
+        .body(Body::from(body))
         .unwrap()
 }
 
@@ -49,7 +57,7 @@ pub async fn get_auth_check(config: ConfigExt, principal: Option<PrincipalOidc>)
 
 /// OIDC Callback endpoint - must match the `redirect_uri` for the login flow
 pub async fn get_callback(
-    jar: axum_extra::extract::CookieJar,
+    jar: CookieJar,
     config: ConfigExt,
     params: Query<OidcCallbackParams>,
 ) -> Response<Body> {
@@ -63,7 +71,7 @@ pub async fn get_callback(
     };
     let callback_res =
         rauthy_client::handler::axum::oidc_callback(&jar, params, enc_key, insecure).await;
-    let (cookie_str, token_set, _id_claims) = match callback_res {
+    let (cookie_str, token_set, id_claims) = match callback_res {
         Ok(res) => res,
         Err(err) => {
             return Response::builder()
@@ -77,31 +85,69 @@ pub async fn get_callback(
     // Depending on how you like to proceed, you could create an independant session for the user,
     // or maybe create just another factor of authentication like a CSRF token.
     // Otherwise, you could just go on and using the existing access token for further authentication.
-    //
-    // For the sake of this example, we will return the raw access token to the user via the HTML
-    // so we can use it for future authentication from the frontend, but this is really up to you
-    // and the security needs of your application.
 
     // This is a very naive approach to HTML templating and only for simplicity in this example.
     // Please don't do this in production and use a proper templating engine.
+    // This HTML template will save the access token in local storage (be careful with that in prod).
+    // This will make it possible to use the `get_protected()` route below via a token.
     let body = templates::HTML_CALLBACK
-        .replace("{{ TOKEN }}", &token_set.access_token)
+        .replace("{{ ACCESS_TOKEN }}", &token_set.access_token)
+        .replace("{{ ID_TOKEN }}", token_set.id_token.as_ref().unwrap())
         .replace("{{ URI }}", "/");
+
+    // Build our very simple Session
+    let sid = secure_random(48);
+    // CAUTION: NEVER build an insecure cookie like this. ALWAYS set the `Secure` flag.
+    // This is only for the example.
+    let session_cookie =
+        format!("{SESSION_COOKIE_KEY}={sid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600");
+    {
+        let mut lock = config.sessions.write().await;
+        lock.push((sid, id_claims.sub.unwrap()));
+    }
 
     Response::builder()
         .status(200)
         // we should append the returned cookie jar here to
         // delete the state cookie from the login flow
         .header(SET_COOKIE, cookie_str)
+        // To be able to show Backchannel Logout as well,
+        // we will do a (very simplified) session approach.
+        .header(SET_COOKIE, session_cookie)
         .header(CONTENT_TYPE, "text/html")
         .body(Body::from(body))
         .unwrap()
 }
 
+/// This is the endpoint for backchannel logouts.
+pub async fn post_logout(config: ConfigExt, logout_token: LogoutToken) -> Response {
+    // If you actually get here, the `LogoutToken` has already been validated and you can be sure
+    // it actually came from your configured Rauthy instance and it valid.
+    //
+    // You now only need to log out the user it refers to.
+    // - If the `sub` is `Some(_)`, you should log out the whole user with all possibliy
+    // existing sessions.
+    // - If the `sid` is `Some(_)`, only the mentioned Session should be logged out.
+
+    // You may optionally cache the `jti` to prevent token replays, but in reality, this cannot
+    // happen anyway as long as you are using TLS, which you should always do anyway.
+
+    let mut lock = config.sessions.write().await;
+    if let Some(sub) = logout_token.sub {
+        info!("Received a Logout Token for user ID {sub}");
+        lock.retain(|(_, uid)| uid != &sub);
+    } else if let Some(sid) = logout_token.sid {
+        info!("Received a Logout Token for Session ID {sid}");
+        lock.retain(|(id, _)| id != &sid);
+    }
+
+    Response::default()
+}
+
 /// As soon as you request the `principal: PrincipalOidc` as a parameter, this route can only be
 /// accessed with a valid Token. Otherwise, the Principal cannot be build and would return a 401
 /// from the extractor function.
-pub async fn get_protected(principal: PrincipalOidc) -> Result<Response, RauthyError> {
+pub async fn get_protected(principal: PrincipalOidc) -> Response {
     // As soon as we get here, the principal is actually valid already.
     // The Principal provides some handy base functions for further easy validation, like:
     //
@@ -118,9 +164,48 @@ pub async fn get_protected(principal: PrincipalOidc) -> Result<Response, RauthyE
     //
     // let userinfo = principal.fetch_userinfo().await?;
 
-    Ok(Response::new(format!(
-        "Hello from Protected Resource:<br/>{:?}",
+    Response::new(format!(
+        "Hello from Token-Protected Resource:<br/>{:?}",
         principal
     ))
-    .into_response())
+    .into_response()
+}
+
+/// This endpoitn will only allow access with our very simple Session. JWT tokens are good for
+/// initializing a session, but not that good for ongoing authn/authz, since they cannot be revoked.
+/// However, a token-based authn/authz scales better (when done right) and is way easier of course.
+/// Both approaches have their up's and downs. We show the session as well to be able to demostrate
+/// OIDC Backchannmel Logut, since tokens cannot be revoked.
+pub async fn get_session(config: ConfigExt, jar: CookieJar) -> Response {
+    let sid = match jar.get(SESSION_COOKIE_KEY) {
+        None => {
+            error!("Session Cookie does not exist in Jar");
+            return Response::builder()
+                .status(401)
+                .body(Body::empty())
+                .unwrap()
+                .into_response();
+        }
+        Some(cookie) => {
+            let sid = cookie.value();
+            info!("Session ID from Cookie: {sid}");
+
+            let lock = config.sessions.read().await;
+            if !lock.iter().any(|(id, _)| id == sid) {
+                return Response::builder()
+                    .status(401)
+                    .body(Body::empty())
+                    .unwrap()
+                    .into_response();
+            }
+
+            sid.to_string()
+        }
+    };
+
+    Response::new(format!(
+        "Hello from Session-Protected Resource:<br/>Session ID: {}",
+        sid
+    ))
+    .into_response()
 }

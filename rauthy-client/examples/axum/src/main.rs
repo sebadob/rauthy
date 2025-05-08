@@ -1,5 +1,5 @@
 use crate::config::Config;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use rauthy_client::oidc_config::{ClaimMapping, JwtClaim, JwtClaimTyp, RauthyConfig};
 use rauthy_client::provider::OidcProvider;
@@ -41,13 +41,14 @@ async fn main() -> anyhow::Result<()> {
             typ: JwtClaimTyp::Groups,
             value: "user".to_string(),
         }]),
-        // In almost all cases, this should just match the `client_id`
-        allowed_audiences: HashSet::from(["dev-test".to_string()]),
-        client_id: "dev-test".to_string(),
+        // In almost all cases, this should just match the `client_id`.
+        allowed_audiences: HashSet::from(["test".to_string()]),
+        client_id: "test".to_string(),
         // If set to 'false', tokens with a non-verified email address will be rejected.
         email_verified: true,
-        // The issuer URL from your Rauthy deployment
-        iss: "https://iam.sebadob.dev/auth/v1".to_string(),
+        // The issuer URL from your Rauthy deployment. Set to localhost if you start the test
+        // container.
+        iss: "http://localhost:8080/auth/v1".to_string(),
         // The scopes you want to request. The only mandatory which always needs to exist is
         // `openid`, the rest is optional and depending on your needs.
         scope: vec![
@@ -60,17 +61,21 @@ async fn main() -> anyhow::Result<()> {
         // secret to the /token endpoint after the callback. Set a secret for confidential clients.
         secret: None,
     };
+
     // The redirect_uri here must match the URI of this application, where we accept and handle
     // the callback after a successful login.
+    let iss = config.iss.clone();
     OidcProvider::setup_from_config(config, "http://localhost:3000/callback".to_string()).await?;
 
-    let config = Config::new().await?;
+    let config = Config::new(iss).await?;
 
     let routes = Router::new()
         .route("/", get(routes::get_index))
         .route("/auth_check", get(routes::get_auth_check))
         .route("/callback", get(routes::get_callback))
+        .route("/logout", post(routes::post_logout))
         .route("/protected", get(routes::get_protected))
+        .route("/session", get(routes::get_session))
         // in production, you should add middlewares here with safe default resposne headers
         .with_state(Arc::new(config));
 
