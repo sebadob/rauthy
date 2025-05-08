@@ -17,8 +17,8 @@ use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
 use crate::entity::scopes::Scope;
-use crate::entity::sessions::Session;
-use crate::entity::theme::ThemeCssFull;
+use crate::entity::sessions::{Session, SessionState};
+use crate::entity::theme::{ThemeCss, ThemeCssFull};
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::user_login_states::UserLoginState;
 use crate::entity::users::User;
@@ -98,7 +98,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     debug!("Migrating table: auth_provider_logos");
     let before = query_sqlite::<Logo>(
         &conn,
-        "SELECT auth_provider_id AS id, res, content_type, data FROM auth_provider_logos",
+        "SELECT auth_provider_id AS id, res, content_type, data, updated FROM auth_provider_logos",
     )
     .await?;
     inserts::auth_provider_logos(before).await?;
@@ -134,7 +134,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     debug!("Migrating table: client_logos");
     let before = query_sqlite::<Logo>(
         &conn,
-        "SELECT client_id AS id, res, content_type, data FROM client_logos",
+        "SELECT client_id AS id, res, content_type, data, updated FROM client_logos",
     )
     .await?;
     inserts::client_logos(before).await?;
@@ -153,14 +153,6 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     debug!("Migrating table: magic_links");
     let before = query_sqlite::<MagicLink>(&conn, "SELECT * FROM magic_links").await?;
     inserts::magic_links(before).await?;
-
-    // PASSWORD POLICY
-    debug!("Migrating table: password_policy");
-    let mut stmt = conn.prepare("SELECT data FROM config WHERE id = 'password_policy'")?;
-    let mut rows = stmt.query(())?;
-    let row = rows.next()?.unwrap();
-    let bytes: Vec<u8> = row.get("data")?;
-    inserts::password_policy(bytes).await?;
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
@@ -226,7 +218,26 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // SESSIONS
     debug!("Migrating table: sessions");
-    let before = query_sqlite::<Session>(&conn, "SELECT * FROM sessions").await?;
+    let mut stmt = conn.prepare("SELECT * FROM sessions")?;
+    let before = stmt
+        .query_map([], |row| {
+            let state = SessionState::from_str(&row.get::<_, String>("state")?)
+                .unwrap_or(SessionState::Unknown);
+            Ok(Session {
+                id: row.get("id")?,
+                csrf_token: row.get("id")?,
+                user_id: row.get("user_id")?,
+                roles: row.get("roles")?,
+                groups: row.get("groups")?,
+                is_mfa: row.get("is_mfa")?,
+                state,
+                exp: row.get("exp")?,
+                last_seen: row.get("last_seen")?,
+                remote_ip: row.get("remote_ip")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
     inserts::sessions(before).await?;
 
     // USER LOGIN STATES
@@ -249,7 +260,29 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // THEMES
     debug!("Migrating table: themes");
-    let before = query_sqlite::<ThemeCssFull>(&conn, "SELECT * FROM themes").await?;
+    let mut stmt = conn.prepare("SELECT * FROM themes")?;
+    let before = stmt
+        .query_map([], |row| {
+            let version: i64 = row.get("version")?;
+            let (light, dark) = if version == 1 {
+                let light = ThemeCss::from(row.get::<_, Vec<u8>>("light")?.as_slice());
+                let dark = ThemeCss::from(row.get::<_, Vec<u8>>("dark")?.as_slice());
+                (light, dark)
+            } else {
+                (ThemeCss::default_light(), ThemeCss::default_dark())
+            };
+
+            Ok(ThemeCssFull {
+                client_id: row.get("client_id")?,
+                last_update: row.get("last_update")?,
+                version,
+                light,
+                dark,
+                border_radius: row.get("border_radius")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
     inserts::themes(before).await?;
 
     // WEBIDS
@@ -310,7 +343,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: auth_provider_logos");
     let before = DB::pg_query_map_with(
         &cl,
-        "SELECT auth_provider_id AS id, res, content_type, data FROM auth_provider_logos",
+        "SELECT auth_provider_id AS id, res, content_type, data, updated FROM auth_provider_logos",
         &[],
         0,
     )
@@ -325,9 +358,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     // USERS
     debug!("Migrating table: users");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM users", &[], 2).await?;
-    debug!("before users insert");
     inserts::users(before).await?;
-    debug!("after users insert");
 
     // PASSKEYS
     debug!("Migrating table: passkeys");
@@ -349,7 +380,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: client_logos");
     let before = DB::pg_query_map_with(
         &cl,
-        "SELECT client_id AS id, res, content_type, data FROM client_logos",
+        "SELECT client_id AS id, res, content_type, data, updated FROM client_logos",
         &[],
         0,
     )
@@ -370,18 +401,6 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: magic_links");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM magic_links", &[], 0).await?;
     inserts::magic_links(before).await?;
-
-    // PASSWORD POLICY
-    debug!("Migrating table: password_policy");
-    let mut rows: Vec<ConfigEntity> = DB::pg_query_map_with(
-        &cl,
-        "SELECT data FROM config WHERE id = 'password_policy'",
-        &[],
-        1,
-    )
-    .await?;
-    let bytes = rows.swap_remove(0).data;
-    inserts::password_policy(bytes).await?;
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");

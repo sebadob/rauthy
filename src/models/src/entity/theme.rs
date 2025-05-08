@@ -461,7 +461,7 @@ impl ThemeCss {
         serialize(self).unwrap()
     }
 
-    fn default_dark() -> Self {
+    pub(crate) fn default_dark() -> Self {
         Self {
             text: [34, 5, 75],
             text_high: [34, 7, 90],
@@ -476,7 +476,7 @@ impl ThemeCss {
         }
     }
 
-    fn default_light() -> Self {
+    pub(crate) fn default_light() -> Self {
         Self {
             text: [200, 5, 37],
             text_high: [200, 15, 25],

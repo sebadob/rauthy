@@ -420,7 +420,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
             DB::pg_execute(
-                sql_1,
+                sql_2,
                 &[
                     &b.id,
                     &b.timestamp,
@@ -611,17 +611,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
             )
             .await?;
         }
-    }
-    Ok(())
-}
-
-pub async fn password_policy(bytes: Vec<u8>) -> Result<(), ErrorResponse> {
-    let sql = "UPDATE config SET data = $1 WHERE id = 'password_policy'";
-
-    if is_hiqlite() {
-        DB::hql().execute(sql, params!(bytes)).await?;
-    } else {
-        DB::pg_execute(sql, &[]).await?;
     }
     Ok(())
 }
@@ -877,7 +866,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
                 &[
                     &b.client_id,
                     &b.last_update,
-                    &b.version,
+                    &(b.version as i32),
                     &b.light.as_bytes(),
                     &b.dark.as_bytes(),
                     &b.border_radius,
@@ -891,7 +880,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
 pub async fn user_attr_config(data_before: Vec<UserAttrConfigEntity>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM user_attr_config";
-    let sql_2 = "INSERT INTO user_attr_config (name, desc) VALUES ($1, $2)";
+    let sql_2 = "INSERT INTO user_attr_config (name, \"desc\") VALUES ($1, $2)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
