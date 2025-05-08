@@ -76,6 +76,9 @@ pub enum JwtTokenType {
     DPoP,
     Id,
     Refresh,
+    #[cfg(feature = "backchannel-logout")]
+    #[serde(rename = "logout+jwt")]
+    Logout,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,6 +142,7 @@ pub struct JwtIdClaims {
     pub amr: Vec<String>,
     pub auth_time: i64,
     pub at_hash: Option<String>,
+    pub sid: Option<String>,
     pub preferred_username: String,
     pub email: Option<String>,
     pub email_verified: Option<bool>,

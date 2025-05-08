@@ -23,6 +23,7 @@ axum = [
     "dep:axum",
     "dep:axum-extra",
 ]
+backchannel-logout = []
 device-code = []
 qrcode = ["device-code", "dep:qrcode"]
 userinfo = []
