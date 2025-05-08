@@ -133,8 +133,7 @@ pub async fn post_logout_handle(
     params: LogoutRequest,
     session: Option<Session>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let is_backchannel = session.is_none()
-        || params.logout_token.is_some()
+    let is_backchannel = params.logout_token.is_some()
         // should always exist in even barely modern browsers
         || req.headers().get("sec-fetch-site").is_none();
 
@@ -198,7 +197,7 @@ pub async fn post_logout_handle(
             .unwrap_or_default();
         let loc = format!("{}{}", uri, state);
 
-        let mut resp = HttpResponse::build(StatusCode::OK)
+        let mut resp = HttpResponse::build(StatusCode::from_u16(302).unwrap())
             .append_header((header::LOCATION, loc))
             .finish();
 
@@ -267,6 +266,8 @@ pub async fn execute_backchannel_logout(
     sid: Option<String>,
     uid: Option<String>,
 ) -> Result<(), ErrorResponse> {
+    debug!("Executing backchannel logout for uid {uid:?} / sid {sid:?}");
+
     let (states, sid) = if let Some(sid) = sid {
         let states = UserLoginState::find_by_session(sid.clone()).await?;
         // As a fallback, we will log out the whole user if we cannot find the session, just to
@@ -446,7 +447,7 @@ pub async fn send_backchannel_logout(
                 }
                 let text = resp.text().await.unwrap_or_default();
                 format!(
-                    "Error during Backchannel Logout for client {}: HTTP {} - {}",
+                    "Error during Backchannel Logout for client '{}': HTTP {} - {}",
                     client_id,
                     status.as_u16(),
                     text
@@ -454,7 +455,7 @@ pub async fn send_backchannel_logout(
             }
             Err(err) => {
                 format!(
-                    "Error during Backchannel Logout for client {}: {}",
+                    "Error during Backchannel Logout for client '{}': {}",
                     client_id, err
                 )
             }

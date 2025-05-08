@@ -10,14 +10,10 @@ use tracing::warn;
 
 impl JWKSPublicKey {
     pub fn validate_token_signature(&self, token: &str) -> Result<(), ErrorResponse> {
-        let (header, rest) = token
-            .split_once('.')
+        let (message, sig_str) = token
+            .rsplit_once('.')
             .ok_or_else(|| ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed token"))?;
-        let (claims, sig_str) = rest
-            .split_once('.')
-            .ok_or_else(|| ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed token"))?;
-        // TODO this can be made more efficient without creating a new String -> only &[u8] needed
-        let message = format!("{}.{}", header, claims);
+
         let sig_bytes = base64_url_no_pad_decode(sig_str)?;
 
         match self.alg()? {
