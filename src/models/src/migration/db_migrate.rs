@@ -98,7 +98,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     debug!("Migrating table: auth_provider_logos");
     let before = query_sqlite::<Logo>(
         &conn,
-        "SELECT auth_provider_id AS id, res, content_type, data FROM auth_provider_logos",
+        "SELECT auth_provider_id AS id, res, content_type, data, updated FROM auth_provider_logos",
     )
     .await?;
     inserts::auth_provider_logos(before).await?;
@@ -134,7 +134,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     debug!("Migrating table: client_logos");
     let before = query_sqlite::<Logo>(
         &conn,
-        "SELECT client_id AS id, res, content_type, data FROM client_logos",
+        "SELECT client_id AS id, res, content_type, data, updated FROM client_logos",
     )
     .await?;
     inserts::client_logos(before).await?;
@@ -153,14 +153,6 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     debug!("Migrating table: magic_links");
     let before = query_sqlite::<MagicLink>(&conn, "SELECT * FROM magic_links").await?;
     inserts::magic_links(before).await?;
-
-    // PASSWORD POLICY
-    debug!("Migrating table: password_policy");
-    let mut stmt = conn.prepare("SELECT data FROM config WHERE id = 'password_policy'")?;
-    let mut rows = stmt.query(())?;
-    let row = rows.next()?.unwrap();
-    let bytes: Vec<u8> = row.get("data")?;
-    inserts::password_policy(bytes).await?;
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
@@ -310,7 +302,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: auth_provider_logos");
     let before = DB::pg_query_map_with(
         &cl,
-        "SELECT auth_provider_id AS id, res, content_type, data FROM auth_provider_logos",
+        "SELECT auth_provider_id AS id, res, content_type, data, updated FROM auth_provider_logos",
         &[],
         0,
     )
@@ -325,9 +317,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     // USERS
     debug!("Migrating table: users");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM users", &[], 2).await?;
-    debug!("before users insert");
     inserts::users(before).await?;
-    debug!("after users insert");
 
     // PASSKEYS
     debug!("Migrating table: passkeys");
@@ -349,7 +339,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: client_logos");
     let before = DB::pg_query_map_with(
         &cl,
-        "SELECT client_id AS id, res, content_type, data FROM client_logos",
+        "SELECT client_id AS id, res, content_type, data, updated FROM client_logos",
         &[],
         0,
     )
@@ -370,18 +360,6 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: magic_links");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM magic_links", &[], 0).await?;
     inserts::magic_links(before).await?;
-
-    // PASSWORD POLICY
-    debug!("Migrating table: password_policy");
-    let mut rows: Vec<ConfigEntity> = DB::pg_query_map_with(
-        &cl,
-        "SELECT data FROM config WHERE id = 'password_policy'",
-        &[],
-        1,
-    )
-    .await?;
-    let bytes = rows.swap_remove(0).data;
-    inserts::password_policy(bytes).await?;
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
