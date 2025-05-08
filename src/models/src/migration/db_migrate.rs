@@ -17,7 +17,7 @@ use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
 use crate::entity::scopes::Scope;
-use crate::entity::sessions::Session;
+use crate::entity::sessions::{Session, SessionState};
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::user_login_states::UserLoginState;
@@ -218,7 +218,26 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // SESSIONS
     debug!("Migrating table: sessions");
-    let before = query_sqlite::<Session>(&conn, "SELECT * FROM sessions").await?;
+    let mut stmt = conn.prepare("SELECT * FROM sessions")?;
+    let before = stmt
+        .query_map([], |row| {
+            let state = SessionState::from_str(&row.get::<_, String>("state")?)
+                .unwrap_or(SessionState::Unknown);
+            Ok(Session {
+                id: row.get("id")?,
+                csrf_token: row.get("id")?,
+                user_id: row.get("user_id")?,
+                roles: row.get("roles")?,
+                groups: row.get("groups")?,
+                is_mfa: row.get("is_mfa")?,
+                state,
+                exp: row.get("exp")?,
+                last_seen: row.get("last_seen")?,
+                remote_ip: row.get("remote_ip")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
     inserts::sessions(before).await?;
 
     // USER LOGIN STATES

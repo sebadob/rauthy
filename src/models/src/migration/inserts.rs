@@ -420,7 +420,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
             DB::pg_execute(
-                sql_1,
+                sql_2,
                 &[
                     &b.id,
                     &b.timestamp,
@@ -611,17 +611,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
             )
             .await?;
         }
-    }
-    Ok(())
-}
-
-pub async fn password_policy(bytes: Vec<u8>) -> Result<(), ErrorResponse> {
-    let sql = "UPDATE config SET data = $1 WHERE id = 'password_policy'";
-
-    if is_hiqlite() {
-        DB::hql().execute(sql, params!(bytes)).await?;
-    } else {
-        DB::pg_execute(sql, &[]).await?;
     }
     Ok(())
 }
