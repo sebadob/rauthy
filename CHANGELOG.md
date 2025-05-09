@@ -1,5 +1,15 @@
 # Changelog
 
+## UNRELEASED
+
+### Bugfix
+
+- DB Migrations between Hiqlite and Postgres have not been working as expected since database driver and query reworks
+  with `v0.29`.
+  [#919](https://github.com/sebadob/rauthy/pull/919)
+- Front-Channel Logout returned HTTP 200 instead of 302 for auto-redirect under certain conditions.
+  [#920](https://github.com/sebadob/rauthy/pull/920)
+
 ## v0.29.1
 
 ### Bugfix
