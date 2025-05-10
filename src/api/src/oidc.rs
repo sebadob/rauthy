@@ -194,7 +194,6 @@ pub async fn get_authorize(
         Session::new(*SESSION_LIFETIME, Some(real_ip_from_req(&req)?))
     };
 
-    debug!("6");
     if let Err(err) = session.save().await {
         let status = err.status_code();
         let body = Error1Html::build(&lang, theme_ts, status, err.message);

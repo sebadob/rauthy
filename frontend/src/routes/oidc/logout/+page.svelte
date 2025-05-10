@@ -42,17 +42,19 @@
 
     async function handleLogout() {
         isLoading = true;
+        let csrfToken = getCsrfToken();
         purgeStorage();
 
         let url = '/auth/v1/oidc/logout';
         if (useIsDev().get()) {
             url = '/auth/v1/dev/logout';
         }
+
         await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-type': 'application/x-www-form-urlencoded',
-                'x-csrf-token': getCsrfToken(),
+                'x-csrf-token': csrfToken,
             },
             body: formDataFromObj(logoutData),
         });
