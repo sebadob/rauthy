@@ -124,6 +124,7 @@
         placeholder="rauthy_admin"
         pattern={PATTERN_URI}
         width={inputWidth}
+        required={!!adminClaimPath}
 />
 
 <p class="desc">{ta.providers.config.mapMfa}</p>
@@ -142,6 +143,7 @@
         placeholder="mfa"
         pattern={PATTERN_URI}
         width={inputWidth}
+        required={!!mfaClaimPath}
 />
 
 <style>
