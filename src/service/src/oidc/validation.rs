@@ -27,16 +27,19 @@ pub async fn validate_auth_req_param(
     code_challenge: &Option<String>,
     code_challenge_method: &Option<String>,
 ) -> Result<(Client, Option<(HeaderName, HeaderValue)>), ErrorResponse> {
-    // client exists
-    let client = Client::find_maybe_ephemeral(String::from(client_id)).await?;
+    let client = Client::find_maybe_ephemeral(String::from(client_id))
+        .await
+        .map_err(|mut err| {
+            if err.error == ErrorResponseType::NotFound {
+                err.message = format!("Client '{client_id}' does not exist").into();
+            }
+            err
+        })?;
 
-    // allowed origin
     let header = client.get_validated_origin_header(req)?;
 
-    // allowed redirect uris
     client.validate_redirect_uri(redirect_uri)?;
 
-    // code challenge + method
     if client.challenge.is_some() {
         if code_challenge.is_none() {
             return Err(ErrorResponse::new(
