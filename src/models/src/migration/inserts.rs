@@ -147,7 +147,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
             DB::pg_execute(
-                sql_1,
+                sql_2,
                 &[
                     &b.id,
                     &b.enabled,
