@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {purgeStorage, saveCsrfToken} from "$utils/helpers";
+    import {getCsrfToken, purgeStorage, saveCsrfToken} from "$utils/helpers";
     import Button from "$lib5/button/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Main from "$lib5/Main.svelte";
@@ -10,7 +10,7 @@
     import {TPL_CSRF_TOKEN} from "$utils/constants";
     import {useParam} from "$state/param.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
-    import {fetchPost} from "$api/fetch";
+    import {formDataFromObj} from "$api/fetch";
     import {useIsDev} from "$state/is_dev.svelte";
 
     let t = useI18n();
@@ -24,8 +24,6 @@
         state: useParam('state').get(),
     });
 
-    // TODO remove the csrfToken from this component completely after finishing
-    // [#692](https://github.com/sebadob/rauthy/issues/692)
     $effect(() => {
         if (csrfToken) {
             saveCsrfToken(csrfToken);
@@ -38,25 +36,29 @@
         }
     });
 
-    async function handleCancel() {
+    function handleCancel() {
         window.location.replace('/auth/v1');
     }
 
     async function handleLogout() {
         isLoading = true;
+        purgeStorage();
 
         let url = '/auth/v1/oidc/logout';
         if (useIsDev().get()) {
             url = '/auth/v1/dev/logout';
         }
-        let res = await fetchPost(url, logoutData, 'form');
-        purgeStorage();
-        let loc = res.headers.get('location');
-        if (loc) {
-            window.location.replace(loc);
-        } else {
-            await handleCancel();
-        }
+        await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-type': 'application/x-www-form-urlencoded',
+                'x-csrf-token': getCsrfToken(),
+            },
+            body: formDataFromObj(logoutData),
+        });
+
+        // the fetch will return a 302 and redirect automatically on success
+        handleCancel();
     }
 </script>
 
