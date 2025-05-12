@@ -92,3 +92,18 @@ pub const HTML_CALLBACK: &str = r#"<!DOCTYPE html>
 </script>
 </html>
 "#;
+
+pub const HTML_SCIM_DATA: &str = r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SCIM Data</title>
+    <meta http-equiv="refresh" content="2">
+</head>
+<body>
+<p>This page will refresh every 2 seconds.</p>
+<div>{{ USERS }}</div>
+<div>{{ GROUPS }}</div>
+</body>
+</html>
+"#;

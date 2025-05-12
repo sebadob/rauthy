@@ -11,7 +11,8 @@ use tracing_subscriber::FmtSubscriber;
 
 mod config;
 mod routes;
-pub mod templates;
+mod scim;
+mod templates;
 
 // I often use something like DEV_MODE to make local dev easier in certain places and really
 // secure in production. In a real app, you would read this value in from a config or env.
@@ -60,6 +61,7 @@ async fn main() -> anyhow::Result<()> {
         // If set to None, the client will be treated as a public client and not provide any
         // secret to the /token endpoint after the callback. Set a secret for confidential clients.
         secret: None,
+        scim_token: "123SuperSafeSCIM".to_string(),
     };
 
     // The redirect_uri here must match the URI of this application, where we accept and handle
@@ -75,7 +77,32 @@ async fn main() -> anyhow::Result<()> {
         .route("/callback", get(routes::get_callback))
         .route("/logout", post(routes::post_logout))
         .route("/protected", get(routes::get_protected))
+        .nest(
+            "/scim/v2",
+            Router::new()
+                .route(
+                    "/Users",
+                    get(scim::users::get_users).post(scim::users::post_user),
+                )
+                .route(
+                    "/Users/{id}",
+                    get(scim::users::get_user)
+                        .put(scim::users::put_user)
+                        .delete(scim::users::delete_user),
+                )
+                .route(
+                    "/Groups",
+                    get(scim::groups::get_groups).post(scim::groups::post_group),
+                )
+                .route(
+                    "/Groups/{id}",
+                    get(scim::groups::get_group)
+                        .put(scim::groups::put_group)
+                        .delete(scim::groups::delete_group),
+                ),
+        )
         .route("/session", get(routes::get_session))
+        .route("/data", get(scim::get_data))
         // in production, you should add middlewares here with safe default resposne headers
         .with_state(Arc::new(config));
 
