@@ -45,7 +45,7 @@ test test="":
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    cargo test {{ test }}
+    cargo test --features scim {{ test }}
     echo All tests successful
 
 # builds the code

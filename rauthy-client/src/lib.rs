@@ -50,6 +50,9 @@ pub mod token_set;
 
 pub mod rauthy_error;
 
+#[cfg(feature = "scim")]
+pub mod scim;
+
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const B64_URL_SAFE_NO_PAD: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
