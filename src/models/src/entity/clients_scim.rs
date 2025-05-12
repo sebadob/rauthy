@@ -260,7 +260,7 @@ impl ClientScim {
                 let err = res.json::<ScimError>().await?;
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Scim,
-                    format!("SCIM GET /Groups errior: {:?}", err),
+                    format!("SCIM GET /Groups error: {:?}", err),
                 ));
             }
 

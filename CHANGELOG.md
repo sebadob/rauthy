@@ -6,7 +6,7 @@
 
 - `v0.29.2`s fix for the HTTP 302 instead of 200 on `/logout` broke the logout from the UI without additional
   `id_token_hint`.
-  [#93ß](https://github.com/sebadob/rauthy/pull/930)
+  [#930](https://github.com/sebadob/rauthy/pull/930)
 - Form validation for Upstream Auth Provider config did not set some fields to required under certain conditions and
   would therefore return the backend validation error instead of a nicer way of handling it.
   [#931](https://github.com/sebadob/rauthy/pull/931)
