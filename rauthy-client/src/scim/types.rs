@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::collections::HashMap;
 
 pub static SCIM_SCHEMA_ERROR: &str = "urn:ietf:params:scim:api:messages:2.0:Error";
 pub static SCIM_SCHEMA_GROUP: &str = "urn:ietf:params:scim:schemas:core:2.0:Group";
@@ -106,6 +107,8 @@ pub struct ScimUser {
     pub groups: Option<Vec<ScimGroupValue>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub roles: Option<Vec<ScimValue>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 impl Default for ScimUser {
@@ -126,6 +129,7 @@ impl Default for ScimUser {
             addresses: None,
             groups: None,
             roles: None,
+            custom: None,
         }
     }
 }

@@ -558,7 +558,7 @@ impl TokenSet {
             if diff < 1 {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
-                    "User has expired".to_string(),
+                    "User has expired",
                 ));
             }
 

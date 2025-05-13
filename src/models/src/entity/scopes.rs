@@ -216,7 +216,22 @@ VALUES ($1, $2, $3, $4)"#,
         Ok(res)
     }
 
-    // Updates a scope
+    pub async fn find_with_mapping(attr_name: &str) -> Result<Vec<Self>, ErrorResponse> {
+        Ok(Scope::find_all()
+            .await?
+            .into_iter()
+            .filter(|s| {
+                if !Scope::is_custom(&s.name) {
+                    false
+                } else {
+                    let access = s.attr_include_access.as_deref().unwrap_or_default();
+                    let id = s.attr_include_id.as_deref().unwrap_or_default();
+                    access.contains(attr_name) || id.contains(attr_name)
+                }
+            })
+            .collect::<Vec<_>>())
+    }
+
     pub async fn update(
         data: &web::Data<AppState>,
         id: &str,
@@ -410,6 +425,7 @@ impl Scope {
     // non-custom scopes.
     /// Note: `groups` is not a default scope, but it will be handled like one for performance
     /// and efficiency reasons.
+    #[inline]
     pub fn extract_custom(scopes: &str) -> HashSet<&str> {
         let mut res = HashSet::new();
         for s in scopes.split(' ') {
@@ -425,7 +441,12 @@ impl Scope {
     /// and efficiency reasons.
     #[inline]
     pub fn is_custom(scope: &str) -> bool {
-        scope != "openid" && scope != "profile" && scope != "email" && scope != "groups"
+        scope != "address"
+            && scope != "email"
+            && scope != "groups"
+            && scope != "openid"
+            && scope != "phone"
+            && scope != "profile"
     }
 }
 

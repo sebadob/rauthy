@@ -13,8 +13,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashSet;
-
+use std::collections::{HashMap, HashSet};
 use utoipa::ToSchema;
 
 // Additional custom attributes for users. These can be set for every user and then mapped to a
@@ -479,6 +478,53 @@ impl UserAttrValueEntity {
         client.put(Cache::User, idx, &res, CACHE_TTL_USER).await?;
 
         Ok(res)
+    }
+
+    #[inline]
+    pub async fn find_key_value_by_scope(
+        scopes: &str,
+        user_id: String,
+    ) -> Result<Option<HashMap<String, serde_json::Value>>, ErrorResponse> {
+        let values = Self::find_for_user(&user_id).await?;
+        if values.is_empty() {
+            return Ok(None);
+        }
+
+        let scopes = Scope::find_all()
+            .await?
+            .into_iter()
+            .filter_map(|s| {
+                if Scope::is_custom(&s.name)
+                    && scopes.contains(&s.name)
+                    && s.attr_include_access.is_some()
+                    || s.attr_include_id.is_some()
+                {
+                    let mut incl = s.attr_include_access.unwrap_or_default();
+                    incl.push_str(&s.attr_include_id.unwrap_or_default());
+                    Some(incl)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut res = HashMap::with_capacity(values.len());
+        for value in values {
+            for scope in &scopes {
+                if scope.contains(&value.key) {
+                    if let Ok(json) = serde_json::from_slice(value.value.as_slice()) {
+                        res.insert(value.key, json);
+                    }
+                    break;
+                }
+            }
+        }
+
+        if res.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(res))
+        }
     }
 
     pub async fn update_for_user(
