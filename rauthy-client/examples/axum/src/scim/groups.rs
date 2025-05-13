@@ -1,11 +1,13 @@
+use crate::scim::users::USERS;
 use axum::extract::Path;
 use rauthy_client::scim::types::{
-    ScimError, ScimFilterBy, ScimGroup, ScimGroupMember, ScimListQuery, ScimListResponse,
-    ScimPatchOp, ScimResource,
+    ScimError, ScimFilterBy, ScimGroup, ScimGroupMember, ScimGroupValue, ScimListQuery,
+    ScimListResponse, ScimPatchOp, ScimResource,
 };
 use rauthy_client::secure_random;
 use std::sync::LazyLock;
 use tokio::sync::RwLock;
+use tracing::info;
 
 // Very simple group storage - DO NOT do it like that in production, we just want to keep it simple.
 pub static GROUPS: LazyLock<RwLock<Vec<ScimGroup>>> = LazyLock::new(|| RwLock::new(Vec::new()));
@@ -36,6 +38,7 @@ pub async fn get_groups(query: ScimListQuery) -> Result<ScimListResponse, ScimEr
 }
 
 pub async fn post_group(group: ScimGroup) -> Result<ScimGroup, ScimError> {
+    info!("Create group {:?}", group);
     save_group(group).await
 }
 
@@ -51,22 +54,25 @@ pub async fn get_group(Path(id): Path<String>) -> Result<ScimGroup, ScimError> {
     }
 }
 
-pub async fn put_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Result<(), ScimError> {
+pub async fn patch_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Result<(), ScimError> {
     for op in patch_op.operations {
         // PatchOps can become very complex and super annoying to work with, if you have a
         // stricly typed language. This example only shows the ones that Rauthy actually sends.
         // You get the least amount of boilerplate with this way of doing it.
 
         if let Ok(users) = op.try_as_add_member() {
+            info!("Add users to group {}: {:?}", id, users);
             // Add users to a group
+            let mut group_name = None;
             for group in GROUPS.write().await.iter_mut() {
                 if group.id.as_deref() == Some(&id) {
                     if group.members.is_none() {
                         group.members = Some(Vec::with_capacity(users.len()));
                     }
+                    group_name = Some(group.display_name.clone());
                     let members = group.members.as_mut().unwrap();
 
-                    for user in users {
+                    for user in &users {
                         members.push(ScimGroupMember {
                             value: user.user_id.to_string(),
                             display: Some(user.user_email.to_string()),
@@ -76,7 +82,29 @@ pub async fn put_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Result<
                     break;
                 }
             }
+
+            if let Some(group_name) = group_name {
+                let user_ids = users.iter().map(|u| u.user_id).collect::<Vec<_>>();
+
+                for user in USERS.write().await.iter_mut() {
+                    if user_ids.contains(&user.id.as_deref().unwrap_or_default()) {
+                        if user.groups.is_none() {
+                            user.groups = Some(Vec::new());
+                        }
+                        user.groups.as_mut().unwrap().push(ScimGroupValue {
+                            value: id.clone(),
+                            _ref: None, // Rauthy does not care about `ref`
+                            display: Some(group_name.clone()),
+                        })
+                    }
+                }
+            }
         } else if let Ok(replace) = op.try_as_replace_name() {
+            info!(
+                "Update group name from to {} for id: {}",
+                replace.group_name, id
+            );
+
             // Update / Replace the group name / externalId
             for group in GROUPS.write().await.iter_mut() {
                 if group.id.as_deref() == Some(&id) {
@@ -85,7 +113,21 @@ pub async fn put_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Result<
                     break;
                 }
             }
+
+            for user in USERS.write().await.iter_mut() {
+                if user.groups.is_none() {
+                    continue;
+                }
+                for group in user.groups.as_mut().unwrap().iter_mut() {
+                    if group.value == id {
+                        group.display = Some(replace.group_name.to_string());
+                        break;
+                    }
+                }
+            }
         } else if let Ok(users) = op.try_as_remove_member() {
+            info!("Remove users from group {}: {:?}", id, users);
+
             // Remove users from group
             for group in GROUPS.write().await.iter_mut() {
                 if group.id.as_deref() == Some(&id) {
@@ -93,10 +135,20 @@ pub async fn put_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Result<
                         return Ok(());
                     }
 
-                    let users = users.into_iter().map(|u| u.user_id).collect::<Vec<_>>();
+                    let users = users.iter().map(|u| u.user_id).collect::<Vec<_>>();
                     let members = group.members.as_mut().unwrap();
                     members.retain(|u| !users.contains(&u.value.as_str()));
                     break;
+                }
+            }
+
+            let user_ids = users.iter().map(|u| u.user_id).collect::<Vec<_>>();
+            for user in USERS.write().await.iter_mut() {
+                if user_ids.contains(&user.id.as_deref().unwrap_or_default()) {
+                    if user.groups.is_none() {
+                        continue;
+                    }
+                    user.groups.as_mut().unwrap().retain(|g| g.value != id);
                 }
             }
         } else {
@@ -108,10 +160,20 @@ pub async fn put_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Result<
 }
 
 pub async fn delete_group(Path(id): Path<String>) -> Result<(), ScimError> {
+    info!("Delete group {:?}", id);
+
     GROUPS
         .write()
         .await
         .retain(|g| g.id.as_deref() != Some(&id));
+
+    for user in USERS.write().await.iter_mut() {
+        if user.groups.is_none() {
+            continue;
+        }
+        user.groups.as_mut().unwrap().retain(|g| g.value != id);
+    }
+
     Ok(())
 }
 

@@ -97,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
                 .route(
                     "/Groups/{id}",
                     get(scim::groups::get_group)
-                        .put(scim::groups::put_group)
+                        .patch(scim::groups::patch_group)
                         .delete(scim::groups::delete_group),
                 ),
         )

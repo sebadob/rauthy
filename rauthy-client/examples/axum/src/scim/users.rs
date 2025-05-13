@@ -5,6 +5,7 @@ use rauthy_client::scim::types::{
 use rauthy_client::secure_random;
 use std::sync::LazyLock;
 use tokio::sync::RwLock;
+use tracing::info;
 
 // Very simple user storage - DO NOT do it like that in production, we just want to keep it simple.
 pub static USERS: LazyLock<RwLock<Vec<ScimUser>>> = LazyLock::new(|| RwLock::new(Vec::new()));
@@ -35,6 +36,7 @@ pub async fn get_users(query: ScimListQuery) -> Result<ScimListResponse, ScimErr
 }
 
 pub async fn post_user(user: ScimUser) -> Result<ScimUser, ScimError> {
+    info!("Create user {:?}", user);
     save_user(user).await
 }
 
@@ -51,6 +53,8 @@ pub async fn get_user(Path(id): Path<String>) -> Result<ScimUser, ScimError> {
 }
 
 pub async fn put_user(Path(id): Path<String>, mut user: ScimUser) -> Result<ScimUser, ScimError> {
+    info!("Update user {}: {:?}", id, user);
+
     // just overwrite the users id so we can re-use our simple logic
     user.id = Some(id);
     save_user(user).await
