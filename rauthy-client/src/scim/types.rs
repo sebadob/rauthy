@@ -357,13 +357,13 @@ pub enum ScimOp {
 #[derive(Debug, Deserialize)]
 pub struct ScimPatchOperations {
     pub op: ScimOp,
-    pub path: Cow<'static, str>,
+    pub path: Option<String>,
     pub value: serde_json::Value,
 }
 
 impl ScimPatchOperations {
     pub fn try_as_add_member(&self) -> Result<Vec<ScimOpAddMember>, ScimError> {
-        if self.op != ScimOp::Add || self.path.as_ref() != "members" {
+        if self.op != ScimOp::Add || self.path.as_deref() != Some("members") {
             return Err(ScimError::new(
                 400,
                 Some("Invalid input for ScimOp::Add".into()),
@@ -433,7 +433,7 @@ impl ScimPatchOperations {
     }
 
     pub fn try_as_remove_member(&self) -> Result<Vec<ScimOpRemoveMember>, ScimError> {
-        if self.op != ScimOp::Remove || self.path.as_ref() != "members" {
+        if self.op != ScimOp::Remove || self.path.as_deref() != Some("members") {
             return Err(ScimError::new(
                 400,
                 Some("Invalid input for ScimOp::Remove".into()),
@@ -506,5 +506,32 @@ mod tests {
             count: None,
         };
         assert_eq!(q.filter_by(), ScimFilterBy::UserName("Alfred"));
+    }
+
+    #[test]
+    fn deserialize_patch_op() {
+        let s = r#"
+        {
+          "schemas": [
+            "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+          ],
+          "Operations": [
+            {
+              "op": "add",
+              "path": "members",
+              "value": [
+                {
+                  "value": "BrbGMJJ9mcJnB7YyZVp0tbAtYlLXShZS",
+                  "display": "admin@localhost"
+                }
+              ]
+            }
+          ]
+        }"#;
+
+        let op: ScimPatchOp = serde_json::from_str(s).unwrap();
+        println!("{:?}", op);
+
+        assert_eq!(1, 2);
     }
 }

@@ -2,7 +2,7 @@ use crate::provider::SCIM_TOKEN;
 use crate::scim::types::ScimError;
 use http::header::{AUTHORIZATION, CONTENT_TYPE};
 use http::HeaderMap;
-use tracing::{debug, error};
+use tracing::error;
 
 #[cfg(feature = "axum")]
 pub mod axum;
@@ -21,7 +21,7 @@ fn is_content_type_scim(headers: &HeaderMap) -> Result<(), ScimError> {
     if CONTENT_TYPE_SCIM == ct {
         Ok(())
     } else {
-        debug!("SCIM request with invalid Content-Type: {}", ct);
+        error!("SCIM request with invalid Content-Type: {}", ct);
         Err(ScimError::new(400, Some("Invalid Content-Type".into())))
     }
 }

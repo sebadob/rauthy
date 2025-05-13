@@ -8,6 +8,7 @@ use axum::response::IntoResponse;
 use axum::response::Response;
 use http::header::CONTENT_TYPE;
 use http::request::Parts;
+use tracing::error;
 
 impl IntoResponse for ScimError {
     #[inline]
@@ -79,10 +80,13 @@ where
                     ))
                 }
             }
-            Err(err) => Err(ScimError::new(
-                400,
-                Some(format!("Cannot extract ScimUser from request body: {:?}", err).into()),
-            )),
+            Err(err) => {
+                error!("Cannot extract ScimUser from request body: {:?}", err);
+                Err(ScimError::new(
+                    400,
+                    Some(format!("Cannot extract ScimUser from request body: {:?}", err).into()),
+                ))
+            }
         }
     }
 }
@@ -109,10 +113,13 @@ where
                     ))
                 }
             }
-            Err(err) => Err(ScimError::new(
-                400,
-                Some(format!("Cannot extract ScimGroup from request body: {:?}", err).into()),
-            )),
+            Err(err) => {
+                error!("Cannot extract ScimGroup from request body: {:?}", err);
+                Err(ScimError::new(
+                    400,
+                    Some(format!("Cannot extract ScimGroup from request body: {:?}", err).into()),
+                ))
+            }
         }
     }
 }
@@ -125,6 +132,8 @@ where
 
     #[inline]
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+        println!("in from request for ScimPatchOp");
+
         validate_scim_token(req.headers())?;
         is_content_type_scim(req.headers())?;
 
@@ -139,10 +148,13 @@ where
                     ))
                 }
             }
-            Err(err) => Err(ScimError::new(
-                400,
-                Some(format!("Cannot extract ScimPatchOp from request body: {:?}", err).into()),
-            )),
+            Err(err) => {
+                error!("Cannot extract ScimPatchOp from request body: {:?}", err);
+                Err(ScimError::new(
+                    400,
+                    Some(format!("Cannot extract ScimPatchOp from request body: {:?}", err).into()),
+                ))
+            }
         }
     }
 }
