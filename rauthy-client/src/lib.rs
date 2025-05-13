@@ -11,8 +11,16 @@
 //!
 //! # Features
 //!
-//! - `actix-web` will enable actix-web specific extractors and api
-//! - `axum` will enable axum specific extractors and api
+//! - `actix-web` enables actix-web specific extractors and api
+//! - `axum` enables axum specific extractors and api
+//! - `backchannel-logout` adds `LogoutToken` + validation functions for OIDC Backchannel Logout
+//! - `device-code` adds everything oyu need to the device code flow. This will most probably be
+//!   used without default features.
+//! - `qrcode` brings QR Code geneation in combination with the `device-code` feature
+//! - `scim` adds types and helpers to implement the client side of SCIM v2 in a Rauthy-compatible
+//!   way
+//! - `userinfo` adds additional types and helpers to easily fetch the `/userinfo` endpoint and
+//!   actively validate against it.
 
 use crate::provider::OidcProvider;
 use base64::{engine, engine::general_purpose, Engine as _};
@@ -49,6 +57,10 @@ pub mod provider;
 pub mod token_set;
 
 pub mod rauthy_error;
+
+/// SCIM v2 types for full compatibility with Rauthy
+#[cfg(feature = "scim")]
+pub mod scim;
 
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 

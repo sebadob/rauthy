@@ -63,7 +63,7 @@ pub struct ScimValue {
 }
 
 /// A SCIM v2 User - values that Rauthy does not support are not added at all.
-/// Some implementations like e.g. aws have the follwoing mandatory values:
+/// Some implementations like e.g. aws have the following mandatory values:
 ///   - `user_name`
 ///   - `name.given_name`
 ///   - `name.family_name`

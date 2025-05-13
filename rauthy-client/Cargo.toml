@@ -11,11 +11,14 @@ description = "rauthy-client - Client for the Rauthy OIDC IAM project"
 readme = "README.md"
 repository = "https://github.com/sebadob/rauthy/tree/main/rauthy-client"
 
+[package.metadata.docs.rs]
+features = ["backchannel-logout", "device-code", "scim"]
+rustdoc-args = ["--features backchannel-logout,device-code,scim"]
+
 [features]
 default = []
 actix-web = [
     "dep:actix-web",
-    "dep:http",
     # minimal versions
     "dep:actix-macros",
 ]
@@ -26,6 +29,7 @@ axum = [
 backchannel-logout = []
 device-code = []
 qrcode = ["device-code", "dep:qrcode"]
+scim = []
 userinfo = []
 
 [dependencies]
@@ -35,6 +39,7 @@ bincode = { version = "2", default-features = false, features = ["std", "serde"]
 cached = { version = "0.55.1", features = [] }
 chacha20poly1305 = { version = "0.10.1", features = ["std"] }
 chrono = { version = "0.4.31", default-features = false, features = ["clock", "serde", "std"] }
+http = "1"
 jwt-simple = { version = "0.12.6", default-features = false, features = ["pure-rust"] }
 rand = "0.9"
 reqwest = { version = "0.12.12", default-features = false, features = [
@@ -49,7 +54,6 @@ tracing = "0.1.40"
 
 # actix-web
 actix-web = { version = "4.4", optional = true, features = [] }
-http = { version = "1.0.0", optional = true }
 
 # axum
 axum = { version = "0.8", optional = true, features = [] }

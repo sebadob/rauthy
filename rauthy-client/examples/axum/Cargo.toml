@@ -6,12 +6,13 @@ authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
 
 [dependencies]
-rauthy-client = { path = "../..", features = ["axum", "backchannel-logout", "userinfo"] }
+rauthy-client = { path = "../..", features = ["axum", "backchannel-logout", "scim", "userinfo"] }
 
 anyhow = "1.0.75"
 axum = { version = "0.8.1", features = ["http2"] }
 axum-extra = { version = "0.10.0", features = ["cookie"] }
 dotenvy = "0.15.7"
+serde_json = "1.0.140"
 tokio = { version = "1.43.1", features = ["full"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["tracing"] }

@@ -25,6 +25,9 @@ pub struct RauthyConfig {
     /// If set to None, the client will be treated as a public client and not provide any
     /// secret to the /token endpoint after the callback. Set a secret for confidential clients.
     pub secret: Option<String>,
+    /// The Bearer token used for all SCIM operations.
+    #[cfg(feature = "scim")]
+    pub scim_token: String,
 }
 
 /// The claim selector which decides how a claim should be evaluated, based on the roles and groups.

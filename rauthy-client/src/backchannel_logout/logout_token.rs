@@ -14,7 +14,7 @@ static LOGOUT_TOKEN_ALLOWED_LIFETIME: u8 = 120;
 static LOGOUT_TOKEN_ALLOW_CLOCK_SKEW: u8 = 5;
 
 /// Logout Token for OIDC backchannel logout specified in
-/// https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken
+/// <https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken>
 #[derive(Debug, Serialize, Deserialize)]
 struct LogoutTokenRaw {
     // default claims
@@ -47,7 +47,7 @@ pub struct LogoutToken {
 
 impl LogoutToken {
     /// Parse and validate the token as specified in
-    /// https://openid.net/specs/openid-connect-backchannel-1_0.html#Validation
+    /// <https://openid.net/specs/openid-connect-backchannel-1_0.html#Validation>
     pub async fn from_str_validated(logout_token: &str) -> Result<Self, RauthyError> {
         let (header, lt_raw) = LogoutTokenRaw::build_from_str(logout_token)?;
         let kid = lt_raw.validate_claims(header)?;

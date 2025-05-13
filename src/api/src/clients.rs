@@ -303,11 +303,15 @@ pub async fn put_clients(
         debug!("scim needs sync: {:?}", needs_sync);
         if needs_sync {
             // We want to sync the groups synchronous to catch possible config errors early.
-            // The user sync however can take a very long time depending on he amount of users,
+            // The user sync however can take a very long time depending on the amount of users,
             // so it will be pushed into the background.
-            scim.sync_groups().await?;
+            let groups = if scim.sync_groups {
+                scim.sync_groups().await?;
+                Group::find_all().await?
+            } else {
+                Vec::default()
+            };
 
-            let groups = Group::find_all().await?;
             task::spawn(async move {
                 let mut groups_remote = HashMap::with_capacity(groups.len());
                 if let Err(err) = scim.sync_users(None, &groups, &mut groups_remote).await {

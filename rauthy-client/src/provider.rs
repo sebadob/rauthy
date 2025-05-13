@@ -11,6 +11,9 @@ use std::time::Duration;
 pub(crate) static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 pub(crate) static OIDC_CONFIG: OnceLock<OidcProviderConfig> = OnceLock::new();
 
+#[cfg(feature = "scim")]
+pub(crate) static SCIM_TOKEN: OnceLock<String> = OnceLock::new();
+
 #[derive(Debug)]
 pub(crate) struct OidcProviderConfig {
     pub auth_url_base: String,
@@ -122,6 +125,13 @@ impl OidcProvider {
         config: RauthyConfig,
         redirect_uri: String,
     ) -> Result<(), RauthyError> {
+        #[cfg(feature = "scim")]
+        SCIM_TOKEN.set(config.scim_token).map_err(|_| {
+            RauthyError::Init(
+                "OidcProvider::setup_from_config() must only be called once at startup",
+            )
+        })?;
+
         let scope = config.scope.join("+");
         let config = OidcProviderConfig::build_from_values(
             redirect_uri,
@@ -136,9 +146,7 @@ impl OidcProvider {
         )
         .await?;
 
-        OIDC_CONFIG.set(config).map_err(|_| {
-            RauthyError::Init("OidcProvider::setup_from_config must only be called once")
-        })?;
+        OIDC_CONFIG.set(config).unwrap();
 
         Ok(())
     }

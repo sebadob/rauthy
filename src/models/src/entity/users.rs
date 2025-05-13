@@ -635,11 +635,6 @@ LIMIT $2"#;
                 .query_raw(sql, params!(last_created_ts, limit))
                 .await?;
             for mut row in rows {
-                let email_verified: bool = row.get("email_verified");
-                if !email_verified {
-                    continue;
-                }
-
                 let user = Self {
                     id: row.get("user_id"),
                     email: row.get("email"),
@@ -649,7 +644,7 @@ LIMIT $2"#;
                     roles: row.get("roles"),
                     groups: row.get("groups"),
                     enabled: row.get("enabled"),
-                    email_verified: true,
+                    email_verified: row.get("email_verified"),
                     password_expires: None,
                     created_at: row.get("created_at"),
                     last_login: None,
@@ -677,11 +672,6 @@ LIMIT $2"#;
             let rows = DB::pg_query_rows(sql, &[&last_created_ts, &(limit as i32)], limit as usize)
                 .await?;
             for row in rows {
-                let email_verified: bool = row.get("email_verified");
-                if !email_verified {
-                    continue;
-                }
-
                 let user = Self {
                     id: row.get("user_id"),
                     email: row.get("email"),
@@ -691,7 +681,7 @@ LIMIT $2"#;
                     roles: row.get("roles"),
                     groups: row.get("groups"),
                     enabled: row.get("enabled"),
-                    email_verified: true,
+                    email_verified: row.get("email_verified"),
                     password_expires: None,
                     created_at: row.get("created_at"),
                     last_login: None,
