@@ -471,6 +471,7 @@ impl ClientScim {
             display_name: group.name,
             ..Default::default()
         };
+        debug!("Creating SCIM group on remote with payload: {:?}", payload);
         let json = serde_json::to_string(&payload)?;
         let url = format!("{}/Groups", self.base_uri);
         let res = HTTP_CLIENT
@@ -1109,29 +1110,35 @@ impl ClientScim {
             while let Some(expected_name) = user_groups_local.pop() {
                 debug!(
                     "Checking for local group '{}' in remote groups: {:?}",
-                    expected_name, user_groups_local
+                    expected_name, user_groups_remote
                 );
                 let pos = user_groups_remote
                     .iter()
                     .position(|g| g.display.as_deref() == Some(expected_name.as_str()));
                 if let Some(pos) = pos {
-                    debug!("Found matching local - remote group: {}", expected_name);
+                    debug!(
+                        "Found matching local - remote group: {} - nothing left to do",
+                        expected_name
+                    );
                     user_groups_remote.swap_remove(pos);
                     continue;
                 }
 
                 let group_remote = match groups_remote.get(&expected_name) {
                     None => {
+                        debug!(
+                            "Remote group {} does not exist yet or has no `externalId` mapping",
+                            expected_name
+                        );
                         // Will happen, if the ScimGroup is needed for the first time, since the map
                         // will be empty at first. We need to fetch or create it and make sure it exists
                         // afterward.
                         let group_local = groups_local.iter().find(|g| g.name == expected_name);
                         if group_local.is_none() {
-                            let err = format!(
+                            error!(
                                 "Group {} does not exist in local database but is mapped to a user - this should never happen",
                                 expected_name
                             );
-                            error!("{}", err);
                             // do not return, try to execute as many mappings as possible
                             continue;
                         }
@@ -1141,20 +1148,17 @@ impl ClientScim {
                             remote = self.create_group(g.clone()).await?;
                         }
                         if remote.is_none() {
-                            let err = format!(
+                            error!(
                                 "SCIM group {} does not exist on Service Provider even after creation - this should never happen",
                                 expected_name
                             );
-                            error!("{}", err);
                             // do not return, try to execute as many mappings as possible
                             continue;
                         }
 
                         let remote = remote.unwrap();
                         groups_remote.insert(expected_name.clone(), remote);
-                        groups_remote
-                            .get(&expected_name)
-                            .expect("The just inserted group to exist")
+                        groups_remote.get(&expected_name).unwrap()
                     }
                     Some(g) => g,
                 };
@@ -1169,34 +1173,6 @@ impl ClientScim {
                 }
                 let url = format!("{}/Groups/{}", self.base_uri, remote_group_id);
 
-                // create the user - group mapping
-                // let mut value = HashMap::with_capacity(2);
-                // value.insert(
-                //     "value".into(),
-                //     serde_json::Value::String(user_id_remote.clone()),
-                // );
-                // value.insert(
-                //     "display".into(),
-                //     serde_json::Value::String(user_email.clone()),
-                // );
-                // let payload = ScimPatchOpWithPath {
-                //     operations: vec![ScimPatchOperationsWithPath {
-                //         op: ScimOp::Add,
-                //         path: "members".into(),
-                //         value: vec![value],
-                //     }],
-                //     ..Default::default()
-                // };
-                // let json = serde_json::to_string(&payload)?;
-                // debug!(
-                //     "Serialized payload for ScimPatchOpWithPath with add:\n{}\n",
-                //     json
-                // );
-
-                //                 let pre = r#"{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-                // "Operations":[{"op":"add","path":"members","value":[{"value":"9eb2bd20-c70c-48fb-a0fb-ff1daccfa23f",
-                // "display":"test_admin@localhost"}]}]}"#;
-
                 // Same situation as for group patching. This "ugly" way of json creation is a pretty
                 // big efficiency gain, and we avoid many unnecessary allocations, since we have a
                 // static json that is the same each time and we know in advance.
@@ -1204,6 +1180,7 @@ impl ClientScim {
                 let json_2 = "\",\"display\":\"";
                 let json_3 = "\"}]}]}";
                 let json = format!("{json_1}{}{json_2}{}{json_3}", user_id_remote, user_email);
+                debug!("Sending PatchOp for Group {}:\n{}", url, json);
 
                 let res = HTTP_CLIENT
                     .patch(url)
@@ -1214,6 +1191,7 @@ impl ClientScim {
                     .send()
                     .await?;
                 if !res.status().is_success() {
+                    debug!("SCIM PatchOp Error Response: {:?}", res);
                     let err = res.json::<ScimError>().await?;
                     error!(
                         "Error adding Group assignment for SCIM client {}: {:?}",
@@ -1228,28 +1206,6 @@ impl ClientScim {
         // it and remove the mappings.
         debug!("Left-Over user_groups_remote: {:?}", user_groups_remote);
         for group_remote in user_groups_remote {
-            // let mut value = HashMap::with_capacity(1);
-            // value.insert(
-            //     "value".into(),
-            //     serde_json::Value::String(user_id_remote.clone()),
-            // );
-            // let payload = ScimPatchOpWithPath {
-            //     operations: vec![ScimPatchOperationsWithPath {
-            //         op: ScimOp::Remove,
-            //         path: "members".into(),
-            //         value: vec![value],
-            //     }],
-            //     ..Default::default()
-            // };
-            // let json = serde_json::to_string(&payload)?;
-            // debug!(
-            //     "Serialized payload for ScimPatchOpWithPath with remove:\n{}\n",
-            //     json
-            // );
-
-            //             let pre = r#"{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-            // "Operations":[{"op":"remove","path":"members","value":[{"value":"9eb2bd20-c70c-48fb-a0fb-ff1daccfa23f"}]}]}"#;
-
             let json_1 = "{\"schemas\":[\"urn:ietf:params:scim:api:messages:2.0:PatchOp\"],\"Operations\":[{\"op\":\"remove\",\"path\":\"members\",\"value\":[{\"value\":\"";
             let json_2 = "\"}]}]}";
             let json = format!("{json_1}{}{json_2}", user_id_remote);
