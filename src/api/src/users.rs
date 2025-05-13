@@ -29,6 +29,7 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
+use rauthy_models::entity::groups::Group;
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPicture};
 use rauthy_models::entity::pow::PowEntity;
@@ -48,6 +49,7 @@ use rauthy_service::oidc::helpers::get_bearer_token_from_header;
 use rauthy_service::oidc::{logout, validation};
 use rauthy_service::password_reset;
 use spow::pow::Pow;
+use std::collections::HashMap;
 use std::env;
 use std::sync::LazyLock;
 use tokio::task;
@@ -234,16 +236,12 @@ pub async fn post_cust_attr(
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Create)?;
     payload.validate()?;
 
-    // No need for SCIM sync's - these attrs are custom and do not exist for SCIM
-
     UserAttrConfigEntity::create(payload)
         .await
         .map(|attr| HttpResponse::Ok().json(attr))
 }
 
 /// Update an additional custom user attribute
-///
-/// The `name` of a custom attribute cannot be updated, only the description.
 #[utoipa::path(
     put,
     path = "/users/attr/{name}",
@@ -264,11 +262,20 @@ pub async fn put_cust_attr(
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)?;
     payload.validate()?;
 
-    // No need for SCIM sync's - these attrs are custom and do not exist for SCIM
+    let entity = UserAttrConfigEntity::update(path.into_inner(), payload).await?;
 
-    UserAttrConfigEntity::update(path.into_inner(), payload)
-        .await
-        .map(|a| HttpResponse::Ok().json(a))
+    let clients = ClientScim::find_with_attr_mapping(&entity.name).await?;
+    let groups = Group::find_all().await?;
+    tokio::spawn(async move {
+        let mut groups_remote = HashMap::with_capacity(groups.len());
+        for scim in clients {
+            if let Err(err) = scim.sync_users(None, &groups, &mut groups_remote).await {
+                error!("{}", err);
+            }
+        }
+    });
+
+    Ok(HttpResponse::Ok().json(entity))
 }
 
 /// Delete an additional custom user attribute
@@ -532,11 +539,23 @@ pub async fn put_user_attr(
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)?;
     payload.validate()?;
 
-    let values = UserAttrValueEntity::update_for_user(&path.into_inner(), payload)
+    let user = User::find(path.into_inner()).await?;
+    let values = UserAttrValueEntity::update_for_user(&user.id, payload)
         .await?
         .drain(..)
         .map(UserAttrValueResponse::from)
         .collect::<Vec<UserAttrValueResponse>>();
+
+    task::spawn(async move {
+        let email = user.email.clone();
+        if let Err(err) = ClientScim::create_update_user(user).await {
+            error!(
+                "Error during SCIM Client user attr update for {}: {:?}",
+                email, err
+            );
+        }
+    });
+
     Ok(HttpResponse::Ok().json(UserAttrValuesResponse { values }))
 }
 

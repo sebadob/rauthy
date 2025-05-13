@@ -1,8 +1,11 @@
 use crate::AddressClaim;
+use crate::entity::user_attr::UserAttrValueEntity;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
+use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::collections::HashMap;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -104,6 +107,10 @@ pub struct ScimUser {
     /// RFC does not specify how this value should look, although it is "expected" to be a String
     #[serde(skip_serializing_if = "Option::is_none")]
     pub roles: Option<Vec<ScimValue>>,
+    /// Rauthy custom attributes for the client scope + user attributes combination.
+    /// Will be ignored by implementations that don't understand them.-
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 impl Default for ScimUser {
@@ -124,6 +131,7 @@ impl Default for ScimUser {
             addresses: None,
             groups: None,
             roles: None,
+            custom: None,
         }
     }
 }
@@ -132,7 +140,11 @@ impl ScimUser {
     /// Respects the `client_scopes` as much as possible. Some values though are necessary for most
     /// SCIM Service Providers, like `email` and the users' names, even though they should only
     /// be given with the `profile` scope.
-    pub fn from_user_values(user: User, values: UserValues, client_scopes: &str) -> Self {
+    pub async fn from_user_values(
+        user: User,
+        values: UserValues,
+        client_scopes: &str,
+    ) -> Result<Self, ErrorResponse> {
         let roles = user
             .get_roles()
             .iter()
@@ -168,7 +180,10 @@ impl ScimUser {
             None
         };
 
-        Self {
+        let custom =
+            UserAttrValueEntity::find_key_value_by_scope(client_scopes, user.id.clone()).await?;
+
+        Ok(Self {
             schemas: vec!["urn:ietf:params:scim:schemas:core:2.0:User".into()],
             // must be None, set by the service provider
             id: None,
@@ -209,7 +224,8 @@ impl ScimUser {
             // read-only
             groups: None,
             roles: Some(roles),
-        }
+            custom,
+        })
     }
 }
 

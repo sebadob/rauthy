@@ -3,6 +3,7 @@ use crate::entity::clients::Client;
 use crate::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use crate::entity::groups::Group;
 use crate::entity::scim_types::{ScimError, ScimGroup, ScimListResponse, ScimResource, ScimUser};
+use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use cryptr::EncValue;
@@ -155,6 +156,25 @@ ON CONFLICT (client_id) DO UPDATE SET
         } else {
             DB::pg_query(sql, &[], 0).await?
         };
+        Ok(res)
+    }
+
+    pub async fn find_with_attr_mapping(attr_name: &str) -> Result<Vec<Self>, ErrorResponse> {
+        let scopes = Scope::find_with_mapping(attr_name).await?;
+        let clients = Client::find_all().await?;
+        let mut res = Vec::with_capacity(clients.len());
+
+        'outer: for client in clients {
+            for scope in &scopes {
+                if client.scopes.contains(&scope.name)
+                    || client.default_scopes.contains(&scope.name)
+                {
+                    let scim = Self::find(client.id).await?;
+                    res.push(scim);
+                    continue 'outer;
+                }
+            }
+        }
         Ok(res)
     }
 
@@ -899,7 +919,7 @@ impl ClientScim {
         let scopes = format!("{},{}", client.scopes, client.default_scopes);
         let expected_groups = user.get_groups();
 
-        let payload = ScimUser::from_user_values(user, user_values, &scopes);
+        let payload = ScimUser::from_user_values(user, user_values, &scopes).await?;
         match self
             .get_user(
                 payload.external_id.as_ref().unwrap(),

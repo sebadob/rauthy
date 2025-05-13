@@ -126,6 +126,7 @@ async fn save_user(mut user: ScimUser) -> Result<ScimUser, ScimError> {
                 u.addresses = user.addresses;
                 // CAUTION: You MUST NOT upgrade any groups assignments here!
                 u.roles = user.roles;
+                u.custom = user.custom;
 
                 res = Some(u.clone());
                 break;

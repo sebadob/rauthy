@@ -17,16 +17,18 @@ Then you can start the example with `cargo run` and open the UI on `localhost:30
 If you have any other setup, keep in mind that in case of Backchannel Logouts, Rauthy needs to be able to reach
 the client directly.
 
-This example also shows a very simple SCIM implementation. You can test SCIM if you naviagte to
+## SCIM
+
+This example also shows a very simple SCIM implementation. You can test it if you naviagte to
 
 ```
 http://localhost:3000/data
 ```
 
-And then activate SCIM for the `test` client.
+And then activate SCIM for the `test` client via Rauthy's Admin UI.
 
 The `SCIM Base URI` is `http://localhost:3000/scim/v2`. Rauthy will derive all the other endpoints based on this
-URI like defined in the RFC. The bearer token is `123SuperSafeSCIM` as set for the `RauthyConfig` in `main.rs`.
+URI like defined in the RFC. The bearer token is `123SuperSafeSCIM` as set in the `RauthyConfig` in `main.rs`.
 
 The simple test page will automatically refresh every 2 seconds and you should see all User / Group data being updated
 in real-time if you have set everything up correctly.
