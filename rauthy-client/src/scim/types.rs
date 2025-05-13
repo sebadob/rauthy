@@ -168,32 +168,6 @@ pub struct ScimGroupMember {
     pub display: Option<String>,
 }
 
-// #[derive(Debug, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct ScimSearchRequest {
-//     pub schemas: Vec<Cow<'static, str>>,
-//     #[serde(skip_serializing_if = "Option::is_none")]
-//     pub attributes: Option<Vec<String>>,
-//     #[serde(skip_serializing_if = "Option::is_none")]
-//     excluded_attributes: Option<Vec<String>>,
-//     pub filter: String,
-//     pub start_index: u32,
-//     pub count: u32,
-// }
-//
-// impl Default for ScimSearchRequest {
-//     fn default() -> Self {
-//         ScimSearchRequest {
-//             schemas: vec!["urn:ietf:params:scim:api:messages:2.0:SearchRequest".into()],
-//             attributes: None,
-//             excluded_attributes: None,
-//             filter: String::default(),
-//             start_index: 1,
-//             count: 100,
-//         }
-//     }
-// }
-
 #[derive(Debug, PartialEq)]
 pub enum ScimFilterBy<'a> {
     ExternalId(&'a str),
@@ -250,15 +224,6 @@ impl ScimListQuery {
         }
     }
 }
-
-// #[derive(Serialize, Deserialize, Debug)]
-// pub struct ScimSchema {
-//     pub id: String,
-//     pub name: String,
-//     pub description: String,
-//     pub attributes: Vec<Attributes>,
-//     pub meta: Meta,
-// }
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
@@ -327,24 +292,6 @@ impl Default for ScimPatchOp {
         }
     }
 }
-
-//
-// #[derive(Debug, Deserialize)]
-// pub struct ScimPatchOpWithPath {
-//     /// `urn:ietf:params:scim:api:messages:2.0:PatchOp`
-//     pub schemas: Vec<Cow<'static, str>>,
-//     #[serde(rename = "Operations")]
-//     pub operations: Vec<ScimPatchOperationsWithPath>,
-// }
-
-// impl Default for ScimPatchOpWithPath {
-//     fn default() -> Self {
-//         Self {
-//             schemas: vec![SCIM_SCHEMA_PATCH_OP.into()],
-//             operations: Vec::default(),
-//         }
-//     }
-// }
 
 #[derive(Debug, PartialEq, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -506,32 +453,5 @@ mod tests {
             count: None,
         };
         assert_eq!(q.filter_by(), ScimFilterBy::UserName("Alfred"));
-    }
-
-    #[test]
-    fn deserialize_patch_op() {
-        let s = r#"
-        {
-          "schemas": [
-            "urn:ietf:params:scim:api:messages:2.0:PatchOp"
-          ],
-          "Operations": [
-            {
-              "op": "add",
-              "path": "members",
-              "value": [
-                {
-                  "value": "BrbGMJJ9mcJnB7YyZVp0tbAtYlLXShZS",
-                  "display": "admin@localhost"
-                }
-              ]
-            }
-          ]
-        }"#;
-
-        let op: ScimPatchOp = serde_json::from_str(s).unwrap();
-        println!("{:?}", op);
-
-        assert_eq!(1, 2);
     }
 }
