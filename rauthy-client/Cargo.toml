@@ -11,6 +11,10 @@ description = "rauthy-client - Client for the Rauthy OIDC IAM project"
 readme = "README.md"
 repository = "https://github.com/sebadob/rauthy/tree/main/rauthy-client"
 
+[package.metadata.docs.rs]
+features = ["backchannel-logout", "device-code", "scim"]
+rustdoc-args = ["--features backchannel-logout,device-code,scim"]
+
 [features]
 default = []
 actix-web = [

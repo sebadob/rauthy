@@ -36,7 +36,7 @@ pub struct ScimAddress {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub postal_code: Option<String>,
     /// When specified, the value
-    /// MUST be in ISO 3166-1 "alpha-2" code format [ISO3166]; e.g.,
+    /// MUST be in ISO 3166-1 "alpha-2" code format ISO3166; e.g.,
     /// the United States and Sweden are "US" and "SE", respectively.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<String>,

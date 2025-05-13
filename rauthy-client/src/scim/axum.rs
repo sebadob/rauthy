@@ -176,21 +176,3 @@ where
         Ok(params)
     }
 }
-
-// impl<S> FromRequestParts<S> for ScimSearchRequest
-// where
-//     S: Send + Sync,
-// {
-//     type Rejection = ScimError;
-//
-//     #[inline]
-//     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-//         validate_scim_token(&parts.headers)?;
-//
-//         let params = match Query::<ScimSearchRequest>::from_request_parts(parts, state).await {
-//             Ok(params) => params.0,
-//             Err(_) => ScimSearchRequest::default(),
-//         };
-//         Ok(params)
-//     }
-// }
