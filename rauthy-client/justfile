@@ -39,6 +39,7 @@ check: clippy-examples
     cargo minimal-versions check --features axum
     cargo minimal-versions check --features device-code
     cargo minimal-versions check --features userinfo
+    cargo minimal-versions check --features scim,axum
 
 # runs the full set of tests
 test test="":
