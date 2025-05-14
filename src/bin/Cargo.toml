@@ -34,6 +34,9 @@ tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = { workspace = true }
+
 [dev-dependencies]
 rauthy-api-types = { path = "../api_types" }
 

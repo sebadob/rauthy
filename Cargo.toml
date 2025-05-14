@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.29.3"
+version = "0.29.4-20250514-jemalloc"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -108,6 +108,7 @@ serde_urlencoded = "0.7.1"
 spow = { version = "0.6", features = ["server"] }
 strum = { version = "0.27", features = ["derive"] }
 svg-hush = "0.9.4"
+tikv-jemallocator = "0.6"
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "tracing"] }
@@ -122,3 +123,5 @@ webauthn-rs = { version = "0.5", features = [
 ] }
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"
+
+
