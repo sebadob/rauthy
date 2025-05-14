@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.8.0
+
+### OIDC Backchannel Logout
+
+There is a new feature `backchannel-logout` which enables compatibility with Backchannel Logout. You will be able to
+accept and validate `LogoutToken`s and perform a Backchannel Logout.
+The [axum Example](https://github.com/sebadob/rauthy/tree/main/rauthy-client/examples/axum) shows how to use it.
+
+### SCIM
+
+With the feature `scim` enabled, all SCIM-related types are included. The SCIM impl is only partial, but covers every
+case / combination that Rauthy might send to a client. The above
+mentioned [axum Example](https://github.com/sebadob/rauthy/tree/main/rauthy-client/examples/axum) shows an example
+integration.
+
+> Both new implementations (Backchannel Logout / SCIM) also bring API extractors for `axum` out of the box. There are
+> not `actix-web` extractors yet.
+
 ## v0.7.0
 
 ### Breaking
