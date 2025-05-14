@@ -9,7 +9,6 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use utoipa::ToSchema;
 
-// This is used for the token info endpoint
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JwtCommonClaims<'a> {
     pub iat: i64,
@@ -126,11 +125,11 @@ pub struct JwtAccessClaims<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub preferred_username: Option<String>,
+    pub preferred_username: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub roles: Option<Vec<String>>,
+    pub roles: Option<Vec<&'a str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub groups: Option<Vec<String>>,
+    pub groups: Option<Vec<&'a str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cnf: Option<JktClaim>,
     #[serde(skip_serializing_if = "Option::is_none")]
