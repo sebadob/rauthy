@@ -1,5 +1,5 @@
 [package]
-name = "rauthy-service"
+name = "rauthy-jwt"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -9,19 +9,13 @@ license.workspace = true
 rauthy-api-types = { path = "../api_types" }
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
-rauthy-jwt = { path = "../jwt" }
 rauthy-models = { path = "../models" }
 
-actix-web = { workspace = true }
 chrono = { workspace = true }
-cryptr = { workspace = true }
-jwt-simple = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
-reqwest = { workspace = true }
 ring = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
-tokio = { workspace = true }
 utoipa = { workspace = true }

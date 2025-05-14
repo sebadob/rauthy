@@ -3,7 +3,7 @@ use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::users::{
-    NewUserRequest, RequestResetRequest, UserResponse, UserResponseSimple,
+    NewUserRequest, RequestResetRequest, UserResponse, UserResponseSimple, Userinfo,
 };
 use rauthy_common::utils::new_store_id;
 use reqwest::StatusCode;
@@ -173,6 +173,10 @@ async fn test_userinfo() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     assert_eq!(res.status(), 200);
+    let info = res.json::<Userinfo>().await?;
+    assert_eq!(info.sub, "m4PJ3TnyP32LA8hzY23deme3");
+    assert_eq!(info.name, "Admin Init");
+    assert!(info.roles.contains(&"rauthy_admin".to_string()));
 
     Ok(())
 }

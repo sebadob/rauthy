@@ -1,0 +1,262 @@
+use rauthy_api_types::oidc::JktClaim;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_models::entity::users::User;
+use rauthy_models::entity::users_values::UserValues;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fmt::Write;
+use std::fmt::{Display, Formatter};
+use std::str::FromStr;
+use utoipa::ToSchema;
+
+// This is used for the token info endpoint
+#[derive(Debug, Serialize, Deserialize)]
+pub struct JwtCommonClaims<'a> {
+    pub iat: i64,
+    pub nbf: i64,
+    pub exp: i64,
+    pub iss: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jti: Option<&'a str>,
+    pub aud: &'a str,
+    pub sub: &'a str,
+    // pub nonce: Option<&'a str>,
+    pub typ: JwtTokenType,
+    pub azp: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<&'a str>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub preferred_username: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub did: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<JktClaim>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct AddressClaim<'a> {
+    pub formatted: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub street_address: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locality: Option<&'a str>,
+    // pub region: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub postal_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country: Option<&'a str>,
+}
+
+impl AddressClaim<'_> {
+    pub fn try_build<'a>(user: &'a User, values: &'a UserValues) -> Option<AddressClaim<'a>> {
+        let mut slf = AddressClaim {
+            formatted: format!("{}\n", user.email_recipient_name()),
+            street_address: None,
+            locality: None,
+            postal_code: None,
+            country: None,
+        };
+
+        if let Some(street) = &values.street {
+            writeln!(slf.formatted, "{}", street).expect("AddressClaim to build");
+            slf.street_address = Some(street);
+        }
+
+        if let Some(zip) = values.zip {
+            slf.postal_code = Some(zip);
+
+            if let Some(city) = &values.city {
+                writeln!(slf.formatted, "{}, {}", zip, city).expect("AddressClaim to build");
+                slf.locality = Some(city);
+            } else {
+                writeln!(slf.formatted, "{}", zip).expect("AddressClaim to build");
+            }
+        }
+
+        if let Some(country) = &values.country {
+            writeln!(slf.formatted, "{}", country).expect("AddressClaim to build");
+            slf.country = Some(country);
+        }
+
+        if slf.street_address.is_some()
+            || slf.locality.is_some()
+            || slf.postal_code.is_some()
+            || slf.country.is_some()
+        {
+            Some(slf)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> From<&'a rauthy_api_types::oidc::AddressClaim> for AddressClaim<'a> {
+    fn from(value: &rauthy_api_types::oidc::AddressClaim) -> AddressClaim {
+        AddressClaim {
+            formatted: value.formatted.to_string(),
+            street_address: value.street_address.as_deref(),
+            locality: value.locality.as_deref(),
+            postal_code: value.postal_code,
+            country: value.country.as_deref(),
+        }
+    }
+}
+
+// impl From<AddressClaim<'_>> for rauthy_api_types::oidc::AddressClaim {
+//     fn from(value: AddressClaim) -> Self {
+//         Self {
+//             formatted: value.formatted,
+//             street_address: value.street_address,
+//             locality: value.locality,
+//             postal_code: value.postal_code,
+//             country: value.country,
+//         }
+//     }
+// }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct JwtAccessClaims<'a> {
+    #[serde(borrow, flatten)]
+    pub common: JwtCommonClaims<'a>,
+
+    // pub scope: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_origins: Option<Vec<&'a str>>,
+    // user part
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preferred_username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub roles: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub groups: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<JktClaim>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<&'a str, serde_json::Value>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct JwtIdClaims<'a> {
+    #[serde(borrow, flatten)]
+    pub common: JwtCommonClaims<'a>,
+
+    pub amr: Vec<&'a str>,
+    pub auth_time: i64,
+    pub at_hash: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sid: Option<&'a str>,
+    pub preferred_username: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email_verified: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub given_name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub family_name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<AddressClaim<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub birthdate: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub picture: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locale: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<&'a str>,
+    pub roles: Vec<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub groups: Option<Vec<&'a str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<JktClaim>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<&'a str, serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub webid: Option<&'a str>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JwtLogoutClaims<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub typ: Option<JwtTokenType>,
+    pub jti: &'a str,
+    pub events: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sid: Option<&'a str>,
+
+    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
+    // `.is_none()` validation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<&'a str>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JwtRefreshClaims<'a> {
+    pub azp: &'a str,
+    pub typ: JwtTokenType,
+    pub uid: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_time: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<JktClaim>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub did: Option<&'a str>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub enum JwtTokenType {
+    Bearer,
+    DPoP,
+    Id,
+    #[serde(rename = "logout+jwt")]
+    Logout,
+    Refresh,
+}
+
+impl JwtTokenType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Bearer => "Bearer",
+            Self::DPoP => "DPoP",
+            Self::Id => "Id",
+            Self::Logout => "logout+jwt",
+            Self::Refresh => "Refresh",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all(serialize = "lowercase"))]
+pub enum JwtAmrValue {
+    Pwd,
+    Mfa,
+}
+
+impl FromStr for JwtAmrValue {
+    type Err = ErrorResponse;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = match s {
+            "pwd" => Self::Pwd,
+            "mfa" => Self::Mfa,
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Unknown value for 'amr' claim",
+                ));
+            }
+        };
+        Ok(slf)
+    }
+}
+
+impl Display for JwtAmrValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Pwd => write!(f, "pwd"),
+            Self::Mfa => write!(f, "mfa"),
+        }
+    }
+}

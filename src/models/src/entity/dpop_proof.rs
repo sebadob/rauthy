@@ -284,7 +284,8 @@ impl DPoPProof {
         // 6. The JWT signature verifies with the public key contained in the jwk
         // JOSE Header Parameter.
         // let nonce = self.claims.nonce.clone();
-        kp.validate_token_signature(raw_token)
+        let mut buf = Vec::with_capacity(256);
+        kp.validate_token_signature(raw_token, &mut buf)
             .map_err(|err| err.message)?;
 
         // 7. The jwk JOSE Header Parameter does not contain a private key.

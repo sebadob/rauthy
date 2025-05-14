@@ -4037,6 +4037,7 @@ dependencies = [
  "cryptr",
  "css-color",
  "deadpool",
+ "ed25519-compact",
  "hiqlite",
  "image",
  "openssl",
@@ -4044,6 +4045,7 @@ dependencies = [
  "oxiri",
  "reqwest",
  "rio_turtle",
+ "rsa",
  "ruma",
  "rusqlite",
  "s3-simple",
@@ -4089,6 +4091,24 @@ dependencies = [
  "tracing",
  "utoipa",
  "validator",
+]
+
+[[package]]
+name = "rauthy-jwt"
+version = "0.29.4-20250514-jemalloc"
+dependencies = [
+ "chrono",
+ "openssl",
+ "openssl-sys",
+ "rauthy-api-types",
+ "rauthy-common",
+ "rauthy-error",
+ "rauthy-models",
+ "ring",
+ "serde",
+ "serde_json",
+ "tracing",
+ "utoipa",
 ]
 
 [[package]]
@@ -4228,6 +4248,7 @@ dependencies = [
  "rauthy-api-types",
  "rauthy-common",
  "rauthy-error",
+ "rauthy-jwt",
  "rauthy-models",
  "reqwest",
  "ring",

@@ -161,7 +161,8 @@ impl LogoutToken {
                 "`alg` mismatch between token header and fetched JWK",
             ));
         }
-        jwk.validate_token_signature(logout_token)?;
+        let mut buf = Vec::with_capacity(256);
+        jwk.validate_token_signature(logout_token, &mut buf)?;
 
         Ok(slf)
     }

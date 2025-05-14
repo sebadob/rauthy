@@ -9,6 +9,7 @@ license.workspace = true
 rauthy-api-types = { path = "../api_types" }
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
+#rauthy-jwt = { path = "../jwt" }
 rauthy-models = { path = "../models" }
 rauthy-service = { path = "../service" }
 
