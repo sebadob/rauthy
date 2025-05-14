@@ -264,16 +264,18 @@ pub async fn put_cust_attr(
 
     let entity = UserAttrConfigEntity::update(path.into_inner(), payload).await?;
 
-    let clients = ClientScim::find_with_attr_mapping(&entity.name).await?;
-    let groups = Group::find_all().await?;
-    tokio::spawn(async move {
-        let mut groups_remote = HashMap::with_capacity(groups.len());
-        for scim in clients {
-            if let Err(err) = scim.sync_users(None, &groups, &mut groups_remote).await {
-                error!("{}", err);
+    let clients_scim = ClientScim::find_with_attr_mapping(&entity.name).await?;
+    if !clients_scim.is_empty() {
+        let groups = Group::find_all().await?;
+        tokio::spawn(async move {
+            let mut groups_remote = HashMap::with_capacity(groups.len());
+            for scim in clients_scim {
+                if let Err(err) = scim.sync_users(None, &groups, &mut groups_remote).await {
+                    error!("{}", err);
+                }
             }
-        }
-    });
+        });
+    }
 
     Ok(HttpResponse::Ok().json(entity))
 }

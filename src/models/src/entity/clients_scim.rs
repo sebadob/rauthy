@@ -169,8 +169,9 @@ ON CONFLICT (client_id) DO UPDATE SET
                 if client.scopes.contains(&scope.name)
                     || client.default_scopes.contains(&scope.name)
                 {
-                    let scim = Self::find(client.id).await?;
-                    res.push(scim);
+                    if let Some(scim) = Self::find_opt(client.id).await? {
+                        res.push(scim);
+                    }
                     continue 'outer;
                 }
             }
