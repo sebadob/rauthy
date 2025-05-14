@@ -456,6 +456,6 @@ mod tests {
             start_index: None,
             count: None,
         };
-        assert_eq!(q.filter_by(), ScimFilterBy::UserName("Alfred"));
+        assert_eq!(q.filter_by(), ScimFilterBy::DisplayName("Alfred"));
     }
 }
