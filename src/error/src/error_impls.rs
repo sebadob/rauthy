@@ -12,6 +12,8 @@ use cryptr::utils::secure_random_alnum;
 use css_color::ParseColorError;
 use deadpool::managed::{BuildError, PoolError};
 use image::ImageError;
+use openssl::error::ErrorStack;
+use ring::error::{KeyRejected, Unspecified};
 use rio_turtle::TurtleError;
 use rsa::pkcs1::Error;
 use s3_simple::S3Error;
@@ -584,6 +586,36 @@ impl From<ed25519_compact::Error> for ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("ed25519 error: {:?}", value),
+        )
+    }
+}
+
+impl From<openssl::error::ErrorStack> for ErrorResponse {
+    fn from(value: ErrorStack) -> Self {
+        debug!("openssl::error::ErrorStack: {:?}", value);
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("openssl::error::ErrorStack: {:?}", value),
+        )
+    }
+}
+
+impl From<ring::error::KeyRejected> for ErrorResponse {
+    fn from(value: KeyRejected) -> Self {
+        debug!("ring::error::KeyRejected: {:?}", value);
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("ring::error::KeyRejected: {:?}", value),
+        )
+    }
+}
+
+impl From<ring::error::Unspecified> for ErrorResponse {
+    fn from(value: Unspecified) -> Self {
+        debug!("ring::error::Unspecified: {:?}", value);
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("ring::error::Unspecified: {:?}", value),
         )
     }
 }

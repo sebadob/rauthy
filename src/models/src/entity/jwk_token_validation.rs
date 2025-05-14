@@ -1,8 +1,7 @@
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
 use rauthy_common::utils::base64_url_no_pad_decode_buf;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rsa::sha2::{Sha256, Sha384, Sha512};
-use rsa::{Pkcs1v15Sign, RsaPublicKey};
+use ring::digest;
 use tracing::warn;
 
 impl JWKSPublicKey {
@@ -20,38 +19,56 @@ impl JWKSPublicKey {
 
         match self.alg()? {
             JwkKeyPairAlg::RS256 => {
-                if let Ok(rsa_pk) = RsaPublicKey::new(self.n()?, self.e()?) {
-                    let hash = hmac_sha256::Hash::hash(message.as_bytes());
-                    if rsa_pk
-                        .verify(Pkcs1v15Sign::new::<Sha256>(), hash.as_slice(), buf)
-                        .is_ok()
-                    {
-                        return Ok(());
-                    }
+                let hash = digest::digest(&digest::SHA256, message.as_bytes());
+                let pubkey = ring::signature::RsaPublicKeyComponents {
+                    n: self.n()?,
+                    e: self.e()?,
+                };
+                if pubkey
+                    .verify(
+                        &ring::signature::RSA_PKCS1_2048_8192_SHA256,
+                        hash.as_ref(),
+                        buf,
+                    )
+                    .is_ok()
+                {
+                    return Ok(());
                 }
             }
 
             JwkKeyPairAlg::RS384 => {
-                if let Ok(rsa_pk) = RsaPublicKey::new(self.n()?, self.e()?) {
-                    let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
-                    if rsa_pk
-                        .verify(Pkcs1v15Sign::new::<Sha384>(), hash.as_slice(), buf)
-                        .is_ok()
-                    {
-                        return Ok(());
-                    }
+                let hash = digest::digest(&digest::SHA384, message.as_bytes());
+                let pubkey = ring::signature::RsaPublicKeyComponents {
+                    n: self.n()?,
+                    e: self.e()?,
+                };
+                if pubkey
+                    .verify(
+                        &ring::signature::RSA_PKCS1_3072_8192_SHA384,
+                        hash.as_ref(),
+                        buf,
+                    )
+                    .is_ok()
+                {
+                    return Ok(());
                 }
             }
 
             JwkKeyPairAlg::RS512 => {
-                if let Ok(rsa_pk) = RsaPublicKey::new(self.n()?, self.e()?) {
-                    let hash = hmac_sha512::Hash::hash(message.as_bytes());
-                    if rsa_pk
-                        .verify(Pkcs1v15Sign::new::<Sha512>(), hash.as_slice(), buf)
-                        .is_ok()
-                    {
-                        return Ok(());
-                    }
+                let hash = digest::digest(&digest::SHA512, message.as_bytes());
+                let pubkey = ring::signature::RsaPublicKeyComponents {
+                    n: self.n()?,
+                    e: self.e()?,
+                };
+                if pubkey
+                    .verify(
+                        &ring::signature::RSA_PKCS1_2048_8192_SHA512,
+                        hash.as_ref(),
+                        buf,
+                    )
+                    .is_ok()
+                {
+                    return Ok(());
                 }
             }
 

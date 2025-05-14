@@ -4044,6 +4044,7 @@ dependencies = [
  "openssl-sys",
  "oxiri",
  "reqwest",
+ "ring",
  "rio_turtle",
  "rsa",
  "ruma",

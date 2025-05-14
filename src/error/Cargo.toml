@@ -20,10 +20,11 @@ image = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
 reqwest = { workspace = true }
+ring = { workspace = true }
 rio_turtle = { workspace = true }
+ruma = { workspace = true }
 rusqlite = { workspace = true }
 rsa = { workspace = true }
-ruma = { workspace = true }
 s3-simple = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
