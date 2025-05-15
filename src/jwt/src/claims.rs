@@ -175,11 +175,11 @@ pub struct JwtIdClaims<'a> {
     pub webid: Option<Cow<'a, str>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct JwtLogoutClaims<'a> {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub typ: Option<JwtTokenType>,
-    pub jti: &'a str,
+    #[serde(borrow, flatten)]
+    pub common: JwtCommonClaims<'a>,
+
     pub events: serde_json::Value,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sid: Option<&'a str>,

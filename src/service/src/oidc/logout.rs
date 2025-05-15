@@ -163,8 +163,11 @@ pub async fn post_logout_handle(
             let (session, user) = find_session_with_user_fallback(Some(s.id), s.user_id).await?;
             (session, user, None, None)
         } else if let Some(token) = params.logout_token {
-            let lt = LogoutToken::from_str_validated(&token).await?;
-            let (session, user) = find_session_with_user_fallback(lt.sid, lt.sub).await?;
+            let mut buf = Vec::with_capacity(512);
+            let lt = LogoutToken::from_str_validated(&token, &mut buf).await?;
+            let (session, user) =
+                find_session_with_user_fallback(lt.sid.map(String::from), lt.sub.map(String::from))
+                    .await?;
             (session, user, None, None)
         } else {
             return Err(ErrorResponse::new(
@@ -320,7 +323,7 @@ pub async fn execute_backchannel_logout(
             if let Err(err) = send_backchannel_logout(
                 client.id.clone(),
                 client.backchannel_logout_uri.unwrap_or_default(),
-                data.issuer.clone(),
+                &data.issuer,
                 sub,
                 sid,
                 kp.as_ref().unwrap(),
@@ -391,7 +394,7 @@ pub async fn execute_backchannel_logout_by_client(
         if let Err(err) = send_backchannel_logout(
             client.id.clone(),
             uri.to_string(),
-            data.issuer.clone(),
+            &data.issuer,
             Some(state.user_id),
             None,
             &kp,
@@ -419,13 +422,13 @@ pub async fn execute_backchannel_logout_by_client(
 pub async fn send_backchannel_logout(
     client_id: String,
     backchannel_logout_uri: String,
-    issuer: String,
+    issuer: &str,
     sub: Option<String>,
     sid: Option<String>,
     kp: &JwkKeyPair,
     tasks: &mut JoinSet<Result<(), ErrorResponse>>,
 ) -> Result<(), ErrorResponse> {
-    let logout_token = LogoutToken::new(issuer, client_id.clone(), sub.clone(), sid.clone())
+    let logout_token = LogoutToken::new(issuer, &client_id, sub.as_deref(), sid.as_deref())
         .into_token_with_kp(kp)?;
 
     tasks.spawn(async move {

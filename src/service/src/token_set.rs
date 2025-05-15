@@ -202,7 +202,7 @@ impl TokenSet {
 
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.access_token_alg)?;
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
-        JwtToken::build(&kp, &claims_new_impl).await
+        JwtToken::build(&kp, &claims_new_impl)
     }
 
     /// Builds the id token for a user after all validation has been successful
@@ -337,7 +337,7 @@ impl TokenSet {
 
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.id_token_alg)?;
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
-        JwtToken::build(&kp, &claims).await
+        JwtToken::build(&kp, &claims)
     }
 
     /// Builds the refresh token for a user after all validation has been successful
@@ -396,7 +396,7 @@ impl TokenSet {
             };
 
             let kp = JwkKeyPair::find_latest(JwkKeyPairAlg::default()).await?;
-            JwtToken::build(&kp, &claims).await?
+            JwtToken::build(&kp, &claims)?
         };
 
         // only save the last 50 characters for validation

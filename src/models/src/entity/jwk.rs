@@ -28,39 +28,6 @@ use time::OffsetDateTime;
 use tracing::{error, info};
 
 #[macro_export]
-macro_rules! sign_jwt {
-    ($key_pair:expr, $claims:expr) => {
-        match $key_pair.typ {
-            JwkKeyPairAlg::RS256 => {
-                let key =
-                    jwt_simple::algorithms::RS256KeyPair::from_der($key_pair.bytes.as_slice())
-                        .unwrap();
-                key.with_key_id(&$key_pair.kid).sign($claims)
-            }
-            JwkKeyPairAlg::RS384 => {
-                let key =
-                    jwt_simple::algorithms::RS384KeyPair::from_der($key_pair.bytes.as_slice())
-                        .unwrap();
-                key.with_key_id(&$key_pair.kid).sign($claims)
-            }
-            JwkKeyPairAlg::RS512 => {
-                let key =
-                    jwt_simple::algorithms::RS512KeyPair::from_der($key_pair.bytes.as_slice())
-                        .unwrap();
-                key.with_key_id(&$key_pair.kid).sign($claims)
-            }
-            JwkKeyPairAlg::EdDSA => {
-                let key =
-                    jwt_simple::algorithms::Ed25519KeyPair::from_der($key_pair.bytes.as_slice())
-                        .unwrap();
-                key.with_key_id(&$key_pair.kid).sign($claims)
-            }
-        }
-        .map_err(|_| ErrorResponse::new(ErrorResponseType::Internal, "Error signing JWT Token"))
-    };
-}
-
-#[macro_export]
 macro_rules! validate_jwt {
     ($type:ty, $key_pair:expr, $token:expr, $options:expr) => {
         match $key_pair.typ {

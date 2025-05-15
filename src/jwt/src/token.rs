@@ -20,7 +20,7 @@ pub struct JwtHeader<'a> {
 pub struct JwtToken;
 
 impl JwtToken {
-    pub async fn build<C: Debug + Serialize>(
+    pub fn build<C: Debug + Serialize>(
         jwk: &JwkKeyPair,
         claims: &C,
     ) -> Result<String, ErrorResponse> {
