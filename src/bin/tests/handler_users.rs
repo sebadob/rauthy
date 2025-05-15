@@ -1,4 +1,4 @@
-use crate::common::{get_auth_headers, get_backend_url, get_token_set};
+use crate::common::{get_auth_headers, get_backend_url, get_token_set, get_token_set_init_client};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
 use rauthy_api_types::generic::Language;
@@ -272,8 +272,17 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
-    // success with access token
+    // not allowed with token - `rauthy` client does not have the `profile` scope
     let ts = get_token_set().await;
+    let res = client
+        .get(&url)
+        .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 401);
+
+    // success with access token - `profile` is in default scopes for `init_client`
+    let ts = get_token_set_init_client().await;
     let res = client
         .get(&url)
         .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))

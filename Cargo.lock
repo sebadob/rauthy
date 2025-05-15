@@ -4081,6 +4081,7 @@ dependencies = [
  "rauthy-api-types",
  "rauthy-common",
  "rauthy-error",
+ "rauthy-jwt",
  "rauthy-models",
  "rauthy-service",
  "rust-embed",

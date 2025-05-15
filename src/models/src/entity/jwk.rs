@@ -29,43 +29,6 @@ use std::str::FromStr;
 use time::OffsetDateTime;
 use tracing::{error, info, warn};
 
-#[macro_export]
-macro_rules! validate_jwt {
-    ($type:ty, $key_pair:expr, $token:expr, $options:expr) => {
-        match $key_pair.typ {
-            JwkKeyPairAlg::RS256 => {
-                let key =
-                    jwt_simple::algorithms::RS256KeyPair::from_der($key_pair.bytes.as_slice())
-                        .unwrap();
-                key.public_key()
-                    .verify_token::<$type>($token, Some($options))
-            }
-            JwkKeyPairAlg::RS384 => {
-                let key =
-                    jwt_simple::algorithms::RS384KeyPair::from_der($key_pair.bytes.as_slice())
-                        .unwrap();
-                key.public_key()
-                    .verify_token::<$type>($token, Some($options))
-            }
-            JwkKeyPairAlg::RS512 => {
-                let key =
-                    jwt_simple::algorithms::RS512KeyPair::from_der($key_pair.bytes.as_slice())
-                        .unwrap();
-                key.public_key()
-                    .verify_token::<$type>($token, Some($options))
-            }
-            JwkKeyPairAlg::EdDSA => {
-                let key =
-                    jwt_simple::algorithms::Ed25519KeyPair::from_der($key_pair.bytes.as_slice())
-                        .unwrap();
-                key.public_key()
-                    .verify_token::<$type>($token, Some($options))
-            }
-        }
-        .map_err(|_| ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid Token"))
-    };
-}
-
 /**
 The Json Web Keys are saved encrypted inside the database. The encryption is the same as for a
 Client secret -> *ChaCha20Poly1305*
@@ -1028,9 +991,6 @@ impl From<JwkKeyPairAlg> for rauthy_api_types::oidc::JwkKeyPairAlg {
 #[cfg(test)]
 mod tests {
     use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType};
-    use crate::{JwtRefreshClaims, JwtTokenType};
-    use jwt_simple::prelude::*;
-    use rauthy_common::utils::base64_url_encode;
 
     #[test]
     fn test_fingerprint() {
@@ -1244,98 +1204,5 @@ mod tests {
         }
         .validate_self();
         assert!(key.is_err());
-    }
-
-    // We usually want to ignore this test and only run it specifically, since it takes quite
-    // a long time to generate all these RSA keys
-    #[tokio::test]
-    #[ignore]
-    async fn test_signature_validation() {
-        // generate some JWKs with third party libraries and validate them with out own logic
-        // make sure they are all fine
-
-        let mut buf = Vec::with_capacity(256);
-
-        let claims = Claims::with_custom_claims(
-            JwtRefreshClaims {
-                azp: "some_azp".to_string(),
-                typ: JwtTokenType::Refresh,
-                uid: "user_id_13337".to_string(),
-                auth_time: None,
-                cnf: None,
-                did: None,
-            },
-            coarsetime::Duration::from_secs(300),
-        );
-
-        // Ed25519
-        let kp = Ed25519KeyPair::generate();
-        let signed_token = kp.sign(claims.clone()).unwrap();
-        let x = base64_url_encode(&kp.public_key().to_bytes());
-        let jwk = JWKSPublicKey {
-            kty: JwkKeyPairType::OKP,
-            alg: Some(JwkKeyPairAlg::EdDSA),
-            crv: Some("Ed25519".to_string()),
-            kid: None,
-            n: None,
-            e: None,
-            x: Some(x),
-        };
-        jwk.validate_token_signature(&signed_token, &mut buf)
-            .unwrap();
-
-        // RS256
-        let kp = RS256KeyPair::generate(2048).unwrap();
-        let signed_token = kp.sign(claims.clone()).unwrap();
-        let comp = kp.public_key().to_components();
-        let n = base64_url_encode(&comp.n);
-        let e = base64_url_encode(&comp.e);
-        let jwk = JWKSPublicKey {
-            kty: JwkKeyPairType::RSA,
-            alg: Some(JwkKeyPairAlg::RS256),
-            crv: None,
-            kid: None,
-            n: Some(n),
-            e: Some(e),
-            x: None,
-        };
-        jwk.validate_token_signature(&signed_token, &mut buf)
-            .unwrap();
-
-        // RS384
-        let kp = RS384KeyPair::generate(3072).unwrap();
-        let signed_token = kp.sign(claims.clone()).unwrap();
-        let comp = kp.public_key().to_components();
-        let n = base64_url_encode(&comp.n);
-        let e = base64_url_encode(&comp.e);
-        let jwk = JWKSPublicKey {
-            kty: JwkKeyPairType::RSA,
-            alg: Some(JwkKeyPairAlg::RS384),
-            crv: None,
-            kid: None,
-            n: Some(n),
-            e: Some(e),
-            x: None,
-        };
-        jwk.validate_token_signature(&signed_token, &mut buf)
-            .unwrap();
-
-        // RS512
-        let kp = RS512KeyPair::generate(4096).unwrap();
-        let signed_token = kp.sign(claims.clone()).unwrap();
-        let comp = kp.public_key().to_components();
-        let n = base64_url_encode(&comp.n);
-        let e = base64_url_encode(&comp.e);
-        let jwk = JWKSPublicKey {
-            kty: JwkKeyPairType::RSA,
-            alg: Some(JwkKeyPairAlg::RS512),
-            crv: None,
-            kid: None,
-            n: Some(n),
-            e: Some(e),
-            x: None,
-        };
-        jwk.validate_token_signature(&signed_token, &mut buf)
-            .unwrap();
     }
 }

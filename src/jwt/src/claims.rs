@@ -25,12 +25,12 @@ pub struct JwtCommonClaims<'a> {
     pub azp: &'a str,
     #[serde(borrow, skip_serializing_if = "Option::is_none")]
     pub scope: Option<Cow<'a, str>>,
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub preferred_username: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preferred_username: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub did: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cnf: Option<JktClaim>,
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<JktClaim<'a>>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -45,6 +45,18 @@ pub struct AddressClaim<'a> {
     pub postal_code: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<&'a str>,
+}
+
+impl From<AddressClaim<'_>> for rauthy_api_types::oidc::AddressClaim {
+    fn from(a: AddressClaim<'_>) -> Self {
+        Self {
+            formatted: a.formatted,
+            street_address: a.street_address.map(String::from),
+            locality: a.locality.map(String::from),
+            postal_code: a.postal_code,
+            country: a.country.map(String::from),
+        }
+    }
 }
 
 impl AddressClaim<'_> {
@@ -126,8 +138,6 @@ pub struct JwtAccessClaims<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub preferred_username: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub roles: Option<Vec<String>>, // TODO probably change to borrowed once it works
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<Vec<String>>, // TODO probably change to borrowed once it works
@@ -145,7 +155,6 @@ pub struct JwtIdClaims<'a> {
     pub at_hash: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sid: Option<&'a str>,
-    pub preferred_username: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]

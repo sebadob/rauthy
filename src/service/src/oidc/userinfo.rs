@@ -4,7 +4,7 @@ use actix_web::{HttpRequest, web};
 use rauthy_api_types::users::Userinfo;
 use rauthy_common::constants::{ENABLE_WEB_ID, USERINFO_STRICT};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::AddressClaim;
+use rauthy_jwt::claims::{AddressClaim, JwtCommonClaims, JwtTokenType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::devices::DeviceEntity;
@@ -24,12 +24,12 @@ pub async fn get_userinfo(
         &bearer,
         &data.issuer,
         None,
-        rauthy_jwt::claims::JwtTokenType::Bearer,
+        Some(JwtTokenType::Bearer),
         0,
         buf.as_mut(),
     )
     .await?;
-    let claims: rauthy_jwt::claims::JwtCommonClaims = serde_json::from_slice(&buf)?;
+    let claims = serde_json::from_slice::<JwtCommonClaims>(&buf)?;
 
     if claims.sub.is_none() {
         return Err(ErrorResponse::new(

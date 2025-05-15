@@ -50,7 +50,7 @@ impl JwtToken {
         token: &str,
         issuer: &str,
         client_id: Option<&str>,
-        expected_type: JwtTokenType,
+        expected_type: Option<JwtTokenType>,
         allowed_clock_skew_seconds: u16,
         buf: &mut Vec<u8>,
     ) -> Result<(), ErrorResponse> {
@@ -135,7 +135,7 @@ impl ValidationClaims<'_> {
         &self,
         issuer: &str,
         client_id: Option<&str>,
-        expected_type: JwtTokenType,
+        expected_type: Option<JwtTokenType>,
         allowed_clock_skew_seconds: u16,
     ) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
@@ -167,11 +167,13 @@ impl ValidationClaims<'_> {
                 ));
             }
         }
-        if self.typ != expected_type {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::JwtToken,
-                "Invalid `typ`",
-            ));
+        if let Some(typ) = expected_type {
+            if self.typ != typ {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::JwtToken,
+                    "Invalid `typ`",
+                ));
+            }
         }
         if self.iss != issuer {
             return Err(ErrorResponse::new(
@@ -205,7 +207,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), JwtTokenType::Bearer, 0)?;
+        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0)?;
 
         ValidationClaims {
             iat: now + 2,
@@ -216,7 +218,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), JwtTokenType::Bearer, 2)?;
+        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 2)?;
 
         let res = ValidationClaims {
             iat: now,
@@ -227,7 +229,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), JwtTokenType::Bearer, 0);
+        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -245,7 +247,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), JwtTokenType::Bearer, 0);
+        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -263,7 +265,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), JwtTokenType::Bearer, 0);
+        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -281,7 +283,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), JwtTokenType::Bearer, 5);
+        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 5);
         assert_eq!(res, Ok(()));
 
         let res = ValidationClaims {
@@ -293,7 +295,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), JwtTokenType::Bearer, 0);
+        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -311,7 +313,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), JwtTokenType::Id, 0);
+        .validate(iss, Some("test"), Some(JwtTokenType::Id), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -329,7 +331,7 @@ mod tests {
             iss: "http://localhost:9090/something/else",
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), JwtTokenType::Bearer, 0);
+        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(

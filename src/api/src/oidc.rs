@@ -27,7 +27,6 @@ use rauthy_common::constants::{
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::JwtCommonClaims;
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
@@ -988,6 +987,7 @@ pub async fn post_token_introspect(
     if let Some((n, v)) = cors_header {
         Ok(HttpResponse::Ok()
             .insert_header((n, v))
+            .insert_header((CONTENT_TYPE, APPLICATION_JSON))
             .insert_header((
                 ACCESS_CONTROL_ALLOW_METHODS,
                 HeaderValue::from_static("POST"),
@@ -996,37 +996,12 @@ pub async fn post_token_introspect(
                 ACCESS_CONTROL_ALLOW_HEADERS,
                 HeaderValue::from_static("Authorization"),
             ))
-            .json(info))
+            .body(info))
     } else {
-        Ok(HttpResponse::Ok().json(info))
+        Ok(HttpResponse::Ok()
+            .insert_header((CONTENT_TYPE, APPLICATION_JSON))
+            .body(info))
     }
-}
-
-/// DEPRECATED
-///
-/// This is an older endpoint for validating tokens manually. This is not being used anymore an will
-/// be removed soon in favor of the [userinfo](get_userinfo) endpoint.
-#[utoipa::path(
-    post,
-    path = "/oidc/token/validate",
-    tag = "deprecated",
-    request_body = TokenValidationRequest,
-    responses(
-        (status = 202, description = "Accepted"),
-        (status = 400, description = "BadRequest", body = ErrorResponse),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-    ),
-)]
-#[post("/oidc/token/validate")]
-pub async fn post_validate_token(
-    data: web::Data<AppState>,
-    Json(payload): Json<TokenValidationRequest>,
-) -> Result<HttpResponse, ErrorResponse> {
-    payload.validate()?;
-
-    validation::validate_token::<JwtCommonClaims>(&data, &payload.token, None)
-        .await
-        .map(|_| HttpResponse::Accepted().finish())
 }
 
 /// The userinfo endpoint for the OIDC standard.

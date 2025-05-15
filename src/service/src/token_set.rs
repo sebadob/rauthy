@@ -168,13 +168,15 @@ impl TokenSet {
                 typ: JwtTokenType::Bearer,
                 azp: &client.id,
                 scope: Some(scope),
+                preferred_username: user.as_ref().map(|u| u.email.as_str()),
                 did: did.as_deref(),
-                cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
+                cnf: dpop_fingerprint
+                    .as_ref()
+                    .map(|jkt| JktClaim { jkt: &jkt.0 }),
             },
             // TODO does this value make sense or should we remove it?
             allowed_origins: None,
             email,
-            preferred_username: user.as_ref().map(|u| u.email.as_str()),
             roles,
             groups,
             custom: None,
@@ -247,15 +249,17 @@ impl TokenSet {
                 sub: Some(user.id.as_str()),
                 typ: JwtTokenType::Id,
                 azp: &client.id,
-                scope: None,
+                scope: Some(Cow::Borrowed(scope)),
+                preferred_username: Some(user.email.as_str()),
                 did: None,
-                cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
+                cnf: dpop_fingerprint
+                    .as_ref()
+                    .map(|jkt| JktClaim { jkt: &jkt.0 }),
             },
             amr: vec![amr],
             auth_time: auth_time.get(),
             at_hash: at_hash.0.as_str(),
             sid: sid.as_ref().map(|sid| sid.0.as_str()),
-            preferred_username: user.email.as_str(),
             email: None,
             email_verified: None,
             given_name: None,
@@ -386,8 +390,11 @@ impl TokenSet {
                     typ: JwtTokenType::Refresh,
                     azp: &client.id,
                     scope: None,
+                    preferred_username: None,
                     did: did.as_deref(),
-                    cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
+                    cnf: dpop_fingerprint
+                        .as_ref()
+                        .map(|jkt| JktClaim { jkt: &jkt.0 }),
                 },
                 uid: &user.id,
                 // Only Optional for backwards compatibility with older Rauthy versions and tokens.
@@ -459,7 +466,7 @@ impl TokenSet {
         })
     }
 
-    // too many arguments is not an issue - params cannot be mistaken because of enum wrappers
+    // too many arguments is not an issue - params cannot be mistaken because of typed wrappers
     #[allow(clippy::too_many_arguments)]
     pub async fn from_user(
         user: &User,

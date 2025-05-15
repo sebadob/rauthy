@@ -49,6 +49,13 @@ pub fn base64_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
         .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
 }
 
+#[inline(always)]
+pub fn base64_decode_buf(b64: &str, buf: &mut Vec<u8>) -> Result<(), ErrorResponse> {
+    B64_STD
+        .decode_vec(b64, buf)
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
+}
+
 // Returns the given input as a base64 URL Encoded String
 #[inline(always)]
 pub fn base64_url_encode(input: &[u8]) -> String {

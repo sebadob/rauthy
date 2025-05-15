@@ -102,7 +102,6 @@ use utoipa::{OpenApi, openapi};
         oidc::get_session_xsrf,
         oidc::post_token,
         oidc::post_token_introspect,
-        oidc::post_validate_token,
         oidc::get_userinfo,
         oidc::get_forward_auth,
         oidc::get_well_known,
@@ -184,7 +183,7 @@ use utoipa::{OpenApi, openapi};
             JwkKeyPairType,
             Language,
 
-            rauthy_models::JwtTokenType,
+            rauthy_jwt::claims::JwtTokenType,
 
             ErrorResponse,
             ErrorResponseType,
