@@ -723,27 +723,6 @@ LIMIT 1"#;
 }
 
 impl JwkKeyPair {
-    pub fn kid_from_token(token: &str) -> Result<String, ErrorResponse> {
-        let metadata_res = jwt_simple::token::Token::decode_metadata(token);
-        if metadata_res.is_err() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Malformed JWT Token Header".to_string(),
-            ));
-        }
-        let metadata = metadata_res.unwrap();
-
-        let kid_opt = metadata.key_id();
-        if let Some(kid) = kid_opt {
-            Ok(kid.to_string())
-        } else {
-            Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Malformed JWT Token Header".to_string(),
-            ))
-        }
-    }
-
     pub fn sign(&self, input: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
         match self.typ {
             JwkKeyPairAlg::RS256 => {

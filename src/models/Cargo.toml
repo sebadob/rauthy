@@ -36,13 +36,13 @@ hmac-sha256 = { workspace = true }
 hmac-sha512 = { workspace = true }
 image = { workspace = true }
 itertools = { workspace = true }
-jwt-simple = { workspace = true }
 lettre = { workspace = true }
 mime = { workspace = true }
 num_cpus = { workspace = true }
 once_cell = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
+# 0.8 is necessary to provide a proper `thread_rng` for `rsa`
 rand_08 = { package = "rand", version = "0.8" }
 rand_core = { workspace = true }
 reqwest = { workspace = true }

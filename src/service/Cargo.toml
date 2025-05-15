@@ -15,7 +15,6 @@ rauthy-models = { path = "../models" }
 actix-web = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }
-jwt-simple = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
 reqwest = { workspace = true }

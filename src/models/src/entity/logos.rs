@@ -5,12 +5,12 @@ use chrono::Utc;
 use hiqlite_macros::params;
 use image::imageops::FilterType;
 use image::{EncodableLayout, ImageFormat};
-use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_common::constants::{
     CACHE_TTL_APP, CONTENT_TYPE_WEBP, IDX_AUTH_PROVIDER_LOGO, IDX_CLIENT_LOGO,
 };
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 use svg_hush::data_url_filter;
 use tracing::debug;
