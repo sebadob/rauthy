@@ -18,7 +18,8 @@ use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, get_rand
 use rauthy_common::{HTTP_CLIENT, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
-use ring::rand;
+use rsa::pkcs8::DecodePrivateKey;
+use rsa::{BigUint, sha2};
 use serde::{Deserialize, Serialize};
 use std::default::Default;
 use std::fmt::{Debug, Display, Formatter};
@@ -394,9 +395,10 @@ impl JWKSPublicKey {
     }
 
     #[inline]
-    pub fn n(&self) -> Result<Vec<u8>, ErrorResponse> {
+    pub fn n(&self) -> Result<BigUint, ErrorResponse> {
         if let Some(n) = &self.n {
-            Ok(base64_url_no_pad_decode(n)?)
+            let decoded = base64_url_no_pad_decode(n)?;
+            Ok(BigUint::from_bytes_be(&decoded))
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
@@ -406,9 +408,10 @@ impl JWKSPublicKey {
     }
 
     #[inline]
-    pub fn e(&self) -> Result<Vec<u8>, ErrorResponse> {
+    pub fn e(&self) -> Result<BigUint, ErrorResponse> {
         if let Some(e) = &self.e {
-            Ok(base64_url_no_pad_decode(e)?)
+            let decoded = base64_url_no_pad_decode(e)?;
+            Ok(BigUint::from_bytes_be(&decoded))
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
@@ -821,43 +824,28 @@ impl JwkKeyPair {
     pub fn sign(&self, input: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
         match self.typ {
             JwkKeyPairAlg::RS256 => {
-                let key = ring::signature::RsaKeyPair::from_der(&self.bytes)?;
-                let mut sig = Vec::with_capacity(1024);
-                key.sign(
-                    &ring::signature::RSA_PKCS1_SHA256,
-                    &rand::SystemRandom::new(),
-                    input,
-                    &mut sig,
-                )?;
+                let hash = hmac_sha256::Hash::hash(input);
+                let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
+                let sig = key.sign(rsa::Pkcs1v15Sign::new::<sha2::Sha256>(), hash.as_slice())?;
                 Ok(sig)
             }
 
             JwkKeyPairAlg::RS384 => {
-                let key = ring::signature::RsaKeyPair::from_der(&self.bytes)?;
-                let mut sig = Vec::with_capacity(2048);
-                key.sign(
-                    &ring::signature::RSA_PKCS1_SHA384,
-                    &rand::SystemRandom::new(),
-                    input,
-                    &mut sig,
-                )?;
+                let hash = hmac_sha512::sha384::Hash::hash(input);
+                let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
+                let sig = key.sign(rsa::Pkcs1v15Sign::new::<sha2::Sha384>(), hash.as_slice())?;
                 Ok(sig)
             }
 
             JwkKeyPairAlg::RS512 => {
-                let key = ring::signature::RsaKeyPair::from_der(&self.bytes)?;
-                let mut sig = Vec::with_capacity(3072);
-                key.sign(
-                    &ring::signature::RSA_PKCS1_SHA512,
-                    &rand::SystemRandom::new(),
-                    input,
-                    &mut sig,
-                )?;
+                let hash = hmac_sha512::Hash::hash(input);
+                let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
+                let sig = key.sign(rsa::Pkcs1v15Sign::new::<sha2::Sha512>(), hash.as_slice())?;
                 Ok(sig)
             }
 
             JwkKeyPairAlg::EdDSA => {
-                let key = ed25519_compact::SecretKey::from_slice(&self.bytes)?;
+                let key = ed25519_compact::SecretKey::from_der(&self.bytes)?;
                 let sig = key.sign(input, Some(Noise::generate()));
                 Ok(sig.to_vec())
             }

@@ -580,6 +580,16 @@ impl From<rsa::pkcs1::Error> for ErrorResponse {
     }
 }
 
+impl From<rsa::pkcs8::Error> for ErrorResponse {
+    fn from(value: rsa::pkcs8::Error) -> Self {
+        debug!("rsa::pkcs8::Error: {:?}", value);
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("rsa::pkcs8::Error: {:?}", value),
+        )
+    }
+}
+
 impl From<ed25519_compact::Error> for ErrorResponse {
     fn from(value: ed25519_compact::Error) -> Self {
         debug!("ed25519_compact::Error: {:?}", value);

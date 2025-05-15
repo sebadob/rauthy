@@ -3,6 +3,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::fmt::{Display, Formatter};
@@ -17,13 +18,13 @@ pub struct JwtCommonClaims<'a> {
     pub iss: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jti: Option<&'a str>,
-    pub aud: &'a str,
-    pub sub: &'a str,
+    pub aud: Cow<'a, str>,
+    pub sub: Option<&'a str>,
     // pub nonce: Option<&'a str>,
     pub typ: JwtTokenType,
     pub azp: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scope: Option<&'a str>,
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<Cow<'a, str>>,
     // #[serde(skip_serializing_if = "Option::is_none")]
     // pub preferred_username: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -127,13 +128,11 @@ pub struct JwtAccessClaims<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preferred_username: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub roles: Option<Vec<&'a str>>,
+    pub roles: Option<Vec<String>>, // TODO probably change to borrowed once it works
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub groups: Option<Vec<&'a str>>,
+    pub groups: Option<Vec<String>>, // TODO probably change to borrowed once it works
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cnf: Option<JktClaim>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub custom: Option<HashMap<&'a str, serde_json::Value>>,
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -160,20 +159,20 @@ pub struct JwtIdClaims<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub birthdate: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub picture: Option<&'a str>,
+    pub picture: Option<Cow<'a, str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locale: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<&'a str>,
-    pub roles: Vec<&'a str>,
+    pub roles: Vec<String>, // TODO change to borrowed data when everything works
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub groups: Option<Vec<&'a str>>,
+    pub groups: Option<Vec<String>>, // TODO change to borrowed data when everything works
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cnf: Option<JktClaim>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub custom: Option<HashMap<&'a str, serde_json::Value>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub webid: Option<&'a str>,
+    pub custom: Option<HashMap<String, serde_json::Value>>,
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub webid: Option<Cow<'a, str>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -191,17 +190,14 @@ pub struct JwtLogoutClaims<'a> {
     pub nonce: Option<&'a str>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct JwtRefreshClaims<'a> {
-    pub azp: &'a str,
-    pub typ: JwtTokenType,
+    #[serde(borrow, flatten)]
+    pub common: JwtCommonClaims<'a>,
+
     pub uid: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub auth_time: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cnf: Option<JktClaim>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub did: Option<&'a str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -253,9 +249,15 @@ impl FromStr for JwtAmrValue {
 
 impl Display for JwtAmrValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl JwtAmrValue {
+    pub fn as_str(&self) -> &str {
         match self {
-            Self::Pwd => write!(f, "pwd"),
-            Self::Mfa => write!(f, "mfa"),
+            Self::Pwd => "pwd",
+            Self::Mfa => "mfa",
         }
     }
 }

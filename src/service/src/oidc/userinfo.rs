@@ -11,6 +11,7 @@ use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webids::WebId;
+use std::borrow::Cow;
 
 pub async fn get_userinfo(
     data: &web::Data<AppState>,
@@ -30,13 +31,22 @@ pub async fn get_userinfo(
     .await?;
     let claims: rauthy_jwt::claims::JwtCommonClaims = serde_json::from_slice(&buf)?;
 
-    let scope = claims.scope.unwrap_or("openid");
-    let user = User::find(claims.sub.to_string()).await.map_err(|_| {
-        ErrorResponse::new(
-            ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
-            "The user has not been found".to_string(),
-        )
-    })?;
+    if claims.sub.is_none() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Not a user token",
+        ));
+    }
+
+    let scope = claims.scope.unwrap_or_else(|| Cow::from("openid"));
+    let user = User::find(claims.sub.unwrap().to_string())
+        .await
+        .map_err(|_| {
+            ErrorResponse::new(
+                ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
+                "The user has not been found".to_string(),
+            )
+        })?;
 
     // reject the request if user has been disabled, even when the token is still valid
     if !user.enabled || user.check_expired().is_err() {

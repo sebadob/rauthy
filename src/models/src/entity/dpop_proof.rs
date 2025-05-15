@@ -312,7 +312,7 @@ impl DPoPProof {
         // claim or a server managed timestamp via the nonce claim, is within an
         // acceptable window (see Section 11.1).
         //
-        // We will accept an 'iat' of 1 minute old and it must not be in the future
+        // We will accept an 'iat' of 1 minute old, and it must not be in the future
         let now = Utc::now().timestamp();
         let now_minus_1 = now - 60;
         if self.claims.iat < now_minus_1 || self.claims.iat > now {
@@ -432,8 +432,10 @@ mod tests {
                 alg: None,
                 crv: None,
                 kid: None,
-                n: Some(base64_url_encode(&n)),
-                e: Some(base64_url_encode(&e)),
+                n: Some(base64_url_no_pad_encode(&n)),
+                // n: Some(base64_url_encode(&n)),
+                e: Some(base64_url_no_pad_encode(&e)),
+                // e: Some(base64_url_encode(&e)),
                 x: None,
             },
             kid: None,

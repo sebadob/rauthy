@@ -1,7 +1,7 @@
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
 use rauthy_common::utils::base64_url_no_pad_decode_buf;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use ring::digest;
+use rsa::sha2;
 use tracing::warn;
 
 impl JWKSPublicKey {
@@ -19,15 +19,12 @@ impl JWKSPublicKey {
 
         match self.alg()? {
             JwkKeyPairAlg::RS256 => {
-                let hash = digest::digest(&digest::SHA256, message.as_bytes());
-                let pubkey = ring::signature::RsaPublicKeyComponents {
-                    n: self.n()?,
-                    e: self.e()?,
-                };
-                if pubkey
+                let hash = hmac_sha256::Hash::hash(message.as_bytes());
+                let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
+                if rsa_pk
                     .verify(
-                        &ring::signature::RSA_PKCS1_2048_8192_SHA256,
-                        hash.as_ref(),
+                        rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
+                        hash.as_slice(),
                         buf,
                     )
                     .is_ok()
@@ -37,15 +34,12 @@ impl JWKSPublicKey {
             }
 
             JwkKeyPairAlg::RS384 => {
-                let hash = digest::digest(&digest::SHA384, message.as_bytes());
-                let pubkey = ring::signature::RsaPublicKeyComponents {
-                    n: self.n()?,
-                    e: self.e()?,
-                };
-                if pubkey
+                let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
+                let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
+                if rsa_pk
                     .verify(
-                        &ring::signature::RSA_PKCS1_3072_8192_SHA384,
-                        hash.as_ref(),
+                        rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
+                        hash.as_slice(),
                         buf,
                     )
                     .is_ok()
@@ -55,15 +49,12 @@ impl JWKSPublicKey {
             }
 
             JwkKeyPairAlg::RS512 => {
-                let hash = digest::digest(&digest::SHA512, message.as_bytes());
-                let pubkey = ring::signature::RsaPublicKeyComponents {
-                    n: self.n()?,
-                    e: self.e()?,
-                };
-                if pubkey
+                let hash = hmac_sha512::Hash::hash(message.as_bytes());
+                let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
+                if rsa_pk
                     .verify(
-                        &ring::signature::RSA_PKCS1_2048_8192_SHA512,
-                        hash.as_ref(),
+                        rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
+                        hash.as_slice(),
                         buf,
                     )
                     .is_ok()
@@ -86,7 +77,7 @@ impl JWKSPublicKey {
         warn!("JWT Token validation error");
         Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
-            "Invalid JWT Token",
+            "Invalid JWT Token signature",
         ))
     }
 }

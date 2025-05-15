@@ -19,7 +19,7 @@ use rauthy_common::utils::{
     base64_encode, base64_url_encode, base64_url_no_pad_decode, base64_url_no_pad_encode, get_rand,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::JwtTokenType;
+use rauthy_jwt::claims::JwtTokenType;
 use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
 use rauthy_models::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPairType};
 use rauthy_service::token_set::TokenSet;

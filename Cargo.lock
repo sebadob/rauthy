@@ -3959,6 +3959,7 @@ dependencies = [
  "rauthy-common",
  "rauthy-error",
  "rauthy-handlers",
+ "rauthy-jwt",
  "rauthy-middlewares",
  "rauthy-models",
  "rauthy-schedulers",
