@@ -14,7 +14,9 @@ use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, IDX_JWK_KID, IDX_JWK_LATEST, IDX_JWKS,
 };
-use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, get_rand};
+use rauthy_common::utils::{
+    base64_url_encode, base64_url_no_pad_decode, base64_url_no_pad_decode_buf, get_rand,
+};
 use rauthy_common::{HTTP_CLIENT, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
@@ -25,7 +27,7 @@ use std::default::Default;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use time::OffsetDateTime;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[macro_export]
 macro_rules! validate_jwt {
@@ -817,6 +819,92 @@ impl JwkKeyPair {
                 Ok(sig.to_vec())
             }
         }
+    }
+
+    /// Verify the signature for a JWT token.
+    ///
+    /// Returns the `<header>.<claims>` string  on success.
+    ///
+    /// Note: This function is a little bit of duplicated code from the
+    /// `JWKSPublicKey::validate_token_signature()` which is almost the same. The reason of the
+    /// duplicate is that the `JWKSPublicKey` contains the public key components b64 encoded
+    /// and the conversion each time would be an unnecessary overhead. `JWKSPublicKey` should
+    /// only be used for validation from remote JWKs.
+    pub fn verify_token<'a>(
+        &self,
+        token: &'a str,
+        buf: &mut Vec<u8>,
+    ) -> Result<&'a str, ErrorResponse> {
+        let (message, sig) = token
+            .rsplit_once('.')
+            .ok_or_else(|| ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed token"))?;
+
+        buf.clear();
+        base64_url_no_pad_decode_buf(sig, buf)?;
+
+        match self.typ {
+            JwkKeyPairAlg::RS256 => {
+                let hash = hmac_sha256::Hash::hash(message.as_bytes());
+                let rsa_pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
+                if rsa_pk
+                    .as_ref()
+                    .verify(
+                        rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
+                        hash.as_slice(),
+                        buf,
+                    )
+                    .is_ok()
+                {
+                    return Ok(message);
+                }
+            }
+
+            JwkKeyPairAlg::RS384 => {
+                let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
+                let rsa_pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
+                if rsa_pk
+                    .as_ref()
+                    .verify(
+                        rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
+                        hash.as_slice(),
+                        buf,
+                    )
+                    .is_ok()
+                {
+                    return Ok(message);
+                }
+            }
+
+            JwkKeyPairAlg::RS512 => {
+                let hash = hmac_sha512::Hash::hash(message.as_bytes());
+                let rsa_pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
+                if rsa_pk
+                    .as_ref()
+                    .verify(
+                        rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
+                        hash.as_slice(),
+                        buf,
+                    )
+                    .is_ok()
+                {
+                    return Ok(message);
+                }
+            }
+
+            JwkKeyPairAlg::EdDSA => {
+                let skey = ed25519_compact::SecretKey::from_der(&self.bytes)?;
+                let signature = ed25519_compact::Signature::from_slice(buf)?;
+                if skey.public_key().verify(message, &signature).is_ok() {
+                    return Ok(message);
+                }
+            }
+        };
+
+        warn!("JWT Token validation error");
+        Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "Invalid JWT Token signature",
+        ))
     }
 }
 

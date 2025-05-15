@@ -2,7 +2,7 @@ use crate::claims::JwtTokenType;
 use chrono::Utc;
 use rauthy_common::utils::{base64_url_no_pad_decode_buf, base64_url_no_pad_encode_buf};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg};
+use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -103,7 +103,7 @@ impl JwtToken {
                 "Invalid JWT Header `alg` does not match `kid`",
             ));
         }
-        JWKSPublicKey::from_key_pair(&key).validate_token_signature(token, buf)?;
+        key.verify_token(token, buf)?;
 
         buf.clear();
         base64_url_no_pad_decode_buf(claims, buf)?;
