@@ -1,4 +1,3 @@
-use crate::AddressClaim;
 use crate::entity::user_attr::UserAttrValueEntity;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
@@ -42,6 +41,44 @@ pub struct ScimAddress {
     pub country: Option<String>,
     // #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     // pub _type: Option<String>,
+}
+
+impl ScimAddress {
+    pub fn try_build(values: &UserValues) -> Option<ScimAddress> {
+        let mut slf = ScimAddress {
+            street_address: None,
+            locality: None,
+            region: None,
+            postal_code: None,
+            country: None,
+        };
+
+        if let Some(street) = &values.street {
+            slf.street_address = Some(street.clone());
+        }
+
+        if let Some(zip) = values.zip {
+            slf.postal_code = Some(zip.to_string());
+
+            if let Some(city) = &values.city {
+                slf.locality = Some(city.clone());
+            }
+        }
+
+        if let Some(country) = &values.country {
+            slf.country = Some(country.clone());
+        }
+
+        if slf.street_address.is_some()
+            || slf.locality.is_some()
+            || slf.postal_code.is_some()
+            || slf.country.is_some()
+        {
+            Some(slf)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -155,7 +192,7 @@ impl ScimUser {
             })
             .collect::<Vec<_>>();
         let address = if client_scopes.contains("address") {
-            AddressClaim::try_build(&user, &values)
+            ScimAddress::try_build(&values)
         } else {
             None
         };
@@ -212,15 +249,7 @@ impl ScimUser {
                     primary: Some(true),
                 }]
             }),
-            addresses: address.map(|addr| {
-                vec![ScimAddress {
-                    street_address: addr.street_address,
-                    locality: addr.locality,
-                    region: None,
-                    postal_code: addr.postal_code.map(|zip| zip.to_string()),
-                    country: addr.country,
-                }]
-            }),
+            addresses: address.map(|addr| vec![addr]),
             // read-only
             groups: None,
             roles: Some(roles),

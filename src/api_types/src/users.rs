@@ -307,6 +307,7 @@ pub struct UserAttrValuesResponse {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct Userinfo {
     pub id: String,
     pub sub: String,

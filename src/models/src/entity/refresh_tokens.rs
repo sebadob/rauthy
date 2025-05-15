@@ -1,5 +1,5 @@
 use crate::database::DB;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -52,8 +52,8 @@ impl RefreshToken {
     pub async fn create(
         id: String,
         user_id: String,
-        nbf: DateTime<Utc>,
-        exp: DateTime<Utc>,
+        nbf: i64,
+        exp: i64,
         scope: Option<String>,
         // TODO should we even save mfa for refresh tokens?
         // even if the original token has been issued with mfa, the refresh
@@ -64,8 +64,8 @@ impl RefreshToken {
         let rt = Self {
             id,
             user_id,
-            nbf: nbf.timestamp(),
-            exp: exp.timestamp(),
+            nbf,
+            exp,
             scope,
             is_mfa,
             session_id,

@@ -10,7 +10,7 @@ use josekit::jwk;
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::UpdateClientRequest;
 use rauthy_api_types::oidc::{
-    JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest, TokenValidationRequest,
+    JktClaim, JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest, TokenValidationRequest,
 };
 use rauthy_common::constants::{
     APPLICATION_JSON, DPOP_TOKEN_ENDPOINT, HEADER_DPOP_NONCE, TOKEN_DPOP,
@@ -19,7 +19,7 @@ use rauthy_common::utils::{
     base64_encode, base64_url_encode, base64_url_no_pad_decode, base64_url_no_pad_encode, get_rand,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::JwtTokenType;
+use rauthy_jwt::claims::JwtTokenType;
 use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
 use rauthy_models::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPairType};
 use rauthy_service::token_set::TokenSet;
@@ -283,7 +283,11 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
             "profile".to_string(),
             "groups".to_string(),
         ],
-        default_scopes: vec!["openid".to_string(), "email".to_string()],
+        default_scopes: vec![
+            "openid".to_string(),
+            "email".to_string(),
+            "profile".to_string(), // needed for user picture tests later on
+        ],
         challenges: None,
         force_mfa: false,
         client_uri: None,
@@ -386,7 +390,7 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
     let payload = TokenValidationRequest {
         token: ts.access_token.clone(),
     };
-    validate_token(&ts.access_token, payload).await?;
+    validate_token(&ts.access_token, payload, None).await?;
 
     Ok(())
 }
@@ -536,7 +540,7 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     let payload = TokenValidationRequest {
         token: ts.access_token.to_owned(),
     };
-    validate_token(&ts.access_token, payload).await?;
+    validate_token(&ts.access_token, payload, None).await?;
 
     // make sure `auth_time` is handled properly
     let auth_time_refresh = auth_time_from_token(ts.refresh_token.as_ref().unwrap());
@@ -695,9 +699,12 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
     let payload = TokenValidationRequest {
         token: ts.access_token.to_owned(),
     };
-    let token_info = validate_token(&ts.access_token, payload).await?;
-    assert!(token_info.cnf.is_some());
-    assert_eq!(token_info.cnf.unwrap().jkt, fingerprint);
+    validate_token(
+        &ts.access_token,
+        payload,
+        Some(JktClaim { jkt: &fingerprint }),
+    )
+    .await?;
 
     // refresh it
     time::sleep(Duration::from_secs(1)).await;
@@ -736,9 +743,12 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
     let payload = TokenValidationRequest {
         token: ts.access_token.to_owned(),
     };
-    let token_info = validate_token(&ts.access_token, payload).await?;
-    assert!(token_info.cnf.is_some());
-    assert_eq!(token_info.cnf.unwrap().jkt, fingerprint);
+    validate_token(
+        &ts.access_token,
+        payload,
+        Some(JktClaim { jkt: &fingerprint }),
+    )
+    .await?;
 
     Ok(())
 }
@@ -938,8 +948,6 @@ async fn test_auth_headers() -> Result<(), Box<dyn Error>> {
         .unwrap();
     assert_eq!(value, "rauthy_admin");
 
-    // the following values are either empty or default, because the init_admin simply
-    // does not have these set during login and we just make sure that the headers are there
     let value = headers
         .get("x-forwarded-user-groups")
         .unwrap()
@@ -952,28 +960,28 @@ async fn test_auth_headers() -> Result<(), Box<dyn Error>> {
         .unwrap()
         .to_str()
         .unwrap();
-    assert_eq!(value, "");
+    assert_eq!(value, "init_admin@localhost");
 
     let value = headers
         .get("x-forwarded-user-email-verified")
         .unwrap()
         .to_str()
         .unwrap();
-    assert_eq!(value, "false");
+    assert_eq!(value, "true");
 
     let value = headers
         .get("x-forwarded-user-family-name")
         .unwrap()
         .to_str()
         .unwrap();
-    assert_eq!(value, "");
+    assert_eq!(value, "Init");
 
     let value = headers
         .get("x-forwarded-user-given-name")
         .unwrap()
         .to_str()
         .unwrap();
-    assert_eq!(value, "");
+    assert_eq!(value, "Admin");
 
     let value = headers
         .get("x-forwarded-user-mfa")
@@ -1027,7 +1035,8 @@ async fn test_token_introspection() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     assert!(res.status().is_success());
-    let info = res.json::<TokenInfo>().await?;
+    let text = res.text().await?;
+    let info = serde_json::from_str::<TokenInfo>(&text)?;
     assert!(info.active);
 
     // with valid basic auth - client_id:client_secret
@@ -1041,7 +1050,8 @@ async fn test_token_introspection() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     assert!(res.status().is_success());
-    let info = res.json::<TokenInfo>().await?;
+    let text = res.text().await?;
+    let info = serde_json::from_str::<TokenInfo>(&text)?;
     assert!(info.active);
 
     // make sure requests with invalid tokens return inactive
@@ -1053,7 +1063,8 @@ async fn test_token_introspection() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     assert!(res.status().is_success());
-    let info = res.json::<TokenInfo>().await?;
+    let text = res.text().await?;
+    let info = serde_json::from_str::<TokenInfo>(&text)?;
     assert!(!info.active);
 
     Ok(())
@@ -1072,7 +1083,8 @@ fn auth_time_from_token(id_token: &str) -> i64 {
 async fn validate_token(
     access_token: &str,
     payload: TokenValidationRequest,
-) -> Result<TokenInfo, Box<dyn Error>> {
+    expected_cnf: Option<JktClaim<'_>>,
+) -> Result<(), Box<dyn Error>> {
     let url_valid = format!("{}/oidc/introspect", get_backend_url());
     let res = reqwest::Client::new()
         .post(&url_valid)
@@ -1081,7 +1093,13 @@ async fn validate_token(
         .send()
         .await?;
     assert_eq!(res.status(), 200);
-    let info = res.json::<TokenInfo>().await.unwrap();
+    let text = res.text().await?;
+    let info = serde_json::from_str::<TokenInfo>(&text)?;
     assert!(info.active);
-    Ok(info)
+    if let Some(cnf) = expected_cnf {
+        assert_eq!(info.cnf.unwrap().jkt, cnf.jkt);
+    } else {
+        assert!(info.cnf.is_none());
+    }
+    Ok(())
 }

@@ -1,17 +1,13 @@
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
-use jwt_simple::algorithms::{EdDSAKeyPairLike, RSAKeyPairLike};
-use jwt_simple::claims::Claims;
-use jwt_simple::prelude::coarsetime;
-use rauthy_common::utils::base64_url_no_pad_decode;
+use rauthy_common::utils::{base64_url_no_pad_decode, base64_url_no_pad_decode_buf};
 use rauthy_error::ErrorResponse;
 use rauthy_error::ErrorResponseType;
-use rauthy_models::JwtLogoutClaims;
-use rauthy_models::JwtTokenType;
+use rauthy_jwt::claims::{JwtCommonClaims, JwtLogoutClaims, JwtTokenType};
 use rauthy_models::entity::auth_providers::AuthProvider;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg};
-use rauthy_models::sign_jwt;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::env;
 use std::str::FromStr;
 use std::string::ToString;
@@ -42,30 +38,35 @@ static LOGOUT_TOKEN_ALLOWED_LIFETIME: LazyLock<u16> = LazyLock::new(|| {
 /// Logout Token for OIDC backchannel logout specified in
 /// https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LogoutToken {
+pub struct LogoutToken<'a> {
     // default claims
-    pub iss: String,
-    pub aud: String,
+    pub iss: &'a str,
+    pub aud: &'a str,
     pub exp: i64,
 
     // MUST always either not exist or be `logout+jwt`
     typ: Option<JwtTokenType>,
     // alg: JwkKeyPairAlg,
     pub iat: i64,
-    pub jti: String,
+    pub jti: Cow<'a, str>,
     // MUST always contain `"http://schemas.openid.net/event/backchannel-logout": {}`
     events: serde_json::Value,
 
-    pub sub: Option<String>,
-    pub sid: Option<String>,
+    pub sub: Option<&'a str>,
+    pub sid: Option<&'a str>,
 
     // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
     // `.is_none()` validation.
-    nonce: Option<String>,
+    nonce: Option<&'a str>,
 }
 
-impl LogoutToken {
-    pub fn new(issuer: String, aud: String, sub: Option<String>, sid: Option<String>) -> Self {
+impl LogoutToken<'_> {
+    pub fn new<'a>(
+        issuer: &'a str,
+        aud: &'a str,
+        sub: Option<&'a str>,
+        sid: Option<&'a str>,
+    ) -> LogoutToken<'a> {
         let iat = Utc::now().timestamp();
         let exp = iat + *LOGOUT_TOKEN_LIFETIME as i64;
 
@@ -74,13 +75,13 @@ impl LogoutToken {
             serde_json::Value::Object(serde_json::Map::new()),
         )]));
 
-        Self {
+        LogoutToken {
             iss: issuer,
             aud,
             exp,
             typ: Some(JwtTokenType::Logout),
             iat,
-            jti: secure_random_alnum(8),
+            jti: secure_random_alnum(8).into(),
             events,
             sub,
             sid,
@@ -88,41 +89,47 @@ impl LogoutToken {
         }
     }
 
+    #[inline]
     pub async fn into_token(self, alg: JwkKeyPairAlg) -> Result<String, ErrorResponse> {
         let kp = JwkKeyPair::find_latest(alg).await?;
         self.into_token_with_kp(&kp)
     }
 
+    #[inline]
     pub fn into_token_with_kp(self, kp: &JwkKeyPair) -> Result<String, ErrorResponse> {
-        let custom_claims = JwtLogoutClaims {
-            typ: self.typ,
-            jti: self.jti,
+        let claims = JwtLogoutClaims {
+            common: JwtCommonClaims {
+                iat: self.iat,
+                nbf: self.iat,
+                exp: self.exp,
+                iss: self.iss,
+                jti: Some(self.jti.as_ref()),
+                aud: Cow::Borrowed(self.aud),
+                sub: self.sub,
+                typ: self.typ.clone().unwrap_or(JwtTokenType::Logout),
+                azp: self.aud,
+                scope: None,
+                preferred_username: None,
+                did: None,
+                cnf: None,
+            },
             events: self.events,
             sid: self.sid,
             nonce: None,
         };
-
-        let mut claims = Claims::with_custom_claims(
-            custom_claims,
-            coarsetime::Duration::from_secs((self.exp - self.iat) as u64),
-        )
-        .with_audience(self.aud)
-        .with_issuer(self.iss);
-
-        if let Some(sub) = self.sub {
-            claims = claims.with_subject(sub);
-        }
-
-        sign_jwt!(kp, claims)
+        rauthy_jwt::token::JwtToken::build(kp, &claims)
     }
 
     /// Parse and validate the token as specified in
     /// https://openid.net/specs/openid-connect-backchannel-1_0.html#Validation
-    pub async fn from_str_validated(logout_token: &str) -> Result<Self, ErrorResponse> {
-        let (header, slf) = Self::build_from_str(logout_token)?;
+    pub async fn from_str_validated<'a>(
+        logout_token: &'a str,
+        buf: &'a mut Vec<u8>,
+    ) -> Result<LogoutToken<'a>, ErrorResponse> {
+        let (header, slf) = LogoutToken::build_from_str(logout_token, buf)?;
         let (kid, alg) = slf.validate_claims(header)?;
 
-        let provider = AuthProvider::find_by_iss(slf.iss.clone())
+        let provider = AuthProvider::find_by_iss(slf.iss.to_string())
             .await
             .map_err(|err| {
                 error!(
@@ -161,7 +168,8 @@ impl LogoutToken {
                 "`alg` mismatch between token header and fetched JWK",
             ));
         }
-        jwk.validate_token_signature(logout_token)?;
+        let mut buf = Vec::with_capacity(256);
+        jwk.validate_token_signature(logout_token, &mut buf)?;
 
         Ok(slf)
     }
@@ -171,7 +179,10 @@ impl LogoutToken {
     ///
     /// Returns `(jwt_header, Self)`
     #[inline]
-    pub fn build_from_str(logout_token: &str) -> Result<(serde_json::Value, Self), ErrorResponse> {
+    pub fn build_from_str<'a>(
+        logout_token: &'a str,
+        buf: &'a mut Vec<u8>,
+    ) -> Result<(serde_json::Value, LogoutToken<'a>), ErrorResponse> {
         // Before we can actually validate the token, we need to decode it and take a peek at the
         // issuer, so we can validate that we do have the issuer configured as an upstream provider.
         let mut split = logout_token.split(".");
@@ -196,9 +207,8 @@ impl LogoutToken {
                 "invalid logout token format - claims are missing",
             )),
             Some(b64) => {
-                let bytes = base64_url_no_pad_decode(b64)?;
-                let s = String::from_utf8_lossy(&bytes);
-                Ok((header, serde_json::from_str::<Self>(&s)?))
+                base64_url_no_pad_decode_buf(b64, buf)?;
+                Ok((header, serde_json::from_slice::<LogoutToken>(buf)?))
             }
         }
     }
@@ -365,16 +375,12 @@ mod tests {
         let sid = "sid_1337";
 
         // ed25519 with sub and no sid
-        let token = LogoutToken::new(
-            iss.to_string(),
-            aud.to_string(),
-            Some(sub.to_string()),
-            None,
-        )
-        .into_token_with_kp(&kp_25519)
-        .unwrap();
+        let token = LogoutToken::new(iss, aud, Some(sub), None)
+            .into_token_with_kp(&kp_25519)
+            .unwrap();
+        let mut buf = Vec::with_capacity(256);
 
-        let (header, lt) = LogoutToken::build_from_str(&token).unwrap();
+        let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
         lt.validate_claims(header).unwrap();
         assert_eq!(lt.typ.unwrap().as_str(), "logout+jwt");
         assert_eq!(lt.aud, aud);
@@ -382,48 +388,37 @@ mod tests {
         assert!(lt.sid.is_none());
 
         // rs256 with sid and no sub
-        let token = LogoutToken::new(
-            iss.to_string(),
-            aud.to_string(),
-            None,
-            Some(sid.to_string()),
-        )
-        .into_token_with_kp(&kp_256)
-        .unwrap();
+        let token = LogoutToken::new(iss, aud, None, Some(sid))
+            .into_token_with_kp(&kp_256)
+            .unwrap();
 
-        let (header, lt) = LogoutToken::build_from_str(&token).unwrap();
+        buf.clear();
+        let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
         lt.validate_claims(header).unwrap();
         assert_eq!(lt.sid.unwrap(), sid);
         assert!(lt.sub.is_none());
 
         // make sure building + validation is fine with rs384 and rs512 as well
-        let token = LogoutToken::new(
-            iss.to_string(),
-            aud.to_string(),
-            None,
-            Some(sid.to_string()),
-        )
-        .into_token_with_kp(&kp_384)
-        .unwrap();
-        let (header, lt) = LogoutToken::build_from_str(&token).unwrap();
+        let token = LogoutToken::new(iss, aud, None, Some(sid))
+            .into_token_with_kp(&kp_384)
+            .unwrap();
+        buf.clear();
+        let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
         lt.validate_claims(header).unwrap();
 
-        let token = LogoutToken::new(
-            iss.to_string(),
-            aud.to_string(),
-            None,
-            Some(sid.to_string()),
-        )
-        .into_token_with_kp(&kp_512)
-        .unwrap();
-        let (header, lt) = LogoutToken::build_from_str(&token).unwrap();
+        let token = LogoutToken::new(iss, aud, None, Some(sid))
+            .into_token_with_kp(&kp_512)
+            .unwrap();
+        buf.clear();
+        let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
         lt.validate_claims(header).unwrap();
 
         // no sub + sid - expect failure
-        let token = LogoutToken::new(iss.to_string(), aud.to_string(), None, None)
+        let token = LogoutToken::new(iss, aud, None, None)
             .into_token_with_kp(&kp_25519)
             .unwrap();
-        let (header, lt) = LogoutToken::build_from_str(&token).unwrap();
+        buf.clear();
+        let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
         lt.validate_claims(header).expect_err("empty sub and sid");
     }
 }

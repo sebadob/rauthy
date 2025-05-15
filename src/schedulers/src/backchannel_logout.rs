@@ -100,7 +100,7 @@ async fn execute_logout_retries(
         match logout::send_backchannel_logout(
             client.id.clone(),
             client.backchannel_logout_uri.unwrap_or_default(),
-            data.issuer.clone(),
+            &data.issuer,
             sub,
             sid,
             kp.unwrap(),

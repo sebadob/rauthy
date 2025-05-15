@@ -215,5 +215,14 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         .await?;
     }
 
+    // make sure `init_client` has `profile` as default scope to make user picture integration
+    // tests succeed
+    let sql = "UPDATE clients SET default_scopes = 'email,openid,profile' WHERE id = 'init_client'";
+    if is_hiqlite() {
+        DB::hql().execute(sql, params!()).await?;
+    } else {
+        DB::pg_execute(sql, &[]).await?;
+    }
+
     Ok(())
 }

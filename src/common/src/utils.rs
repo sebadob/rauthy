@@ -49,6 +49,13 @@ pub fn base64_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
         .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
 }
 
+#[inline(always)]
+pub fn base64_decode_buf(b64: &str, buf: &mut Vec<u8>) -> Result<(), ErrorResponse> {
+    B64_STD
+        .decode_vec(b64, buf)
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
+}
+
 // Returns the given input as a base64 URL Encoded String
 #[inline(always)]
 pub fn base64_url_encode(input: &[u8]) -> String {
@@ -69,6 +76,11 @@ pub fn base64_url_no_pad_encode(input: &[u8]) -> String {
 }
 
 #[inline(always)]
+pub fn base64_url_no_pad_encode_buf(input: &[u8], buf: &mut String) {
+    B64_URL_SAFE_NO_PAD.encode_string(input, buf)
+}
+
+#[inline(always)]
 pub fn base64_url_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
     B64_URL_SAFE
         .decode(b64)
@@ -79,6 +91,13 @@ pub fn base64_url_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
 pub fn base64_url_no_pad_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
     B64_URL_SAFE_NO_PAD
         .decode(b64)
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
+}
+
+#[inline(always)]
+pub fn base64_url_no_pad_decode_buf(b64: &str, buf: &mut Vec<u8>) -> Result<(), ErrorResponse> {
+    B64_URL_SAFE_NO_PAD
+        .decode_vec(b64, buf)
         .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
 }
 
