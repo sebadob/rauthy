@@ -5,10 +5,6 @@ use actix_web::web;
 use cryptr::{EncKeys, EncValue};
 use ed25519_compact::Noise;
 use hiqlite_macros::params;
-use jwt_simple::algorithms;
-use jwt_simple::algorithms::{
-    Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
-};
 use postgres_types::Type;
 use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
 use rauthy_common::constants::{
@@ -20,7 +16,8 @@ use rauthy_common::utils::{
 use rauthy_common::{HTTP_CLIENT, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
-use rsa::pkcs8::DecodePrivateKey;
+use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey};
+use rsa::traits::PublicKeyParts;
 use rsa::{BigUint, sha2};
 use serde::{Deserialize, Serialize};
 use std::default::Default;
@@ -153,7 +150,7 @@ impl JWKS {
                 typ: cert.signature,
                 bytes: jwk_decrypted,
             };
-            jwks.add_jwk(&kp);
+            jwks.add_jwk(&kp)?;
         }
 
         client
@@ -165,9 +162,10 @@ impl JWKS {
 }
 
 impl JWKS {
-    pub fn add_jwk(&mut self, key_pair: &JwkKeyPair) {
-        let pub_key = JWKSPublicKey::from_key_pair(key_pair);
-        self.keys.push(pub_key)
+    pub fn add_jwk(&mut self, key_pair: &JwkKeyPair) -> Result<(), ErrorResponse> {
+        let pub_key = JWKSPublicKey::from_key_pair(key_pair)?;
+        self.keys.push(pub_key);
+        Ok(())
     }
 
     /// Rotates and generates a whole new Set of JWKs for signing JWT Tokens
@@ -179,16 +177,18 @@ impl JWKS {
 
         // RSA256
         let jwk_plain = web::block(|| {
-            RS256KeyPair::generate(2048)
+            let mut rng = rand_08::thread_rng();
+            rsa::RsaPrivateKey::new(&mut rng, 2028)
                 .unwrap()
-                .with_key_id(&get_rand(24))
+                .to_pkcs8_der()
+                .unwrap()
         })
         .await?;
-        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+        let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
             .into_bytes()
             .to_vec();
         let entity = Jwk {
-            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS256,
             enc_key_id: enc_key_active.to_string(),
@@ -198,16 +198,18 @@ impl JWKS {
 
         // RS384
         let jwk_plain = web::block(|| {
-            RS384KeyPair::generate(3072)
+            let mut rng = rand_08::thread_rng();
+            rsa::RsaPrivateKey::new(&mut rng, 3072)
                 .unwrap()
-                .with_key_id(&get_rand(24))
+                .to_pkcs8_der()
+                .unwrap()
         })
         .await?;
-        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+        let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
             .into_bytes()
             .to_vec();
         let entity = Jwk {
-            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS384,
             enc_key_id: enc_key_active.to_string(),
@@ -217,16 +219,18 @@ impl JWKS {
 
         // RSA512
         let jwk_plain = web::block(|| {
-            RS512KeyPair::generate(4096)
+            let mut rng = rand_08::thread_rng();
+            rsa::RsaPrivateKey::new(&mut rng, 4096)
                 .unwrap()
-                .with_key_id(&get_rand(24))
+                .to_pkcs8_der()
+                .unwrap()
         })
         .await?;
-        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+        let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
             .into_bytes()
             .to_vec();
         let entity = Jwk {
-            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS512,
             enc_key_id: enc_key_active.to_string(),
@@ -235,13 +239,12 @@ impl JWKS {
         entity.save().await?;
 
         // Ed25519
-        let jwk_plain =
-            web::block(|| Ed25519KeyPair::generate().with_key_id(&get_rand(24))).await?;
-        let jwk = EncValue::encrypt(jwk_plain.to_der().as_slice())?
+        let jwk_plain = web::block(ed25519_compact::KeyPair::generate).await?;
+        let jwk = EncValue::encrypt(jwk_plain.sk.to_der().as_slice())?
             .into_bytes()
             .to_vec();
         let entity = Jwk {
-            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::EdDSA,
             enc_key_id: enc_key_active.to_string(),
@@ -365,49 +368,37 @@ impl JWKSPublicKey {
     }
 
     #[inline]
-    pub fn from_key_pair(key_pair: &JwkKeyPair) -> Self {
-        let get_rsa = |kid: String, comp: algorithms::RSAPublicKeyComponents| JWKSPublicKey {
-            kty: JwkKeyPairType::RSA,
-            alg: Some(key_pair.typ.clone()),
-            crv: None,
-            kid: Some(kid),
-            n: Some(base64_url_encode(&comp.n)),
-            e: Some(base64_url_encode(&comp.e)),
-            x: None,
-        };
-
-        let get_ed25519 = |kid: String, x: String| JWKSPublicKey {
-            kty: JwkKeyPairType::OKP,
-            alg: Some(key_pair.typ.clone()),
-            crv: Some("Ed25519".to_string()),
-            kid: Some(kid),
-            n: None,
-            e: None,
-            x: Some(x),
-        };
-
-        match key_pair.typ {
-            JwkKeyPairAlg::RS256 => {
-                let kp = algorithms::RS256KeyPair::from_der(&key_pair.bytes).unwrap();
-                let comp = kp.public_key().to_components();
-                get_rsa(key_pair.kid.clone(), comp)
-            }
-            JwkKeyPairAlg::RS384 => {
-                let kp = algorithms::RS384KeyPair::from_der(&key_pair.bytes).unwrap();
-                let comp = kp.public_key().to_components();
-                get_rsa(key_pair.kid.clone(), comp)
-            }
-            JwkKeyPairAlg::RS512 => {
-                let kp = algorithms::RS384KeyPair::from_der(&key_pair.bytes).unwrap();
-                let comp = kp.public_key().to_components();
-                get_rsa(key_pair.kid.clone(), comp)
+    pub fn from_key_pair(key_pair: &JwkKeyPair) -> Result<Self, ErrorResponse> {
+        let slf = match key_pair.typ {
+            JwkKeyPairAlg::RS256 | JwkKeyPairAlg::RS384 | JwkKeyPairAlg::RS512 => {
+                let key = rsa::RsaPrivateKey::from_pkcs8_der(&key_pair.bytes)?;
+                let pubkey = key.to_public_key();
+                Self {
+                    kty: JwkKeyPairType::RSA,
+                    alg: Some(key_pair.typ.clone()),
+                    crv: None,
+                    kid: Some(key_pair.kid.clone()),
+                    n: Some(base64_url_encode(&pubkey.n().to_bytes_be())),
+                    e: Some(base64_url_encode(&pubkey.e().to_bytes_be())),
+                    x: None,
+                }
             }
             JwkKeyPairAlg::EdDSA => {
-                let kp = algorithms::Ed25519KeyPair::from_der(&key_pair.bytes).unwrap();
-                let x = base64_url_encode(&kp.public_key().to_bytes());
-                get_ed25519(key_pair.kid.clone(), x)
+                let key = ed25519_compact::SecretKey::from_der(&key_pair.bytes)?;
+                let x = base64_url_encode(&key.public_key().to_der());
+                Self {
+                    kty: JwkKeyPairType::OKP,
+                    alg: Some(key_pair.typ.clone()),
+                    crv: Some("Ed25519".to_string()),
+                    kid: Some(key_pair.kid.clone()),
+                    n: None,
+                    e: None,
+                    x: Some(x),
+                }
             }
-        }
+        };
+
+        Ok(slf)
     }
 
     /// Tries to fetch a JWKS from a remote location, parses the whole content and caches it by

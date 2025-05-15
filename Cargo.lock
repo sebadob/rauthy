@@ -4166,6 +4166,7 @@ dependencies = [
  "openssl-sys",
  "postgres-types",
  "pretty_assertions",
+ "rand 0.8.5",
  "rand_core 0.9.3",
  "rauthy-api-types",
  "rauthy-common",

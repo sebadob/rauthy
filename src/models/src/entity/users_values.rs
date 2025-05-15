@@ -1,10 +1,10 @@
 use crate::database::{Cache, DB};
 use hiqlite_macros::params;
-use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_api_types::users::{UserValuesRequest, UserValuesResponse};
 use rauthy_common::constants::{CACHE_TTL_USER, IDX_USERS_VALUES};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserValues {

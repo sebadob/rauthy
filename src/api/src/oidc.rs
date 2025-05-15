@@ -435,7 +435,7 @@ pub async fn get_certs() -> Result<HttpResponse, ErrorResponse> {
 #[get("/oidc/certs/{kid}")]
 pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
     let kp = JwkKeyPair::find(kid.into_inner()).await?;
-    let pub_key = JWKSPublicKey::from_key_pair(&kp);
+    let pub_key = JWKSPublicKey::from_key_pair(&kp)?;
     Ok(HttpResponse::Ok()
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
@@ -464,7 +464,6 @@ pub async fn post_device_auth(
         return ErrorResponse::from(err).error_response();
     }
 
-    // handle ip rate-limiting
     if DEVICE_GRANT_RATE_LIMIT.is_some() {
         match real_ip_from_req(&req) {
             Err(err) => {
@@ -511,7 +510,6 @@ pub async fn post_device_auth(
         };
     }
 
-    // find and validate the client
     let client = match Client::find(payload.client_id).await {
         Ok(client) => client,
         Err(_) => {
