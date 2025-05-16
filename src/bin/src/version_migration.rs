@@ -1,4 +1,7 @@
+use hiqlite_macros::params;
+use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
+use rauthy_models::database::DB;
 use tracing::warn;
 
 /// If it's necessary to apply manual migrations between major versions, which are
@@ -14,6 +17,16 @@ pub async fn manual_version_migrations() -> Result<(), ErrorResponse> {
     migrating from an older version with a still existing 'admin@localhost.de'.
 "#
     );
+
+    // The deletion of the legacy Rauthy logo has been forgotten for new Hiqlite deployments.
+    // A permanent DB migration will be added for the next feature release. Until then, there will
+    // be this dynamic query to not introduce any breaking change with a new patch version.
+    if is_hiqlite() {
+        DB::hql().execute(r#"
+DELETE FROM client_logos
+WHERE client_id = 'rauthy' AND content_type = 'image/svg+xml' AND data LIKE '%viewBox="0 0 512 138"%';
+        "#, params!()).await?;
+    }
 
     Ok(())
 }
