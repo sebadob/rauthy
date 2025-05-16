@@ -20,8 +20,8 @@ attributes, if some exist.
 
 - It was possible, that Rauthy tried to sync groups via SCIM even if group syncing has been disabled.
   [#936](https://github.com/sebadob/rauthy/pull/936)
-- The legacy Rauthy showed up at the login page in versions `0.29.0` - `0.29.3` for fresh Hiqlite deployments. This was
-  due to a missing, permanent database migration that removes the old logo. This was shadowed by the manual version
+- The legacy Rauthy logo showed up at the login page in versions `0.29.0` - `0.29.3` for fresh Hiqlite deployments. This
+  was due to a missing, permanent database migration that removes the old logo. This was shadowed by the manual version
   migration queries that existed during the `0.28` release. This patch version has a programmatic query and will add
   a permanent migration with the `0.30` release to not introduce breaking changes with a patch level.
   [#943](https://github.com/sebadob/rauthy/pull/943)
