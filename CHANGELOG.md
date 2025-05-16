@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.29.4
+
+### Changes
+
+#### Custom Attributes via SCIM
+
+Rauthy's SCIM functionality now also adds custom user attributes. These will be added, just like inside the `id_token`
+claims, under `custom: *` as JSON values. These will be added only if the client should receive these attributes
+defined via the allowed `scope`s.
+
+This is a non-RFC value, but it should be ignored by any client, that does not understand the `custom` field. While the
+`rauthy-client` has been released with a new version in the meantime, its implementation gives you access to custom
+attributes, if some exist.
+
+[#936](https://github.com/sebadob/rauthy/pull/936)
+
+### Bugfix
+
+- It was possible, that Rauthy tried to sync groups via SCIM even if group syncing has been disabled.
+  [#936](https://github.com/sebadob/rauthy/pull/936)
+- The legacy Rauthy showed up at the login page in versions `0.29.0` - `0.29.3` for fresh Hiqlite deployments. This was
+  due to a missing, permanent database migration that removes the old logo. This was shadowed by the manual version
+  migration queries that existed during the `0.28` release. This patch version has a programmatic query and will add
+  a permanent migration with the `0.30` release to not introduce breaking changes with a patch level.
+  [#943](https://github.com/sebadob/rauthy/pull/943)
+
 ## v0.29.3
 
 ### Bugfix
