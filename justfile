@@ -10,6 +10,7 @@ docker := `echo ${DOCKER:-docker}`
 map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
 npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
+node_image := "node:22"
 builder_image := "ghcr.io/sebadob/rauthy-builder"
 builder_tag_date := "20250505"
 container_mailcrab := "rauthy-mailcrab"
@@ -32,12 +33,6 @@ setup:
     cd frontend/
     {{ npm }} install
     cd ..
-
-    echo "Building the UI and static HTML"
-    just build-ui
-
-    echo "Starting Postgres and Mailcrab containers"
-    just backend-start
 
 # start the backend containers for local dev
 @backend-start:
@@ -175,6 +170,27 @@ run ty="hiqlite":
       cargo run
     fi
 
+# runs (and stops) Postgres, Mailcrab, normal `just run` command
+compose ty="hiqlite":
+    #!/usr/bin/env bash
+
+    just mailcrab-start
+
+    # In case of Postgres, the container will not be up that quickly
+    if [[ {{ ty }} == "postgres" ]]; then
+      just postgres-start
+      sleep 2
+      {{ postgres }} cargo run
+      just postgres-stop
+    elif [[ {{ ty }} == "ui" ]]; then
+      cd frontend
+      {{ npm }} run dev -- --host=0.0.0.0
+    elif [[ {{ ty }} == "hiqlite" ]]; then
+      cargo run
+    fi
+
+    just mailcrab-stop
+
 # prints out the currently set version
 version:
     #!/usr/bin/env bash
@@ -262,8 +278,8 @@ test-postgres test="": test-backend-stop postgres-stop postgres-start
       exit 1
     fi
 
-# builds the frontend and exports to static html
-build-ui:
+# builds the frontend and exports to static html, the option `container` will build it inside a container
+build-ui where="local":
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -274,13 +290,21 @@ build-ui:
     rm -rf static/v1/*
     rm -rf templates/html/*
 
-    # build the frontend
-    cd frontend
-    {{ npm }} run build
-    cd ..
+    if [[ {{ where }} == "container" ]]; then
+        {{ docker }} run \
+            -v {{ invocation_directory() }}/:/work/ \
+            -w /work/frontend \
+            {{ map_docker_user }} \
+            {{ node_image }} \
+            npm run build
+    else
+        # build the frontend
+        cd frontend
+        {{ npm }} run build
+    fi
 
-    git add static/v1/*
-    git add templates/html/*
+#    git add static/v1/*
+#    git add templates/html/*
 
 # builds the rauthy book
 build-docs:

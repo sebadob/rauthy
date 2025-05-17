@@ -33,29 +33,59 @@ To work with this project, you need to have the following tools available on you
 - `npm`
 - `docker` / `podman`
 
+> `npm` is not strictly necessary, but recommended to have. If you just want to build the static UI files, you can also
+> do it inside a container. However, if you want to do any form of development on the UI, you need `npm` to run it in
+> dev mode locally.
+
 ### Building from source
 
-If you just want to build from source yourself without doing any development, all necessary files have been checked into
-version control to make this possible. In some environments, `just build-ui` does not work (like FreeBSD e.g.). To still
-be able to build from source on those systems, the pre-built static HTML has been checked into version control.
+If you only care about building from source and don't need any testing or development, you need to do 2 things:
+
+- `just build-ui`
+- `cargo build --release`
+
+This will build a release binary for your current platform in the simplest form. You can also build the multi arch
+container image. However, you cannot just use `just build` (like explained further down). You then need to do something
+like
 
 ```
-cargo build --release
+just build my/registry/rauthy
 ```
+
+This will build the container AND will try to `push` the image as well. If you only want a local image without pushing
+it, you can do
+
+```
+just build my/registry/rauthy nopush
+```
+
+which will then build the multi arch image and load it into your local container registry afterward.
 
 #### CAUTION
 
-If you are building from source, either for production or without rebuilding the UI, you MUST always build
-from a stable release tag and never from main. To not have messy PRs, the UI will only be rebuilt during releases or
-in special occasions.  
-You also MUST NEVER use a build from `main` in production. The `main` branch might contain unstable database migrations.
-If these are applied to your production database and needed changes before the next release, it will produce a conflict
-that is impossible to be solved automatically. You either need to roll back and apply an older DB backup, or undo the
-unstable migrations manually. Just don't ever use `main` or any nightly images you might find in production.
+If you are building from source for production, you MUST always build from a stable release tag and never from `main`.
+
+You MUST NEVER use a build from `main` or any nightly image (tag typically with `*-some_date` appended) in production.
+The `main` branch might contain unstable database migrations. If these are applied to your production database and
+needed changes before the next release, it will produce a conflict that is impossible to be solved automatically. You
+either need to roll back and apply an older DB backup, or undo the unstable migrations manually. Just don't ever use
+`main` or any nightly images you might find in production.
 
 ### Initial Development Setup
 
-A lot of work has been put into simplifying the development setup lately. The minimum need to do is:
+A lot of work has been put into simplifying the development setup lately.
+
+If you start inside a freshly cloned project, you first need to execute
+
+```
+just setup
+```
+
+which will run `npm install` for the frontend, to make all the `node_modules` available for either building the UI or
+running it in development mode. You only need to run this once or after a version bump, which will typically bump
+all dependencies and therefore needs another `npm install`.
+
+After the `setup`, you need:
 
 - `just backend-start`
 - `just build-ui`
@@ -64,11 +94,6 @@ A lot of work has been put into simplifying the development setup lately. The mi
 times, if the containers are already running, but these can be ignored. You don't strictly need the Postgres if you
 are only developing with `hiqlite`. If you want to save the resources, instead of `just backend-start`, you could only
 do `just mailcrab-start` to start the local email test server.
-
-Even though pre-built static HTML files are checked into version control to make building from source possible on some
-systems, where the UI cannot be built, you MUST always rebuild it, when you are developing locally. This is done with
-`just build-ui`. The pre-built files checked into version control are usually only updated during releases to not have
-messy PRs all the time.
 
 Rauthy is using compile-time checked templating with [askama](https://crates.io/crates/askama). If you ever see any
 templating related errors from `askama`, you most like just need to rebuild the UI with another `just build-ui`.
@@ -141,6 +166,10 @@ If you want to test against Postgres, instead of the above `just run`, simply ex
 just run postgres
 ```
 
+> If you don't want to keep running your Postgres and Mailcrab containers up and running, you can instead of `just run`
+> also use `just compose`, which will start and stop both containers each time. Keep in mind though, that you will lose
+> any prior state from testing in that case (apart from Hiqlite).
+
 ### Default Credentials
 
 When `DEV_MODE=true` (which is the default for local dev), Rauthy will do some programmatic DB migrations. For instance
@@ -183,6 +212,91 @@ rebuilt the UI, you will have the static HTML files updates, and you see the lat
 > it fails because of some issue. At that point, the pre-built HTML will be cleaned up already, but the new files are
 > not added of course because of the UI error.
 > You need to fix the UI error first, then rebuild it, and then the `askama` template errors will go away.
+
+## Architecture and Internals
+
+### DEV vs PROD mode
+
+Rauthy's architecture in production is really simple, but in local development, it's a bit more involved.
+
+During **local development**, you have the Rust backend, which basically is "Rauthy". It serves the whole API. In
+addition, you typically want to run the UI in dev mode as well, which is done via `just run ui`, like explained above.
+This will run NodeJS and serve the Svelte UI on port `5173`.
+
+In **production**, the whole UI will be compiled into static HTML and served by the Rust backend. This means you only
+have this single server running doing all the work.
+
+For the UI, `<template>` blocks are used to do a little bit of SSR. Some values will be injected into the HTML (in prod)
+before it's sent to the user. To access these `<template>` blocks, there is a dedicated Svelte component in
+`frontend/src/lib/Template.svelte` which will take care of this. In prod, it will simply get the information from the
+DOM. During local dev, it will fetch the data async from the Rust backend via the `/auth/v1/template/${id}` endpoint.
+This endpoint is only available when Rauthy is compiled with `debug_assertions` and not every scenario works with it
+like it prod. These cases are mentioned above already as well, just to keep that in mind. It's mostly about password
+resets.
+
+Some actions and flows only work like normal, when the backend is served as static HTML from the Rust API. To work
+around these edge cases, Rauthy exposes dev-only endpoints in `src/api/src/dev_only/dev_handler.rs`. These are used
+in some situations, where you might have a chicken-and-egg problem because of non-static HTML or things like that.
+
+### Database Migrations
+
+DB migrations live in `migrations`. They work very similar for both DB versions with slight differences.
+
+The files in both cases MUST follow a strictly ascending order with their ID to be considered valid. For `hiqlite`, the
+files therefore must always start with `<id>_`, while for Postgres (because of different crates under the hood), it must
+be `V<id>__`.
+
+> The **most important part** is, that you NEVER modify already existing files that have been published in any stable
+> version before. These migrations will be hashed at startup and compared to the already applied hashes, and they will
+> `panic` if there is any difference, to never operate on a database in an unknown state.
+
+### I18n
+
+#### UI
+
+Internationalization has been reworked a few times until it reached the current, hopefully easy to understand state:
+
+For the UI, everything you need to do is to take a look at `frontend/src/i18n`. This folder will container `admin`
+and `common`. Translations are split into these categories, so that a normal user would never have to fetch any
+translations that are only necessary for the Admin UI part. Therefore, if you add anything, make sure it is done in the
+correct section. It is done in this way to have all the type-checked instead of the usual "fetch some JSON and interpret
+it"-way of doing it.
+
+You can access them inside the code via already existing hooks and I always use `t` for the `common` translations, and
+`ta` for all `admin` translations:
+
+```typescript
+let t = useI18n();
+let ta = useI18nAdmin();
+```
+
+#### E-Mail
+
+E-Mails are rendered in the backend. Translations are being handled in `src/models/src/i18n_email`. Most of these have
+fixed presets. But for the "New Password" and "Password Reset" E-Mail, some custom `TPL_*` env vars can be set to
+overwrite the defaults and customize these mails a bit more. The corresponding files, which require a bit more work
+when adding a whole new language, are `src/models/src/i18n_email/password_new.rs` and
+`[reset.rs](src/models/src/i18n_email/reset.rs)`.
+
+### CSS
+
+CSS is being done very straight forward. To make it short: I really hate any CSS frameworks.
+
+There is `frontend/src/css/global.css` which contains a few global CSS values, that are just used in many places.
+
+`frontend/src/css/theme.css` only exists to make the IDE happy and have a better DX. In reality, the themes are always
+(even during local dev) fetched from the backend to make them dynamically updatable and also cacheable. In
+`frontend/src/app.html`, you can see the `<link rel="stylesheet" href="/auth/v1/theme/{{client_id}}/{{theme_ts}}"/>` to
+fetch themes dynamically, depending on the `client_id`.
+
+Apart from this, all components are styled locally in the `<style>` blocks with just normal CSS.
+
+### UI Compilation
+
+To make the static HTML compilation work and not fail in some edge cases, there is also the
+`frontend/src/hooks.server.js` which you might need to do something in, if you added something new that's failing now.
+This file is only used when the UI is served during local dev and will never be taken into account for the static HTML
+build or in production.
 
 ## Known Limitations
 
@@ -257,8 +371,8 @@ just pre-pr-checks
 ## FreeBSD
 
 If you want to compile from source on FreeBSD, you may have a few limitations. Compiling the UI on FreeBSD seems to not
-work. That is why the `static/` html is checked into version control so it does not prevent you from building from
-source.
+work. You can use `just build-ui container` to use a `node` container to build the static UI files in that case, or run
+the docker command from the recipe manually, if you don't have `just` available.
 
 Since FreeBSD uses some cargo mechanism at build time differently, you may also run into linking issues like e.g. for
 `openssl`, `sqlite` or `rocksdb`. In these situations, you should be able to fix it by installing the dependency on your
