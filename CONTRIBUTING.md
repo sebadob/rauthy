@@ -259,7 +259,7 @@ be `V<id>__`.
 
 #### UI
 
-Internalization has been reworked a few times until it reached the current, hopefully easy to understand state:
+Internationalization has been reworked a few times until it reached the current, hopefully easy to understand state:
 
 For the UI, everything you need to do is to take a look at `frontend/src/i18n`. This folder will container `admin`
 and `common`. Translations are split into these categories, so that a normal user would never have to fetch any
