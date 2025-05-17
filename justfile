@@ -175,6 +175,27 @@ run ty="hiqlite":
       cargo run
     fi
 
+# runs (and stops) Postgres, Mailcrab, normal `just run` command
+compose ty="hiqlite":
+    #!/usr/bin/env bash
+
+    just mailcrab-start
+
+    # In case of Postgres, the container will not be up that quickly
+    if [[ {{ ty }} == "postgres" ]]; then
+      just postgres-start
+      sleep 2
+      {{ postgres }} cargo run
+      just postgres-stop
+    elif [[ {{ ty }} == "ui" ]]; then
+      cd frontend
+      {{ npm }} run dev -- --host=0.0.0.0
+    elif [[ {{ ty }} == "hiqlite" ]]; then
+      cargo run
+    fi
+
+    just mailcrab-stop
+
 # prints out the currently set version
 version:
     #!/usr/bin/env bash
