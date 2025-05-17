@@ -167,8 +167,7 @@ just run postgres
 ```
 
 > If you don't want to keep running your Postgres and Mailcrab containers up and running, you can instead of `just run`
-> also use `just compose`, which will start and stop both containers each time. Keep in mind though, that you will lose
-> any prior state from testing in that case (apart from Hiqlite).
+> also use `just watch` (or `just watch posgres`), which will start dev containers as needed and watch for changes in the Rust code to automatically recompile and restart rauthy. This command requires the [watchexec](https://watchexec.github.io/) tool.
 
 ### Default Credentials
 
@@ -183,11 +182,11 @@ admin@localhost
 123SuperSafe
 ```
 
-### Dev Backend
+### Dev Env Containers
 
-If you want to stop the dev containers, `just backend-stop` will take care of this. If you are working on DB migrations
+If you want to stop the dev containers, `just backend-stop` will take care of this, to remove the containers use `just backend-rm`. If you are working on DB migrations
 and are still changing your new migration, you probably need to clean upt he DB while tuning, because of hash
-mismatches. For Postgres, `just postgres-stop` and `just postgres-start`. For Hiqlite, `just delete-hiqlite`.
+mismatches. For Postgres, `just postgres-rm` and `just postgres-start`. For Hiqlite, `just delete-hiqlite`.
 
 Your local email test server [mailcrab](https://github.com/tweedegolf/mailcrab) will be available on `localhost:1080`.
 It will intercept and grab any outgoing emails in the default configuration. Even addresses that don't exist will be
@@ -320,7 +319,7 @@ requirements mentioned above.
 
 If you are adding a new test and want to debug it, it depends on the type of test how to do that best.
 
-If it's a unit test, it's pretty straight forward, `just test your_unit_test`.  
+If it's a unit test, it's pretty straight forward, `just test your_unit_test`.
 If it's an integration test however, you may not always want to execute the whole range of tests with
 `just test-hiqlite` or `just test-posgtres`, because it takes quite some time.
 
