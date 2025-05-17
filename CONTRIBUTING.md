@@ -257,6 +257,8 @@ be `V<id>__`.
 
 ### I18n
 
+#### UI
+
 Internalization has been reworked a few times until it reached the current, hopefully easy to understand state:
 
 For the UI, everything you need to do is to take a look at `frontend/src/i18n`. This folder will container `admin`
@@ -272,6 +274,14 @@ You can access them inside the code via already existing hooks and I always use 
 let t = useI18n();
 let ta = useI18nAdmin();
 ```
+
+#### E-Mail
+
+E-Mails are rendered in the backend. Translations are being handled in `src/models/src/i18n_email`. Most of these have
+fixed presets. But for the "New Password" and "Password Reset" E-Mail, some custom `TPL_*` env vars can be set to
+overwrite the defaults and customize these mails a bit more. The corresponding files, which require a bit more work
+when adding a whole new language, are `src/models/src/i18n_email/password_new.rs` and
+`[reset.rs](src/models/src/i18n_email/reset.rs)`.
 
 ### CSS
 
