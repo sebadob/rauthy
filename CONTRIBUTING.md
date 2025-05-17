@@ -95,11 +95,6 @@ times, if the containers are already running, but these can be ignored. You don'
 are only developing with `hiqlite`. If you want to save the resources, instead of `just backend-start`, you could only
 do `just mailcrab-start` to start the local email test server.
 
-Even though pre-built static HTML files are checked into version control to make building from source possible on some
-systems, where the UI cannot be built, you MUST always rebuild it, when you are developing locally. This is done with
-`just build-ui`. The pre-built files checked into version control are usually only updated during releases to not have
-messy PRs all the time.
-
 Rauthy is using compile-time checked templating with [askama](https://crates.io/crates/askama). If you ever see any
 templating related errors from `askama`, you most like just need to rebuild the UI with another `just build-ui`.
 
