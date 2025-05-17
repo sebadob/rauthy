@@ -1,3 +1,4 @@
+// @ts-ignore
 const isDev = process.env.DEV_MODE === 'true';
 
 const langDefault = 'en';
@@ -31,7 +32,7 @@ export async function handle({event, resolve}) {
                 let locale = event.cookies.get('locale');
                 return html
                     .replace('%lang%', locale || langDefault)
-                    .replace('{{theme_ts}}', new Date().getTime());
+                    .replace('{{theme_ts}}', new Date().getTime().toString());
             } else {
                 return html.replace('%lang%', '{{lang}}');
             }
