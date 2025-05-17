@@ -55,7 +55,19 @@ unstable migrations manually. Just don't ever use `main` or any nightly images y
 
 ### Initial Development Setup
 
-A lot of work has been put into simplifying the development setup lately. The minimum need to do is:
+A lot of work has been put into simplifying the development setup lately.
+
+If you start inside a freshly cloned project, you only need to execute
+
+```
+just setup
+```
+
+which will run `npm install` for the frontend, build the UI static files for the templating engine, and then start
+the Postgres and Mailcrab containers for development.
+
+However, if you are resuming work, you don't need the additional `npm install` each time. You can also do these steps
+separately:
 
 - `just backend-start`
 - `just build-ui`
