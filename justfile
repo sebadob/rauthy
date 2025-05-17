@@ -35,18 +35,18 @@ setup:
     cd ..
 
 # start the backend containers for local dev
-@backend-start:
+@dev-env-start:
     just mailcrab-start
     just postgres-start
 
 # stop mailcrab and postgres docker containers
-@backend-stop:
+@dev-env-stop:
     just postgres-stop
     just mailcrab-stop
 
 
 # rm mailcrab and postgres docker containers
-@backend-rm: backend-stop
+@dev-env-rm: dev-env-stop
     just mailcrab-rm
 
     echo "Trying to cleanup orphaned containers"
@@ -206,7 +206,7 @@ watch ty="hiqlite":
 
     watchexec -r -w src -w templates -- $command
 
-    just backend-stop
+    just dev-env-stop
 
 # prints out the currently set version
 version:

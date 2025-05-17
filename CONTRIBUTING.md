@@ -87,12 +87,12 @@ all dependencies and therefore needs another `npm install`.
 
 After the `setup`, you need:
 
-- `just backend-start`
+- `just dev-env-start`
 - `just build-ui`
 
-`just backend-start` will start the Mailcrab and Postgres containers. You might see errors when you run this multiple
+`just dev-env-start` will start the Mailcrab and Postgres containers. You might see errors when you run this multiple
 times, if the containers are already running, but these can be ignored. You don't strictly need the Postgres if you
-are only developing with `hiqlite`. If you want to save the resources, instead of `just backend-start`, you could only
+are only developing with `hiqlite`. If you want to save the resources, instead of `just dev-env-start`, you could only
 do `just mailcrab-start` to start the local email test server.
 
 Rauthy is using compile-time checked templating with [askama](https://crates.io/crates/askama). If you ever see any
@@ -184,7 +184,7 @@ admin@localhost
 
 ### Dev Env Containers
 
-If you want to stop the dev containers, `just backend-stop` will take care of this, to remove the containers use `just backend-rm`. If you are working on DB migrations
+If you want to stop the dev containers, `just dev-env-stop` will take care of this, to remove the containers use `just dev-env-rm`. If you are working on DB migrations
 and are still changing your new migration, you probably need to clean upt he DB while tuning, because of hash
 mismatches. For Postgres, `just postgres-rm` and `just postgres-start`. For Hiqlite, `just delete-hiqlite`.
 
