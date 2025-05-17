@@ -153,6 +153,10 @@ If you want to test against Postgres, instead of the above `just run`, simply ex
 just run postgres
 ```
 
+> If you don't want to keep running your Postgres and Mailcrab containers up and running, you can instead of `just run`
+> also use `just compose`, which will start and stop both containers each time. Keep in mind though, that you will lose
+> any prior state from testing in that case (apart from Hiqlite).
+
 ### Default Credentials
 
 When `DEV_MODE=true` (which is the default for local dev), Rauthy will do some programmatic DB migrations. For instance
