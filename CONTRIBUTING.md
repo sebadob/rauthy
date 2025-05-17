@@ -231,13 +231,17 @@ This will run NodeJS and serve the Svelte UI on port `5173`.
 In **production**, the whole UI will be compiled into static HTML and served by the Rust backend. This means you only
 have this single server running doing all the work.
 
-For the UI, some `<template>`ing blocks are using in an SSR way. Some values will be injected into the HTML (in prod)
+For the UI, `<template>` blocks are used to do a little bit of SSR. Some values will be injected into the HTML (in prod)
 before it's sent to the user. To access these `<template>` blocks, there is a dedicated Svelte component in
 `frontend/src/lib/Template.svelte` which will take care of this. In prod, it will simply get the information from the
 DOM. During local dev, it will fetch the data async from the Rust backend via the `/auth/v1/template/${id}` endpoint.
 This endpoint is only available when Rauthy is compiled with `debug_assertions` and not every scenario works with it
 like it prod. These cases are mentioned above already as well, just to keep that in mind. It's mostly about password
 resets.
+
+Some actions and flows only work like normal, when the backend is served as static HTML from the Rust API. To work
+around these edge cases, Rauthy exposes dev-only endpoints in `src/api/src/dev_only/dev_handler.rs`. These are used
+in some situations, where you might have a chicken-and-egg problem because of non-static HTML or things like that.
 
 ### Database Migrations
 
