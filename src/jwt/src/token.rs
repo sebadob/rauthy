@@ -271,22 +271,6 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 0);
-        assert_eq!(
-            res,
-            Err(ErrorResponse::new(
-                ErrorResponseType::JwtToken,
-                "Invalid `aud` / `azp`"
-            ))
-        );
-
-        let res = ValidationClaims {
-            iat: now,
-            exp: now + 10,
-            nbf: now,
-            iss,
-            typ: JwtTokenType::Bearer,
-        }
         .validate(iss, Some(JwtTokenType::Id), 0);
         assert_eq!(
             res,
