@@ -397,7 +397,7 @@ allow insecure cookies for testing locally:</p>
 <pre><code>docker run -it --rm \
     -e LOCAL_TEST=true \
     -p 8080:8080 \
-    ghcr.io/sebadob/rauthy:0.29.3
+    ghcr.io/sebadob/rauthy:0.29.4
 </code></pre>
 <p>This will start the container in interactive mode with the <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> database. Just
 take a look at the log at the logs to see the Account Dashboard URL and new admin password, to get access.</p>
@@ -406,7 +406,7 @@ take a look at the log at the logs to see the Account Dashboard URL and new admi
     -e LOCAL_TEST=true \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.29.3
+    ghcr.io/sebadob/rauthy:0.29.4
 </code></pre>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
@@ -499,7 +499,7 @@ section.</p>
     -v $(pwd)/rauthy/data:/app/data \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.29.3
+    ghcr.io/sebadob/rauthy:0.29.4
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/rauthy.cfg:/app/rauthy.cfg</code> makes sure to overwrite the testing config inside the container</li>
@@ -739,7 +739,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.29.3
+          image: ghcr.io/sebadob/rauthy:0.29.4
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for

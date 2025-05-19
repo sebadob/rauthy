@@ -1,1 +1,0 @@
-import{j as e,k as i,l as o}from"./DXTz3Rbt.js";import{f as a}from"./DMieIo7a.js";import{i as n,r as f}from"./Cx6cA6Ki.js";let s=i(void 0);function d(r){return!e(s)&&n()&&a("/auth/v1/oidc/sessioninfo").then(t=>{t.status===401&&f(r),o(s,t.body,!0)}),{get(){return e(s)},set(t){o(s,t,!0)}}}export{d as u};

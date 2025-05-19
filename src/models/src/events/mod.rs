@@ -1,4 +1,4 @@
-use crate::events::event::EventLevel;
+use event::EventLevel;
 use rauthy_error::ErrorResponse;
 use std::env;
 use std::sync::OnceLock;

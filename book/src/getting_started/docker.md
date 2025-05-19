@@ -11,7 +11,7 @@ allow insecure cookies for testing locally:
 docker run -it --rm \
     -e LOCAL_TEST=true \
     -p 8080:8080 \
-    ghcr.io/sebadob/rauthy:0.29.3
+    ghcr.io/sebadob/rauthy:0.29.4
 ```
 
 This will start the container in interactive mode with the [Hiqlite](https://github.com/sebadob/hiqlite) database. Just
@@ -24,7 +24,7 @@ docker run -d \
     -e LOCAL_TEST=true \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.29.3
+    ghcr.io/sebadob/rauthy:0.29.4
 ```
 
 ```admonish note
@@ -127,7 +127,7 @@ docker run -d \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.29.3
+    ghcr.io/sebadob/rauthy:0.29.4
 ```
 
 - `-v $(pwd)/rauthy/rauthy.cfg:/app/rauthy.cfg` makes sure to overwrite the testing config inside the container

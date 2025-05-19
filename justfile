@@ -10,6 +10,7 @@ docker := `echo ${DOCKER:-docker}`
 map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
 npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
+node_image := "node:22"
 builder_image := "ghcr.io/sebadob/rauthy-builder"
 builder_tag_date := "20250505"
 container_mailcrab := "rauthy-mailcrab"
@@ -33,21 +34,21 @@ setup:
     {{ npm }} install
     cd ..
 
-    echo "Building the UI and static HTML"
-    just build-ui
-
-    echo "Starting Postgres and Mailcrab containers"
-    just backend-start
-
 # start the backend containers for local dev
-@backend-start:
-    just mailcrab-start || echo ">>> Mailcrab is already running - nothing to do"
-    just postgres-start || echo ">>> Postgres is already running - nothing to do"
+@dev-env-start:
+    just mailcrab-start
+    just postgres-start
 
 # stop mailcrab and postgres docker containers
-@backend-stop:
-    just postgres-stop || echo ">>> Postgres is not running - nothing to do"
-    just mailcrab-stop || echo ">>> Mailcrab is not running - nothing to do"
+@dev-env-stop:
+    just postgres-stop
+    just mailcrab-stop
+
+
+# rm mailcrab and postgres docker containers
+@dev-env-rm: dev-env-stop
+    just mailcrab-rm
+
     echo "Trying to cleanup orphaned containers"
     {{ docker }} rm container rauthy || echo ">>> No orphaned 'rauthy' container found"
 
@@ -111,35 +112,48 @@ docker-buildx-setup:
 
 # Starts mailcrab
 mailcrab-start:
-    {{ docker }} run -d \
-      -p 1025:1025 \
-      -p 1080:1080 \
-      --name {{ container_mailcrab }} \
-      --restart unless-stopped \
-      docker.io/marlonb/mailcrab
+    #!/usr/bin/env bash
+    if {{ docker }} ps -a --format '{{{{ .Names }}' | grep -q "^{{ container_mailcrab }}$"; then
+        {{ docker }} start {{ container_mailcrab }}
+    else
+        {{ docker }} run -d \
+            -p 1025:1025 \
+            -p 1080:1080 \
+            --name {{ container_mailcrab }} \
+            --restart unless-stopped \
+            docker.io/marlonb/mailcrab || echo ">>> Mailcrab is already running - nothing to do"
+    fi
 
 # Stops mailcrab
 mailcrab-stop:
-    {{ docker }} stop {{ container_mailcrab }}
-    {{ docker }} rm {{ container_mailcrab }}
+    {{ docker }} stop {{ container_mailcrab }} || echo ">>> Mailcrab is not running - nothing to do"
+
+mailcrab-rm:
+    {{ docker }} rm {{ container_mailcrab }} || echo ">>> Mailcrab does not exists - nothing to do"
 
 # Starts mailcrab
 postgres-start:
     #!/usr/bin/env bash
 
-    {{ docker }} run -d \
-      -e POSTGRES_USER=rauthy \
-      -e POSTGRES_PASSWORD=123SuperSafe \
-      -e POSTGRES_DB=rauthy \
-      -p 5432:5432 \
-      --name {{ container_postgres }} \
-      --restart unless-stopped \
-      docker.io/library/postgres:17.2-alpine
+    if {{ docker }} ps -a --format '{{{{ .Names }}' | grep -q "^{{ container_mailcrab }}$"; then
+        {{ docker }} start {{ container_postgres }}
+    else
+        {{ docker }} run -d \
+            -e POSTGRES_USER=rauthy \
+            -e POSTGRES_PASSWORD=123SuperSafe \
+            -e POSTGRES_DB=rauthy \
+            -p 5432:5432 \
+            --name {{ container_postgres }} \
+            --restart unless-stopped \
+            docker.io/library/postgres:17.2-alpine || echo ">>> Postgres is already running - nothing to do"
+    fi
 
 # Stops mailcrab
 postgres-stop:
-    {{ docker }} stop {{ container_postgres }}
-    {{ docker }} rm {{ container_postgres }}
+    {{ docker }} stop {{ container_postgres }} || echo ">>> Postgres is not running - nothing to do"
+
+postgres-rm:
+    {{ docker }} rm {{ container_postgres }} || echo ">>> Postgres does not exists - nothing to do"
 
 # Just uses `cargo fmt --all`
 fmt:
@@ -174,6 +188,25 @@ run ty="hiqlite":
     elif [[ {{ ty }} == "hiqlite" ]]; then
       cargo run
     fi
+
+# runs (and stops) Postgres, Mailcrab, normal `just run` command
+watch ty="hiqlite":
+    #!/usr/bin/env bash
+
+    just mailcrab-start
+
+    # In case of Postgres, the container will not be up that quickly
+    if [[ {{ ty }} == "postgres" ]]; then
+      just postgres-start
+      sleep 2
+      command="{{ postgres }} cargo run"
+    elif [[ {{ ty }} == "hiqlite" ]]; then
+      command="cargo run"
+    fi
+
+    watchexec -r -w src -w templates -- $command
+
+    just dev-env-stop
 
 # prints out the currently set version
 version:
@@ -262,8 +295,8 @@ test-postgres test="": test-backend-stop postgres-stop postgres-start
       exit 1
     fi
 
-# builds the frontend and exports to static html
-build-ui:
+# builds the frontend and exports to static html, the option `container` will build it inside a container
+build-ui where="local":
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -274,13 +307,21 @@ build-ui:
     rm -rf static/v1/*
     rm -rf templates/html/*
 
-    # build the frontend
-    cd frontend
-    {{ npm }} run build
-    cd ..
+    if [[ {{ where }} == "container" ]]; then
+        {{ docker }} run \
+            -v {{ invocation_directory() }}/:/work/ \
+            -w /work/frontend \
+            {{ map_docker_user }} \
+            {{ node_image }} \
+            npm run build
+    else
+        # build the frontend
+        cd frontend
+        {{ npm }} run build
+    fi
 
-    git add static/v1/*
-    git add templates/html/*
+#    git add static/v1/*
+#    git add templates/html/*
 
 # builds the rauthy book
 build-docs:
