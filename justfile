@@ -44,7 +44,6 @@ setup:
     just postgres-stop
     just mailcrab-stop
 
-
 # rm mailcrab and postgres docker containers
 @dev-env-rm: dev-env-stop
     just mailcrab-rm
@@ -135,7 +134,7 @@ mailcrab-rm:
 postgres-start:
     #!/usr/bin/env bash
 
-    if {{ docker }} ps -a --format '{{{{ .Names }}' | grep -q "^{{ container_mailcrab }}$"; then
+    if {{ docker }} ps -a --format '{{{{ .Names }}' | grep -q "^{{ container_postgres }}$"; then
         {{ docker }} start {{ container_postgres }}
     else
         {{ docker }} run -d \
@@ -274,7 +273,7 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
     fi
 
 # runs the full set of tests with postgres
-test-postgres test="": test-backend-stop postgres-stop postgres-start
+test-postgres test="": test-backend-stop postgres-rm postgres-start
     #!/usr/bin/env bash
     clear
 
