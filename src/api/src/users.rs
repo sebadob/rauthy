@@ -678,7 +678,7 @@ async fn validate_user_picture_access(
 
     if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
         let mut buf = Vec::with_capacity(512);
-        if JwtToken::validate_claims_into(&bearer, &data.issuer, None, None, 0, &mut buf)
+        if JwtToken::validate_claims_into(&bearer, &data.issuer, None, 0, &mut buf)
             .await
             .is_ok()
         {

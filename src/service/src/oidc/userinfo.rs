@@ -23,7 +23,6 @@ pub async fn get_userinfo(
     rauthy_jwt::token::JwtToken::validate_claims_into(
         &bearer,
         &data.issuer,
-        None,
         Some(JwtTokenType::Bearer),
         0,
         buf.as_mut(),

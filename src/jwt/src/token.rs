@@ -49,7 +49,6 @@ impl JwtToken {
     pub async fn validate_claims_into(
         token: &str,
         issuer: &str,
-        client_id: Option<&str>,
         expected_type: Option<JwtTokenType>,
         allowed_clock_skew_seconds: u16,
         buf: &mut Vec<u8>,
@@ -109,7 +108,6 @@ impl JwtToken {
         base64_url_no_pad_decode_buf(claims, buf)?;
         serde_json::from_slice::<ValidationClaims>(buf)?.validate(
             issuer,
-            client_id,
             expected_type,
             allowed_clock_skew_seconds,
         )?;
@@ -118,13 +116,14 @@ impl JwtToken {
     }
 }
 
+// Note: No need to include `aud` in the validation. This will never be `rauthy` itself, and all
+// other possibilities are validated indirectly with a `Client` lookup afterward, which will be
+// done ba grabbing the `client_id` from `aud` / `azp` anyway.
 #[derive(Debug, Deserialize)]
 struct ValidationClaims<'a> {
     iat: i64,
     exp: i64,
     nbf: i64,
-    aud: &'a str,
-    azp: &'a str,
     iss: &'a str,
     typ: JwtTokenType,
 }
@@ -134,7 +133,6 @@ impl ValidationClaims<'_> {
     fn validate(
         &self,
         issuer: &str,
-        client_id: Option<&str>,
         expected_type: Option<JwtTokenType>,
         allowed_clock_skew_seconds: u16,
     ) -> Result<(), ErrorResponse> {
@@ -158,14 +156,6 @@ impl ValidationClaims<'_> {
                 ErrorResponseType::JwtToken,
                 "Token is not valid yet",
             ));
-        }
-        if let Some(cid) = client_id {
-            if self.azp != self.aud || self.azp != cid {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::JwtToken,
-                    "Invalid `aud` / `azp`",
-                ));
-            }
         }
         if let Some(typ) = expected_type {
             if self.typ != typ {
@@ -202,34 +192,28 @@ mod tests {
             iat: now,
             exp: now + 60,
             nbf: now,
-            aud: "test",
-            azp: "test",
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0)?;
+        .validate(iss, Some(JwtTokenType::Bearer), 0)?;
 
         ValidationClaims {
             iat: now + 2,
             exp: now + 60,
             nbf: now + 2,
-            aud: "test",
-            azp: "test",
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 2)?;
+        .validate(iss, Some(JwtTokenType::Bearer), 2)?;
 
         let res = ValidationClaims {
             iat: now,
             exp: now + 60,
             nbf: now + 2,
-            aud: "test",
-            azp: "test",
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0);
+        .validate(iss, Some(JwtTokenType::Bearer), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -242,12 +226,10 @@ mod tests {
             iat: now + 2,
             exp: now + 60,
             nbf: now + 2,
-            aud: "test",
-            azp: "test",
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0);
+        .validate(iss, Some(JwtTokenType::Bearer), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -260,12 +242,10 @@ mod tests {
             iat: now - 60,
             exp: now - 3,
             nbf: now - 60,
-            aud: "test",
-            azp: "test",
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0);
+        .validate(iss, Some(JwtTokenType::Bearer), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -278,24 +258,20 @@ mod tests {
             iat: now - 60,
             exp: now - 3,
             nbf: now - 60,
-            aud: "test",
-            azp: "test",
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 5);
+        .validate(iss, Some(JwtTokenType::Bearer), 5);
         assert_eq!(res, Ok(()));
 
         let res = ValidationClaims {
             iat: now,
             exp: now + 10,
             nbf: now,
-            aud: "test",
-            azp: "test1",
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0);
+        .validate(iss, Some(JwtTokenType::Bearer), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -308,12 +284,10 @@ mod tests {
             iat: now,
             exp: now + 10,
             nbf: now,
-            aud: "test",
-            azp: "test",
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), Some(JwtTokenType::Id), 0);
+        .validate(iss, Some(JwtTokenType::Id), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -326,12 +300,10 @@ mod tests {
             iat: now,
             exp: now + 10,
             nbf: now,
-            aud: "test",
-            azp: "test",
             iss: "http://localhost:9090/something/else",
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some("test"), Some(JwtTokenType::Bearer), 0);
+        .validate(iss, Some(JwtTokenType::Bearer), 0);
         assert_eq!(
             res,
             Err(ErrorResponse::new(

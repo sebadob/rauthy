@@ -16,16 +16,9 @@ pub async fn get_token_info(
     token: &str,
 ) -> Result<(String, Option<(HeaderName, HeaderValue)>), ErrorResponse> {
     let mut buf = Vec::with_capacity(512);
-    if JwtToken::validate_claims_into(
-        token,
-        &data.issuer,
-        None,
-        Some(JwtTokenType::Bearer),
-        0,
-        &mut buf,
-    )
-    .await
-    .is_err()
+    if JwtToken::validate_claims_into(token, &data.issuer, Some(JwtTokenType::Bearer), 0, &mut buf)
+        .await
+        .is_err()
     {
         return Ok((
             serde_json::to_string(&TokenInfo {
@@ -104,15 +97,8 @@ async fn check_client_auth(
     }
 
     if let Some(token) = header.strip_prefix("Bearer ") {
-        JwtToken::validate_claims_into(
-            token,
-            &data.issuer,
-            None,
-            Some(JwtTokenType::Bearer),
-            0,
-            buf,
-        )
-        .await?;
+        JwtToken::validate_claims_into(token, &data.issuer, Some(JwtTokenType::Bearer), 0, buf)
+            .await?;
         // Just make sure it deserializes fine
         serde_json::from_slice::<JwtAccessClaims>(buf)?;
         Ok(client)

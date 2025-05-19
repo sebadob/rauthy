@@ -80,7 +80,6 @@ pub async fn get_logout_html(
     JwtToken::validate_claims_into(
         &token_raw,
         &data.issuer,
-        None,
         Some(JwtTokenType::Id),
         LOGOUT_TOKEN_CLOCK_SKEW,
         &mut buf,
@@ -141,7 +140,6 @@ pub async fn post_logout_handle(
             JwtToken::validate_claims_into(
                 id_token_hint,
                 &data.issuer,
-                None,
                 Some(JwtTokenType::Id),
                 LOGOUT_TOKEN_CLOCK_SKEW,
                 &mut buf,

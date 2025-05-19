@@ -69,7 +69,6 @@ pub async fn validate_refresh_token(
     JwtToken::validate_claims_into(
         refresh_token,
         &data.issuer,
-        None,
         Some(JwtTokenType::Refresh),
         0,
         &mut buf,
