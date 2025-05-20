@@ -47,9 +47,7 @@ use serde_json_path::JsonPath;
 use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
-use time::OffsetDateTime;
 
-use std::time::Duration;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
@@ -721,7 +719,7 @@ impl AuthProviderCallback {
         Ok(())
     }
 
-    async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
         let opt: Option<Self> = DB::hql()
             .get(Cache::AuthProviderCallback, callback_id)
             .await?;
@@ -735,7 +733,7 @@ impl AuthProviderCallback {
         }
     }
 
-    async fn save(&self) -> Result<(), ErrorResponse> {
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
         DB::hql()
             .put(
                 Cache::AuthProviderCallback,

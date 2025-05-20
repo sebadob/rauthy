@@ -456,11 +456,11 @@ impl Store<String, InternalStateData> for DB {
     type Error = hiqlite::Error;
 
     async fn get(&self, key: &String) -> Result<Option<InternalStateData>, Self::Error> {
-        Self::client().get(Cache::Atproto, key).await
+        Self::hql().get(Cache::Atproto, key).await
     }
 
     async fn set(&self, key: String, value: InternalStateData) -> Result<(), Self::Error> {
-        Self::client()
+        Self::hql()
             .put(
                 Cache::Atproto,
                 key,
@@ -471,11 +471,11 @@ impl Store<String, InternalStateData> for DB {
     }
 
     async fn del(&self, key: &String) -> Result<(), Self::Error> {
-        Self::client().delete(Cache::Atproto, key.to_string()).await
+        Self::hql().delete(Cache::Atproto, key.to_string()).await
     }
 
     async fn clear(&self) -> Result<(), Self::Error> {
-        Self::client().clear_cache(Cache::Atproto).await
+        Self::hql().clear_cache(Cache::Atproto).await
     }
 }
 
@@ -484,22 +484,22 @@ impl StateStore for DB {}
 impl Store<Did, Session> for DB {
     type Error = hiqlite::Error;
 
-    async fn get(&self, key: &Did) -> Result<Option<Atproto>, Self::Error> {
-        Self::client().get(Cache::Atproto, key.to_string()).await
+    async fn get(&self, key: &Did) -> Result<Option<Session>, Self::Error> {
+        Self::hql().get(Cache::Atproto, key.to_string()).await
     }
 
-    async fn set(&self, key: Did, value: Atproto) -> Result<(), Self::Error> {
-        Self::client()
+    async fn set(&self, key: Did, value: Session) -> Result<(), Self::Error> {
+        Self::hql()
             .put(Cache::Atproto, key.to_string(), &value, CACHE_TTL_SESSION)
             .await
     }
 
     async fn del(&self, key: &Did) -> Result<(), Self::Error> {
-        Self::client().delete(Cache::Atproto, key.to_string()).await
+        Self::hql().delete(Cache::Atproto, key.to_string()).await
     }
 
     async fn clear(&self) -> Result<(), Self::Error> {
-        Self::client().clear_cache(Cache::Atproto).await
+        Self::hql().clear_cache(Cache::Atproto).await
     }
 }
 

@@ -31,7 +31,7 @@ use tracing::{debug, error};
 use utoipa::{PartialSchema, ToSchema};
 
 use crate::{
-    AuthStep, AuthStep, AuthStepLoggedIn, AuthStepLoggedIn, ListenScheme,
+    AuthStep, AuthStepLoggedIn, ListenScheme,
     api_cookie::ApiCookie,
     app_state::AppState,
     database::DB,
@@ -67,7 +67,7 @@ impl AtprotoClient {
     pub fn new(
         listen_scheme: &ListenScheme,
         public_url: &str,
-    ) -> Result<Self, atrium_oauth_client::Error> {
+    ) -> Result<Self, atrium_oauth::Error> {
         let http_client = Arc::new(DefaultHttpClient::default());
 
         let listen_scheme = match listen_scheme {
@@ -77,7 +77,7 @@ impl AtprotoClient {
 
         let client_metadata = AtprotoClientMetadata {
             client_id: format!("{listen_scheme}://{public_url}/auth/v1/atproto/client_metadata"),
-            client_uri: String::new(),
+            client_uri: None,
             redirect_uris: vec![format!(
                 "{listen_scheme}://{public_url}/auth/v1/atproto/callback"
             )],

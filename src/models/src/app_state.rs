@@ -1,16 +1,9 @@
 use crate::ListenScheme;
-use crate::database::DB;
 use crate::email::EMail;
 use crate::entity::atproto::AtprotoClient;
 use crate::events::event::Event;
 use crate::events::ip_blacklist_handler::IpBlacklistReq;
 use crate::events::listener::EventRouterMsg;
-use atrium_identity::did::{CommonDidResolver, CommonDidResolverConfig, DEFAULT_PLC_DIRECTORY_URL};
-use atrium_identity::handle::{AtprotoHandleResolver, AtprotoHandleResolverConfig};
-use atrium_oauth::{
-    AtprotoClientMetadata, AuthMethod, DefaultHttpClient, GrantType, KnownScope, OAuthClient,
-    OAuthClientConfig, OAuthResolverConfig, Scope,
-};
 use rauthy_common::constants::PROXY_MODE;
 use std::env;
 use std::sync::Arc;

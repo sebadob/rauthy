@@ -1,6 +1,6 @@
 use crate::{
     api_keys, atproto, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc,
-    roles, scopes, sessions, users,
+    roles, scopes, sessions, themes, users,
 };
 use actix_web::web;
 use rauthy_api_types::atproto::{
@@ -160,7 +160,6 @@ use utoipa::{OpenApi, openapi};
     ),
     components(
         schemas(
-            entity::colors::Colors,
             entity::atproto::DnsTxtResolver,
             entity::fed_cm::FedCMAccount,
             entity::fed_cm::FedCMAccounts,
