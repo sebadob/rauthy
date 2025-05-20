@@ -3882,7 +3882,6 @@ dependencies = [
  "rauthy-common",
  "rauthy-error",
  "rauthy-models",
- "ring",
  "serde",
  "serde_json",
  "tracing",

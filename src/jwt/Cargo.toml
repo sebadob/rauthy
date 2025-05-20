@@ -14,7 +14,6 @@ rauthy-models = { path = "../models" }
 chrono = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
-ring = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }

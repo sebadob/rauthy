@@ -114,18 +114,6 @@ impl<'a> From<&'a rauthy_api_types::oidc::AddressClaim> for AddressClaim<'a> {
     }
 }
 
-// impl From<AddressClaim<'_>> for rauthy_api_types::oidc::AddressClaim {
-//     fn from(value: AddressClaim) -> Self {
-//         Self {
-//             formatted: value.formatted,
-//             street_address: value.street_address,
-//             locality: value.locality,
-//             postal_code: value.postal_code,
-//             country: value.country,
-//         }
-//     }
-// }
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JwtAccessClaims<'a> {
     #[serde(borrow, flatten)]
