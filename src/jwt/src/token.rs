@@ -4,10 +4,18 @@ use rauthy_common::utils::{base64_url_no_pad_decode_buf, base64_url_no_pad_encod
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::fmt::Debug;
+use std::sync::LazyLock;
+use tracing::warn;
 
-// TODO change to config variable
-static MAX_TOKEN_LEN: usize = 4096;
+static TOKEN_LEN_LIMIT: LazyLock<usize> = LazyLock::new(|| {
+    env::var("TOKEN_LEN_LIMIT")
+        .as_deref()
+        .unwrap_or("4096")
+        .parse::<usize>()
+        .expect("Cannot parse TOKEN_LEN_LIMIT as usize")
+});
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct JwtHeader<'a> {
@@ -53,7 +61,14 @@ impl JwtToken {
         allowed_clock_skew_seconds: u16,
         buf: &mut Vec<u8>,
     ) -> Result<(), ErrorResponse> {
-        if token.len() > MAX_TOKEN_LEN {
+        debug_assert!(buf.is_empty());
+
+        if token.len() > *TOKEN_LEN_LIMIT {
+            warn!(
+                "Received a JWT token above the size limit TOKEN_LEN_LIMIT. Either this is an \
+                exhaustion attack, or you create very big tokens and might need to increase the \
+                limit"
+            );
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "JWT token input too long",
@@ -83,7 +98,7 @@ impl JwtToken {
         if split.next().is_some() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Invalid JWT token",
+                "Invalid JWT token format",
             ));
         }
 
@@ -95,14 +110,15 @@ impl JwtToken {
                 "Invalid JWT Header `typ`",
             ));
         }
-        let key = JwkKeyPair::find(header.kid.to_string()).await?;
-        if key.typ != header.alg {
+        let jwk = JwkKeyPair::find(header.kid.to_string()).await?;
+        if jwk.typ != header.alg {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid JWT Header `alg` does not match `kid`",
             ));
         }
-        key.verify_token(token, buf)?;
+        buf.clear();
+        jwk.verify_token(token, buf)?;
 
         buf.clear();
         base64_url_no_pad_decode_buf(claims, buf)?;

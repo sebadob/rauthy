@@ -70,6 +70,8 @@ async fn check_client_auth(
     client_id: String,
     buf: &mut Vec<u8>,
 ) -> Result<Client, ErrorResponse> {
+    debug_assert!(buf.is_empty());
+
     let client = Client::find(client_id).await.map_err(|_| {
         ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),

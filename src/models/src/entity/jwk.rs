@@ -768,18 +768,19 @@ impl JwkKeyPair {
         token: &'a str,
         buf: &mut Vec<u8>,
     ) -> Result<&'a str, ErrorResponse> {
+        debug_assert!(buf.is_empty());
+
         let (message, sig) = token
             .rsplit_once('.')
             .ok_or_else(|| ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed token"))?;
 
-        buf.clear();
         base64_url_no_pad_decode_buf(sig, buf)?;
 
         match self.typ {
             JwkKeyPairAlg::RS256 => {
                 let hash = hmac_sha256::Hash::hash(message.as_bytes());
-                let rsa_pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                if rsa_pk
+                let pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
+                if pk
                     .as_ref()
                     .verify(
                         rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
@@ -794,8 +795,8 @@ impl JwkKeyPair {
 
             JwkKeyPairAlg::RS384 => {
                 let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
-                let rsa_pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                if rsa_pk
+                let pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
+                if pk
                     .as_ref()
                     .verify(
                         rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
@@ -810,8 +811,8 @@ impl JwkKeyPair {
 
             JwkKeyPairAlg::RS512 => {
                 let hash = hmac_sha512::Hash::hash(message.as_bytes());
-                let rsa_pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                if rsa_pk
+                let pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
+                if pk
                     .as_ref()
                     .verify(
                         rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
