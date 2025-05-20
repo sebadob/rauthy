@@ -7,14 +7,12 @@ use argon2::password_hash::rand_core::OsRng;
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
 use cryptr::{EncKeys, EncValue};
 use hiqlite_macros::params;
-use jwt_simple::algorithms::{
-    Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
-};
 use rauthy_api_types::api_keys::ApiKeyRequest;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{base64_decode, get_rand};
 use rauthy_error::ErrorResponse;
 use ring::digest;
+use rsa::pkcs8::EncodePrivateKey;
 use std::env;
 use time::OffsetDateTime;
 use tracing::{debug, info};
@@ -161,16 +159,18 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
 
         // RSA256
         let jwk_plain = web::block(|| {
-            RS256KeyPair::generate(2048)
+            let mut rng = rand_08::thread_rng();
+            rsa::RsaPrivateKey::new(&mut rng, 2028)
                 .unwrap()
-                .with_key_id(&get_rand(24))
+                .to_pkcs8_der()
+                .unwrap()
         })
         .await?;
-        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+        let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
             .into_bytes()
             .to_vec();
         entities.push(Jwk {
-            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS256,
             enc_key_id: enc_key_active.clone(),
@@ -179,16 +179,18 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
 
         // RS384
         let jwk_plain = web::block(|| {
-            RS384KeyPair::generate(3072)
+            let mut rng = rand_08::thread_rng();
+            rsa::RsaPrivateKey::new(&mut rng, 3072)
                 .unwrap()
-                .with_key_id(&get_rand(24))
+                .to_pkcs8_der()
+                .unwrap()
         })
         .await?;
-        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+        let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
             .into_bytes()
             .to_vec();
         entities.push(Jwk {
-            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS384,
             enc_key_id: enc_key_active.clone(),
@@ -197,16 +199,18 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
 
         // RSA512
         let jwk_plain = web::block(|| {
-            RS512KeyPair::generate(4096)
+            let mut rng = rand_08::thread_rng();
+            rsa::RsaPrivateKey::new(&mut rng, 4096)
                 .unwrap()
-                .with_key_id(&get_rand(24))
+                .to_pkcs8_der()
+                .unwrap()
         })
         .await?;
-        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+        let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
             .into_bytes()
             .to_vec();
         entities.push(Jwk {
-            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS512,
             enc_key_id: enc_key_active.clone(),
@@ -214,13 +218,12 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
         });
 
         // Ed25519
-        let jwk_plain =
-            web::block(|| Ed25519KeyPair::generate().with_key_id(&get_rand(24))).await?;
-        let jwk = EncValue::encrypt(jwk_plain.to_der().as_slice())?
+        let jwk_plain = web::block(ed25519_compact::KeyPair::generate).await?;
+        let jwk = EncValue::encrypt(jwk_plain.sk.to_der().as_slice())?
             .into_bytes()
             .to_vec();
         entities.push(Jwk {
-            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::EdDSA,
             enc_key_id: enc_key_active.clone(),

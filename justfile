@@ -273,7 +273,7 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
     fi
 
 # runs the full set of tests with postgres
-test-postgres test="": test-backend-stop postgres-rm postgres-start
+test-postgres test="": test-backend-stop postgres-stop postgres-rm postgres-start
     #!/usr/bin/env bash
     clear
 

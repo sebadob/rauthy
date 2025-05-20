@@ -188,6 +188,8 @@ https://sebadob.github.io/rauthy/config/encryption.html"#
     {
         debug!("I18n Config: {:?}", *I18N_CONFIG);
         debug!("{:?}", *HTTP_CLIENT);
+
+        // rauthy_jwt::test_jwk_compat().await.unwrap();
     }
 
     if args.len() > 1 && args[1] == "dummy-data" {

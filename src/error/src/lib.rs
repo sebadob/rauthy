@@ -20,6 +20,7 @@ pub enum ErrorResponseType {
     UseDpopNonce((Option<String>, String)),
     Forbidden,
     Internal,
+    JwtToken,
     JoseError,
     MfaRequired,
     NoSession,

@@ -1,5 +1,4 @@
 use crate::oidc::bcl_logout_token::LogoutToken;
-use crate::oidc::validation;
 use actix_web::cookie::SameSite;
 use actix_web::http::header::{ACCESS_CONTROL_ALLOW_METHODS, HeaderValue};
 use actix_web::http::{StatusCode, header};
@@ -9,6 +8,8 @@ use rauthy_common::constants::{
     COOKIE_SESSION, COOKIE_SESSION_FED_CM, EXPERIMENTAL_FED_CM_ENABLE, RAUTHY_VERSION,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_jwt::claims::{JwtIdClaims, JwtTokenType};
+use rauthy_jwt::token::JwtToken;
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
@@ -20,7 +21,6 @@ use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::user_login_states::UserLoginState;
 use rauthy_models::entity::users::User;
 use rauthy_models::html::HtmlCached;
-use rauthy_models::{JwtIdClaims, JwtTokenType};
 use std::borrow::Cow;
 use std::env;
 use std::str::FromStr;
@@ -58,7 +58,7 @@ static LOGOUT_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 // We will allow more clock skew here for the token expiration validation to not be too
 // strict, as long as the signature of the token and all other things are valid.
 // This value could be made configurable, but it is probably not really worth it.
-static LOGOUT_TOKEN_CLOCK_SKEW: u64 = 600;
+static LOGOUT_TOKEN_CLOCK_SKEW: u16 = 600;
 
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
 pub async fn get_logout_html(
@@ -76,23 +76,21 @@ pub async fn get_logout_html(
 
     // check if the provided token hint is valid
     let token_raw = logout_request.id_token_hint.unwrap();
-    let claims =
-        validation::validate_token::<JwtIdClaims>(data, &token_raw, Some(LOGOUT_TOKEN_CLOCK_SKEW))
-            .await?;
-
-    // check if it is an ID token
-    if JwtTokenType::Id != claims.custom.typ {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "The provided token is not an ID token",
-        ));
-    }
+    let mut buf = Vec::with_capacity(512);
+    JwtToken::validate_claims_into(
+        &token_raw,
+        &data.issuer,
+        Some(JwtTokenType::Id),
+        LOGOUT_TOKEN_CLOCK_SKEW,
+        &mut buf,
+    )
+    .await?;
+    let claims = serde_json::from_slice::<JwtIdClaims>(&buf)?;
 
     // from here on, the token_hint contains a valid ID token -> skip the logout confirmation
     if logout_request.post_logout_redirect_uri.is_some() {
         // unwrap is safe since the token is valid already
-        let client_id = claims.custom.azp;
-        let client = Client::find(client_id).await?;
+        let client = Client::find(claims.common.azp.to_string()).await?;
         if client.post_logout_redirect_uris.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -118,7 +116,6 @@ pub async fn get_logout_html(
                 "Given 'post_logout_redirect_uri' is not allowed",
             ));
         }
-        // redirect uri is valid at this point
     }
 
     HtmlCached::Logout(session.csrf_token)
@@ -137,16 +134,19 @@ pub async fn post_logout_handle(
         // should always exist in even barely modern browsers
         || req.headers().get("sec-fetch-site").is_none();
 
+    let mut buf = Vec::with_capacity(512);
     let (session, user, cors_header, post_logout_redirect_uri) =
-        if let Some(id_token_hint) = params.id_token_hint {
-            let claims = validation::validate_token::<JwtIdClaims>(
-                &data,
-                &id_token_hint,
-                Some(LOGOUT_TOKEN_CLOCK_SKEW),
+        if let Some(id_token_hint) = &params.id_token_hint {
+            JwtToken::validate_claims_into(
+                id_token_hint,
+                &data.issuer,
+                Some(JwtTokenType::Id),
+                LOGOUT_TOKEN_CLOCK_SKEW,
+                &mut buf,
             )
             .await?;
-
-            let client = Client::find(claims.custom.azp).await?;
+            let claims = serde_json::from_slice::<JwtIdClaims>(&buf)?;
+            let client = Client::find(claims.common.azp.to_string()).await?;
             let cors_header = client.get_validated_origin_header(&req)?;
 
             let post_logout_redirect_uri = if let Some(uri) = params.post_logout_redirect_uri {
@@ -156,15 +156,20 @@ pub async fn post_logout_handle(
                 None
             };
 
-            let (session, user) =
-                find_session_with_user_fallback(claims.custom.sid, claims.subject).await?;
+            let (session, user) = find_session_with_user_fallback(
+                claims.sid.map(String::from),
+                claims.common.sub.map(String::from),
+            )
+            .await?;
             (session, user, cors_header, post_logout_redirect_uri)
         } else if let Some(s) = session {
             let (session, user) = find_session_with_user_fallback(Some(s.id), s.user_id).await?;
             (session, user, None, None)
         } else if let Some(token) = params.logout_token {
-            let lt = LogoutToken::from_str_validated(&token).await?;
-            let (session, user) = find_session_with_user_fallback(lt.sid, lt.sub).await?;
+            let lt = LogoutToken::from_str_validated(&token, &mut buf).await?;
+            let (session, user) =
+                find_session_with_user_fallback(lt.sid.map(String::from), lt.sub.map(String::from))
+                    .await?;
             (session, user, None, None)
         } else {
             return Err(ErrorResponse::new(
@@ -320,7 +325,7 @@ pub async fn execute_backchannel_logout(
             if let Err(err) = send_backchannel_logout(
                 client.id.clone(),
                 client.backchannel_logout_uri.unwrap_or_default(),
-                data.issuer.clone(),
+                &data.issuer,
                 sub,
                 sid,
                 kp.as_ref().unwrap(),
@@ -391,7 +396,7 @@ pub async fn execute_backchannel_logout_by_client(
         if let Err(err) = send_backchannel_logout(
             client.id.clone(),
             uri.to_string(),
-            data.issuer.clone(),
+            &data.issuer,
             Some(state.user_id),
             None,
             &kp,
@@ -419,13 +424,13 @@ pub async fn execute_backchannel_logout_by_client(
 pub async fn send_backchannel_logout(
     client_id: String,
     backchannel_logout_uri: String,
-    issuer: String,
+    issuer: &str,
     sub: Option<String>,
     sid: Option<String>,
     kp: &JwkKeyPair,
     tasks: &mut JoinSet<Result<(), ErrorResponse>>,
 ) -> Result<(), ErrorResponse> {
-    let logout_token = LogoutToken::new(issuer, client_id.clone(), sub.clone(), sid.clone())
+    let logout_token = LogoutToken::new(issuer, &client_id, sub.as_deref(), sid.as_deref())
         .into_token_with_kp(kp)?;
 
     tasks.spawn(async move {

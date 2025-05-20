@@ -327,8 +327,8 @@ pub struct DeviceVerifyResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct JktClaim {
-    pub jkt: String,
+pub struct JktClaim<'a> {
+    pub jkt: &'a str,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -436,24 +436,24 @@ pub struct SessionInfoResponse<'a> {
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, ToSchema)]
-pub struct TokenInfo {
+pub struct TokenInfo<'a> {
     pub active: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sub: Option<String>,
+    pub sub: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub scope: Option<String>,
+    pub scope: Option<Cow<'a, str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_id: Option<String>,
+    pub client_id: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub aud: Option<String>,
+    pub aud: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub username: Option<String>,
+    pub username: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub iat: Option<u64>,
+    pub iat: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub nbf: Option<u64>,
+    pub nbf: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub exp: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cnf: Option<JktClaim>,
+    pub exp: Option<i64>,
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<JktClaim<'a>>,
 }

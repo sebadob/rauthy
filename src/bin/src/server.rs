@@ -432,7 +432,6 @@ fn api_services() -> actix_web::Scope {
                 .service(themes::post_theme)
                 .service(themes::put_theme)
                 .service(themes::delete_theme)
-                .service(oidc::post_validate_token)
                 .service(oidc::get_well_known)
                 .service(generic::get_health)
                 .service(generic::get_i18n_config)

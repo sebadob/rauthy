@@ -1,6 +1,4 @@
-use crate::common::{
-    extract_token_claims_unverified, get_auth_headers, get_backend_url, get_token_set,
-};
+use crate::common::{get_auth_headers, get_backend_url, get_token_set};
 use rauthy_api_types::clients::{ClientResponse, UpdateClientRequest};
 use rauthy_api_types::oidc::JwkKeyPairAlg;
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
@@ -8,7 +6,8 @@ use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigResponse, UserAttrValueRequest, UserAttrValuesResponse,
     UserAttrValuesUpdateRequest,
 };
-use rauthy_models::JwtAccessClaims;
+use rauthy_common::utils::base64_url_no_pad_decode;
+use rauthy_jwt::claims::JwtAccessClaims;
 use rauthy_models::entity::user_attr::UserAttrConfigEntity;
 use serde_json::Value;
 use std::error::Error;
@@ -167,7 +166,8 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
 
     // fetch a new token and check the scope mapping
     let token = get_token_set().await;
-    let claims = extract_token_claims_unverified::<JwtAccessClaims>(&token.access_token).unwrap();
+    let bytes = extract_raw_claims(&token.access_token);
+    let claims = serde_json::from_slice::<JwtAccessClaims>(&bytes).unwrap();
     assert!(claims.custom.is_some());
     let cust_claims = claims.custom.unwrap();
     assert_eq!(
@@ -232,7 +232,8 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
 
     // fetch a new token and check the scope mapping
     let token = get_token_set().await;
-    let claims = extract_token_claims_unverified::<JwtAccessClaims>(&token.access_token).unwrap();
+    let bytes = extract_raw_claims(&token.access_token);
+    let claims = serde_json::from_slice::<JwtAccessClaims>(&bytes).unwrap();
     assert!(claims.custom.is_some());
     let cust_claims = claims.custom.unwrap();
     assert_eq!(
@@ -279,8 +280,18 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
 
     // no custom token mapping anymore
     let token = get_token_set().await;
-    let claims = extract_token_claims_unverified::<JwtAccessClaims>(&token.access_token).unwrap();
+    let bytes = extract_raw_claims(&token.access_token);
+    let claims = serde_json::from_slice::<JwtAccessClaims>(&bytes).unwrap();
     assert!(claims.custom.is_none());
 
     Ok(())
+}
+
+fn extract_raw_claims(token: &str) -> Vec<u8> {
+    let mut split = token.split('.');
+    split.next().unwrap();
+    let claims = split.next().unwrap();
+    split.next().unwrap();
+    assert!(split.next().is_none());
+    base64_url_no_pad_decode(claims).unwrap()
 }

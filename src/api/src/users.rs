@@ -22,6 +22,8 @@ use rauthy_common::constants::{
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_jwt::claims::{JwtCommonClaims, JwtTokenType};
+use rauthy_jwt::token::JwtToken;
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
@@ -44,9 +46,8 @@ use rauthy_models::events::event::Event;
 use rauthy_models::html::HtmlCached;
 use rauthy_models::html::templates::{Error3Html, ErrorHtml};
 use rauthy_models::language::Language;
-use rauthy_models::{JwtCommonClaims, JwtTokenType};
 use rauthy_service::oidc::helpers::get_bearer_token_from_header;
-use rauthy_service::oidc::{logout, validation};
+use rauthy_service::oidc::logout;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::collections::HashMap;
@@ -676,12 +677,18 @@ async fn validate_user_picture_access(
     }
 
     if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
-        if let Ok(claims) = validation::validate_token::<JwtCommonClaims>(data, &bearer, None).await
+        let mut buf = Vec::with_capacity(512);
+        if JwtToken::validate_claims_into(&bearer, &data.issuer, None, 0, &mut buf)
+            .await
+            .is_ok()
         {
-            if (claims.custom.typ == JwtTokenType::Bearer || claims.custom.typ == JwtTokenType::Id)
-                && claims.subject.as_deref() == Some(user_id)
+            let claims: JwtCommonClaims = serde_json::from_slice(&buf)?;
+            debug!("token claims are ok: {:?}", claims);
+            if (claims.typ == JwtTokenType::Bearer || claims.typ == JwtTokenType::Id)
+                && claims.sub == Some(user_id)
+                && claims.scope.unwrap_or_default().contains("profile")
             {
-                let client = Client::find(claims.custom.azp).await?;
+                let client = Client::find(claims.azp.to_string()).await?;
                 let cors = client.get_validated_origin_header(req)?;
                 return Ok(cors);
             }

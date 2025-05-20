@@ -1,8 +1,5 @@
 use actix_web::web;
 use chrono::Utc;
-use jwt_simple::algorithms::{EdDSAKeyPairLike, RSAKeyPairLike};
-use jwt_simple::claims::Claims;
-use jwt_simple::prelude::{UnixTimeStamp, coarsetime};
 use rauthy_api_types::oidc::JktClaim;
 use rauthy_common::constants::{
     DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, DISABLE_REFRESH_TOKEN_NBF, ENABLE_SOLID_AUD,
@@ -10,6 +7,10 @@ use rauthy_common::constants::{
 };
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_jwt::claims::{
+    JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
+};
+use rauthy_jwt::token::JwtToken;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
@@ -20,14 +21,10 @@ use rauthy_models::entity::user_attr::UserAttrValueEntity;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webids::WebId;
-use rauthy_models::{
-    AddressClaim, JwtAccessClaims, JwtAmrValue, JwtIdClaims, JwtRefreshClaims, JwtTokenType,
-    sign_jwt,
-};
 use ring::digest;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
-use std::ops::Add;
+use std::borrow::Cow;
+use std::collections::HashMap;
 use std::str::FromStr;
 use utoipa::ToSchema;
 
@@ -82,14 +79,17 @@ pub enum AuthCodeFlow {
 pub struct AuthTime(i64);
 
 impl AuthTime {
+    #[inline]
     pub fn now() -> Self {
         Self(Utc::now().timestamp())
     }
 
+    #[inline]
     pub fn given(ts: i64) -> Self {
         Self(ts)
     }
 
+    #[inline]
     pub fn get(&self) -> i64 {
         self.0
     }
@@ -139,38 +139,47 @@ impl TokenSet {
             DeviceCodeFlow::Yes(did) => Some(did),
             DeviceCodeFlow::No => None,
         };
-        let mut custom_claims = JwtAccessClaims {
-            typ: JwtTokenType::Bearer,
-            azp: client.id.to_string(),
-            scope: scope
-                .map(|s| s.0)
-                .unwrap_or_else(|| client.default_scopes.clone().replace(',', " ")),
-            allowed_origins: None,
-            did,
-            email: None,
-            preferred_username: None,
-            roles: None,
-            groups: None,
-            cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
-            custom: None,
-        };
+        let scope = scope
+            .map(|s| Cow::from(s.0))
+            .unwrap_or_else(|| Cow::from(client.default_scopes.replace(',', " ")));
 
-        // add user specific claims if available
-        let sub = if let Some(user) = user {
-            custom_claims.preferred_username = Some(user.email.clone());
-            custom_claims.roles = Some(user.get_roles());
-
-            if custom_claims.scope.contains("email") {
-                custom_claims.email = Some(user.email.clone());
-            }
-
-            if custom_claims.scope.contains("groups") {
-                custom_claims.groups = Some(user.get_groups());
-            }
-
-            Some(&user.id)
+        let email = if scope.contains("email") {
+            user.as_ref().map(|u| u.email.as_str())
         } else {
             None
+        };
+        let roles = user.map(|u| u.get_roles());
+        let groups = if scope.contains("groups") {
+            user.as_ref().map(|u| u.get_groups())
+        } else {
+            None
+        };
+
+        let now = Utc::now().timestamp();
+        let mut claims_new_impl = JwtAccessClaims {
+            common: JwtCommonClaims {
+                iat: now,
+                nbf: now,
+                exp: now + lifetime,
+                iss: &data.issuer,
+                jti: None,
+                aud: Cow::Borrowed(client.id.as_str()),
+                sub: user.map(|u| u.id.as_str()),
+                typ: JwtTokenType::Bearer,
+                azp: &client.id,
+                scope: Some(scope),
+                preferred_username: user.as_ref().map(|u| u.email.as_str()),
+                did: did.as_deref(),
+                cnf: dpop_fingerprint
+                    .as_ref()
+                    .map(|jkt| JktClaim { jkt: &jkt.0 }),
+            },
+            // TODO does this value make sense or should we remove it?
+            allowed_origins: None,
+            email,
+            roles,
+            groups,
+            custom: None,
         };
 
         if let Some((cust, user_attrs)) = scope_customs {
@@ -189,25 +198,13 @@ impl TokenSet {
                 }
             }
             if !attr.is_empty() {
-                custom_claims.custom = Some(attr);
+                claims_new_impl.custom = Some(attr.clone());
             }
         }
 
-        let mut claims = Claims::with_custom_claims(
-            custom_claims,
-            coarsetime::Duration::from_secs(lifetime as u64),
-        )
-        .with_issuer(data.issuer.clone())
-        .with_audience(client.id.to_string());
-
-        if let Some(sub) = sub {
-            claims = claims.with_subject(sub);
-        }
-
-        // sign the token
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.access_token_alg)?;
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
-        sign_jwt!(kp, claims)
+        JwtToken::build(&kp, &claims_new_impl)
     }
 
     /// Builds the id token for a user after all validation has been successful
@@ -227,22 +224,42 @@ impl TokenSet {
         auth_code_flow: AuthCodeFlow,
     ) -> Result<String, ErrorResponse> {
         let amr = if user.has_webauthn_enabled() && auth_code_flow == AuthCodeFlow::Yes {
-            JwtAmrValue::Mfa.to_string()
+            JwtAmrValue::Mfa.as_str()
         } else {
-            JwtAmrValue::Pwd.to_string()
+            JwtAmrValue::Pwd.as_str()
+        };
+        let aud = if client.is_ephemeral() && *ENABLE_SOLID_AUD {
+            Cow::from(format!("[\"{}\",\"solid\"]", client.id))
+        } else {
+            Cow::Borrowed(client.id.as_str())
         };
 
-        let webid =
-            (*ENABLE_WEB_ID && scope.contains("webid")).then(|| WebId::resolve_webid_uri(&user.id));
+        let webid = (*ENABLE_WEB_ID && scope.contains("webid"))
+            .then(|| Cow::from(WebId::resolve_webid_uri(&user.id)));
 
-        let mut custom_claims = JwtIdClaims {
-            azp: client.id.clone(),
-            typ: JwtTokenType::Id,
+        let now = Utc::now().timestamp();
+        let mut claims = JwtIdClaims {
+            common: JwtCommonClaims {
+                iat: now,
+                nbf: now,
+                exp: now + lifetime,
+                iss: &data.issuer,
+                jti: None,
+                aud,
+                sub: Some(user.id.as_str()),
+                typ: JwtTokenType::Id,
+                azp: &client.id,
+                scope: Some(Cow::Borrowed(scope)),
+                preferred_username: Some(user.email.as_str()),
+                did: None,
+                cnf: dpop_fingerprint
+                    .as_ref()
+                    .map(|jkt| JktClaim { jkt: &jkt.0 }),
+            },
             amr: vec![amr],
             auth_time: auth_time.get(),
-            at_hash: at_hash.0,
-            sid: sid.map(|sid| sid.0),
-            preferred_username: user.email.clone(),
+            at_hash: at_hash.0.as_str(),
+            sid: sid.as_ref().map(|sid| sid.0.as_str()),
             email: None,
             email_verified: None,
             given_name: None,
@@ -251,71 +268,55 @@ impl TokenSet {
             birthdate: None,
             picture: None,
             locale: None,
+            nonce: nonce.as_ref().map(|n| n.0.as_str()),
             phone: None,
             roles: user.get_roles(),
             groups: None,
-            cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
             custom: None,
             webid,
         };
 
-        let mut user_values = None;
-        let mut user_values_fetched = false;
+        let add_address = scope.contains("address");
+        let add_phone = scope.contains("phone");
+        let add_profile = scope.contains("profile");
+
+        let user_values = if add_address || add_phone || add_profile {
+            UserValues::find(&user.id).await?
+        } else {
+            None
+        };
 
         if scope.contains("email") {
-            custom_claims.email = Some(user.email.clone());
-            custom_claims.email_verified = Some(user.email_verified);
+            claims.email = Some(user.email.as_str());
+            claims.email_verified = Some(user.email_verified);
         }
-
-        if scope.contains("profile") {
-            custom_claims.given_name = Some(user.given_name.clone());
-            custom_claims.family_name = user.family_name.clone();
-            custom_claims.locale = Some(user.language.to_string());
-
-            user_values = UserValues::find(&user.id).await?;
-            user_values_fetched = true;
+        if add_profile {
+            claims.given_name = Some(user.given_name.as_str());
+            claims.family_name = user.family_name.as_deref();
+            claims.locale = Some(user.language.as_str());
 
             if let Some(values) = &user_values {
                 if let Some(birthdate) = &values.birthdate {
-                    custom_claims.birthdate = Some(birthdate.clone());
+                    claims.birthdate = Some(birthdate.as_str());
                 }
             }
 
-            custom_claims.picture = user.picture_uri();
-            // if let Some(picture_id) = &user.picture_id {
-            // custom_claims.picture = Some(format!(
-            //     "{}/users/{}/picture/{}",
-            //     data.issuer, user.id, picture_id
-            // ));
-            // }
+            claims.picture = user.picture_uri().map(Cow::from);
         }
-
-        if scope.contains("address") {
-            if !user_values_fetched {
-                user_values = UserValues::find(&user.id).await?;
-                user_values_fetched = true;
-            }
-
+        if add_address {
             if let Some(values) = &user_values {
-                custom_claims.address = AddressClaim::try_build(user, values);
+                claims.address = rauthy_jwt::claims::AddressClaim::try_build(user, values);
             }
         }
-
-        if scope.contains("phone") {
-            if !user_values_fetched {
-                user_values = UserValues::find(&user.id).await?;
-                // user_values_fetched = true;
-            }
-
+        if add_phone {
             if let Some(values) = &user_values {
                 if let Some(phone) = &values.phone {
-                    custom_claims.phone = Some(phone.clone());
+                    claims.phone = Some(phone.as_str());
                 }
             }
         }
-
         if scope.contains("groups") {
-            custom_claims.groups = Some(user.get_groups());
+            claims.groups = Some(user.get_groups());
         }
 
         if let Some((cust, user_attrs)) = scope_customs {
@@ -334,37 +335,13 @@ impl TokenSet {
                 }
             }
             if !attr.is_empty() {
-                custom_claims.custom = Some(attr);
+                claims.custom = Some(attr);
             }
         }
 
-        let mut claims = Claims::with_custom_claims(
-            custom_claims,
-            coarsetime::Duration::from_secs(lifetime as u64),
-        )
-        .with_subject(user.id.clone())
-        .with_issuer(data.issuer.clone());
-
-        // TODO should we maybe always include the "solid" claim here depending on if a webid exists?
-        // like it is now, static clients would never include this claim, even though they might need it
-        if client.is_ephemeral() && *ENABLE_SOLID_AUD {
-            let mut aud = HashSet::with_capacity(2);
-            aud.insert("solid".to_string());
-            aud.insert(client.id.to_string());
-            claims = claims.with_audiences(aud);
-        } else {
-            claims = claims.with_audience(client.id.to_string());
-        }
-
-        if let Some(nonce) = nonce {
-            claims = claims.with_nonce(nonce.0);
-        }
-
-        // sign the token
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.id_token_alg)?;
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
-
-        sign_jwt!(kp, claims)
+        JwtToken::build(&kp, &claims)
     }
 
     /// Builds the refresh token for a user after all validation has been successful
@@ -387,41 +364,52 @@ impl TokenSet {
             None
         };
 
-        let custom_claims = JwtRefreshClaims {
-            azp: client.id.clone(),
-            typ: JwtTokenType::Refresh,
-            uid: user.id.clone(),
-            auth_time: Some(auth_time.get()),
-            cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
-            did: did.clone(),
-        };
-
+        let now = Utc::now().timestamp();
         let nbf = if *DISABLE_REFRESH_TOKEN_NBF {
-            Utc::now()
+            now
         } else {
-            Utc::now().add(chrono::Duration::seconds(access_token_lifetime - 60))
+            // allow 60 second early usage
+            now + access_token_lifetime - 60
         };
-        let nbf_unix = UnixTimeStamp::from_secs(nbf.timestamp() as u64);
+        let exp = if did.is_some() {
+            nbf + 3600 * *DEVICE_GRANT_REFRESH_TOKEN_LIFETIME as i64
+        } else {
+            nbf + 3600 * *REFRESH_TOKEN_LIFETIME as i64
+        };
 
-        let claims =
-            Claims::with_custom_claims(custom_claims, coarsetime::Duration::from_hours(48))
-                .with_issuer(data.issuer.clone())
-                .invalid_before(nbf_unix)
-                .with_audience(client.id.to_string());
-
-        // sign the token
         let token = {
+            let claims = rauthy_jwt::claims::JwtRefreshClaims {
+                common: JwtCommonClaims {
+                    iat: now,
+                    nbf,
+                    exp,
+                    iss: &data.issuer,
+                    jti: None,
+                    aud: Cow::Borrowed(client.id.as_str()),
+                    sub: None,
+                    typ: JwtTokenType::Refresh,
+                    azp: &client.id,
+                    scope: None,
+                    preferred_username: None,
+                    did: did.as_deref(),
+                    cnf: dpop_fingerprint
+                        .as_ref()
+                        .map(|jkt| JktClaim { jkt: &jkt.0 }),
+                },
+                uid: &user.id,
+                // Only Optional for backwards compatibility with older Rauthy versions and tokens.
+                // Could be changed with v1.0.0 maybe.
+                auth_time: Some(auth_time.get()),
+            };
+
             let kp = JwkKeyPair::find_latest(JwkKeyPairAlg::default()).await?;
-            sign_jwt!(kp, claims)
-        }?;
+            JwtToken::build(&kp, &claims)?
+        };
 
         // only save the last 50 characters for validation
         let validation_string = String::from(&token).split_off(token.len() - 49);
 
         if let Some(device_id) = did {
-            let exp = nbf.add(chrono::Duration::hours(
-                *DEVICE_GRANT_REFRESH_TOKEN_LIFETIME as i64,
-            ));
             RefreshTokenDevice::create(
                 validation_string,
                 device_id,
@@ -432,7 +420,6 @@ impl TokenSet {
             )
             .await?;
         } else {
-            let exp = nbf.add(chrono::Duration::hours(*REFRESH_TOKEN_LIFETIME as i64));
             RefreshToken::create(
                 validation_string,
                 user.id.clone(),
@@ -479,7 +466,7 @@ impl TokenSet {
         })
     }
 
-    // too many arguments is not an issue - params cannot be mistaken because of enum wrappers
+    // too many arguments is not an issue - params cannot be mistaken because of typed wrappers
     #[allow(clippy::too_many_arguments)]
     pub async fn from_user(
         user: &User,
