@@ -7,8 +7,8 @@ use rauthy_common::constants::{SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL};
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
-    api_keys, auth_providers, blacklist, clients, dev_only, events, fed_cm, generic, groups, html,
-    oidc, roles, scopes, sessions, themes, users,
+    api_keys, atproto, auth_providers, blacklist, clients, dev_only, events, fed_cm, generic,
+    groups, html, oidc, roles, scopes, sessions, themes, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -436,7 +436,10 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::get_health)
                 .service(generic::get_i18n_config)
                 .service(generic::get_ready)
-                .service(html::get_static_assets),
+                .service(html::get_static_assets)
+                .service(atproto::get_client_metadata)
+                .service(atproto::post_login)
+                .service(atproto::post_callback),
         )
 }
 

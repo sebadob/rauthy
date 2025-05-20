@@ -1,5 +1,6 @@
 export type CodeChallengeMethod = 'plain' | 'S256';
 export type JwtTokenType = 'Bearer' | 'DPoP' | 'Id' | 'Refresh';
+export type AuthRequest = LoginRequest | AtprotoRequest;
 
 export interface LoginRequest {
     /// Validation: `email`
@@ -21,6 +22,18 @@ export interface LoginRequest {
     code_challenge?: string,
     /// Validation: `plain|S256`
     code_challenge_method?: CodeChallengeMethod,
+}
+
+export interface AtprotoRequest {
+    /// Validation: PATTERN_AT_ID
+    at_id: string,
+    pow: string,
+    /// Validation: PATTERN_URI
+    redirect_uri: string,
+    /// Validation: PATTERN_URI
+    state: string,
+    /// Validation: PATTERN_CODE_CHALLENGE
+    pkce_challenge: string,
 }
 
 export interface LoginRefreshRequest {

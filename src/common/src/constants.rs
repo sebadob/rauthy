@@ -223,7 +223,7 @@ pub static DEVICE_GRANT_RATE_LIMIT: LazyLock<Option<u32>> = LazyLock::new(|| {
     env::var("DEVICE_GRANT_RATE_LIMIT")
         .map(|rl| {
             rl.parse::<u32>()
-                .expect("DEVICE_GRANT_RATE_LIMIT cannot be parsed as u32")
+                .expect("DEVICE_GRANT_RATE_LIMIT cannot be parsed to u32 - bad format")
         })
         .ok()
 });
@@ -662,4 +662,10 @@ pub static WEBAUTHN_NO_PASSWORD_EXPIRY: LazyLock<bool> = LazyLock::new(|| {
         .unwrap_or("true")
         .parse::<bool>()
         .expect("WEBAUTHN_NO_PASSWORD_EXPIRY cannot be parsed as bool")
+});
+pub static ATPROTO_ENABLE: LazyLock<bool> = LazyLock::new(|| {
+    env::var("ATPROTO_ENABLE")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("ATPROTO_ENABLE cannot be parsed to bool - bad format")
 });

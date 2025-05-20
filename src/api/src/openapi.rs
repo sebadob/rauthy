@@ -1,8 +1,11 @@
 use crate::{
-    api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
-    scopes, sessions, themes, users,
+    api_keys, atproto, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc,
+    roles, scopes, sessions, themes, users,
 };
 use actix_web::web;
+use rauthy_api_types::atproto::{
+    CallbackRequest as AtprotoCallbackRequest, LoginRequest as AtprotoLoginRequest,
+};
 use rauthy_api_types::{
     api_keys::*, auth_providers::*, blacklist::*, clients::*, events::*, fed_cm::*, generic::*,
     groups::*, oidc::*, roles::*, scopes::*, sessions::*, themes::*, users::*,
@@ -27,6 +30,10 @@ use utoipa::{OpenApi, openapi};
         api_keys::delete_api_key,
         api_keys::get_api_key_test,
         api_keys::put_api_key_secret,
+
+        atproto::get_client_metadata,
+        atproto::post_login,
+        atproto::post_callback,
 
         auth_providers::post_providers,
         auth_providers::post_provider,
@@ -153,6 +160,7 @@ use utoipa::{OpenApi, openapi};
     ),
     components(
         schemas(
+            entity::atproto::DnsTxtResolver,
             entity::fed_cm::FedCMAccount,
             entity::fed_cm::FedCMAccounts,
             entity::fed_cm::FedCMIdPBranding,
@@ -189,6 +197,8 @@ use utoipa::{OpenApi, openapi};
             ErrorResponseType,
 
             ApiKeyRequest,
+            AtprotoCallbackRequest,
+            AtprotoLoginRequest,
             AuthCodeRequest,
             AuthRequest,
             BackchannelLogoutRequest,
@@ -305,6 +315,7 @@ use utoipa::{OpenApi, openapi};
         (name = "generic", description = "Generic endpoints"),
         (name = "webid", description = "WebID endpoints"),
         (name = "fed_cm", description = "Experimental FedCM endpoints"),
+        (name = "atproto", description = "Experimental ATProto endpoints"),
         (name = "deprecated", description = "Deprecated endpoints - will be removed in a future version"),
     ),
 )]
