@@ -91,6 +91,11 @@
     let userId = $state('');
     let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset);
 
+    let atEnabled = $state(true);
+    let atForm = $state(false);
+    let atId = $state('');
+
+
     onMount(() => {
         if (!needsPassword) {
             refEmail?.focus();
@@ -183,10 +188,14 @@
     async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
         err = '';
 
-        if (!clientId) {
+        if (!atForm && !clientId) {
             console.error('clientId is undefined');
             return;
+        } else if (atForm && !atId) {
+            console.error('atId is undefined');
+            return;
         }
+
         if (!redirectUri) {
             console.error('redirectUri is undefined');
             return;
@@ -196,7 +205,13 @@
 
         let pow = await fetchSolvePow() || '';
 
-        const payload: LoginRequest = {
+        const payload: AuthRequest = atForm ? AtprotoRequest {
+            at_id: atId,
+            pow,
+            redirect_uri: redirectUri,
+            state: stateParam,
+            pkce_challenge: nonce,
+        } : LoginRequest {
             email,
             pow,
             client_id: clientId,
@@ -210,7 +225,7 @@
             payload.code_challenge_method = challengeMethod;
         }
 
-        if (needsPassword && email !== existingMfaUser) {
+        if (!atForm && needsPassword && email !== existingMfaUser) {
             if (!password) {
                 err = t.authorize.passwordRequired;
                 isLoading = false;
@@ -227,6 +242,9 @@
         let url = '/auth/v1/oidc/authorize';
         if (useIsDev().get()) {
             url = '/auth/v1/dev/authorize';
+        }
+        if atForm {
+          url = '/auth/v1/atproto/login';
         }
 
         let res = await fetchPost<undefined | WebauthnLoginResponse>(url, payload, 'json', 'noRedirect');
