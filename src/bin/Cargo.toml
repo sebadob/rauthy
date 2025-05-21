@@ -5,6 +5,9 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[features]
+jemalloc = ["dep:tikv-jemallocator"]
+
 [dependencies]
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
@@ -37,7 +40,7 @@ tokio = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
-tikv-jemallocator = { workspace = true }
+tikv-jemallocator = { workspace = true, optional = true }
 
 [dev-dependencies]
 rauthy-api-types = { path = "../api_types" }
