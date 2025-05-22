@@ -80,18 +80,6 @@
         return i;
     })));
 
-    // $effect(() => {
-    //     userOrig = user;
-    //     userOrig.family_name = user.family_name || '';
-    //     userOrig.user_values = {
-    //         birthdate: userOrig.user_values?.birthdate || '',
-    //         phone: userOrig.user_values?.phone || '',
-    //         street: userOrig.user_values?.street || '',
-    //         city: userOrig.user_values?.city || '',
-    //         country: userOrig.user_values?.country || '',
-    //     };
-    // });
-
     $effect(() => {
         if (user) {
             userOrig = {

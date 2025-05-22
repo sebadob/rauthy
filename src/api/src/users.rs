@@ -1523,7 +1523,7 @@ pub async fn put_user_by_id(
     patch,
     path = "/users/{id}",
     tag = "users",
-    request_body = UpdateUserRequest,
+    request_body = PatchOp,
     responses(
         (status = 200, description = "Ok", body = UserResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),

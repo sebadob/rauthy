@@ -90,19 +90,6 @@
             return;
         }
 
-        // let payload: UpdateUserRequest = {
-        //     email: user.email,
-        //     given_name: user.given_name,
-        //     family_name: user.family_name,
-        //     language: user.language,
-        //     password: pwdNew,
-        //     roles: user.roles,
-        //     groups: user.groups,
-        //     enabled: user.enabled,
-        //     email_verified: user.email_verified,
-        //     user_expires: user.user_expires,
-        // };
-
         let payload: PatchOp = {
             put: [{key: 'password', value: pwdNew}],
             del: [],
