@@ -2,8 +2,9 @@ use crate::{ReqPrincipal, content_len_limit};
 use actix_web::http::StatusCode;
 use actix_web::http::header::{ACCEPT, HeaderName, HeaderValue, LOCATION};
 use actix_web::web::{Json, Query};
-use actix_web::{HttpRequest, HttpResponse, ResponseError, delete, get, post, put, web};
+use actix_web::{HttpRequest, HttpResponse, ResponseError, delete, get, patch, post, put, web};
 use chrono::Utc;
+use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
 use rauthy_api_types::oidc::PasswordResetResponse;
 use rauthy_api_types::users::{
@@ -1511,8 +1512,48 @@ pub async fn put_user_by_id(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
     payload.validate()?;
 
-    let (user, user_values, is_new_admin) =
-        User::update(&data, id.into_inner(), payload, None).await?;
+    handle_put_user_by_id(data, id.into_inner(), req, payload).await
+}
+
+/// Modifies a user via a patch operation
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    patch,
+    path = "/users/{id}",
+    tag = "users",
+    request_body = UpdateUserRequest,
+    responses(
+        (status = 200, description = "Ok", body = UserResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[patch("/users/{id}")]
+pub async fn patch_user(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    req: HttpRequest,
+    principal: ReqPrincipal,
+    Json(payload): Json<PatchOp>,
+    // Json(payload): Json<PatchOp<'_>>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
+
+    let user_id = id.into_inner();
+    let upd_req = User::patch(user_id.clone(), payload).await?;
+    handle_put_user_by_id(data, user_id, req, upd_req).await
+}
+
+#[inline]
+async fn handle_put_user_by_id(
+    data: web::Data<AppState>,
+    user_id: String,
+    req: HttpRequest,
+    payload: UpdateUserRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let (user, user_values, is_new_admin) = User::update(&data, user_id, payload, None).await?;
 
     if is_new_admin {
         data.tx_events

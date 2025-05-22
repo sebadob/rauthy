@@ -168,7 +168,7 @@ pub struct UpdateUserSelfRequest {
     pub user_values: Option<UserValuesRequest>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Validate, ToSchema)]
 pub struct UserValuesRequest {
     /// Validation: `[0-9]{4}-[0-9]{2}-[0-9]{2}`
     #[validate(regex(path = "*RE_DATE_STR", code = "[0-9]{4}-[0-9]{2}-[0-9]{2}"))]

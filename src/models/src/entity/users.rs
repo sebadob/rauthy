@@ -21,10 +21,12 @@ use argon2::PasswordHash;
 use chrono::Utc;
 use hiqlite::Params;
 use hiqlite_macros::params;
+use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
-    UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesResponse,
+    UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesRequest,
+    UserValuesResponse,
 };
 use rauthy_common::constants::{
     CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, PUB_URL_WITH_SCHEME,
@@ -35,11 +37,12 @@ use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use std::cmp::max;
+use std::cmp::{max, min};
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace};
+use validator::Validate;
 
 static SQL_SAVE: &str = r#"
 UPDATE USERS SET
@@ -103,11 +106,11 @@ impl Debug for User {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "id: {}, email: {}, given_name: {}, family_name: {:?}, password: <hidden>, \
+            "User {{ id: {}, email: {}, given_name: {}, family_name: {:?}, password: <hidden>, \
         roles: {}, groups: {:?}, enabled: {}, email_verified: {}, password_expires: {:?}, \
         created_at: {}, last_login: {:?}, last_failed_login: {:?}, failed_login_attempts: {:?}, \
         language: {}, webauthn_user_id: {:?}, user_expires: {:?}, auth_provider_id: {:?}, \
-        federation_uid: {:?}, picture_id: {:?}",
+        federation_uid: {:?}, picture_id: {:?} }}",
             self.id,
             self.email,
             self.given_name,
@@ -950,6 +953,163 @@ LIMIT $2"#;
             DB::pg_execute(sql, &[&email_verified, &user_id]).await?;
         }
         Ok(())
+    }
+
+    /// Builds an `UpdateUserRequest` solely from data inside the DB. This data can then be used
+    /// for `PatchOp`s. Build `UpdateUserRequest` to be able to re-use all other existing
+    /// functionality and checks.
+    pub async fn upd_req_from_db(user_id: String) -> Result<UpdateUserRequest, ErrorResponse> {
+        let u = Self::find(user_id).await?;
+
+        let roles = u.get_roles();
+        let groups = Some(u.get_groups());
+        let language = Some(rauthy_api_types::generic::Language::from(u.language));
+
+        let user_values = UserValues::find(&u.id).await?.map(|uv| UserValuesRequest {
+            birthdate: uv.birthdate,
+            phone: uv.phone,
+            street: uv.street,
+            zip: uv.zip,
+            city: uv.city,
+            country: uv.country,
+        });
+
+        Ok(UpdateUserRequest {
+            email: u.email,
+            given_name: u.given_name,
+            family_name: u.family_name,
+            language,
+            // Must be None here to avoid triggering the "new password set" logic for each user
+            // update. This req is being used for `PatchOp`s and if the PatchOp contains a
+            // `password`, it will be updated later on.
+            password: None,
+            roles,
+            groups,
+            enabled: u.enabled,
+            email_verified: u.email_verified,
+            user_expires: u.user_expires,
+            user_values,
+        })
+    }
+
+    pub async fn patch(
+        user_id: String,
+        payload: PatchOp,
+        // payload: PatchOp<'_>,
+    ) -> Result<UpdateUserRequest, ErrorResponse> {
+        let mut upd_req = User::upd_req_from_db(user_id).await?;
+        let mut uv = upd_req.user_values.unwrap_or_default();
+
+        for put in payload.put {
+            match put.key.as_str() {
+                "email" => upd_req.email = put.value.as_str().unwrap_or_default().to_string(),
+                "given_name" => {
+                    upd_req.given_name = put.value.as_str().unwrap_or_default().to_string()
+                }
+                "family_name" => upd_req.family_name = put.value.as_str().map(String::from),
+                "language" => {
+                    let lang = rauthy_api_types::generic::Language::from(Language::from(
+                        put.value.as_str().unwrap_or_default(),
+                    ));
+                    upd_req.language = Some(lang)
+                }
+                "roles" => {
+                    upd_req.roles = put
+                        .value
+                        .as_array()
+                        .map(|arr| {
+                            arr.iter()
+                                .map(|v| v.as_str().unwrap_or_default().to_string())
+                                .collect()
+                        })
+                        .unwrap_or_default()
+                }
+                "groups" => {
+                    upd_req.groups = Some(
+                        put.value
+                            .as_array()
+                            .map(|arr| {
+                                arr.iter()
+                                    .map(|v| v.as_str().unwrap_or_default().to_string())
+                                    .collect()
+                            })
+                            .unwrap_or_default(),
+                    )
+                }
+                "enabled" => upd_req.enabled = put.value.as_bool().unwrap_or(true),
+                "email_verified" => upd_req.email_verified = put.value.as_bool().unwrap_or(true),
+                "user_expires" => upd_req.user_expires = put.value.as_i64(),
+                key => {
+                    if let Some(key) = key.strip_prefix("user_values.") {
+                        match key {
+                            "birthdate" => uv.birthdate = put.value.as_str().map(String::from),
+                            "phone" => uv.phone = put.value.as_str().map(String::from),
+                            "street" => uv.street = put.value.as_str().map(String::from),
+                            "zip" => {
+                                uv.zip = put.value.as_i64().map(|i| min(i32::MAX as i64, i) as i32)
+                            }
+                            "city" => uv.city = put.value.as_str().map(String::from),
+                            "country" => uv.country = put.value.as_str().map(String::from),
+                            v => {
+                                return Err(ErrorResponse::new(
+                                    ErrorResponseType::BadRequest,
+                                    format!("Invalid patch op put value for user: user_values.{v}"),
+                                ));
+                            }
+                        }
+                    } else {
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::BadRequest,
+                            format!("Invalid patch op put value for user: {key}"),
+                        ));
+                    }
+                }
+            }
+        }
+
+        for put in payload.del {
+            match put.key.as_str() {
+                "family_name" => upd_req.family_name = None,
+                "language" => upd_req.language = None,
+                "roles" => upd_req.roles = Vec::default(),
+                "groups" => upd_req.groups = None,
+                "user_expires" => upd_req.user_expires = None,
+                "user_values" => uv = UserValuesRequest::default(),
+                key => {
+                    if let Some(key) = key.strip_prefix("user_values.") {
+                        match key {
+                            "birthdate" => uv.birthdate = None,
+                            "phone" => uv.phone = None,
+                            "street" => uv.street = None,
+                            "zip" => uv.zip = None,
+                            "city" => uv.city = None,
+                            "country" => uv.country = None,
+                            v => {
+                                return Err(ErrorResponse::new(
+                                    ErrorResponseType::BadRequest,
+                                    format!("Invalid patch op del value for user: user_values.{v}"),
+                                ));
+                            }
+                        }
+                    } else {
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::BadRequest,
+                            format!("Invalid patch op del value for user: {key}"),
+                        ));
+                    }
+                }
+            }
+        }
+
+        if uv != UserValuesRequest::default() {
+            upd_req.user_values = Some(uv);
+        } else {
+            upd_req.user_values = None;
+        }
+
+        upd_req.validate()?;
+
+        todo!()
     }
 
     pub async fn update(

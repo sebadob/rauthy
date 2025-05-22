@@ -395,6 +395,7 @@ fn api_services() -> actix_web::Scope {
                 .service(users::get_user_by_email)
                 .service(users::post_users)
                 .service(users::put_user_by_id)
+                .service(users::patch_user)
                 .service(users::put_user_self)
                 .service(users::delete_user_by_id)
                 .service(users::post_user_password_request_reset)
