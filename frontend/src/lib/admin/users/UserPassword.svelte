@@ -8,10 +8,11 @@
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
     import Form from "$lib5/form/Form.svelte";
-    import {fetchGet, fetchPost, fetchPut} from "$api/fetch";
+    import {fetchGet, fetchPatch, fetchPost, fetchPut} from "$api/fetch";
     import type {RequestResetRequest} from "$api/types/authorize.ts";
     import {useI18n} from "$state/i18n.svelte";
     import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import type {PatchOp} from "$api/types/generic";
 
     let {
         user,
@@ -89,23 +90,15 @@
             return;
         }
 
-        let payload: UpdateUserRequest = {
-            email: user.email,
-            given_name: user.given_name,
-            family_name: user.family_name,
-            language: user.language,
-            password: pwdNew,
-            roles: user.roles,
-            groups: user.groups,
-            enabled: user.enabled,
-            email_verified: user.email_verified,
-            user_expires: user.user_expires,
+        let payload: PatchOp = {
+            put: [{key: 'password', value: pwdNew}],
+            del: [],
         };
 
         err = '';
         isLoading = true;
 
-        let res = await fetchPut(form.action, payload);
+        let res = await fetchPatch(form.action, payload);
         if (res.error) {
             err = res.error.message;
         } else {

@@ -3,6 +3,7 @@ use crate::{
     scopes, sessions, themes, users,
 };
 use actix_web::web;
+use rauthy_api_types::*;
 use rauthy_api_types::{
     api_keys::*, auth_providers::*, blacklist::*, clients::*, events::*, fed_cm::*, generic::*,
     groups::*, oidc::*, roles::*, scopes::*, sessions::*, themes::*, users::*,
@@ -147,6 +148,7 @@ use utoipa::{OpenApi, openapi};
         users::post_user_password_request_reset,
         users::get_user_by_email,
         users::put_user_by_id,
+        users::patch_user,
         users::put_user_self,
         users::post_user_self_convert_passkey,
         users::delete_user_by_id,
@@ -217,6 +219,8 @@ use utoipa::{OpenApi, openapi};
             PasswordHashTimesRequest,
             PasswordPolicyRequest,
             PasswordResetRequest,
+            PatchOp,
+            PatchValue,
             ProviderRequest,
             ProviderLoginRequest,
             ProviderLookupRequest,

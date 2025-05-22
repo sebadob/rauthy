@@ -9,7 +9,7 @@
     import type {GroupResponse} from "$api/types/groups.ts";
     import type {SelectItem} from "$lib5/select_list/props.ts";
     import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from "$utils/form";
-    import {fetchPut} from "$api/fetch";
+    import {fetchPatch, fetchPut} from "$api/fetch";
     import Form from "$lib5/form/Form.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
     import {useI18n} from "$state/i18n.svelte";
@@ -24,6 +24,7 @@
     import type {Language} from "$api/types/i18n.ts";
     import {useI18nConfig} from "$state/i18n_config.svelte";
     import UserPicture from "$lib/UserPicture.svelte";
+    import type {PatchOp} from "$api/types/generic";
 
     let {
         user = $bindable(),
@@ -42,6 +43,8 @@
 
     let err = $state('');
     let success = $state(false);
+
+    let userOrig: undefined | UserResponse;
 
     let email = $state('');
     let givenName = $state('');
@@ -79,6 +82,28 @@
 
     $effect(() => {
         if (user) {
+            userOrig = {
+                id: user.id,
+                email: user.email,
+                given_name: user.given_name,
+                family_name: user.family_name || '',
+                language: user.language,
+                roles: user.roles,
+                groups: user.groups || [],
+                enabled: user.enabled,
+                account_type: user.account_type,
+                email_verified: user.email_verified,
+                created_at: user.created_at,
+                user_values: {
+                    birthdate: user.user_values?.birthdate || '',
+                    phone: user.user_values?.phone || '',
+                    street: user.user_values?.street || '',
+                    zip: user.user_values?.zip,
+                    city: user.user_values?.city || '',
+                    country: user.user_values?.country || '',
+                }
+            }
+
             email = user.email;
             givenName = user.given_name;
             familyName = user.family_name || '';
@@ -132,29 +157,107 @@
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
 
-        const payload: UpdateUserRequest = {
-            email,
-            given_name: givenName,
-            family_name: familyName || undefined,
-            language,
-            roles: rolesItems.filter(i => i.selected).map(i => i.name),
-            groups: groupsItems.filter(i => i.selected).map(i => i.name),
-            enabled,
-            email_verified: emailVerified,
-            user_expires: expires ? unixTsFromLocalDateTime(expDate, expTime) : undefined,
+        let payload: PatchOp = {
+            put: [],
+            del: [],
         };
-        if (birthdate || phone || street || zip || city || country) {
-            payload.user_values = {
-                birthdate: birthdate || undefined,
-                phone: phone?.replaceAll(' ', '') || undefined,
-                street: street || undefined,
-                zip: zip ? Number.parseInt(zip) : undefined,
-                city: city || undefined,
-                country: country || undefined,
-            };
+
+        if (email !== userOrig?.email) {
+            payload.put.push({key: 'email', value: email});
+        }
+        if (givenName !== userOrig?.given_name) {
+            payload.put.push({key: 'given_name', value: givenName});
+        }
+        if (familyName !== userOrig?.family_name) {
+            if (familyName) {
+                payload.put.push({key: 'family_name', value: familyName});
+            } else {
+                payload.del.push('family_name');
+            }
+        }
+        if (language !== userOrig?.language) {
+            if (language) {
+                payload.put.push({key: 'language', value: language});
+            } else {
+                payload.del.push('language');
+            }
+        }
+        let roles = rolesItems.filter(i => i.selected).map(i => i.name);
+        if (roles.join(',') !== userOrig?.roles?.join(',')) {
+            if (roles.length > 0) {
+                payload.put.push({key: 'roles', value: roles});
+            } else {
+                payload.del.push('roles');
+            }
+        }
+        let groups = groupsItems.filter(i => i.selected).map(i => i.name);
+        if (groups.join(',') !== userOrig?.groups?.join(',')) {
+            if (groups.length > 0) {
+                payload.put.push({key: 'groups', value: groups});
+            } else {
+                payload.del.push('groups');
+            }
+        }
+        if (enabled !== userOrig?.enabled) {
+            payload.put.push({key: 'enabled', value: enabled});
+        }
+        if (emailVerified !== userOrig?.email_verified) {
+            payload.put.push({key: 'email_verified', value: emailVerified});
+        }
+        let exp = unixTsFromLocalDateTime(expDate, expTime);
+        if (exp !== userOrig?.user_expires) {
+            if (expires) {
+                payload.put.push({key: 'user_expires', value: exp});
+            } else {
+                payload.del.push('user_expires');
+            }
         }
 
-        let res = await fetchPut<UserResponse>(form.action, payload);
+        if (birthdate !== userOrig?.user_values?.birthdate) {
+            if (birthdate) {
+                payload.put.push({key: 'user_values.birthdate', value: birthdate});
+            } else {
+                payload.del.push('user_values.birthdate');
+            }
+        }
+        if (phone !== userOrig?.user_values?.phone) {
+            if (phone) {
+                payload.put.push({key: 'user_values.phone', value: phone});
+            } else {
+                payload.del.push('user_values.phone');
+            }
+        }
+        if (street !== userOrig?.user_values?.street) {
+            if (street) {
+                payload.put.push({key: 'user_values.street', value: street});
+            } else {
+                payload.del.push('user_values.street');
+            }
+        }
+        let zp = zip ? Number.parseInt(zip) : null;
+        if (zp !== userOrig?.user_values?.zip) {
+            if (zip) {
+                payload.put.push({key: 'user_values.zip', value: zp});
+            } else {
+                payload.del.push('user_values.zip');
+            }
+        }
+        if (city !== userOrig?.user_values?.city) {
+            if (city) {
+                payload.put.push({key: 'user_values.city', value: city});
+            } else {
+                payload.del.push('user_values.city');
+            }
+        }
+        if (country !== userOrig?.user_values?.country) {
+            if (country) {
+                payload.put.push({key: 'user_values.country', value: country});
+            } else {
+                payload.del.push('user_values.country');
+            }
+        }
+
+        let res = await fetchPatch<UserResponse>(form.action, payload);
         if (res.body) {
             success = true;
             user = res.body;

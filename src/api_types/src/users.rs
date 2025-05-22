@@ -148,7 +148,8 @@ pub struct UpdateUserRequest {
     pub user_values: Option<UserValuesRequest>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UpdateUserSelfRequest {
     /// Validation: `email`
     #[validate(email)]
@@ -160,15 +161,18 @@ pub struct UpdateUserSelfRequest {
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{1,32}"))]
     pub family_name: Option<String>,
     pub language: Option<Language>,
+    #[validate(length(max = 256))]
     pub password_current: Option<String>,
     pub mfa_code: Option<String>,
     /// Validation: Applies password policy
+    #[validate(length(max = 256))]
     pub password_new: Option<String>,
     #[validate(nested)]
     pub user_values: Option<UserValuesRequest>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Default, PartialEq, Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UserValuesRequest {
     /// Validation: `[0-9]{4}-[0-9]{2}-[0-9]{2}`
     #[validate(regex(path = "*RE_DATE_STR", code = "[0-9]{4}-[0-9]{2}-[0-9]{2}"))]
