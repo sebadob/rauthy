@@ -19,7 +19,7 @@ pub mod users;
 #[derive(Deserialize)]
 pub struct PatchOp {
     pub put: Vec<PatchValue>,
-    pub del: Vec<PatchValue>,
+    pub del: Vec<String>,
 }
 
 #[derive(Deserialize)]

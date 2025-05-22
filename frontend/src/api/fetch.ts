@@ -10,7 +10,7 @@ export interface IResponse<T> {
 }
 
 function buildHeaders(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: 'GET' | 'PATCH' | 'POST' | 'PUT' | 'DELETE',
     payload: 'json' | 'form',
 ): HeadersInit {
     let headers: any;
@@ -72,6 +72,19 @@ export async function fetchForm(form: HTMLFormElement, body: URLSearchParams) {
     })
 }
 
+export async function fetchPatch<T>(
+    uri: string,
+    payload?: Object,
+    typ: 'json' | 'form' = 'json',
+    redirect: 'handle401' | 'noRedirect' = 'handle401',
+): Promise<IResponse<T>> {
+    if (payload) {
+        return fetchWithBody('PATCH', uri, typ, redirect, payload);
+    } else {
+        return fetchWithoutBody('PATCH', uri, typ, redirect);
+    }
+}
+
 export async function fetchPut<T>(
     uri: string,
     payload?: Object,
@@ -99,7 +112,7 @@ export async function fetchDelete<T>(
 }
 
 async function fetchWithoutBody<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: 'GET' | 'PATCH' | 'POST' | 'PUT' | 'DELETE',
     uri: string,
     typ: 'json' | 'form',
     redirect: 'handle401' | 'noRedirect',
@@ -113,7 +126,7 @@ async function fetchWithoutBody<T>(
 }
 
 async function fetchWithBody<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: 'GET' | 'PATCH' | 'POST' | 'PUT' | 'DELETE',
     uri: string,
     typ: 'json' | 'form',
     redirect: 'handle401' | 'noRedirect',

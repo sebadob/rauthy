@@ -1537,12 +1537,13 @@ pub async fn patch_user(
     req: HttpRequest,
     principal: ReqPrincipal,
     Json(payload): Json<PatchOp>,
-    // Json(payload): Json<PatchOp<'_>>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
 
     let user_id = id.into_inner();
     let upd_req = User::patch(user_id.clone(), payload).await?;
+    upd_req.validate()?;
+
     handle_put_user_by_id(data, user_id, req, upd_req).await
 }
 

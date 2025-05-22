@@ -42,7 +42,6 @@ use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace};
-use validator::Validate;
 
 static SQL_SAVE: &str = r#"
 UPDATE USERS SET
@@ -995,7 +994,6 @@ LIMIT $2"#;
     pub async fn patch(
         user_id: String,
         payload: PatchOp,
-        // payload: PatchOp<'_>,
     ) -> Result<UpdateUserRequest, ErrorResponse> {
         let mut upd_req = User::upd_req_from_db(user_id).await?;
         let mut uv = upd_req.user_values.unwrap_or_default();
@@ -1003,6 +1001,9 @@ LIMIT $2"#;
         for put in payload.put {
             match put.key.as_str() {
                 "email" => upd_req.email = put.value.as_str().unwrap_or_default().to_string(),
+                "password" => {
+                    upd_req.password = Some(put.value.as_str().unwrap_or_default().to_string())
+                }
                 "given_name" => {
                     upd_req.given_name = put.value.as_str().unwrap_or_default().to_string()
                 }
@@ -1067,8 +1068,8 @@ LIMIT $2"#;
             }
         }
 
-        for put in payload.del {
-            match put.key.as_str() {
+        for key in payload.del {
+            match key.as_str() {
                 "family_name" => upd_req.family_name = None,
                 "language" => upd_req.language = None,
                 "roles" => upd_req.roles = Vec::default(),
@@ -1107,9 +1108,7 @@ LIMIT $2"#;
             upd_req.user_values = None;
         }
 
-        upd_req.validate()?;
-
-        todo!()
+        Ok(upd_req)
     }
 
     pub async fn update(
