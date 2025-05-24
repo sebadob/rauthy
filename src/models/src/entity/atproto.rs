@@ -209,11 +209,11 @@ impl AtprotoCallback for AuthProviderCallback {
 
             req_client_id: String::from("atproto"),
             req_scopes: None,
-            req_redirect_uri: payload.redirect_uri.clone(),
-            req_state: payload.state.clone(),
-            req_nonce: None,
-            req_code_challenge: None,
-            req_code_challenge_method: None,
+            req_redirect_uri: payload.redirect_uri,
+            req_state: payload.state,
+            req_nonce: payload.nonce,
+            req_code_challenge: payload.code_challenge,
+            req_code_challenge_method: payload.code_challenge_method,
 
             provider_id: String::from("atproto"),
 
@@ -224,6 +224,7 @@ impl AtprotoCallback for AuthProviderCallback {
 
         let options = AuthorizeOptions {
             state: Some(slf.callback_id.clone()),
+            scopes: vec![Scope::Known(KnownScope::Atproto)],
             ..Default::default()
         };
 
@@ -234,10 +235,14 @@ impl AtprotoCallback for AuthProviderCallback {
                     &slf.callback_id,
                     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64,
                 );
-                let header =
-                    HeaderValue::from_str(&location).expect("Location HeaderValue to be correct");
 
-                Ok((cookie, slf.xsrf_token, header))
+                slf.save().await?;
+
+                Ok((
+                    cookie,
+                    slf.xsrf_token,
+                    HeaderValue::from_str(&location).expect("Location HeaderValue to be correct"),
+                ))
             }
             Err(error) => {
                 error!(%error, "failed to build pushed authorization request for atproto");
