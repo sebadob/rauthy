@@ -10,6 +10,7 @@ export const I18nKo: I18n = {
         delete: "삭제",
         details: "자세히",
         email: "이메일",
+        atprotoId: "Handle or DID",
         errTooShort: "입력이 너무 짧습니다.",
         errTooLong: "입력이 너무 깁니다.",
         expandContent: "내용 확장",
@@ -136,6 +137,7 @@ export const I18nKo: I18n = {
         requestExpired: "요청이 만료되었습니다.",
         signUp: "사용자 가입",
         validEmail: "비정상적인 이메일 주소",
+        validAtprotoId: "Provide valid handle or DID",
     },
     device: {
         accept: "수락",

@@ -10,6 +10,7 @@ export const I18nZh: I18n = {
         delete: "删除",
         details: "详情",
         email: "电子邮箱",
+        atprotoId: "Handle or DID",
         errTooShort: "输入过短",
         errTooLong: "输入过长",
         expandContent: "展开内容",
@@ -136,6 +137,7 @@ export const I18nZh: I18n = {
         requestExpired: "请求已过期",
         signUp: "用户注册",
         validEmail: "验证电子邮件地址",
+        validAtprotoId: "Provide valid handle or DID",
     },
     device: {
         accept: "接受",

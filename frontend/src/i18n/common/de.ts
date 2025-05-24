@@ -10,6 +10,7 @@ export const I18nDe: I18n = {
         delete: "Löschen",
         details: "Details",
         email: "E-Mail",
+        atprotoId: "Handle or DID",
         errTooShort: "Eingabe zu kurz",
         errTooLong: "Eingabe zu lang",
         expandContent: "Inhalt ausklappen",
@@ -136,6 +137,7 @@ export const I18nDe: I18n = {
         requestExpired: "Anfrage ist abgelaufen",
         signUp: "Benutzer Registrierung",
         validEmail: "Gültige E-Mail Adresse angeben",
+        validAtprotoId: "Provide valid handle or DID",
     },
     device: {
         accept: "Akzeptieren",

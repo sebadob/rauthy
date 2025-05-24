@@ -33,6 +33,8 @@
     import {fetchPost, type IResponse} from "$api/fetch";
     import {useIsDev} from "$state/is_dev.svelte";
     import type {
+        AtprotoRequest,
+        AuthRequest,
         CodeChallengeMethod,
         LoginRefreshRequest,
         LoginRequest,
@@ -46,6 +48,7 @@
     import ClientLogo from "$lib5/ClientLogo.svelte";
     import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
     import {fetchSolvePow} from "$utils/pow";
+    import { PATTERN_ATPROTO_ID } from "$utils/patterns";
 
     const inputWidth = "18rem";
 
@@ -76,6 +79,7 @@
     let mfaPurpose: undefined | MfaPurpose = $state();
 
     let isLoading = $state(false);
+    let isAtproto = $state(false);
     // let err = $state('some error message that it longer over multiple lines');
     let err = $state('');
     let loginAction = $state('');
@@ -93,6 +97,8 @@
     let password = $state('');
     let userId = $state('');
     let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset);
+
+    let atprotoId = $state('');
 
     onMount(() => {
         if (!needsPassword) {
@@ -186,12 +192,8 @@
     async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
         err = '';
 
-        if (!clientId) {
+        if (!isAtproto && !clientId) {
             console.error('clientId is undefined');
-            return;
-        }
-        if (!redirectUri) {
-            console.error('redirectUri is undefined');
             return;
         }
 
@@ -199,7 +201,7 @@
 
         let pow = await fetchSolvePow() || '';
 
-        const payload: LoginRequest = {
+        let payload: AuthRequest = {
             email,
             pow,
             client_id: clientId,
@@ -208,12 +210,26 @@
             nonce: nonce,
             scopes,
         };
-        if (challenge && challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
-            payload.code_challenge = challenge;
-            payload.code_challenge_method = challengeMethod;
+
+        if (isAtproto) {
+          payload = {
+              at_id: atprotoId,
+              pow,
+              redirect_uri: redirectUri,
+              state: stateParam,
+          };
         }
 
-        if (needsPassword && email !== existingMfaUser) {
+        if (challenge) {
+            if (challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
+              payload.code_challenge = challenge;
+              payload.code_challenge_method = challengeMethod;
+            } else if (isAtproto) {
+              payload.pkce_challenge = challenge;
+            }
+        }
+
+        if (needsPassword && email !== existingMfaUser && !isAtproto) {
             if (!password) {
                 err = t.authorize.passwordRequired;
                 isLoading = false;
@@ -230,6 +246,10 @@
         let url = '/auth/v1/oidc/authorize';
         if (useIsDev().get()) {
             url = '/auth/v1/dev/authorize';
+        }
+
+        if (isAtproto) {
+          url = '/auth/v1/atproto/login';
         }
 
         let res = await fetchPost<undefined | WebauthnLoginResponse>(url, payload, 'json', 'noRedirect');
@@ -446,23 +466,38 @@
                 {#if !clientMfaForce}
                     <Form action={authorizeUrl} {onSubmit}>
                         <div class:emailMinHeight={!showPasswordInput}>
-                            <Input
-                                    bind:ref={refEmail}
-                                    typ="email"
-                                    name="email"
-                                    bind:value={email}
-                                    autocomplete="email"
-                                    label={t.common.email}
-                                    placeholder={t.common.email}
-                                    errMsg={t.authorize.validEmail}
-                                    disabled={tooManyRequests || clientMfaForce}
-                                    onInput={onEmailInput}
-                                    width={inputWidth}
-                                    required
-                            />
+                            {#if isAtproto}
+                              <Input
+                                      typ="text"
+                                      name="atproto_id"
+                                      bind:value={atprotoId}
+                                      label={t.common.atprotoId}
+                                      placeholder={t.common.atprotoId}
+                                      errMsg={t.authorize.validAtprotoId}
+                                      pattern={PATTERN_ATPROTO_ID}
+                                      disabled={tooManyRequests}
+                                      width={inputWidth}
+                                      required
+                              />
+                            {:else}
+                              <Input
+                                      bind:ref={refEmail}
+                                      typ="email"
+                                      name="email"
+                                      bind:value={email}
+                                      autocomplete="email"
+                                      label={t.common.email}
+                                      placeholder={t.common.email}
+                                      errMsg={t.authorize.validEmail}
+                                      disabled={tooManyRequests || clientMfaForce}
+                                      onInput={onEmailInput}
+                                      width={inputWidth}
+                                      required
+                              />
+                            {/if}
                         </div>
 
-                        {#if showPasswordInput}
+                        {#if showPasswordInput && !isAtproto}
                             <InputPassword
                                     bind:ref={refPassword}
                                     name="password"
@@ -476,7 +511,7 @@
                                     required
                             />
 
-                            {#if showResetRequest && !tooManyRequests}
+                            {#if showResetRequest && !tooManyRequests && !isAtproto}
                                 <div class="forgotten">
                                     <Button invisible onclick={handleShowReset}>
                                         {t.authorize.passwordForgotten}
@@ -486,7 +521,7 @@
                         {/if}
 
                         {#if !tooManyRequests && !clientMfaForce}
-                            {#if showReset}
+                            {#if showReset  && !isAtproto}
                                 <div class="btn flex-col">
                                     <Button onclick={requestReset}>
                                         {t.authorize.passwordRequest}
@@ -498,11 +533,20 @@
                                         {t.authorize.login}
                                     </Button>
                                 </div>
+                                {#if isAtproto}
+                                  <div class="btn flex-col">
+                                    <Button onclick={() => {
+                                      isAtproto = false;
+                                    }}>
+                                        Back
+                                      </Button>
+                                  </div>
+                                {/if}
                             {/if}
                         {/if}
                     </Form>
 
-                    {#if isRegOpen && !showResetRequest && !tooManyRequests}
+                    {#if isRegOpen && !showResetRequest && !tooManyRequests && !isAtproto}
                         {#if clientUri}
                             <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
                                 {t.authorize.signUp}
@@ -535,7 +579,7 @@
                     </div>
                 {/if}
 
-                {#if !clientMfaForce && (providers.length > 0 || atprotoEnable)}
+                {#if !clientMfaForce && (providers.length > 0 || atprotoEnable) && !isAtproto}
                     <div class="providers flex-col">
                         <div class="providersSeparator">
                             <div class="separator"></div>
@@ -549,7 +593,9 @@
                           <ButtonAuthProvider
                                   ariaLabel={`Login: ATProto`}
                                   provider={{id: "atproto", name: "ATProto", updated: 0}}
-                                  onclick={providerLogin}
+                                  onclick={() => {
+                                    isAtproto = true;
+                                  }}
                           />
                         {/if}
                         {#each providers as provider (provider.id)}

@@ -85,6 +85,7 @@
 
     function oninvalid(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
         event.preventDefault();
+        console.log("woops");
         isError = true;
     }
 

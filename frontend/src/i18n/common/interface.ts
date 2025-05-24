@@ -12,6 +12,7 @@ export interface I18n {
         delete: string,
         details: string,
         email: string,
+        atprotoId: string,
         errTooShort: string,
         errTooLong: string,
         expandContent: string,
@@ -117,6 +118,7 @@ export interface I18n {
         requestExpired: string,
         signUp: string,
         validEmail: string,
+        validAtprotoId: string,
     },
     device: {
         accept: string,
