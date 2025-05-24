@@ -31,9 +31,9 @@ use utoipa::{OpenApi, openapi};
         api_keys::get_api_key_test,
         api_keys::put_api_key_secret,
 
-        atproto::get_client_metadata,
-        atproto::post_login,
-        atproto::post_callback,
+        atproto::get_atproto_client_metadata,
+        atproto::post_atproto_login,
+        atproto::post_atproto_callback,
 
         auth_providers::post_providers,
         auth_providers::post_provider,

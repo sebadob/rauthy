@@ -50,6 +50,7 @@ const config = {
             '/auth/v1/password_hash_times': backend,
             '/auth/v1/password_policy': backend,
             '^^(?!\/auth\/v1\/providers\/callback)\/auth\/v1\/providers.*': backend,
+            '/auth/v1/atproto/callback': backend,
             // '/auth/v1/providers': backend,
             '/auth/v1/scopes': backend,
             '/auth/v1/search': backend,

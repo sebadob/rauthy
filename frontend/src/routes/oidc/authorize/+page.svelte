@@ -33,14 +33,15 @@
     import {fetchPost, type IResponse} from "$api/fetch";
     import {useIsDev} from "$state/is_dev.svelte";
     import type {
-        AtprotoRequest,
-        AuthRequest,
         CodeChallengeMethod,
         LoginRefreshRequest,
         LoginRequest,
         RequestResetRequest,
         WebauthnLoginResponse
     } from "$api/types/authorize.ts";
+    import type {
+        AtprotoRequest,
+    } from "$api/types/atproto.ts";
     import Form from "$lib5/form/Form.svelte";
     import ButtonAuthProvider from "$lib5/ButtonAuthProvider.svelte";
     import {onMount} from "svelte";
@@ -192,7 +193,22 @@
     async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
         err = '';
 
-        if (!isAtproto && !clientId) {
+        if (isAtproto) {
+          console.error("isAtproto");
+
+          getPkce(64, (error, {challenge, verifier}) => {
+              if (!error) {
+                  localStorage.setItem(PKCE_VERIFIER_UPSTREAM, verifier);
+
+          console.error("atprotoLogin");
+                  atprotoLogin(challenge);
+              }
+          });
+
+          return;
+        }
+
+        if (!clientId) {
             console.error('clientId is undefined');
             return;
         }
@@ -201,7 +217,7 @@
 
         let pow = await fetchSolvePow() || '';
 
-        let payload: AuthRequest = {
+        const payload: LoginRequest = {
             email,
             pow,
             client_id: clientId,
@@ -211,23 +227,11 @@
             scopes,
         };
 
-        if (isAtproto) {
-          payload = {
-              at_id: atprotoId,
-              pow,
-              redirect_uri: redirectUri,
-              state: stateParam,
-          };
+        if (challenge && challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
+          payload.code_challenge = challenge;
+          payload.code_challenge_method = challengeMethod;
         }
 
-        if (challenge) {
-            if (challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
-              payload.code_challenge = challenge;
-              payload.code_challenge_method = challengeMethod;
-            } else if (isAtproto) {
-              payload.pkce_challenge = challenge;
-            }
-        }
 
         if (needsPassword && email !== existingMfaUser && !isAtproto) {
             if (!password) {
@@ -248,12 +252,58 @@
             url = '/auth/v1/dev/authorize';
         }
 
-        if (isAtproto) {
-          url = '/auth/v1/atproto/login';
-        }
-
         let res = await fetchPost<undefined | WebauthnLoginResponse>(url, payload, 'json', 'noRedirect');
         await handleAuthRes(res);
+    }
+
+    async function atprotoLogin(pkce_challenge: string) {
+        err = '';
+
+        if (!redirectUri) {
+            console.error('redirectUri is undefined');
+            return;
+        }
+
+        isLoading = true;
+
+        console.error('isLoading true');
+
+        // let pow = await fetchSolvePow() || '';
+
+        const payload: AtprotoRequest = {
+          at_id: atprotoId,
+          // pow,
+          redirect_uri: redirectUri,
+          state: stateParam,
+          nonce: nonce,
+          pkce_challenge: pkce_challenge,
+        };
+
+        if (challenge && challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
+          payload.code_challenge = challenge;
+          payload.code_challenge_method = challengeMethod;
+        }
+
+        let res = await fetchPost<string>('/auth/v1/atproto/login', payload);
+        isLoading = false;
+
+        console.error('isLoading false');
+
+        if (res.text) {
+            saveProviderToken(res.text);
+
+        console.error('saveProviderToken');
+
+            let loc = res.headers.get('location');
+            console.error(loc);
+            if (!loc) {
+                console.error('no location header set for provider login');
+                return;
+            }
+            window.location.href = loc;
+        } else {
+            err = res.error?.message || 'Error';
+        }
     }
 
     async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse>) {

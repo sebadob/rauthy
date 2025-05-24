@@ -919,6 +919,7 @@ impl ProviderCallbackHtml<'_> {
 #[template(path = "html/atproto/callback.html")]
 pub struct AtprotoCallbackHtml<'a> {
     lang: &'a str,
+    client_id: &'a str,
     theme_ts: i64,
     templates: &'a [HtmlTemplate],
 }
@@ -927,6 +928,7 @@ impl AtprotoCallbackHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AtprotoCallbackHtml {
             lang: lang.as_str(),
+            client_id: "rauthy",
             theme_ts,
             ..Default::default()
         };

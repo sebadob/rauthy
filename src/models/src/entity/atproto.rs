@@ -23,9 +23,9 @@ use hickory_resolver::{
     Resolver, TokioResolver, config::ResolverConfig, name_server::TokioConnectionProvider,
     proto::rr::rdata::TXT,
 };
-use rauthy_api_types::atproto;
+use rauthy_api_types::{atproto, auth_providers::ProviderRequest};
 use rauthy_common::constants::{
-    COOKIE_UPSTREAM_CALLBACK, DEV_MODE, PROVIDER_LINK_COOKIE, PUB_URL_WITH_SCHEME,
+    COOKIE_UPSTREAM_CALLBACK, DEV_MODE, PROVIDER_LINK_COOKIE, PUB_URL, PUB_URL_WITH_SCHEME,
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -38,14 +38,14 @@ use crate::{
     app_state::AppState,
     database::DB,
     entity::{
-        auth_codes::AuthCode, auth_providers::AuthProviderLinkCookie, clients::Client, users::User,
+        auth_codes::AuthCode,
+        auth_providers::{AuthProvider, AuthProviderLinkCookie, AuthProviderType},
+        clients::Client,
+        users::User,
     },
 };
 
-use super::{
-    auth_providers::{AuthProviderCallback, AuthProviderType},
-    sessions::Session,
-};
+use super::{auth_providers::AuthProviderCallback, sessions::Session};
 
 #[derive(Clone)]
 pub struct AtprotoClient(
@@ -69,18 +69,18 @@ impl AtprotoClient {
     pub fn new() -> Result<Self, atrium_oauth::Error> {
         let http_client = Arc::new(DefaultHttpClient::default());
 
-        if *DEV_MODE {
+        let scopes = vec![
+            Scope::Unknown("transition:email".to_owned()),
+            Scope::Known(KnownScope::Atproto),
+            Scope::Known(KnownScope::TransitionGeneric),
+        ];
+
+        if let Some(port) = PUB_URL_WITH_SCHEME.strip_prefix("http://localhost") {
             let client_metadata = AtprotoLocalhostClientMetadata {
                 redirect_uris: Some(vec![format!(
-                    "{}/auth/v1/atproto/callback",
-                    PUB_URL_WITH_SCHEME
-                        .strip_prefix("http://localhost")
-                        .map_or_else(
-                            || PUB_URL_WITH_SCHEME.to_owned(),
-                            |suffix| format!("http://127.0.0.1{suffix}",)
-                        )
+                    "http://127.0.0.1{port}/auth/v1/atproto/callback",
                 )]),
-                scopes: Some(vec![Scope::Known(KnownScope::Atproto)]),
+                scopes: Some(scopes.clone()),
             };
 
             let config = OAuthClientConfig {
@@ -110,7 +110,7 @@ impl AtprotoClient {
                 redirect_uris: vec![format!("{}/auth/v1/atproto/callback", *PUB_URL_WITH_SCHEME)],
                 token_endpoint_auth_method: AuthMethod::None,
                 grant_types: vec![GrantType::AuthorizationCode],
-                scopes: vec![Scope::Known(KnownScope::Atproto)],
+                scopes,
                 jwks_uri: None,
                 token_endpoint_auth_signing_alg: None,
             };
@@ -207,6 +207,31 @@ impl AtprotoCallback for AuthProviderCallback {
         data: &'a web::Data<AppState>,
         payload: atproto::LoginRequest,
     ) -> Result<(Cookie<'a>, String, HeaderValue), ErrorResponse> {
+        if let Err(_) = AuthProvider::find_by_iss("atproto".to_owned()).await {
+            let payload = ProviderRequest {
+                name: String::new(),
+                typ: rauthy_api_types::auth_providers::AuthProviderType::Custom,
+                enabled: true,
+                issuer: "atproto".to_owned(),
+                authorization_endpoint: String::new(),
+                token_endpoint: String::new(),
+                userinfo_endpoint: String::new(),
+                jwks_endpoint: None,
+                use_pkce: true,
+                client_secret_basic: false,
+                client_secret_post: false,
+                client_id: "atproto".to_owned(),
+                client_secret: None,
+                scope: String::new(),
+                admin_claim_path: None,
+                admin_claim_value: None,
+                mfa_claim_path: None,
+                mfa_claim_value: None,
+            };
+
+            let _ = AuthProvider::create(payload).await?;
+        };
+
         let slf = Self {
             callback_id: secure_random_alnum(32),
             xsrf_token: secure_random_alnum(32),
@@ -225,11 +250,15 @@ impl AtprotoCallback for AuthProviderCallback {
             pkce_challenge: payload.pkce_challenge,
         };
 
-        slf.save().await?;
+        dbg!(&slf.callback_id);
 
         let options = AuthorizeOptions {
             state: Some(slf.callback_id.clone()),
-            scopes: vec![Scope::Known(KnownScope::Atproto)],
+            scopes: vec![
+                Scope::Unknown("transition:email".to_owned()),
+                Scope::Known(KnownScope::Atproto),
+                Scope::Known(KnownScope::TransitionGeneric),
+            ],
             ..Default::default()
         };
 
@@ -275,16 +304,15 @@ impl AtprotoCallback for AuthProviderCallback {
         })?;
 
         // validate state
-        if callback_id != payload.state {
-            AuthProviderCallback::delete(callback_id).await?;
+        // if callback_id != payload.state {
+        //     AuthProviderCallback::delete(callback_id).await?;
 
-            error!("`state` does not match");
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "`state` does not match",
-            ));
-        }
-        debug!("callback state is valid");
+        //     error!("`state` does not match");
+        //     return Err(ErrorResponse::new(
+        //         ErrorResponseType::BadRequest,
+        //         "`state` does not match",
+        //     ));
+        // }
 
         // validate csrf token
         let slf = AuthProviderCallback::find(callback_id).await?;
@@ -338,16 +366,17 @@ impl AtprotoCallback for AuthProviderCallback {
             }
         };
 
+        let Some(email) = email else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "failed to get email from session for atproto",
+            ));
+        };
+
         let link_cookie = ApiCookie::from_req(req, PROVIDER_LINK_COOKIE)
             .and_then(|value| AuthProviderLinkCookie::try_from(value.as_str()).ok());
 
-        if email.is_none() {
-            todo!()
-        }
-
-        let claims_user_id = did.to_string();
-
-        let user_opt = match User::find_by_federation("atproto", &claims_user_id).await {
+        let user_opt = match User::find_by_federation("atproto", &*did).await {
             Ok(user) => {
                 debug!(
                     "found already existing user by federation lookup: {:?}",
@@ -357,11 +386,11 @@ impl AtprotoCallback for AuthProviderCallback {
             }
             Err(_) => {
                 debug!(
-                    "did not find already existing user by federation lookup - making sure email does not exist"
+                    "did not find already existing user by federation lookup - making sure email \
+                     does not exist"
                 );
 
-                if let Ok(mut user) = User::find_by_email(email.as_ref().unwrap().to_string()).await
-                {
+                if let Ok(mut user) = User::find_by_email(email.clone()).await {
                     if let Some(link) = link_cookie.as_ref() {
                         if link.provider_id != "atproto" {
                             return Err(ErrorResponse::new(
@@ -385,14 +414,15 @@ impl AtprotoCallback for AuthProviderCallback {
                         }
 
                         user.auth_provider_id = Some("atproto".to_owned());
-                        user.federation_uid = Some(claims_user_id.clone());
+                        user.federation_uid = Some(did.to_string());
 
                         Some(user)
                     } else {
                         return Err(ErrorResponse::new(
                             ErrorResponseType::Forbidden,
                             format!(
-                                "User with email '{}' already exists but is not linked to this provider.",
+                                "User with email '{}' already exists but is not linked to this \
+                                 provider.",
                                 user.email
                             ),
                         ));
@@ -402,16 +432,14 @@ impl AtprotoCallback for AuthProviderCallback {
                 }
             }
         };
-        debug!("user_opt:\n{:?}", user_opt);
 
         let now = chrono::Utc::now().timestamp();
+
         let user = if let Some(mut user) = user_opt {
             let mut old_email = None;
             let mut forbidden_error = None;
 
-            if user.federation_uid.is_none()
-                || user.federation_uid.as_deref() != Some(&claims_user_id)
-            {
+            if user.federation_uid.is_none() || user.federation_uid.as_deref() != Some(&*did) {
                 forbidden_error = Some("non-federated user or ID mismatch");
             }
 
@@ -428,9 +456,9 @@ impl AtprotoCallback for AuthProviderCallback {
                 return Err(ErrorResponse::new(ErrorResponseType::Forbidden, err));
             }
 
-            if Some(user.email.as_str()) != email.as_deref() {
+            if user.email != email {
                 old_email = Some(user.email);
-                user.email = email.as_ref().unwrap().to_string();
+                user.email = email.clone();
             }
 
             user.last_login = Some(now);
@@ -441,7 +469,7 @@ impl AtprotoCallback for AuthProviderCallback {
             user
         } else {
             let new_user = User {
-                email: email.as_ref().unwrap().to_string(),
+                email: email.clone(),
                 given_name: "Unknown".to_string(),
                 family_name: None,
                 roles: Default::default(),
@@ -450,9 +478,10 @@ impl AtprotoCallback for AuthProviderCallback {
                 last_login: Some(now),
                 language: Default::default(),
                 auth_provider_id: Some("atproto".to_owned()),
-                federation_uid: Some(claims_user_id.to_string()),
+                federation_uid: Some(did.to_string()),
                 ..Default::default()
             };
+
             User::create_federated(new_user).await?
         };
 
@@ -478,6 +507,7 @@ impl AtprotoCallback for AuthProviderCallback {
             vec!["atproto".to_owned()],
             client.auth_code_lifetime,
         );
+
         code.save().await?;
 
         let auth_step = AuthStep::LoggedIn(AuthStepLoggedIn {
@@ -492,6 +522,7 @@ impl AtprotoCallback for AuthProviderCallback {
         });
 
         let cookie = ApiCookie::build(COOKIE_UPSTREAM_CALLBACK, "", 0);
+
         Ok((auth_step, cookie))
     }
 }
