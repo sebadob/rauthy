@@ -144,6 +144,7 @@ fn is_path_csrf_exception(path: &str) -> bool {
                 || path.ends_with("/logo")
                 || path.starts_with("/.well-known/")
                 || path.contains("/webauthn/auth/")
+                || path.starts_with("/atproto/")
         }
     }
 }

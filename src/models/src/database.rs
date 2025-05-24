@@ -1,28 +1,31 @@
-use crate::app_state::AppState;
-use crate::entity::db_version::DbVersion;
-use crate::migration::db_migrate_dev::migrate_dev_data;
-use crate::migration::{anti_lockout, db_migrate, init_prod};
-use crate::sqlx_refinery_migration::migrate_sqlx_to_refinery;
+use crate::{
+    app_state::AppState,
+    entity::db_version::DbVersion,
+    migration::{anti_lockout, db_migrate, db_migrate_dev::migrate_dev_data, init_prod},
+    sqlx_refinery_migration::migrate_sqlx_to_refinery,
+};
 use actix_web::web;
 use atrium_api::types::string::Did;
 use atrium_common::store::Store;
-use atrium_oauth::store::session::{Session, SessionStore};
-use atrium_oauth::store::state::{InternalStateData, StateStore};
-use futures_util::StreamExt;
-use hiqlite::NodeConfig;
-use hiqlite::cache_idx::CacheIndex;
-use hiqlite_macros::embed::*;
-use rauthy_common::constants::{
-    CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION, DEV_MODE, RAUTHY_VERSION,
+use atrium_oauth::store::{
+    session::{Session, SessionStore},
+    state::{InternalStateData, StateStore},
 };
-use rauthy_common::{is_hiqlite, is_postgres};
+use futures_util::StreamExt;
+use hiqlite::{NodeConfig, cache_idx::CacheIndex};
+use hiqlite_macros::embed::*;
+use rauthy_common::{
+    constants::{CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION, DEV_MODE, RAUTHY_VERSION},
+    is_hiqlite, is_postgres,
+};
 use rauthy_error::ErrorResponse;
-use std::env;
-use std::ops::DerefMut;
-use std::sync::{Arc, OnceLock};
-use std::time::Duration;
-use tokio::pin;
-use tokio::time::sleep;
+use std::{
+    env,
+    ops::DerefMut,
+    sync::{Arc, OnceLock},
+    time::Duration,
+};
+use tokio::{pin, time::sleep};
 use tokio_postgres::config::{LoadBalanceHosts, SslMode};
 use tracing::{debug, error, info, warn};
 
@@ -77,11 +80,12 @@ impl DB {
         }
 
         let config = NodeConfig::from_env();
-        // Note: At the time of writing, I have not included the option to not start the DB
-        // layer when the feature is enabled, as this would mean many adoptions and additional
-        // checks in the Hiqlite code.
-        // This means, even if Postgres is configured, this will still create and start the Hiqlite
-        // DB, but it simply won't do anything else than heartbeats between the nodes.
+        // Note: At the time of writing, I have not included the option to not start the
+        // DB layer when the feature is enabled, as this would mean many
+        // adoptions and additional checks in the Hiqlite code.
+        // This means, even if Postgres is configured, this will still create and start
+        // the Hiqlite DB, but it simply won't do anything else than heartbeats
+        // between the nodes.
         let client = hiqlite::start_node_with_cache::<Cache>(config).await?;
         let _ = HIQLITE_CLIENT.set(client);
 
@@ -130,7 +134,8 @@ impl DB {
         db_name: &str,
         db_max_conn: u32,
     ) -> Result<deadpool_postgres::Pool, ErrorResponse> {
-        // let mut config: tokio_postgres::Config = db_host.parse().expect("invalid database url");
+        // let mut config: tokio_postgres::Config = db_host.parse().expect("invalid
+        // database url");
         let mut config: tokio_postgres::Config = tokio_postgres::Config::default();
         config.host(host);
         config.port(port);
@@ -297,8 +302,8 @@ impl DB {
 
 // Postgres helpers
 impl DB {
-    /// Helper function to reduce boilerplate when doing raw postgres streaming queries.
-    /// This is needed to make postgres `query_raw()` work easily.
+    /// Helper function to reduce boilerplate when doing raw postgres streaming
+    /// queries. This is needed to make postgres `query_raw()` work easily.
     #[inline]
     pub fn params_iter<'a>(
         s: &'a [&'a (dyn postgres_types::ToSql + Sync)],
@@ -354,9 +359,9 @@ impl DB {
         }
     }
 
-    /// If you can estimate how many rows would be returned from the given query, provide a
-    /// proper `expected_rows_size_hint` to reserve memory in advance. This will provide a small
-    /// performance boost.
+    /// If you can estimate how many rows would be returned from the given
+    /// query, provide a proper `expected_rows_size_hint` to reserve memory
+    /// in advance. This will provide a small performance boost.
     #[inline]
     pub async fn pg_query<'a, T: From<tokio_postgres::Row>>(
         stmt: &str,
@@ -385,9 +390,9 @@ impl DB {
         Ok(res)
     }
 
-    /// If you can estimate how many rows would be returned from the given query, provide a
-    /// proper `expected_rows_size_hint` to reserve memory in advance. This will provide a small
-    /// performance boost.
+    /// If you can estimate how many rows would be returned from the given
+    /// query, provide a proper `expected_rows_size_hint` to reserve memory
+    /// in advance. This will provide a small performance boost.
     #[inline]
     pub async fn pg_query_rows<'a>(
         stmt: &str,
@@ -408,8 +413,9 @@ impl DB {
     }
 }
 
-/// Be very careful when you use this verifier. It will make any TLS connection work but does NOT
-/// VALIDATE any certificates. Use is discouraged and it should only be done for testing.
+/// Be very careful when you use this verifier. It will make any TLS connection
+/// work but does NOT VALIDATE any certificates. Use is discouraged and it
+/// should only be done for testing.
 #[derive(Debug)]
 struct NoTlsVerifier {}
 
@@ -456,17 +462,20 @@ impl Store<String, InternalStateData> for DB {
     type Error = hiqlite::Error;
 
     async fn get(&self, key: &String) -> Result<Option<InternalStateData>, Self::Error> {
-        Self::hql().get(Cache::Atproto, key).await
+        let Some(value) = Self::hql().get_bytes(Cache::Atproto, key).await? else {
+            return Ok(None);
+        };
+
+        let state = serde_json::from_slice(&value)?;
+
+        Ok(Some(state))
     }
 
     async fn set(&self, key: String, value: InternalStateData) -> Result<(), Self::Error> {
+        let value = serde_json::to_vec(&value)?;
+
         Self::hql()
-            .put(
-                Cache::Atproto,
-                key,
-                &value,
-                CACHE_TTL_AUTH_PROVIDER_CALLBACK,
-            )
+            .put_bytes(Cache::Atproto, key, value, CACHE_TTL_AUTH_PROVIDER_CALLBACK)
             .await
     }
 
@@ -485,12 +494,20 @@ impl Store<Did, Session> for DB {
     type Error = hiqlite::Error;
 
     async fn get(&self, key: &Did) -> Result<Option<Session>, Self::Error> {
-        Self::hql().get(Cache::Atproto, key.to_string()).await
+        let Some(value) = Self::hql().get_bytes(Cache::Atproto, &key.to_string()).await? else {
+            return Ok(None);
+        };
+
+        let session = serde_json::from_slice(&value)?;
+
+        Ok(Some(session))
     }
 
     async fn set(&self, key: Did, value: Session) -> Result<(), Self::Error> {
+        let value = serde_json::to_vec(&value)?;
+
         Self::hql()
-            .put(Cache::Atproto, key.to_string(), &value, CACHE_TTL_SESSION)
+            .put_bytes(Cache::Atproto, key.to_string(), value, CACHE_TTL_SESSION)
             .await
     }
 

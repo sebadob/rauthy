@@ -275,12 +275,20 @@ fn api_services() -> actix_web::Scope {
         .service(users::get_user_webid)
         .service(
             web::scope("/v1")
+                .service(atproto::get_atproto_client_metadata)
+                .service(atproto::post_atproto_login)
+                .service(atproto::get_atproto_callback_html)
+                .service(atproto::post_atproto_callback)
                 .service(api_keys::get_api_keys)
                 .service(api_keys::post_api_key)
                 .service(api_keys::put_api_key)
                 .service(api_keys::delete_api_key)
                 .service(api_keys::get_api_key_test)
                 .service(api_keys::put_api_key_secret)
+                .service(atproto::get_atproto_client_metadata)
+                .service(atproto::post_atproto_login)
+                .service(atproto::get_atproto_callback_html)
+                .service(atproto::post_atproto_callback)
                 .service(auth_providers::post_providers)
                 .service(auth_providers::get_providers_minimal)
                 .service(auth_providers::post_provider)
@@ -436,10 +444,7 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::get_health)
                 .service(generic::get_i18n_config)
                 .service(generic::get_ready)
-                .service(html::get_static_assets)
-                .service(atproto::get_client_metadata)
-                .service(atproto::post_login)
-                .service(atproto::post_callback),
+                .service(html::get_static_assets),
         )
 }
 

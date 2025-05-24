@@ -2,13 +2,10 @@ use actix_web::{
     HttpRequest, HttpResponse, get,
     http::header::{self, HeaderValue, LOCATION},
     post,
-    web::{self, Json, Query},
+    web::{self, Json},
 };
-use rauthy_api_types::{
-    atproto,
-    auth_providers::{ProviderCallbackRequest, ProviderLookupResponse},
-};
-use rauthy_common::constants::ATPROTO_ENABLE;
+use rauthy_api_types::atproto;
+use rauthy_common::constants::{ATPROTO_ENABLE, PUB_URL_WITH_SCHEME};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::{
     app_state::AppState,
@@ -28,7 +25,9 @@ use crate::{ReqPrincipal, map_auth_step};
     ),
 )]
 #[get("/atproto/client_metadata")]
-pub async fn get_client_metadata(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_atproto_client_metadata(
+    data: web::Data<AppState>,
+) -> Result<HttpResponse, ErrorResponse> {
     is_atproto_enabled()?;
 
     Ok(HttpResponse::Ok()
@@ -50,29 +49,21 @@ pub async fn get_client_metadata(data: web::Data<AppState>) -> Result<HttpRespon
     ),
 )]
 #[post("/atproto/login")]
-pub async fn post_login(
+pub async fn post_atproto_login(
     data: web::Data<AppState>,
-    payload: Json<atproto::LoginRequest>,
+    Json(payload): Json<atproto::LoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     is_atproto_enabled()?;
     principal.validate_session_auth_or_init()?;
 
-    let payload = payload.into_inner();
-    let (cookie, xsrf_token, location) =
+    let (mut cookie, xsrf_token, location) =
         <AuthProviderCallback as AtprotoCallback>::login_start(&data, payload).await?;
 
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))
         .cookie(cookie)
         .body(xsrf_token))
-}
-
-#[get("/atproto/callback")]
-pub async fn get_atproto_callback_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    HtmlCached::AtprotoCallback
-        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
-        .await
 }
 
 /// Callback for an upstream atproto login
@@ -86,9 +77,8 @@ pub async fn get_atproto_callback_html(req: HttpRequest) -> Result<HttpResponse,
     tag = "atproto",
     request_body = atproto::CallbackRequest,
     responses(
-        (status = 202, description = "Correct credentials, adds Location header"),
+        (status = 200, description = "Correct credentials, adds Location header"),
         (status = 400, description = "BadRequest", body = ErrorResponse),
-        (status = 404, description = "NotFound", body = ErrorResponse),
     ),
 )]
 #[post("/atproto/callback")]
@@ -102,24 +92,18 @@ pub async fn post_atproto_callback(
     Json(payload): Json<atproto::CallbackRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    post_atproto_callback_handle(data, req, payload, principal).await
-}
-
-// extracted to make it usable in `post_dev_only_endpoints()`
-#[inline(always)]
-pub async fn post_atproto_callback_handle(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-    payload: atproto::CallbackRequest,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
     is_atproto_enabled()?;
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
     let session = principal.get_session()?;
-    let (auth_step, cookie) =
-        AtprotoCallback::login_finish(&data, &req, &payload, session.clone()).await?;
+    let (auth_step, cookie) = <AuthProviderCallback as AtprotoCallback>::login_finish(
+        &data,
+        &req,
+        &payload,
+        session.clone(),
+    )
+    .await?;
 
     let mut resp = map_auth_step(auth_step, &req).await?;
     resp.add_cookie(&cookie).map_err(|err| {
@@ -130,6 +114,15 @@ pub async fn post_atproto_callback_handle(
     })?;
 
     Ok(resp)
+}
+
+#[get("/atproto/callback")]
+pub async fn get_atproto_callback_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    is_atproto_enabled()?;
+
+    HtmlCached::AtprotoCallback
+        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, false)
+        .await
 }
 
 #[inline(always)]

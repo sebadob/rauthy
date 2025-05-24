@@ -675,6 +675,8 @@ impl Session {
             if state == SessionState::Init {
                 #[cfg(debug_assertions)]
                 let exceptions = [
+                    "/auth/v1/atproto/login",
+                    "/auth/v1/atproto/callback",
                     "/auth/v1/oidc/authorize",
                     "/auth/v1/dev/authorize",
                     "/auth/v1/oidc/callback",
@@ -685,6 +687,8 @@ impl Session {
                 ];
                 #[cfg(not(debug_assertions))]
                 let exceptions = [
+                    "/auth/v1/atproto/login",
+                    "/auth/v1/atproto/callback",
                     "/auth/v1/oidc/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
