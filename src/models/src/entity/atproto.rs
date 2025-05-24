@@ -73,7 +73,12 @@ impl AtprotoClient {
             let client_metadata = AtprotoLocalhostClientMetadata {
                 redirect_uris: Some(vec![format!(
                     "{}/auth/v1/atproto/callback",
-                    *PUB_URL_WITH_SCHEME
+                    PUB_URL_WITH_SCHEME
+                        .strip_prefix("http://localhost")
+                        .map_or_else(
+                            || PUB_URL_WITH_SCHEME.to_owned(),
+                            |suffix| format!("http://127.0.0.1{suffix}",)
+                        )
                 )]),
                 scopes: Some(vec![Scope::Known(KnownScope::Atproto)]),
             };
