@@ -18,12 +18,12 @@ use rauthy_api_types::sessions::SessionState;
 use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
 use rauthy_common::compression::{compress_br_dyn, compress_gzip};
 use rauthy_common::constants::{
-    APPLICATION_JSON, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED, AUTH_HEADER_FAMILY_NAME,
-    AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA, AUTH_HEADER_ROLES,
-    AUTH_HEADER_USER, AUTH_HEADERS_ENABLE, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
-    DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, EXPERIMENTAL_FED_CM_ENABLE,
-    GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
-    SESSION_TIMEOUT,
+    APPLICATION_JSON, ATPROTO_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
+    AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
+    AUTH_HEADER_ROLES, AUTH_HEADER_USER, AUTH_HEADERS_ENABLE, COOKIE_MFA,
+    DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT,
+    EXPERIMENTAL_FED_CM_ENABLE, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
+    OPEN_USER_REG, SESSION_LIFETIME, SESSION_TIMEOUT,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -166,6 +166,7 @@ pub async fn get_authorize(
             theme_ts,
             &[
                 HtmlTemplate::AuthProviders(auth_providers_json),
+                HtmlTemplate::AtprotoEnable(*ATPROTO_ENABLE),
                 HtmlTemplate::ClientName(client.name.unwrap_or_default()),
                 HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
                 HtmlTemplate::ClientLogoUpdated(logo_updated),
@@ -205,6 +206,7 @@ pub async fn get_authorize(
         theme_ts,
         &[
             HtmlTemplate::AuthProviders(auth_providers_json),
+            HtmlTemplate::AtprotoEnable(*ATPROTO_ENABLE),
             HtmlTemplate::ClientName(client.name.unwrap_or_default()),
             HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
             HtmlTemplate::ClientLogoUpdated(logo_updated),

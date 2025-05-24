@@ -13,7 +13,7 @@ use askama::Template;
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_common::constants::{
-    DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE,
+    ATPROTO_ENABLE, DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE,
     USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::utils::get_rand;
@@ -62,6 +62,7 @@ pub struct TplPasswordReset {
 pub enum HtmlTemplate {
     /// Auth providers as pre-built, cached JSON value
     AuthProviders(String),
+    AtprotoEnable(bool),
     ClientName(String),
     ClientUrl(String),
     ClientLogoUpdated(Option<i64>),
@@ -93,6 +94,7 @@ impl HtmlTemplate {
                 let json = AuthProviderTemplate::get_all_json_template().await?;
                 Ok((Self::AuthProviders(json), None))
             }
+            "tpl_atproto_enable" => Ok((Self::AtprotoEnable(*ATPROTO_ENABLE), None)),
             "tpl_client_logo_updated" => Ok((
                 Self::ClientLogoUpdated(Some(Utc::now().timestamp_millis())),
                 None,
@@ -190,6 +192,7 @@ impl HtmlTemplate {
     pub fn id(&self) -> &'static str {
         match self {
             Self::AuthProviders(_) => "tpl_auth_providers",
+            Self::AtprotoEnable(_) => "tpl_atproto_enable",
             Self::ClientName(_) => "tpl_client_name",
             Self::ClientUrl(_) => "tpl_client_url",
             Self::ClientLogoUpdated(_) => "tpl_client_logo_updated",
@@ -212,6 +215,7 @@ impl HtmlTemplate {
     pub fn inner(&self) -> String {
         match self {
             Self::AuthProviders(i) => i.to_string(),
+            Self::AtprotoEnable(i) => i.to_string(),
             Self::ClientName(i) => i.to_string(),
             Self::ClientUrl(i) => i.to_string(),
             Self::ClientLogoUpdated(i) => i.map(|i| i.to_string()).unwrap_or_default(),
@@ -245,7 +249,10 @@ impl IndexHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::IsRegOpen(*OPEN_USER_REG)],
+            templates: &[
+                HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
+                HtmlTemplate::AtprotoEnable(*ATPROTO_ENABLE),
+            ],
         };
 
         res.render().unwrap()
