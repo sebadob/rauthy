@@ -11,7 +11,9 @@
     import getPkce from "oauth-pkce";
     import {
         PKCE_VERIFIER_UPSTREAM,
-        TPL_AUTH_PROVIDERS, TPL_CLIENT_LOGO_UPDATED,
+        TPL_AUTH_PROVIDERS,
+        TPL_ATPROTO_ENABLE,
+        TPL_CLIENT_LOGO_UPDATED,
         TPL_CLIENT_NAME,
         TPL_CLIENT_URL,
         TPL_CSRF_TOKEN,
@@ -70,6 +72,7 @@
     let refresh = false;
     let existingMfaUser: undefined | string = $state();
     let providers: AuthProviderTemplate[] = $state([]);
+    let atprotoEnable: undefined | boolean = $state();
     let mfaPurpose: undefined | MfaPurpose = $state();
 
     let isLoading = $state(false);
@@ -398,6 +401,7 @@
 </svelte:head>
 
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
+<Template id={TPL_ATPROTO_ENABLE} bind:value={atprotoEnable}/>
 <Template id={TPL_CLIENT_NAME} bind:value={clientName}/>
 <Template id={TPL_CLIENT_URL} bind:value={clientUri}/>
 <Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated}/>
@@ -531,7 +535,7 @@
                     </div>
                 {/if}
 
-                {#if !clientMfaForce && providers.length > 0}
+                {#if !clientMfaForce && (providers.length > 0 || atprotoEnable)}
                     <div class="providers flex-col">
                         <div class="providersSeparator">
                             <div class="separator"></div>
@@ -541,6 +545,13 @@
                                 </div>
                             </div>
                         </div>
+                        {#if atprotoEnable}
+                          <ButtonAuthProvider
+                                  ariaLabel={`Login: ATProto`}
+                                  provider={{id: "atproto", name: "ATProto", updated: 0}}
+                                  onclick={providerLogin}
+                          />
+                        {/if}
                         {#each providers as provider (provider.id)}
                             <ButtonAuthProvider
                                     ariaLabel={`Login: ${provider.name}`}
