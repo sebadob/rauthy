@@ -1,19 +1,23 @@
 use actix_web::{
-    get,
+    HttpRequest, HttpResponse, get,
     http::header::{self, HeaderValue, LOCATION},
     post,
     web::{self, Json, Query},
-    HttpRequest, HttpResponse,
 };
-use rauthy_api_types::{atproto, auth_providers::ProviderLookupResponse};
+use rauthy_api_types::{
+    atproto,
+    auth_providers::{ProviderCallbackRequest, ProviderLookupResponse},
+};
 use rauthy_common::constants::ATPROTO_ENABLE;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::{
     app_state::AppState,
-    entity::{atproto::AtprotoCallback, auth_providers::AuthProviderCallback},
+    entity::{atproto::AtprotoCallback, auth_providers::AuthProviderCallback, theme::ThemeCssFull},
+    html::HtmlCached,
 };
+use validator::Validate as _;
 
-use crate::{map_auth_step, ReqPrincipal};
+use crate::{ReqPrincipal, map_auth_step};
 
 #[utoipa::path(
     get,
@@ -64,39 +68,58 @@ pub async fn post_login(
         .body(xsrf_token))
 }
 
+#[get("/atproto/callback")]
+pub async fn get_atproto_callback_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::AtprotoCallback
+        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
+        .await
+}
+
+/// Callback for an upstream atproto login
+///
+/// **Permissions**
+/// - `session-init`
+/// - `session-auth`
 #[utoipa::path(
     post,
     path = "/atproto/callback",
     tag = "atproto",
+    request_body = atproto::CallbackRequest,
     responses(
-        (status = 200, description = "OK", body = ProviderLookupResponse),
+        (status = 202, description = "Correct credentials, adds Location header"),
         (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 404, description = "NotFound", body = ErrorResponse),
     ),
 )]
 #[post("/atproto/callback")]
 #[tracing::instrument(
-    name = "post_provider_callback",
+    name = "post_atproto_callback",
     skip_all, fields(callback_id = payload.state)
 )]
-pub async fn post_callback(
+pub async fn post_atproto_callback(
     data: web::Data<AppState>,
     req: HttpRequest,
-    payload: Query<atproto::CallbackRequest>,
+    Json(payload): Json<atproto::CallbackRequest>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    post_atproto_callback_handle(data, req, payload, principal).await
+}
+
+// extracted to make it usable in `post_dev_only_endpoints()`
+#[inline(always)]
+pub async fn post_atproto_callback_handle(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+    payload: atproto::CallbackRequest,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     is_atproto_enabled()?;
     principal.validate_session_auth_or_init()?;
+    payload.validate()?;
 
-    let payload = payload.into_inner();
     let session = principal.get_session()?;
-    let (auth_step, cookie) = <AuthProviderCallback as AtprotoCallback>::login_finish(
-        &data,
-        &req,
-        &payload,
-        session.clone(),
-    )
-    .await?;
+    let (auth_step, cookie) =
+        AtprotoCallback::login_finish(&data, &req, &payload, session.clone()).await?;
 
     let mut resp = map_auth_step(auth_step, &req).await?;
     resp.add_cookie(&cookie).map_err(|err| {

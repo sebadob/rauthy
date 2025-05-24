@@ -916,6 +916,26 @@ impl ProviderCallbackHtml<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "html/atproto/callback.html")]
+pub struct AtprotoCallbackHtml<'a> {
+    lang: &'a str,
+    theme_ts: i64,
+    templates: &'a [HtmlTemplate],
+}
+
+impl AtprotoCallbackHtml<'_> {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
+        let res = AtprotoCallbackHtml {
+            lang: lang.as_str(),
+            theme_ts,
+            ..Default::default()
+        };
+
+        res.render().unwrap()
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "html/oidc/logout.html")]
 pub struct LogoutHtml<'a> {
     lang: &'a str,

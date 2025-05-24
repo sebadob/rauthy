@@ -14,7 +14,7 @@ use rauthy_common::compression::{compress_br_9, compress_br_dyn, compress_gzip};
 use rauthy_common::constants::HEADER_HTML;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
-use templates::AdminDocsHtml;
+use templates::{AdminDocsHtml, AtprotoCallbackHtml};
 use tracing::debug;
 
 pub mod templates;
@@ -35,6 +35,7 @@ pub enum HtmlCached {
     AdminSessions,
     AdminUsers,
     AuthProviderCallback,
+    AtprotoCallback,
     ConfigArgon2,
     ConfigEncryption,
     ConfigJwks,
@@ -65,6 +66,7 @@ impl HtmlCached {
             Self::AdminSessions => "admin_sessions",
             Self::AdminUsers => "admin_users",
             Self::AuthProviderCallback => "auth_provider_cb",
+            Self::AtprotoCallback => "atproto_cb",
             Self::ConfigArgon2 => "cfg_argon2",
             Self::ConfigEncryption => "cfg_encryption",
             Self::ConfigJwks => "cfg_jwks",
@@ -140,6 +142,7 @@ impl HtmlCached {
             Self::AdminSessions => AdminSessionsHtml::build(&lang, theme_ts),
             Self::AdminUsers => AdminUsersHtml::build(&lang, theme_ts),
             Self::AuthProviderCallback => ProviderCallbackHtml::build(&lang, theme_ts),
+            Self::AtprotoCallback => AtprotoCallbackHtml::build(&lang, theme_ts),
             Self::ConfigArgon2 => AdminConfigArgon2Html::build(&lang, theme_ts),
             Self::ConfigEncryption => AdminConfigEncryptionHtml::build(&lang, theme_ts),
             Self::ConfigJwks => AdminConfigJwksHtml::build(&lang, theme_ts),
