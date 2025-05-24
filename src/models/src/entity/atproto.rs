@@ -14,8 +14,9 @@ use atrium_identity::{
     },
 };
 use atrium_oauth::{
-    AtprotoClientMetadata, AuthMethod, AuthorizeOptions, CallbackParams, DefaultHttpClient,
-    GrantType, KnownScope, OAuthClient, OAuthClientConfig, OAuthResolverConfig, Scope,
+    AtprotoClientMetadata, AtprotoLocalhostClientMetadata, AuthMethod, AuthorizeOptions,
+    CallbackParams, DefaultHttpClient, GrantType, KnownScope, OAuthClient, OAuthClientConfig,
+    OAuthResolverConfig, Scope,
 };
 use cryptr::utils::secure_random_alnum;
 use hickory_resolver::{
@@ -24,14 +25,15 @@ use hickory_resolver::{
 };
 use rauthy_api_types::atproto;
 use rauthy_common::constants::{
-    COOKIE_UPSTREAM_CALLBACK, PROVIDER_LINK_COOKIE, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
+    COOKIE_UPSTREAM_CALLBACK, DEV_MODE, PROVIDER_LINK_COOKIE, PUB_URL_WITH_SCHEME,
+    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::{debug, error};
 use utoipa::{PartialSchema, ToSchema};
 
 use crate::{
-    AuthStep, AuthStepLoggedIn, ListenScheme,
+    AuthStep, AuthStepLoggedIn,
     api_cookie::ApiCookie,
     app_state::AppState,
     database::DB,
@@ -64,50 +66,71 @@ impl std::fmt::Debug for AtprotoClient {
 }
 
 impl AtprotoClient {
-    pub fn new(
-        listen_scheme: &ListenScheme,
-        public_url: &str,
-    ) -> Result<Self, atrium_oauth::Error> {
+    pub fn new() -> Result<Self, atrium_oauth::Error> {
         let http_client = Arc::new(DefaultHttpClient::default());
 
-        let listen_scheme = match listen_scheme {
-            ListenScheme::Http | ListenScheme::UnixHttp => "http",
-            ListenScheme::Https | ListenScheme::HttpHttps | ListenScheme::UnixHttps => "https",
-        };
+        if *DEV_MODE {
+            let client_metadata = AtprotoLocalhostClientMetadata {
+                redirect_uris: Some(vec![format!(
+                    "{}/auth/v1/atproto/callback",
+                    *PUB_URL_WITH_SCHEME
+                )]),
+                scopes: Some(vec![Scope::Known(KnownScope::Atproto)]),
+            };
 
-        let client_metadata = AtprotoClientMetadata {
-            client_id: format!("{listen_scheme}://{public_url}/auth/v1/atproto/client_metadata"),
-            client_uri: None,
-            redirect_uris: vec![format!(
-                "{listen_scheme}://{public_url}/auth/v1/atproto/callback"
-            )],
-            token_endpoint_auth_method: AuthMethod::None,
-            grant_types: vec![GrantType::AuthorizationCode],
-            scopes: vec![Scope::Known(KnownScope::Atproto)],
-            jwks_uri: None,
-            token_endpoint_auth_signing_alg: None,
-        };
+            let config = OAuthClientConfig {
+                client_metadata,
+                keys: None,
+                resolver: OAuthResolverConfig {
+                    did_resolver: CommonDidResolver::new(CommonDidResolverConfig {
+                        plc_directory_url: DEFAULT_PLC_DIRECTORY_URL.to_string(),
+                        http_client: http_client.clone(),
+                    }),
+                    handle_resolver: AtprotoHandleResolver::new(AtprotoHandleResolverConfig {
+                        dns_txt_resolver: DnsTxtResolver::default(),
+                        http_client: http_client.clone(),
+                    }),
+                    authorization_server_metadata: Default::default(),
+                    protected_resource_metadata: Default::default(),
+                },
+                state_store: DB,
+                session_store: DB,
+            };
 
-        let config = OAuthClientConfig {
-            client_metadata: client_metadata.clone(),
-            keys: None,
-            resolver: OAuthResolverConfig {
-                did_resolver: CommonDidResolver::new(CommonDidResolverConfig {
-                    plc_directory_url: DEFAULT_PLC_DIRECTORY_URL.to_string(),
-                    http_client: http_client.clone(),
-                }),
-                handle_resolver: AtprotoHandleResolver::new(AtprotoHandleResolverConfig {
-                    dns_txt_resolver: DnsTxtResolver::default(),
-                    http_client: http_client.clone(),
-                }),
-                authorization_server_metadata: Default::default(),
-                protected_resource_metadata: Default::default(),
-            },
-            state_store: DB,
-            session_store: DB,
-        };
+            OAuthClient::new(config).map(Arc::new).map(AtprotoClient)
+        } else {
+            let client_metadata = AtprotoClientMetadata {
+                client_id: format!("{}/auth/v1/atproto/client_metadata", *PUB_URL_WITH_SCHEME),
+                client_uri: None,
+                redirect_uris: vec![format!("{}/auth/v1/atproto/callback", *PUB_URL_WITH_SCHEME)],
+                token_endpoint_auth_method: AuthMethod::None,
+                grant_types: vec![GrantType::AuthorizationCode],
+                scopes: vec![Scope::Known(KnownScope::Atproto)],
+                jwks_uri: None,
+                token_endpoint_auth_signing_alg: None,
+            };
 
-        OAuthClient::new(config).map(Arc::new).map(AtprotoClient)
+            let config = OAuthClientConfig {
+                client_metadata,
+                keys: None,
+                resolver: OAuthResolverConfig {
+                    did_resolver: CommonDidResolver::new(CommonDidResolverConfig {
+                        plc_directory_url: DEFAULT_PLC_DIRECTORY_URL.to_string(),
+                        http_client: http_client.clone(),
+                    }),
+                    handle_resolver: AtprotoHandleResolver::new(AtprotoHandleResolverConfig {
+                        dns_txt_resolver: DnsTxtResolver::default(),
+                        http_client: http_client.clone(),
+                    }),
+                    authorization_server_metadata: Default::default(),
+                    protected_resource_metadata: Default::default(),
+                },
+                state_store: DB,
+                session_store: DB,
+            };
+
+            OAuthClient::new(config).map(Arc::new).map(AtprotoClient)
+        }
     }
 }
 

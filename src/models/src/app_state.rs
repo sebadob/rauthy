@@ -140,54 +140,7 @@ impl AppState {
             .rp_name(&rp_name);
         let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
 
-        // let atproto = {
-        //     let http_client = Arc::new(DefaultHttpClient::default());
-
-        //     let listen_scheme = match listen_scheme {
-        //         ListenScheme::Http | ListenScheme::UnixHttp => "http",
-        //         ListenScheme::Https | ListenScheme::HttpHttps | ListenScheme::UnixHttps => "https",
-        //     };
-
-        //     let client_metadata = AtprotoClientMetadata {
-        //         client_id: format!(
-        //             "{listen_scheme}://{public_url}/auth/v1/atproto/client_metadata"
-        //         ),
-        //         client_uri: Some(format!("{listen_scheme}://{public_url}")),
-        //         redirect_uris: vec![format!(
-        //             "{listen_scheme}://{public_url}/auth/v1/atproto/callback"
-        //         )],
-        //         token_endpoint_auth_method: AuthMethod::None,
-        //         grant_types: vec![GrantType::AuthorizationCode],
-        //         scopes: vec![Scope::Known(KnownScope::Atproto)],
-        //         jwks_uri: None,
-        //         token_endpoint_auth_signing_alg: None,
-        //     };
-
-        //     Arc::new(
-        //         OAuthClient::new(OAuthClientConfig {
-        //             client_metadata: client_metadata.clone(),
-        //             keys: None,
-        //             resolver: OAuthResolverConfig {
-        //                 did_resolver: CommonDidResolver::new(CommonDidResolverConfig {
-        //                     plc_directory_url: DEFAULT_PLC_DIRECTORY_URL.to_string(),
-        //                     http_client: http_client.clone(),
-        //                 }),
-        //                 handle_resolver: AtprotoHandleResolver::new(AtprotoHandleResolverConfig {
-        //                     dns_txt_resolver: DnsTxtResolver::default(),
-        //                     http_client: http_client.clone(),
-        //                 }),
-        //                 authorization_server_metadata: Default::default(),
-        //                 protected_resource_metadata: Default::default(),
-        //             },
-        //             state_store: DB,
-        //             session_store: DB,
-        //         })
-        //         .expect("failed to initialize atproto client"),
-        //     )
-        // };
-
-        let atproto = AtprotoClient::new(&listen_scheme, &public_url)
-            .expect("failed to initialize atproto client");
+        let atproto = AtprotoClient::new().expect("failed to initialize atproto client");
 
         Ok(Self {
             public_url,
