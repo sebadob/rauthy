@@ -26,6 +26,8 @@ pub async fn post_authorize(
     add_login_delay: &mut bool,
     user_needs_mfa: &mut bool,
 ) -> Result<AuthStep, ErrorResponse> {
+    *add_login_delay = true;
+
     let mut user = User::find_by_email(req_data.email).await.inspect_err(|_| {
         // The UI does not show the password input form when there is no user yet.
         // To prevent username enumeration, we should not add a login delay if a user does not
@@ -42,7 +44,7 @@ pub async fn post_authorize(
                 Some(c)
             } else {
                 // If a possibly existing mfa cookie does not match the given email, or the user
-                // has webauthn disabled in the meantime, ignore the cookie
+                // has webauthn disabled in the meantime, ignore it
                 None
             }
         } else {
@@ -51,14 +53,14 @@ pub async fn post_authorize(
 
     let account_type = user.account_type();
 
-    // only allow an empty password, if the user has a passkey only account or a valid MFA cookie
+    // Only allow an empty password, if the user has a passkey only account or a valid MFA cookie.
     let user_must_provide_password =
         req_data.password.is_none() && account_type != AccountType::Passkey && mfa_cookie.is_none();
     if user_must_provide_password {
         // if we get here, the UI did the first step from the login form
         // -> username only without password
-        // we should not add a delay in that case, because the user did nothing wrong, we just need
-        // to get the password, because it is no passkey only account
+        // We should not add a delay in that case, because the user did nothing wrong, we just need
+        // to get the password, because it is no passkey only account.
         *add_login_delay = false;
 
         trace!("No user password has been provided");
@@ -79,10 +81,6 @@ pub async fn post_authorize(
     user.check_enabled()?;
     user.check_expired()?;
 
-    // TODO should we move the password hashing as far back as possible? -> most expensive operation
-    // maybe it makes sense to do additional DB requests instead of hashing a password?
-    // what about brute force attempts in that case?
-    // -> identify the best ordering and if it maybe makes sense to check the client first
     if let Some(pwd) = req_data.password {
         *has_password_been_hashed = true;
         user.validate_password(data, pwd).await?;
@@ -94,6 +92,9 @@ pub async fn post_authorize(
         user.failed_login_attempts = None;
         user.save(None).await?;
     }
+    // If the password was correct, we don't want a login delay anymore.
+    // It should only prevent username enumeration and brute force, not degrade the UX.
+    *add_login_delay = false;
 
     // client validations
     let client = Client::find_maybe_ephemeral(req_data.client_id).await?;
@@ -101,8 +102,8 @@ pub async fn post_authorize(
         // in this case, we do not want to add a login delay
         // the user password was correct, we only need a passkey being added to the account
         *user_needs_mfa = true;
-        *add_login_delay = false;
     })?;
+    client.validate_user_groups(&user)?;
     client.validate_redirect_uri(&req_data.redirect_uri)?;
     client.validate_code_challenge(&req_data.code_challenge, &req_data.code_challenge_method)?;
     let header_origin = client.get_validated_origin_header(req)?;
@@ -126,7 +127,6 @@ pub async fn post_authorize(
     );
     code.save().await?;
 
-    // build location header
     let mut loc = format!("{}?code={}", req_data.redirect_uri, code.id);
     if let Some(state) = req_data.state {
         write!(loc, "&state={}", state)?;

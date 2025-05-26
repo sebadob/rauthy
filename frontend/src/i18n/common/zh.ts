@@ -1,4 +1,4 @@
-import {type I18n} from "./interface.ts";
+import {type I18n} from "./interface";
 
 export const I18nZh: I18n = {
     lang: "zh",
@@ -117,6 +117,7 @@ export const I18nZh: I18n = {
     },
     authorize: {
         clientForceMfa: "本次登陆强制使用多因子认证以增强安全性。\n要完成登陆，请登入您的账户并添加一个登陆密钥。",
+        clientGroupPrefixForbidden: "Missing group assignment for this login",
         email: "电子邮件地址",
         emailBadFormat: "错误的电子邮件地址格式",
         emailRequired: "电子邮件地址必填。",

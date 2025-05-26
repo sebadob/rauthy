@@ -335,6 +335,13 @@ pub async fn post_authorize_handle(
                 return Err(err);
             }
 
+            if let ErrorResponseType::Forbidden = err.error {
+                // We only get a forbidden if there is a mismatch in group prefix restriction and
+                // we can return the "true" error directly for best UX.
+                error!("User login with not matching client group prefix");
+                return Err(err);
+            }
+
             let err = Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "Invalid user credentials",

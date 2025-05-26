@@ -257,6 +257,13 @@
             }
         } else if (res.status === 400) {
             err = res.error?.message || '';
+        } else if (res.status === 403) {
+            if (res.error?.message.includes('contact your Administrator')) {
+                err = t.authorize.clientGroupPrefixForbidden;
+            } else {
+                // This should really never happen. Forbidden is only returned for group prefix mismatch.
+                err = res.error?.message || '';
+            }
         } else if (res.status === 406) {
             // 406 -> client forces MFA while the user has none
             err = t.authorize.clientForceMfa;

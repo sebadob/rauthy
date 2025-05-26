@@ -1,4 +1,4 @@
-import {type I18n} from "./interface.ts";
+import {type I18n} from "./interface";
 
 export const I18nEn: I18n = {
     lang: "en",
@@ -117,6 +117,7 @@ export const I18nEn: I18n = {
     },
     authorize: {
         clientForceMfa: "This login forces MFA to achieve higher security.\nTo get access, you need to log in to your account and add at least one additional Passkey",
+        clientGroupPrefixForbidden: "Missing group assignment for this login",
         email: "E-Mail",
         emailBadFormat: "Bad E-Mail format",
         emailRequired: "E-Mail is required",

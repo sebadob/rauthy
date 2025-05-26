@@ -109,6 +109,7 @@ pub async fn validate_refresh_token(
     let mut user = User::find(claims.uid.to_string()).await?;
     user.check_enabled()?;
     user.check_expired()?;
+    client.validate_user_groups(&user)?;
 
     // validate that it exists in the db and invalidate it afterward
     let (_, validation_str) = refresh_token.split_at(refresh_token.len() - 49);

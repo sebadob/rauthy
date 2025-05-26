@@ -41,8 +41,8 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
     id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
-    backchannel_logout_uri = $20
-WHERE id = $21"#;
+    backchannel_logout_uri = $20, restrict_group_prefix = $21
+WHERE id = $22"#;
 
 /**
 # OIDC Client
@@ -79,17 +79,19 @@ pub struct Client {
     pub client_uri: Option<String>,
     pub contacts: Option<String>,
     pub backchannel_logout_uri: Option<String>,
+    pub restrict_group_prefix: Option<String>,
 }
 
 impl Debug for Client {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "id: {}, name: {:?}, endabled: {}, confidential: {}, secret: <hidden>, \
+            "Client {{ id: {}, name: {:?}, endabled: {}, confidential: {}, secret: <hidden>, \
         redirect_uris: {}, post_logout_redirect_uris: {:?}, allowed_origins: {:?}, \
         flows_enabled: {}, access_token_alg: {}, id_token_alg: {}, auth_code_lifetime: {}, \
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
-        client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}",
+        client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?} \
+        }}",
             self.id,
             self.name,
             self.enabled,
@@ -108,7 +110,8 @@ impl Debug for Client {
             self.force_mfa,
             self.client_uri,
             self.contacts,
-            self.backchannel_logout_uri
+            self.backchannel_logout_uri,
+            self.restrict_group_prefix,
         )
     }
 }
@@ -137,6 +140,7 @@ impl From<tokio_postgres::Row> for Client {
             client_uri: row.get("client_uri"),
             contacts: row.get("contacts"),
             backchannel_logout_uri: row.get("backchannel_logout_uri"),
+            restrict_group_prefix: row.get("restrict_group_prefix"),
         }
     }
 }
@@ -164,9 +168,9 @@ impl Client {
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri)
+client_uri, contacts, backchannel_logout_uri, restrict_group_prefix)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21)"#;
+$18, $19, $20, $21, $22)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -193,7 +197,8 @@ $18, $19, $20, $21)"#;
                         client.force_mfa,
                         &client.client_uri,
                         &client.contacts,
-                        &client.backchannel_logout_uri
+                        &client.backchannel_logout_uri,
+                        &client.restrict_group_prefix
                     ),
                 )
                 .await?;
@@ -222,6 +227,7 @@ $18, $19, $20, $21)"#;
                     &client.client_uri,
                     &client.contacts,
                     &client.backchannel_logout_uri,
+                    &client.restrict_group_prefix,
                 ],
             )
             .await?;
@@ -248,9 +254,9 @@ $18, $19, $20, $21)"#;
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri)
+client_uri, contacts, backchannel_logout_uri, restrict_group_prefix)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-$21)"#;
+$21, $22)"#;
         let sql_2 = r#"
 INSERT INTO
 clients_dyn (id, created, registration_token, token_endpoint_auth_method)
@@ -282,7 +288,8 @@ VALUES ($1, $2, $3, $4)"#;
                             client.force_mfa,
                             &client.client_uri,
                             &client.contacts,
-                            &client.backchannel_logout_uri
+                            &client.backchannel_logout_uri,
+                            &client.restrict_group_prefix
                         ),
                     ),
                     (
@@ -325,6 +332,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &client.client_uri,
                     &client.contacts,
                     &client.backchannel_logout_uri,
+                    &client.restrict_group_prefix,
                 ],
             )
             .await?;
@@ -538,6 +546,7 @@ VALUES ($1, $2, $3, $4)"#;
                 &self.client_uri,
                 contacts,
                 backchannel_logout_uri,
+                &self.restrict_group_prefix,
                 &self.id
             ),
         ));
@@ -582,6 +591,7 @@ VALUES ($1, $2, $3, $4)"#;
                 &self.client_uri,
                 &contacts,
                 &backchannel_logout_uri,
+                &self.restrict_group_prefix,
                 &self.id,
             ],
         )
@@ -634,6 +644,7 @@ VALUES ($1, $2, $3, $4)"#;
                         self.client_uri.clone(),
                         contacts,
                         backchannel_logout_uri,
+                        &self.restrict_group_prefix,
                         self.id.clone()
                     ),
                 )
@@ -662,6 +673,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &self.client_uri,
                     &contacts,
                     &backchannel_logout_uri,
+                    &self.restrict_group_prefix,
                     &self.id,
                 ],
             )
@@ -1032,6 +1044,7 @@ impl Client {
 
     /// Sanitizes the requested scopes on the authorization endpoint and matches them to the
     /// allowed scopes for this client.
+    #[inline]
     pub fn sanitize_login_scopes(
         &self,
         scopes: &Option<Vec<String>>,
@@ -1071,6 +1084,7 @@ impl Client {
     /// The "rauthy" client is the exception for this check to makes logging into the account
     /// possible without MFA. The force MFA for the Rauthy admin UI is done in
     /// Principal::validate_admin_session() depending on the `ADMIN_FORCE_MFA` config variable.
+    #[inline]
     pub fn validate_mfa(&self, user: &User) -> Result<(), ErrorResponse> {
         if &self.id != "rauthy" && self.force_mfa && !user.has_webauthn_enabled() {
             trace!("MFA required for this client but the user has none");
@@ -1087,6 +1101,7 @@ impl Client {
     // `allowed_origins`. If the Origin is an external one and allowed by the config, it returns
     // the correct `ACCESS_CONTROL_ALLOW_ORIGIN` header which can then be inserted into the
     // HttpResponse.
+    #[inline]
     pub fn get_validated_origin_header(
         &self,
         req: &HttpRequest,
@@ -1134,6 +1149,7 @@ impl Client {
         err_msg()
     }
 
+    #[inline]
     pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
         let has_any = self.get_redirect_uris().iter().any(|uri| {
             (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
@@ -1151,6 +1167,7 @@ impl Client {
         }
     }
 
+    #[inline]
     pub fn validate_post_logout_redirect_uri(
         &self,
         post_logout_redirect_uri: &str,
@@ -1176,6 +1193,7 @@ impl Client {
         }
     }
 
+    #[inline]
     pub fn validate_code_challenge(
         &self,
         code_challenge: &Option<String>,
@@ -1219,6 +1237,7 @@ impl Client {
         }
     }
 
+    #[inline]
     pub fn validate_challenge_method(
         &self,
         code_challenge_method: &str,
@@ -1247,6 +1266,7 @@ impl Client {
         Ok(())
     }
 
+    #[inline]
     pub fn validate_flow(&self, flow: &str) -> Result<(), ErrorResponse> {
         if flow.is_empty() || !self.flows_enabled.contains(flow) {
             return Err(ErrorResponse::new(
@@ -1257,6 +1277,7 @@ impl Client {
         Ok(())
     }
 
+    #[inline]
     pub async fn validate_secret(
         &self,
         secret: &str,
@@ -1297,6 +1318,22 @@ impl Client {
             ErrorResponseType::Unauthorized,
             "Invalid 'client_secret'",
         ))
+    }
+
+    #[inline]
+    pub fn validate_user_groups(&self, user: &User) -> Result<(), ErrorResponse> {
+        if let Some(prefix) = &self.restrict_group_prefix {
+            if user.get_groups().iter().any(|g| g.starts_with(prefix)) {
+                Ok(())
+            } else {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "You don't have access to this client, please contact your Administrator",
+                ))
+            }
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -1389,6 +1426,7 @@ impl Client {
             client_uri: self.client_uri,
             contacts,
             backchannel_logout_uri: self.backchannel_logout_uri,
+            restrict_group_prefix: self.restrict_group_prefix,
             scim: scim.map(|scim| ScimClientRequestResponse {
                 bearer_token: scim.bearer_token,
                 base_uri: scim.base_uri,
@@ -1431,6 +1469,7 @@ impl From<EphemeralClientRequest> for Client {
             client_uri: value.client_uri,
             contacts: value.contacts.map(|c| c.join(",")),
             backchannel_logout_uri: None,
+            restrict_group_prefix: None,
         }
     }
 }
@@ -1469,6 +1508,7 @@ impl Default for Client {
             client_uri: None,
             contacts: None,
             backchannel_logout_uri: None,
+            restrict_group_prefix: None,
         }
     }
 }
@@ -1674,6 +1714,7 @@ mod tests {
             client_uri: Some("http://localhost:1337".to_string()),
             contacts: Some("batman@localhost.de,@alfred:matrix.org".to_string()),
             backchannel_logout_uri: None,
+            restrict_group_prefix: None,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);

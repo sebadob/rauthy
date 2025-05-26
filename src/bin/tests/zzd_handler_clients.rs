@@ -123,6 +123,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             "@alfred:matrix.org".to_string(),
         ]),
         backchannel_logout_uri: None,
+        restrict_group_prefix: None,
         scim: None,
     };
 

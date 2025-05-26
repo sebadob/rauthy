@@ -98,6 +98,7 @@ export interface I18n {
     },
     authorize: {
         clientForceMfa: string,
+        clientGroupPrefixForbidden: string,
         email: string,
         emailBadFormat: string,
         emailRequired: string,
