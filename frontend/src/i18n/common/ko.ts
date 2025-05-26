@@ -1,4 +1,4 @@
-import {type I18n} from "./interface.ts";
+import {type I18n} from "./interface";
 
 export const I18nKo: I18n = {
     lang: "ko",
@@ -117,6 +117,7 @@ export const I18nKo: I18n = {
     },
     authorize: {
         clientForceMfa: "이 로그인은 더 높은 수준의 보안을 위해서 MFA를 강제합니다.\n접근하려면, 계정에 로그인하고 최소 하나 이상의 패스키를 추가해야 합니다.",
+        clientGroupPrefixForbidden: "Missing group assignment for this login",
         email: "이메일",
         emailBadFormat: "잘못된 이메일 형식입니다.",
         emailRequired: "이메일이 필요합니다.",

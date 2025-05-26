@@ -38,6 +38,8 @@ export let I18nAdminKo: I18nAdmin = {
         descClientUri: `로그인 페이지에 표시할 클라이언트 URI 및 연락처에 대한 정보입니다.`,
         descName: `클라이언트 이름은 클라이언트 구성에 영향을 주지 않고 변경할 수 있으며,
             로그인 페이지에서만 표시됩니다.`,
+        descGroupPrefix: `The login to this client may be restricted by an optional group prefix.
+            Only users, that are assigned to a matching group, will be allowed to log in.`,
         descOrigin: `추가로 허용되는 외부 오리진을 설정합니다. 일반적으로 클라이언트가 브라우저에서 직접
             Rauthy에 요청해야 하는 경우(일반적으로 SPA)에만 필요합니다.`,
         descPKCE: `클라이언트가 이를 지원하는 경우, 추가 보안을 위해 항상 S256 PKCE를 활성화해야 합니다.
@@ -49,6 +51,7 @@ export let I18nAdminKo: I18nAdmin = {
             와일드카드로 사용할 수 있습니다.`,
         errConfidentialPKCE: `클라이언트는 기밀 또는 PKCE 챌린지 중 하나 이상 활성화되어야 합니다.`,
         forceMfa: "강제 MFA",
+        groupLoginPrefix: "Login Group Prefix",
         name: "클라이언트 이름",
         scim: {
             baseUri: `The SCIM base URI is the one from which the sub routes like 

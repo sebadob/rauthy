@@ -84,6 +84,8 @@ pub async fn grant_type_password(
 
     match user.validate_password(data, password.clone()).await {
         Ok(_) => {
+            client.validate_user_groups(&user)?;
+
             user.last_login = Some(Utc::now().timestamp());
             user.last_failed_login = None;
             user.failed_login_attempts = None;

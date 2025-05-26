@@ -37,6 +37,7 @@ export interface I18nAdmin {
         delete1: string,
         descAuthCode: string,
         descClientUri: string,
+        descGroupPrefix: string,
         descName: string,
         descOrigin: string,
         descPKCE: string,
@@ -45,6 +46,7 @@ export interface I18nAdmin {
         descUri: string,
         errConfidentialPKCE: string,
         forceMfa: string,
+        groupLoginPrefix: string,
         name: string,
         scim: {
             // inserted as html

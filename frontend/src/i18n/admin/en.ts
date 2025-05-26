@@ -41,6 +41,8 @@ export let I18nAdminEn: I18nAdmin = {
             the login page.`,
         descName: `The client name can be changed without any impact on the client configuration.
             It only exists to be shown on the login page.`,
+        descGroupPrefix: `The login to this client may be restricted by an optional group prefix.
+            Only users, that are assigned to a matching group, will be allowed to log in.`,
         descOrigin: `External, additionally allowed origins - usually only necessary, if this client
             needs to make requests to Rauthy directly from the browser, typically SPAs.`,
         descPKCE: `If the client supports it, you should always activate S256 PKCE for additional 
@@ -53,6 +55,7 @@ export let I18nAdminEn: I18nAdmin = {
         errConfidentialPKCE: `The client must either be confidential or have at least one PKCE
             challenge activated.`,
         forceMfa: "Force MFA",
+        groupLoginPrefix: "Login Group Prefix",
         name: "Client Name",
         scim: {
             baseUri: `The SCIM base URI is the one from which the sub routes like 

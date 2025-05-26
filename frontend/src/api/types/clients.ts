@@ -63,6 +63,8 @@ export interface UpdateClientRequest {
     contacts?: string[],
     /// Validation: PATTERN_URI
     backchannel_logout_uri?: string,
+    /// Validation: PATTERN_GROUP
+    restrict_group_prefix?: string,
     scim?: ScimClientRequestResponse,
 }
 
@@ -91,6 +93,7 @@ export interface ClientResponse {
     client_uri?: string,
     contacts?: string[],
     backchannel_logout_uri?: string,
+    restrict_group_prefix?: string,
     scim?: ScimClientRequestResponse,
 }
 

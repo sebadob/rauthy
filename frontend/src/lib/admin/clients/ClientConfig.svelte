@@ -7,7 +7,13 @@
     import {fetchGet, fetchPut} from "$api/fetch";
     import Form from "$lib5/form/Form.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
-    import {PATTERN_CLIENT_NAME, PATTERN_CONTACT, PATTERN_GROUP, PATTERN_ORIGIN, PATTERN_URI} from "$utils/patterns";
+    import {
+        PATTERN_CLIENT_NAME,
+        PATTERN_CONTACT,
+        PATTERN_GROUP,
+        PATTERN_ORIGIN,
+        PATTERN_URI
+    } from "$utils/patterns";
     import {
         AuthFlowDeviceCode,
         type ClientResponse,
@@ -52,6 +58,7 @@
     let redirectURIs: string[] = $state(Array.from(client.redirect_uris));
     let postLogoutRedirectURIs: string[] = $state(client.post_logout_redirect_uris ? Array.from(client.post_logout_redirect_uris) : []);
     let backchannel_logout_uri: string = $state(client.backchannel_logout_uri || '');
+    let restrict_group_prefix: string = $state(client.restrict_group_prefix || '');
 
     let scimEnabled = $state(client.scim !== undefined);
     let scim: ScimClientRequestResponse = $state({
@@ -105,6 +112,7 @@
             confidential = client.confidential;
             uri = client.client_uri || '';
             backchannel_logout_uri = client.backchannel_logout_uri || '';
+            restrict_group_prefix = client.restrict_group_prefix || '';
             contacts = client.contacts ? Array.from(client.contacts) : [];
             origins = client.allowed_origins ? Array.from(client.allowed_origins) : [];
             redirectURIs = Array.from(client.redirect_uris);
@@ -195,6 +203,7 @@
             client_uri: uri || undefined,
             contacts: contacts.length > 0 ? contacts : undefined,
             backchannel_logout_uri: backchannel_logout_uri || undefined,
+            restrict_group_prefix: restrict_group_prefix || undefined,
         }
 
         if (flows.authorizationCode) {
@@ -229,7 +238,7 @@
                 base_uri: scim.base_uri,
                 bearer_token: scim.bearer_token,
                 sync_groups: scim.sync_groups,
-                group_sync_prefix: scim.sync_groups && scim.group_sync_prefix.length ? scim.group_sync_prefix : undefined,
+                group_sync_prefix: scim.sync_groups && scim.group_sync_prefix?.length ? scim.group_sync_prefix : undefined,
             }
         }
 
@@ -293,6 +302,14 @@
         <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={forceMfa}>
             {ta.clients.forceMfa}
         </InputCheckbox>
+        <p style:margin-bottom="-.25rem">{ta.clients.descGroupPrefix}</p>
+        <Input
+                bind:value={restrict_group_prefix}
+                autocomplete="off"
+                label={ta.clients.groupLoginPrefix}
+                placeholder={ta.clients.groupLoginPrefix}
+                pattern={PATTERN_GROUP}
+        />
 
         <p class="mb-0"><b>Authentication Flows</b></p>
         <InputCheckbox ariaLabel="authorization_code" bind:checked={flows.authorizationCode}>
