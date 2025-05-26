@@ -1,4 +1,3 @@
-import getPkce from 'oauth-pkce';
 import {
     ACCESS_TOKEN,
     AUTH_ENDPOINT,
@@ -15,6 +14,7 @@ import {
 import {decode, encode} from "base64-arraybuffer";
 import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
 import type {EventLevel} from "$api/types/events.ts";
+import {generatePKCE} from "$utils/pkce";
 
 export function buildWebIdUri(userId: string) {
     return `${window.location.origin}/auth/${userId}/profile#me`
@@ -30,15 +30,14 @@ export function isDefaultScope(name: string) {
 }
 
 export const redirectToLogin = (state?: string) => {
-    getPkce(64, (error, {challenge, verifier}) => {
-        if (!error) {
-            localStorage.setItem(PKCE_VERIFIER, verifier);
-            const nonce = genKey(24);
+    generatePKCE().then(pkce => {
+        if (pkce) {
+            localStorage.setItem(PKCE_VERIFIER, pkce.verifier);
             const s = state || 'admin';
             const redirect_uri = `${window.location.origin}${REDIRECT_URI}`.replaceAll(':', '%3A').replaceAll('/', '%2F');
-            window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${redirect_uri}&response_type=code&code_challenge=${challenge}&code_challenge_method=S256&scope=openid+profile+email&nonce=${nonce}&state=${s}`;
+            window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${redirect_uri}&response_type=code&code_challenge=${pkce.challenge}&code_challenge_method=S256&scope=openid+profile+email&nonce=${pkce.nonce}&state=${s}`;
         }
-    });
+    })
 };
 
 export const redirectToLogout = () => {
