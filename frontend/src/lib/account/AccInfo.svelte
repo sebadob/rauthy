@@ -3,7 +3,6 @@
     import {buildWebIdUri, formatDateFromTs, saveProviderToken} from "$utils/helpers";
     import Button from "$lib5/button/Button.svelte";
     import Modal from "$lib5/Modal.svelte";
-    import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "$utils/constants";
     import {useI18n} from "$state/i18n.svelte.js";
     import type {UserResponse} from "$api/types/user.ts";
@@ -14,6 +13,7 @@
     import ButtonAuthProvider from "../ButtonAuthProvider.svelte";
     import UserPicture from "$lib/UserPicture.svelte";
     import {fetchSolvePow} from "$utils/pow";
+    import {generatePKCE} from "$utils/pkce";
 
     let {
         user = $bindable(),
@@ -51,10 +51,10 @@
     });
 
     function linkProvider(id: string) {
-        getPkce(64, (error, {challenge, verifier}) => {
-            if (!error) {
-                localStorage.setItem(PKCE_VERIFIER_UPSTREAM, verifier);
-                providerLoginPkce(id, challenge);
+        generatePKCE().then(pkce => {
+            if (pkce) {
+                localStorage.setItem(PKCE_VERIFIER_UPSTREAM, pkce.verifier);
+                providerLoginPkce(id, pkce.challenge);
             }
         });
     }
