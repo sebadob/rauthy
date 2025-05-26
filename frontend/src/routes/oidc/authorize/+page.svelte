@@ -8,7 +8,6 @@
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import Input from "$lib5/form/Input.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
-    import getPkce from "oauth-pkce";
     import {
         PKCE_VERIFIER_UPSTREAM,
         TPL_AUTH_PROVIDERS, TPL_CLIENT_LOGO_UPDATED,
@@ -44,6 +43,7 @@
     import ClientLogo from "$lib5/ClientLogo.svelte";
     import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
     import {fetchSolvePow} from "$utils/pow";
+    import {generatePKCE} from "$utils/pkce";
 
     const inputWidth = "18rem";
 
@@ -312,10 +312,10 @@
     }
 
     function providerLogin(id: string) {
-        getPkce(64, (error, {challenge, verifier}) => {
-            if (!error) {
-                localStorage.setItem(PKCE_VERIFIER_UPSTREAM, verifier);
-                providerLoginPkce(id, challenge);
+        generatePKCE().then(pkce => {
+            if (pkce) {
+                localStorage.setItem(PKCE_VERIFIER_UPSTREAM, pkce.verifier);
+                providerLoginPkce(id, pkce.challenge);
             }
         });
     }
@@ -553,6 +553,7 @@
                                     ariaLabel={`Login: ${provider.name}`}
                                     {provider}
                                     onclick={providerLogin}
+                                    {isLoading}
                             />
                         {/each}
                     </div>

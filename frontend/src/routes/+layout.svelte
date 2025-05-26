@@ -14,12 +14,15 @@
         children: Snippet,
     } = $props();
 
+    let isSecureContext = $state(true);
+
     // We expect true to not break SSR.
     // If cookies should be disabled, the warning will show up fast enough.
     let cookiesEnabled = $state(true);
 
     onMount(() => {
         cookiesEnabled = navigator.cookieEnabled;
+        isSecureContext = window.crypto?.subtle !== undefined;
     });
 </script>
 
@@ -27,7 +30,15 @@
     <h2>You need to enable JavaScript</h2>
 </noscript>
 
-{#if cookiesEnabled}
+{#if !isSecureContext}
+    <div class="err">
+        <h1>Not a secure browser context</h1>
+        <p>
+            You are either not in a secure browser context, or <code>window.crypto.subtle.</code>
+            is not available.
+        </p>
+    </div>
+{:else if cookiesEnabled}
     {@render children()}
 {:else}
     <div>
