@@ -3,8 +3,6 @@ import {isBrowser} from "$utils/helpers";
 export interface PKCE {
     challenge: string,
     verifier: string,
-    // technically not part of PKCE, but we keep the secure random gen all in one place
-    nonce: string,
 }
 
 function b64UrlEncode(string: string) {
@@ -16,7 +14,7 @@ export async function generatePKCE(): Promise<undefined | PKCE> {
         return;
     }
 
-    let random = new Uint8Array(48);
+    let random = new Uint8Array(64);
     random = window.crypto.getRandomValues(random);
     let str = String.fromCharCode.apply(null, Array.from(random));
     let verifier = b64UrlEncode(str);
@@ -28,10 +26,16 @@ export async function generatePKCE(): Promise<undefined | PKCE> {
     let strHash = String.fromCharCode.apply(null, Array.from(new Uint8Array(hash)));
     let challenge = b64UrlEncode(strHash);
 
-    let randomNonce = new Uint8Array(24);
-    randomNonce = window.crypto.getRandomValues(randomNonce);
-    let strNonce = String.fromCharCode.apply(null, Array.from(randomNonce));
-    let nonce = b64UrlEncode(str);
+    return {challenge, verifier};
+}
 
-    return {challenge, verifier, nonce};
+export function generateNonce() {
+    if (!isBrowser() || window.crypto?.subtle == undefined) {
+        return;
+    }
+
+    let random = new Uint8Array(24);
+    random = window.crypto.getRandomValues(random);
+    let str = String.fromCharCode.apply(null, Array.from(random));
+    return b64UrlEncode(str);
 }

@@ -14,7 +14,7 @@ import {
 import {decode, encode} from "base64-arraybuffer";
 import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
 import type {EventLevel} from "$api/types/events.ts";
-import {generatePKCE} from "$utils/pkce";
+import {generateNonce, generatePKCE} from "$utils/pkce";
 
 export function buildWebIdUri(userId: string) {
     return `${window.location.origin}/auth/${userId}/profile#me`
@@ -33,9 +33,12 @@ export const redirectToLogin = (state?: string) => {
     generatePKCE().then(pkce => {
         if (pkce) {
             localStorage.setItem(PKCE_VERIFIER, pkce.verifier);
+            // If we were able to generate PKCE, nonce generation will always succeed as well.
+            // `genKey()` is just a fallback to make TS happy.
+            let nonce = generateNonce() || genKey(24);
             const s = state || 'admin';
             const redirect_uri = `${window.location.origin}${REDIRECT_URI}`.replaceAll(':', '%3A').replaceAll('/', '%2F');
-            window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${redirect_uri}&response_type=code&code_challenge=${pkce.challenge}&code_challenge_method=S256&scope=openid+profile+email&nonce=${pkce.nonce}&state=${s}`;
+            window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${redirect_uri}&response_type=code&code_challenge=${pkce.challenge}&code_challenge_method=S256&scope=openid+profile+email&nonce=${nonce}&state=${s}`;
         }
     })
 };
