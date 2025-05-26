@@ -12,7 +12,6 @@ export const PATTERN_CONTACT = '^[a-zA-Z0-9\\+.@\\/:]{0,48}$';
 export const PATTERN_CSS_VALUE_LOOSE = '^[a-z0-9\\-,.#\\(\\)%\\/\\s]+$';
 // export const PATTERN_FLOW = '^(authorization_code|client_credentials|password|refresh_token)$';
 export const PATTERN_GROUP = '^[a-z0-9\\-_\\/,:*]{2,64}$';
-export const PATTERN_GROUP_EMPTY = '^[a-z0-9\\-_\\/,:*]{0,64}$';
 export const PATTERN_IPV4 = '^(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}$';
 export const PATTERN_LOWERCASE = '^[a-z0-9\\-_\\/]{2,128}$';
 export const PATTERN_ORIGIN = '^(http|https)://[a-z0-9.:\\-]+$';

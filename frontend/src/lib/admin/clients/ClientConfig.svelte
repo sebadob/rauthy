@@ -11,7 +11,6 @@
         PATTERN_CLIENT_NAME,
         PATTERN_CONTACT,
         PATTERN_GROUP,
-        PATTERN_GROUP_EMPTY,
         PATTERN_ORIGIN,
         PATTERN_URI
     } from "$utils/patterns";
@@ -239,7 +238,7 @@
                 base_uri: scim.base_uri,
                 bearer_token: scim.bearer_token,
                 sync_groups: scim.sync_groups,
-                group_sync_prefix: scim.sync_groups && scim.group_sync_prefix.length ? scim.group_sync_prefix : undefined,
+                group_sync_prefix: scim.sync_groups && scim.group_sync_prefix?.length ? scim.group_sync_prefix : undefined,
             }
         }
 
@@ -309,7 +308,7 @@
                 autocomplete="off"
                 label={ta.clients.groupLoginPrefix}
                 placeholder={ta.clients.groupLoginPrefix}
-                pattern={PATTERN_GROUP_EMPTY}
+                pattern={PATTERN_GROUP}
         />
 
         <p class="mb-0"><b>Authentication Flows</b></p>
@@ -512,7 +511,7 @@
                                 label={ta.clients.scim.groupSyncPrefix}
                                 placeholder={ta.clients.scim.groupSyncPrefix}
                                 width={inputWidth}
-                                pattern={PATTERN_GROUP_EMPTY}
+                                pattern={PATTERN_GROUP}
                         />
                     </div>
                 {/if}
