@@ -69,7 +69,8 @@ pub struct ProviderRequest {
     pub mfa_claim_value: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ProviderCallbackRequest {
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
@@ -85,7 +86,8 @@ pub struct ProviderCallbackRequest {
     pub pkce_verifier: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ProviderLoginRequest {
     // values for the downstream client
     /// Validation: `email`

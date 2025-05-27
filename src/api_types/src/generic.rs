@@ -11,12 +11,14 @@ pub struct EncKeyMigrateRequest {
     pub key_id: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct I18nRequest {
     pub content: I18nContent,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 #[serde(rename_all = "camelCase")]
 pub enum I18nContent {
     Account,
@@ -56,7 +58,8 @@ pub struct PaginationParams {
     pub session_state: Option<SessionState>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct PasswordHashTimesRequest {
     #[validate(range(min = 500))]
     pub target_time: u32,
@@ -66,7 +69,8 @@ pub struct PasswordHashTimesRequest {
     pub p_cost: Option<u32>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct PasswordPolicyRequest {
     /// Validation: `8 <= length_min <= 128`
     #[validate(range(min = 8, max = 128))]
@@ -141,7 +145,8 @@ pub struct Argon2ParamsResponse {
     pub p_cost: u32,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct EncKeysResponse<'a> {
     pub active: &'a str,
     pub keys: Vec<&'a str>,
@@ -166,7 +171,8 @@ pub struct LoginTimeResponse {
     pub num_cpus: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct PasswordPolicyResponse {
     pub length_min: i32,
     pub length_max: i32,

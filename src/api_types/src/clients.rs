@@ -9,7 +9,8 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 // https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata
-#[derive(Debug, Validate, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct DynamicClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
@@ -114,7 +115,8 @@ pub struct EphemeralClientRequest {
     pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
 }
 
-#[derive(Debug, Validate, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct NewClientRequest {
     /// Validation: `^[a-z0-9-_/]{2,128}$`
     #[validate(regex(path = "*RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
@@ -135,7 +137,8 @@ pub struct NewClientRequest {
     pub post_logout_redirect_uris: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UpdateClientRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$`
     #[validate(regex(
@@ -196,7 +199,7 @@ pub struct UpdateClientRequest {
 }
 
 #[derive(Debug, Default, Validate, Deserialize, ToSchema)]
-#[cfg_attr(debug_assertions, derive(serde::Serialize))]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ClientSecretRequest {
     /// Validation: Value between 1 and 24
     #[validate(range(min = 1, max = 24))]
@@ -217,7 +220,8 @@ pub struct ScimClientRequestResponse {
     pub group_sync_prefix: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct ClientResponse {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -251,14 +255,16 @@ pub struct ClientResponse {
     pub scim: Option<ScimClientRequestResponse>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct ClientSecretResponse {
     pub id: String,
     pub confidential: bool,
     pub secret: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct DynamicClientResponse {
     pub client_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]

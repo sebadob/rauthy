@@ -3,7 +3,8 @@ use std::net::Ipv4Addr;
 use utoipa::ToSchema;
 use validator::Validate;
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct IpBlacklistRequest {
     /// Validation: Ipv4Addr
     #[schema(value_type = str)]

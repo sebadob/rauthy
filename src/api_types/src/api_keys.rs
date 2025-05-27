@@ -33,7 +33,8 @@ pub struct ApiKeyAccess {
     pub access_rights: Vec<AccessRights>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ApiKeyRequest {
     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
     #[validate(regex(path = "*RE_API_KEY", code = "^[a-zA-Z0-9_-/]{2,24}$"))]
