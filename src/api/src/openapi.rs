@@ -14,7 +14,6 @@ use rauthy_models::ListenScheme;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity;
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
-use rauthy_models::entity::user_attr::UserAttrConfigEntity;
 use rauthy_service::token_set;
 use utoipa::openapi::{ExternalDocs, Server};
 use utoipa::{OpenApi, openapi};
@@ -273,7 +272,6 @@ use utoipa::{OpenApi, openapi};
             ThemeRequestResponse,
             TokenInfo,
             UserPictureConfig,
-            UserAttrConfigEntity,
             UserAttrConfigResponse,
             UserAttrConfigValueResponse,
             UserAttrValueResponse,

@@ -63,8 +63,7 @@ const config = {
     },
     worker: {
         format: 'es',
-        // @ts-ignore
-        plugins: [wasm()],
+        plugins: () => [wasm()],
     }
 };
 

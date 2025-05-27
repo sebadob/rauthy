@@ -10,7 +10,8 @@
     import type {
         UserAttrConfigResponse,
         UserAttrConfigValueResponse,
-        UserAttrValueResponse, UserAttrValuesResponse,
+        UserAttrValueResponse,
+        UserAttrValuesResponse,
     } from "$api/types/user_attrs.ts";
 
     let {
@@ -31,6 +32,8 @@
         name: string,
         desc?: string,
         value: string,
+        defaultValue: string | undefined,
+        userEditable: boolean,
     }
 
     let attrsAll: UserAttrConfigValueResponse[] = $state([]);
@@ -52,6 +55,8 @@
                 name: a.name,
                 desc: a.desc,
                 value: attrsUser.find(au => au.key === a.name)?.value || '',
+                defaultValue: a.default_value,
+                userEditable: a.user_editable || false,
             };
             return v;
         });
@@ -117,7 +122,7 @@
                     bind:value={a.value}
                     autocomplete="off"
                     label={a.name}
-                    placeholder={a.desc || 'JSON Value'}
+                    placeholder={a.defaultValue ? a.defaultValue : a.desc || 'JSON Value'}
             />
         {/each}
 
