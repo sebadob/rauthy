@@ -3,7 +3,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct ThemeCss {
     /// Validation: 3 HSL values: deg, sat, lum
     pub text: [u16; 3],
@@ -66,7 +66,7 @@ impl ThemeCss {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct ThemeRequestResponse {
     pub client_id: String,
     pub light: ThemeCss,

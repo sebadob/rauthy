@@ -9,13 +9,13 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct UserPictureConfig {
     pub upload_allowed: bool,
     pub content_len_limit: u32,
 }
 
-#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct DeviceRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
@@ -35,7 +35,8 @@ pub struct MfaAwaitRequest {
     pub req_id: String,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(PartialEq, Eq, Deserialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub enum MfaPurpose {
     Login(String),
     PasswordNew,
@@ -43,7 +44,8 @@ pub enum MfaPurpose {
     Test,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct NewUserRequest {
     /// Validation: `email`
     #[validate(email)]
@@ -68,7 +70,8 @@ pub struct NewUserRequest {
     pub user_expires: Option<i64>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct NewUserRegistrationRequest {
     #[validate(email)]
     pub email: String,
@@ -86,14 +89,16 @@ pub struct NewUserRegistrationRequest {
     pub redirect_uri: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct PasskeyRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{1,32}"))]
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct PasswordResetRequest {
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "*RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
@@ -106,7 +111,8 @@ pub struct PasswordResetRequest {
     pub mfa_code: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct RequestResetRequest {
     /// Validation: `email`
     #[validate(email)]
@@ -116,7 +122,8 @@ pub struct RequestResetRequest {
     pub redirect_uri: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UpdateUserRequest {
     /// Validation: `email`
     #[validate(email)]
@@ -148,7 +155,7 @@ pub struct UpdateUserRequest {
     pub user_values: Option<UserValuesRequest>,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UpdateUserSelfRequest {
     /// Validation: `email`
@@ -171,7 +178,7 @@ pub struct UpdateUserSelfRequest {
     pub user_values: Option<UserValuesRequest>,
 }
 
-#[derive(Debug, Default, PartialEq, Deserialize, Validate, ToSchema)]
+#[derive(Default, PartialEq, Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UserValuesRequest {
     /// Validation: `[0-9]{4}-[0-9]{2}-[0-9]{2}`
@@ -193,7 +200,8 @@ pub struct UserValuesRequest {
     pub country: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UserAttrConfigRequest {
     /// Validation: `^[a-zA-Z0-9-_/]{2,32}$`
     #[validate(regex(path = "*RE_ATTR", code = "^[a-z0-9-_/]{2,32}$"))]
@@ -203,7 +211,8 @@ pub struct UserAttrConfigRequest {
     pub desc: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UserAttrValueRequest {
     /// Validation: `^[a-zA-Z0-9-_/]{2,32}$`
     #[validate(regex(path = "*RE_ATTR", code = "^[a-z0-9-_/]{2,32}$"))]
@@ -211,18 +220,21 @@ pub struct UserAttrValueRequest {
     pub value: serde_json::Value,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UserAttrValuesUpdateRequest {
     #[validate(nested)]
     pub values: Vec<UserAttrValueRequest>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnAuthStartRequest {
     pub purpose: MfaPurpose,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnAuthFinishRequest {
     /// Validation: `[a-zA-Z0-9]{48}`
     #[validate(regex(path = "*RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
@@ -232,7 +244,8 @@ pub struct WebauthnAuthFinishRequest {
     pub data: webauthn_rs::prelude::PublicKeyCredential,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnRegStartRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{1,32}"))]
@@ -242,7 +255,8 @@ pub struct WebauthnRegStartRequest {
     pub magic_link_id: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnRegFinishRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{1,32}"))]
@@ -255,13 +269,14 @@ pub struct WebauthnRegFinishRequest {
     pub magic_link_id: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebIdRequest {
     pub custom_triples: Option<String>,
     pub expose_email: bool,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct DeviceResponse {
     pub id: String,
     pub client_id: String,
@@ -278,7 +293,8 @@ pub struct DeviceResponse {
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct PasskeyResponse {
     pub name: String,
     /// Unix timestamp in seconds
@@ -288,29 +304,33 @@ pub struct PasskeyResponse {
     pub user_verified: Option<bool>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserAttrConfigValueResponse {
     pub name: String,
     pub desc: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserAttrConfigResponse {
     pub values: Vec<UserAttrConfigValueResponse>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserAttrValueResponse {
     pub key: String,
     pub value: serde_json::Value,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserAttrValuesResponse {
     pub values: Vec<UserAttrValueResponse>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct Userinfo {
     pub id: String,
@@ -354,7 +374,8 @@ pub struct Userinfo {
     pub webid: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 #[serde(rename_all = "snake_case")]
 pub enum UserAccountTypeResponse {
     New,
@@ -365,7 +386,8 @@ pub enum UserAccountTypeResponse {
     FederatedPassword,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserResponse {
     pub id: String,
     pub email: String,
@@ -400,7 +422,7 @@ pub struct UserResponse {
     pub picture_id: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct UserResponseSimple {
     pub id: String,
     pub email: String,
@@ -425,7 +447,8 @@ impl From<tokio_postgres::Row> for UserResponseSimple {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[derive(Default, Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserValuesResponse {
     pub birthdate: Option<String>,
     pub phone: Option<String>,
@@ -435,14 +458,14 @@ pub struct UserValuesResponse {
     pub country: Option<String>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct WebId {
     pub user_id: String,
     pub expose_email: bool,
     pub custom_triples: Option<String>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct WebIdResponse {
     pub webid: WebId,
     pub issuer: String,
@@ -452,7 +475,7 @@ pub struct WebIdResponse {
     pub language: Language,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct WebauthnAuthStartResponse {
     pub code: String,
     #[schema(value_type = str)]
@@ -461,12 +484,12 @@ pub struct WebauthnAuthStartResponse {
     pub exp: u64,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct WebauthnLoginFinishResponse {
     pub loc: String,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct WebauthnLoginResponse {
     pub code: String,
     pub user_id: String,

@@ -4,6 +4,7 @@ use rauthy_common::regex::{
 };
 use validator::ValidationError;
 
+#[inline]
 pub fn validate_vec_attr(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
 
@@ -23,6 +24,7 @@ pub fn validate_vec_attr(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
+#[inline]
 pub fn validate_vec_challenge(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
 
@@ -42,6 +44,7 @@ pub fn validate_vec_challenge(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
+#[inline]
 pub fn validate_vec_contact(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
@@ -55,6 +58,7 @@ pub fn validate_vec_contact(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
+#[inline]
 pub fn validate_vec_grant_types(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
 
@@ -74,6 +78,7 @@ pub fn validate_vec_grant_types(value: &[String]) -> Result<(), ValidationError>
     Ok(())
 }
 
+#[inline]
 pub fn validate_vec_origin(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
@@ -87,6 +92,7 @@ pub fn validate_vec_origin(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
+#[inline]
 pub fn validate_vec_uri(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
@@ -100,6 +106,7 @@ pub fn validate_vec_uri(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
+#[inline]
 pub fn validate_vec_grant_type(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
@@ -116,6 +123,7 @@ pub fn validate_vec_grant_type(value: &[String]) -> Result<(), ValidationError> 
 // validate_vec_groups, _roles and _scopes do the same thing but are 3 functions just to
 // be clear in the validation fields above that it does not create confusion, even if they
 // all use the same `RE_GROUPS` regex.
+#[inline]
 pub fn validate_vec_groups(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
@@ -129,6 +137,7 @@ pub fn validate_vec_groups(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
+#[inline]
 pub fn validate_vec_roles(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
@@ -142,6 +151,7 @@ pub fn validate_vec_roles(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
+#[inline]
 pub fn validate_vec_scopes(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {

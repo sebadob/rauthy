@@ -191,7 +191,6 @@ use utoipa::{OpenApi, openapi};
             ErrorResponseType,
 
             ApiKeyRequest,
-            AuthCodeRequest,
             AuthRequest,
             BackchannelLogoutRequest,
             IpBlacklistRequest,

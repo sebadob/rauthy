@@ -16,7 +16,7 @@ use time::OffsetDateTime;
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct AddressClaim {
     pub formatted: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -30,7 +30,7 @@ pub struct AddressClaim {
     pub country: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+#[derive(Deserialize, Validate, ToSchema, IntoParams)]
 pub struct AuthRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
@@ -64,43 +64,25 @@ pub struct AuthRequest {
     pub prompt: Option<String>,
 }
 
+#[inline]
 fn default_scope() -> String {
     String::from("openid")
 }
 
-// TODO is this not being used anymore? -> check!
-#[derive(Debug, Deserialize, Validate, ToSchema)]
-pub struct AuthCodeRequest {
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "*RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
-    pub grant_type: String,
-    /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
-    pub code: String,
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "*RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
-    pub client_id: String,
-    /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
-    pub client_secret: Option<String>,
-    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
-    pub redirect_uri: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Serialize, Deserialize, Validate, ToSchema)]
 pub struct BackchannelLogoutRequest {
     #[validate(regex(path = "*RE_BASE64"))]
     pub logout_token: String,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct PasswordResetResponse {
     pub csrf_token: String,
     pub password_policy: PasswordPolicyResponse,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 #[serde(rename_all = "lowercase")]
 pub enum DeviceAcceptedRequest {
     Accept,
@@ -108,7 +90,8 @@ pub enum DeviceAcceptedRequest {
     Pending,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Clone, Serialize))]
 pub struct LoginRequest {
     /// Validation: `email`
     #[validate(email)]
@@ -148,7 +131,7 @@ pub struct LoginRequest {
     pub code_challenge_method: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct LoginRefreshRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
@@ -176,8 +159,8 @@ pub struct LoginRefreshRequest {
     pub code_challenge_method: Option<String>,
 }
 
-#[derive(Debug, Default, Deserialize, Validate, ToSchema, IntoParams)]
-#[cfg_attr(debug_assertions, derive(serde::Serialize))]
+#[derive(Default, Deserialize, Validate, ToSchema, IntoParams)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct LogoutRequest {
     /// Valid `id_token` issued by Rauthy to do an RP Initiated Logout.
     /// https://openid.net/specs/openid-connect-rpinitiated-1_0.html
@@ -199,7 +182,8 @@ pub struct LogoutRequest {
     pub logout_token: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct DeviceGrantRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
@@ -212,7 +196,8 @@ pub struct DeviceGrantRequest {
     pub scope: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct DeviceVerifyRequest {
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
@@ -226,7 +211,8 @@ pub struct DeviceVerifyRequest {
     pub device_accepted: DeviceAcceptedRequest,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct TokenRequest {
     /// Validation: `^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$`
     #[validate(regex(
@@ -301,14 +287,15 @@ impl TokenRequest {
     }
 }
 
-#[derive(Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct TokenValidationRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub token: String,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct DeviceCodeResponse<'a> {
     pub device_code: &'a str,
     pub user_code: &'a str,
@@ -320,18 +307,19 @@ pub struct DeviceCodeResponse<'a> {
     pub interval: Option<u8>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct DeviceVerifyResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scopes: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct JktClaim<'a> {
     pub jkt: &'a str,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(PartialEq, Serialize, Deserialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum JwkKeyPairAlg {
     RS256,
     RS384,
@@ -357,7 +345,7 @@ impl Display for JwkKeyPairAlg {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub enum JwkKeyPairType {
     RSA,
     OKP,
@@ -369,7 +357,7 @@ impl Default for JwkKeyPairType {
     }
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct JWKSPublicKeyCerts {
     pub kty: JwkKeyPairType,
     pub alg: JwkKeyPairAlg,
@@ -385,19 +373,19 @@ pub struct JWKSPublicKeyCerts {
     pub x: Option<String>, // OKP
 }
 
-#[derive(Debug, Default, Serialize, ToSchema)]
+#[derive(Default, Serialize, ToSchema)]
 pub struct JWKSCerts {
     pub keys: Vec<JWKSPublicKeyCerts>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct OAuth2ErrorResponse<'a> {
     pub error: OAuth2ErrorTypeResponse,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_description: Option<Cow<'a, str>>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OAuth2ErrorTypeResponse {
     InvalidRequest,
@@ -413,7 +401,8 @@ pub enum OAuth2ErrorTypeResponse {
     ExpiredToken,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct SessionInfoResponse<'a> {
     pub id: Cow<'a, str>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -435,7 +424,8 @@ pub struct SessionInfoResponse<'a> {
     pub state: SessionState,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, ToSchema)]
+#[derive(Default, Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct TokenInfo<'a> {
     pub active: bool,
     #[serde(skip_serializing_if = "Option::is_none")]

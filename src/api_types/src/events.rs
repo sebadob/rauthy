@@ -32,7 +32,7 @@ pub enum EventType {
     ScimTaskFailed,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+#[derive(Deserialize, Validate, ToSchema, IntoParams)]
 pub struct EventsListenParams {
     /// Validation: `0 <= latest <= 1000`
     #[validate(range(min = 0, max = 1000))]
@@ -40,7 +40,7 @@ pub struct EventsListenParams {
     pub level: Option<EventLevel>,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct EventsRequest {
     /// Unix timestamp in seconds
     #[validate(range(min = 1719784800))]
@@ -52,7 +52,7 @@ pub struct EventsRequest {
     pub typ: Option<EventType>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct EventResponse {
     pub id: String,
     pub timestamp: i64,
