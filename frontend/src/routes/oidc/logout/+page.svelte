@@ -37,7 +37,7 @@
     });
 
     function handleCancel() {
-        window.location.replace('/auth/v1');
+        window.location.replace('/auth/v1/');
     }
 
     async function handleLogout() {
@@ -45,8 +45,10 @@
         let csrfToken = getCsrfToken();
         purgeStorage();
 
+        let isDev = useIsDev().get();
+
         let url = '/auth/v1/oidc/logout';
-        if (useIsDev().get()) {
+        if (isDev) {
             url = '/auth/v1/dev/logout';
         }
 
@@ -56,10 +58,12 @@
                 'Content-type': 'application/x-www-form-urlencoded',
                 'x-csrf-token': csrfToken,
             },
+            // manual necessary during dev to avoid CORS issues when using the DEV vs static UI
+            redirect: isDev ? 'manual' : 'follow',
             body: formDataFromObj(logoutData),
         });
 
-        // the fetch will return a 302 and redirect automatically on success
+        // the fetch should always return a 302 and redirect automatically on success
         handleCancel();
     }
 </script>
