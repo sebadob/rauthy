@@ -82,6 +82,7 @@ impl UserAttrConfigEntity {
             ));
         }
 
+        let typ = new_attr.typ.as_ref().map(|t| t.as_str());
         let user_editable = new_attr.user_editable.unwrap_or(false);
         let default_value = if let Some(bytes) = &new_attr.default_value {
             Some(serde_json::to_vec(bytes)?)
@@ -99,7 +100,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
                         &new_attr.name,
                         &new_attr.desc,
                         &default_value,
-                        new_attr.typ.as_ref().map(|t| t.as_str()),
+                        typ,
                         user_editable
                     ),
                 )
@@ -107,13 +108,13 @@ VALUES ($1, $2, $3, $4, $5)"#,
         } else {
             DB::pg_execute(
                 r#"
-INSERT INTO user_attr_config (name, \"desc\", default_value, typ, user_editable)
+INSERT INTO user_attr_config (name, "desc", default_value, typ, user_editable)
 VALUES ($1, $2, $3, $4, $5)"#,
                 &[
                     &new_attr.name,
                     &new_attr.desc,
                     &default_value,
-                    &new_attr.typ.as_ref().map(|t| t.as_str()),
+                    &typ,
                     &user_editable,
                 ],
             )
@@ -415,7 +416,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 &txn,
                 r#"
 UPDATE user_attr_config
-SET name  = $1, \"desc\" = $2, default_value = $3, typ = $4, user_editable = $5
+SET name  = $1, "desc" = $2, default_value = $3, typ = $4, user_editable = $5
 WHERE name = $6"#,
                 &[
                     &slf.name,
