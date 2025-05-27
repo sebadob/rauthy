@@ -99,7 +99,7 @@ pub static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     builder.build().unwrap()
 });
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub enum DbType {
     Postgres,
     Hiqlite,
