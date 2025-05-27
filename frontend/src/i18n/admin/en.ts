@@ -17,8 +17,10 @@ export let I18nAdminEn: I18nAdmin = {
     },
     attrs: {
         delete1: "Are you sure you want to delete this attribute?",
+        defaultValue: "Default Value",
         desc: "Description",
         name: "Attribute Name",
+        userEditable: "User Editable",
     },
     clients: {
         backchannelLogout: "If this client supports {{ OIDC_BCL }}, you can provide the URI here.",

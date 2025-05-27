@@ -10,11 +10,11 @@ use rauthy_api_types::oidc::PasswordResetResponse;
 use rauthy_api_types::users::{
     DeviceRequest, DeviceResponse, MfaPurpose, NewUserRegistrationRequest, NewUserRequest,
     PasskeyResponse, PasswordResetRequest, RequestResetRequest, UpdateUserRequest,
-    UpdateUserSelfRequest, UserAttrConfigRequest, UserAttrConfigResponse, UserAttrValueResponse,
-    UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserPictureConfig, UserResponse,
-    UserResponseSimple, WebIdRequest, WebIdResponse, WebauthnAuthFinishRequest,
-    WebauthnAuthStartRequest, WebauthnAuthStartResponse, WebauthnRegFinishRequest,
-    WebauthnRegStartRequest,
+    UpdateUserSelfRequest, UserAttrConfigRequest, UserAttrConfigResponse,
+    UserAttrConfigValueResponse, UserAttrValueResponse, UserAttrValuesResponse,
+    UserAttrValuesUpdateRequest, UserPictureConfig, UserResponse, UserResponseSimple, WebIdRequest,
+    WebIdResponse, WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
+    WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
     COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, OPEN_USER_REG,
@@ -225,7 +225,7 @@ pub async fn get_cust_attr(principal: ReqPrincipal) -> Result<HttpResponse, Erro
     tag = "users",
     request_body = UserAttrConfigRequest,
     responses(
-        (status = 200, description = "Ok", body = UserAttrConfigEntity),
+        (status = 200, description = "Ok", body = UserAttrConfigValueResponse),
         (status = 403, description = "Forbidden"),
     ),
 )]
@@ -240,7 +240,7 @@ pub async fn post_cust_attr(
 
     UserAttrConfigEntity::create(payload)
         .await
-        .map(|attr| HttpResponse::Ok().json(attr))
+        .map(|attr| HttpResponse::Ok().json(UserAttrConfigValueResponse::from(attr)))
 }
 
 /// Update an additional custom user attribute
@@ -265,6 +265,7 @@ pub async fn put_cust_attr(
     payload.validate()?;
 
     let entity = UserAttrConfigEntity::update(path.into_inner(), payload).await?;
+    debug!("entity after update: {:?}", entity);
 
     let clients_scim = ClientScim::find_with_attr_mapping(&entity.name).await?;
     if !clients_scim.is_empty() {
@@ -279,7 +280,7 @@ pub async fn put_cust_attr(
         });
     }
 
-    Ok(HttpResponse::Ok().json(entity))
+    Ok(HttpResponse::Ok().json(UserAttrConfigValueResponse::from(entity)))
 }
 
 /// Delete an additional custom user attribute

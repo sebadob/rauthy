@@ -5,7 +5,7 @@ use deadpool_postgres::GenericClient;
 use hiqlite::Params;
 use hiqlite_macros::params;
 use rauthy_api_types::users::{
-    UserAttrConfigRequest, UserAttrConfigValueResponse, UserAttrValueResponse,
+    UserAttrConfigRequest, UserAttrConfigTyp, UserAttrConfigValueResponse, UserAttrValueResponse,
     UserAttrValuesUpdateRequest,
 };
 use rauthy_common::constants::{CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_ATTR_CONFIG};
@@ -14,21 +14,50 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
-use utoipa::ToSchema;
 
 // Additional custom attributes for users. These can be set for every user and then mapped to a
 // scope, to include them in JWT tokens.
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserAttrConfigEntity {
     pub name: String,
     pub desc: Option<String>,
+    pub default_value: Option<Vec<u8>>,
+    pub typ: Option<UserAttrConfigTyp>,
+    pub user_editable: bool,
+}
+
+impl From<hiqlite::Row<'_>> for UserAttrConfigEntity {
+    fn from(mut row: hiqlite::Row<'_>) -> Self {
+        let typ = if let Ok(s) = row.try_get::<String>("typ") {
+            UserAttrConfigTyp::try_from(s.as_str()).ok()
+        } else {
+            None
+        };
+
+        Self {
+            name: row.get("name"),
+            desc: row.get("desc"),
+            default_value: row.get("default_value"),
+            typ,
+            user_editable: row.get("user_editable"),
+        }
+    }
 }
 
 impl From<tokio_postgres::Row> for UserAttrConfigEntity {
     fn from(row: tokio_postgres::Row) -> Self {
+        let typ = if let Ok(s) = row.try_get::<_, String>("typ") {
+            UserAttrConfigTyp::try_from(s.as_str()).ok()
+        } else {
+            None
+        };
+
         Self {
             name: row.get("name"),
             desc: row.get("desc"),
+            default_value: row.get("default_value"),
+            typ,
+            user_editable: row.get("user_editable"),
         }
     }
 }
@@ -53,25 +82,53 @@ impl UserAttrConfigEntity {
             ));
         }
 
+        let typ = new_attr.typ.as_ref().map(|t| t.as_str());
+        let user_editable = new_attr.user_editable.unwrap_or(false);
+        let default_value = if let Some(bytes) = &new_attr.default_value {
+            Some(serde_json::to_vec(bytes)?)
+        } else {
+            None
+        };
+
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    "INSERT INTO user_attr_config (name, \"desc\") VALUES ($1, $2)",
-                    params!(&new_attr.name, &new_attr.desc),
+                    r#"
+INSERT INTO user_attr_config (name, desc, default_value, typ, user_editable)
+VALUES ($1, $2, $3, $4, $5)"#,
+                    params!(
+                        &new_attr.name,
+                        &new_attr.desc,
+                        &default_value,
+                        typ,
+                        user_editable
+                    ),
                 )
                 .await?;
         } else {
             DB::pg_execute(
-                "INSERT INTO user_attr_config (name, \"desc\") VALUES ($1, $2)",
-                &[&new_attr.name, &new_attr.desc],
+                r#"
+INSERT INTO user_attr_config (name, "desc", default_value, typ, user_editable)
+VALUES ($1, $2, $3, $4, $5)"#,
+                &[
+                    &new_attr.name,
+                    &new_attr.desc,
+                    &default_value,
+                    &typ,
+                    &user_editable,
+                ],
             )
             .await?;
         };
 
         let mut attrs = UserAttrConfigEntity::find_all().await?;
+
         let slf = Self {
             name: new_attr.name.clone(),
             desc: new_attr.desc.clone(),
+            default_value: default_value.clone(),
+            typ: new_attr.typ.clone(),
+            user_editable: new_attr.user_editable.unwrap_or(false),
         };
         attrs.push(slf.clone());
         DB::hql()
@@ -224,6 +281,18 @@ impl UserAttrConfigEntity {
         Ok(res)
     }
 
+    #[inline]
+    pub async fn find_with_default_value() -> Result<Vec<Self>, ErrorResponse> {
+        // Even though with naively fetch all of them first and filter later, the `Self::find_all()`
+        // is cached locally and therefore very fast. The total amount of custom attributes will
+        // be small anyway.
+        Ok(Self::find_all()
+            .await?
+            .into_iter()
+            .filter(|v| v.default_value.is_some())
+            .collect())
+    }
+
     pub async fn update(
         name: String,
         req_data: UserAttrConfigRequest,
@@ -232,32 +301,33 @@ impl UserAttrConfigEntity {
 
         slf.name.clone_from(&req_data.name);
         slf.desc.clone_from(&req_data.desc);
+        slf.user_editable = req_data.user_editable.unwrap_or(false);
+        slf.default_value = if let Some(v) = &req_data.default_value {
+            Some(serde_json::to_vec(v)?)
+        } else {
+            None
+        };
 
         let client = DB::hql();
         let mut scope_updates = Vec::new();
 
         // we only need to update pre-computed data in other places if the name changes
         let user_attr_ids_cleanup = if name != req_data.name {
+            let sql = "SELECT user_id FROM user_attr_values WHERE key = $1";
+
             let user_attr_cache_clear_idxs = if is_hiqlite() {
                 client
-                    .query_raw(
-                        "SELECT user_id FROM user_attr_values WHERE key = $1",
-                        params!(&name),
-                    )
+                    .query_raw(sql, params!(&name))
                     .await?
                     .into_iter()
                     .map(|mut row| row.get::<String>("user_id"))
                     .collect::<Vec<_>>()
             } else {
-                DB::pg_query_rows(
-                    "SELECT user_id FROM user_attr_values WHERE key = $1",
-                    &[&name],
-                    0,
-                )
-                .await?
-                .into_iter()
-                .map(|row| row.get::<_, String>("user_id"))
-                .collect::<Vec<_>>()
+                DB::pg_query_rows(sql, &[&name], 0)
+                    .await?
+                    .into_iter()
+                    .map(|row| row.get::<_, String>("user_id"))
+                    .collect::<Vec<_>>()
             };
 
             // update all possible scope mappings
@@ -299,6 +369,8 @@ impl UserAttrConfigEntity {
             Vec::default()
         };
 
+        let typ = &slf.typ.as_ref().map(|t| t.as_str());
+
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(scope_updates.len() + 1);
 
@@ -315,8 +387,18 @@ impl UserAttrConfigEntity {
             // need another user_attr_values update here
 
             txn.push((
-                "UPDATE user_attr_config SET name  = $1, \"desc\" = $2 WHERE name = $3",
-                params!(&slf.name, &slf.desc, name),
+                r#"
+ UPDATE user_attr_config
+ SET name  = $1, desc = $2, default_value = $3, typ = $4, user_editable = $5
+ WHERE name = $6"#,
+                params!(
+                    &slf.name,
+                    &slf.desc,
+                    &slf.default_value,
+                    typ,
+                    slf.user_editable,
+                    name
+                ),
             ));
 
             client.txn(txn).await?;
@@ -332,8 +414,18 @@ impl UserAttrConfigEntity {
 
             DB::pg_txn_append(
                 &txn,
-                "UPDATE user_attr_config SET name  = $1, \"desc\" = $2 WHERE name = $3",
-                &[&slf.name, &slf.desc, &name],
+                r#"
+UPDATE user_attr_config
+SET name  = $1, "desc" = $2, default_value = $3, typ = $4, user_editable = $5
+WHERE name = $6"#,
+                &[
+                    &slf.name,
+                    &slf.desc,
+                    &slf.default_value,
+                    typ,
+                    &slf.user_editable,
+                    &name,
+                ],
             )
             .await?;
 
@@ -374,9 +466,18 @@ impl UserAttrConfigEntity {
 
 impl From<UserAttrConfigEntity> for UserAttrConfigValueResponse {
     fn from(value: UserAttrConfigEntity) -> Self {
+        let default_value = if let Some(v) = value.default_value {
+            Some(serde_json::from_slice(&v).unwrap_or_default())
+        } else {
+            None
+        };
+
         Self {
             name: value.name,
             desc: value.desc,
+            default_value,
+            typ: value.typ,
+            user_editable: value.user_editable,
         }
     }
 }
@@ -476,6 +577,31 @@ impl UserAttrValueEntity {
         };
 
         client.put(Cache::User, idx, &res, CACHE_TTL_USER).await?;
+
+        Ok(res)
+    }
+
+    /// Finds all existing values for the user and expands the result with default values from
+    /// config entities, if any exist.
+    #[inline]
+    pub async fn find_for_user_with_defaults(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
+        let mut res = Self::find_for_user(user_id).await?;
+        let defaults = UserAttrConfigEntity::find_with_default_value().await?;
+
+        // The total amount of user attrs with default values is probably very low, which makes
+        // a `Vec<_>` and iterating over all of them the better option compared to a HashMap.
+        for default in defaults {
+            if !res.iter().any(|v| v.key == default.name) {
+                debug_assert!(default.default_value.is_some());
+                if let Some(value) = default.default_value {
+                    res.push(Self {
+                        user_id: user_id.to_string(),
+                        key: default.name,
+                        value,
+                    });
+                }
+            }
+        }
 
         Ok(res)
     }

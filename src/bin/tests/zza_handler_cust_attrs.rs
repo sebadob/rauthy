@@ -35,6 +35,9 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
     let cust_attr = UserAttrConfigRequest {
         name: "cust1".to_string(),
         desc: Some("some description".to_string()),
+        default_value: None,
+        typ: None,
+        user_editable: None,
     };
     let res = client
         .post(&url_attrs)
@@ -180,6 +183,9 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
     let cust_attr_mod = UserAttrConfigRequest {
         name: "cust2".to_string(),
         desc: Some("some description 2".to_string()),
+        default_value: None,
+        typ: None,
+        user_editable: None,
     };
     let url_attr_mod = format!("{}/users/attr/{}", backend_url, cust_attr.name);
     let res = client

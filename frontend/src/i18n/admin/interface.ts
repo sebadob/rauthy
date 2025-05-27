@@ -20,8 +20,10 @@ export interface I18nAdmin {
     },
     attrs: {
         delete1: string,
+        defaultValue: string,
         desc: string,
         name: string,
+        userEditable: string,
     },
     clients: {
         backchannelLogout: string,

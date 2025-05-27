@@ -5,6 +5,7 @@ use rauthy_common::regex::{
     RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_NAME,
     RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_STREET, RE_URI, RE_USER_NAME,
 };
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -200,6 +201,36 @@ pub struct UserValuesRequest {
     pub country: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub enum UserAttrConfigTyp {
+    Email,
+}
+
+impl TryFrom<&str> for UserAttrConfigTyp {
+    type Error = ErrorResponse;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let slf = match value {
+            "email" => Self::Email,
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "invalid value for UserAttrConfigTyp",
+                ));
+            }
+        };
+        Ok(slf)
+    }
+}
+
+impl UserAttrConfigTyp {
+    pub fn as_str(&self) -> &str {
+        match self {
+            UserAttrConfigTyp::Email => "email",
+        }
+    }
+}
+
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UserAttrConfigRequest {
@@ -209,6 +240,10 @@ pub struct UserAttrConfigRequest {
     /// Validation: `^[a-zA-Z0-9-_/]{0,128}$`
     #[validate(regex(path = "*RE_ATTR_DESC", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub desc: Option<String>,
+    pub default_value: Option<serde_json::Value>,
+    /// Currently ignored - will be implemented in a future version
+    pub typ: Option<UserAttrConfigTyp>,
+    pub user_editable: Option<bool>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -309,6 +344,9 @@ pub struct PasskeyResponse {
 pub struct UserAttrConfigValueResponse {
     pub name: String,
     pub desc: Option<String>,
+    pub default_value: Option<String>,
+    pub typ: Option<UserAttrConfigTyp>,
+    pub user_editable: bool,
 }
 
 #[derive(Serialize, ToSchema)]

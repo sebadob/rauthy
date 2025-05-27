@@ -15,8 +15,10 @@ export let I18nAdminKo: I18nAdmin = {
     },
     attrs: {
         delete1: "이 속성을 삭제하시겠습니까?",
+        defaultValue: "Default Value",
         desc: "설명",
         name: "속성 이름",
+        userEditable: "User Editable",
     },
     clients: {
         backchannelLogout: "If this client supports {{ OIDC_BCL }}, you can provide the URI here.",
