@@ -272,7 +272,6 @@ VALUES ($1, $2, $3, $4)"#,
         };
         let is_name_update = clients.is_some();
 
-        debug!("scope_req: {:?}", scope_req);
         // check configured custom attributes and clean them up
         let attrs = UserAttrConfigEntity::find_all_as_set().await?;
         let attr_include_access = Self::clean_up_attrs(scope_req.attr_include_access, &attrs);

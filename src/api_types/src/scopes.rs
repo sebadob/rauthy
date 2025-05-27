@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
 
-#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ScopeRequest {
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
@@ -18,7 +18,7 @@ pub struct ScopeRequest {
     pub attr_include_id: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct ScopeResponse {
     pub id: String,

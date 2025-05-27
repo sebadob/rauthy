@@ -47,12 +47,12 @@ pub struct ApiKeyRequest {
     pub access: Vec<ApiKeyAccess>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct ApiKeysResponse {
     pub keys: Vec<ApiKeyResponse>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct ApiKeyResponse {
     pub name: String,
     /// Unix timestamp in seconds

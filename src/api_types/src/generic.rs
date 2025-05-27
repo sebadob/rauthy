@@ -4,20 +4,20 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
-#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+#[derive(Deserialize, Validate, ToSchema, IntoParams)]
 pub struct EncKeyMigrateRequest {
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub key_id: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(PartialEq, Eq, Deserialize)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct I18nRequest {
     pub content: I18nContent,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(PartialEq, Eq, Deserialize)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 #[serde(rename_all = "camelCase")]
 pub enum I18nContent {
@@ -32,7 +32,7 @@ pub enum I18nContent {
     Register,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
     En,
@@ -41,12 +41,12 @@ pub enum Language {
     Ko,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+#[derive(Deserialize, Validate, ToSchema, IntoParams)]
 pub struct LogoParams {
     pub updated: Option<i64>,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+#[derive(Deserialize, Validate, ToSchema, IntoParams)]
 pub struct PaginationParams {
     pub page_size: Option<u16>,
     pub offset: Option<u16>,
@@ -58,7 +58,7 @@ pub struct PaginationParams {
     pub session_state: Option<SessionState>,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct PasswordHashTimesRequest {
     #[validate(range(min = 500))]
@@ -69,7 +69,7 @@ pub struct PasswordHashTimesRequest {
     pub p_cost: Option<u32>,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct PasswordPolicyRequest {
     /// Validation: `8 <= length_min <= 128`
@@ -98,7 +98,7 @@ pub struct PasswordPolicyRequest {
     pub not_recently_used: Option<i32>,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct SearchParams {
     /// Data type
     pub ty: SearchParamsType,
@@ -110,7 +110,7 @@ pub struct SearchParams {
     pub limit: Option<u16>,
 }
 
-#[derive(Debug, PartialEq, Deserialize, ToSchema)]
+#[derive(PartialEq, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchParamsIdx {
     // user params
@@ -122,14 +122,14 @@ pub enum SearchParamsIdx {
     Ip,
 }
 
-#[derive(Debug, PartialEq, Deserialize, ToSchema)]
+#[derive(PartialEq, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchParamsType {
     User,
     Session,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct AppVersionResponse {
     pub current: String,
     pub last_check: Option<i64>,
@@ -138,33 +138,33 @@ pub struct AppVersionResponse {
     pub update_available: bool,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct Argon2ParamsResponse {
     pub m_cost: u32,
     pub t_cost: u32,
     pub p_cost: u32,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct EncKeysResponse<'a> {
     pub active: &'a str,
     pub keys: Vec<&'a str>,
 }
 
-#[derive(Debug, Default, Serialize, ToSchema)]
+#[derive(Default, Serialize, ToSchema)]
 pub struct HealthResponse {
     pub db_healthy: bool,
     pub cache_healthy: bool,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct I18nConfigResponse {
     pub common: Vec<Language>,
     pub admin: Vec<Language>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct LoginTimeResponse {
     pub argon2_params: Argon2ParamsResponse,
     pub login_time: u32,

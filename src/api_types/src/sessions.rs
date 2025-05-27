@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum SessionState {
     Init,
     Auth,
@@ -9,7 +9,7 @@ pub enum SessionState {
     Unknown,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct SessionResponse<'a> {
     pub id: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]

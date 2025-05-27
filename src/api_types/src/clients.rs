@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 // https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata
-#[derive(Debug, Validate, Deserialize, ToSchema)]
+#[derive(Validate, Deserialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct DynamicClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
@@ -75,7 +75,7 @@ pub struct DynamicClientRequest {
 }
 
 /// This request is used for ephemeral clients, which are needed for Solid OIDC for instance.
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[derive(Serialize, Deserialize, Validate, ToSchema)]
 pub struct EphemeralClientRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$`
     #[validate(regex(
@@ -115,7 +115,7 @@ pub struct EphemeralClientRequest {
     pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
 }
 
-#[derive(Debug, Validate, Deserialize, ToSchema)]
+#[derive(Validate, Deserialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct NewClientRequest {
     /// Validation: `^[a-z0-9-_/]{2,128}$`
@@ -137,7 +137,7 @@ pub struct NewClientRequest {
     pub post_logout_redirect_uris: Option<Vec<String>>,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UpdateClientRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$`
@@ -198,7 +198,7 @@ pub struct UpdateClientRequest {
     pub scim: Option<ScimClientRequestResponse>,
 }
 
-#[derive(Debug, Default, Validate, Deserialize, ToSchema)]
+#[derive(Default, Validate, Deserialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ClientSecretRequest {
     /// Validation: Value between 1 and 24
@@ -206,7 +206,8 @@ pub struct ClientSecretRequest {
     pub cache_current_hours: Option<u8>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema, Validate)]
+#[derive(Serialize, Deserialize, ToSchema, Validate)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct ScimClientRequestResponse {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
@@ -220,8 +221,8 @@ pub struct ScimClientRequestResponse {
     pub group_sync_prefix: Option<String>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
-#[cfg_attr(debug_assertions, derive(Deserialize))]
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Debug, Deserialize))]
 pub struct ClientResponse {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -255,7 +256,7 @@ pub struct ClientResponse {
     pub scim: Option<ScimClientRequestResponse>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct ClientSecretResponse {
     pub id: String,
@@ -263,8 +264,8 @@ pub struct ClientSecretResponse {
     pub secret: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Serialize, ToSchema)]
-#[cfg_attr(debug_assertions, derive(Deserialize))]
+#[derive(PartialEq, Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Debug, Deserialize))]
 pub struct DynamicClientResponse {
     pub client_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -288,7 +289,7 @@ pub struct DynamicClientResponse {
     pub post_logout_redirect_uri: Option<String>,
 
     // only Some(_) after new token has been issued
-    // TODO rotate on PUT
+    // TODO rotate on PUT?
     #[serde(skip_serializing_if = "Option::is_none")]
     pub registration_access_token: Option<String>,
     // This is the uri for PUT requests from Self -> only provide if `registration_access_token`

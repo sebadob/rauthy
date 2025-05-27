@@ -15,7 +15,7 @@ pub enum AuthProviderType {
     OIDC,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct ProviderRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\s]{2,128}]`
     #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
@@ -69,7 +69,7 @@ pub struct ProviderRequest {
     pub mfa_claim_value: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ProviderCallbackRequest {
     /// Validation: `[a-zA-Z0-9]`
@@ -86,7 +86,7 @@ pub struct ProviderCallbackRequest {
     pub pkce_verifier: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ProviderLoginRequest {
     // values for the downstream client
@@ -133,7 +133,7 @@ pub struct ProviderLoginRequest {
     pub pkce_challenge: String,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct ProviderLookupRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
@@ -143,7 +143,7 @@ pub struct ProviderLookupRequest {
     pub metadata_url: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct ProviderResponse {
     pub id: String,
     pub name: String,
@@ -170,7 +170,7 @@ pub struct ProviderResponse {
     pub client_secret_post: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct ProviderLinkedUserResponse {
     pub id: String,
     pub email: String,
@@ -185,7 +185,7 @@ impl From<tokio_postgres::Row> for ProviderLinkedUserResponse {
     }
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct ProviderLookupResponse {
     pub issuer: String,
     pub authorization_endpoint: String,

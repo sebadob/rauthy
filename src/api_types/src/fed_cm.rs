@@ -3,7 +3,7 @@ use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct FedCMAssertionRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
@@ -25,7 +25,7 @@ pub struct FedCMAssertionRequest {
     pub disclosure_text_shown: bool,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+#[derive(Deserialize, Validate, ToSchema, IntoParams)]
 pub struct FedCMClientMetadataRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(

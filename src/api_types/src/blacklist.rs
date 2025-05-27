@@ -3,7 +3,7 @@ use std::net::Ipv4Addr;
 use utoipa::ToSchema;
 use validator::Validate;
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct IpBlacklistRequest {
     /// Validation: Ipv4Addr
@@ -16,12 +16,12 @@ pub struct IpBlacklistRequest {
     pub exp: i64,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct BlacklistResponse {
     pub ips: Vec<BlacklistedIp>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct BlacklistedIp {
     pub ip: String,
     /// Unix timestamp in seconds
