@@ -47,6 +47,64 @@ docker stop rauthy && docker rm rauthy
 
 To proceed, go to **[First Start](first_start.md)**, or do the production setup below to have persistence.
 
+## Testing / Evaluation with E-Mail
+
+You can do anything you like with the default <code>admin@localhost</code> account. Rauthy does not have any special
+accounts. It is an account like any other. The only reason it is a Rauthy admin, is because it is assigned to the
+<code>rauthy_admin</code> role.
+
+If you like to test creating new accounts or password reset flows though, you need to have at least a minimal setup that
+is able to send E-Mails. The easiest way (work on localhost only) is the below `docker-compose.yaml`:
+
+```
+networks:
+  rauthy-test:
+    driver: bridge
+    
+services:
+  mailcrab:
+    image: marlonb/mailcrab:latest
+    ports:
+      - "1080:1080"
+    networks:
+      - rauthy-test
+      
+  rauthy:
+    container_name: rauthy-test
+    image: ghcr.io/sebadob/rauthy:latest
+    environment:
+      - LOCAL_TEST=true
+      - SMTP_URL=mailcrab
+      - SMTP_PORT=1025
+      - SMTP_DANGER_INSECURE=true
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mailcrab
+    networks:
+      - rauthy-test
+```
+
+Save this into `docker-compose.yaml` and start with:
+
+```
+docker compose up -d
+```
+
+You then need the logs output from Rauthy to read the random password for the `admin@localhost` account:
+
+```
+docker logs -f rauthy-test
+```
+
+Any outgoing E-Mail will be caught by `mailcrab`, which can be accessed
+via [http://localhost:1080](http://localhost:1080) .
+When you are done testing, shut down with
+
+```
+docker compose down
+```
+
 ## Production Setup
 
 For going to production or to test more in-depth, you need to apply a config that matches your environment.

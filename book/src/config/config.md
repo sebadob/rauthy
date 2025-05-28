@@ -721,8 +721,8 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 #SMTP_PORT=
 #SMTP_USERNAME=
 #SMTP_PASSWORD=
-# Format: "Rauthy <rauthy@localhost.de>"
-# default: "Rauthy <rauthy@localhost.de>"
+# Format: "Rauthy <rauthy@localhost>"
+# default: "Rauthy <rauthy@localhost>"
 #SMTP_FROM=
 
 # The number of retries that should be done for connecting to
