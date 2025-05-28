@@ -536,7 +536,7 @@ pub static SESSION_VALIDATE_IP: LazyLock<bool> = LazyLock::new(|| {
 
 pub static SMTP_FROM: LazyLock<String> = LazyLock::new(|| {
     env::var("SMTP_FROM")
-        .unwrap_or_else(|_| "Rauthy <rauthy@localhost.de>".to_string())
+        .unwrap_or_else(|_| "Rauthy <rauthy@localhost>".to_string())
         .trim()
         .to_string()
 });

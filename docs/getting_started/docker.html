@@ -196,6 +196,50 @@ restart to your liking without using test data.</p>
 <pre><code>docker stop rauthy &amp;&amp; docker rm rauthy
 </code></pre>
 <p>To proceed, go to <strong><a href="first_start.html">First Start</a></strong>, or do the production setup below to have persistence.</p>
+<h2 id="testing--evaluation-with-e-mail"><a class="header" href="#testing--evaluation-with-e-mail">Testing / Evaluation with E-Mail</a></h2>
+<p>You can do anything you like with the default <code>admin@localhost</code> account. Rauthy does not have any special
+accounts. It is an account like any other. The only reason it is a Rauthy admin, is because it is assigned to the
+<code>rauthy_admin</code> role.</p>
+<p>If you like to test creating new accounts or password reset flows though, you need to have at least a minimal setup that
+is able to send E-Mails. The easiest way (work on localhost only) is the below <code>docker-compose.yaml</code>:</p>
+<pre><code>networks:
+  rauthy-test:
+    driver: bridge
+    
+services:
+  mailcrab:
+    image: marlonb/mailcrab:latest
+    ports:
+      - "1080:1080"
+    networks:
+      - rauthy-test
+      
+  rauthy:
+    container_name: rauthy-test
+    image: ghcr.io/sebadob/rauthy:latest
+    environment:
+      - LOCAL_TEST=true
+      - SMTP_URL=mailcrab
+      - SMTP_PORT=1025
+      - SMTP_DANGER_INSECURE=true
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mailcrab
+    networks:
+      - rauthy-test
+</code></pre>
+<p>Save this into <code>docker-compose.yaml</code> and start with:</p>
+<pre><code>docker compose up -d
+</code></pre>
+<p>You then need the logs output from Rauthy to read the random password for the <code>admin@localhost</code> account:</p>
+<pre><code>docker logs -f rauthy-test
+</code></pre>
+<p>Any outgoing E-Mail will be caught by <code>mailcrab</code>, which can be accessed
+via <a href="http://localhost:1080">http://localhost:1080</a> .
+When you are done testing, shut down with</p>
+<pre><code>docker compose down
+</code></pre>
 <h2 id="production-setup"><a class="header" href="#production-setup">Production Setup</a></h2>
 <p>For going to production or to test more in-depth, you need to apply a config that matches your environment.</p>
 <p>The first thing you want to do is to add a volume mount for the database. The second thing is to provide a more
