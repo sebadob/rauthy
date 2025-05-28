@@ -17,6 +17,7 @@
     import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props";
     import {fetchSearchServer, type SearchParamsIdxUser} from "$utils/search";
     import UserPicture from "$lib/UserPicture.svelte";
+    import type {AuthProviderTemplate} from "$api/templates/AuthProvider";
 
     let closeModal: undefined | (() => void) = $state();
     let err = $state('');
@@ -27,6 +28,7 @@
     let uid = useParam('uid');
     let userId: undefined | string = $state();
 
+    let providers: AuthProviderTemplate[] = $state([]);
     let groups: GroupResponse[] = $state([]);
     let roles: RoleResponse[] = $state([]);
 
@@ -42,6 +44,7 @@
 
     onMount(() => {
         fetchUsers('page_size=' + sspPageSize);
+        fetchAuthProviders();
         fetchRoles();
         fetchGroups();
     })
@@ -113,6 +116,15 @@
         }
 
         return [res.status, res.headers];
+    }
+
+    async function fetchAuthProviders() {
+        let res = await fetchGet<AuthProviderTemplate[]>('/auth/v1/providers/minimal');
+        if (res.body) {
+            providers = res.body;
+        } else {
+            err = res.error?.message || 'Error';
+        }
     }
 
     async function fetchRoles() {
@@ -267,7 +279,7 @@
 
     <div id="users">
         {#if userId}
-            <UserDetails {userId} {roles} {groups} {onSave}/>
+            <UserDetails {userId} {providers} {roles} {groups} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>
