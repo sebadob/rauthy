@@ -74,6 +74,8 @@
             setTimeout(() => {
                 success = false;
             }, 3000);
+
+            await fetchAttrs();
         }
     }
 </script>
