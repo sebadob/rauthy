@@ -388,9 +388,9 @@ VALUES ($1, $2, $3, $4, $5)"#,
 
             txn.push((
                 r#"
- UPDATE user_attr_config
- SET name  = $1, desc = $2, default_value = $3, typ = $4, user_editable = $5
- WHERE name = $6"#,
+UPDATE user_attr_config
+SET name  = $1, desc = $2, default_value = $3, typ = $4, user_editable = $5
+WHERE name = $6"#,
                 params!(
                     &slf.name,
                     &slf.desc,
@@ -466,16 +466,12 @@ impl UserAttrConfigEntity {
 
 impl From<UserAttrConfigEntity> for UserAttrConfigValueResponse {
     fn from(value: UserAttrConfigEntity) -> Self {
-        let default_value = if let Some(v) = value.default_value {
-            Some(serde_json::from_slice(&v).unwrap_or_default())
-        } else {
-            None
-        };
-
         Self {
             name: value.name,
             desc: value.desc,
-            default_value,
+            default_value: value
+                .default_value
+                .map(|v| serde_json::from_slice(&v).unwrap_or_default()),
             typ: value.typ,
             user_editable: value.user_editable,
         }

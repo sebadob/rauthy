@@ -4,12 +4,12 @@
     import {untrack} from "svelte";
     import CheckIcon from "$lib5/CheckIcon.svelte";
     import Input from "$lib5/form/Input.svelte";
-    import type {UpdateUserRequest, UserResponse, UserResponseSimple} from "$api/types/user.ts";
+    import type {UserResponse, UserResponseSimple} from "$api/types/user.ts";
     import type {RoleResponse} from "$api/types/roles.ts";
     import type {GroupResponse} from "$api/types/groups.ts";
     import type {SelectItem} from "$lib5/select_list/props.ts";
     import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from "$utils/form";
-    import {fetchPatch, fetchPut} from "$api/fetch";
+    import {fetchPatch} from "$api/fetch";
     import Form from "$lib5/form/Form.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
     import {useI18n} from "$state/i18n.svelte";
@@ -25,16 +25,19 @@
     import {useI18nConfig} from "$state/i18n_config.svelte";
     import UserPicture from "$lib/UserPicture.svelte";
     import type {PatchOp} from "$api/types/generic";
+    import type {AuthProviderTemplate} from "$api/templates/AuthProvider";
 
     let {
         user = $bindable(),
         roles,
         groups,
+        providers,
         onSave,
     }: {
         user: UserResponse,
         roles: RoleResponse[],
         groups: GroupResponse[],
+        providers: AuthProviderTemplate[],
         onSave: () => void,
     } = $props();
 
@@ -79,6 +82,11 @@
         };
         return i;
     })));
+
+    let providerName = $derived(user.account_type?.startsWith('federated')
+        ? providers.filter(p => p.id == user.auth_provider_id)[0]?.name
+        : ''
+    );
 
     $effect(() => {
         if (user) {
@@ -283,9 +291,21 @@
     </div>
 
     <Form action={`/auth/v1/users/${user.id}`} {onSubmit}>
-        <LabeledValue label="ID" mono>
-            {user.id}
-        </LabeledValue>
+        <div class="values">
+            <div>
+                <LabeledValue label="ID" mono>
+                    {user.id}
+                </LabeledValue>
+            </div>
+            <div>
+                <LabeledValue label={t.account.accType}>
+                    {user.account_type}
+                    {#if providerName}
+                        : {providerName}
+                    {/if}
+                </LabeledValue>
+            </div>
+        </div>
 
         <div class="values">
             <div>
@@ -390,10 +410,10 @@
         </div>
 
         <SelectList bind:items={rolesItems}>
-            {t.account.roles}
+            {t.account.roles.replaceAll(',', ' ')}
         </SelectList>
         <SelectList bind:items={groupsItems}>
-            {t.account.groups}
+            {t.account.groups.replaceAll(',', ' ')}
         </SelectList>
 
         <div class="values">

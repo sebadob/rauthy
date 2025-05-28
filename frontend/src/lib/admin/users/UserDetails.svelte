@@ -13,14 +13,17 @@
     import Devices from "$lib5/devices/Devices.svelte";
     import UserForceLogout from "./UserForceLogout.svelte";
     import UserDelete from "$lib5/admin/users/UserDelete.svelte";
+    import type {AuthProviderTemplate} from "$api/templates/AuthProvider";
 
     let {
         userId,
+        providers,
         roles,
         groups,
         onSave,
     }: {
         userId: string,
+        providers: AuthProviderTemplate[],
         roles: RoleResponse[],
         groups: GroupResponse[],
         onSave: () => void,
@@ -75,7 +78,7 @@
 
 {#if user}
     {#if selected === tabs[0]}
-        <UserInfo bind:user {roles} {groups} {onSave}/>
+        <UserInfo bind:user {providers} {roles} {groups} {onSave}/>
     {:else if selected === tabs[1]}
         <UserAttr {user} {onSave}/>
     {:else if selected === tabs[2]}
