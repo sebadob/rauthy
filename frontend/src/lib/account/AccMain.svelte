@@ -18,6 +18,7 @@
     import type {WebIdResponse} from "$api/types/web_id.ts";
     import IconLogout from "$icons/IconLogout.svelte";
     import Button from "$lib/button/Button.svelte";
+    import AccOther from "$lib/account/AccOther.svelte";
 
     let {
         user = $bindable(),
@@ -49,6 +50,7 @@
             t.account.navEdit,
             t.common.password,
             'WebID',
+            t.account.other,
             t.account.navLogout,
         ]
         : [
@@ -57,6 +59,7 @@
             t.account.devices,
             t.account.navEdit,
             t.common.password,
+            t.account.other,
             t.account.navLogout,
         ]);
     let tabsWide = $derived(!!webIdData ?
@@ -66,12 +69,14 @@
             t.account.navEdit,
             t.common.password,
             'WebID',
+            t.account.other,
         ]
         : [
             t.account.navMfa,
             t.account.devices,
             t.account.navEdit,
             t.common.password,
+            t.account.other,
         ]);
 
     onMount(() => {
@@ -125,6 +130,8 @@
                     {#if webIdData}
                         <AccWebId bind:webIdData/>
                     {/if}
+                {:else if selected === t.account.other}
+                    <AccOther {user}/>
                 {:else if selected === t.account.devices}
                     <Devices userId={user.id}/>
                 {/if}
@@ -158,6 +165,8 @@
                         {#if webIdData}
                             <AccWebId bind:webIdData/>
                         {/if}
+                    {:else if selected === t.account.other}
+                        <AccOther {user}/>
                     {:else if selected === t.account.devices}
                         <AccDevices/>
                     {/if}

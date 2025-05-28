@@ -374,6 +374,7 @@ fn api_services() -> actix_web::Scope {
                 .service(users::get_user_picture_config)
                 .service(users::get_user_by_id)
                 .service(users::get_user_attr)
+                .service(users::get_user_attr_editable)
                 .service(users::put_user_attr)
                 .service(users::put_user_picture)
                 .service(users::get_user_picture)

@@ -87,6 +87,7 @@ export const I18nEn: I18n = {
         navEdit: "Edit",
         navMfa: "MFA",
         navLogout: "Logout",
+        other: "Other",
         passwordConfirm: "Confirm Password",
         passwordCurr: "Current Password",
         passwordCurrReq: "Current password is required",

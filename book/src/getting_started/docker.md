@@ -54,7 +54,7 @@ accounts. It is an account like any other. The only reason it is a Rauthy admin,
 <code>rauthy_admin</code> role.
 
 If you like to test creating new accounts or password reset flows though, you need to have at least a minimal setup that
-is able to send E-Mails. The easiest way (work on localhost only) is the below `docker-compose.yaml`:
+is able to send E-Mails. The easiest way (works on localhost only) is the below `docker-compose.yaml`:
 
 ```
 networks:

@@ -19,6 +19,13 @@ export let I18nAdminDe: I18nAdmin = {
         delete1: "Soll dieses Attribut wirklich gelöscht werden?",
         defaultValue: "Standard Wert",
         desc: "Beschreibung",
+        makeEditable: "Editierbar machen",
+        makeEditableP1: "Dieses Attribut kann durch Benutzer editierbar gemacht werden.",
+        makeEditableP2: `<b>ACHTUNG:</b> Diese Änderung kann niemals rückgängig gemacht werden! Jegliche Angaben durch
+            einen Benutzer direkt sind immer unvalidiert und dürfen NIEMALS für irgengeine Form von Authentifizierung 
+            oder Authorisierung genutzt werden!`,
+        makeEditableP3: `Ein Attribut kann deshalb niemals von editierbar zu nicht-editierbar gewandelt werden, weil
+            für eine gewisse Zeit, unabhängig von der Dauer, unvalidierte Eingaben erlaubt waren.`,
         name: "Attribut Name",
         userEditable: "Durch Benutzer Editierbar",
     },

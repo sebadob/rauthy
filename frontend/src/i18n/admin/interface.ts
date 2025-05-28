@@ -22,6 +22,11 @@ export interface I18nAdmin {
         delete1: string,
         defaultValue: string,
         desc: string,
+        makeEditable: string,
+        makeEditableP1: string,
+        // inserted as html
+        makeEditableP2: string,
+        makeEditableP3: string,
         name: string,
         userEditable: string,
     },

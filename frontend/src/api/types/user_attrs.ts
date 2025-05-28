@@ -37,3 +37,15 @@ export interface UserAttrValueResponse {
 export interface UserAttrValuesResponse {
     values: UserAttrValueResponse[],
 }
+
+export interface UserEditableAttrResponse {
+    name: string,
+    desc?: string,
+    default_value?: string,
+    typ?: UserAttrConfigTyp,
+    value?: string,
+}
+
+export interface UserEditableAttrsResponse {
+    values: UserEditableAttrResponse[],
+}

@@ -276,6 +276,8 @@ use utoipa::{OpenApi, openapi};
             UserAttrConfigValueResponse,
             UserAttrValueResponse,
             UserAttrValuesResponse,
+            UserEditableAttrResponse,
+            UserEditableAttrsResponse,
             Userinfo,
             UserValuesResponse,
             UserAccountTypeResponse,

@@ -123,6 +123,7 @@
                     autocomplete="off"
                     label={a.name}
                     placeholder={a.defaultValue ? a.defaultValue : a.desc || 'JSON Value'}
+                    onEnter={onSubmit}
             />
         {/each}
 

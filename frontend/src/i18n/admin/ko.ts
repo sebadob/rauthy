@@ -17,6 +17,12 @@ export let I18nAdminKo: I18nAdmin = {
         delete1: "이 속성을 삭제하시겠습니까?",
         defaultValue: "Default Value",
         desc: "설명",
+        makeEditable: "Make Editable",
+        makeEditableP1: "You can convert this attribute and make it editable by users themselves.",
+        makeEditableP2: `<b>CAUTION:</b> This can never be changed back! All inputs from a user directly are always
+            untrusted data and MUST NEVER be used for any form of authentication or authorization!`,
+        makeEditableP3: `An attribute cannot be changed from editable to non-editable, because it allowed untrusted
+            inputs in the past, no matter for how long this was the case.`,
         name: "속성 이름",
         userEditable: "User Editable",
     },

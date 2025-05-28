@@ -282,6 +282,17 @@ VALUES ($1, $2, $3, $4, $5)"#,
     }
 
     #[inline]
+    pub async fn find_all_user_editable() -> Result<Vec<Self>, ErrorResponse> {
+        // Self::find_all() is always cached. Therefore,
+        // it is not that huge of a waste, if we filter later.
+        Ok(Self::find_all()
+            .await?
+            .into_iter()
+            .filter(|c| c.user_editable)
+            .collect::<Vec<_>>())
+    }
+
+    #[inline]
     pub async fn find_with_default_value() -> Result<Vec<Self>, ErrorResponse> {
         // Even though with naively fetch all of them first and filter later, the `Self::find_all()`
         // is cached locally and therefore very fast. The total amount of custom attributes will

@@ -68,6 +68,7 @@ export interface I18n {
         navEdit: string,
         navMfa: string,
         navLogout: string,
+        other: string,
         passwordConfirm: string,
         passwordCurr: string,
         passwordCurrReq: string,
