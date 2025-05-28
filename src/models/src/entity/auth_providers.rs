@@ -42,7 +42,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
 use ring::digest;
 use serde::{Deserialize, Serialize};
-use serde_json::value;
+use serde_json::{Value, value};
 use serde_json_path::JsonPath;
 use std::borrow::Cow;
 use std::fmt::Write;
@@ -1245,7 +1245,7 @@ impl AuthProviderIdClaims<'_> {
             ));
         }
 
-        let claims_user_id = if let Some(sub) = &self.sub {
+        let claims_user_id_json = if let Some(sub) = &self.sub {
             sub
         } else if let Some(id) = &self.id {
             id
@@ -1258,10 +1258,20 @@ impl AuthProviderIdClaims<'_> {
                 ErrorResponseType::BadRequest,
                 err.to_string(),
             ));
-        }
+        };
+
         // We need to create a real string here, since we don't know what json type we get.
         // Any json number would become a String too, which is what we need for compatibility.
-        .to_string();
+        let claims_user_id = match claims_user_id_json {
+            Value::Number(num) => num.to_string(),
+            Value::String(s) => s.to_string(),
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "Invalid value for the Upstream User ID",
+                ));
+            }
+        };
 
         let user_opt = match User::find_by_federation(&provider.id, &claims_user_id).await {
             Ok(user) => {
