@@ -370,6 +370,22 @@ pub struct UserAttrValuesResponse {
 
 #[derive(Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct UserEditableAttrResponse {
+    pub name: String,
+    pub desc: Option<String>,
+    pub default_value: Option<String>,
+    pub typ: Option<UserAttrConfigTyp>,
+    pub value: Option<serde_json::Value>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct UserEditableAttrsResponse {
+    pub values: Vec<UserEditableAttrResponse>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct Userinfo {
     pub id: String,
     pub sub: String,

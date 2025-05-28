@@ -87,6 +87,7 @@ export const I18nKo: I18n = {
         navEdit: "수정",
         navMfa: "MFA",
         navLogout: "로그아웃",
+        other: "Other",
         passwordConfirm: "비밀번호 확인",
         passwordCurr: "현재 비밀번호",
         passwordCurrReq: "현재 비밀번호가 필요합니다.",

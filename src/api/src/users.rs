@@ -12,8 +12,9 @@ use rauthy_api_types::users::{
     PasskeyResponse, PasswordResetRequest, RequestResetRequest, UpdateUserRequest,
     UpdateUserSelfRequest, UserAttrConfigRequest, UserAttrConfigResponse,
     UserAttrConfigValueResponse, UserAttrValueResponse, UserAttrValuesResponse,
-    UserAttrValuesUpdateRequest, UserPictureConfig, UserResponse, UserResponseSimple, WebIdRequest,
-    WebIdResponse, WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
+    UserAttrValuesUpdateRequest, UserEditableAttrResponse, UserEditableAttrsResponse,
+    UserPictureConfig, UserResponse, UserResponseSimple, WebIdRequest, WebIdResponse,
+    WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
     WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
@@ -528,6 +529,60 @@ pub async fn get_user_attr(
     Ok(HttpResponse::Ok().json(UserAttrValuesResponse { values }))
 }
 
+/// Returns the additional custom attributes for the given user id that are user-editable
+#[utoipa::path(
+    get,
+    path = "/users/{id}/attr/editable",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = UserAttrValuesResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{id}/attr/editable")]
+pub async fn get_user_attr_editable(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+    let user_id = path.into_inner();
+    if user_id != principal.user_id()? {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "mismatch between path and Principal `id`",
+        ));
+    }
+
+    let configs = UserAttrConfigEntity::find_all_user_editable().await?;
+    let mut values = UserAttrValueEntity::find_for_user(&user_id).await?;
+
+    let mut combined = Vec::with_capacity(configs.len());
+    for config in configs {
+        let default_value = if let Some(default) = config.default_value {
+            Some(serde_json::from_slice(&default)?)
+        } else {
+            None
+        };
+
+        let value = if let Some(pos) = values.iter().position(|v| v.key == config.name) {
+            let value = values.swap_remove(pos);
+            Some(serde_json::from_slice(&value.value)?)
+        } else {
+            None
+        };
+
+        combined.push(UserEditableAttrResponse {
+            name: config.name,
+            desc: config.desc,
+            default_value,
+            typ: config.typ,
+            value,
+        });
+    }
+
+    Ok(HttpResponse::Ok().json(UserEditableAttrsResponse { values: combined }))
+}
+
 /// Updates the additional custom attributes for the given user id
 #[utoipa::path(
     put,
@@ -543,13 +598,33 @@ pub async fn get_user_attr(
 pub async fn put_user_attr(
     path: web::Path<String>,
     principal: ReqPrincipal,
-    Json(payload): Json<UserAttrValuesUpdateRequest>,
+    Json(mut payload): Json<UserAttrValuesUpdateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal
-        .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)?;
+    let user_id = path.into_inner();
+    if principal
+        .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)
+        .is_err()
+    {
+        principal.validate_session_auth()?;
+        if user_id != principal.user_id()? {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "mismatch between path and Principal `id`",
+            ));
+        }
+
+        // For all non-admins, we want to make sure the payload
+        // only contains those keys, that are actually user-editable
+        let allowed_keys = UserAttrConfigEntity::find_all_user_editable()
+            .await?
+            .into_iter()
+            .map(|c| c.name)
+            .collect::<Vec<_>>();
+        payload.values.retain(|v| allowed_keys.contains(&v.key));
+    }
     payload.validate()?;
 
-    let user = User::find(path.into_inner()).await?;
+    let user = User::find(user_id).await?;
     let values = UserAttrValueEntity::update_for_user(&user.id, payload)
         .await?
         .drain(..)
