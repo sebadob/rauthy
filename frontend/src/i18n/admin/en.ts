@@ -19,6 +19,12 @@ export let I18nAdminEn: I18nAdmin = {
         delete1: "Are you sure you want to delete this attribute?",
         defaultValue: "Default Value",
         desc: "Description",
+        makeEditable: "Make Editable",
+        makeEditableP1: "You can convert this attribute and make it editable by users themselves.",
+        makeEditableP2: `<b>CAUTION:</b> This can never be changed back! All inputs from a user directly are always
+            untrusted data and MUST NEVER be used for any form of authentication or authorization!`,
+        makeEditableP3: `An attribute cannot be changed from editable to non-editable, because it allowed untrusted
+            inputs in the past, no matter for how long this was the case.`,
         name: "Attribute Name",
         userEditable: "User Editable",
     },

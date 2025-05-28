@@ -264,8 +264,13 @@ pub async fn put_cust_attr(
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)?;
     payload.validate()?;
 
+    // Note: Even though in the Admin UI, a change from user-editable back to non-editable is
+    // not allowed at all, we do not check this condition here on purpose. The only reason is that
+    // we want to have at least the possibility to do this via an API call. The reason we only leave
+    // this option for direct API calls is that it should only be done with intention and not easily
+    // by clicking a button without thinking twice about the risks and implications.
+
     let entity = UserAttrConfigEntity::update(path.into_inner(), payload).await?;
-    debug!("entity after update: {:?}", entity);
 
     let clients_scim = ClientScim::find_with_attr_mapping(&entity.name).await?;
     if !clients_scim.is_empty() {
