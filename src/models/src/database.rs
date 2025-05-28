@@ -2,13 +2,12 @@ use crate::app_state::AppState;
 use crate::entity::db_version::DbVersion;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, db_migrate, init_prod};
-use crate::sqlx_refinery_migration::migrate_sqlx_to_refinery;
 use actix_web::web;
 use futures_util::StreamExt;
 use hiqlite::NodeConfig;
 use hiqlite::cache_idx::CacheIndex;
 use hiqlite_macros::embed::*;
-use rauthy_common::constants::{DEV_MODE, RAUTHY_VERSION};
+use rauthy_common::constants::DEV_MODE;
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
 use std::env;
@@ -210,12 +209,6 @@ impl DB {
         if is_hiqlite() {
             Self::hql().migrate::<MigrationsHiqlite>().await?;
         } else {
-            // TODO remove after v0.29
-            if semver::Version::parse(RAUTHY_VERSION).unwrap().minor > 29 {
-                panic!("Remove the ` migrate_sqlx_to_refinery()` block after v0.29");
-            }
-            migrate_sqlx_to_refinery().await?;
-
             debug!("Migrating data from ../../migrations/postgres");
             let mut client = DB::pg().await?;
             let report = migrations_postgres::migrations::runner()
