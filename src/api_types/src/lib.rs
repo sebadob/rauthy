@@ -11,6 +11,7 @@ pub mod fed_cm;
 pub mod generic;
 pub mod groups;
 pub mod oidc;
+pub mod pam;
 pub mod roles;
 pub mod scopes;
 pub mod sessions;

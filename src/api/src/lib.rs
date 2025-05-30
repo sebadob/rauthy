@@ -31,6 +31,7 @@ pub mod groups;
 pub mod html;
 pub mod oidc;
 pub mod openapi;
+mod pam;
 pub mod roles;
 pub mod scopes;
 pub mod sessions;
