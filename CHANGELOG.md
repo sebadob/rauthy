@@ -1,5 +1,123 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Restrict client login by group prefix
+
+In addition to the already existing "Force MFA" switch for each client, which will fore users to have MFA enabled, you
+can now also restrict the login to each client by an additional group prefix, just like it has been added for SCIM syncs
+recently.
+
+For instance, if you have groups like `app:admin` and `app:user`, you can restrict the client with the prefix `app:`,
+which will only allow users assigned to one of these groups to do the login.
+
+Usually, such decisions are done on the client side, depending on the claims in the tokens, because it's a lot more
+powerful and roles can be assigned properly, and so on. However, not all client apps support claim restrictions. In
+these cases, you can now do it on Rauthy's side, or maybe just in addition to provide a better UX, because the user will
+get the error message during Rauthy's login already and not after the token was exchanged with the client.
+
+[#952](https://github.com/sebadob/rauthy/pull/952)
+
+#### User-Editable custom attributes
+
+User attributes can now be set to be user-editable. A new section has been added to the account dashboard which shows
+these user-editable attributes (if any exist), and the user can modify them without the need of an admin.
+
+CAUTION: Setting an attribute to be user-editable is a one-way operation and cannot be reverted! The reason is, that
+user inputs are always unverified and cannot be trusted, and these attributes MUST NEVER be used in any context of
+authn / authz on clients. To avoid the possibility of leaking, unvalidated inputs, once an attribute was user-editable,
+it can never be changed back, because you cannot trust the existing values at that point. This should act as a
+safety-net for admins.
+
+[#964](https://github.com/sebadob/rauthy/pull/964)
+
+#### Default values for custom attributes
+
+You can now define a default value for each custom attribute. If the value is not set for a user, the default will be
+added to token claims. This makes it possible to set things like default storage quotas for all users via a custom
+attribute, and still allows to overwrite them. It is probably the most powerful, when you can so modify many users at
+once, because it resolves dynamically during token creation and does not need an update for each single user.
+
+[#958](https://github.com/sebadob/rauthy/pull/958)
+
+#### User account type in Admin UI
+
+The user account type is now also being shown in the Admin UI, just like it is in the account dashboard. With this
+update, Admins can see which accounts are federated and to which upstream auth provider they are linked.
+
+[#960](https://github.com/sebadob/rauthy/pull/960)
+
+#### Custom JWT implementation
+
+Do be more flexible and more efficient, the external dependency for generating JWT tokens has been dropped in favor of
+a new, fully custom implementation. This is a lot more light weight, more efficient, and makes Rauthy independent for
+things like PQC algorithms / FIPS 204 in the future. This change alone dropped 21 external dependencies in exchange for
+only a few hundred lines of code in comparison to the old setup.
+
+To avoid possible resource exhaustion attacks on the token introspection and userinfo endpoints, the token size (in
+characters) is now limited to 4096. This is more than double the amount of an RS512 signed `id_token` with more than
+only the default values, so you should never have any problems reaching the limit. Theoretically, it is of course
+possible, so you get a new config variable to tune this:
+
+```
+# Sets the limit in characters for the maximum JWT token length that 
+# will be accepted when validating it. The default of 4096 is high 
+# enough that you should never worry about this value. A typical 
+# `id_token` with quite a few additional custom attributes and scopes, 
+# signed with RS512, will usually be below 2000 characters. 
+# 
+# Only if you create very big tokens and you get errors on the 
+# `/userinfo` for instance, you might want to increase this value.
+# Otherwise, don't worry about it.
+#
+# default: 4096 
+TOKEN_LEN_LIMIT=4096
+```
+
+[#941](https://github.com/sebadob/rauthy/pull/941)
+
+#### `PATCH` is possible on `/users/{id}`
+
+The user modification endpoint now provides a `PATCH` operation, which the Admin UI user config uses by default. It will
+only update the values, that actually have been changed in the UI. This reduces the possibility of overwriting values
+that have been modified by the user via the account dashboard in the exact same moment.
+
+[#951](https://github.com/sebadob/rauthy/pull/951)
+
+#### `jemalloc` feature flag
+
+Rauthy can optionally be compiled with the `jemalloc` feature flag, which will exchange the glibc `malloc` for
+`jemalloc`. This will most probably become the default allocator for Rauthy after some tuning. It avoids memory
+fragmentation over time and is a lot more performant. You can also adjust it to match your workloads and the default
+tuning will probably be aimed at being efficient. However, if you run a Rauthy instance with thousands or even millions
+of users, you can custom-compile a version with optimized tuning, which will use more memory, but handle this many
+concurrent allocations better. Documentation about it will follow.
+
+[#949](https://github.com/sebadob/rauthy/pull/949)
+
+#### Memory optimizations
+
+All `derive` impl's on all API types have been checked and quite a lot of unnecessary `derive`s have been removed (were
+e.g. only necessary during development / testing). This is a small optimization regarding release compile-time and
+binary size.
+
+[#956](https://github.com/sebadob/rauthy/pull/956)
+
+### Bugfix
+
+- The legacy Rauthy placeholder logo was not removed from the `hiqlite` DB migrations for fresh instances
+  [#942](https://github.com/sebadob/rauthy/pull/942)
+- Some mobile browsers started failing recently because of some issue with the PKCE challenge generation. The external
+  dependency for this has been dropped in favor of a custom implementation.
+  [#953](https://github.com/sebadob/rauthy/pull/953)
+- `user.federation_uid` was saved as an escaped JSON string inside the DB instead of as a raw String directly. This was
+  not an issue on it's own, because during login, both the escaped values were compared, but it didn't look good.
+  [#962](https://github.com/sebadob/rauthy/pull/962)
+- The default value for the `SMTP_FROM` was changed from `rauthy@localhost.de` to just `rauthy@localhost`.
+  [#963](https://github.com/sebadob/rauthy/pull/963)
+
 ## v0.29.4
 
 ### Changes
