@@ -57,6 +57,7 @@ pub async fn grant_type_authorization_code(
                 format!("Client '{}' not found", client_id),
             )
         })?;
+    client.validate_enabled()?;
     let header_origin = client.get_validated_origin_header(&req)?;
     if client.confidential {
         let secret = client_secret.ok_or_else(|| {
