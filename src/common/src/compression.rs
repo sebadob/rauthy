@@ -4,17 +4,19 @@ use rauthy_error::ErrorResponse;
 use std::io::{Cursor, Write};
 use std::sync::LazyLock;
 
-static BROTLI_PARAMS: LazyLock<BrotliEncoderParams> = LazyLock::new(BrotliEncoderParams::default);
-static BROTLI_PARAMS_9: LazyLock<BrotliEncoderParams> = LazyLock::new(|| BrotliEncoderParams {
+pub static BROTLI_PARAMS: LazyLock<BrotliEncoderParams> =
+    LazyLock::new(BrotliEncoderParams::default);
+pub static BROTLI_PARAMS_9: LazyLock<BrotliEncoderParams> = LazyLock::new(|| BrotliEncoderParams {
     quality: 9,
     ..Default::default()
 });
 // Params for dynamic compression which happens often like with every new request.
 // We don't want to compress too high in that case because of diminishing returns.
-static BROTLI_PARAMS_DYN: LazyLock<BrotliEncoderParams> = LazyLock::new(|| BrotliEncoderParams {
-    quality: 5,
-    ..Default::default()
-});
+pub static BROTLI_PARAMS_DYN: LazyLock<BrotliEncoderParams> =
+    LazyLock::new(|| BrotliEncoderParams {
+        quality: 5,
+        ..Default::default()
+    });
 
 /// Brotli compression with max quality
 #[inline]

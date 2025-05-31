@@ -4,6 +4,8 @@ use rauthy_models::{entity::users::User, language::Language};
 use std::time::Duration;
 use tracing::info;
 
+// TODO keep around until internal benchmarking is finished
+#[allow(dead_code)]
 pub async fn insert_dummy_data(amount: u32) -> Result<(), ErrorResponse> {
     tokio::time::sleep(Duration::from_secs(1)).await;
     info!(

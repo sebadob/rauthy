@@ -122,5 +122,3 @@ webauthn-rs = { version = "0.5", features = [
 ] }
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"
-
-
