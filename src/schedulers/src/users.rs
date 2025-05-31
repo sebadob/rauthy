@@ -14,7 +14,8 @@ use tracing::{debug, error, info};
 
 pub async fn user_expiry_checker(data: web::Data<AppState>) {
     let secs = env::var("SCHED_USER_EXP_MINS")
-        .unwrap_or_else(|_| "60".to_string())
+        .as_deref()
+        .unwrap_or("60")
         .parse::<u64>()
         .expect("Cannot parse 'SCHED_USER_EXP_MINS' to u64");
     let mut interval = tokio::time::interval(Duration::from_secs(secs * 60));
@@ -50,14 +51,8 @@ async fn execute(
     data: &web::Data<AppState>,
     cleanup_after_secs: Option<u64>,
 ) -> Result<(), ErrorResponse> {
-    let users = User::find_expired().await?;
-    if users.is_empty() {
-        return Ok(());
-    }
-
     let now = Utc::now().timestamp();
-
-    for mut user in users {
+    for mut user in User::find_expired().await? {
         debug!("Found expired user {}: {}", user.id, user.email);
 
         let exp_ts = if let Some(ts) = user.user_expires {

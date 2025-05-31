@@ -3,7 +3,6 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 pub static RE_ALNUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]+$").unwrap());
-// TODO maybe drop all 24, 48, 64 and validate only with ALNUM to have fewer regexes
 pub static RE_ALNUM_48: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap());
 pub static RE_ALNUM_64: LazyLock<Regex> =

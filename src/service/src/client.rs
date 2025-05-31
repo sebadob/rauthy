@@ -13,7 +13,7 @@ pub async fn update_client(
     if client.id != client_req.id {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("The 'id' cannot be changed"),
+            "The 'id' cannot be changed",
         ));
     }
 

@@ -149,9 +149,9 @@ impl TokenSet {
         } else {
             None
         };
-        let roles = user.map(|u| u.get_roles());
+        let roles = user.map(|u| u.roles_iter().collect());
         let groups = if scope.contains("groups") {
-            user.as_ref().map(|u| u.get_groups())
+            user.map(|u| u.groups_iter().collect())
         } else {
             None
         };

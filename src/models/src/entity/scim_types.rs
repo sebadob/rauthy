@@ -183,8 +183,7 @@ impl ScimUser {
         client_scopes: &str,
     ) -> Result<Self, ErrorResponse> {
         let roles = user
-            .get_roles()
-            .iter()
+            .roles_iter()
             .map(|r| ScimValue {
                 value: r.to_string(),
                 display: None,

@@ -21,13 +21,18 @@ pub async fn backchannel_logout_retry(data: web::Data<AppState>) {
         .parse::<u16>()
         .expect("Cannot parse BACKCHANNEL_LOGOUT_RETRY_COUNT as u16");
 
+    let mut clients: Vec<Client> = Vec::with_capacity(1);
+    let mut kps: Vec<JwkKeyPair> = Vec::with_capacity(1);
+
     loop {
         // We want to randomize the sleep because this scheduler should run on all cluster members.
         // This increases the chance opf success in case of a network segmentation.
         let millis = get_rand_between(60_000, 90_000);
         time::sleep(Duration::from_millis(millis)).await;
 
-        if let Err(err) = execute_logout_retries(&data, retry_count).await {
+        clients.clear();
+        kps.clear();
+        if let Err(err) = execute_logout_retries(&data, &mut clients, &mut kps, retry_count).await {
             error!("Error during backchannel_logout_retry: {}", err.message);
         }
     }
@@ -35,6 +40,8 @@ pub async fn backchannel_logout_retry(data: web::Data<AppState>) {
 
 async fn execute_logout_retries(
     data: &web::Data<AppState>,
+    clients: &mut Vec<Client>,
+    kps: &mut Vec<JwkKeyPair>,
     retry_count: u16,
 ) -> Result<(), ErrorResponse> {
     let failures = FailedBackchannelLogout::find_all().await?;
@@ -42,8 +49,6 @@ async fn execute_logout_retries(
         return Ok(());
     }
 
-    let mut clients: Vec<Client> = Vec::with_capacity(1);
-    let mut kps: Vec<JwkKeyPair> = Vec::with_capacity(1);
     let mut tasks = JoinSet::new();
 
     for failure in failures {
