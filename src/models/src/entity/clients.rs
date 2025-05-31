@@ -1173,7 +1173,10 @@ impl Client {
         if has_any {
             Ok(())
         } else {
-            trace!("Invalid `redirect_uri`: {}", redirect_uri);
+            debug!(
+                "Invalid `redirect_uri`: {} / expected on of: {}",
+                redirect_uri, self.redirect_uris
+            );
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid redirect uri",
