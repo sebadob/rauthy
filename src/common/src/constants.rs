@@ -540,20 +540,8 @@ pub static SMTP_FROM: LazyLock<String> = LazyLock::new(|| {
         .trim()
         .to_string()
 });
-pub static SMTP_PASSWORD: LazyLock<String> = LazyLock::new(|| {
-    env::var("SMTP_PASSWORD")
-        .expect("SMTP_PASSWORD is not set")
-        .trim()
-        .to_string()
-});
 pub static SMTP_URL: LazyLock<Option<String>> =
     LazyLock::new(|| env::var("SMTP_URL").ok().map(|url| url.trim().to_string()));
-pub static SMTP_USERNAME: LazyLock<String> = LazyLock::new(|| {
-    env::var("SMTP_USERNAME")
-        .expect("SMTP_USERNAME is not set")
-        .trim()
-        .to_string()
-});
 
 pub static SUSPICIOUS_REQUESTS_BLACKLIST: LazyLock<u16> = LazyLock::new(|| {
     env::var("SUSPICIOUS_REQUESTS_BLACKLIST")
@@ -582,21 +570,6 @@ pub static SSP_THRESHOLD: LazyLock<u16> = LazyLock::new(|| {
         .unwrap_or("1000")
         .parse::<u16>()
         .expect("SSP_THRESHOLD cannot be parsed as u16")
-});
-
-pub static SWAGGER_UI_EXTERNAL: LazyLock<bool> = LazyLock::new(|| {
-    env::var("SWAGGER_UI_EXTERNAL")
-        .as_deref()
-        .unwrap_or("true")
-        .parse::<bool>()
-        .expect("SWAGGER_UI_EXTERNAL cannot be parsed as bool")
-});
-pub static SWAGGER_UI_INTERNAL: LazyLock<bool> = LazyLock::new(|| {
-    env::var("SWAGGER_UI_INTERNAL")
-        .as_deref()
-        .unwrap_or("true")
-        .parse::<bool>()
-        .expect("SWAGGER_UI_INTERNAL cannot be parsed as bool")
 });
 
 pub static TRUSTED_PROXIES: LazyLock<Vec<cidr::IpCidr>> = LazyLock::new(build_trusted_proxies);

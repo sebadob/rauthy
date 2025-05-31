@@ -7,7 +7,7 @@ use std::{env, thread};
 use tokio::time::Instant;
 use tracing::{debug, error, warn};
 
-static ARGON2_PARAMS: Lazy<argon2::Params> = Lazy::new(|| {
+pub static ARGON2_PARAMS: Lazy<argon2::Params> = Lazy::new(|| {
     let mut argon2_m_cost = env::var("ARGON2_M_COST")
         .as_deref()
         .unwrap_or("32768")
@@ -37,24 +37,24 @@ static ARGON2_PARAMS: Lazy<argon2::Params> = Lazy::new(|| {
     params
 });
 
-static BUCKET_USE_PATH_STYLE: Lazy<usize> = Lazy::new(|| {
+static MAS_HASH_THREADS: Lazy<usize> = Lazy::new(|| {
     env::var("MAX_HASH_THREADS")
         .as_deref()
         .unwrap_or("2")
         .parse::<usize>()
         .expect("Cannot parse MAX_HASH_THREADS to usize")
 });
-static HASH_AWAIT_WARN_TIME: Lazy<u64> = Lazy::new(|| {
+pub static HASH_AWAIT_WARN_TIME: Lazy<u64> = Lazy::new(|| {
     env::var("HASH_AWAIT_WARN_TIME")
         .as_deref()
         .unwrap_or("500")
         .parse::<u64>()
         .expect("Cannot parse HASH_AWAIT_WARN_TIME to u64")
 });
-static HASH_CHANNELS: Lazy<(
+pub static HASH_CHANNELS: Lazy<(
     flume::Sender<PasswordHashMessage>,
     flume::Receiver<PasswordHashMessage>,
-)> = Lazy::new(|| flume::bounded(*BUCKET_USE_PATH_STYLE));
+)> = Lazy::new(|| flume::bounded(*MAS_HASH_THREADS));
 
 pub struct HashPassword {
     plain_text: String,
@@ -110,7 +110,7 @@ impl ComparePasswords {
     }
 }
 
-enum PasswordHashMessage {
+pub enum PasswordHashMessage {
     Hash(HashPassword),
     Compare(ComparePasswords),
 }

@@ -3,7 +3,6 @@ use actix_web::rt::System;
 use actix_web::{App, HttpServer, middleware, web};
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
-use rauthy_common::constants::{SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL};
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
@@ -44,7 +43,12 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
         .build()
         .unwrap();
 
-    let swagger_internal = if *SWAGGER_UI_INTERNAL {
+    let swagger_ui_internal = env::var("SWAGGER_UI_INTERNAL")
+        .as_deref()
+        .unwrap_or("true")
+        .parse::<bool>()
+        .expect("SWAGGER_UI_INTERNAL cannot be parsed as bool");
+    let swagger_internal = if swagger_ui_internal {
         Some(swagger_ui(&app_state))
     } else {
         None
@@ -113,7 +117,7 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
             .wrap(RauthyIpBlacklistMiddleware)
             .service(api_services());
 
-        if *SWAGGER_UI_EXTERNAL {
+        if swagger_ui_external() {
             app = app.service(swagger_ui(&app_state));
         }
 
@@ -186,7 +190,7 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
             .wrap(RauthyIpBlacklistMiddleware)
             .service(api_services());
 
-        if *SWAGGER_UI_EXTERNAL {
+        if swagger_ui_external() {
             app = app.service(swagger_ui(&app_state));
         }
 
@@ -451,6 +455,14 @@ fn swagger_ui(app_state: &web::Data<AppState>) -> SwaggerUi {
                 .supported_submit_methods(["get"])
                 .filter(true),
         )
+}
+
+fn swagger_ui_external() -> bool {
+    env::var("SWAGGER_UI_EXTERNAL")
+        .as_deref()
+        .unwrap_or("true")
+        .parse::<bool>()
+        .expect("SWAGGER_UI_EXTERNAL cannot be parsed as bool")
 }
 
 fn workers() -> usize {

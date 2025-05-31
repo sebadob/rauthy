@@ -13,9 +13,7 @@ use chrono::DateTime;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
 use lettre::{AsyncSmtpTransport, AsyncTransport, message};
-use rauthy_common::constants::{
-    EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME,
-};
+use rauthy_common::constants::{EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_URL};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::Notification;
 use std::env;
@@ -582,7 +580,16 @@ async fn connect_test_smtp(
     smtp_url: &str,
     smtp_port: Option<u16>,
 ) -> Result<AsyncSmtpTransport<lettre::Tokio1Executor>, ErrorResponse> {
-    let creds = authentication::Credentials::new(SMTP_USERNAME.clone(), SMTP_PASSWORD.clone());
+    let username = env::var("SMTP_USERNAME")
+        .expect("SMTP_USERNAME is not set")
+        .trim()
+        .to_string();
+    let password = env::var("SMTP_PASSWORD")
+        .expect("SMTP_PASSWORD is not set")
+        .trim()
+        .to_string();
+
+    let creds = authentication::Credentials::new(username, password);
 
     // always try fully wrapped TLS first
     let mut builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)

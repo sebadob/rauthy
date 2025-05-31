@@ -219,10 +219,16 @@ pub(crate) fn build_trusted_proxies() -> Vec<cidr::IpCidr> {
                 proxies.push(cidr);
             }
             Err(err) => {
-                error!("Cannot parse trusted proxy entry to CIDR: {}", err);
+                panic!(
+                    "Cannot parse trusted proxy entry {trimmed} to CIDR: {}",
+                    err
+                );
             }
         }
     }
+    // will never increase and is lazy static afterward
+    proxies.shrink_to_fit();
+
     proxies
 }
 
