@@ -39,7 +39,7 @@ actix-web-lab = "0.24"
 actix-web-prom = "0.10"
 askama = "0.14"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
-async-trait = "0.1.74" # TODO delete ?
+async-trait = "0.1.74"
 base64 = "0.22.0"
 bincode = { version = "2", features = ["serde"] }
 brotli = "8"
