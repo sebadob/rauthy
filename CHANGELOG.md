@@ -4,6 +4,93 @@
 
 ### Changes
 
+#### Hiqlite Optimizations
+
+Hiqlite has received lots of optimizations and its version has been integrated in this Rauthy version. The updates were
+mainly about stability, especially during cluster rolling-releases in environments like Kubernetes, where the versions
+before had some issues with the ephemeral, in-memory Cache Raft state, which could get into a deadlock during a race
+condition. This has been fixed completely.
+
+Another thing is that it's now possible to optionally have the Cache Raft state like WAL + Snapshots on disk instead of
+in-memory. The on-disk solution is of course quite a bit slower, because it's limited by your disk speed, but the memory
+usage will be lower as well. If all of that data is kept in-memory, you basically need 3 times the size of a single
+cache value (+1 in WAL logs and +1 in Snapshot, kind of, depending on TTL of course). Writing the state to disk has
+other advantages as well. The cache can be rebuilt and you never lose cached data even if the whole cluster went down.
+On restart, the whole in-memory cache layer can be rebuilt from WAL + Snapshots.
+
+The next improvement is that `hiqlite` received a fully custom WAL implementation and we can drop `rocksdb` as the WAL
+store. `rocksdb` is really good and very fast, but a huge overkill for the job, a very heavyweight dependency and
+brings quite a few issues in regard to compilation targets. This feature version still contains code and dependencies
+to migrate existing `rocksdb` Log Stores to the new `hiqlite-wal` store, but from the next feature version, we can fully
+remove the dependency. Just removing `rocksdb` will reduce the release binary size by ~7MB. On top of that,
+`hiqlite-wal` is quite a bit more efficient with your memory at runtime without any sacrifices in throughput.
+
+The new `hiqlite-wal` now also has some mechanisms to try to repair a WAL file and recover records that might have been
+corrupted because of a bad crash for instance. `rocksdb` could get into a state where it would be almost impossible to
+recover. If you run your Rauthy instance in a container environment, or anywhere where you can guarantee, that no 2nd
+Rauthy process might try to access the same data on disk, you probably want to set `HQL_IGNORE_WAL_LOCK=true` now, which
+will start and try the repair routine, even if it detects a non-graceful shutdown. It is crucial though that it can
+never happen, that another instance is still running accessing the same data. That's what this warning is for in such
+a scenario. If you rather have full control and double check in case of an error, leave this value unset. The default
+is `false`.
+The other new value is `HQL_CACHE_STORAGE_DISK`, which is `true` by default. This will store the WAL + Snapshots for the
+in-memory cache on disk and therefore free up that memory. If you would rather have everything in-memory though, set
+this value to `false`.
+
+```
+# Set to `false` to store Cache WAL files + Snapshots in-memory only.
+# Depending on your environment and setup, this can lead to cluster
+# issues if a node crashes and cannot do a graceful shutdown. It is not
+# recommended to keep the Raft state in-memory only, apart from for
+# testing and in special cases.
+# default: true
+#HQL_CACHE_STORAGE_DISK=true
+
+# Can be set to true to start the WAL handler even if the
+# `lock.hql` file exists. This may be necessary after a
+# crash, when the lock file could not be removed during a
+# graceful shutdown.
+#
+# IMPORTANT: Even though the Database can "heal" itself by
+# simply rebuilding from the existing Raft log files without
+# even needing to think about it, you may want to only
+# set `HQL_IGNORE_WAL_LOCK` when necessary to have more
+# control. Depending on the type of crash (whole OS, maybe
+# immediate power loss, force killed, ...), it may be the
+# case that the WAL files + metadata could not be synced
+# to disk properly and that quite a bit of data is lost.
+#
+# In such a case, it is usually a better idea to delete
+# the whole volume and let the broken node rebuild from
+# other healthy cluster members, just to be sure.
+#
+# However, you can decide to ignore the lock file and start
+# anyway. But you must be 100% sure, that no orphaned
+# process is still running and accessing the WAL files!
+#
+# default: false
+#HQL_IGNORE_WAL_LOCK=false
+```
+
+And if all of this was not enough yet, I was able to improve the overall throughput of `hiqlite` by ~30%. For more
+information, take at the [Hiqlite Repo](https://github.com/sebadob/hiqlite) directly.
+
+> If you are currently running a HA Cluster with Hiqlite as your database, you should make sure you have a backup before
+> starting this version, just in case, because of the Log Store Migration. It would be even more safe if you can afford
+> to shut down the whole cluster cleanly first and then restart from scratch.
+
+#### Early `panic` in case of misconfiguration
+
+Most lazy static config variables are now being triggered at the very start of the application. This brings two
+benefits:
+
+1. If you have any issues in your config, it will panic and error early, instead of "some time later" when this value
+   is used for the first time.
+2. It will make the start of the Heap way more compact, because all values will align perfectly, and therefore reduce
+   memory fragmentation a little bit.
+
+[#969](https://github.com/sebadob/rauthy/pull/969)
+
 #### Restrict client login by group prefix
 
 In addition to the already existing "Force MFA" switch for each client, which will fore users to have MFA enabled, you
@@ -15,8 +102,8 @@ which will only allow users assigned to one of these groups to do the login.
 
 Usually, such decisions are done on the client side, depending on the claims in the tokens, because it's a lot more
 powerful and roles can be assigned properly, and so on. However, not all client apps support claim restrictions. In
-these cases, you can now do it on Rauthy's side, or maybe just in addition to provide a better UX, because the user will
-get the error message during Rauthy's login already and not after the token was exchanged with the client.
+these cases, you can now do it on Rauthys side, or maybe just in addition to provide a better UX, because the user will
+get the error message during Rauthys login already and not after the token was exchanged with the client.
 
 [#952](https://github.com/sebadob/rauthy/pull/952)
 
@@ -89,11 +176,10 @@ that have been modified by the user via the account dashboard in the exact same 
 #### `jemalloc` feature flag
 
 Rauthy can optionally be compiled with the `jemalloc` feature flag, which will exchange the glibc `malloc` for
-`jemalloc`. This will most probably become the default allocator for Rauthy after some tuning. It avoids memory
-fragmentation over time and is a lot more performant. You can also adjust it to match your workloads and the default
-tuning will probably be aimed at being efficient. However, if you run a Rauthy instance with thousands or even millions
-of users, you can custom-compile a version with optimized tuning, which will use more memory, but handle this many
-concurrent allocations better. Documentation about it will follow.
+`jemalloc`. It avoids memory fragmentation over time and is a lot more performant. You can also adjust it to match your
+workloads and the default tuning will probably be aimed at being efficient. However, if you run a Rauthy instance with
+thousands or even millions of users, you can custom-compile a version with optimized tuning, which will use more memory,
+but handle this many concurrent allocations better. Documentation about it will follow.
 
 [#949](https://github.com/sebadob/rauthy/pull/949)
 
@@ -101,9 +187,11 @@ concurrent allocations better. Documentation about it will follow.
 
 All `derive` impl's on all API types have been checked and quite a lot of unnecessary `derive`s have been removed (were
 e.g. only necessary during development / testing). This is a small optimization regarding release compile-time and
-binary size.
+binary size. Additionally, lots of other small improvements have been made all over the code to reduce the number of
+overall memory allocations in general.
 
 [#956](https://github.com/sebadob/rauthy/pull/956)
+[#968](https://github.com/sebadob/rauthy/pull/968)
 
 ### Bugfix
 

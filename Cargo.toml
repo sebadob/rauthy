@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.30.0-20250528"
+version = "0.30.0-20250531"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -27,8 +27,8 @@ strip = false
 
 [patch.crates-io]
 #hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
-#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
-#hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
+hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
 
 [workspace.dependencies]
 accept-language = "3"
@@ -37,10 +37,9 @@ actix-multipart = "0.7.2"
 actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-lab = "0.24"
 actix-web-prom = "0.10"
-anyhow = "1"
 askama = "0.14"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
-async-trait = "0.1.74"
+async-trait = "0.1.74" # TODO delete ?
 base64 = "0.22.0"
 bincode = { version = "2", features = ["serde"] }
 brotli = "8"
@@ -59,8 +58,10 @@ futures = "0.3"
 futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
-hiqlite = { version = "0.6.0", features = ["cache", "dashboard", "listen_notify_local"] }
-hiqlite-macros = { version = "0.6.0" }
+hiqlite = { version = "0.7.0-20250529", features = [
+    "cache", "dashboard", "listen_notify_local", "migrate-rocksdb"
+] }
+hiqlite-macros = { version = "0.7.0-20250529" }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
@@ -92,7 +93,7 @@ rsa = { version = "0.9.3", features = ["serde", "sha2"] }
 ruma = { version = "0.12.0", features = [
     "client-api-c", "client-ext-client-api", "client-reqwest", "markdown", "rand"
 ] }
-rusqlite = "0.34"
+rusqlite = "0.36"
 rust-embed = "8.5.0"
 rustls = { version = "0.23", default-features = false, features = ["logging", "std", "tls12", "ring"] }
 rustls-pki-types = "1.4.1"
@@ -102,7 +103,7 @@ semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_json_path = "0.7.1"
-serde_rusqlite = "0.38"
+serde_rusqlite = "0.39"
 serde_urlencoded = "0.7.1"
 spow = { version = "0.6", features = ["server"] }
 strum = { version = "0.27", features = ["derive"] }

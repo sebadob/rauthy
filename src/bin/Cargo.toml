@@ -24,7 +24,6 @@ chrono = { workspace = true }
 cryptr = { workspace = true }
 dotenvy = { workspace = true }
 flume = { workspace = true }
-hiqlite-macros = { workspace = true }
 num_cpus = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
@@ -50,5 +49,4 @@ josekit = "0.8"
 pretty_assertions = "1"
 reqwest = { workspace = true, features = ["multipart"] }
 ring = { workspace = true }
-serde = "1"
 tokio-test = "*"

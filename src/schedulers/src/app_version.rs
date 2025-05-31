@@ -24,7 +24,6 @@ pub async fn app_version_check(data: web::Data<AppState>) {
     let mut last_version_notification = None;
 
     // do a first check shortly after startup to not wait hours on a fresh install
-    // tokio::time::sleep(Duration::from_secs(3)).await;
     tokio::time::sleep(Duration::from_secs(120)).await;
     check_app_version(&data, &mut last_version_notification).await;
 
