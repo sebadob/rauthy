@@ -14,6 +14,10 @@ reference config below.
 - `HQL_NODE_ID_FROM` or `HQL_NODE_ID` + `HQL_NODES` - HA only
 - !!! `HQL_SECRET_RAFT` + `HQL_SECRET_API` - set even when not using HA
 - `DATABASE_URL` + `HIQLITE` - if you want to use Postgres
+- if you use `HIQLITE`:
+    - `HQL_CACHE_STORAGE_DISK`
+    - `HQL_IGNORE_WAL_LOCK`
+    - `HQL_SECRET_RAFT` + `HQL_SECRET_API`
 - `RAUTHY_ADMIN_EMAIL`
 - `EMAIL_SUB_PREFIX`, `SMTP_URL`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`
 - !!! `ENC_KEY_ACTIVE` + `ENC_KEYS`
@@ -438,6 +442,39 @@ HQL_SECRET_API=SuperSecureSecret1337
 # a file on disk with `file:path/to/enc/keys/file`
 # default: env
 #HQL_ENC_KEYS_FROM=env
+
+# Set to `false` to store Cache WAL files + Snapshots in-memory only.
+# Depending on your environment and setup, this can lead to cluster
+# issues if a node crashes and cannot do a graceful shutdown. It is not
+# recommended to keep the Raft state in-memory only, apart from for
+# testing and in special cases.
+# default: true
+#HQL_CACHE_STORAGE_DISK=true
+
+# Can be set to true to start the WAL handler even if the
+# `lock.hql` file exists. This may be necessary after a
+# crash, when the lock file could not be removed during a
+# graceful shutdown.
+#
+# IMPORTANT: Even though the Database can "heal" itself by
+# simply rebuilding from the existing Raft log files without
+# even needing to think about it, you may want to only
+# set `HQL_IGNORE_WAL_LOCK` when necessary to have more
+# control. Depending on the type of crash (whole OS, maybe
+# immediate power loss, force killed, ...), it may be the
+# case that the WAL files + metadata could not be synced
+# to disk properly and that quite a bit of data is lost.
+#
+# In such a case, it is usually a better idea to delete
+# the whole volume and let the broken node rebuild from
+# other healthy cluster members, just to be sure.
+#
+# However, you can decide to ignore the lock file and start
+# anyway. But you must be 100% sure, that no orphaned
+# process is still running and accessing the WAL files!
+#
+# default: false
+#HQL_IGNORE_WAL_LOCK=false
 
 #####################################
 ############ DATABASE ###############

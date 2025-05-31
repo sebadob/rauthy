@@ -19,7 +19,6 @@ accept-language = { workspace = true }
 actix-multipart = { workspace = true }
 actix-web = { workspace = true }
 actix-web-lab = { workspace = true }
-anyhow = { workspace = true }
 argon2 = { workspace = true }
 askama = { workspace = true }
 async-trait = { workspace = true }
