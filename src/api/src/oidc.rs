@@ -325,7 +325,7 @@ pub async fn post_authorize_handle(
     {
         Ok(auth_step) => map_auth_step(auth_step, &req).await,
         Err(err) => {
-            debug!("{:?}", err);
+            debug!("POST /authorize Error: {:?}", err);
             // We always must return the exact same error type, no matter what the actual error is,
             // to prevent information enumeration. The only exception is when the user needs to add
             // a passkey to the account while having given the correct credentials. In that case,

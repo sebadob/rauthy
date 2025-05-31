@@ -132,7 +132,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         password: Some(PASSWORD.to_string()),
         pow: get_solved_pow().await,
         client_id: "rauthy".to_string(),
-        redirect_uri: redirect_uri.to_owned(),
+        redirect_uri: redirect_uri.to_string(),
         scopes: None,
         state: None,
         nonce: Some("MySuperNonce".to_string()),
@@ -153,7 +153,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let req_token = TokenRequest {
         grant_type: "authorization_code".to_string(),
         code: Some(code),
-        redirect_uri: Some(redirect_uri.to_owned()),
+        redirect_uri: Some(redirect_uri.to_string()),
         client_id: Some("rauthy".to_string()),
         client_secret: None,
         code_verifier: Some(challenge_plain.to_string()),

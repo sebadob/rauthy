@@ -17,7 +17,10 @@ container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
-jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:4,tcache_max:8192,dirty_decay_ms:5000,muzzy_decay_ms:5000"
+jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,dirty_decay_ms:5000,muzzy_decay_ms:5000"
+
+#jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:4,tcache_max:8192,dirty_decay_ms:5000,muzzy_decay_ms:5000"
+
 postgres := "HIQLITE=false"
 
 [private]
@@ -172,7 +175,9 @@ delete-hiqlite:
 
     mkdir -p data/
     rm -rf data/logs
+    rm -rf data/logs_cache
     rm -rf data/state_machine
+    rm -rf data/state_machine_cache
 
 # runs any of: none (hiqlite), postgres, ui
 run ty="hiqlite":
@@ -274,7 +279,7 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
     fi
 
 # runs the full set of tests with postgres
-test-postgres test="": test-backend-stop postgres-stop postgres-rm postgres-start
+test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlite postgres-start
     #!/usr/bin/env bash
     clear
 
@@ -372,9 +377,10 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-ui
         -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
         -v {{ invocation_directory() }}/:/work/ \
         -w /work \
+        -e {{ jemalloc_conf }} \
         {{ map_docker_user }} \
         {{ builder_image }}:{{ builder_tag_date }} \
-        cargo build --release --target x86_64-unknown-linux-gnu
+        cargo build --release --features jemalloc --target x86_64-unknown-linux-gnu
     cp target/x86_64-unknown-linux-gnu/release/rauthy out/rauthy_amd64
 
     # TODO here is potential to unify both images into a `dockerx` build which could
@@ -385,9 +391,10 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-ui
         -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
         -v {{ invocation_directory() }}/:/work/ \
         -w /work \
+        -e {{ jemalloc_conf }} \
         {{ map_docker_user }} \
         {{ builder_image }}:{{ builder_tag_date }} \
-        cargo build --release --target aarch64-unknown-linux-gnu
+        cargo build --release --features jemalloc --target aarch64-unknown-linux-gnu
     cp target/aarch64-unknown-linux-gnu/release/rauthy out/rauthy_arm64
 
     if [[ {{ push }} == "push" ]]; then
