@@ -19,6 +19,7 @@ use crate::language::Language;
 use actix_web::{HttpRequest, web};
 use argon2::PasswordHash;
 use chrono::Utc;
+use core::str::Split;
 use hiqlite::Params;
 use hiqlite_macros::params;
 use rauthy_api_types::PatchOp;
@@ -1633,6 +1634,7 @@ impl User {
         Ok(user)
     }
 
+    #[inline]
     pub fn get_groups(&self) -> Vec<String> {
         let mut res = Vec::new();
         if self.groups.is_some() {
@@ -1645,6 +1647,12 @@ impl User {
         res
     }
 
+    #[inline]
+    pub fn groups_iter(&self) -> Split<char> {
+        self.groups.as_deref().unwrap_or_default().split(',')
+    }
+
+    #[inline]
     pub fn get_roles(&self) -> Vec<String> {
         let mut res = Vec::new();
         if !self.roles.is_empty() {
@@ -1653,6 +1661,11 @@ impl User {
                 .for_each(|r| res.push(r.trim().to_owned()));
         }
         res
+    }
+
+    #[inline]
+    pub fn roles_iter(&self) -> Split<char> {
+        self.roles.as_str().split(',')
     }
 
     #[inline(always)]
@@ -1721,10 +1734,9 @@ impl User {
         Ok(false)
     }
 
+    #[inline]
     pub fn is_admin(&self) -> bool {
-        self.get_roles()
-            .iter()
-            .any(|r| r.as_str() == RAUTHY_ADMIN_ROLE)
+        self.roles_iter().any(|r| r == RAUTHY_ADMIN_ROLE)
     }
 
     async fn is_email_free(email: String) -> Result<(), ErrorResponse> {

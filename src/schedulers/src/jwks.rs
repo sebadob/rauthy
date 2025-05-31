@@ -8,6 +8,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::jwk::{JWKS, Jwk};
 use std::collections::HashSet;
+use std::env;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::time::Duration;
@@ -16,7 +17,14 @@ use tracing::{debug, error, info};
 /// Auto-Rotates JWKS
 pub async fn jwks_auto_rotate(data: web::Data<AppState>) {
     // sec min hour day_of_month month day_of_week year
-    let schedule = cron::Schedule::from_str("0 30 3 1 * * *").unwrap();
+    let schedule = {
+        cron::Schedule::from_str(
+            env::var("JWK_AUTOROTATE_CRON")
+                .as_deref()
+                .unwrap_or("0 30 3 1 * * *"),
+        )
+        .unwrap()
+    };
 
     loop {
         sleep_schedule_next(&schedule).await;

@@ -32,7 +32,6 @@ pub async fn handle_get_pwd_reset<'a>(
     ml.validate(&user_id, &req, false)?;
 
     let user = User::find(ml.user_id.clone()).await?;
-
     let lang = Language::try_from(&req).unwrap_or_default();
 
     let content = if no_html {
@@ -83,7 +82,7 @@ pub async fn handle_put_user_passkey_start<'a>(
         _ => {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "You cannot register a new passkey here for an existing user".to_string(),
+                "You cannot register a new passkey here for an existing user",
             ));
         }
     }
@@ -114,14 +113,14 @@ pub async fn handle_put_user_passkey_finish<'a>(
         None => {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                String::from("CSRF Token is missing"),
+                "CSRF Token is missing",
             ));
         }
         Some(token) => {
             if ml.csrf_token != token.to_str().unwrap_or("") {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
-                    String::from("Invalid CSRF Token"),
+                    "Invalid CSRF Token",
                 ));
             }
         }
@@ -155,7 +154,7 @@ pub async fn handle_put_user_password_reset<'a>(
                 // TODO delete the whole ML too?
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "MFA code is missing".to_string(),
+                    "MFA code is missing",
                 ));
             }
             Some(code) => {
@@ -164,7 +163,7 @@ pub async fn handle_put_user_password_reset<'a>(
                     // TODO delete the whole ML too?
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Forbidden,
-                        "User ID does not match".to_string(),
+                        "User ID does not match",
                     ));
                 }
 
@@ -176,7 +175,6 @@ pub async fn handle_put_user_password_reset<'a>(
     let mut ml = MagicLink::find(&req_data.magic_link_id).await?;
     ml.validate(&user.id, &req, true)?;
 
-    // validate password
     user.apply_password_rules(&req_data.password).await?;
 
     // all good

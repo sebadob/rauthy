@@ -39,7 +39,8 @@ use validator::Validate;
 
 pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
     let common = env::var("FILTER_LANG_COMMON")
-        .unwrap_or_else(|_| "en de zhhans ko".to_string())
+        .as_deref()
+        .unwrap_or("en de zhhans ko")
         .trim()
         .split(" ")
         .filter_map(|v| {
@@ -55,7 +56,8 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
         })
         .collect::<Vec<_>>();
     let admin = env::var("FILTER_LANG_ADMIN")
-        .unwrap_or_else(|_| "en de ko".to_string())
+        .as_deref()
+        .unwrap_or("en de ko")
         .trim()
         .split(" ")
         .filter_map(|v| {

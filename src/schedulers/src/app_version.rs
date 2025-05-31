@@ -12,7 +12,8 @@ use tracing::{debug, error, info, warn};
 /// Checks for newly available Rauthy app versions
 pub async fn app_version_check(data: web::Data<AppState>) {
     let disable = env::var("DISABLE_APP_VERSION_CHECK")
-        .unwrap_or_else(|_| "false".to_string())
+        .as_deref()
+        .unwrap_or("false")
         .parse::<bool>()
         .expect("Cannot parse DISABLE_APP_VERSION_CHECK to bool");
     if disable {

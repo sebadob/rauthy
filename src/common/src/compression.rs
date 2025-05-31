@@ -11,7 +11,6 @@ static BROTLI_PARAMS_9: LazyLock<BrotliEncoderParams> = LazyLock::new(|| BrotliE
 });
 // Params for dynamic compression which happens often like with every new request.
 // We don't want to compress too high in that case because of diminishing returns.
-// TODO test compression times for dyn compression and find best compromise
 static BROTLI_PARAMS_DYN: LazyLock<BrotliEncoderParams> = LazyLock::new(|| BrotliEncoderParams {
     quality: 5,
     ..Default::default()

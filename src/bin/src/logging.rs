@@ -56,7 +56,8 @@ pub fn is_log_fmt_json() -> bool {
 
 fn read_level(env_var: &str) -> Level {
     match env::var(env_var)
-        .unwrap_or_else(|_| String::from("info"))
+        .as_deref()
+        .unwrap_or("info")
         .trim()
         .to_lowercase()
         .as_str()

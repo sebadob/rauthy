@@ -9,7 +9,8 @@ use tracing::{debug, error, warn};
 
 static ARGON2_PARAMS: Lazy<argon2::Params> = Lazy::new(|| {
     let mut argon2_m_cost = env::var("ARGON2_M_COST")
-        .unwrap_or_else(|_| String::from("32768"))
+        .as_deref()
+        .unwrap_or("32768")
         .parse::<u32>()
         .expect("Could not parse ARGON2_M_COST value");
     if argon2_m_cost < 32768 {
@@ -17,11 +18,13 @@ static ARGON2_PARAMS: Lazy<argon2::Params> = Lazy::new(|| {
         argon2_m_cost = 32768;
     }
     let argon2_t_cost = env::var("ARGON2_T_COST")
-        .unwrap_or_else(|_| String::from("3"))
+        .as_deref()
+        .unwrap_or("3")
         .parse::<u32>()
         .expect("Could not parse ARGON2_T_COST value");
     let argon2_p_cost = env::var("ARGON2_P_COST")
-        .unwrap_or_else(|_| String::from("1"))
+        .as_deref()
+        .unwrap_or("1")
         .parse::<u32>()
         .expect("Could not parse ARGON2_P_COST value");
 
@@ -36,13 +39,15 @@ static ARGON2_PARAMS: Lazy<argon2::Params> = Lazy::new(|| {
 
 static BUCKET_USE_PATH_STYLE: Lazy<usize> = Lazy::new(|| {
     env::var("MAX_HASH_THREADS")
-        .unwrap_or_else(|_| "2".to_string())
+        .as_deref()
+        .unwrap_or("2")
         .parse::<usize>()
         .expect("Cannot parse MAX_HASH_THREADS to usize")
 });
 static HASH_AWAIT_WARN_TIME: Lazy<u64> = Lazy::new(|| {
     env::var("HASH_AWAIT_WARN_TIME")
-        .unwrap_or_else(|_| "500".to_string())
+        .as_deref()
+        .unwrap_or("500")
         .parse::<u64>()
         .expect("Cannot parse HASH_AWAIT_WARN_TIME to u64")
 });

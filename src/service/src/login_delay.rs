@@ -38,13 +38,11 @@ pub async fn handle_login_delay(
 
     match res {
         Ok(resp) => {
-            // cleanup possibly blacklisted IP
             data.tx_ip_blacklist
                 .send_async(IpBlacklistReq::LoginFailedDelete(peer_ip.to_string()))
                 .await
                 .expect("ip blacklist recv not to be closed");
 
-            // only calculate the new median login time base on the full duration incl password hash
             if has_password_been_hashed {
                 let new_time = (success_time + delta.as_millis() as i64) / 2;
 
@@ -104,101 +102,26 @@ pub async fn handle_login_delay(
             let sleep_time = match failed_logins as u64 {
                 // n-th blacklist -> blocks for 24h with each invalid request
                 t if t >= 25 => {
-                    let not_before = Utc::now().add(chrono::Duration::seconds(86400));
-                    let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
-
-                    data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
-                        .await
-                        .unwrap();
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::TooManyRequests(ts),
-                        html,
-                    ));
+                    return build_send_event(data, &peer_ip, 86400).await;
                 }
-
                 t if t > 20 => sleep_time_median + t * 20_000,
-
-                // 4th blacklist
                 20 => {
-                    let not_before = Utc::now().add(chrono::Duration::seconds(3600));
-                    let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
-
-                    data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
-                        .await
-                        .unwrap();
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::TooManyRequests(ts),
-                        html,
-                    ));
+                    return build_send_event(data, &peer_ip, 3600).await;
                 }
-
                 t if t > 15 => sleep_time_median + t * 15_000,
-
-                // 3rd blacklist
                 15 => {
-                    let not_before = Utc::now().add(chrono::Duration::seconds(900));
-                    let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
-
-                    data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
-                        .await
-                        .unwrap();
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::TooManyRequests(ts),
-                        html,
-                    ));
+                    return build_send_event(data, &peer_ip, 900).await;
                 }
-
                 t if t > 10 => sleep_time_median + t * 10_000,
-
-                // 2nd blacklist
                 10 => {
-                    let not_before = Utc::now().add(chrono::Duration::seconds(600));
-                    let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
-
-                    data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
-                        .await
-                        .unwrap();
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::TooManyRequests(ts),
-                        html,
-                    ));
+                    return build_send_event(data, &peer_ip, 600).await;
                 }
-
                 t if t > 7 => sleep_time_median + t * 5_000,
-
-                // 1st blacklist
                 7 => {
-                    let not_before = Utc::now().add(chrono::Duration::seconds(60));
-                    let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
-
-                    data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
-                        .await
-                        .unwrap();
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::TooManyRequests(ts),
-                        html,
-                    ));
+                    return build_send_event(data, &peer_ip, 60).await;
                 }
-
                 t if t >= 5 => sleep_time_median + t * 3_000,
-
                 t if t >= 3 => sleep_time_median + t * 2_000,
-
                 _ => sleep_time_median,
             };
 
@@ -208,4 +131,25 @@ pub async fn handle_login_delay(
             Err(err)
         }
     }
+}
+
+#[inline]
+async fn build_send_event(
+    data: &web::Data<AppState>,
+    peer_ip: &IpAddr,
+    nbf_seconds: u32,
+) -> Result<HttpResponse, ErrorResponse> {
+    let not_before = Utc::now().add(chrono::Duration::seconds(nbf_seconds as i64));
+    let ts = not_before.timestamp();
+    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
+
+    data.tx_events
+        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
+        .await
+        .unwrap();
+
+    Err(ErrorResponse::new(
+        ErrorResponseType::TooManyRequests(ts),
+        html,
+    ))
 }

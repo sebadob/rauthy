@@ -12,7 +12,8 @@ pub async fn events_cleanup() {
     let mut interval = tokio::time::interval(Duration::from_secs(3600));
 
     let cleanup_days = env::var("EVENT_CLEANUP_DAYS")
-        .unwrap_or_else(|_| "31".to_string())
+        .as_deref()
+        .unwrap_or("31")
         .parse::<u32>()
         .expect("Cannot parse EVENT_CLEANUP_DAYS to u32") as i64;
 

@@ -39,10 +39,7 @@ impl AppState {
         tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
     ) -> anyhow::Result<Self> {
         let listen_addr = env::var("LISTEN_ADDRESS").unwrap_or_else(|_| String::from("0.0.0.0"));
-        let listen_scheme = match env::var("LISTEN_SCHEME")
-            .unwrap_or_else(|_| String::from("http_https"))
-            .as_str()
-        {
+        let listen_scheme = match env::var("LISTEN_SCHEME").as_deref().unwrap_or("http_https") {
             "http" => {
                 let port = env::var("LISTEN_PORT_HTTP").unwrap_or_else(|_| "8080".to_string());
                 info!("Listen URL: http://{}:{}", listen_addr, port);
@@ -80,15 +77,18 @@ impl AppState {
         info!("Public URL: {}", public_url);
 
         let argon2_m_cost = env::var("ARGON2_M_COST")
-            .unwrap_or_else(|_| String::from("131072"))
+            .as_deref()
+            .unwrap_or("131072")
             .parse::<u32>()
             .expect("Could not parse ARGON2_M_COST value");
         let argon2_t_cost = env::var("ARGON2_T_COST")
-            .unwrap_or_else(|_| String::from("4"))
+            .as_deref()
+            .unwrap_or("4")
             .parse::<u32>()
             .expect("Could not parse ARGON2_T_COST value");
         let argon2_p_cost = env::var("ARGON2_P_COST")
-            .unwrap_or_else(|_| String::from("8"))
+            .as_deref()
+            .unwrap_or("8")
             .parse::<u32>()
             .expect("Could not parse ARGON2_P_COST value");
         let argon2_params = argon2::Params::new(argon2_m_cost, argon2_t_cost, argon2_p_cost, None)
@@ -99,7 +99,8 @@ impl AppState {
         );
 
         let refresh_grace_time = env::var("REFRESH_TOKEN_GRACE_TIME")
-            .unwrap_or_else(|_| String::from('5'))
+            .as_deref()
+            .unwrap_or("5")
             .parse::<u32>()
             .expect("Could not parse REFRESH_TOKEN_GRACE_TIME");
 
@@ -117,12 +118,14 @@ impl AppState {
         debug!("Issuer: {}", issuer);
 
         let ml_lt_pwd_first = env::var("ML_LT_PWD_FIRST")
-            .unwrap_or_else(|_| String::from("4320"))
+            .as_deref()
+            .unwrap_or("4320")
             .trim()
             .parse::<u32>()
             .expect("ML_LT_PWD_FIRST cannot be parsed as u32");
         let ml_lt_pwd_reset = env::var("ML_LT_PWD_RESET")
-            .unwrap_or_else(|_| String::from("30"))
+            .as_deref()
+            .unwrap_or("30")
             .trim()
             .parse::<u32>()
             .expect("ML_LT_PWD_RESET cannot be parsed as u32");

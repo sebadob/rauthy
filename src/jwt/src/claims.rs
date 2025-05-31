@@ -126,9 +126,9 @@ pub struct JwtAccessClaims<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub roles: Option<Vec<String>>, // TODO probably change to borrowed once it works
+    pub roles: Option<Vec<&'a str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub groups: Option<Vec<String>>, // TODO probably change to borrowed once it works
+    pub groups: Option<Vec<&'a str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
 }
