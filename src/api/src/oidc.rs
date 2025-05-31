@@ -401,7 +401,6 @@ pub async fn get_callback_html(
     principal: ReqPrincipal,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // TODO can we even be more strict and request session auth here?
     principal.validate_session_auth_or_init()?;
 
     let lang = Language::try_from(&req).unwrap_or_default();

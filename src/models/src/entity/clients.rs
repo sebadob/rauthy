@@ -933,6 +933,7 @@ impl Client {
     }
 
     /// Decrypts the client secret (if it exists) and then returns it as clear text.
+    #[inline]
     pub fn get_secret_cleartext(&self) -> Result<Option<String>, ErrorResponse> {
         if let Some(secret) = self.secret.as_ref() {
             let bytes = EncValue::try_from(secret.clone())?.decrypt()?;
@@ -1076,6 +1077,19 @@ impl Client {
         }
 
         Ok(res)
+    }
+
+    /// Returns an error if the client is not enabled.
+    #[inline]
+    pub fn validate_enabled(&self) -> Result<(), ErrorResponse> {
+        if self.enabled {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "client is disabled",
+            ))
+        }
     }
 
     /// Validates the User's access to this client depending on the `force_mfa` setting.

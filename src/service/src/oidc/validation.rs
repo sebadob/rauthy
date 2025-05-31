@@ -34,6 +34,7 @@ pub async fn validate_auth_req_param(
 
     let header = client.get_validated_origin_header(req)?;
 
+    client.validate_enabled()?;
     client.validate_redirect_uri(redirect_uri)?;
 
     if client.challenge.is_some() {

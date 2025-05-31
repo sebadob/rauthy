@@ -25,6 +25,7 @@ pub async fn grant_type_refresh(
     }
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
     let client = Client::find_maybe_ephemeral(client_id).await?;
+    client.validate_enabled()?;
 
     let header_origin = client.get_validated_origin_header(&req)?;
 

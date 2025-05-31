@@ -58,6 +58,7 @@ pub async fn get_token_info(
 
     buf.clear();
     let client = check_client_auth(data, req, client_id, &mut buf).await?;
+    client.validate_enabled()?;
     let cors_header = client.get_validated_origin_header(req)?;
 
     Ok((info, cors_header))

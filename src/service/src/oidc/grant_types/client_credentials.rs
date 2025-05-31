@@ -25,16 +25,11 @@ pub async fn grant_type_credentials(
 
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
     let client = Client::find(client_id).await?;
+    client.validate_enabled()?;
     if !client.confidential {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "'client_credentials' flow is allowed for confidential clients only",
-        ));
-    }
-    if !client.enabled {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "client is disabled",
         ));
     }
     let secret = client_secret.ok_or_else(|| {
