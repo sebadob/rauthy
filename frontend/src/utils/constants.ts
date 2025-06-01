@@ -42,6 +42,11 @@ export const EVENT_TYPES = [
     'Test',
 ]
 
+export const ATTR_TYPES = [
+    '-',
+    'email',
+]
+
 // All TPL_* values match a possibly existing `<template>` id
 // -> src/models/src/html/templates.rs -> HtmlTemplate
 export const TPL_ATPROTO_ID = 'tpl_atproto_id';
