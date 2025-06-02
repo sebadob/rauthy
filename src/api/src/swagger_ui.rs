@@ -34,13 +34,12 @@ pub static SWAGGER_UI_PUBLIC: LazyLock<bool> = LazyLock::new(|| {
 #[get("/docs/openapi.json")]
 pub async fn get_openapi_doc(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     if !*SWAGGER_UI_ENABLE {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::NotFound,
-            "SWAGGER_UI_ENABLE is not set",
-        ));
+        return Ok(HttpResponse::NotFound().finish());
     }
     if !*SWAGGER_UI_PUBLIC {
-        principal.validate_session_auth()?;
+        if principal.validate_session_auth().is_err() {
+            return Ok(HttpResponse::Unauthorized().finish());
+        }
     }
 
     Ok(HttpResponse::Ok()
@@ -54,13 +53,12 @@ pub async fn get_swagger_ui(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !*SWAGGER_UI_ENABLE {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::NotFound,
-            "SWAGGER_UI_ENABLE is not set",
-        ));
+        return Ok(HttpResponse::NotFound().finish());
     }
     if !*SWAGGER_UI_PUBLIC {
-        principal.validate_session_auth()?;
+        if principal.validate_session_auth().is_err() {
+            return Ok(HttpResponse::Unauthorized().finish());
+        }
     }
 
     match utoipa_swagger_ui::serve(path.as_str(), OPENAPI_CONFIG.clone()) {
