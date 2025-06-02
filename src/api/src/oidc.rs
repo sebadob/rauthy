@@ -67,8 +67,8 @@ use validator::Validate;
     tag = "oidc",
     params(AuthRequest),
     responses(
-        (status = 200, description = "If the params match the allowed settings, returns the pre-rendered HTML",),
-        (status = 400, description = "If any params do not match the backend config", body = ErrorResponse),
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest on invalid params", body = ErrorResponse),
     ),
 )]
 #[get("/oidc/authorize")]
@@ -224,7 +224,6 @@ pub async fn get_authorize(
 
     let cookie = session.client_cookie();
     if let Some(o) = origin_header {
-        // TODO is 'Access-Control-Allow-Credentials: true' needed as well?
         return Ok(HttpResponse::Ok()
             .cookie(cookie)
             .insert_header(o)
