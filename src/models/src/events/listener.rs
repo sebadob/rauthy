@@ -138,7 +138,7 @@ impl EventListener {
                     debug!("received new event in EventListener::router: {:?}", event);
 
                     if event_ids.contains(&event.id) {
-                        warn!("Duplicate event ID in router: {}", event.id);
+                        debug!("Duplicate event ID in router: {}", event.id);
                         continue;
                     }
 

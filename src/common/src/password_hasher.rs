@@ -37,7 +37,7 @@ pub static ARGON2_PARAMS: Lazy<argon2::Params> = Lazy::new(|| {
     params
 });
 
-static MAS_HASH_THREADS: Lazy<usize> = Lazy::new(|| {
+pub static MAX_HASH_THREADS: Lazy<usize> = Lazy::new(|| {
     env::var("MAX_HASH_THREADS")
         .as_deref()
         .unwrap_or("2")
@@ -54,7 +54,7 @@ pub static HASH_AWAIT_WARN_TIME: Lazy<u64> = Lazy::new(|| {
 pub static HASH_CHANNELS: Lazy<(
     flume::Sender<PasswordHashMessage>,
     flume::Receiver<PasswordHashMessage>,
-)> = Lazy::new(|| flume::bounded(*MAS_HASH_THREADS));
+)> = Lazy::new(|| flume::bounded(*MAX_HASH_THREADS));
 
 pub struct HashPassword {
     plain_text: String,
