@@ -2,6 +2,14 @@
 
 ## CURRENT WORK
 
+TODO before v0.30:
+
+- add just recipe that archives a pre-built static HTML folder for FreeBSD like systems
+- test rocksdb migration inside hiqlite once again and make sure the `id_from` issue
+  does not happen again
+- update book with the "new" K8s sts setup to show how to do an HA deployment
+- lower the default heartbeat interval for hiqlite and increase timeouts between conn attempts
+
 ## Stage 1 - essentials
 
 [x] finished
