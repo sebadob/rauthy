@@ -3,6 +3,8 @@ use actix_web::rt::System;
 use actix_web::{App, HttpServer, middleware, web};
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
+use rauthy_common::is_hiqlite;
+use rauthy_common::password_hasher::MAX_HASH_THREADS;
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
@@ -15,12 +17,12 @@ use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::ListenScheme;
 use rauthy_models::app_state::AppState;
+use std::cmp::max;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::{env, thread};
 use tracing::{error, info};
 use utoipa_swagger_ui::SwaggerUi;
-
 // TODO Currently, we have some duplicated code in here for building the HttpServer.
 // This is due to the strict typing from actix_web. We want to be able to conditionally `.wrap`
 // the server with an optional prometheus metrics collector.
@@ -43,12 +45,7 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
         .build()
         .unwrap();
 
-    let swagger_ui_internal = env::var("SWAGGER_UI_INTERNAL")
-        .as_deref()
-        .unwrap_or("true")
-        .parse::<bool>()
-        .expect("SWAGGER_UI_INTERNAL cannot be parsed as bool");
-    let swagger_internal = if swagger_ui_internal {
+    let swagger_internal = if swagger_ui_internal() {
         Some(swagger_ui(&app_state))
     } else {
         None
@@ -460,9 +457,17 @@ fn swagger_ui(app_state: &web::Data<AppState>) -> SwaggerUi {
 fn swagger_ui_external() -> bool {
     env::var("SWAGGER_UI_EXTERNAL")
         .as_deref()
-        .unwrap_or("true")
+        .unwrap_or("false")
         .parse::<bool>()
         .expect("SWAGGER_UI_EXTERNAL cannot be parsed as bool")
+}
+
+fn swagger_ui_internal() -> bool {
+    env::var("SWAGGER_UI_INTERNAL")
+        .as_deref()
+        .unwrap_or("true")
+        .parse::<bool>()
+        .expect("SWAGGER_UI_INTERNAL cannot be parsed as bool")
 }
 
 fn workers() -> usize {
@@ -472,7 +477,13 @@ fn workers() -> usize {
         .parse::<usize>()
         .expect("Unable to parse HTTP_WORKERS");
     if workers == 0 {
-        workers = num_cpus::get();
+        let cores = num_cpus::get();
+        if cores < 4 {
+            workers = 1;
+        } else {
+            let reserve = if is_hiqlite() { 2 } else { 1 };
+            workers = max(2, cores as i64 - *MAX_HASH_THREADS as i64 - reserve) as usize;
+        }
     }
     workers
 }
