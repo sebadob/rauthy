@@ -16,7 +16,10 @@ panic = "abort"
 codegen-units = 1
 lto = true
 strip = true
-panic = "abort"
+# We do not want to abort in production, even though it would produce smaller binaries.
+# We want to let Rust handle the unwinding and therefore give Hiqlite a chance to at least
+# try to flush possibly open file buffers to disk.
+#panic = "abort"
 
 [profile.profiling]
 inherits = "release"
@@ -108,7 +111,7 @@ serde_urlencoded = "0.7.1"
 spow = { version = "0.6", features = ["server"] }
 strum = { version = "0.27", features = ["derive"] }
 svg-hush = "0.9.4"
-tikv-jemallocator = "0.6"
+tikv-jemallocator = { version = "0.6", features = ["unprefixed_malloc_on_supported_platforms"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "tracing"] }

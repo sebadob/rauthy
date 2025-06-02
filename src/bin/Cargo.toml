@@ -38,6 +38,7 @@ tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 
+# jemalloc does not work properly on msvc targets
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator = { workspace = true, optional = true }
 

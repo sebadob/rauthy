@@ -21,7 +21,7 @@ reference config below.
 - `RAUTHY_ADMIN_EMAIL`
 - `EMAIL_SUB_PREFIX`, `SMTP_URL`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`
 - !!! `ENC_KEY_ACTIVE` + `ENC_KEYS`
-- `MAX_HASH_THREADS`
+- `MAX_HASH_THREADS` in combination with `HTTP_WORKERS`
 - any target in the `EVENTS / AUDIT` section
 - !!! `PUB_URL`
 - `PROXY_MODE` + `TRUSTED_PROXIES`
@@ -1312,7 +1312,19 @@ LISTEN_SCHEME=http
 # port (80/443), you need to add the port to the PUB_URL
 PUB_URL=localhost:8080
 
-# default value: number of available physical cores
+# Limits the amount of HTTP worker threads. This value
+# heavily impacts memory usage, even in idle. The default
+# values are:
+# - less than 4 CPU cores -> 1
+# - 4+ cores -> max(2, cores - MAX_HASH_THREADS - reserve)
+#   where `reserve` is 2 if `HIQLITE=true` and 1 otherwise.
+#
+# CAUTION: If you run your instance on a big underlying host,
+# you almost always want to manually set an appropriate
+# value. Rauthy can only see all available cores and not any
+# possibly set container limits. This means if it runs inside
+# a container on something like a a 96 core host, Rauthy will 
+# by default spawn very many threads.
 #HTTP_WORKERS=1
 
 # When rauthy is running behind a reverse proxy, set to true

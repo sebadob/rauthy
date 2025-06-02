@@ -96,7 +96,6 @@ pub async fn grant_type_password(
             if !hash_uptodate {
                 info!("Updating Argon2ID params for user '{}'", &user.email);
                 let new_hash = HashPassword::hash_password(password).await?;
-                // let new_hash = User::new_password_hash(&password, params).await?;
                 user.password = Some(new_hash);
             }
 
