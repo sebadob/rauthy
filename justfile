@@ -17,11 +17,10 @@ container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
-jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,dirty_decay_ms:5000,muzzy_decay_ms:5000"
-
-#jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:4,tcache_max:8192,dirty_decay_ms:5000,muzzy_decay_ms:5000"
-
+jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:1,tcache_max:2048,dirty_decay_ms:3000,muzzy_decay_ms:3000"
 postgres := "HIQLITE=false"
+
+#jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:1,tcache_max:1024,dirty_decay_ms:1000,muzzy_decay_ms:1000"
 
 [private]
 default:
@@ -266,7 +265,7 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
     ./target/debug/rauthy test &
     echo $! > {{ file_test_pid }}
 
-    # a fresh Hiqlite instance needs ~1 - 1.5 seconds for the raft initialization
+    # Wait for the fresh Raft
     sleep 3
 
     if cargo test {{ test }}; then
@@ -286,10 +285,12 @@ test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlit
     sleep 2
 
     cargo build
-    {{ postgres }} ./target/debug/rauthy test &
+    # the Hiqlite tests are disk-backed, lets check postgres in-memory to cover this as well
+    {{ postgres }} HQL_CACHE_STORAGE_DISK=false ./target/debug/rauthy test &
     echo $! > {{ file_test_pid }}
 
-    sleep 1
+    # Wait for the fresh Raft
+    sleep 3
 
     if {{ postgres }} cargo test {{ test }}; then
       echo "All Postgres tests successful"
