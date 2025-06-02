@@ -5,6 +5,10 @@ use actix_web::web;
 use cryptr::EncKeys;
 use rauthy_common::constants::{BUILD_TIME, RAUTHY_VERSION};
 use rauthy_common::password_hasher;
+use rauthy_handlers::openapi::ApiDoc;
+use rauthy_handlers::swagger_ui::{
+    OPENAPI_CONFIG, OPENAPI_JSON, SWAGGER_UI_ENABLE, SWAGGER_UI_PUBLIC,
+};
 use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::email;
@@ -180,14 +184,11 @@ https://sebadob.github.io/rauthy/config/encryption.html"#
     // assets are referenced after an app upgrade with a newly built UI.
     DB::hql().clear_cache(Cache::Html).await.unwrap();
 
-    // if args.len() > 1 && args[1] == "dummy-data" {
-    //     let amount = if args.len() > 2 {
-    //         args[2].parse::<u32>().unwrap_or(100_000)
-    //     } else {
-    //         100_000
-    //     };
-    //     tokio::spawn(dummy_data::insert_dummy_data(amount));
-    // }
+    if *SWAGGER_UI_ENABLE {
+        OPENAPI_JSON.set(ApiDoc::build(&app_state).to_json()?)?;
+        let _ = *OPENAPI_CONFIG;
+        let _ = *SWAGGER_UI_PUBLIC;
+    }
 
     let metrics_enable = env::var("METRICS_ENABLE")
         .as_deref()

@@ -4111,6 +4111,7 @@ dependencies = [
  "tokio",
  "tracing",
  "utoipa",
+ "utoipa-swagger-ui",
  "validator",
 ]
 

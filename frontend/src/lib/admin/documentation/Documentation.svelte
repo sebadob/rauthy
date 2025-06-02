@@ -16,7 +16,7 @@
 
     <p>
         {ta.docs.openapi}
-        <A href="/docs/v1/swagger-ui/" target="_blank">Swagger UI</A>
+        <A href="/auth/v1/docs/" target="_blank">Swagger UI</A>
         <br>
         <b>{ta.common.note}:</b>
         {ta.docs.openapiNote}

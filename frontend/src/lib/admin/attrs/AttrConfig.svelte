@@ -23,7 +23,7 @@
 
     const width = "20rem";
 
-    let refSubmit: undefined | HTMLButtonElement;
+    let refSubmit: undefined | HTMLButtonElement = $state();
 
     let t = useI18n();
     let ta = useI18nAdmin();
