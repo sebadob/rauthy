@@ -400,6 +400,7 @@ impl From<serde_json::Error> for ErrorResponse {
         )
     }
 }
+
 impl From<reqwest::header::ToStrError> for ErrorResponse {
     fn from(value: reqwest::header::ToStrError) -> Self {
         debug!("reqwest::header::ToStrError: {:?}", value);

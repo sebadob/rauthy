@@ -133,8 +133,6 @@ pub async fn post_authorize(
         write!(loc, "&state={}", state)?;
     };
 
-    // TODO double check that we do not have any problems with the direct webauthn login here
-    // TODO should we allow to skip this step if set so in the config?
     // check if we need to validate the 2nd factor
     if user.has_webauthn_enabled() {
         session.set_mfa(true).await?;
