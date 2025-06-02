@@ -17,10 +17,8 @@ container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
-jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:1,tcache_max:2048,dirty_decay_ms:3000,muzzy_decay_ms:3000"
+jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:8,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000"
 postgres := "HIQLITE=false"
-
-#jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:1,tcache_max:1024,dirty_decay_ms:1000,muzzy_decay_ms:1000"
 
 [private]
 default:
