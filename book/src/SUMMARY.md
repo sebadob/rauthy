@@ -21,6 +21,7 @@
     - [Bootstrapping](config/bootstrap.md)
     - [Database Migrations](config/db_migration.md)
     - [UNIX Domain Sockets](config/unix_socket.md)
+    - [Tuning](config/tuning.md)
 
 - [Authentication Providers](auth_providers/index.md)
     - [Github](./auth_providers/github.md)

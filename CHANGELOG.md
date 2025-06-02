@@ -79,6 +79,31 @@ information, take at the [Hiqlite Repo](https://github.com/sebadob/hiqlite) dire
 > starting this version, just in case, because of the Log Store Migration. It would be even more safe if you can afford
 > to shut down the whole cluster cleanly first and then restart from scratch.
 
+#### Default for `HTTP_WORKERS` changed
+
+The default value for `HTTP_WORKERS` has been changed. Even though you probably almost always want to set this value
+manually in production, especially when running your instance on a huge underlying host, the default has been tuned to
+fit smaller hosts a bit better. Here is the new description in the config:
+
+```
+# Limits the amount of HTTP worker threads. This value
+# heavily impacts memory usage, even in idle. The default
+# values are:
+# - less than 4 CPU cores -> 1
+# - 4+ cores -> max(2, cores - MAX_HASH_THREADS - reserve)
+#   where `reserve` is 2 when `HIQLITE=true` and 1 otherwise.
+#
+# CAUTION: If you run your instance on a big underlying host,
+# you almost always want to manually set an appropriate
+# value. Rauthy can only see all available cores and not any
+# possibly set container limits. This means if it runs inside
+# a container on something like a a 96 core host, Rauthy will 
+# by default spawn very many threads.
+#HTTP_WORKERS=1
+```
+
+[#975](https://github.com/sebadob/rauthy/pull/975)
+
 #### Early `panic` in case of misconfiguration
 
 Most lazy static config variables are now being triggered at the very start of the application. This brings two
@@ -179,7 +204,9 @@ Rauthy can optionally be compiled with the `jemalloc` feature flag, which will e
 `jemalloc`. It avoids memory fragmentation over time and is a lot more performant. You can also adjust it to match your
 workloads and the default tuning will probably be aimed at being efficient. However, if you run a Rauthy instance with
 thousands or even millions of users, you can custom-compile a version with optimized tuning, which will use more memory,
-but handle this many concurrent allocations better. Documentation about it will follow.
+but handle this many concurrent allocations better. Take a look at the book for tuning advise.
+
+The `jemalloc` feature flag will be enabled by default from this version on.
 
 [#949](https://github.com/sebadob/rauthy/pull/949)
 
@@ -205,6 +232,8 @@ overall memory allocations in general.
   [#962](https://github.com/sebadob/rauthy/pull/962)
 - The default value for the `SMTP_FROM` was changed from `rauthy@localhost.de` to just `rauthy@localhost`.
   [#963](https://github.com/sebadob/rauthy/pull/963)
+- The default value for `SWAGGER_UI_EXTERNAL` was `true` since the last server init rework with `v0.29` when it should
+  have been `false`
 
 ## v0.29.4
 
