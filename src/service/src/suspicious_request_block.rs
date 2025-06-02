@@ -1,11 +1,14 @@
-const START_WITH_TARGETS: [&str; 7] = [
-    "wp-admin",
-    "docker-compose",
-    "etc/",
-    ".aws",
+const START_WITH_TARGETS: [&str; 10] = [
+    "../",
+    ".aws/",
     ".env",
+    ".git/",
     ".kube/",
     ".ssh/",
+    "docker-compose",
+    "etc/",
+    "http",
+    "wp-",
 ];
 
 const ENDS_WITH_TARGETS: [&str; 8] = [
