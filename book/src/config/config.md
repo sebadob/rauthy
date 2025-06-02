@@ -1357,25 +1357,21 @@ PROXY_MODE=false
 # default: 0.0.0.0
 #METRICS_ADDR=0.0.0.0
 
-# The post to listen on for the /metrics endpoint.
+# The port to listen on for the /metrics endpoint.
 # You do not want to expose your metrics on a publicly reachable endpoint!
 # default: 9090
 #METRICS_PORT=9090
 
-# If the Swagger UI should be served together with the /metrics route on the internal
-# server. It it then reachable via:
-# http://METRICS_ADDR:METRICS_PORT/docs/v1/swagger-ui/
-# default: true
-#SWAGGER_UI_INTERNAL=true
-
-# If the Swagger UI should be served externally as well. This makes the link in the
-# Admin UI work.
-#
-# CAUTION: The Swagger UI is open and does not require any login to be seen!
-# Rauthy is open source, which means anyone could just download it and see on their
-# own, but it may be a security concern to just expose less information.
+# Can be set to `true` to enable the Swagger UI.
+# This will consume ~13mb of additional memory.
 # default: false
-#SWAGGER_UI_EXTERNAL=false
+SWAGGER_UI_ENABLE=true
+
+# Can be set to `true` to make the Swagger UI publicly 
+# available. By default, you can only access it with a 
+# valid `rauthy_admin` session.
+# default: false
+SWAGGER_UI_PUBLIC=false
 
 # The interval in seconds in which keep-alives should be sent to SSE clients.
 # Depending on your network setup, proxy timeouts, ...

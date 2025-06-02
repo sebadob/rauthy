@@ -34,6 +34,7 @@ pub mod openapi;
 pub mod roles;
 pub mod scopes;
 pub mod sessions;
+pub mod swagger_ui;
 pub mod themes;
 pub mod users;
 

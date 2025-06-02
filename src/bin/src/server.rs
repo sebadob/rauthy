@@ -6,10 +6,9 @@ use prometheus::Registry;
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::MAX_HASH_THREADS;
 use rauthy_common::utils::UseDummyAddress;
-use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, dev_only, events, fed_cm, generic, groups, html,
-    oidc, roles, scopes, sessions, themes, users,
+    oidc, roles, scopes, sessions, swagger_ui, themes, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -22,7 +21,6 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::{env, thread};
 use tracing::{error, info};
-use utoipa_swagger_ui::SwaggerUi;
 // TODO Currently, we have some duplicated code in here for building the HttpServer.
 // This is due to the strict typing from actix_web. We want to be able to conditionally `.wrap`
 // the server with an optional prometheus metrics collector.
@@ -45,12 +43,6 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
         .build()
         .unwrap();
 
-    let swagger_internal = if swagger_ui_internal() {
-        Some(swagger_ui(&app_state))
-    } else {
-        None
-    };
-
     thread::spawn(move || {
         let addr = env::var("METRICS_ADDR").unwrap_or_else(|_| "0.0.0.0".to_string());
         let port = env::var("METRICS_PORT").unwrap_or_else(|_| "9090".to_string());
@@ -62,24 +54,16 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
         let addr_full = format!("{}:{}", addr, port);
 
         info!("Metrics available on: http://{}/metrics", addr_full);
-        let srv = if let Some(swagger_ui) = swagger_internal {
-            info!(
-                "Serving Swagger UI internally on: http://{}/docs/v1/swagger-ui/",
-                addr_full
-            );
-            HttpServer::new(move || App::new().wrap(metrics.clone()).service(swagger_ui.clone()))
-                .workers(1)
-                .bind(addr_full)
-                .unwrap()
-                .run()
-        } else {
-            HttpServer::new(move || App::new().wrap(metrics.clone()))
-                .workers(1)
-                .bind(addr_full)
-                .unwrap()
-                .run()
-        };
-        System::new().block_on(srv).unwrap();
+        // TODO create single threaded runtime specifically -> probably use tokio
+        System::new()
+            .block_on(
+                HttpServer::new(move || App::new().wrap(metrics.clone()))
+                    .workers(1)
+                    .bind(addr_full)
+                    .unwrap()
+                    .run(),
+            )
+            .unwrap();
     });
 
     let metrics_collector = PrometheusMetricsBuilder::new("rauthy")
@@ -113,10 +97,6 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
             .wrap(RauthyIpBlacklistMiddleware)
             .service(api_services());
-
-        if swagger_ui_external() {
-            app = app.service(swagger_ui(&app_state));
-        }
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
@@ -186,10 +166,6 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
             .wrap(RauthyIpBlacklistMiddleware)
             .service(api_services());
-
-        if swagger_ui_external() {
-            app = app.service(swagger_ui(&app_state));
-        }
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
@@ -439,35 +415,10 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::get_health)
                 .service(generic::get_i18n_config)
                 .service(generic::get_ready)
+                .service(swagger_ui::get_openapi_doc)
+                .service(swagger_ui::get_swagger_ui)
                 .service(html::get_static_assets),
         )
-}
-
-fn swagger_ui(app_state: &web::Data<AppState>) -> SwaggerUi {
-    SwaggerUi::new("/docs/v1/swagger-ui/{_:.*}")
-        .url("/docs/v1/api-doc/openapi.json", ApiDoc::build(app_state))
-        .config(
-            utoipa_swagger_ui::Config::from("../api-doc/openapi.json")
-                .try_it_out_enabled(false)
-                .supported_submit_methods(["get"])
-                .filter(true),
-        )
-}
-
-fn swagger_ui_external() -> bool {
-    env::var("SWAGGER_UI_EXTERNAL")
-        .as_deref()
-        .unwrap_or("false")
-        .parse::<bool>()
-        .expect("SWAGGER_UI_EXTERNAL cannot be parsed as bool")
-}
-
-fn swagger_ui_internal() -> bool {
-    env::var("SWAGGER_UI_INTERNAL")
-        .as_deref()
-        .unwrap_or("true")
-        .parse::<bool>()
-        .expect("SWAGGER_UI_INTERNAL cannot be parsed as bool")
 }
 
 fn workers() -> usize {

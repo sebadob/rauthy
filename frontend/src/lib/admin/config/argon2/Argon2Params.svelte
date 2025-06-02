@@ -24,7 +24,7 @@
 </script>
 
 <h3>Argon2ID - Password Hashing</h3>
-<p>{ta.docs.hashing.pUtility}<p>
+<p>{ta.docs.hashing.pUtility}</p>
 <p>
     <b>{ta.docs.hashing.tune}</b><br>
     {ta.docs.hashing.pTune}

@@ -64,16 +64,16 @@ The default value is:
 You almost **always want to tune this** to your needs, it has a big impact on memory! The best idea is probably to use
 the same formula, but with respect to custom container limits, or whatever you would want Rauthy to use.
 
-### `METRICS_ENABLE` + `SWAGGER_UI_INTERNAL` + `SWAGGER_UI_EXTERNAL`
+### `METRICS_ENABLE`
 
-In newer versions, the `METRICS_ENABLE` is `false` by default and opt-in. You can enable prometheus metrics with it and
-also expose the `SWAGGER_UI_INTERNAL`. An independent HTTP server will be spawned and if both values are active, it will
-consume an additional ~18 - 20 MB of memory.
+In newer versions, the `METRICS_ENABLE` is `false` by default and opt-in. You can enable prometheus metrics with it. An
+independent HTTP server will be spawned, it will consume additional memory and CPU. Leave it to `false` if not needed.
 
-If you then also enable `SWAGGER_UI_EXTERNAL`, it will be another ~12.8MB for the main server **PER HTTP_WORKER**!
-Unfortunately, the Swagger UI cannot be boxed and made more efficient. The whole dataset is copied for each thread!
+### `SWAGGER_UI_ENABLE`
 
-So, if you don't need metrics and especially the Swagger UIs, keep them disabled.
+If enable `SWAGGER_UI_ENABLE` and set it to `true`, it will consume ~13 MB of additional memory. To reduce overall
+memory fragmentation further down the road, if enabled, it will be initialized at the very start of the application
+instead of being lazily initialized. If you don't need the API documentation, leave it to the default, which is `false`.
 
 ## Password Hashing
 
@@ -120,6 +120,7 @@ MALLOC_CONF=abort_conf:true,narenas:1,tcache_max:1024,dirty_decay_ms:1000,muzzy_
 **2. Lowest possible memory at all costs.**
 
 This will come with a **very big performance hit**! You should only use it, if you don't care about performance at all.
+Imho, the performance hit is not worth the small savings compared to the config above.
 
 ```
 MALLOC_CONF=abort_conf:true,narenas:1,tcache:false,dirty_decay_ms:0,muzzy_decay_ms:0
@@ -128,6 +129,11 @@ MALLOC_CONF=abort_conf:true,narenas:1,tcache:false,dirty_decay_ms:0,muzzy_decay_
 ### Medium Instance
 
 If you run a medium instance with up to 500-1000 users, you are probably just fine with the defaults. Stick to them.
+Just for reference, the currently used default config is this:
+
+```
+MALLOC_CONF=abort_conf:true,narenas:8,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000
+```
 
 ### Big Instance
 
@@ -135,8 +141,8 @@ A big instance is one with more than at least 1000 users. In this case, you migh
 especially if you have a higher value for `MAX_HASH_THREADS` or `HTTP_WORKERS`. Most requests are so small, that they
 almost entirely fit in the thread-local cache for the allocator, but if dynamic brotli compression kicks in, memory
 from an allocator arena will be necessary most of the time. Because Rauthy does not need the arena's that often, the
-default value of `4` is too low in such a case. You should set at least `narenas` from the string below equal to the
-amount of CPU cores your Rauthy instance is assigned to. Depending on the amount or concurrent logins, you can even set
+default value of `4` is too low in such a case. You should set `narenas` from the string below at least equal to the
+amount of CPU cores your Rauthy instance is assigned to. Depending on the amount or concurrent logins, you may set
 `narenas` to 2-4x CPU cores at the cost of higher memory usage.
 
 ```
@@ -146,9 +152,8 @@ MALLOC_CONF=abort_conf:true,narenas:16,tcache_max:16384,dirty_decay_ms:10000,muz
 ### Open End
 
 For any instance with basically an open end of users, or if you have a very high degree of concurrent logins (or you
-just
-don't care about low memory usage and only about max performance), set `narenas` to 4x your CPU cores (higher values
-will start to have a negative impact).
+just don't care about low memory usage and only about max performance), set `narenas` to 4x your CPU cores (higher
+values will start to have a negative impact). This config will let you scale into millions of users easily.
 
 ```
 MALLOC_CONF=abort_conf:true,narenas:64,tcache_max:32768,dirty_decay_ms:30000,muzzy_decay_ms:30000

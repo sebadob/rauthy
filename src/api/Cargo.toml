@@ -32,4 +32,5 @@ time = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
 validator = { workspace = true }
