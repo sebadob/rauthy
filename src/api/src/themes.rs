@@ -73,7 +73,7 @@ pub async fn post_theme(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
 
-    let theme = ThemeCssFull::find(path.into_inner()).await?;
+    let theme = ThemeCssFull::find_with_default(path.into_inner()).await?;
     Ok(HttpResponse::Ok().json(ThemeRequestResponse::from(theme)))
 }
 

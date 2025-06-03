@@ -115,7 +115,7 @@ impl FedCMIdPBranding {
         let rauthy_icon = FedCMIdPIcon::rauthy_logo(&data.issuer);
 
         // this is pretty inefficient, but FedCM is in experimental testing only anyway
-        let css = ThemeCssFull::find("rauthy".to_string()).await?;
+        let css = ThemeCssFull::find_with_default("rauthy".to_string()).await?;
         let background_color = format!(
             "hsl({} {} {})",
             css.light.bg[0], css.light.bg[1], css.light.bg[2]

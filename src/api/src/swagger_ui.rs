@@ -3,7 +3,7 @@ use actix_web::http::header::{CONTENT_SECURITY_POLICY, HeaderValue};
 use actix_web::web::Path;
 use actix_web::{HttpResponse, get};
 use rauthy_common::constants::{APPLICATION_JSON, PUB_URL_WITH_SCHEME};
-use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_error::ErrorResponse;
 use std::env;
 use std::sync::{Arc, LazyLock, OnceLock};
 
@@ -36,10 +36,8 @@ pub async fn get_openapi_doc(principal: ReqPrincipal) -> Result<HttpResponse, Er
     if !*SWAGGER_UI_ENABLE {
         return Ok(HttpResponse::NotFound().finish());
     }
-    if !*SWAGGER_UI_PUBLIC {
-        if principal.validate_session_auth().is_err() {
-            return Ok(HttpResponse::Unauthorized().finish());
-        }
+    if !*SWAGGER_UI_PUBLIC && principal.validate_session_auth().is_err() {
+        return Ok(HttpResponse::Unauthorized().finish());
     }
 
     Ok(HttpResponse::Ok()
@@ -55,10 +53,8 @@ pub async fn get_swagger_ui(
     if !*SWAGGER_UI_ENABLE {
         return Ok(HttpResponse::NotFound().finish());
     }
-    if !*SWAGGER_UI_PUBLIC {
-        if principal.validate_session_auth().is_err() {
-            return Ok(HttpResponse::Unauthorized().finish());
-        }
+    if !*SWAGGER_UI_PUBLIC && principal.validate_session_auth().is_err() {
+        return Ok(HttpResponse::Unauthorized().finish());
     }
 
     match utoipa_swagger_ui::serve(path.as_str(), OPENAPI_CONFIG.clone()) {
