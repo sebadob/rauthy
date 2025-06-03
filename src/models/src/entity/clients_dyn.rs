@@ -94,7 +94,7 @@ impl ClientDyn {
     pub async fn rate_limit_ip(ip: IpAddr) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
-        let ts: Option<i64> = client.get(Cache::IPRateLimit, ip.to_string()).await?;
+        let ts: Option<i64> = client.get(Cache::IpRateLimit, ip.to_string()).await?;
         match ts {
             Some(ts) => {
                 return Err(ErrorResponse::new(
@@ -106,7 +106,7 @@ impl ClientDyn {
                 let now = Utc::now().timestamp();
                 client
                     .put(
-                        Cache::IPRateLimit,
+                        Cache::IpRateLimit,
                         ip.to_string(),
                         &now,
                         (*DEVICE_GRANT_RATE_LIMIT).map(|i| i as i64),

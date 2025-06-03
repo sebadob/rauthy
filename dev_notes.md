@@ -7,8 +7,6 @@ TODO before v0.30:
 - add just recipe that archives a pre-built static HTML folder for FreeBSD like systems
 - update book with the "new" K8s sts setup to show how to do an HA deployment
 - hiqlite env var for more granular sync config
-- Migrate `src/models/src/events/ip_blacklist_handler.rs` persistence from thread local HashMap to distributed Hiqlite
-- randomize default admin user id on prod init + set email to `BOOTSTRAP_ADMIN_EMAIL` before password info logging
 
 ## Stage 1 - essentials
 

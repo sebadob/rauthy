@@ -2234,7 +2234,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.7.0-20250529"
-source = "git+https://github.com/sebadob/hiqlite.git#c6116b35bb3a0727fd350f9389e288bbf0a0fb1f"
+source = "git+https://github.com/sebadob/hiqlite.git#9bbc90f4faee98d8c1ab4965ae46fb8318e50ca7"
 dependencies = [
  "argon2",
  "axum 0.8.4",
@@ -2289,7 +2289,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-macros"
 version = "0.7.0-20250529"
-source = "git+https://github.com/sebadob/hiqlite.git#c6116b35bb3a0727fd350f9389e288bbf0a0fb1f"
+source = "git+https://github.com/sebadob/hiqlite.git#9bbc90f4faee98d8c1ab4965ae46fb8318e50ca7"
 dependencies = [
  "hiqlite",
  "rust-embed",
@@ -2298,7 +2298,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-wal"
 version = "0.7.0-20250529"
-source = "git+https://github.com/sebadob/hiqlite.git#c6116b35bb3a0727fd350f9389e288bbf0a0fb1f"
+source = "git+https://github.com/sebadob/hiqlite.git#9bbc90f4faee98d8c1ab4965ae46fb8318e50ca7"
 dependencies = [
  "bincode",
  "byteorder",
@@ -4399,9 +4399,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.12.18"
+version = "0.12.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e98ff6b0dbbe4d5a37318f433d4fc82babd21631f194d370409ceb2e40b2f0b5"
+checksum = "a2f8e5513d63f2e5b386eb5106dc67eaf3f84e95258e210489136b8b92ad6119"
 dependencies = [
  "async-compression",
  "base64 0.22.1",
@@ -4573,9 +4573,9 @@ dependencies = [
 
 [[package]]
 name = "ruma"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c64fdaae631940eda62844a8a3026aba2ba84c22588c888ebec44861ba4d0c18"
+checksum = "d910a9b75cbf0e88f74295997c1a41c3ab7a117879a029c72db815192c167a0d"
 dependencies = [
  "assign",
  "js_int",
@@ -4608,9 +4608,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-client-api"
-version = "0.20.2"
+version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9a89ac03a0f4451f946ed9aed6fdd16ef5a78a3a2849e87af4b2474a176b2fb"
+checksum = "09cc4ff88a70a3d1e7a2c5b51cca7499cb889b42687608ab664b9a216c49314d"
 dependencies = [
  "as_variant",
  "assign",
@@ -4664,9 +4664,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-events"
-version = "0.30.2"
+version = "0.30.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c100eb6c7691ef010f18d9af315f486fc4da621b7203c431e88352148e84551"
+checksum = "41ab3d1b54c32a65194ecc44bc7f7575df50ef4255b139547d7dcc1753dc883d"
 dependencies = [
  "as_variant",
  "indexmap 2.9.0",
@@ -5768,9 +5768,9 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.6.4"
+version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fdb0c213ca27a9f57ab69ddb290fd80d970922355b83ae380b395d3986b8a2e"
+checksum = "adc82fd73de2a9722ac5da747f12383d2bfdb93591ee6c58486e0097890f05f2"
 dependencies = [
  "bitflags 2.9.1",
  "bytes",

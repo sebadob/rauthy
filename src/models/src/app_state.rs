@@ -1,7 +1,6 @@
 use crate::ListenScheme;
 use crate::email::EMail;
 use crate::events::event::Event;
-use crate::events::ip_blacklist_handler::IpBlacklistReq;
 use crate::events::listener::EventRouterMsg;
 use rauthy_common::constants::PROXY_MODE;
 use std::env;
@@ -28,7 +27,6 @@ pub struct AppState {
     pub tx_email: mpsc::Sender<EMail>,
     pub tx_events: flume::Sender<Event>,
     pub tx_events_router: flume::Sender<EventRouterMsg>,
-    pub tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
     pub webauthn: Arc<Webauthn>,
 }
 
@@ -37,7 +35,6 @@ impl AppState {
         tx_email: mpsc::Sender<EMail>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
-        tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
     ) -> Result<Self, Box<dyn Error>> {
         let listen_addr = env::var("LISTEN_ADDRESS").unwrap_or_else(|_| String::from("0.0.0.0"));
         let listen_scheme = match env::var("LISTEN_SCHEME").as_deref().unwrap_or("http_https") {
@@ -154,7 +151,6 @@ impl AppState {
             tx_email,
             tx_events,
             tx_events_router,
-            tx_ip_blacklist,
             webauthn,
         })
     }
