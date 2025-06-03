@@ -9,7 +9,7 @@ use cryptr::{EncKeys, EncValue};
 use hiqlite_macros::params;
 use rauthy_api_types::api_keys::ApiKeyRequest;
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::{base64_decode, get_rand};
+use rauthy_common::utils::{base64_decode, get_rand, new_store_id};
 use rauthy_error::ErrorResponse;
 use ring::digest;
 use rsa::pkcs8::EncodePrivateKey;
@@ -105,13 +105,20 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
             }
         };
 
-        let sql = "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost'";
+        let sql = r#"
+UPDATE users
+SET id = $1, email = $2, password = $3
+WHERE email = 'admin@localhost'"#;
+
+        // We want the same user ID in tests all the time, but generate a new one for a fresh prod
+        // init to reduce the possible attack surface even further. As long as a user provides a
+        // `BOOTSTRAP_ADMIN_EMAIL` (maybe force the existence in the future?), the default admin
+        // for new instances is impossible to guess.
+        let new_id = new_store_id();
         if is_hiqlite() {
-            // TODO we could grab a possibly existing `RAUTHY_ADMIN_EMAIL` and initialize a custom
-            // admin
-            DB::hql().execute(sql, params!(email, hash)).await?;
+            DB::hql().execute(sql, params!(new_id, email, hash)).await?;
         } else {
-            DB::pg_execute(sql, &[&email, &hash]).await?;
+            DB::pg_execute(sql, &[&new_id, &email, &hash]).await?;
         }
 
         // now check if we should bootstrap an API Key
