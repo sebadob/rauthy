@@ -15,9 +15,9 @@ use rauthy_models::email;
 use rauthy_models::email::EMail;
 use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::events::health_watch::watch_health;
+use rauthy_models::events::init_event_vars;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
-use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
 use spow::pow::Pow;
 use std::env;
 use std::error::Error;
@@ -124,7 +124,6 @@ https://sebadob.github.io/rauthy/config/encryption.html"#
 
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
-    let (tx_ip_blacklist, rx_ip_blacklist) = flume::unbounded();
 
     debug!("Initializing AppState");
     let app_state = web::Data::new(
@@ -132,7 +131,6 @@ https://sebadob.github.io/rauthy/config/encryption.html"#
             tx_email.clone(),
             tx_events.clone(),
             tx_events_router.clone(),
-            tx_ip_blacklist.clone(),
         )
         .await?,
     );
@@ -146,7 +144,6 @@ https://sebadob.github.io/rauthy/config/encryption.html"#
     init_event_vars().unwrap();
     EventNotifier::init_notifiers(tx_email).await.unwrap();
     tokio::spawn(EventListener::listen(
-        tx_ip_blacklist.clone(),
         tx_events_router,
         rx_events_router,
         rx_events,
@@ -155,8 +152,8 @@ https://sebadob.github.io/rauthy/config/encryption.html"#
     debug!("Starting Password Hasher");
     tokio::spawn(password_hasher::run());
 
-    debug!("Starting Blacklist handler");
-    tokio::spawn(ip_blacklist_handler::run(tx_ip_blacklist, rx_ip_blacklist));
+    // debug!("Starting Blacklist handler");
+    // tokio::spawn(ip_blacklist_handler::run(tx_ip_blacklist, rx_ip_blacklist));
 
     debug!("Starting health watch");
     tokio::spawn(watch_health(app_state.tx_events.clone()));

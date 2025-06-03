@@ -20,18 +20,18 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::app_version::LatestAppVersion;
+use rauthy_models::entity::ip_blacklist::IpBlacklist;
 use rauthy_models::entity::is_db_alive;
 use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
 use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
-use rauthy_models::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq};
 use rauthy_models::language::Language;
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
 use std::env;
-use std::ops::{Add, Sub};
+use std::ops::Sub;
 use std::str::FromStr;
 use std::sync::LazyLock;
 use tracing::{error, info, warn};
@@ -460,10 +460,7 @@ pub async fn get_ready() -> impl Responder {
 /// If `BLACKLIST_SUSPICIOUS_REQUESTS` is set, it will also compare the
 /// request path against common bot / hacker scan targets and blacklist preemptively.
 #[get("/")]
-pub async fn catch_all(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     let path = req.path();
     let ip = real_ip_from_req(&req)?.to_string();
 
@@ -473,20 +470,16 @@ pub async fn catch_all(
     }
 
     if *SUSPICIOUS_REQUESTS_BLACKLIST > 0
-        && path.len() > 1
+        && !path.is_empty()
         && suspicious_request_block::is_scan_target(path)
     {
         warn!(
             "Blacklisting suspicious target path request '{}' from {}",
             path, ip,
         );
-        let exp = Utc::now().add(chrono::Duration::minutes(
-            *SUSPICIOUS_REQUESTS_BLACKLIST as i64,
-        ));
-        if let Err(err) = data
-            .tx_ip_blacklist
-            .send_async(IpBlacklistReq::Blacklist(IpBlacklist { ip, exp }))
-            .await
+
+        if let Err(err) =
+            IpBlacklist::put(ip.to_string(), *SUSPICIOUS_REQUESTS_BLACKLIST as i64).await
         {
             error!(
                 "Error blacklisting suspicious request - please repot this bug: {:?}",

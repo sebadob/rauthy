@@ -62,7 +62,7 @@ futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 hiqlite = { version = "0.7.0-20250529", features = [
-    "cache", "dashboard", "listen_notify_local", "migrate-rocksdb"
+    "cache", "counters", "dashboard", "listen_notify_local", "migrate-rocksdb"
 ] }
 hiqlite-macros = { version = "0.7.0-20250529" }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }

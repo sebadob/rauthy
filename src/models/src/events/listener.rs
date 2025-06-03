@@ -1,13 +1,11 @@
 use crate::database::DB;
 use crate::events::EVENT_PERSIST_LEVEL;
-use crate::events::event::{Event, EventLevel, EventType};
-use crate::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq, IpLoginFailedSet};
+use crate::events::event::{Event, EventLevel};
 use crate::events::notifier::EventNotifier;
 use actix_web_lab::sse;
-use chrono::DateTime;
 use rauthy_common::constants::EVENTS_LATEST_LIMIT;
 use rauthy_error::ErrorResponse;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time;
@@ -29,14 +27,13 @@ pub struct EventListener;
 impl EventListener {
     #[tracing::instrument(level = "debug", skip_all)]
     pub async fn listen(
-        tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
         tx_router: flume::Sender<EventRouterMsg>,
         rx_router: flume::Receiver<EventRouterMsg>,
         rx_event: flume::Receiver<Event>,
     ) -> Result<(), ErrorResponse> {
         debug!("EventListener::listen has been started");
 
-        tokio::spawn(Self::router(rx_router, tx_ip_blacklist));
+        tokio::spawn(Self::router(rx_router));
         tokio::spawn(Self::raft_events_listener(tx_router));
 
         while let Ok(event) = rx_event.recv_async().await {
@@ -99,14 +96,10 @@ impl EventListener {
     /// Registrations via SSE endpoint. It will serialize incoming Events to SSE payload in JSON
     /// format and forward them to all registered clients.
     #[tracing::instrument(level = "debug", skip_all)]
-    async fn router(
-        rx: flume::Receiver<EventRouterMsg>,
-        tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
-    ) {
+    async fn router(rx: flume::Receiver<EventRouterMsg>) {
         debug!("EventListener::router has been started");
 
-        let mut clients: HashMap<String, (i16, mpsc::Sender<sse::Event>)> =
-            HashMap::with_capacity(1);
+        let mut clients: BTreeMap<String, (i16, mpsc::Sender<sse::Event>)> = BTreeMap::new();
         let mut ips_to_remove = Vec::with_capacity(1);
 
         // TODO in HA deployments (currently only seen with Postgres), we may have duplicate
@@ -115,7 +108,7 @@ impl EventListener {
         // via `EventRouterMsg::Event(event)`.
         // -> investigate the reason to ultimately get rid of the additional HashSet checks.
         // -> does it maybe make sense to utilize the hiqlite cache here for unified data?
-        let mut event_ids: HashSet<String> = HashSet::with_capacity(EVENTS_LATEST_LIMIT as usize);
+        let mut event_ids: BTreeSet<String> = BTreeSet::new();
         // Event::find_latest returns the latest events ordered by timestamp desc
         let mut events = Event::find_latest(EVENTS_LATEST_LIMIT as i64)
             .await
@@ -142,56 +135,10 @@ impl EventListener {
                         continue;
                     }
 
-                    let sse_payload =
-                        sse::Event::Data(sse::Data::new(serde_json::to_string(&event).unwrap()));
-
-                    // deserialize the event and check for important updates
-                    match event.typ {
-                        EventType::InvalidLogins => {
-                            tx_ip_blacklist
-                                .send_async(IpBlacklistReq::LoginFailedSet(IpLoginFailedSet {
-                                    ip: event.ip.unwrap_or_default(),
-                                    invalid_logins: event.data.unwrap_or_default() as u32,
-                                }))
-                                .await
-                                .unwrap();
-                        }
-                        EventType::IpBlacklisted => {
-                            tx_ip_blacklist
-                                .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
-                                    ip: event.ip.unwrap_or_default(),
-                                    exp: DateTime::from_timestamp(event.data.unwrap(), 0)
-                                        .unwrap_or_default(),
-                                }))
-                                .await
-                                .unwrap();
-                        }
-                        EventType::IpBlacklistRemoved => {
-                            tx_ip_blacklist
-                                .send_async(IpBlacklistReq::BlacklistDelete(
-                                    event.ip.unwrap_or_default(),
-                                ))
-                                .await
-                                .unwrap();
-                        }
-                        EventType::JwksRotated => {}
-                        EventType::NewUserRegistered => {}
-                        EventType::NewRauthyAdmin => {}
-                        EventType::NewRauthyVersion => {}
-                        EventType::PossibleBruteForce => {}
-                        EventType::RauthyStarted => {}
-                        EventType::RauthyHealthy => {}
-                        EventType::RauthyUnhealthy => {}
-                        EventType::SecretsMigrated => {}
-                        EventType::UserEmailChange => {}
-                        EventType::UserPasswordReset => {}
-                        EventType::Test => {}
-                        EventType::BackchannelLogoutFailed => {}
-                        EventType::ScimTaskFailed => {}
-                    }
-
                     // pre-compute the payload
                     // the incoming data is already in JSON format
+                    let sse_payload =
+                        sse::Event::Data(sse::Data::new(serde_json::to_string(&event).unwrap()));
                     let event_level_value = event.level.value();
 
                     // send payload to all clients

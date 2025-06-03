@@ -6,7 +6,6 @@ use tracing::info;
 
 pub mod event;
 pub mod health_watch;
-pub mod ip_blacklist_handler;
 pub mod listener;
 pub mod notifier;
 
