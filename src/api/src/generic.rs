@@ -470,7 +470,8 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
     }
 
     if *SUSPICIOUS_REQUESTS_BLACKLIST > 0
-        && !path.is_empty()
+        // `/` will be the path of length 1
+        && path.len() > 1
         && suspicious_request_block::is_scan_target(path)
     {
         warn!(

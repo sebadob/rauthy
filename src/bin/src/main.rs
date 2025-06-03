@@ -152,9 +152,6 @@ https://sebadob.github.io/rauthy/config/encryption.html"#
     debug!("Starting Password Hasher");
     tokio::spawn(password_hasher::run());
 
-    // debug!("Starting Blacklist handler");
-    // tokio::spawn(ip_blacklist_handler::run(tx_ip_blacklist, rx_ip_blacklist));
-
     debug!("Starting health watch");
     tokio::spawn(watch_health(app_state.tx_events.clone()));
 
