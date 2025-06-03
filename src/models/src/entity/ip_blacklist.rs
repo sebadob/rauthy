@@ -15,7 +15,7 @@ impl IpBlacklist {
         buf.write_i64::<BigEndian>(exp.timestamp())?;
 
         DB::hql()
-            .put(Cache::IpBlacklist, ip, &exp, Some(ttl_seconds))
+            .put(Cache::IpBlacklist, ip, &buf, Some(ttl_seconds))
             .await?;
 
         Ok(())
