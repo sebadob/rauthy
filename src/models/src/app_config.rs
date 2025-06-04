@@ -3,32 +3,26 @@ use crate::email::EMail;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use rauthy_common::constants::CookieMode;
-use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::env;
 use std::error::Error;
-use std::ops::{Add, Sub};
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::sync::mpsc;
 use toml::Value;
+use tracing::debug;
 use webauthn_rs::Webauthn;
 
 #[derive(Debug)]
 pub struct AppConfig {
-    pub public_url: String,
     pub argon2_params: argon2::Params,
-    pub issuer: String,
-    pub listen_addr: String,
     pub listen_scheme: ListenScheme,
-    pub refresh_grace_time: u32,
-    pub ml_lt_pwd_first: u32,
-    pub ml_lt_pwd_reset: u32,
     pub tx_email: mpsc::Sender<EMail>,
     pub tx_events: flume::Sender<Event>,
     pub tx_events_router: flume::Sender<EventRouterMsg>,
     pub webauthn: Arc<Webauthn>,
+    pub vars: Vars,
 }
 
 impl AppConfig {
@@ -37,6 +31,17 @@ impl AppConfig {
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
     ) -> Result<Self, Box<dyn Error>> {
+        let vars = Vars::load("rauthy.toml").await;
+
+        let argon2_params = argon2::Params::new(
+            vars.hashing.argon2_m_cost,
+            vars.hashing.argon2_t_cost,
+            vars.hashing.argon2_p_cost,
+            None,
+        )
+        .expect("Unable to build Argon2id params");
+        debug!("Argon2id Params: {:?}", argon2_params);
+
         todo!()
     }
 }
@@ -66,7 +71,10 @@ struct Vars {
     pub scim: VarsScim,
     pub server: VarsServer,
     pub suspicious_requests: VarsSuspiciousRequests,
+    pub templates: VarsTemplates,
+    pub user_pictures: VarsUserPictures,
     pub user_registration: VarsUserRegistration,
+    pub webauthn: VarsWebauthn,
 }
 
 impl Default for Vars {
@@ -282,11 +290,129 @@ impl Default for Vars {
                 blacklist: 1440,
                 log: false,
             },
+            templates: VarsTemplates {
+                password_new_en: VarsTemplate {
+                    subject: "New Password".into(),
+                    header: "New password for".into(),
+                    text: None,
+                    click_link: "Click the link below to get forwarded to the password form."
+                        .into(),
+                    validity:
+                        "This link is only valid for a short period of time for security reasons."
+                            .into(),
+                    expires: "Link expires:".into(),
+                    button: "Set Password".into(),
+                    footer: None,
+                },
+                password_new_de: VarsTemplate {
+                    subject: "Neues Passwort".into(),
+                    header: "Neues Passwort für".into(),
+                    text: None,
+                    click_link:
+                        "Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen."
+                            .into(),
+                    validity: "Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
+                        .into(),
+                    expires: "Link gültig bis:".into(),
+                    button: "Passwort Setzen".into(),
+                    footer: None,
+                },
+                password_new_ko: VarsTemplate {
+                    subject: "新密码".into(),
+                    header: "新密码".into(),
+                    text: None,
+                    click_link: "点击下方链接以打开密码设置表单。".into(),
+                    validity: "出于安全考虑，此链接仅在短时间内有效。".into(),
+                    expires: "链接过期时间：".into(),
+                    button: "设置密码".into(),
+                    footer: None,
+                },
+                password_new_zhhans: VarsTemplate {
+                    subject: "새 비밀번호".into(),
+                    header: "새 비밀번호를 설정해 주세요:".into(),
+                    text: None,
+                    click_link: "비밀번호 입력창으로 이동하려면, 아래의 링크를 클릭해 주세요."
+                        .into(),
+                    validity: "이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into(),
+                    expires: "링크 만료일:".into(),
+                    button: "비밀번호 설정".into(),
+                    footer: None,
+                },
+                password_reset_en: VarsTemplate {
+                    subject: "Password Reset Request".into(),
+                    header: "Password reset request for".into(),
+                    text: None,
+                    click_link:
+                        "Click the link below to get forwarded to the password request form.".into(),
+                    validity:
+                        "This link is only valid for a short period of time for security reasons."
+                            .into(),
+                    expires: "Link expires:".into(),
+                    button: "Reset Password".into(),
+                    footer: None,
+                },
+                password_reset_de: VarsTemplate {
+                    subject: "Passwort Reset angefordert".into(),
+                    header: "Passwort Reset angefordert für".into(),
+                    text: None,
+                    click_link: "Klicken Sie auf den unten stehenden Link für den Passwort Reset."
+                        .into(),
+                    validity: "Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
+                        .into(),
+                    expires: "Link gültig bis:".into(),
+                    button: "Passwort Zurücksetzen".into(),
+                    footer: None,
+                },
+                password_reset_ko: VarsTemplate {
+                    subject: "密码重置请求".into(),
+                    header: "密码重置请求：".into(),
+                    text: None,
+                    click_link: "点击下方链接以打开密码重置表单。".into(),
+                    validity: "出于安全考虑，此链接仅在短时间内有效。".into(),
+                    expires: "链接过期时间".into(),
+                    button: "重置密码".into(),
+                    footer: None,
+                },
+                password_reset_zhhans: VarsTemplate {
+                    subject: "비밀번호 초기화 요청".into(),
+                    header: "비밀번호 초기화 요청:".into(),
+                    text: None,
+                    click_link:
+                        "비밀번호 초기화 요청 창으로 이동하려면, 아래의 링크를 클릭해 주세요."
+                            .into(),
+                    validity: "이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into(),
+                    expires: "링크 만료일:".into(),
+                    button: "비밀번호 초기화".into(),
+                    footer: None,
+                },
+            },
+            user_pictures: VarsUserPictures {
+                storage_type: "db".into(),
+                path: "./pictures".into(),
+                s3_url: None,
+                bucket: None,
+                region: None,
+                s3_key: None,
+                s3_secret: None,
+                s3_path_style: true,
+                upload_limit_mb: 10,
+                public: false,
+            },
             user_registration: VarsUserRegistration {
                 enable: false,
                 domain_restriction: None,
                 domain_blacklist: Vec::default(),
                 allow_open_redirect: false,
+            },
+            webauthn: VarsWebauthn {
+                rp_id: String::default(),
+                rp_origin: String::default(),
+                rp_name: "Rauthy IAM".into(),
+                req_exp: 60,
+                data_exp: 90,
+                renew_exp: 2160,
+                force_uv: false,
+                no_password_exp: true,
             },
         }
     }
@@ -294,7 +420,7 @@ impl Default for Vars {
 
 impl Vars {
     async fn load(path_config: &str) -> Self {
-        // we want to make sure we grab all the necessary memory BEFORE
+        // We want to make sure we grab all the necessary memory BEFORE
         // loading the toml to avoid bigger memory fragmentation chunks.
         let mut slf = Self::default();
 
@@ -307,7 +433,6 @@ impl Vars {
         // in static memory.
 
         let mut table = config.parse::<toml::Table>().unwrap();
-        // println!("\n\n{:?}\n", table);
         slf.parse_dev(&mut table);
         slf.parse_access(&mut table);
         slf.parse_auth_headers(&mut table);
@@ -330,11 +455,10 @@ impl Vars {
         slf.parse_scim(&mut table);
         slf.parse_server(&mut table);
         slf.parse_suspicious_requests(&mut table);
+        slf.parse_templates(&mut table);
+        slf.parse_user_pictures(&mut table);
         slf.parse_user_registration(&mut table);
-
-        // TODO
-
-        // TODO drop table BEFORE setting as static!
+        slf.parse_webauthn(&mut table);
 
         slf
     }
@@ -1537,6 +1661,157 @@ impl Vars {
         }
     }
 
+    fn parse_templates(&mut self, table: &mut toml::Table) {
+        let Some(Value::Array(arr)) = table.remove("templates") else {
+            panic!("{}", err_t("templates", "", "Array"));
+        };
+
+        for entry in arr {
+            let Value::Table(mut table) = entry else {
+                panic!("{}", err_t("<entry>", "templates", "Table"));
+            };
+            let mut tpl = VarsTemplate {
+                subject: Default::default(),
+                header: Default::default(),
+                text: None,
+                click_link: Default::default(),
+                validity: Default::default(),
+                expires: Default::default(),
+                button: Default::default(),
+                footer: None,
+            };
+
+            let lang = t_str(&mut table, "[templates]", "lang", "")
+                .expect("`lang` is mandatory for `[[templates]]`");
+            let typ = t_str(&mut table, "[templates]", "typ", "")
+                .expect("`typ` is mandatory for `[[templates]]`");
+
+            if let Some(v) = t_str(&mut table, "templates", "subject", "") {
+                tpl.subject = v.into();
+            }
+            if let Some(v) = t_str(&mut table, "templates", "header", "") {
+                tpl.header = v.into();
+            }
+            if let Some(v) = t_str(&mut table, "templates", "text", "") {
+                tpl.text = Some(v);
+            }
+            if let Some(v) = t_str(&mut table, "templates", "click_link", "") {
+                tpl.click_link = v.into();
+            }
+            if let Some(v) = t_str(&mut table, "templates", "validity", "") {
+                tpl.validity = v.into();
+            }
+            if let Some(v) = t_str(&mut table, "templates", "expires", "") {
+                tpl.expires = v.into();
+            }
+            if let Some(v) = t_str(&mut table, "templates", "footer", "") {
+                tpl.footer = Some(v);
+            }
+
+            let is_password_new = match typ.as_str() {
+                "password_new" => true,
+                "password_reset" => false,
+                _ => {
+                    panic!(
+                        "Invalid value for `templates.typ`, allowed are: password_new password_reset"
+                    )
+                }
+            };
+            match lang.as_str() {
+                "en" => {
+                    if is_password_new {
+                        self.templates.password_new_en = tpl;
+                    } else {
+                        self.templates.password_reset_en = tpl;
+                    }
+                }
+                "de" => {
+                    if is_password_new {
+                        self.templates.password_new_de = tpl;
+                    } else {
+                        self.templates.password_reset_de = tpl;
+                    }
+                }
+                "ko" => {
+                    if is_password_new {
+                        self.templates.password_new_ko = tpl;
+                    } else {
+                        self.templates.password_reset_ko = tpl;
+                    }
+                }
+                "zh_hans" => {
+                    if is_password_new {
+                        self.templates.password_new_zhhans = tpl;
+                    } else {
+                        self.templates.password_reset_zhhans = tpl;
+                    }
+                }
+                _ => {
+                    panic!("Invalid value for `templates.lang`, allowed are: en de ko zh_hans")
+                }
+            }
+
+            println!("template: {:?}", table);
+        }
+    }
+
+    fn parse_user_pictures(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "user_pictures") else {
+            return;
+        };
+
+        if let Some(v) = t_str(
+            &mut table,
+            "user_pictures",
+            "storage_type",
+            "PICTURE_STORAGE_TYPE",
+        ) {
+            if !["db", "file", "s3", "disabled"].contains(&v.as_str()) {
+                panic!("`user_pictures.storage_type` must be one of: db file s3 disabled");
+            }
+            self.user_pictures.storage_type = v.into();
+        }
+        if let Some(v) = t_str(&mut table, "user_pictures", "path", "PICTURE_PATH") {
+            self.user_pictures.path = v.into();
+        }
+
+        if let Some(v) = t_str(&mut table, "user_pictures", "s3_url", "PIC_S3_URL") {
+            self.user_pictures.s3_url = v.into();
+        }
+        if let Some(v) = t_str(&mut table, "user_pictures", "bucket", "PIC_S3_BUCKET") {
+            self.user_pictures.bucket = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "user_pictures", "region", "PIC_S3_REGION") {
+            self.user_pictures.region = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "user_pictures", "s3_key", "PIC_S3_KEY") {
+            self.user_pictures.s3_key = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "user_pictures", "s3_secret", "PIC_S3_SECRET") {
+            self.user_pictures.s3_secret = Some(v);
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_pictures",
+            "s3_path_style",
+            "PIC_S3_PATH_STYLE",
+        ) {
+            self.user_pictures.s3_path_style = v;
+        }
+
+        if let Some(v) = t_u16(
+            &mut table,
+            "user_pictures",
+            "upload_limit_mb",
+            "PICTURE_UPLOAD_LIMIT_MB",
+        ) {
+            self.user_pictures.upload_limit_mb = v;
+        }
+        if let Some(v) = t_bool(&mut table, "user_pictures", "public", "PICTURE_PUBLIC") {
+            self.user_pictures.public = v;
+        }
+    }
+
     fn parse_user_registration(&mut self, table: &mut toml::Table) {
         let Some(mut table) = t_table(table, "user_registration") else {
             return;
@@ -1560,6 +1835,42 @@ impl Vars {
             "USER_REG_DOMAIN_BLACKLIST",
         ) {
             self.user_registration.domain_blacklist = v;
+        }
+    }
+
+    fn parse_webauthn(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "webauthn") else {
+            return;
+        };
+
+        if let Some(v) = t_str(&mut table, "webauthn", "rp_id", "RP_ID") {
+            self.webauthn.rp_id = v;
+        }
+        if let Some(v) = t_str(&mut table, "webauthn", "rp_origin", "RP_ORIGIN") {
+            self.webauthn.rp_origin = v;
+        }
+        if let Some(v) = t_str(&mut table, "webauthn", "rp_name", "RP_NAME") {
+            self.webauthn.rp_name = v.into();
+        }
+        if let Some(v) = t_u16(&mut table, "webauthn", "req_exp", "WEBAUTHN_REQ_EXP") {
+            self.webauthn.req_exp = v;
+        }
+        if let Some(v) = t_u16(&mut table, "webauthn", "data_exp", "WEBAUTHN_DATA_EXP") {
+            self.webauthn.data_exp = v;
+        }
+        if let Some(v) = t_u16(&mut table, "webauthn", "renew_exp", "WEBAUTHN_RENEW_EXP") {
+            self.webauthn.renew_exp = v;
+        }
+        if let Some(v) = t_bool(&mut table, "webauthn", "force_uv", "WEBAUTHN_FORCE_UV") {
+            self.webauthn.force_uv = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "webauthn",
+            "no_password_exp",
+            "WEBAUTHN_NO_PASSWORD_EXPIRY",
+        ) {
+            self.webauthn.no_password_exp = v;
         }
     }
 }
@@ -1828,11 +2139,62 @@ struct VarsSuspiciousRequests {
 }
 
 #[derive(Debug)]
+struct VarsTemplates {
+    pub password_new_en: VarsTemplate,
+    pub password_new_de: VarsTemplate,
+    pub password_new_ko: VarsTemplate,
+    pub password_new_zhhans: VarsTemplate,
+
+    pub password_reset_en: VarsTemplate,
+    pub password_reset_de: VarsTemplate,
+    pub password_reset_ko: VarsTemplate,
+    pub password_reset_zhhans: VarsTemplate,
+}
+
+#[derive(Debug)]
+struct VarsTemplate {
+    pub subject: Cow<'static, str>,
+    pub header: Cow<'static, str>,
+    pub text: Option<String>,
+    pub click_link: Cow<'static, str>,
+    pub validity: Cow<'static, str>,
+    pub expires: Cow<'static, str>,
+    pub button: Cow<'static, str>,
+    pub footer: Option<String>,
+}
+
+#[derive(Debug)]
+struct VarsUserPictures {
+    pub storage_type: Cow<'static, str>,
+    pub path: Cow<'static, str>,
+    pub s3_url: Option<String>,
+    pub bucket: Option<String>,
+    pub region: Option<String>,
+    pub s3_key: Option<String>,
+    pub s3_secret: Option<String>,
+    pub s3_path_style: bool,
+    pub upload_limit_mb: u16,
+    pub public: bool,
+}
+
+#[derive(Debug)]
 struct VarsUserRegistration {
     pub enable: bool,
     pub domain_restriction: Option<String>,
     pub domain_blacklist: Vec<String>,
     pub allow_open_redirect: bool,
+}
+
+#[derive(Debug)]
+struct VarsWebauthn {
+    pub rp_id: String,
+    pub rp_origin: String,
+    pub rp_name: Cow<'static, str>,
+    pub req_exp: u16,
+    pub data_exp: u16,
+    pub renew_exp: u16,
+    pub force_uv: bool,
+    pub no_password_exp: bool,
 }
 
 fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<bool> {
@@ -1956,7 +2318,6 @@ fn err_t(key: &str, parent: &str, typ: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::fs;
 
     #[tokio::test]
     async fn test_config_vars_build() {
@@ -1981,7 +2342,7 @@ mod tests {
         //         .unwrap(),
         //     provider_callback_url: t_str(&mut table, "dev", "provider_callback_url", ""),
         // };
-        println!("{:?}", vars);
+        // println!("{:?}", vars);
 
         let dev_mode = assert_eq!(1, 2);
     }

@@ -1353,45 +1353,6 @@ blacklist = 1440
 # default: false
 log = true
 
-[user_registration]
-# If the User Registration endpoint should be accessible by anyone.
-# If not, an admin must create each new user.
-# default: false
-enable = true
-
-# Can be used when 'open_user_reg = true' to restrict the domains for
-# a registration. For instance, set it to
-# 'user_reg_domain_restriction = gmail.com' to allow only
-# registrations with 'user@gmail.com'.
-domain_restriction = 'my-domain.com'
-
-# If `open_user_reg = true`, you can blacklist certain domains on
-# the open registration endpoint. Provide the domains as a `\n`
-# separated list.
-domain_blacklist = [
-    'example.com',
-    'evil.net',
-]
-
-# If set to `true`, any validation of the `redirect_uri` provided
-# during a user registration will be disabled. Clients can use
-# this feature to redirect the user back to their application
-# after a successful registration, so instead of ending up in the
-# user dashboard, they come back to the client app that initiated
-# the registration.
-#
-# The given `redirect_uri` will be compared against all registered
-# `client_uri`s and will throw an error, if there is no match.
-# However, this check will prevent ephemeral clients from using
-# this feature. Only if you need it in combination with ephemeral
-# clients, you should set this option to `true`. Otherwise, it is
-# advised to set the correct Client URI in the admin UI. The
-# `redirect_uri` will be allowed if it starts with any registered
-# `client_uri`.
-#
-# default: false
-allow_open_redirect = false
-
 [[templates]]
 # You can overwrite some default email templating values.
 # If you want to modify the basic templates themselves, this is
@@ -1491,6 +1452,45 @@ upload_limit_mb = 10
 # default: false
 public = false
 
+[user_registration]
+# If the User Registration endpoint should be accessible by anyone.
+# If not, an admin must create each new user.
+# default: false
+enable = true
+
+# Can be used when 'open_user_reg = true' to restrict the domains for
+# a registration. For instance, set it to
+# 'user_reg_domain_restriction = gmail.com' to allow only
+# registrations with 'user@gmail.com'.
+domain_restriction = 'my-domain.com'
+
+# If `open_user_reg = true`, you can blacklist certain domains on
+# the open registration endpoint. Provide the domains as a `\n`
+# separated list.
+domain_blacklist = [
+    'example.com',
+    'evil.net',
+]
+
+# If set to `true`, any validation of the `redirect_uri` provided
+# during a user registration will be disabled. Clients can use
+# this feature to redirect the user back to their application
+# after a successful registration, so instead of ending up in the
+# user dashboard, they come back to the client app that initiated
+# the registration.
+#
+# The given `redirect_uri` will be compared against all registered
+# `client_uri`s and will throw an error, if there is no match.
+# However, this check will prevent ephemeral clients from using
+# this feature. Only if you need it in combination with ephemeral
+# clients, you should set this option to `true`. Otherwise, it is
+# advised to set the correct Client URI in the admin UI. The
+# `redirect_uri` will be allowed if it starts with any registered
+# `client_uri`.
+#
+# default: false
+allow_open_redirect = false
+
 [webauthn]
 # The 'Relaying Party (RP) ID' - effective domain name.
 #
@@ -1513,8 +1513,8 @@ rp_origin = 'http://localhost:5173'
 # Non-critical RP Name
 # Has no security properties and may be changed without issues
 #
-# default: Rauthy Webauthn
-rp_name = 'Rauthy Webauthn'
+# default: Rauthy IAM
+rp_name = 'Rauthy IAM'
 
 # The Cache lifetime in seconds for Webauthn requests. Within
 # this time, a webauthn request must have been validated.
