@@ -786,24 +786,24 @@ email = 'admin@localhost'
 #
 # If left empty, no messages will not be sent to Matrix.
 # Format: `@<user_id>:<server address>`
-matrix_user_id = ''
+#matrix_user_id = ''
 # Format: `!<random string>:<server address>`
-matrix_room_id = ''
-matrix_access_token = ''
-matrix_user_password = ''
+#matrix_room_id = ''
+#matrix_access_token = ''
+#matrix_user_password = ''
 # URL of your Matrix server.
 # default: https://matrix.org
-matrix_server_url = 'https://matrix.org'
+#matrix_server_url = 'https://matrix.org'
 
 # Optional path to a PEM Root CA certificate file for the
 # Matrix client.
-matrix_root_ca_path = 'tls/root.cert.pem'
+#matrix_root_ca_path = 'tls/root.cert.pem'
 
 # May be set to disable the TLS validation for the Matrix
 # client.
 #
 # default: false
-matrix_danger_disable_tls_validation = false
+#matrix_danger_disable_tls_validation = false
 
 # The default behavior is, that Rauthy will panic at startup
 # if it cannot connect to a configured Matrix server. The
@@ -822,7 +822,7 @@ matrix_error_no_panic = true
 
 # The Webhook for Slack Notifications.
 # If left empty, no messages will be sent to Slack.
-slack_webhook = ''
+#slack_webhook = ''
 
 # The notification level for events. Works the same way as
 # a logging level. For instance: 'notice' means send out a
@@ -1090,10 +1090,10 @@ MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
 #
 # Languages for all user-facing pages.
 # Available Options: en de zhhans ko
-filter_lang_common = 'en de zhhans ko'
+filter_lang_common = ['en', 'de', 'zhhans', 'ko']
 # Languages for the Admin UI.
 # Available Options: en de ko
-filter_lang_admin = 'en de ko'
+filter_lang_admin = ['en', 'de', 'ko']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
@@ -1286,9 +1286,7 @@ proxy_mode = false
 # these are mandatory to be able to extract the real client
 # IP properly and safely to prevent IP header spoofing.
 # All requests with a different source will be blocked.
-trusted_proxies = '''
-192.168.14.0/24
-'''
+trusted_proxies = ['192.168.14.0/24']
 
 # To bring support for applications using deep-linking, you can set custom URL
 # schemes to be accepted when present in the `Origin` header. For instance, a
@@ -1296,7 +1294,7 @@ trusted_proxies = '''
 #
 # Provide the value as a space separated list of Strings, like for instance:
 # "tauri myapp"
-additional_allowed_origin_schemes = 'tauri myapp'
+additional_allowed_origin_schemes = ['tauri', 'myapp']
 
 # To enable or disable the additional HTTP server to expose the /metrics endpoint
 # default: false
@@ -1370,10 +1368,10 @@ domain_restriction = 'my-domain.com'
 # If `open_user_reg = true`, you can blacklist certain domains on
 # the open registration endpoint. Provide the domains as a `\n`
 # separated list.
-domain_blacklist = '''
-example.com
-evil.net
-'''
+domain_blacklist = [
+    'example.com',
+    'evil.net',
+]
 
 # If set to `true`, any validation of the `redirect_uri` provided
 # during a user registration will be disabled. Clients can use

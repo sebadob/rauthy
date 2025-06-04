@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::env;
 use std::error::Error;
+use std::ops::{Add, Sub};
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::sync::mpsc;
@@ -39,7 +41,7 @@ impl AppConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct Vars {
     pub dev: VarsDev,
     pub access: VarsAccess,
@@ -55,6 +57,16 @@ struct Vars {
     pub events: VarsEvents,
     pub fedcm: Option<ConfigVarsFedCM>,
     pub hashing: VarsHashing,
+    pub http_client: VarsHttpClient,
+    pub i18n: VarsI18n,
+    pub lifetimes: VarsLifetimes,
+    pub logging: VarsLogging,
+    pub mfa: VarsMfa,
+    pub pow: VarsPow,
+    pub scim: VarsScim,
+    pub server: VarsServer,
+    pub suspicious_requests: VarsSuspiciousRequests,
+    pub user_registration: VarsUserRegistration,
 }
 
 impl Default for Vars {
@@ -91,7 +103,7 @@ impl Default for Vars {
             },
             backchannel_logout: VarsBackchannelLogout {
                 retry_count: 100,
-                damger_allow_http: false,
+                danger_allow_http: false,
                 danger_allow_insecure: false,
                 token_lifetime: 30,
                 allow_clock_skew: 5,
@@ -108,7 +120,7 @@ impl Default for Vars {
                 pg_tls_no_verify: false,
                 pg_max_conn: 20,
                 migrate_pg_host: None,
-                migrate_pg_port: None,
+                migrate_pg_port: 5432,
                 migrate_pg_user: None,
                 migrate_pg_password: None,
                 migrate_pg_db_name: None,
@@ -139,6 +151,9 @@ impl Default for Vars {
                 rauthy_admin_email: Cow::default(),
                 sub_prefix: "Rauthy IAM".into(),
                 smtp_url: None,
+                smtp_port: None,
+                smtp_username: None,
+                smtp_password: None,
                 smtp_from: None,
                 connect_retries: 3,
                 danger_insecure: false,
@@ -176,7 +191,7 @@ impl Default for Vars {
                 notify_level_matrix: EventLevel::Notice,
                 notify_level_slack: EventLevel::Notice,
                 persist_level: EventLevel::Info,
-                cleanup_days: 30,
+                cleanup_days: 31,
                 level_new_user: EventLevel::Info,
                 level_user_email_change: EventLevel::Notice,
                 level_user_password_reset: EventLevel::Notice,
@@ -205,6 +220,74 @@ impl Default for Vars {
                 hash_await_warn_time: 500,
                 jwk_autorotate_cron: "0 30 3 1 * * *".into(),
             },
+            http_client: VarsHttpClient {
+                connect_timeout: 10,
+                request_timeout: 10,
+                min_tls: "1.3".into(),
+                idle_timeout: 900,
+                danger_unencrypted: false,
+                danger_insecure: false,
+                root_ca_bundle: None,
+            },
+            i18n: VarsI18n {
+                filter_lang_common: vec!["en".into(), "de".into(), "zhhans".into(), "ko".into()],
+                filter_lang_admin: vec!["en".into(), "de".into(), "ko".into()],
+            },
+            lifetimes: VarsLifetimes {
+                refresh_token_grace_time: 5,
+                refresh_token_lifetime: 48,
+                session_lifetime: 14400,
+                session_renew_mfa: false,
+                session_timeout: 5400,
+                magic_link_pwd_reset: 30,
+                magic_link_pwd_first: 4320,
+            },
+            logging: VarsLogging {
+                level: "info".into(),
+                level_database: "info".into(),
+                level_access: "Basic".into(),
+                log_fmt: "text".into(),
+            },
+            mfa: VarsMfa {
+                admin_force_mfa: true,
+            },
+            pow: VarsPow {
+                difficulty: 20,
+                exp: 30,
+            },
+            scim: VarsScim {
+                sync_delete_groups: false,
+                sync_delete_users: false,
+                retry_count: 100,
+            },
+            server: VarsServer {
+                listen_address: "0.0.0.0".into(),
+                port_http: 8080,
+                port_https: 8443,
+                scheme: "http_https".into(),
+                pub_url: String::default(),
+                http_workers: 0,
+                proxy_mode: false,
+                trusted_proxies: Vec::default(),
+                additional_allowed_origin_schemes: Vec::default(),
+                metrics_enable: false,
+                metrics_addr: "0.0.0.0".into(),
+                metrics_port: 9090,
+                swagger_ui_enable: false,
+                swagger_ui_public: false,
+                see_keep_alive: 30,
+                ssp_threshold: 1000,
+            },
+            suspicious_requests: VarsSuspiciousRequests {
+                blacklist: 1440,
+                log: false,
+            },
+            user_registration: VarsUserRegistration {
+                enable: false,
+                domain_restriction: None,
+                domain_blacklist: Vec::default(),
+                allow_open_redirect: false,
+            },
         }
     }
 }
@@ -224,15 +307,42 @@ impl Vars {
         // in static memory.
 
         let mut table = config.parse::<toml::Table>().unwrap();
+        // println!("\n\n{:?}\n", table);
         slf.parse_dev(&mut table);
         slf.parse_access(&mut table);
+        slf.parse_auth_headers(&mut table);
+        slf.parse_backchannel_logout(&mut table);
+        slf.parse_database(&mut table);
+        slf.parse_device_grant(&mut table);
+        slf.parse_dpop(&mut table);
+        slf.parse_dynamic_clients(&mut table);
+        slf.parse_email(&mut table);
+        slf.parse_encryption(&mut table);
+        slf.parse_ephemeral_clients(&mut table);
+        slf.parse_events(&mut table);
+        slf.parse_fedcm(&mut table);
+        slf.parse_hashing(&mut table);
+        slf.parse_http_client(&mut table);
+        slf.parse_i18n(&mut table);
+        slf.parse_lifetimes(&mut table);
+        slf.parse_logging(&mut table);
+        slf.parse_pow(&mut table);
+        slf.parse_scim(&mut table);
+        slf.parse_server(&mut table);
+        slf.parse_suspicious_requests(&mut table);
+        slf.parse_user_registration(&mut table);
+
         // TODO
+
+        // TODO drop table BEFORE setting as static!
 
         slf
     }
 
     fn parse_dev(&mut self, table: &mut toml::Table) {
-        let mut table = t_table(table, "dev").unwrap();
+        let Some(mut table) = t_table(table, "dev") else {
+            return;
+        };
 
         if let Some(v) = t_bool(&mut table, "dev", "dev_mode", "DEV_MODE") {
             self.dev.dev_mode = v;
@@ -254,7 +364,9 @@ impl Vars {
     }
 
     fn parse_access(&mut self, table: &mut toml::Table) {
-        let mut table = t_table(table, "access").unwrap();
+        let Some(mut table) = t_table(table, "access") else {
+            return;
+        };
 
         if let Some(v) = t_bool(&mut table, "access", "userinfo_strict", "USERINFO_STRICT") {
             self.access.userinfo_strict = v;
@@ -314,7 +426,9 @@ impl Vars {
     }
 
     fn parse_auth_headers(&mut self, table: &mut toml::Table) {
-        let mut table = t_table(table, "auth_headers").unwrap();
+        let Some(mut table) = t_table(table, "auth_headers") else {
+            return;
+        };
 
         if let Some(v) = t_bool(&mut table, "auth_headers", "enable", "AUTH_HEADERS_ENABLE") {
             self.auth_headers.enable = v;
@@ -360,98 +474,1120 @@ impl Vars {
             self.auth_headers.mfa = v.into();
         }
     }
-}
 
-#[derive(Debug, Deserialize)]
-struct VarsDev {
-    #[serde(default)]
-    pub dev_mode: bool,
-    #[serde(default)]
-    pub dpop_http: bool,
-    #[serde(default)]
-    pub insecure_cookie: bool,
-    pub provider_callback_url: Option<String>,
-}
+    fn parse_backchannel_logout(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "backchannel_logout") else {
+            return;
+        };
 
-// impl ConfigVarsDev {
-//     fn parse(tbl: toml::Table) -> Self {
-//         Self {
-//             dev_mode: tbl.get("dev_mode").unwrap_or(false),
-//             dpop_http: false,
-//             insecure_cookie: false,
-//             provider_callback_url: None,
-//         }
-//     }
-// }
-//
-
-// macro_rules! value {
-//     ($t:ty, $tbl:expr, $key:expr) => {
-//         let v = $tbl.get($key).unwrap();
-//         let toml::value::Value::$ty(v) = v else {
-//             panic!("Invalid type for key {}, expected {:?}", $key, &t);
-//         }
-//         v
-//     };
-// }
-
-fn value<T>(tbl: &toml::Table, key: &str) -> T {
-    let v = tbl.get(key).unwrap();
-    match v {
-        Value::String(_) => {}
-        Value::Integer(_) => {}
-        Value::Float(_) => {}
-        Value::Boolean(_) => {}
-        Value::Datetime(_) => {}
-        Value::Array(_) => {}
-        Value::Table(_) => {}
+        if let Some(v) = t_u32(
+            &mut table,
+            "backchannel_logout",
+            "retry_count",
+            "BACKCHANNEL_LOGOUT_RETRY_COUNT",
+        ) {
+            self.backchannel_logout.retry_count = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "backchannel_logout",
+            "danger_allow_http",
+            "BACKCHANNEL_DANGER_ALLOW_HTTP",
+        ) {
+            self.backchannel_logout.danger_allow_http = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "backchannel_logout",
+            "danger_allow_insecure",
+            "BACKCHANNEL_DANGER_ALLOW_INSECURE",
+        ) {
+            self.backchannel_logout.danger_allow_insecure = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "backchannel_logout",
+            "token_lifetime",
+            "LOGOUT_TOKEN_LIFETIME",
+        ) {
+            self.backchannel_logout.token_lifetime = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "backchannel_logout",
+            "allow_clock_skew",
+            "LOGOUT_TOKEN_ALLOW_CLOCK_SKEW",
+        ) {
+            self.backchannel_logout.allow_clock_skew = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "backchannel_logout",
+            "allowed_token_lifetime",
+            "LOGOUT_TOKEN_ALLOWED_LIFETIME",
+        ) {
+            self.backchannel_logout.allowed_token_lifetime = v;
+        }
     }
-    todo!()
-}
 
-#[derive(Debug, Deserialize)]
-struct VarsAccess {
-    #[serde(default = "bool_true")]
-    pub userinfo_strict: bool,
-    #[serde(default)]
-    pub danger_disable_introspect_auth: bool,
-    #[serde(default)]
-    pub disable_refresh_token_nbf: bool,
-    #[serde(default = "bool_true")]
-    pub sec_header_block: bool,
-    #[serde(default = "bool_true")]
-    pub session_validate_ip: bool,
-    #[serde(default)]
-    pub password_reset_cookie_binding: bool,
-    pub peer_ip_header_name: Option<String>,
-    #[serde(default)]
-    pub cookie_mode: CookieMode,
-    #[serde(default = "bool_true")]
-    pub cookie_set_path: bool,
-    #[serde(default = "u32_4096")]
-    pub token_len_limit: i64,
-}
+    fn parse_database(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "database") else {
+            return;
+        };
 
-impl Default for VarsAccess {
-    fn default() -> Self {
-        Self {
-            userinfo_strict: true,
-            danger_disable_introspect_auth: false,
-            disable_refresh_token_nbf: false,
-            sec_header_block: true,
-            session_validate_ip: true,
-            password_reset_cookie_binding: false,
-            peer_ip_header_name: None,
-            cookie_mode: Default::default(),
-            cookie_set_path: true,
-            token_len_limit: 4096,
+        if let Some(v) = t_bool(&mut table, "database", "hiqlite", "HIQLITE") {
+            self.database.hiqlite = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "database",
+            "health_check_delay_secs",
+            "HEALTH_CHECK_DELAY_SECS",
+        ) {
+            self.database.health_check_delay_secs = v;
+        }
+
+        if let Some(v) = t_str(&mut table, "database", "pg_host", "PG_HOST") {
+            self.database.pg_host = Some(v);
+        }
+        if let Some(v) = t_u16(&mut table, "database", "pg_port", "PG_PORT") {
+            self.database.pg_port = v;
+        }
+        if let Some(v) = t_str(&mut table, "database", "pg_user", "PG_USER") {
+            self.database.pg_user = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "database", "pg_password", "PG_PASSWORD") {
+            self.database.pg_password = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "database", "pg_db_name", "PG_DB_NAME") {
+            self.database.pg_db_name = v.into();
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "database",
+            "pg_tls_no_verify",
+            "PG_TLS_NO_VERIFY",
+        ) {
+            self.database.pg_tls_no_verify = v;
+        }
+        if let Some(v) = t_u16(&mut table, "database", "pg_max_conn", "PG_MAX_CONN") {
+            self.database.pg_max_conn = v;
+        }
+
+        if let Some(v) = t_str(&mut table, "database", "migrate_pg_host", "MIGRATE_PG_HOST") {
+            self.database.migrate_pg_host = Some(v);
+        }
+        if let Some(v) = t_u16(&mut table, "database", "migrate_pg_port", "MIGRATE_PG_PORT") {
+            self.database.migrate_pg_port = v;
+        }
+        if let Some(v) = t_str(&mut table, "database", "migrate_pg_user", "MIGRATE_PG_USER") {
+            self.database.migrate_pg_user = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "database",
+            "migrate_pg_password",
+            "MIGRATE_PG_PASSWORD",
+        ) {
+            self.database.migrate_pg_password = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "database",
+            "migrate_pg_db_name",
+            "MIGRATE_PG_DB_NAME",
+        ) {
+            self.database.migrate_pg_db_name = Some(v);
+        }
+
+        if let Some(v) = t_u32(
+            &mut table,
+            "database",
+            "sched_user_exp_mins",
+            "SCHED_USER_EXP_MINS",
+        ) {
+            self.database.sched_user_exp_mins = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "database",
+            "sched_user_exp_delete_mins",
+            "SCHED_USER_EXP_DELETE_MINS",
+        ) {
+            self.database.sched_user_exp_delete_mins = Some(v);
+        }
+    }
+
+    fn parse_device_grant(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "device_grant") else {
+            return;
+        };
+
+        if let Some(v) = t_u32(
+            &mut table,
+            "device_grant",
+            "code_lifetime",
+            "DEVICE_GRANT_CODE_LIFETIME",
+        ) {
+            self.device_grant.code_lifetime = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "device_grant",
+            "user_code_length",
+            "DEVICE_GRANT_USER_CODE_LENGTH",
+        ) {
+            self.device_grant.user_code_length = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "device_grant",
+            "rate_limit",
+            "DEVICE_GRANT_RATE_LIMIT",
+        ) {
+            self.device_grant.rate_limit = Some(v);
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "device_grant",
+            "poll_interval",
+            "DEVICE_GRANT_POLL_INTERVAL",
+        ) {
+            self.device_grant.poll_interval = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "device_grant",
+            "refresh_token_lifetime",
+            "DEVICE_GRANT_REFRESH_TOKEN_LIFETIME",
+        ) {
+            self.device_grant.refresh_token_lifetime = v;
+        }
+    }
+
+    fn parse_dpop(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "dpop") else {
+            return;
+        };
+
+        if let Some(v) = t_bool(&mut table, "dpop", "force_nonce", "DPOP_FORCE_NONCE") {
+            self.dpop.force_nonce = v;
+        }
+        if let Some(v) = t_u32(&mut table, "dpop", "nonce_exp", "DPOP_NONCE_EXP") {
+            self.dpop.nonce_exp = v;
+        }
+    }
+
+    fn parse_dynamic_clients(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "dynamic_clients") else {
+            return;
+        };
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "dynamic_clients",
+            "enable",
+            "ENABLE_DYN_CLIENT_REG",
+        ) {
+            self.dynamic_clients.enable = v;
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "dynamic_clients",
+            "reg_token",
+            "DYN_CLIENT_REG_TOKEN",
+        ) {
+            self.dynamic_clients.reg_token = Some(v);
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "dynamic_clients",
+            "default_token_lifetime",
+            "DYN_CLIENT_DEFAULT_TOKEN_LIFETIME",
+        ) {
+            self.dynamic_clients.default_token_lifetime = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "dynamic_clients",
+            "secret_auto_rotate",
+            "DYN_CLIENT_SECRET_AUTO_ROTATE",
+        ) {
+            self.dynamic_clients.secret_auto_rotate = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "dynamic_clients",
+            "cleanup_interval",
+            "DYN_CLIENT_CLEANUP_INTERVAL",
+        ) {
+            self.dynamic_clients.cleanup_interval = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "dynamic_clients",
+            "cleanup_minutes",
+            "DYN_CLIENT_CLEANUP_MINUTES",
+        ) {
+            self.dynamic_clients.cleanup_minutes = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "dynamic_clients",
+            "rate_limit_sec",
+            "DYN_CLIENT_RATE_LIMIT_SEC",
+        ) {
+            self.dynamic_clients.rate_limit_sec = v;
+        }
+    }
+
+    fn parse_email(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "email") else {
+            return;
+        };
+
+        if let Some(v) = t_str(
+            &mut table,
+            "email",
+            "rauthy_admin_email",
+            "RAUTHY_ADMIN_EMAIL",
+        ) {
+            self.email.rauthy_admin_email = v.into();
+        }
+        if let Some(v) = t_str(&mut table, "email", "sub_prefix", "EMAIL_SUB_PREFIX") {
+            self.email.sub_prefix = v.into();
+        }
+        if let Some(v) = t_str(&mut table, "email", "smtp_url", "SMTP_URL") {
+            self.email.smtp_url = Some(v);
+        }
+        if let Some(v) = t_u16(&mut table, "email", "smtp_port", "SMTP_PORT") {
+            self.email.smtp_port = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "email", "smtp_username", "SMTP_USERNAME") {
+            self.email.smtp_username = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "email", "smtp_password", "SMTP_PASSWORD") {
+            self.email.smtp_password = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "email", "smtp_from", "SMTP_FROM") {
+            self.email.smtp_from = Some(v);
+        }
+        if let Some(v) = t_u16(
+            &mut table,
+            "email",
+            "connect_retries",
+            "SMTP_CONNECT_RETRIES",
+        ) {
+            self.email.connect_retries = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "email",
+            "danger_insecure",
+            "SMTP_DANGER_INSECURE",
+        ) {
+            self.email.danger_insecure = v;
+        }
+    }
+
+    fn parse_encryption(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "encryption") else {
+            return;
+        };
+
+        if let Some(v) = t_str(&mut table, "encryption", "key_active", "ENC_KEY_ACTIVE") {
+            self.encryption.key_active = v;
+        }
+        if let Some(v) = t_str_vec(&mut table, "encryption", "keys", "ENC_KEYS") {
+            self.encryption.keys = v;
+        }
+    }
+
+    fn parse_ephemeral_clients(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "ephemeral_clients") else {
+            return;
+        };
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "ephemeral_clients",
+            "enable",
+            "ENABLE_EPHEMERAL_CLIENTS",
+        ) {
+            self.ephemeral_clients.enable = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "ephemeral_clients",
+            "enable_web_id",
+            "ENABLE_WEB_ID",
+        ) {
+            self.ephemeral_clients.enable_web_id = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "ephemeral_clients",
+            "enable_solid_aud",
+            "ENABLE_SOLID_AUD",
+        ) {
+            self.ephemeral_clients.enable_solid_aud = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "ephemeral_clients",
+            "force_mfa",
+            "EPHEMERAL_CLIENTS_FORCE_MFA",
+        ) {
+            self.ephemeral_clients.force_mfa = v;
+        }
+
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "ephemeral_clients",
+            "allowed_flows",
+            "EPHEMERAL_CLIENTS_ALLOWED_FLOWS",
+        ) {
+            self.ephemeral_clients.allowed_flows = v.into_iter().map(Cow::from).collect::<Vec<_>>();
+        }
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "ephemeral_clients",
+            "allowed_scopes",
+            "EPHEMERAL_CLIENTS_ALLOWED_SCOPES",
+        ) {
+            self.ephemeral_clients.allowed_scopes =
+                v.into_iter().map(Cow::from).collect::<Vec<_>>();
+        }
+
+        if let Some(v) = t_u32(
+            &mut table,
+            "ephemeral_clients",
+            "cache_lifetime",
+            "EPHEMERAL_CLIENTS_CACHE_LIFETIME",
+        ) {
+            self.ephemeral_clients.cache_lifetime = v;
+        }
+    }
+
+    fn parse_events(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "events") else {
+            return;
+        };
+
+        if let Some(v) = t_str(&mut table, "events", "email", "EVENT_EMAIL") {
+            self.events.email = Some(v);
+        }
+
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "matrix_user_id",
+            "EVENT_MATRIX_USER_ID",
+        ) {
+            self.events.matrix_user_id = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "matrix_room_id",
+            "EVENT_MATRIX_ROOM_ID",
+        ) {
+            self.events.matrix_room_id = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "matrix_access_token",
+            "EVENT_MATRIX_ACCESS_TOKEN",
+        ) {
+            self.events.matrix_access_token = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "matrix_user_password",
+            "EVENT_MATRIX_USER_PASSWORD",
+        ) {
+            self.events.matrix_user_password = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "matrix_server_url",
+            "EVENT_MATRIX_SERVER_URL",
+        ) {
+            self.events.matrix_server_url = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "matrix_root_ca_path",
+            "EVENT_MATRIX_ROOT_CA_PATH",
+        ) {
+            self.events.matrix_root_ca_path = Some(v);
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "events",
+            "matrix_danger_disable_tls_validation",
+            "EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION",
+        ) {
+            self.events.matrix_danger_disable_tls_validation = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "events",
+            "matrix_error_no_panic",
+            "EVENT_MATRIX_ERROR_NO_PANIC",
+        ) {
+            self.events.matrix_error_no_panic = v;
+        }
+
+        if let Some(v) = t_str(&mut table, "events", "slack_webhook", "EVENT_SLACK_WEBHOOK") {
+            self.events.slack_webhook = Some(v);
+        }
+
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "notify_level_email",
+            "EVENT_NOTIFY_LEVEL_EMAIL",
+        ) {
+            self.events.notify_level_email =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for notify_level_email");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "notify_level_matrix",
+            "EVENT_NOTIFY_LEVEL_MATRIX",
+        ) {
+            self.events.notify_level_matrix =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for notify_level_matrix");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "notify_level_slack",
+            "EVENT_NOTIFY_LEVEL_SLACK",
+        ) {
+            self.events.notify_level_slack =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for notify_level_slack");
+        }
+        if let Some(v) = t_str(&mut table, "events", "persist_level", "EVENT_PERSIST_LEVEL") {
+            self.events.persist_level =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for persist_level");
+        }
+
+        if let Some(v) = t_u32(&mut table, "events", "cleanup_days", "EVENT_CLEANUP_DAYS") {
+            self.events.cleanup_days = v;
+        }
+
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_new_user",
+            "EVENT_LEVEL_NEW_USER",
+        ) {
+            self.events.level_new_user =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_new_user");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_user_email_change",
+            "EVENT_LEVEL_USER_EMAIL_CHANGE",
+        ) {
+            self.events.level_user_email_change = EventLevel::from_str(&v)
+                .expect("Cannot parse EventLevel for level_user_email_change");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_user_password_reset",
+            "EVENT_LEVEL_USER_PASSWORD_RESET",
+        ) {
+            self.events.level_user_password_reset = EventLevel::from_str(&v)
+                .expect("Cannot parse EventLevel for level_user_password_reset");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_rauthy_admin",
+            "EVENT_LEVEL_RAUTHY_ADMIN",
+        ) {
+            self.events.level_rauthy_admin =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_rauthy_admin");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_rauthy_version",
+            "EVENT_LEVEL_RAUTHY_VERSION",
+        ) {
+            self.events.level_rauthy_version =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_rauthy_version");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_jwks_rotate",
+            "EVENT_LEVEL_JWKS_ROTATE",
+        ) {
+            self.events.level_jwks_rotate =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_jwks_rotate");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_secrets_migrated",
+            "EVENT_LEVEL_SECRETS_MIGRATED",
+        ) {
+            self.events.level_secrets_migrated = EventLevel::from_str(&v)
+                .expect("Cannot parse EventLevel for level_secrets_migrated");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_rauthy_start",
+            "EVENT_LEVEL_RAUTHY_START",
+        ) {
+            self.events.level_rauthy_start =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_rauthy_start");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_rauthy_healthy",
+            "EVENT_LEVEL_RAUTHY_HEALTHY",
+        ) {
+            self.events.level_rauthy_healthy =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_rauthy_healthy");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_rauthy_unhealthy",
+            "EVENT_LEVEL_RAUTHY_UNHEALTHY",
+        ) {
+            self.events.level_rauthy_unhealthy = EventLevel::from_str(&v)
+                .expect("Cannot parse EventLevel for level_rauthy_unhealthy");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_ip_blacklisted",
+            "EVENT_LEVEL_IP_BLACKLISTED",
+        ) {
+            self.events.level_ip_blacklisted =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_ip_blacklisted");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_failed_logins_25",
+            "EVENT_LEVEL_FAILED_LOGINS_25",
+        ) {
+            self.events.level_failed_logins_25 = EventLevel::from_str(&v)
+                .expect("Cannot parse EventLevel for level_failed_logins_25");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_failed_logins_20",
+            "EVENT_LEVEL_FAILED_LOGINS_20",
+        ) {
+            self.events.level_failed_logins_20 = EventLevel::from_str(&v)
+                .expect("Cannot parse EventLevel for level_failed_logins_20");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_failed_logins_15",
+            "EVENT_LEVEL_FAILED_LOGINS_15",
+        ) {
+            self.events.level_failed_logins_15 = EventLevel::from_str(&v)
+                .expect("Cannot parse EventLevel for level_failed_logins_15");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_failed_logins_10",
+            "EVENT_LEVEL_FAILED_LOGINS_10",
+        ) {
+            self.events.level_failed_logins_10 = EventLevel::from_str(&v)
+                .expect("Cannot parse EventLevel for level_failed_logins_10");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_failed_logins_7",
+            "EVENT_LEVEL_FAILED_LOGINS_7",
+        ) {
+            self.events.level_failed_logins_7 = EventLevel::from_str(&v)
+                .expect("Cannot parse EventLevel for level_failed_logins_7");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_failed_login",
+            "EVENT_LEVEL_FAILED_LOGIN",
+        ) {
+            self.events.level_failed_login =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_failed_login");
+        }
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "events",
+            "disable_app_version_check",
+            "DISABLE_APP_VERSION_CHECK",
+        ) {
+            self.events.disable_app_version_check = v;
+        }
+    }
+
+    fn parse_fedcm(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "fedcm") else {
+            return;
+        };
+
+        let mut vars = ConfigVarsFedCM {
+            experimental_enable: false,
+            session_lifetime: 2592000,
+            session_timeout: 259200,
+        };
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "fedcm",
+            "experimental_enable",
+            "EXPERIMENTAL_FED_CM_ENABLE",
+        ) {
+            vars.experimental_enable = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "fedcm",
+            "session_lifetime",
+            "SESSION_LIFETIME_FED_CM",
+        ) {
+            vars.session_lifetime = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "fedcm",
+            "session_timeout",
+            "SESSION_TIMEOUT_FED_CM",
+        ) {
+            vars.session_timeout = v;
+        }
+
+        self.fedcm = Some(vars);
+    }
+
+    fn parse_hashing(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "hashing") else {
+            return;
+        };
+
+        if let Some(v) = t_u32(&mut table, "hashing", "argon2_m_cost", "ARGON2_M_COST") {
+            self.hashing.argon2_m_cost = v;
+        }
+        if let Some(v) = t_u32(&mut table, "hashing", "argon2_t_cost", "ARGON2_T_COST") {
+            self.hashing.argon2_t_cost = v;
+        }
+        if let Some(v) = t_u32(&mut table, "hashing", "argon2_p_cost", "ARGON2_P_COST") {
+            self.hashing.argon2_p_cost = v;
+        }
+
+        if let Some(v) = t_u32(
+            &mut table,
+            "hashing",
+            "max_hash_threads",
+            "MAX_HASH_THREADS",
+        ) {
+            self.hashing.max_hash_threads = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "hashing",
+            "hash_await_warn_time",
+            "HASH_AWAIT_WARN_TIME",
+        ) {
+            self.hashing.hash_await_warn_time = v;
+        }
+
+        if let Some(v) = t_str(
+            &mut table,
+            "hashing",
+            "jwk_autorotate_cron",
+            "JWK_AUTOROTATE_CRON",
+        ) {
+            self.hashing.jwk_autorotate_cron = v.into();
+        }
+    }
+
+    fn parse_http_client(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "http_client") else {
+            return;
+        };
+
+        if let Some(v) = t_u32(
+            &mut table,
+            "http_client",
+            "connect_timeout",
+            "HTTP_CONNECT_TIMEOUT",
+        ) {
+            self.http_client.connect_timeout = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "http_client",
+            "request_timeout",
+            "HTTP_REQUEST_TIMEOUT",
+        ) {
+            self.http_client.request_timeout = v;
+        }
+        if let Some(v) = t_str(&mut table, "http_client", "min_tls", "HTTP_MIN_TLS") {
+            self.http_client.min_tls = v.into();
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "http_client",
+            "idle_timeout",
+            "HTTP_IDLE_TIMEOUT",
+        ) {
+            self.http_client.idle_timeout = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "http_client",
+            "danger_unencrypted",
+            "HTTP_DANGER_UNENCRYPTED",
+        ) {
+            self.http_client.danger_unencrypted = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "http_client",
+            "danger_insecure",
+            "HTTP_DANGER_INSECURE",
+        ) {
+            self.http_client.danger_insecure = v;
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "http_client",
+            "root_ca_bundle",
+            "HTTP_CUST_ROOT_CA_BUNDLE",
+        ) {
+            self.http_client.root_ca_bundle = Some(v);
+        }
+    }
+
+    fn parse_i18n(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "i18n") else {
+            return;
+        };
+
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "i18n",
+            "filter_lang_common",
+            "FILTER_LANG_COMMON",
+        ) {
+            self.i18n.filter_lang_common = v.into_iter().map(Cow::from).collect::<Vec<_>>();
+        }
+        if let Some(v) = t_str_vec(&mut table, "i18n", "filter_lang_admin", "FILTER_LANG_ADMIN") {
+            self.i18n.filter_lang_admin = v.into_iter().map(Cow::from).collect::<Vec<_>>();
+        }
+    }
+
+    fn parse_lifetimes(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "lifetimes") else {
+            return;
+        };
+
+        if let Some(v) = t_u16(
+            &mut table,
+            "lifetimes",
+            "refresh_token_grace_time",
+            "REFRESH_TOKEN_GRACE_TIME",
+        ) {
+            self.lifetimes.refresh_token_grace_time = v;
+        }
+        if let Some(v) = t_u16(
+            &mut table,
+            "lifetimes",
+            "refresh_token_lifetime",
+            "REFRESH_TOKEN_LIFETIME",
+        ) {
+            self.lifetimes.refresh_token_lifetime = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "lifetimes",
+            "session_lifetime",
+            "SESSION_LIFETIME",
+        ) {
+            self.lifetimes.session_lifetime = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "lifetimes",
+            "session_renew_mfa",
+            "SESSION_RENEW_MFA",
+        ) {
+            self.lifetimes.session_renew_mfa = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "lifetimes",
+            "session_timeout",
+            "SESSION_TIMEOUT",
+        ) {
+            self.lifetimes.session_timeout = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "lifetimes",
+            "magic_link_pwd_reset",
+            "ML_LT_PWD_RESET",
+        ) {
+            self.lifetimes.magic_link_pwd_reset = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "lifetimes",
+            "magic_link_pwd_first",
+            "ML_LT_PWD_FIRST",
+        ) {
+            self.lifetimes.magic_link_pwd_first = v;
+        }
+    }
+
+    fn parse_logging(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "logging") else {
+            return;
+        };
+
+        if let Some(v) = t_str(&mut table, "logging", "level", "LOG_LEVEL") {
+            self.logging.level = v.into();
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "logging",
+            "level_database",
+            "LOG_LEVEL_DATABASE",
+        ) {
+            self.logging.level_database = v.into();
+        }
+        if let Some(v) = t_str(&mut table, "logging", "level_access", "LOG_LEVEL_ACCESS") {
+            self.logging.level_access = v.into();
+        }
+        if let Some(v) = t_str(&mut table, "logging", "log_fmt", "LOG_FMT") {
+            self.logging.log_fmt = v.into();
+        }
+    }
+
+    fn parse_mfa(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "mfa") else {
+            return;
+        };
+
+        if let Some(v) = t_bool(&mut table, "mfa", "admin_force_mfa", "ADMIN_FORCE_MFA") {
+            self.mfa.admin_force_mfa = v;
+        }
+    }
+
+    fn parse_pow(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "pow") else {
+            return;
+        };
+
+        if let Some(v) = t_u16(&mut table, "pow", "difficulty", "POW_DIFFICULTY") {
+            self.pow.difficulty = v;
+        }
+        if let Some(v) = t_u16(&mut table, "pow", "exp", "POW_EXP") {
+            self.pow.exp = v;
+        }
+    }
+
+    fn parse_scim(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "scim") else {
+            return;
+        };
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "scim",
+            "sync_delete_groups",
+            "SCIM_SYNC_DELETE_GROUPS",
+        ) {
+            self.scim.sync_delete_groups = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "scim",
+            "sync_delete_users",
+            "SCIM_SYNC_DELETE_USERS",
+        ) {
+            self.scim.sync_delete_users = v;
+        }
+        if let Some(v) = t_u16(&mut table, "scim", "retry_count", "SCIM_RETRY_COUNT") {
+            self.scim.retry_count = v;
+        }
+    }
+
+    fn parse_server(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "server") else {
+            return;
+        };
+
+        if let Some(v) = t_str(&mut table, "server", "listen_address", "LISTEN_ADDRESS") {
+            self.server.listen_address = v.into();
+        }
+        if let Some(v) = t_u16(&mut table, "server", "port_http", "LISTEN_PORT_HTTP") {
+            self.server.port_http = v;
+        }
+        if let Some(v) = t_u16(&mut table, "server", "port_https", "LISTEN_PORT_HTTPS") {
+            self.server.port_https = v;
+        }
+        if let Some(v) = t_str(&mut table, "server", "scheme", "LISTEN_SCHEME") {
+            self.server.scheme = v.into();
+        }
+        if let Some(v) = t_str(&mut table, "server", "pub_url", "PUB_URL") {
+            self.server.pub_url = v.into();
+        }
+        if let Some(v) = t_u16(&mut table, "server", "http_workers", "HTTP_WORKERS") {
+            self.server.http_workers = v;
+        }
+
+        if let Some(v) = t_bool(&mut table, "server", "proxy_mode", "PROXY_MODE") {
+            self.server.proxy_mode = v;
+        }
+        if let Some(v) = t_str_vec(&mut table, "server", "trusted_proxies", "TRUSTED_PROXIES") {
+            self.server.trusted_proxies = v;
+        }
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "server",
+            "additional_allowed_origin_schemes",
+            "ADDITIONAL_ALLOWED_ORIGIN_SCHEMES",
+        ) {
+            self.server.additional_allowed_origin_schemes = v;
+        }
+
+        if let Some(v) = t_bool(&mut table, "server", "metrics_enable", "METRICS_ENABLE") {
+            self.server.metrics_enable = v;
+        }
+        if let Some(v) = t_str(&mut table, "server", "metrics_addr", "METRICS_ADDR") {
+            self.server.metrics_addr = v.into();
+        }
+        if let Some(v) = t_u16(&mut table, "server", "metrics_port", "METRICS_PORT") {
+            self.server.metrics_port = v;
+        }
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "server",
+            "swagger_ui_enable",
+            "SWAGGER_UI_ENABLE",
+        ) {
+            self.server.swagger_ui_enable = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "server",
+            "swagger_ui_public",
+            "SWAGGER_UI_PUBLIC",
+        ) {
+            self.server.swagger_ui_public = v;
+        }
+
+        if let Some(v) = t_u16(&mut table, "server", "see_keep_alive", "SSE_KEEP_ALIVE") {
+            self.server.see_keep_alive = v;
+        }
+        if let Some(v) = t_u16(&mut table, "server", "ssp_threshold", "SSP_THRESHOLD") {
+            self.server.ssp_threshold = v;
+        }
+    }
+
+    fn parse_suspicious_requests(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "suspicious_requests") else {
+            return;
+        };
+
+        if let Some(v) = t_u16(
+            &mut table,
+            "suspicious_requests",
+            "blacklist",
+            "SUSPICIOUS_REQUESTS_BLACKLIST",
+        ) {
+            self.suspicious_requests.blacklist = v.into();
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "suspicious_requests",
+            "log",
+            "SUSPICIOUS_REQUESTS_LOG",
+        ) {
+            self.suspicious_requests.log = v.into();
+        }
+    }
+
+    fn parse_user_registration(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "user_registration") else {
+            return;
+        };
+
+        if let Some(v) = t_bool(&mut table, "user_registration", "enable", "OPEN_USER_REG") {
+            self.user_registration.enable = v;
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "user_registration",
+            "domain_restriction",
+            "USER_REG_DOMAIN_RESTRICTION",
+        ) {
+            self.user_registration.domain_restriction = Some(v);
+        }
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "user_registration",
+            "domain_blacklist",
+            "USER_REG_DOMAIN_BLACKLIST",
+        ) {
+            self.user_registration.domain_blacklist = v;
         }
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
+struct VarsDev {
+    pub dev_mode: bool,
+    pub dpop_http: bool,
+    pub insecure_cookie: bool,
+    pub provider_callback_url: Option<String>,
+}
+
+#[derive(Debug)]
+struct VarsAccess {
+    pub userinfo_strict: bool,
+    pub danger_disable_introspect_auth: bool,
+    pub disable_refresh_token_nbf: bool,
+    pub sec_header_block: bool,
+    pub session_validate_ip: bool,
+    pub password_reset_cookie_binding: bool,
+    pub peer_ip_header_name: Option<String>,
+    pub cookie_mode: CookieMode,
+    pub cookie_set_path: bool,
+    pub token_len_limit: i64,
+}
+
+#[derive(Debug)]
 struct VarsAuthHeaders {
-    #[serde(default)]
     pub enable: bool,
     pub user: Cow<'static, str>,
     pub roles: Cow<'static, str>,
@@ -463,169 +1599,96 @@ struct VarsAuthHeaders {
     pub mfa: Cow<'static, str>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct VarsBackchannelLogout {
-    #[serde(default = "u32_100")]
     pub retry_count: u32,
-    #[serde(default)]
-    pub damger_allow_http: bool,
-    #[serde(default)]
+    pub danger_allow_http: bool,
     pub danger_allow_insecure: bool,
-    #[serde(default = "u32_30")]
     pub token_lifetime: u32,
-    #[serde(default = "u32_5")]
     pub allow_clock_skew: u32,
-    #[serde(default = "u32_120")]
     pub allowed_token_lifetime: u32,
 }
 
-impl Default for VarsBackchannelLogout {
-    fn default() -> Self {
-        Self {
-            retry_count: 100,
-            damger_allow_http: false,
-            danger_allow_insecure: false,
-            token_lifetime: 30,
-            allow_clock_skew: 5,
-            allowed_token_lifetime: 120,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct VarsDatabase {
-    #[serde(default = "bool_true")]
     pub hiqlite: bool,
-    #[serde(default = "u32_30")]
     pub health_check_delay_secs: u32,
 
     pub pg_host: Option<String>,
     pub pg_user: Option<String>,
-    pub pg_port: u32,
+    pub pg_port: u16,
     pub pg_password: Option<String>,
     pub pg_db_name: Cow<'static, str>,
-    #[serde(default)]
     pub pg_tls_no_verify: bool,
-    #[serde(default = "u32_30")]
-    pub pg_max_conn: u32,
+    pub pg_max_conn: u16,
 
     pub migrate_pg_host: Option<String>,
-    pub migrate_pg_port: Option<u32>,
+    pub migrate_pg_port: u16,
     pub migrate_pg_user: Option<String>,
     pub migrate_pg_password: Option<String>,
     pub migrate_pg_db_name: Option<String>,
 
-    #[serde(default = "u32_60")]
     pub sched_user_exp_mins: u32,
     pub sched_user_exp_delete_mins: Option<u32>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct VarsDeviceGrant {
-    #[serde(default = "u32_300")]
     pub code_lifetime: u32,
-    #[serde(default = "u32_8")]
     pub user_code_length: u32,
     pub rate_limit: Option<u32>,
-    #[serde(default = "u32_5")]
     pub poll_interval: u32,
-    #[serde(default = "u32_72")]
     pub refresh_token_lifetime: u32,
 }
 
-impl Default for VarsDeviceGrant {
-    fn default() -> Self {
-        Self {
-            code_lifetime: 300,
-            user_code_length: 8,
-            rate_limit: None,
-            poll_interval: 5,
-            refresh_token_lifetime: 72,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct VarsDpop {
-    #[serde(default = "bool_true")]
     pub force_nonce: bool,
-    #[serde(default = "u32_900")]
     pub nonce_exp: u32,
 }
 
-impl Default for VarsDpop {
-    fn default() -> Self {
-        Self {
-            force_nonce: true,
-            nonce_exp: 900,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct VarsDynamicClients {
-    #[serde(default)]
     pub enable: bool,
     pub reg_token: Option<String>,
-    #[serde(default = "u32_1800")]
     pub default_token_lifetime: u32,
-    #[serde(default = "bool_true")]
     pub secret_auto_rotate: bool,
-    #[serde(default = "u32_60")]
     pub cleanup_interval: u32,
-    #[serde(default = "u32_60")]
     pub cleanup_minutes: u32,
-    #[serde(default = "u32_60")]
     pub rate_limit_sec: u32,
 }
 
-impl Default for VarsDynamicClients {
-    fn default() -> Self {
-        Self {
-            enable: false,
-            reg_token: None,
-            default_token_lifetime: 1800,
-            secret_auto_rotate: true,
-            cleanup_interval: 60,
-            cleanup_minutes: 60,
-            rate_limit_sec: 60,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct VarsEmail {
     pub rauthy_admin_email: Cow<'static, str>,
     pub sub_prefix: Cow<'static, str>,
     pub smtp_url: Option<String>,
+    pub smtp_port: Option<u16>,
+    pub smtp_username: Option<String>,
+    pub smtp_password: Option<String>,
     pub smtp_from: Option<String>,
-    pub connect_retries: u32,
+    pub connect_retries: u16,
     pub danger_insecure: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct VarsEncryption {
     pub key_active: String,
     pub keys: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct VarsEphemeralClients {
-    #[serde(default)]
     pub enable: bool,
-    #[serde(default)]
     pub enable_web_id: bool,
-    #[serde(default)]
     pub enable_solid_aud: bool,
-    #[serde(default)]
     pub force_mfa: bool,
     pub allowed_flows: Vec<Cow<'static, str>>,
     pub allowed_scopes: Vec<Cow<'static, str>>,
-    #[serde(default = "u32_3600")]
     pub cache_lifetime: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct VarsEvents {
     pub email: Option<String>,
 
@@ -635,267 +1698,241 @@ struct VarsEvents {
     pub matrix_user_password: Option<String>,
     pub matrix_server_url: Option<String>,
     pub matrix_root_ca_path: Option<String>,
-    #[serde(default)]
     pub matrix_danger_disable_tls_validation: bool,
-    #[serde(default)]
     pub matrix_error_no_panic: bool,
 
     pub slack_webhook: Option<String>,
 
-    #[serde(default = "ev_lv_warn")]
     pub notify_level_email: EventLevel,
-    #[serde(default = "ev_lv_notice")]
     pub notify_level_matrix: EventLevel,
-    #[serde(default = "ev_lv_notice")]
     pub notify_level_slack: EventLevel,
-    #[serde(default = "ev_lv_info")]
     pub persist_level: EventLevel,
-    #[serde(default = "u32_30")]
     pub cleanup_days: u32,
 
-    #[serde(default = "ev_lv_info")]
     pub level_new_user: EventLevel,
-    #[serde(default = "ev_lv_notice")]
     pub level_user_email_change: EventLevel,
-    #[serde(default = "ev_lv_notice")]
     pub level_user_password_reset: EventLevel,
-    #[serde(default = "ev_lv_notice")]
     pub level_rauthy_admin: EventLevel,
-    #[serde(default = "ev_lv_notice")]
     pub level_rauthy_version: EventLevel,
-    #[serde(default = "ev_lv_notice")]
     pub level_jwks_rotate: EventLevel,
-    #[serde(default = "ev_lv_notice")]
     pub level_secrets_migrated: EventLevel,
-    #[serde(default = "ev_lv_info")]
     pub level_rauthy_start: EventLevel,
-    #[serde(default = "ev_lv_notice")]
     pub level_rauthy_healthy: EventLevel,
-    #[serde(default = "ev_lv_crit")]
     pub level_rauthy_unhealthy: EventLevel,
-    #[serde(default = "ev_lv_warn")]
     pub level_ip_blacklisted: EventLevel,
-    #[serde(default = "ev_lv_crit")]
     pub level_failed_logins_25: EventLevel,
-    #[serde(default = "ev_lv_crit")]
     pub level_failed_logins_20: EventLevel,
-    #[serde(default = "ev_lv_warn")]
     pub level_failed_logins_15: EventLevel,
-    #[serde(default = "ev_lv_warn")]
     pub level_failed_logins_10: EventLevel,
-    #[serde(default = "ev_lv_notice")]
     pub level_failed_logins_7: EventLevel,
-    #[serde(default = "ev_lv_info")]
     pub level_failed_login: EventLevel,
 
-    #[serde(default)]
     pub disable_app_version_check: bool,
 }
 
-impl Default for VarsEvents {
-    fn default() -> Self {
-        Self {
-            email: None,
-            matrix_user_id: None,
-            matrix_room_id: None,
-            matrix_access_token: None,
-            matrix_user_password: None,
-            matrix_server_url: None,
-            matrix_root_ca_path: None,
-            matrix_danger_disable_tls_validation: false,
-            matrix_error_no_panic: false,
-            slack_webhook: None,
-            notify_level_email: EventLevel::Warning,
-            notify_level_matrix: EventLevel::Notice,
-            notify_level_slack: EventLevel::Notice,
-            persist_level: EventLevel::Info,
-            cleanup_days: 30,
-            level_new_user: EventLevel::Info,
-            level_user_email_change: EventLevel::Notice,
-            level_user_password_reset: EventLevel::Notice,
-            level_rauthy_admin: EventLevel::Notice,
-            level_rauthy_version: EventLevel::Notice,
-            level_jwks_rotate: EventLevel::Notice,
-            level_secrets_migrated: EventLevel::Notice,
-            level_rauthy_start: EventLevel::Info,
-            level_rauthy_healthy: EventLevel::Notice,
-            level_rauthy_unhealthy: EventLevel::Critical,
-            level_ip_blacklisted: EventLevel::Warning,
-            level_failed_logins_25: EventLevel::Critical,
-            level_failed_logins_20: EventLevel::Critical,
-            level_failed_logins_15: EventLevel::Warning,
-            level_failed_logins_10: EventLevel::Warning,
-            level_failed_logins_7: EventLevel::Notice,
-            level_failed_login: EventLevel::Info,
-
-            disable_app_version_check: false,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct ConfigVarsFedCM {
-    #[serde(default)]
     pub experimental_enable: bool,
-    #[serde(default = "u32_2592000")]
     pub session_lifetime: u32,
-    #[serde(default = "u32_259200")]
     pub session_timeout: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct VarsHashing {
-    #[serde(default = "u32_131072")]
     pub argon2_m_cost: u32,
-    #[serde(default = "u32_4")]
     pub argon2_t_cost: u32,
-    #[serde(default = "u32_8")]
     pub argon2_p_cost: u32,
-    #[serde(default = "u32_2")]
     pub max_hash_threads: u32,
-    #[serde(default = "u32_500")]
     pub hash_await_warn_time: u32,
-    #[serde(default = "jwk_cron")]
     pub jwk_autorotate_cron: Cow<'static, str>,
 }
 
-impl Default for VarsHashing {
-    fn default() -> Self {
-        Self {
-            argon2_m_cost: 131072,
-            argon2_t_cost: 4,
-            argon2_p_cost: 8,
-            max_hash_threads: 2,
-            hash_await_warn_time: 500,
-            jwk_autorotate_cron: "0 30 3 1 * * *".into(),
+#[derive(Debug)]
+struct VarsHttpClient {
+    pub connect_timeout: u32,
+    pub request_timeout: u32,
+    pub min_tls: Cow<'static, str>,
+    pub idle_timeout: u32,
+    pub danger_unencrypted: bool,
+    pub danger_insecure: bool,
+    pub root_ca_bundle: Option<String>,
+}
+
+#[derive(Debug)]
+struct VarsI18n {
+    pub filter_lang_common: Vec<Cow<'static, str>>,
+    pub filter_lang_admin: Vec<Cow<'static, str>>,
+}
+
+#[derive(Debug)]
+struct VarsLifetimes {
+    pub refresh_token_grace_time: u16,
+    pub refresh_token_lifetime: u16,
+    pub session_lifetime: u32,
+    pub session_renew_mfa: bool,
+    pub session_timeout: u32,
+    pub magic_link_pwd_reset: u32,
+    pub magic_link_pwd_first: u32,
+}
+
+#[derive(Debug)]
+struct VarsLogging {
+    pub level: Cow<'static, str>,
+    pub level_database: Cow<'static, str>,
+    pub level_access: Cow<'static, str>,
+    pub log_fmt: Cow<'static, str>,
+}
+
+#[derive(Debug)]
+struct VarsMfa {
+    pub admin_force_mfa: bool,
+}
+
+#[derive(Debug)]
+struct VarsPow {
+    pub difficulty: u16,
+    pub exp: u16,
+}
+
+#[derive(Debug)]
+struct VarsScim {
+    pub sync_delete_groups: bool,
+    pub sync_delete_users: bool,
+    pub retry_count: u16,
+}
+
+#[derive(Debug)]
+struct VarsServer {
+    pub listen_address: Cow<'static, str>,
+    pub port_http: u16,
+    pub port_https: u16,
+    pub scheme: Cow<'static, str>,
+    pub pub_url: String,
+    pub http_workers: u16,
+    pub proxy_mode: bool,
+    pub trusted_proxies: Vec<String>,
+    pub additional_allowed_origin_schemes: Vec<String>,
+    pub metrics_enable: bool,
+    pub metrics_addr: Cow<'static, str>,
+    pub metrics_port: u16,
+    pub swagger_ui_enable: bool,
+    pub swagger_ui_public: bool,
+    pub see_keep_alive: u16,
+    pub ssp_threshold: u16,
+}
+
+#[derive(Debug)]
+struct VarsSuspiciousRequests {
+    pub blacklist: u16,
+    pub log: bool,
+}
+
+#[derive(Debug)]
+struct VarsUserRegistration {
+    pub enable: bool,
+    pub domain_restriction: Option<String>,
+    pub domain_blacklist: Vec<String>,
+    pub allow_open_redirect: bool,
+}
+
+fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<bool> {
+    if !env_var.is_empty() {
+        if let Ok(v) = env::var(env_var)
+            .as_deref()
+            .map(|v| match v.parse::<bool>() {
+                Ok(b) => b,
+                Err(_) => {
+                    panic!("{}", err_env(env_var, "bool"));
+                }
+            })
+        {
+            return Some(v);
         }
     }
-}
 
-fn bool_true() -> bool {
-    true
-}
-fn u32_2() -> u32 {
-    2
-}
-fn u32_4() -> u32 {
-    4
-}
-fn u32_5() -> u32 {
-    5
-}
-fn u32_8() -> u32 {
-    8
-}
-fn u32_30() -> u32 {
-    30
-}
-fn u32_60() -> u32 {
-    60
-}
-fn u32_72() -> u32 {
-    72
-}
-fn u32_100() -> u32 {
-    100
-}
-fn u32_120() -> u32 {
-    100
-}
-fn u32_300() -> u32 {
-    300
-}
-fn u32_500() -> u32 {
-    500
-}
-fn u32_900() -> u32 {
-    900
-}
-fn u32_1800() -> u32 {
-    1800
-}
-fn u32_3600() -> u32 {
-    3600
-}
-fn u32_4096() -> u32 {
-    4096
-}
-fn u32_131072() -> u32 {
-    131072
-}
-fn u32_259200() -> u32 {
-    259200
-}
-fn u32_2592000() -> u32 {
-    2592000
-}
-fn ev_lv_info() -> EventLevel {
-    EventLevel::Info
-}
-fn ev_lv_notice() -> EventLevel {
-    EventLevel::Notice
-}
-fn ev_lv_warn() -> EventLevel {
-    EventLevel::Warning
-}
-fn ev_lv_crit() -> EventLevel {
-    EventLevel::Critical
-}
-fn jwk_cron() -> Cow<'static, str> {
-    "0 30 3 1 * * *".into()
-}
-
-fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<bool> {
     let Value::Boolean(b) = map.remove(key)? else {
         panic!("{}", err_t(key, parent, "bool"));
     };
-    if env_overwrite.is_empty() {
-        Some(b)
-    } else {
-        Some(
-            env::var(env_overwrite)
-                .as_deref()
-                .map(|v| match v.parse::<bool>() {
-                    Ok(b) => b,
-                    Err(_) => {
-                        panic!("{}", err_env(env_overwrite, "bool"));
-                    }
-                })
-                .unwrap_or(b),
-        )
-    }
+    Some(b)
 }
 
-fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<i64> {
+fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<i64> {
+    if !env_var.is_empty() {
+        if let Ok(v) = env::var(env_var)
+            .as_deref()
+            .map(|v| match v.parse::<i64>() {
+                Ok(b) => b,
+                Err(_) => {
+                    panic!("{}", err_env(env_var, "Integer"));
+                }
+            })
+        {
+            return Some(v);
+        }
+    }
+
     let Value::Integer(i) = map.remove(key)? else {
         panic!("{}", err_t(key, parent, "bool"));
     };
-    if env_overwrite.is_empty() {
-        Some(i)
+    Some(i)
+}
+
+fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u32> {
+    if let Some(v) = t_i64(map, parent, key, env_overwrite) {
+        if v < 0 || v > u32::MAX as i64 {
+            panic!("{}", err_t(key, parent, "u32"));
+        }
+        Some(v as u32)
     } else {
-        Some(
-            env::var(env_overwrite)
-                .as_deref()
-                .map(|v| match v.parse::<i64>() {
-                    Ok(b) => b,
-                    Err(_) => {
-                        panic!("{}", err_env(env_overwrite, "Integer"));
-                    }
-                })
-                .unwrap_or(i),
-        )
+        None
+    }
+}
+fn t_u16(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u16> {
+    if let Some(v) = t_i64(map, parent, key, env_overwrite) {
+        if v < 0 || v > u16::MAX as i64 {
+            panic!("{}", err_t(key, parent, "u16"));
+        }
+        Some(v as u16)
+    } else {
+        None
     }
 }
 
-fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<String> {
+fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<String> {
+    if !env_var.is_empty() {
+        if let Ok(v) = env::var(env_var) {
+            return Some(v);
+        }
+    }
     let Value::String(s) = map.remove(key)? else {
         panic!("{}", err_t(key, parent, "String"));
     };
-    if env_overwrite.is_empty() {
-        Some(s)
-    } else {
-        Some(env::var(env_overwrite).unwrap_or(s))
+    Some(s)
+}
+
+fn t_str_vec(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<Vec<String>> {
+    if !env_var.is_empty() {
+        if let Ok(arr) = env::var(env_var) {
+            return Some(
+                arr.lines()
+                    .into_iter()
+                    .map(|l| l.trim().to_string())
+                    .collect(),
+            );
+        }
     }
+
+    let Value::Array(arr) = map.remove(key)? else {
+        return None;
+    };
+    let mut res = Vec::with_capacity(arr.len());
+    for value in arr {
+        let Value::String(s) = value else {
+            panic!("{}", err_t(key, parent, "String"));
+        };
+        res.push(s);
+    }
+    Some(res)
 }
 
 fn t_table(map: &mut toml::Table, key: &str) -> Option<toml::Table> {
