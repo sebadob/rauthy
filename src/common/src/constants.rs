@@ -3,17 +3,48 @@ use crate::regex::RE_GRANT_TYPES_EPHEMERAL;
 use crate::utils::build_trusted_proxies;
 use actix_web::http::Uri;
 use chrono::{DateTime, Utc};
+use serde::Deserialize;
 use std::env;
 use std::ops::Not;
 use std::str::FromStr;
 use std::string::ToString;
 use std::sync::LazyLock;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum CookieMode {
     Host,
     Secure,
     DangerInsecure,
+}
+
+impl From<&str> for CookieMode {
+    fn from(s: &str) -> Self {
+        match s {
+            "host" => Self::Host,
+            "secure" => Self::Secure,
+            "danger-insecure" => Self::DangerInsecure,
+            v => {
+                panic!("Cannot parse {} as CookieMode", v);
+            }
+        }
+    }
+}
+
+impl CookieMode {
+    pub fn as_str(&self) -> &str {
+        match self {
+            CookieMode::Host => "host",
+            CookieMode::Secure => "secure",
+            CookieMode::DangerInsecure => "danger-insecure",
+        }
+    }
+}
+
+impl Default for CookieMode {
+    fn default() -> Self {
+        Self::Host
+    }
 }
 
 pub static BUILD_TIME: LazyLock<DateTime<Utc>> = LazyLock::new(|| {

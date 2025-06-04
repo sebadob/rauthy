@@ -4211,6 +4211,7 @@ dependencies = [
  "tokio-postgres",
  "tokio-postgres-rustls",
  "tokio-test",
+ "toml",
  "tracing",
  "utoipa",
  "validator",
