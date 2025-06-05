@@ -2,6 +2,7 @@ use crate::ListenScheme;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
+use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
 use std::borrow::Cow;
 use std::env;
@@ -62,6 +63,7 @@ struct Vars {
     pub events: VarsEvents,
     pub fedcm: Option<ConfigVarsFedCM>,
     pub hashing: VarsHashing,
+    pub hiqlite_config: hiqlite::NodeConfig,
     pub http_client: VarsHttpClient,
     pub i18n: VarsI18n,
     pub lifetimes: VarsLifetimes,
@@ -228,6 +230,7 @@ impl Default for Vars {
                 hash_await_warn_time: 500,
                 jwk_autorotate_cron: "0 30 3 1 * * *".into(),
             },
+            hiqlite_config: Default::default(),
             http_client: VarsHttpClient {
                 connect_timeout: 10,
                 request_timeout: 10,
@@ -432,7 +435,9 @@ impl Vars {
         // and memory fragmentation, after the quite big toml has been freed and the config stays
         // in static memory.
 
-        let mut table = config.parse::<toml::Table>().unwrap();
+        let mut table = config
+            .parse::<toml::Table>()
+            .expect("Cannot parse TOML file");
         slf.parse_dev(&mut table);
         slf.parse_access(&mut table);
         slf.parse_auth_headers(&mut table);
@@ -447,6 +452,7 @@ impl Vars {
         slf.parse_events(&mut table);
         slf.parse_fedcm(&mut table);
         slf.parse_hashing(&mut table);
+        slf.parse_hiqlite_config(&mut table).await;
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
         slf.parse_lifetimes(&mut table);
@@ -1349,6 +1355,30 @@ impl Vars {
             "JWK_AUTOROTATE_CRON",
         ) {
             self.hashing.jwk_autorotate_cron = v.into();
+        }
+    }
+
+    async fn parse_hiqlite_config(&mut self, table: &mut toml::Table) {
+        let Some(table) = t_table(table, "cluster") else {
+            return;
+        };
+
+        debug_assert!(!self.encryption.key_active.is_empty());
+        debug_assert!(!self.encryption.keys.is_empty());
+        let Ok(enc_keys) = cryptr::EncKeys::try_parse(
+            self.encryption.key_active.clone(),
+            self.encryption.keys.clone(),
+        ) else {
+            panic!("Invalid ENC_KEYS / ENC_KEY_ACTIVE");
+        };
+
+        match NodeConfig::from_toml_table(table, "cluster", Some(enc_keys)).await {
+            Ok(config) => {
+                self.hiqlite_config = config;
+            }
+            Err(err) => {
+                panic!("Error parsing `[cluster]` section: {:?}", err);
+            }
         }
     }
 
@@ -2278,7 +2308,14 @@ fn t_str_vec(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> O
             return Some(
                 arr.lines()
                     .into_iter()
-                    .map(|l| l.trim().to_string())
+                    .filter_map(|l| {
+                        let trimmed = l.trim().to_string();
+                        if trimmed.is_empty() {
+                            None
+                        } else {
+                            Some(trimmed)
+                        }
+                    })
                     .collect(),
             );
         }
@@ -2342,7 +2379,7 @@ mod tests {
         //         .unwrap(),
         //     provider_callback_url: t_str(&mut table, "dev", "provider_callback_url", ""),
         // };
-        // println!("{:?}", vars);
+        // println!("{:?}", vars.hiqlite_config);
 
         let dev_mode = assert_eq!(1, 2);
     }
