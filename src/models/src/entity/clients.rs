@@ -41,8 +41,8 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
     id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
-    backchannel_logout_uri = $20, restrict_group_prefix = $21
-WHERE id = $22"#;
+    backchannel_logout_uri = $20, restrict_group_prefix = $21, cust_email_mapping = $22
+WHERE id = $23"#;
 
 /**
 # OIDC Client
@@ -80,6 +80,7 @@ pub struct Client {
     pub contacts: Option<String>,
     pub backchannel_logout_uri: Option<String>,
     pub restrict_group_prefix: Option<String>,
+    pub cust_email_mapping: Option<String>,
 }
 
 impl Debug for Client {
@@ -90,7 +91,8 @@ impl Debug for Client {
         redirect_uris: {}, post_logout_redirect_uris: {:?}, allowed_origins: {:?}, \
         flows_enabled: {}, access_token_alg: {}, id_token_alg: {}, auth_code_lifetime: {}, \
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
-        client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?} \
+        client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?}, \
+        cust_email_mapping: {:?}
         }}",
             self.id,
             self.name,
@@ -112,6 +114,7 @@ impl Debug for Client {
             self.contacts,
             self.backchannel_logout_uri,
             self.restrict_group_prefix,
+            self.cust_email_mapping
         )
     }
 }
@@ -141,6 +144,7 @@ impl From<tokio_postgres::Row> for Client {
             contacts: row.get("contacts"),
             backchannel_logout_uri: row.get("backchannel_logout_uri"),
             restrict_group_prefix: row.get("restrict_group_prefix"),
+            cust_email_mapping: row.get("cust_email_mapping"),
         }
     }
 }
@@ -168,9 +172,9 @@ impl Client {
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix)
+client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, cust_email_mapping)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22)"#;
+$18, $19, $20, $21, $22, $23)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -198,7 +202,8 @@ $18, $19, $20, $21, $22)"#;
                         &client.client_uri,
                         &client.contacts,
                         &client.backchannel_logout_uri,
-                        &client.restrict_group_prefix
+                        &client.restrict_group_prefix,
+                        &client.cust_email_mapping
                     ),
                 )
                 .await?;
@@ -228,6 +233,7 @@ $18, $19, $20, $21, $22)"#;
                     &client.contacts,
                     &client.backchannel_logout_uri,
                     &client.restrict_group_prefix,
+                    &client.cust_email_mapping,
                 ],
             )
             .await?;
@@ -254,9 +260,9 @@ $18, $19, $20, $21, $22)"#;
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix)
+client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, cust_email_mapping)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-$21, $22)"#;
+$21, $22, $23)"#;
         let sql_2 = r#"
 INSERT INTO
 clients_dyn (id, created, registration_token, token_endpoint_auth_method)
@@ -289,7 +295,8 @@ VALUES ($1, $2, $3, $4)"#;
                             &client.client_uri,
                             &client.contacts,
                             &client.backchannel_logout_uri,
-                            &client.restrict_group_prefix
+                            &client.restrict_group_prefix,
+                            &client.cust_email_mapping
                         ),
                     ),
                     (
@@ -333,6 +340,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &client.contacts,
                     &client.backchannel_logout_uri,
                     &client.restrict_group_prefix,
+                    &client.cust_email_mapping,
                 ],
             )
             .await?;
@@ -645,6 +653,7 @@ VALUES ($1, $2, $3, $4)"#;
                         contacts,
                         backchannel_logout_uri,
                         &self.restrict_group_prefix,
+                        &self.cust_email_mapping,
                         self.id.clone()
                     ),
                 )
@@ -674,6 +683,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &contacts,
                     &backchannel_logout_uri,
                     &self.restrict_group_prefix,
+                    &self.cust_email_mapping,
                     &self.id,
                 ],
             )
@@ -1487,6 +1497,7 @@ impl From<EphemeralClientRequest> for Client {
             contacts: value.contacts.map(|c| c.join(",")),
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
+            cust_email_mapping: None,
         }
     }
 }
@@ -1526,6 +1537,7 @@ impl Default for Client {
             contacts: None,
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
+            cust_email_mapping: None,
         }
     }
 }
@@ -1732,6 +1744,7 @@ mod tests {
             contacts: Some("batman@localhost.de,@alfred:matrix.org".to_string()),
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
+            cust_email_mapping: None,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);

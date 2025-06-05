@@ -1,8 +1,8 @@
 use crate::cust_validation::*;
 use crate::oidc::JwkKeyPairAlg;
 use rauthy_common::regex::{
-    RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_GROUPS_ROLES_SCOPES, RE_LOWERCASE, RE_SCOPE_SPACE,
-    RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
+    RE_ATTR, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_GROUPS_ROLES_SCOPES, RE_LOWERCASE,
+    RE_SCOPE_SPACE, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -194,6 +194,8 @@ pub struct UpdateClientRequest {
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
     #[validate(regex(path = "*RE_GROUPS_ROLES_SCOPES", code = "^[a-z0-9-_/,:*]{2,64}$"))]
     pub restrict_group_prefix: Option<String>,
+    #[validate(regex(path = "*RE_ATTR", code = "^[a-z0-9-_/]{2,32}$"))]
+    pub cust_email_mapping: Option<String>,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
 }
