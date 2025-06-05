@@ -64,12 +64,11 @@ pub struct DB;
 
 impl DB {
     /// Builds the NodeConfig and starts the Hiqlite node
-    pub async fn init() -> Result<(), ErrorResponse> {
+    pub async fn init(config: hiqlite::NodeConfig) -> Result<(), ErrorResponse> {
         if HIQLITE_CLIENT.get().is_some() {
             panic!("DB::init() must only be called once at startup");
         }
 
-        let config = NodeConfig::from_env();
         // Note: At the time of writing, I have not included the option to not start the DB
         // layer when the feature is enabled, as this would mean many adoptions and additional
         // checks in the Hiqlite code.

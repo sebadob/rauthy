@@ -2,22 +2,27 @@ use crate::ListenScheme;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
+use cryptr::EncKeys;
 use hiqlite::NodeConfig;
-use rauthy_common::constants::CookieMode;
+use rauthy_common::constants::{CookieMode, PROXY_MODE};
+use spow::pow::Pow;
 use std::borrow::Cow;
 use std::env;
 use std::error::Error;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tokio::fs;
 use tokio::sync::mpsc;
 use toml::Value;
-use tracing::debug;
+use tracing::{debug, info};
 use webauthn_rs::Webauthn;
 
+static CONFIG: OnceLock<RauthyConfig> = OnceLock::new();
+
 #[derive(Debug)]
-pub struct AppConfig {
+pub struct RauthyConfig {
     pub argon2_params: argon2::Params,
+    pub issuer: String,
     pub listen_scheme: ListenScheme,
     pub tx_email: mpsc::Sender<EMail>,
     pub tx_events: flume::Sender<Event>,
@@ -26,13 +31,53 @@ pub struct AppConfig {
     pub vars: Vars,
 }
 
-impl AppConfig {
+impl RauthyConfig {
     pub async fn build(
         tx_email: mpsc::Sender<EMail>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
-    ) -> Result<Self, Box<dyn Error>> {
-        let vars = Vars::load("rauthy.toml").await;
+    ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
+        let (vars, node_config) = Vars::load("config.toml").await;
+
+        let listen_scheme = match vars.server.scheme.as_ref() {
+            "http" => {
+                info!(
+                    "Listen URL: http://{}:{}",
+                    vars.server.listen_address, vars.server.port_http
+                );
+                ListenScheme::Http
+            }
+            "https" => {
+                info!(
+                    "Listen URL: https://{}:{}",
+                    vars.server.listen_address, vars.server.port_https
+                );
+                ListenScheme::Https
+            }
+            "http_https" => {
+                let port = format!("{{{}|{}}}", vars.server.port_http, vars.server.port_https);
+                info!(
+                    "Listen URL: {{http|https}}://{}:{}",
+                    vars.server.listen_address, port
+                );
+                ListenScheme::HttpHttps
+            }
+            #[cfg(not(target_os = "windows"))]
+            "unix_http" => {
+                info!("Listen URL: unix+http:{}", vars.server.listen_address);
+                ListenScheme::UnixHttp
+            }
+            #[cfg(not(target_os = "windows"))]
+            "unix_https" => {
+                info!("Listen URL: unix+https:{}", vars.server.listen_address);
+                ListenScheme::UnixHttps
+            }
+            _ => panic!(
+                "'LISTEN_SCHEME' environment variable not correctly set (http | https | http_https)"
+            ),
+        };
+
+        info!("Public URL: {}", vars.server.pub_url);
 
         let argon2_params = argon2::Params::new(
             vars.hashing.argon2_m_cost,
@@ -43,12 +88,66 @@ impl AppConfig {
         .expect("Unable to build Argon2id params");
         debug!("Argon2id Params: {:?}", argon2_params);
 
-        todo!()
+        #[cfg(target_os = "windows")]
+        let is_https =
+            matches!(listen_scheme, ListenScheme::HttpHttps | ListenScheme::Https) || *PROXY_MODE;
+        #[cfg(not(target_os = "windows"))]
+        let is_https = matches!(
+            listen_scheme,
+            ListenScheme::HttpHttps | ListenScheme::Https | ListenScheme::UnixHttps
+        ) || *PROXY_MODE;
+        let issuer_scheme = if is_https { "https" } else { "http" };
+
+        let issuer = format!("{}://{}/auth/v1", issuer_scheme, vars.server.pub_url);
+        debug!("Issuer: {}", issuer);
+
+        let rp_origin = webauthn_rs::prelude::Url::parse(&vars.webauthn.rp_origin)
+            .expect("Cannot parse webauthn.rp_origin to URL");
+        let builder = webauthn_rs::WebauthnBuilder::new(&vars.webauthn.rp_id, &rp_origin)
+            .expect("Invalid configuration")
+            // Set a "nice" relying party name. Has no security properties - may be changed in the future.
+            .rp_name(&vars.webauthn.rp_name);
+        let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
+
+        let slf = Self {
+            argon2_params,
+            issuer,
+            listen_scheme,
+            tx_email,
+            tx_events,
+            tx_events_router,
+            webauthn,
+            vars,
+        };
+
+        Ok((slf, node_config))
+    }
+
+    pub fn init_static(self) {
+        let Ok(enc_keys) = EncKeys::try_parse(
+            self.vars.encryption.key_active.clone(),
+            self.vars.encryption.keys.clone(),
+        ) else {
+            panic!(
+                r#"The `ENC_KEYS`are not correctly set up. Please take a look at the documentation:
+    https://sebadob.github.io/rauthy/config/encryption.html"#
+            );
+        };
+
+        Pow::init_bytes(enc_keys.get_key(&enc_keys.enc_key_active).unwrap());
+        enc_keys.init().unwrap();
+
+        CONFIG.set(self).unwrap();
+    }
+
+    #[inline]
+    pub fn get() -> &'static Self {
+        CONFIG.get().unwrap()
     }
 }
 
 #[derive(Debug)]
-struct Vars {
+pub struct Vars {
     pub dev: VarsDev,
     pub access: VarsAccess,
     pub auth_headers: VarsAuthHeaders,
@@ -63,7 +162,6 @@ struct Vars {
     pub events: VarsEvents,
     pub fedcm: Option<ConfigVarsFedCM>,
     pub hashing: VarsHashing,
-    pub hiqlite_config: hiqlite::NodeConfig,
     pub http_client: VarsHttpClient,
     pub i18n: VarsI18n,
     pub lifetimes: VarsLifetimes,
@@ -230,7 +328,6 @@ impl Default for Vars {
                 hash_await_warn_time: 500,
                 jwk_autorotate_cron: "0 30 3 1 * * *".into(),
             },
-            hiqlite_config: Default::default(),
             http_client: VarsHttpClient {
                 connect_timeout: 10,
                 request_timeout: 10,
@@ -422,9 +519,7 @@ impl Default for Vars {
 }
 
 impl Vars {
-    async fn load(path_config: &str) -> Self {
-        // We want to make sure we grab all the necessary memory BEFORE
-        // loading the toml to avoid bigger memory fragmentation chunks.
+    async fn load(path_config: &str) -> (Self, hiqlite::NodeConfig) {
         let mut slf = Self::default();
 
         let Ok(config) = fs::read_to_string(path_config).await else {
@@ -434,10 +529,13 @@ impl Vars {
         // Note: these inner parsers are very verbose, but they allow the upfront memory allocation
         // and memory fragmentation, after the quite big toml has been freed and the config stays
         // in static memory.
+        // It will also be easier in the future to maybe add other config sources into the mix
+        // and use something else as default very easily, like e.g. a config fetched from a Vault.
 
         let mut table = config
             .parse::<toml::Table>()
             .expect("Cannot parse TOML file");
+
         slf.parse_dev(&mut table);
         slf.parse_access(&mut table);
         slf.parse_auth_headers(&mut table);
@@ -452,11 +550,11 @@ impl Vars {
         slf.parse_events(&mut table);
         slf.parse_fedcm(&mut table);
         slf.parse_hashing(&mut table);
-        slf.parse_hiqlite_config(&mut table).await;
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
         slf.parse_lifetimes(&mut table);
         slf.parse_logging(&mut table);
+        slf.parse_mfa(&mut table);
         slf.parse_pow(&mut table);
         slf.parse_scim(&mut table);
         slf.parse_server(&mut table);
@@ -466,7 +564,9 @@ impl Vars {
         slf.parse_user_registration(&mut table);
         slf.parse_webauthn(&mut table);
 
-        slf
+        let node_config = slf.parse_hiqlite_config(&mut table).await;
+
+        (slf, node_config)
     }
 
     fn parse_dev(&mut self, table: &mut toml::Table) {
@@ -1358,9 +1458,9 @@ impl Vars {
         }
     }
 
-    async fn parse_hiqlite_config(&mut self, table: &mut toml::Table) {
+    async fn parse_hiqlite_config(&mut self, table: &mut toml::Table) -> hiqlite::NodeConfig {
         let Some(table) = t_table(table, "cluster") else {
-            return;
+            panic!("Missing mandatory `[cluster]` section");
         };
 
         debug_assert!(!self.encryption.key_active.is_empty());
@@ -1373,9 +1473,7 @@ impl Vars {
         };
 
         match NodeConfig::from_toml_table(table, "cluster", Some(enc_keys)).await {
-            Ok(config) => {
-                self.hiqlite_config = config;
-            }
+            Ok(config) => config,
             Err(err) => {
                 panic!("Error parsing `[cluster]` section: {:?}", err);
             }
@@ -1906,7 +2004,7 @@ impl Vars {
 }
 
 #[derive(Debug)]
-struct VarsDev {
+pub struct VarsDev {
     pub dev_mode: bool,
     pub dpop_http: bool,
     pub insecure_cookie: bool,
@@ -1914,7 +2012,7 @@ struct VarsDev {
 }
 
 #[derive(Debug)]
-struct VarsAccess {
+pub struct VarsAccess {
     pub userinfo_strict: bool,
     pub danger_disable_introspect_auth: bool,
     pub disable_refresh_token_nbf: bool,
@@ -1928,7 +2026,7 @@ struct VarsAccess {
 }
 
 #[derive(Debug)]
-struct VarsAuthHeaders {
+pub struct VarsAuthHeaders {
     pub enable: bool,
     pub user: Cow<'static, str>,
     pub roles: Cow<'static, str>,
@@ -1941,7 +2039,7 @@ struct VarsAuthHeaders {
 }
 
 #[derive(Debug)]
-struct VarsBackchannelLogout {
+pub struct VarsBackchannelLogout {
     pub retry_count: u32,
     pub danger_allow_http: bool,
     pub danger_allow_insecure: bool,
@@ -1951,7 +2049,7 @@ struct VarsBackchannelLogout {
 }
 
 #[derive(Debug)]
-struct VarsDatabase {
+pub struct VarsDatabase {
     pub hiqlite: bool,
     pub health_check_delay_secs: u32,
 
@@ -1974,7 +2072,7 @@ struct VarsDatabase {
 }
 
 #[derive(Debug)]
-struct VarsDeviceGrant {
+pub struct VarsDeviceGrant {
     pub code_lifetime: u32,
     pub user_code_length: u32,
     pub rate_limit: Option<u32>,
@@ -1983,13 +2081,13 @@ struct VarsDeviceGrant {
 }
 
 #[derive(Debug)]
-struct VarsDpop {
+pub struct VarsDpop {
     pub force_nonce: bool,
     pub nonce_exp: u32,
 }
 
 #[derive(Debug)]
-struct VarsDynamicClients {
+pub struct VarsDynamicClients {
     pub enable: bool,
     pub reg_token: Option<String>,
     pub default_token_lifetime: u32,
@@ -2000,7 +2098,7 @@ struct VarsDynamicClients {
 }
 
 #[derive(Debug)]
-struct VarsEmail {
+pub struct VarsEmail {
     pub rauthy_admin_email: Cow<'static, str>,
     pub sub_prefix: Cow<'static, str>,
     pub smtp_url: Option<String>,
@@ -2013,13 +2111,13 @@ struct VarsEmail {
 }
 
 #[derive(Debug)]
-struct VarsEncryption {
+pub struct VarsEncryption {
     pub key_active: String,
     pub keys: Vec<String>,
 }
 
 #[derive(Debug)]
-struct VarsEphemeralClients {
+pub struct VarsEphemeralClients {
     pub enable: bool,
     pub enable_web_id: bool,
     pub enable_solid_aud: bool,
@@ -2030,7 +2128,7 @@ struct VarsEphemeralClients {
 }
 
 #[derive(Debug)]
-struct VarsEvents {
+pub struct VarsEvents {
     pub email: Option<String>,
 
     pub matrix_user_id: Option<String>,
@@ -2072,14 +2170,14 @@ struct VarsEvents {
 }
 
 #[derive(Debug)]
-struct ConfigVarsFedCM {
+pub struct ConfigVarsFedCM {
     pub experimental_enable: bool,
     pub session_lifetime: u32,
     pub session_timeout: u32,
 }
 
 #[derive(Debug)]
-struct VarsHashing {
+pub struct VarsHashing {
     pub argon2_m_cost: u32,
     pub argon2_t_cost: u32,
     pub argon2_p_cost: u32,
@@ -2089,7 +2187,7 @@ struct VarsHashing {
 }
 
 #[derive(Debug)]
-struct VarsHttpClient {
+pub struct VarsHttpClient {
     pub connect_timeout: u32,
     pub request_timeout: u32,
     pub min_tls: Cow<'static, str>,
@@ -2100,13 +2198,13 @@ struct VarsHttpClient {
 }
 
 #[derive(Debug)]
-struct VarsI18n {
+pub struct VarsI18n {
     pub filter_lang_common: Vec<Cow<'static, str>>,
     pub filter_lang_admin: Vec<Cow<'static, str>>,
 }
 
 #[derive(Debug)]
-struct VarsLifetimes {
+pub struct VarsLifetimes {
     pub refresh_token_grace_time: u16,
     pub refresh_token_lifetime: u16,
     pub session_lifetime: u32,
@@ -2117,7 +2215,7 @@ struct VarsLifetimes {
 }
 
 #[derive(Debug)]
-struct VarsLogging {
+pub struct VarsLogging {
     pub level: Cow<'static, str>,
     pub level_database: Cow<'static, str>,
     pub level_access: Cow<'static, str>,
@@ -2125,25 +2223,25 @@ struct VarsLogging {
 }
 
 #[derive(Debug)]
-struct VarsMfa {
+pub struct VarsMfa {
     pub admin_force_mfa: bool,
 }
 
 #[derive(Debug)]
-struct VarsPow {
+pub struct VarsPow {
     pub difficulty: u16,
     pub exp: u16,
 }
 
 #[derive(Debug)]
-struct VarsScim {
+pub struct VarsScim {
     pub sync_delete_groups: bool,
     pub sync_delete_users: bool,
     pub retry_count: u16,
 }
 
 #[derive(Debug)]
-struct VarsServer {
+pub struct VarsServer {
     pub listen_address: Cow<'static, str>,
     pub port_http: u16,
     pub port_https: u16,
@@ -2163,13 +2261,13 @@ struct VarsServer {
 }
 
 #[derive(Debug)]
-struct VarsSuspiciousRequests {
+pub struct VarsSuspiciousRequests {
     pub blacklist: u16,
     pub log: bool,
 }
 
 #[derive(Debug)]
-struct VarsTemplates {
+pub struct VarsTemplates {
     pub password_new_en: VarsTemplate,
     pub password_new_de: VarsTemplate,
     pub password_new_ko: VarsTemplate,
@@ -2182,7 +2280,7 @@ struct VarsTemplates {
 }
 
 #[derive(Debug)]
-struct VarsTemplate {
+pub struct VarsTemplate {
     pub subject: Cow<'static, str>,
     pub header: Cow<'static, str>,
     pub text: Option<String>,
@@ -2194,7 +2292,7 @@ struct VarsTemplate {
 }
 
 #[derive(Debug)]
-struct VarsUserPictures {
+pub struct VarsUserPictures {
     pub storage_type: Cow<'static, str>,
     pub path: Cow<'static, str>,
     pub s3_url: Option<String>,
@@ -2208,7 +2306,7 @@ struct VarsUserPictures {
 }
 
 #[derive(Debug)]
-struct VarsUserRegistration {
+pub struct VarsUserRegistration {
     pub enable: bool,
     pub domain_restriction: Option<String>,
     pub domain_blacklist: Vec<String>,
@@ -2216,7 +2314,7 @@ struct VarsUserRegistration {
 }
 
 #[derive(Debug)]
-struct VarsWebauthn {
+pub struct VarsWebauthn {
     pub rp_id: String,
     pub rp_origin: String,
     pub rp_name: Cow<'static, str>,
@@ -2379,7 +2477,7 @@ mod tests {
         //         .unwrap(),
         //     provider_callback_url: t_str(&mut table, "dev", "provider_callback_url", ""),
         // };
-        // println!("{:?}", vars.hiqlite_config);
+        // println!("size of vars: {}", std::mem::size_of::<Vars>());
 
         let dev_mode = assert_eq!(1, 2);
     }

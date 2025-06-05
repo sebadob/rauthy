@@ -2,7 +2,6 @@
 
 use crate::logging::setup_logging;
 use actix_web::web;
-use cryptr::EncKeys;
 use rauthy_common::constants::{BUILD_TIME, RAUTHY_VERSION};
 use rauthy_common::password_hasher;
 use rauthy_handlers::openapi::ApiDoc;
@@ -18,13 +17,13 @@ use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::init_event_vars;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
-use spow::pow::Pow;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::env;
 use std::error::Error;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 #[cfg(all(feature = "jemalloc", not(target_env = "msvc")))]
 #[global_allocator]
@@ -99,31 +98,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
         info!("Application started in Integration Test Mode");
     }
 
-    match EncKeys::from_env() {
-        Ok(keys) => {
-            // for the PoWs, we just use our active keys as b64
-            Pow::init_bytes(keys.get_key(&keys.enc_key_active).unwrap());
-            keys.init().unwrap()
-        }
-        Err(err) => {
-            error!(
-                r#"The `ENC_KEYS`are not correctly set up. Please take a look at the documentation:
-https://sebadob.github.io/rauthy/config/encryption.html"#
-            );
-            panic!("{}", err);
-        }
-    }
+    let (tx_email, rx_email) = mpsc::channel::<EMail>(16);
+    let (tx_events, rx_events) = flume::unbounded();
+    let (tx_events_router, rx_events_router) = flume::unbounded();
 
-    DB::init()
+    // TODO after everything has been migrated, keep only the AppConfig and get rid of AppState
+    //  and all constants
+    info!("Initializing AppConfig");
+
+    let (rauthy_config, node_config) = RauthyConfig::build(
+        tx_email.clone(),
+        tx_events.clone(),
+        tx_events_router.clone(),
+    )
+    .await?;
+    rauthy_config.init_static();
+
+    println!("Parsed Static AppConfig: \n\n{:?}\n", RauthyConfig::get());
+
+    DB::init(node_config)
         .await
         .expect("Error starting the database / cache layer");
 
     debug!("Starting E-Mail handler");
-    let (tx_email, rx_email) = mpsc::channel::<EMail>(16);
     tokio::spawn(email::sender(rx_email, test_mode));
-
-    let (tx_events, rx_events) = flume::unbounded();
-    let (tx_events_router, rx_events_router) = flume::unbounded();
 
     debug!("Initializing AppState");
     let app_state = web::Data::new(

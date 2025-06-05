@@ -2234,7 +2234,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.7.0-20250529"
-source = "git+https://github.com/sebadob/hiqlite.git#f5ad11730633446165ba87138b61f301433ad5f8"
+source = "git+https://github.com/sebadob/hiqlite.git#f225d2acadb1e50ae290bc0ca91722eb6f9f92cf"
 dependencies = [
  "argon2",
  "axum 0.8.4",
@@ -2290,7 +2290,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-macros"
 version = "0.7.0-20250529"
-source = "git+https://github.com/sebadob/hiqlite.git#f5ad11730633446165ba87138b61f301433ad5f8"
+source = "git+https://github.com/sebadob/hiqlite.git#f225d2acadb1e50ae290bc0ca91722eb6f9f92cf"
 dependencies = [
  "hiqlite",
  "rust-embed",
@@ -2299,7 +2299,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-wal"
 version = "0.7.0-20250529"
-source = "git+https://github.com/sebadob/hiqlite.git#f5ad11730633446165ba87138b61f301433ad5f8"
+source = "git+https://github.com/sebadob/hiqlite.git#f225d2acadb1e50ae290bc0ca91722eb6f9f92cf"
 dependencies = [
  "bincode",
  "byteorder",

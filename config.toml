@@ -618,7 +618,7 @@ insecure_cookie = true
 #
 # default: false
 # overwritten by: HQL_WAL_IGNORE_LOCK
-#wal_ignore_lock = true
+wal_ignore_lock = true
 
 # You can reset the Raft Logs + Metadata when set to
 # `true`. This can be helpful, if you e.g. run a single
