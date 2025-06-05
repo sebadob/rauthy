@@ -67,7 +67,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             dotenvy::dotenv_override().ok();
         }
     }
-    init_lazy_vars::trigger();
 
     if !logging::is_log_fmt_json() {
         println!(
@@ -111,6 +110,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .await?;
     rauthy_config.init_static();
+    init_lazy_vars::trigger();
 
     println!("Parsed Static AppConfig: \n\n{:?}\n", RauthyConfig::get());
 

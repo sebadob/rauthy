@@ -100,9 +100,9 @@
 | DYN_CLIENT_CLEANUP_INTERVAL                | dynamic_clients.cleanup_interval            | u32        |          |
 | DYN_CLIENT_CLEANUP_MINUTES                 | dynamic_clients.cleanup_minutes             | u32        |          |
 | DYN_CLIENT_RATE_LIMIT_SEC                  | dynamic_clients.rate_limit_sec              | u32        |          |
-| RAUTHY_ADMIN_EMAIL                         | email.rauthy_admin_email                    | String     | *6       |
+| RAUTHY_ADMIN_EMAIL                         | email.rauthy_admin_email                    | String     |          |
 | EMAIL_SUB_PREFIX                           | email.sub_prefix                            | String     |          |
-| SMTP_URL                                   | email.smtp_url                              | String     | *7       |
+| SMTP_URL                                   | email.smtp_url                              | String     | *6       |
 | SMTP_PORT                                  | email.smtp_port                             | u16        |          |
 | SMTP_USERNAME                              | email.smtp_username                         | String     |          |
 | SMTP_PASSWORD                              | email.smtp_password                         | String     |          |
@@ -192,8 +192,8 @@
 | LISTEN_SCHEME                              | server.scheme                               | String     |          |
 | PUB_URL                                    | server.pub_url                              | String     | x        |
 | HTTP_WORKERS                               | server.http_workers                         | u16        |          |
-| PROXY_MODE                                 | server.proxy_mode                           | bool       | *8       |
-| TRUSTED_PROXIES                            | server.trusted_proxies                      | \[String\] | *8       |
+| PROXY_MODE                                 | server.proxy_mode                           | bool       | *7       |
+| TRUSTED_PROXIES                            | server.trusted_proxies                      | \[String\] | *7       |
 | ADDITIONAL_ALLOWED_ORIGIN_SCHEMES          | server.additional_allowed_origin_schemes    | \[String\] |          |
 | METRICS_ENABLE                             | server.metrics_enable                       | bool       |          |
 | METRICS_ADDR                               | server.metrics_addr                         | String     |          |
@@ -204,8 +204,8 @@
 | SSP_THRESHOLD                              | server.ssp_threshold                        | u16        |          |
 | SUSPICIOUS_REQUESTS_BLACKLIST              | suspicious_requests.blacklist               | u16        |          |
 | SUSPICIOUS_REQUESTS_LOG                    | suspicious_requests.log                     | bool       |          |
-| -                                          | \[templates\].lang                          | String     | *9       |
-| -                                          | \[templates\].typ                           | String     | *9       |
+| -                                          | \[templates\].lang                          | String     | *8       |
+| -                                          | \[templates\].typ                           | String     | *8       |
 | -                                          | \[templates\].subject                       | String     |          |
 | -                                          | \[templates\].header                        | String     |          |
 | -                                          | \[templates\].text                          | String     |          |
@@ -244,11 +244,10 @@
 4. Required when `MIGRATE_DB_FROM=postgres`
 5. Not strictly required but should probably almost be set when `dynamic_clients.enable = true` to not have an open dyn
    client registration.
-6. Technically not required, but don't leave it empty
-7. When not set, E-Mail cannot be sent and things like user registration and self-service password requests will not
+6. When not set, E-Mail cannot be sent and things like user registration and self-service password requests will not
    work. You can operate Rauthy without this setting, but then an Admin needs to perform all these actions.
-8. Required when running behind a reverse proxy
-9. The `[templates]` block can be given multiple times for different languages / templates, but if so, `lang` + `typ`
+7. Required when running behind a reverse proxy
+8. The `[templates]` block can be given multiple times for different languages / templates, but if so, `lang` + `typ`
    are required inside.
 
 > NOTE: All `\[String\]` types are Arrays inside the TOML, but a single String value for an ENV VAR, which separates the

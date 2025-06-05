@@ -1,7 +1,6 @@
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
-use rauthy_common::constants::{EMAIL_SUB_PREFIX, PUB_URL};
 use rauthy_error::ErrorResponse;
 use serde::Serialize;
 use std::sync::OnceLock;
@@ -50,7 +49,7 @@ impl FedCMAccount {
             // TODO not sure if it produces errors and problems if we populate this value at all
             approved_clients: Vec::default(),
             login_hints: vec![login_hint, "state=fedcm".to_string()],
-            domain_hints: vec![PUB_URL.to_string()],
+            domain_hints: vec![RauthyConfig::get().vars.server.pub_url.clone()],
         }
     }
 }
@@ -130,7 +129,7 @@ impl FedCMIdPBranding {
             // color for text on IDP branded widgets.
             color: Some(color),
             icons: vec![rauthy_icon],
-            name: Some(&*EMAIL_SUB_PREFIX),
+            name: Some(&RauthyConfig::get().vars.email.sub_prefix),
         })
     }
 }

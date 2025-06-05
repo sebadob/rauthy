@@ -3,7 +3,7 @@ use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
 use rauthy_api_types::oidc::{LoginRefreshRequest, LoginRequest};
-use rauthy_common::constants::{COOKIE_MFA, SESSION_RENEW_MFA, WEBAUTHN_REQ_EXP};
+use rauthy_common::constants::{COOKIE_MFA, WEBAUTHN_REQ_EXP};
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
@@ -12,6 +12,7 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::{AccountType, User};
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_models::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use std::fmt::Write;
 use tracing::trace;
@@ -214,7 +215,7 @@ pub async fn post_authorize_refresh(
     };
 
     // check if we need to validate the 2nd factor
-    if user.has_webauthn_enabled() && *SESSION_RENEW_MFA {
+    if user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa {
         let step = AuthStepAwaitWebauthn {
             code: get_rand(48),
             header_csrf: Session::get_csrf_header(&session.csrf_token),

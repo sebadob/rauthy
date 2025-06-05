@@ -4,9 +4,9 @@ use actix_web::{
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
 };
 use futures::future::LocalBoxFuture;
-use rauthy_common::constants::SEC_HEADER_BLOCK;
 use rauthy_common::utils::real_ip_from_svc_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::future::{Ready, ready};
 use std::rc::Rc;
 use tracing::{debug, warn};
@@ -104,10 +104,10 @@ where
                     ip,
                     req.path()
                 );
-                if *SEC_HEADER_BLOCK {
+                if RauthyConfig::get().vars.access.sec_header_block {
                     Err(Error::from(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
-                        "cross-origin request forbidden for this resource".to_string(),
+                        "cross-origin request forbidden for this resource",
                     )))
                 } else {
                     warn!(

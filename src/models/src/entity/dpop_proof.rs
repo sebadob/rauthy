@@ -1,9 +1,10 @@
 use crate::database::{Cache, DB};
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
+use crate::rauthy_config::RauthyConfig;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, http};
 use chrono::{DateTime, Utc};
-use rauthy_common::constants::{DPOP_FORCE_NONCE, DPOP_NONCE_EXP, DPOP_TOKEN_ENDPOINT, TOKEN_DPOP};
+use rauthy_common::constants::{DPOP_TOKEN_ENDPOINT, TOKEN_DPOP};
 use rauthy_common::regex::RE_TOKEN_68;
 use rauthy_common::utils::{base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -28,7 +29,8 @@ impl Debug for DPoPNonce {
 impl DPoPNonce {
     /// Creates a new DPoP nonce, inserts it into the cache and returns its value.
     pub async fn new_value() -> Result<String, ErrorResponse> {
-        let exp = Utc::now().add(chrono::Duration::seconds(*DPOP_NONCE_EXP as i64));
+        let nonce_exp = RauthyConfig::get().vars.dpop.nonce_exp as i64;
+        let exp = Utc::now().add(chrono::Duration::seconds(nonce_exp));
         let slf = Self {
             exp,
             value: get_rand(32),
@@ -36,23 +38,13 @@ impl DPoPNonce {
 
         let client = DB::hql();
         client
-            .put(
-                Cache::DPoPNonce,
-                "latest",
-                &slf,
-                Some(*DPOP_NONCE_EXP as i64),
-            )
+            .put(Cache::DPoPNonce, "latest", &slf, Some(nonce_exp))
             .await?;
 
         // we need by its own value additionally, because the "latest" may be overwritten
         // before its expiration
         client
-            .put(
-                Cache::DPoPNonce,
-                slf.value.clone(),
-                &slf,
-                Some(*DPOP_NONCE_EXP as i64),
-            )
+            .put(Cache::DPoPNonce, slf.value.clone(), &slf, Some(nonce_exp))
             .await?;
 
         Ok(slf.value)
@@ -298,7 +290,7 @@ impl DPoPProof {
 
         // 9. The htu claim matches the HTTP URI value for the HTTP request in
         // which the JWT was received, ignoring any query and fragment parts.
-        if self.claims.htu != DPOP_TOKEN_ENDPOINT.to_string() {
+        if self.claims.htu != DPOP_TOKEN_ENDPOINT.get().unwrap().to_string() {
             return Err("Invalid 'htu' claim".to_string());
         }
 
@@ -337,7 +329,7 @@ impl DPoPProof {
                 });
                 return Err(latest);
             }
-        } else if *DPOP_FORCE_NONCE {
+        } else if RauthyConfig::get().vars.dpop.force_nonce {
             let latest = DPoPNonce::get_latest().await.unwrap_or_else(|err| {
                 error!("Cache lookup error during DPoP nonce generation: {:?}", err);
                 err.message.to_string()

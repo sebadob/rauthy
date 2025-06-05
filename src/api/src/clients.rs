@@ -10,7 +10,6 @@ use rauthy_api_types::clients::{
     DynamicClientResponse, NewClientRequest, UpdateClientRequest,
 };
 use rauthy_api_types::generic::LogoParams;
-use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
@@ -20,6 +19,7 @@ use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_models::entity::groups::Group;
 use rauthy_models::entity::logos::{Logo, LogoType};
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::client;
 use rauthy_service::oidc::{helpers, logout};
 use std::collections::HashMap;
@@ -170,12 +170,12 @@ pub async fn post_clients_dyn(
     Json(payload): Json<DynamicClientRequest>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*ENABLE_DYN_CLIENT_REG {
+    if !RauthyConfig::get().vars.dynamic_clients.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
     payload.validate()?;
 
-    if let Some(token) = &*DYN_CLIENT_REG_TOKEN {
+    if let Some(token) = &RauthyConfig::get().vars.dynamic_clients.reg_token {
         let bearer = helpers::get_bearer_token_from_header(req.headers())?;
         if token != &bearer {
             return Ok(HttpResponse::Unauthorized()
@@ -216,7 +216,7 @@ pub async fn get_clients_dyn(
     id: web::Path<String>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*ENABLE_DYN_CLIENT_REG {
+    if !RauthyConfig::get().vars.dynamic_clients.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
 
@@ -249,7 +249,7 @@ pub async fn put_clients_dyn(
     id: web::Path<String>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*ENABLE_DYN_CLIENT_REG {
+    if !RauthyConfig::get().vars.dynamic_clients.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
     payload.validate()?;

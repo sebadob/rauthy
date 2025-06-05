@@ -2,6 +2,7 @@ use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::SameSite;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, cookie, web};
@@ -9,7 +10,7 @@ use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_common::constants::{
-    CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER, SESSION_LIFETIME_FED_CM,
+    CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER,
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
@@ -569,7 +570,7 @@ impl Session {
         ApiCookie::build_with_same_site(
             COOKIE_SESSION_FED_CM,
             Cow::from(&self.id),
-            *SESSION_LIFETIME_FED_CM,
+            RauthyConfig::get().vars.fedcm.session_lifetime as i64,
             SameSite::None,
         )
     }

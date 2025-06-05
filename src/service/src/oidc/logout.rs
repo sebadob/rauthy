@@ -4,9 +4,7 @@ use actix_web::http::header::{ACCESS_CONTROL_ALLOW_METHODS, HeaderValue};
 use actix_web::http::{StatusCode, header};
 use actix_web::{HttpRequest, HttpResponse};
 use rauthy_api_types::oidc::{BackchannelLogoutRequest, LogoutRequest};
-use rauthy_common::constants::{
-    COOKIE_SESSION, COOKIE_SESSION_FED_CM, EXPERIMENTAL_FED_CM_ENABLE, RAUTHY_VERSION,
-};
+use rauthy_common::constants::{COOKIE_SESSION, COOKIE_SESSION_FED_CM, RAUTHY_VERSION};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtIdClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
@@ -208,7 +206,7 @@ pub async fn post_logout_handle(
             let cookie_session = ApiCookie::build(COOKIE_SESSION, &sid, 0);
             resp.add_cookie(&cookie_session)?;
 
-            if *EXPERIMENTAL_FED_CM_ENABLE {
+            if RauthyConfig::get().vars.fedcm.experimental_enable {
                 let cookie_fed_cm = ApiCookie::build_with_same_site(
                     COOKIE_SESSION_FED_CM,
                     Cow::from(&sid),

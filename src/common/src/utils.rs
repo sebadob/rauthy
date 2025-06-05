@@ -138,7 +138,7 @@ pub fn real_ip_from_req(req: &HttpRequest) -> Result<IpAddr, ErrorResponse> {
     if let Some(ip) = ip_from_cust_header(req.headers()) {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         Ok(ip)
-    } else if *PROXY_MODE {
+    } else if *PROXY_MODE.get().unwrap() {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         parse_peer_addr(req.connection_info().realip_remote_addr(), false)
     } else {
@@ -153,7 +153,7 @@ pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Result<IpAddr, ErrorRespons
     if let Some(ip) = ip_from_cust_header(req.headers()) {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         Ok(ip)
-    } else if *PROXY_MODE {
+    } else if *PROXY_MODE.get().unwrap() {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         parse_peer_addr(req.connection_info().realip_remote_addr(), false)
     } else {
@@ -235,7 +235,7 @@ pub(crate) fn build_trusted_proxies() -> Vec<cidr::IpCidr> {
 #[inline(always)]
 fn ip_from_cust_header(headers: &HeaderMap) -> Option<IpAddr> {
     // If a custom override has been set, try this first and use the default as fallback
-    if let Some(header_name) = &*PEER_IP_HEADER_NAME {
+    if let Some(header_name) = PEER_IP_HEADER_NAME.get().unwrap() {
         if let Some(Ok(value)) = headers.get(header_name).map(|s| s.to_str()) {
             match IpAddr::from_str(value) {
                 Ok(ip) => {

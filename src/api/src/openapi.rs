@@ -338,7 +338,7 @@ impl ApiDoc {
 
         #[cfg(not(target_os = "windows"))]
         let listen_scheme = &RauthyConfig::get().listen_scheme;
-        let scheme = if (!*PROXY_MODE && listen_scheme == &ListenScheme::Http)
+        let scheme = if (!*PROXY_MODE.get().unwrap() && listen_scheme == &ListenScheme::Http)
             || listen_scheme == &ListenScheme::UnixHttp
         {
             "http://"

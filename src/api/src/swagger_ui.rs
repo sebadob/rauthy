@@ -2,8 +2,9 @@ use crate::ReqPrincipal;
 use actix_web::http::header::{CONTENT_SECURITY_POLICY, HeaderValue};
 use actix_web::web::Path;
 use actix_web::{HttpResponse, get};
-use rauthy_common::constants::{APPLICATION_JSON, PUB_URL_WITH_SCHEME};
+use rauthy_common::constants::APPLICATION_JSON;
 use rauthy_error::ErrorResponse;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::env;
 use std::sync::{Arc, LazyLock, OnceLock};
 
@@ -66,7 +67,7 @@ pub async fn get_swagger_ui(
                         CONTENT_SECURITY_POLICY,
                         HeaderValue::from_str(&format!(
                             "frame-ancestors {}; object-src 'none';",
-                            *PUB_URL_WITH_SCHEME
+                            RauthyConfig::get().pub_url_with_scheme
                         ))
                         .unwrap(),
                     ))

@@ -1,31 +1,28 @@
 use chrono::Utc;
 use hiqlite_macros::params;
-use rauthy_common::constants::{
-    DYN_CLIENT_CLEANUP_INTERVAL, DYN_CLIENT_CLEANUP_MINUTES, DYN_CLIENT_REG_TOKEN,
-    ENABLE_DYN_CLIENT_REG,
-};
 use rauthy_common::is_hiqlite;
 use rauthy_models::database::DB;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::time::Duration;
 use tracing::{debug, error, info};
 
 /// Cleans up unused dynamically registered clients
 pub async fn dyn_client_cleanup() {
-    if !*ENABLE_DYN_CLIENT_REG {
+    if !RauthyConfig::get().vars.dynamic_clients.enable {
         info!(
             "Dynamic client registration is not enabled - exiting dynamic_client_cleanup scheduler"
         );
         return;
     }
-    if DYN_CLIENT_REG_TOKEN.is_some() {
+    if RauthyConfig::get().vars.dynamic_clients.reg_token.is_some() {
         info!("Dynamic client registration is private - exiting dynamic_client_cleanup scheduler");
         return;
     }
 
     let mut interval = tokio::time::interval(Duration::from_secs(
-        DYN_CLIENT_CLEANUP_INTERVAL.saturating_mul(60),
+        (RauthyConfig::get().vars.dynamic_clients.cleanup_interval as u64).saturating_mul(60),
     ));
 
     loop {
@@ -58,7 +55,8 @@ pub async fn dyn_client_cleanup() {
             }
         };
 
-        let threshold = Utc::now().timestamp() - *DYN_CLIENT_CLEANUP_MINUTES as i64;
+        let threshold = Utc::now().timestamp()
+            - RauthyConfig::get().vars.dynamic_clients.cleanup_minutes as i64;
         let mut cleaned_up = 0;
         for client in clients {
             if client.created < threshold {

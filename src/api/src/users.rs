@@ -18,8 +18,8 @@ use rauthy_api_types::users::{
     WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
-    COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, OPEN_USER_REG,
-    PWD_CSRF_HEADER, PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_BLACKLIST,
+    COOKIE_MFA, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, PWD_CSRF_HEADER,
+    PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_BLACKLIST,
     USER_REG_DOMAIN_RESTRICTION, USER_REG_OPEN_REDIRECT,
 };
 use rauthy_common::utils::real_ip_from_req;
@@ -357,7 +357,7 @@ pub async fn get_user_picture_config(
 )]
 #[get("/users/register")]
 pub async fn get_users_register(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    if !*OPEN_USER_REG {
+    if !RauthyConfig::get().vars.user_registration.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
     HtmlCached::UserRegistration
@@ -394,7 +394,7 @@ pub async fn post_users_register_handle(
     req: HttpRequest,
     payload: NewUserRegistrationRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*OPEN_USER_REG {
+    if !RauthyConfig::get().vars.user_registration.enable {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "Open User Registration is not allowed".to_string(),
@@ -1380,7 +1380,7 @@ pub async fn post_webauthn_reg_finish(
 #[get("/{id}/profile")]
 pub async fn get_user_webid(id: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
     // check if webid's are enabled globally
-    if !*ENABLE_WEB_ID {
+    if !RauthyConfig::get().vars.ephemeral_clients.enable_web_id {
         return Ok(HttpResponse::MethodNotAllowed().finish());
     }
 
@@ -1419,7 +1419,7 @@ pub async fn get_user_webid_data(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     // check if webid's are enabled globally
-    if !*ENABLE_WEB_ID {
+    if !RauthyConfig::get().vars.ephemeral_clients.enable_web_id {
         return Ok(HttpResponse::MethodNotAllowed().finish());
     }
 
@@ -1457,7 +1457,7 @@ pub async fn put_user_webid_data(
     principal: ReqPrincipal,
     Json(payload): Json<WebIdRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*ENABLE_WEB_ID {
+    if !RauthyConfig::get().vars.ephemeral_clients.enable_web_id {
         return Ok(HttpResponse::MethodNotAllowed().finish());
     }
     payload.validate()?;

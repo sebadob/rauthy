@@ -3984,6 +3984,7 @@ dependencies = [
  "rauthy-models",
  "rauthy-schedulers",
  "rauthy-service",
+ "regex",
  "reqwest",
  "ring",
  "rustls",

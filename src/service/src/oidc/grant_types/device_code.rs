@@ -2,11 +2,11 @@ use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenScopes, Toke
 use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
-use rauthy_common::constants::DEVICE_GRANT_POLL_INTERVAL;
 use rauthy_common::utils::new_store_id;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::devices::{DeviceAuthCode, DeviceEntity};
 use rauthy_models::entity::users::User;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::borrow::Cow;
 use std::net::IpAddr;
 use std::ops::{Add, Sub};
@@ -66,10 +66,9 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
     // We allow it to be 500ms shorter than specified to not get into
     // possible problems with slightly inaccurate client implementations.
     let now = Utc::now();
+    let interval = RauthyConfig::get().vars.device_grant.poll_interval as i64;
     let poll_thres = now
-        .sub(chrono::Duration::seconds(
-            *DEVICE_GRANT_POLL_INTERVAL as i64,
-        ))
+        .sub(chrono::Duration::seconds(interval))
         .add(chrono::Duration::milliseconds(500));
     if poll_thres < code.last_poll {
         warn!("device does not respect the poll interval");

@@ -30,8 +30,8 @@ use rauthy_api_types::users::{
     UserValuesResponse,
 };
 use rauthy_common::constants::{
-    CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, PUB_URL_WITH_SCHEME,
-    RAUTHY_ADMIN_ROLE, WEBAUTHN_NO_PASSWORD_EXPIRY,
+    CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
+    WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
@@ -1761,7 +1761,9 @@ impl User {
         self.picture_id.as_ref().map(|pic_id| {
             format!(
                 "{}/auth/v1/users/{}/picture/{}",
-                *PUB_URL_WITH_SCHEME, self.id, pic_id
+                RauthyConfig::get().pub_url_with_scheme,
+                self.id,
+                pic_id
             )
         })
     }

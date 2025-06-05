@@ -302,9 +302,9 @@ pub struct DeviceCodeResponse<'a> {
     pub verification_uri: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verification_uri_complete: Option<String>,
-    pub expires_in: u16,
+    pub expires_in: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub interval: Option<u8>,
+    pub interval: Option<u32>,
 }
 
 #[derive(Serialize, ToSchema)]

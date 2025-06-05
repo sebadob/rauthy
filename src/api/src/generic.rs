@@ -11,8 +11,8 @@ use rauthy_api_types::generic::{
     PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
-    APP_START, APPLICATION_JSON, HEADER_ALLOW_ALL_ORIGINS, HEALTH_CHECK_DELAY_SECS, IDX_LOGIN_TIME,
-    RAUTHY_VERSION, SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
+    APP_START, APPLICATION_JSON, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME, RAUTHY_VERSION,
+    SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::ErrorResponse;
@@ -417,7 +417,9 @@ pub async fn post_update_language(
 )]
 #[get("/health")]
 pub async fn get_health() -> impl Responder {
-    if Utc::now().sub(*APP_START).num_seconds() < *HEALTH_CHECK_DELAY_SECS as i64 {
+    if Utc::now().sub(*APP_START).num_seconds()
+        < RauthyConfig::get().vars.database.health_check_delay_secs as i64
+    {
         info!("Early health check within the HEALTH_CHECK_DELAY_SECS timeframe - returning true");
         HttpResponse::Ok().json(HealthResponse {
             db_healthy: true,

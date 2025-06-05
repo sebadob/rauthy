@@ -1,7 +1,7 @@
 use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
 use crate::rauthy_config::RauthyConfig;
-use rauthy_common::constants::{CACHE_TTL_APP, ENABLE_DYN_CLIENT_REG, GRANT_TYPE_DEVICE_CODE};
+use rauthy_common::constants::{CACHE_TTL_APP, GRANT_TYPE_DEVICE_CODE};
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -85,8 +85,11 @@ impl WellKnown {
         let token_endpoint = format!("{}/oidc/token", issuer);
         let introspection_endpoint = format!("{}/oidc/introspect", issuer);
         let userinfo_endpoint = format!("{}/oidc/userinfo", issuer);
-        let registration_endpoint =
-            ENABLE_DYN_CLIENT_REG.then_some(format!("{}/clients_dyn", issuer));
+        let registration_endpoint = RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .enable
+            .then_some(format!("{}/clients_dyn", issuer));
         let end_session_endpoint = format!("{}/oidc/logout", issuer);
         let jwks_uri = format!("{}/oidc/certs", issuer);
         let grant_types_supported = vec![

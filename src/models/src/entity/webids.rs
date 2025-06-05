@@ -1,7 +1,8 @@
 use crate::database::{Cache, DB};
+use crate::rauthy_config::RauthyConfig;
 use hiqlite_macros::params;
 use rauthy_api_types::users::WebIdResponse;
-use rauthy_common::constants::{CACHE_TTL_USER, PUB_URL_WITH_SCHEME};
+use rauthy_common::constants::CACHE_TTL_USER;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use rio_api::formatter::TriplesFormatter;
@@ -31,12 +32,20 @@ impl From<tokio_postgres::Row> for WebId {
 impl WebId {
     #[inline]
     pub fn resolve_webid_uri(user_id: &str) -> String {
-        format!("{}/auth/{}/profile#me", *PUB_URL_WITH_SCHEME, user_id)
+        format!(
+            "{}/auth/{}/profile#me",
+            RauthyConfig::get().pub_url_with_scheme,
+            user_id
+        )
     }
 
     #[inline]
     pub fn resolve_webid_card_uri(user_id: &str) -> String {
-        format!("{}/auth/{}/profile", *PUB_URL_WITH_SCHEME, user_id)
+        format!(
+            "{}/auth/{}/profile",
+            RauthyConfig::get().pub_url_with_scheme,
+            user_id
+        )
     }
 
     /// Returns the WebId from the database, if it exists, and a default otherwise.

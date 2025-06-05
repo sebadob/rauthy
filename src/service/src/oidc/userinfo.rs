@@ -2,7 +2,6 @@ use crate::oidc::helpers;
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use rauthy_api_types::users::Userinfo;
-use rauthy_common::constants::{ENABLE_WEB_ID, USERINFO_STRICT};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{AddressClaim, JwtCommonClaims, JwtTokenType};
 use rauthy_models::entity::clients::Client;
@@ -10,6 +9,7 @@ use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webids::WebId;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::borrow::Cow;
 
 pub async fn get_userinfo(
@@ -52,7 +52,7 @@ pub async fn get_userinfo(
         ));
     }
 
-    let cors_header = if *USERINFO_STRICT {
+    let cors_header = if RauthyConfig::get().vars.access.userinfo_strict {
         // if the token has been issued to a device, make sure it still exists and is valid
         if let Some(device_id) = claims.did {
             // make sure it still exists
@@ -89,8 +89,9 @@ pub async fn get_userinfo(
 
     let roles = user.get_roles();
     let groups = scope.contains("groups").then(|| user.get_groups());
-    let webid =
-        (*ENABLE_WEB_ID && scope.contains("webid")).then(|| WebId::resolve_webid_uri(&user.id));
+    let webid = (RauthyConfig::get().vars.ephemeral_clients.enable_web_id
+        && scope.contains("webid"))
+    .then(|| WebId::resolve_webid_uri(&user.id));
 
     let mut userinfo = Userinfo {
         id: user.id.clone(),

@@ -1,9 +1,5 @@
 use chrono::Utc;
 use rauthy_api_types::oidc::JktClaim;
-use rauthy_common::constants::{
-    DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, DISABLE_REFRESH_TOKEN_NBF, ENABLE_SOLID_AUD,
-    ENABLE_WEB_ID, REFRESH_TOKEN_LIFETIME,
-};
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{
@@ -226,14 +222,17 @@ impl TokenSet {
         } else {
             JwtAmrValue::Pwd.as_str()
         };
-        let aud = if client.is_ephemeral() && *ENABLE_SOLID_AUD {
+        let aud = if client.is_ephemeral()
+            && RauthyConfig::get().vars.ephemeral_clients.enable_solid_aud
+        {
             Cow::from(format!("[\"{}\",\"solid\"]", client.id))
         } else {
             Cow::Borrowed(client.id.as_str())
         };
 
-        let webid = (*ENABLE_WEB_ID && scope.contains("webid"))
-            .then(|| Cow::from(WebId::resolve_webid_uri(&user.id)));
+        let webid = (RauthyConfig::get().vars.ephemeral_clients.enable_web_id
+            && scope.contains("webid"))
+        .then(|| Cow::from(WebId::resolve_webid_uri(&user.id)));
 
         let now = Utc::now().timestamp();
         let mut claims = JwtIdClaims {
@@ -362,16 +361,16 @@ impl TokenSet {
         };
 
         let now = Utc::now().timestamp();
-        let nbf = if *DISABLE_REFRESH_TOKEN_NBF {
+        let nbf = if RauthyConfig::get().vars.access.disable_refresh_token_nbf {
             now
         } else {
             // allow 60 second early usage
             now + access_token_lifetime - 60
         };
         let exp = if did.is_some() {
-            nbf + 3600 * *DEVICE_GRANT_REFRESH_TOKEN_LIFETIME as i64
+            nbf + 3600 * RauthyConfig::get().vars.device_grant.refresh_token_lifetime as i64
         } else {
-            nbf + 3600 * *REFRESH_TOKEN_LIFETIME as i64
+            nbf + 3600 * RauthyConfig::get().vars.lifetimes.refresh_token_lifetime as i64
         };
 
         let token = {

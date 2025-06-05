@@ -12,14 +12,12 @@ use actix_web::{HttpResponse, HttpResponseBuilder};
 use askama::Template;
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
-use rauthy_common::constants::{
-    DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE,
-    USER_REG_DOMAIN_RESTRICTION,
-};
+use rauthy_common::constants::{HEADER_HTML, PWD_RESET_COOKIE, USER_REG_DOMAIN_RESTRICTION};
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Serialize;
 use std::borrow::Cow;
+use std::cmp::max;
 use std::fmt::{Debug, Display, Formatter};
 use tracing::warn;
 
@@ -107,12 +105,18 @@ impl HtmlTemplate {
                 }
             }
             "tpl_device_user_code_length" => Ok((
-                Self::DeviceUserCodeLength(*DEVICE_GRANT_USER_CODE_LENGTH),
+                Self::DeviceUserCodeLength(max(
+                    RauthyConfig::get().vars.device_grant.user_code_length,
+                    255,
+                ) as u8),
                 None,
             )),
             "tpl_email_old" => Ok((Self::EmailOld("OLD@EMAIL.LOCAL".to_string()), None)),
             "tpl_email_new" => Ok((Self::EmailOld("NEW@EMAIL.LOCAL".to_string()), None)),
-            "tpl_is_reg_open" => Ok((Self::IsRegOpen(*OPEN_USER_REG), None)),
+            "tpl_is_reg_open" => Ok((
+                Self::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
+                None,
+            )),
             // the LoginAction requires a complex logic + validation.
             // Simply always return None during local dev.
             "tpl_login_action" => Ok((Self::LoginAction(FrontendAction::None), None)),
@@ -248,7 +252,9 @@ impl IndexHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::IsRegOpen(*OPEN_USER_REG)],
+            templates: &[HtmlTemplate::IsRegOpen(
+                RauthyConfig::get().vars.user_registration.enable,
+            )],
         };
 
         res.render().unwrap()
@@ -313,9 +319,10 @@ impl DeviceHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::DeviceUserCodeLength(
-                *DEVICE_GRANT_USER_CODE_LENGTH,
-            )],
+            templates: &[HtmlTemplate::DeviceUserCodeLength(max(
+                RauthyConfig::get().vars.device_grant.user_code_length,
+                255,
+            ) as u8)],
         };
 
         res.render().unwrap()

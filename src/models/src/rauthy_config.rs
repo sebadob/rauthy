@@ -4,7 +4,7 @@ use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
-use rauthy_common::constants::{CookieMode, PROXY_MODE};
+use rauthy_common::constants::CookieMode;
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::env;
@@ -24,6 +24,9 @@ pub struct RauthyConfig {
     pub argon2_params: argon2::Params,
     pub issuer: String,
     pub listen_scheme: ListenScheme,
+    pub provider_callback_uri: String,
+    pub provider_callback_uri_encoded: String,
+    pub pub_url_with_scheme: String,
     pub tx_email: mpsc::Sender<EMail>,
     pub tx_events: flume::Sender<Event>,
     pub tx_events_router: flume::Sender<EventRouterMsg>,
@@ -89,16 +92,47 @@ impl RauthyConfig {
         debug!("Argon2id Params: {:?}", argon2_params);
 
         #[cfg(target_os = "windows")]
-        let is_https =
-            matches!(listen_scheme, ListenScheme::HttpHttps | ListenScheme::Https) || *PROXY_MODE;
+        let is_https = matches!(listen_scheme, ListenScheme::HttpHttps | ListenScheme::Https)
+            || vars.server.proxy_mode;
         #[cfg(not(target_os = "windows"))]
         let is_https = matches!(
             listen_scheme,
             ListenScheme::HttpHttps | ListenScheme::Https | ListenScheme::UnixHttps
-        ) || *PROXY_MODE;
+        ) || vars.server.proxy_mode;
         let issuer_scheme = if is_https { "https" } else { "http" };
         let issuer = format!("{}://{}/auth/v1", issuer_scheme, vars.server.pub_url);
         debug!("Issuer: {}", issuer);
+
+        let pub_url = &vars.server.pub_url;
+        let provider_callback_uri = {
+            let scheme = if (listen_scheme == ListenScheme::Http && !vars.server.proxy_mode)
+                || listen_scheme == ListenScheme::UnixHttp
+            {
+                "http"
+            } else {
+                "https"
+            };
+            let pub_url = if vars.dev.dev_mode {
+                env::var("DEV_MODE_PROVIDER_CALLBACK_URL").unwrap_or_else(|_| pub_url.clone())
+            } else {
+                pub_url.clone()
+            };
+            format!("{}://{}/auth/v1/providers/callback", scheme, pub_url)
+        };
+        let provider_callback_uri_encoded = provider_callback_uri
+            .replace(':', "%3A")
+            .replace('/', "%2F");
+
+        let pub_url_with_scheme = {
+            let scheme = if (listen_scheme == ListenScheme::Http && !vars.server.proxy_mode)
+                || listen_scheme == ListenScheme::UnixHttp
+            {
+                "http"
+            } else {
+                "https"
+            };
+            format!("{}://{}", scheme, pub_url)
+        };
 
         let rp_origin = webauthn_rs::prelude::Url::parse(&vars.webauthn.rp_origin)
             .expect("Cannot parse webauthn.rp_origin to URL");
@@ -112,6 +146,9 @@ impl RauthyConfig {
             argon2_params,
             issuer,
             listen_scheme,
+            provider_callback_uri,
+            provider_callback_uri_encoded,
+            pub_url_with_scheme,
             tx_email,
             tx_events,
             tx_events_router,
@@ -159,7 +196,7 @@ pub struct Vars {
     pub encryption: VarsEncryption,
     pub ephemeral_clients: VarsEphemeralClients,
     pub events: VarsEvents,
-    pub fedcm: Option<ConfigVarsFedCM>,
+    pub fedcm: ConfigVarsFedCM,
     pub hashing: VarsHashing,
     pub http_client: VarsHttpClient,
     pub i18n: VarsI18n,
@@ -255,7 +292,7 @@ impl Default for Vars {
                 rate_limit_sec: 60,
             },
             email: VarsEmail {
-                rauthy_admin_email: Cow::default(),
+                rauthy_admin_email: None,
                 sub_prefix: "Rauthy IAM".into(),
                 smtp_url: None,
                 smtp_port: None,
@@ -318,7 +355,11 @@ impl Default for Vars {
                 level_failed_login: EventLevel::Info,
                 disable_app_version_check: false,
             },
-            fedcm: None,
+            fedcm: ConfigVarsFedCM {
+                experimental_enable: false,
+                session_lifetime: 2592000,
+                session_timeout: 259200,
+            },
             hashing: VarsHashing {
                 argon2_m_cost: 131072,
                 argon2_t_cost: 4,
@@ -981,7 +1022,7 @@ impl Vars {
             "rauthy_admin_email",
             "RAUTHY_ADMIN_EMAIL",
         ) {
-            self.email.rauthy_admin_email = v.into();
+            self.email.rauthy_admin_email = Some(v);
         }
         if let Some(v) = t_str(&mut table, "email", "sub_prefix", "EMAIL_SUB_PREFIX") {
             self.email.sub_prefix = v.into();
@@ -1381,19 +1422,13 @@ impl Vars {
             return;
         };
 
-        let mut vars = ConfigVarsFedCM {
-            experimental_enable: false,
-            session_lifetime: 2592000,
-            session_timeout: 259200,
-        };
-
         if let Some(v) = t_bool(
             &mut table,
             "fedcm",
             "experimental_enable",
             "EXPERIMENTAL_FED_CM_ENABLE",
         ) {
-            vars.experimental_enable = v;
+            self.fedcm.experimental_enable = v;
         }
         if let Some(v) = t_u32(
             &mut table,
@@ -1401,7 +1436,7 @@ impl Vars {
             "session_lifetime",
             "SESSION_LIFETIME_FED_CM",
         ) {
-            vars.session_lifetime = v;
+            self.fedcm.session_lifetime = v;
         }
         if let Some(v) = t_u32(
             &mut table,
@@ -1409,10 +1444,8 @@ impl Vars {
             "session_timeout",
             "SESSION_TIMEOUT_FED_CM",
         ) {
-            vars.session_timeout = v;
+            self.fedcm.session_timeout = v;
         }
-
-        self.fedcm = Some(vars);
     }
 
     fn parse_hashing(&mut self, table: &mut toml::Table) {
@@ -1657,7 +1690,7 @@ impl Vars {
             return;
         };
 
-        if let Some(v) = t_u16(&mut table, "pow", "difficulty", "POW_DIFFICULTY") {
+        if let Some(v) = t_u8(&mut table, "pow", "difficulty", "POW_DIFFICULTY") {
             self.pow.difficulty = v;
         }
         if let Some(v) = t_u16(&mut table, "pow", "exp", "POW_EXP") {
@@ -2098,7 +2131,7 @@ pub struct VarsDynamicClients {
 
 #[derive(Debug)]
 pub struct VarsEmail {
-    pub rauthy_admin_email: Cow<'static, str>,
+    pub rauthy_admin_email: Option<String>,
     pub sub_prefix: Cow<'static, str>,
     pub smtp_url: Option<String>,
     pub smtp_port: Option<u16>,
@@ -2228,7 +2261,7 @@ pub struct VarsMfa {
 
 #[derive(Debug)]
 pub struct VarsPow {
-    pub difficulty: u16,
+    pub difficulty: u8,
     pub exp: u16,
 }
 
@@ -2382,6 +2415,16 @@ fn t_u16(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) ->
             panic!("{}", err_t(key, parent, "u16"));
         }
         Some(v as u16)
+    } else {
+        None
+    }
+}
+fn t_u8(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u8> {
+    if let Some(v) = t_i64(map, parent, key, env_overwrite) {
+        if v < 0 || v > u8::MAX as i64 {
+            panic!("{}", err_t(key, parent, "u16"));
+        }
+        Some(v as u8)
     } else {
         None
     }

@@ -5,10 +5,7 @@ use actix_web::{HttpRequest, HttpResponse, get, post};
 use chrono::Utc;
 use rauthy_api_types::clients::EphemeralClientRequest;
 use rauthy_api_types::fed_cm::{FedCMAssertionRequest, FedCMClientMetadataRequest};
-use rauthy_common::constants::{
-    COOKIE_SESSION_FED_CM, EXPERIMENTAL_FED_CM_ENABLE, HEADER_ALLOW_ALL_ORIGINS, HEADER_JSON,
-    PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL, SESSION_TIMEOUT_FED_CM,
-};
+use rauthy_common::constants::{COOKIE_SESSION_FED_CM, HEADER_ALLOW_ALL_ORIGINS, HEADER_JSON};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::ListenScheme;
@@ -162,13 +159,19 @@ pub async fn get_fed_cm_config(req: HttpRequest) -> Result<HttpResponse, ErrorRe
 #[tracing::instrument(level = "debug", skip_all)]
 #[get("/fed_cm/client_config")]
 pub async fn get_fed_client_config() -> HttpResponse {
+    let pub_url_scheme = &RauthyConfig::get().pub_url_with_scheme;
     let config = EphemeralClientRequest {
-        client_id: format!("{}/auth/v1/fed_cm/client_config", *PUB_URL_WITH_SCHEME),
+        client_id: format!("{}/auth/v1/fed_cm/client_config", pub_url_scheme),
         client_name: Some("Rauthy".to_string()),
-        client_uri: Some(PUB_URL_WITH_SCHEME.to_string()),
-        contacts: RAUTHY_ADMIN_EMAIL.clone().map(|e| vec![e]),
-        redirect_uris: vec![format!("{}/auth/v1/*", *PUB_URL_WITH_SCHEME)],
-        post_logout_redirect_uris: Some(vec![format!("{}/auth/v1/*", *PUB_URL_WITH_SCHEME)]),
+        client_uri: Some(pub_url_scheme.clone()),
+        contacts: RauthyConfig::get()
+            .vars
+            .email
+            .rauthy_admin_email
+            .clone()
+            .map(|e| vec![e]),
+        redirect_uris: vec![format!("{}/auth/v1/*", pub_url_scheme)],
+        post_logout_redirect_uris: Some(vec![format!("{}/auth/v1/*", pub_url_scheme)]),
         grant_types: Some(vec![
             "authorization_code".to_string(),
             "refresh_token".to_string(),
@@ -330,7 +333,7 @@ pub async fn get_fed_cm_well_known(req: HttpRequest) -> Result<HttpResponse, Err
 
 #[inline(always)]
 fn is_fed_cm_enabled() -> Result<(), ErrorResponse> {
-    if *EXPERIMENTAL_FED_CM_ENABLE {
+    if RauthyConfig::get().vars.fedcm.experimental_enable {
         Ok(())
     } else {
         error!("EXPERIMENTAL_FED_CM_ENABLE is not set");
@@ -439,7 +442,7 @@ async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) 
             };
 
             if session.is_valid(
-                *SESSION_TIMEOUT_FED_CM,
+                RauthyConfig::get().vars.fedcm.session_timeout,
                 real_ip_from_req(req).ok(),
                 req.path(),
             ) {

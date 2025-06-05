@@ -30,9 +30,8 @@ use rauthy_api_types::auth_providers::{
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
-    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI,
-    PROVIDER_CALLBACK_URI_ENCODED, PROVIDER_LINK_COOKIE, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
-    WEBAUTHN_REQ_EXP,
+    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_LINK_COOKIE,
+    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, deserialize,
@@ -49,6 +48,7 @@ use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
 
+use crate::rauthy_config::RauthyConfig;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
@@ -784,7 +784,7 @@ impl AuthProviderCallback {
                 '?'
             },
             provider.client_id,
-            *PROVIDER_CALLBACK_URI_ENCODED,
+            RauthyConfig::get().provider_callback_uri_encoded,
             provider.scope,
             slf.callback_id
         );
@@ -874,7 +874,7 @@ impl AuthProviderCallback {
             code: &payload.code,
             code_verifier: provider.use_pkce.then_some(&payload.pkce_verifier),
             grant_type: "authorization_code",
-            redirect_uri: &PROVIDER_CALLBACK_URI,
+            redirect_uri: &RauthyConfig::get().provider_callback_uri,
         };
         if provider.client_secret_post {
             payload.client_secret = AuthProvider::get_secret_cleartext(&provider.secret)?;

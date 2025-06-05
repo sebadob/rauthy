@@ -82,7 +82,7 @@ pub fn validate_vec_grant_types(value: &[String]) -> Result<(), ValidationError>
 pub fn validate_vec_origin(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
-        if !RE_ORIGIN.is_match(v) {
+        if !RE_ORIGIN.get().unwrap().is_match(v) {
             err = Some("^(http|https)://[a-z0-9.:-]+$");
         }
     });

@@ -1,6 +1,5 @@
-use crate::constants::ADDITIONAL_ALLOWED_ORIGIN_SCHEMES;
 use regex::Regex;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, OnceLock};
 
 pub static RE_ALNUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]+$").unwrap());
 pub static RE_ALNUM_48: LazyLock<Regex> =
@@ -50,15 +49,7 @@ pub static RE_LOWERCASE_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-_/\s]{2,128}$").unwrap());
 pub static RE_MFA_CODE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap());
-pub static RE_ORIGIN: LazyLock<Regex> = LazyLock::new(|| {
-    let additional_schemes = ADDITIONAL_ALLOWED_ORIGIN_SCHEMES.join("|");
-    let pattern = if additional_schemes.is_empty() {
-        r"^(http|https)://[a-z0-9.:-]+$".to_string()
-    } else {
-        format!("^(http|https|{})://[a-z0-9.:-]+$", additional_schemes)
-    };
-    Regex::new(&pattern).unwrap()
-});
+pub static RE_ORIGIN: OnceLock<Regex> = OnceLock::new();
 pub static RE_PHONE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+[0-9]{0,32}$").unwrap());
 pub static RE_SCOPE_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-_/:\s*]{0,512}$").unwrap());

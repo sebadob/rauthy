@@ -12,7 +12,6 @@ use chrono::DateTime;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
 use lettre::{AsyncSmtpTransport, AsyncTransport, message};
-use rauthy_common::constants::{EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_URL};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::Notification;
 use std::env;
@@ -212,8 +211,9 @@ pub async fn send_email_change_info_new(magic_link: &MagicLink, user: &User, new
         .unwrap_or_default();
 
     let i18n = I18nEmailChangeInfoNew::build(&user.language);
+    let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let text = EMailChangeInfoNewTxt {
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         link: &link,
         exp: &exp,
         header: i18n.header,
@@ -225,7 +225,7 @@ pub async fn send_email_change_info_new(magic_link: &MagicLink, user: &User, new
     let html = EMailChangeInfoNewHtml {
         lang: user.language.as_str(),
         theme_vars,
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         link: &link,
         exp: &exp,
         header: i18n.header,
@@ -238,7 +238,7 @@ pub async fn send_email_change_info_new(magic_link: &MagicLink, user: &User, new
     let req = EMail {
         recipient_name: user.email_recipient_name(),
         address: new_email.clone(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
+        subject: format!("{} - {}", email_sub_prefix, i18n.subject),
         text: text
             .render()
             .expect("Template rendering: EMailChangeInfoNewTxt"),
@@ -270,8 +270,9 @@ pub async fn send_email_confirm_change(
     was_admin_action: bool,
 ) {
     let i18n = I18nEmailConfirmChange::build(&user.language);
+    let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let text = EMailConfirmChangeTxt {
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         header: i18n.subject,
         msg: i18n.msg,
         email_changed_to,
@@ -288,7 +289,7 @@ pub async fn send_email_confirm_change(
     let html = EMailConfirmChangeHtml {
         lang: user.language.as_str(),
         theme_vars,
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         header: i18n.subject,
         msg: i18n.msg,
         email_changed_to,
@@ -298,7 +299,7 @@ pub async fn send_email_confirm_change(
     let req = EMail {
         recipient_name: user.email_recipient_name(),
         address: email_addr.to_string(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
+        subject: format!("{} - {}", email_sub_prefix, i18n.subject),
         text: text
             .render()
             .expect("Template rendering: EMailConfirmChangeTxt"),
@@ -336,10 +337,11 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
         .await
         .unwrap_or_default();
 
+    let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let (subject, text, html) = if user.password.is_none() {
         let i18n = I18nEmailPasswordNew::build(&user.language);
         let text = EmailResetTxt {
-            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            email_sub_prefix,
             link: &link,
             exp: &exp,
             header: i18n.header,
@@ -353,7 +355,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
         let html = EMailResetHtml {
             lang: user.language.as_str(),
             theme_vars,
-            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            email_sub_prefix,
             link: &link,
             exp: &exp,
             header: i18n.header,
@@ -369,7 +371,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
     } else {
         let i18n = I18nEmailReset::build(&user.language);
         let text = EmailResetTxt {
-            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            email_sub_prefix,
             link: &link,
             exp: &exp,
             header: i18n.header,
@@ -383,7 +385,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
         let html = EMailResetHtml {
             lang: user.language.as_str(),
             theme_vars,
-            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            email_sub_prefix,
             link: &link,
             exp: &exp,
             header: i18n.header,
@@ -401,7 +403,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
     let req = EMail {
         recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, subject),
+        subject: format!("{} - {}", email_sub_prefix, subject),
         text: text.render().expect("Template rendering: EmailResetTxt"),
         html: Some(html.render().expect("Template rendering: EmailResetHtml")),
     };
@@ -429,8 +431,9 @@ pub async fn send_pwd_reset_info(user: &User) {
     );
 
     let i18n = I18nEmailResetInfo::build(&user.language);
+    let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let text = EmailResetInfoTxt {
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         link: &link,
         exp: &exp.to_string(),
         expires_1: i18n.expires_1,
@@ -444,7 +447,7 @@ pub async fn send_pwd_reset_info(user: &User) {
     let html = EMailResetInfoHtml {
         lang: user.language.as_str(),
         theme_vars,
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         link: &link,
         exp: &exp.to_string(),
         expires_1: i18n.expires_1,
@@ -456,7 +459,7 @@ pub async fn send_pwd_reset_info(user: &User) {
     let req = EMail {
         recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
+        subject: format!("{} - {}", email_sub_prefix, i18n.subject),
         text: text
             .render()
             .expect("Template rendering: EmailResetInfoTxt"),
@@ -486,8 +489,9 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
 
     // to make the integration tests not panic, results are taken and just thrown away
     // not the nicest approach for now, but it works
-    if test_mode || SMTP_URL.is_none() {
-        if SMTP_URL.is_none() {
+    let url = &RauthyConfig::get().vars.email.smtp_url;
+    if test_mode || url.is_none() {
+        if url.is_none() {
             error!("SMTP_URL is not configured, cannot send out any E-Mails!");
         }
 
@@ -506,7 +510,7 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
     }
 
     let mailer = {
-        let smtp_url = SMTP_URL.as_deref().unwrap();
+        let smtp_url = url.as_deref().unwrap();
         let smtp_port = env::var("SMTP_PORT")
             .map(|s| s.parse::<u16>().expect("SMTP_PORT cannot be parsed to u16"))
             .ok();
@@ -546,7 +550,12 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
         conn.unwrap()
     };
 
-    let from: message::Mailbox = SMTP_FROM
+    let from: message::Mailbox = RauthyConfig::get()
+        .vars
+        .email
+        .smtp_from
+        .as_ref()
+        .expect("SMTP_FROM not set")
         .parse()
         .expect("SMTP_FROM could not be parsed correctly");
 

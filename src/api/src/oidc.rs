@@ -18,12 +18,7 @@ use rauthy_api_types::sessions::SessionState;
 use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
 use rauthy_common::compression::{compress_br_dyn, compress_gzip};
 use rauthy_common::constants::{
-    APPLICATION_JSON, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED, AUTH_HEADER_FAMILY_NAME,
-    AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA, AUTH_HEADER_ROLES,
-    AUTH_HEADER_USER, AUTH_HEADERS_ENABLE, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
-    DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, EXPERIMENTAL_FED_CM_ENABLE,
-    GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
-    SESSION_TIMEOUT,
+    APPLICATION_JSON, COOKIE_MFA, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -46,6 +41,7 @@ use rauthy_models::html::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
 };
 use rauthy_models::language::Language;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::{authorize, logout, token_info, userinfo, validation};
 use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
@@ -115,7 +111,8 @@ pub async fn get_authorize(
         true
     } else if let Some(max_age) = params.max_age {
         if let Some(session) = &principal.session {
-            let session_created = session.exp - *SESSION_LIFETIME as i64;
+            let session_created =
+                session.exp - RauthyConfig::get().vars.lifetimes.session_lifetime as i64;
             Utc::now().timestamp() > session_created + max_age
         } else {
             true
@@ -169,7 +166,7 @@ pub async fn get_authorize(
                 HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
                 HtmlTemplate::ClientLogoUpdated(logo_updated),
                 HtmlTemplate::CsrfToken(csrf.to_string()),
-                HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
+                HtmlTemplate::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
                 HtmlTemplate::LoginAction(FrontendAction::Refresh),
             ],
         );
@@ -186,10 +183,16 @@ pub async fn get_authorize(
     let session = if let Some(session) = &principal.session {
         match principal.validate_session_auth_or_init() {
             Ok(_) => session.clone(),
-            Err(_) => Session::new(*SESSION_LIFETIME, Some(real_ip_from_req(&req)?)),
+            Err(_) => Session::new(
+                RauthyConfig::get().vars.lifetimes.session_lifetime,
+                Some(real_ip_from_req(&req)?),
+            ),
         }
     } else {
-        Session::new(*SESSION_LIFETIME, Some(real_ip_from_req(&req)?))
+        Session::new(
+            RauthyConfig::get().vars.lifetimes.session_lifetime,
+            Some(real_ip_from_req(&req)?),
+        )
     };
 
     if let Err(err) = session.save().await {
@@ -208,7 +211,7 @@ pub async fn get_authorize(
             HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
             HtmlTemplate::ClientLogoUpdated(logo_updated),
             HtmlTemplate::CsrfToken(session.csrf_token.clone()),
-            HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
+            HtmlTemplate::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
             HtmlTemplate::LoginAction(action),
         ],
     );
@@ -239,7 +242,7 @@ pub async fn get_authorize(
             .body(body_bytes));
     }
 
-    if *EXPERIMENTAL_FED_CM_ENABLE {
+    if RauthyConfig::get().vars.fedcm.experimental_enable {
         Ok(HttpResponse::build(StatusCode::OK)
             .cookie(session.client_cookie_fed_cm())
             .cookie(cookie)
@@ -465,7 +468,7 @@ pub async fn post_device_auth(
         return ErrorResponse::from(err).error_response();
     }
 
-    if DEVICE_GRANT_RATE_LIMIT.is_some() {
+    if RauthyConfig::get().vars.device_grant.rate_limit.is_some() {
         match real_ip_from_req(&req) {
             Err(err) => {
                 error!("{err}");
@@ -581,8 +584,8 @@ pub async fn post_device_auth(
         user_code,
         verification_uri,
         verification_uri_complete,
-        expires_in: *DEVICE_GRANT_CODE_LIFETIME,
-        interval: Some(*DEVICE_GRANT_POLL_INTERVAL),
+        expires_in: RauthyConfig::get().vars.device_grant.code_lifetime,
+        interval: Some(RauthyConfig::get().vars.device_grant.poll_interval),
     };
 
     HttpResponse::Ok().json(resp)
@@ -757,13 +760,18 @@ pub async fn rotate_jwk(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRe
 )]
 #[post("/oidc/session")]
 pub async fn post_session(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req).ok());
+    let session = Session::new(
+        RauthyConfig::get().vars.lifetimes.session_lifetime,
+        real_ip_from_req(&req).ok(),
+    );
     session.save().await?;
     let cookie = session.client_cookie();
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(*SESSION_TIMEOUT as i64));
+        .add(::time::Duration::seconds(
+            RauthyConfig::get().vars.lifetimes.session_lifetime as i64,
+        ));
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
@@ -775,7 +783,7 @@ pub async fn post_session(req: HttpRequest) -> Result<HttpResponse, ErrorRespons
         state: SessionState::from(session.state()?),
     };
 
-    if *EXPERIMENTAL_FED_CM_ENABLE {
+    if RauthyConfig::get().vars.fedcm.experimental_enable {
         Ok(HttpResponse::Created()
             .cookie(cookie)
             .cookie(session.client_cookie_fed_cm())
@@ -821,7 +829,9 @@ pub async fn get_session_info(principal: ReqPrincipal) -> HttpResponse {
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(*SESSION_TIMEOUT as i64));
+        .add(::time::Duration::seconds(
+            RauthyConfig::get().vars.lifetimes.session_timeout as i64,
+        ));
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: None,
@@ -870,7 +880,9 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(*SESSION_TIMEOUT as i64));
+        .add(::time::Duration::seconds(
+            RauthyConfig::get().vars.lifetimes.session_timeout as i64,
+        ));
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
@@ -1091,28 +1103,29 @@ pub async fn post_userinfo(req: HttpRequest) -> Result<HttpResponse, ErrorRespon
 pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     let (info, _) = userinfo::get_userinfo(req).await?;
 
-    if *AUTH_HEADERS_ENABLE {
+    let headers = &RauthyConfig::get().vars.auth_headers;
+    if headers.enable {
         Ok(HttpResponse::Ok()
-            .insert_header((AUTH_HEADER_USER.as_str(), info.id))
-            .insert_header((AUTH_HEADER_ROLES.as_str(), info.roles.join(",")))
+            .insert_header((headers.user.as_ref(), info.id))
+            .insert_header((headers.roles.as_ref(), info.roles.join(",")))
             .insert_header((
-                AUTH_HEADER_GROUPS.as_str(),
+                headers.groups.as_ref(),
                 info.groups.map(|g| g.join(",")).unwrap_or_default(),
             ))
-            .insert_header((AUTH_HEADER_EMAIL.as_str(), info.email.unwrap_or_default()))
+            .insert_header((headers.email.as_ref(), info.email.unwrap_or_default()))
             .insert_header((
-                AUTH_HEADER_EMAIL_VERIFIED.as_str(),
+                headers.email_verified.as_ref(),
                 info.email_verified.unwrap_or(false).to_string(),
             ))
             .insert_header((
-                AUTH_HEADER_FAMILY_NAME.as_str(),
+                headers.family_name.as_ref(),
                 info.family_name.unwrap_or_default(),
             ))
             .insert_header((
-                AUTH_HEADER_GIVEN_NAME.as_str(),
+                headers.given_name.as_ref(),
                 info.given_name.unwrap_or_default(),
             ))
-            .insert_header((AUTH_HEADER_MFA.as_str(), info.mfa_enabled.to_string()))
+            .insert_header((headers.mfa.as_ref(), info.mfa_enabled.to_string()))
             .finish())
     } else {
         Ok(HttpResponse::Ok().finish())

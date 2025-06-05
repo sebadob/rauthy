@@ -4,6 +4,7 @@ use crate::entity::clients_scim::ClientScim;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
@@ -16,18 +17,14 @@ use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest, ScimClientRequestResponse,
 };
-use rauthy_common::constants::{
-    ADDITIONAL_ALLOWED_ORIGIN_SCHEMES, ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_TTL_APP,
-    CACHE_TTL_DYN_CLIENT, CACHE_TTL_EPHEMERAL_CLIENT, DYN_CLIENT_DEFAULT_TOKEN_LIFETIME,
-    DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS, EPHEMERAL_CLIENTS_ALLOWED_FLOWS,
-    EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA, PUB_URL_WITH_SCHEME,
-};
+use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_common::{HTTP_CLIENT, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
 use reqwest::header::CONTENT_TYPE;
 use serde::{Deserialize, Serialize};
+use std::cmp::min;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
@@ -473,7 +470,7 @@ VALUES ($1, $2, $3, $4)"#;
     /// is a URL. Otherwise, it will do a classic fetch from the database.
     /// This function should be used in places where we would possibly accept an ephemeral client.
     pub async fn find_maybe_ephemeral(id: String) -> Result<Self, ErrorResponse> {
-        if !*ENABLE_EPHEMERAL_CLIENTS || Url::from_str(&id).is_err() {
+        if !RauthyConfig::get().vars.ephemeral_clients.enable || Url::from_str(&id).is_err() {
             return Self::find(id).await;
         }
 
@@ -488,7 +485,7 @@ VALUES ($1, $2, $3, $4)"#;
                 Cache::ClientEphemeral,
                 id,
                 &slf,
-                *CACHE_TTL_EPHEMERAL_CLIENT,
+                Some(RauthyConfig::get().vars.ephemeral_clients.cache_lifetime as i64),
             )
             .await?;
 
@@ -712,7 +709,7 @@ VALUES ($1, $2, $3, $4)"#;
         client_dyn.token_endpoint_auth_method = token_endpoint_auth_method;
         client_dyn.last_used = Some(Utc::now().timestamp());
 
-        if *DYN_CLIENT_SECRET_AUTO_ROTATE {
+        if RauthyConfig::get().vars.dynamic_clients.secret_auto_rotate {
             let (_secret_plain, registration_token) = Client::generate_new_secret()?;
             client_dyn.registration_token = registration_token;
         }
@@ -758,16 +755,20 @@ WHERE id = $4"#;
         }
 
         new_client.save_cache().await?;
+        let ttl = RauthyConfig::get().vars.dynamic_clients.rate_limit_sec as i64;
         DB::hql()
             .put(
                 Cache::ClientDynamic,
                 ClientDyn::get_cache_entry(&client_dyn.id),
                 &client_dyn,
-                *CACHE_TTL_DYN_CLIENT,
+                Some(ttl),
             )
             .await?;
 
-        new_client.into_dynamic_client_response(client_dyn, *DYN_CLIENT_SECRET_AUTO_ROTATE)
+        new_client.into_dynamic_client_response(
+            client_dyn,
+            RauthyConfig::get().vars.dynamic_clients.secret_auto_rotate,
+        )
     }
 
     pub async fn cache_current_secret(
@@ -868,7 +869,7 @@ impl Client {
 
     #[inline(always)]
     pub fn force_mfa(&self) -> bool {
-        self.force_mfa || self.id == "rauthy" && *ADMIN_FORCE_MFA
+        self.force_mfa || self.id == "rauthy" && RauthyConfig::get().vars.mfa.admin_force_mfa
     }
 
     // Generates a new random 64 character long client secret and returns the cleartext and
@@ -1453,7 +1454,11 @@ impl Client {
 
 impl From<EphemeralClientRequest> for Client {
     fn from(value: EphemeralClientRequest) -> Self {
-        let scopes = EPHEMERAL_CLIENTS_ALLOWED_SCOPES.clone();
+        let scopes = RauthyConfig::get()
+            .vars
+            .ephemeral_clients
+            .allowed_scopes
+            .join(",");
 
         Self {
             id: value.client_id,
@@ -1465,7 +1470,11 @@ impl From<EphemeralClientRequest> for Client {
             redirect_uris: value.redirect_uris.join(","),
             post_logout_redirect_uris: value.post_logout_redirect_uris.map(|uris| uris.join(",")),
             allowed_origins: None,
-            flows_enabled: EPHEMERAL_CLIENTS_ALLOWED_FLOWS.clone(),
+            flows_enabled: RauthyConfig::get()
+                .vars
+                .ephemeral_clients
+                .allowed_flows
+                .join(","),
             access_token_alg: value
                 .access_token_signed_response_alg
                 .unwrap_or_default()
@@ -1479,7 +1488,7 @@ impl From<EphemeralClientRequest> for Client {
             scopes: scopes.clone(),
             default_scopes: scopes,
             challenge: Some("S256".to_string()),
-            force_mfa: *EPHEMERAL_CLIENTS_FORCE_MFA,
+            force_mfa: RauthyConfig::get().vars.ephemeral_clients.force_mfa,
             client_uri: value.client_uri,
             contacts: value.contacts.map(|c| c.join(",")),
             backchannel_logout_uri: None,
@@ -1605,7 +1614,13 @@ impl Client {
             flows_enabled: req.grant_types.join(","),
             access_token_alg,
             id_token_alg,
-            access_token_lifetime: *DYN_CLIENT_DEFAULT_TOKEN_LIFETIME,
+            access_token_lifetime: min(
+                RauthyConfig::get()
+                    .vars
+                    .dynamic_clients
+                    .default_token_lifetime,
+                i32::MAX as u32,
+            ) as i32,
             challenge: confidential.then_some("S256".to_string()),
             force_mfa: false,
             client_uri: req.client_uri,
@@ -1667,13 +1682,16 @@ fn extract_external_origin(req: &HttpRequest) -> Result<Option<&str>, ErrorRespo
     debug!(origin, "Origin header found:");
 
     // `Origin` will be present for same-origin requests other than `GET` / `HEAD`
-    if origin == *PUB_URL_WITH_SCHEME {
+    if origin == RauthyConfig::get().pub_url_with_scheme {
         return Ok(None);
     }
 
     let (scheme, _) = origin.split_once("://").unwrap_or((origin, ""));
     if scheme != "http" && scheme != "https" {
-        let has_any_match = ADDITIONAL_ALLOWED_ORIGIN_SCHEMES
+        let has_any_match = RauthyConfig::get()
+            .vars
+            .server
+            .additional_allowed_origin_schemes
             .iter()
             .any(|allowed| allowed == scheme);
         if !has_any_match {
@@ -1693,7 +1711,7 @@ mod tests {
     use super::*;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
-    use actix_web::{App, HttpResponse, HttpServer};
+    use actix_web::{App, HttpResponse, HttpServer, web};
     use pretty_assertions::assert_eq;
     use rauthy_common::constants::APPLICATION_JSON;
     use std::thread::JoinHandle;

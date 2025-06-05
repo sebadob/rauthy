@@ -1,8 +1,8 @@
 use chrono::Utc;
 use hiqlite_macros::params;
-use rauthy_common::constants::SESSION_LIFETIME;
 use rauthy_common::is_hiqlite;
 use rauthy_models::database::DB;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::time::Duration;
 use tracing::{debug, error};
 
@@ -23,7 +23,9 @@ pub async fn user_login_states_cleanup() {
 
         // It makes no sense to keep login states around for longer than the maximum allowed
         // total lifetime for sessions. Adds 1 day of grace time already.
-        let threshold = Utc::now().timestamp() - *SESSION_LIFETIME as i64 - 3600 * 24;
+        let threshold = Utc::now().timestamp()
+            - RauthyConfig::get().vars.lifetimes.session_lifetime as i64
+            - 3600 * 24;
         let sql = "DELETE FROM user_login_states WHERE timestamp < $1";
 
         if is_hiqlite() {

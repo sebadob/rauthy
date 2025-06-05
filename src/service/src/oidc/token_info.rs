@@ -1,12 +1,12 @@
 use actix_web::HttpRequest;
 use actix_web::http::header::{AUTHORIZATION, HeaderName, HeaderValue};
 use rauthy_api_types::oidc::TokenInfo;
-use rauthy_common::constants::DANGER_DISABLE_INTROSPECT_AUTH;
 use rauthy_common::utils::base64_decode_buf;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtAccessClaims, JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
 use rauthy_models::entity::clients::Client;
+use rauthy_models::rauthy_config::RauthyConfig;
 use tracing::error;
 
 pub async fn get_token_info(
@@ -77,7 +77,11 @@ async fn check_client_auth(
         )
     })?;
 
-    if *DANGER_DISABLE_INTROSPECT_AUTH {
+    if RauthyConfig::get()
+        .vars
+        .access
+        .danger_disable_introspect_auth
+    {
         return Ok(client);
     }
 
