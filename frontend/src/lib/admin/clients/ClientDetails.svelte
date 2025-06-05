@@ -12,11 +12,13 @@
         client,
         clients,
         scopesAll,
+        attrsAll,
         onSave,
     }: {
         client: ClientResponse,
         clients: ClientResponse[],
         scopesAll: string[],
+        attrsAll: string[],
         onSave: () => void,
     } = $props();
 
@@ -49,7 +51,7 @@
 
 <div class="details">
     {#if selected === ta.nav.config}
-        <ClientConfig {client} {clients} {scopesAll} {onSave}/>
+        <ClientConfig {client} {clients} {scopesAll} {attrsAll} {onSave}/>
     {:else if selected === 'Secret'}
         <ClientSecret {client}/>
     {:else if selected === 'Branding'}
