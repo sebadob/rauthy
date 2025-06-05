@@ -15,7 +15,7 @@ use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::ListenScheme;
-use rauthy_models::app_state::AppState;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::cmp::max;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
@@ -30,9 +30,9 @@ use tracing::{error, info};
 // There is most probably a way to do this when we wrap it inside something like
 // `Box<dyn ServiceFactory<_>>`, but I have not figured out the correct type for that yet.
 
-pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Result<()> {
-    let listen_scheme = app_state.listen_scheme.clone();
-    let listen_addr = app_state.listen_addr.clone();
+pub async fn server_with_metrics() -> std::io::Result<()> {
+    let listen_scheme = RauthyConfig::get().listen_scheme.clone();
+    let listen_addr = RauthyConfig::get().vars.server.listen_address.to_string();
 
     let shared_registry = Registry::new();
     let metrics = PrometheusMetricsBuilder::new("api")
@@ -77,7 +77,6 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
     let server = HttpServer::new(move || {
         let mut app = App::new()
             .wrap(RauthyLoggingMiddleware)
-            .app_data(app_state.clone())
             .wrap(RauthyPrincipalMiddleware)
             .wrap(CsrfProtectionMiddleware)
             .wrap(default_headers())
@@ -100,7 +99,7 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
-            &app_state.listen_scheme,
+            &RauthyConfig::get().listen_scheme,
             ListenScheme::UnixHttp | ListenScheme::UnixHttps
         ) {
             app = app.app_data(UseDummyAddress);
@@ -148,14 +147,13 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
     }
 }
 
-pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::Result<()> {
-    let listen_scheme = app_state.listen_scheme.clone();
-    let listen_addr = app_state.listen_addr.clone();
+pub async fn server_without_metrics() -> std::io::Result<()> {
+    let listen_scheme = RauthyConfig::get().listen_scheme.clone();
+    let listen_addr = RauthyConfig::get().vars.server.listen_address.to_string();
 
     let server = HttpServer::new(move || {
         let mut app = App::new()
             .wrap(RauthyLoggingMiddleware)
-            .app_data(app_state.clone())
             .wrap(RauthyPrincipalMiddleware)
             .wrap(CsrfProtectionMiddleware)
             .wrap(default_headers())
@@ -169,7 +167,7 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
-            &app_state.listen_scheme,
+            &RauthyConfig::get().listen_scheme,
             ListenScheme::UnixHttp | ListenScheme::UnixHttps
         ) {
             app = app.app_data(UseDummyAddress);

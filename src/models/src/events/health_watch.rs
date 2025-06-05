@@ -1,15 +1,17 @@
 use crate::database::DB;
 use crate::entity::is_db_alive;
 use crate::events::event::Event;
+use crate::rauthy_config::RauthyConfig;
 use std::time::Duration;
 use tracing::debug;
 
-pub async fn watch_health(tx_events: flume::Sender<Event>) {
+pub async fn watch_health() {
     debug!("Rauthy health watcher started");
 
     let mut interval = tokio::time::interval(Duration::from_secs(30));
     let mut was_healthy_after_startup = false;
     let mut last_state = false;
+    let tx_events = RauthyConfig::get().tx_events.clone();
 
     loop {
         interval.tick().await;

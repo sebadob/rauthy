@@ -8,6 +8,7 @@ use crate::events::{
     EVENT_LEVEL_RAUTHY_START, EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED,
     EVENT_LEVEL_USER_EMAIL_CHANGE, EVENT_LEVEL_USER_PASSWORD_RESET,
 };
+use crate::rauthy_config::RauthyConfig;
 use chrono::{DateTime, Timelike, Utc};
 use hiqlite::Row;
 use hiqlite_macros::params;
@@ -869,8 +870,8 @@ impl Event {
     }
 
     #[inline(always)]
-    pub async fn send(self, tx: &flume::Sender<Self>) -> Result<(), ErrorResponse> {
-        match tx.send_async(self).await {
+    pub async fn send(self) -> Result<(), ErrorResponse> {
+        match RauthyConfig::get().tx_events.send_async(self).await {
             Ok(_) => Ok(()),
             Err(err) => {
                 error!("Event::send: {:?}", err);

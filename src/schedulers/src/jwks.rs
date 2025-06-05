@@ -1,10 +1,8 @@
 use crate::sleep_schedule_next;
-use actix_web::web;
 use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_common::constants::IDX_JWK_KID;
 use rauthy_common::is_hiqlite;
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::jwk::{JWKS, Jwk};
 use std::collections::HashSet;
@@ -15,7 +13,7 @@ use std::time::Duration;
 use tracing::{debug, error, info};
 
 /// Auto-Rotates JWKS
-pub async fn jwks_auto_rotate(data: web::Data<AppState>) {
+pub async fn jwks_auto_rotate() {
     // sec min hour day_of_month month day_of_week year
     let schedule = {
         cron::Schedule::from_str(
@@ -34,7 +32,7 @@ pub async fn jwks_auto_rotate(data: web::Data<AppState>) {
             continue;
         }
 
-        if let Err(err) = JWKS::rotate(&data).await {
+        if let Err(err) = JWKS::rotate().await {
             error!("Error during JWKS auto-rotation: {}", err.message);
         }
     }

@@ -1,26 +1,25 @@
 use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenSet};
+use actix_web::HttpRequest;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
 };
-use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::dpop_proof::DPoPProof;
 use rauthy_models::entity::user_login_states::UserLoginState;
 use rauthy_models::entity::users::User;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::str::FromStr;
 use tracing::{info, warn};
 
 #[tracing::instrument(skip_all, fields(client_id = req_data.client_id, username = req_data.username))]
 pub async fn grant_type_password(
-    data: &web::Data<AppState>,
     req: HttpRequest,
     req_data: TokenRequest,
 ) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
@@ -83,7 +82,7 @@ pub async fn grant_type_password(
     user.check_enabled()?;
     user.check_expired()?;
 
-    match user.validate_password(data, password.clone()).await {
+    match user.validate_password(password.clone()).await {
         Ok(_) => {
             client.validate_user_groups(&user)?;
 
@@ -92,7 +91,7 @@ pub async fn grant_type_password(
             user.failed_login_attempts = None;
 
             // check if the password hash should be upgraded
-            let hash_uptodate = user.is_argon2_uptodate(&data.argon2_params)?;
+            let hash_uptodate = user.is_argon2_uptodate(&RauthyConfig::get().argon2_params)?;
             if !hash_uptodate {
                 info!("Updating Argon2ID params for user '{}'", &user.email);
                 let new_hash = HashPassword::hash_password(password).await?;
@@ -107,7 +106,6 @@ pub async fn grant_type_password(
 
             let ts = TokenSet::from_user(
                 &user,
-                data,
                 &client,
                 AuthTime::now(),
                 dpop_fingerprint,

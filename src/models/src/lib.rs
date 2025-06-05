@@ -5,7 +5,6 @@ use actix_web::http::header::{HeaderName, HeaderValue};
 use std::fmt::{Display, Formatter};
 
 pub mod api_cookie;
-pub mod app_state;
 pub mod database;
 pub mod email;
 pub mod entity;

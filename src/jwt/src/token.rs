@@ -3,6 +3,7 @@ use chrono::Utc;
 use rauthy_common::utils::{base64_url_no_pad_decode_buf, base64_url_no_pad_encode_buf};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
+use rauthy_models::rauthy_config::RauthyConfig;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fmt::Debug;
@@ -56,7 +57,6 @@ impl JwtToken {
     /// claims bytes will be written into `buf`.
     pub async fn validate_claims_into(
         token: &str,
-        issuer: &str,
         expected_type: Option<JwtTokenType>,
         allowed_clock_skew_seconds: u16,
         buf: &mut Vec<u8>,
@@ -123,7 +123,7 @@ impl JwtToken {
         buf.clear();
         base64_url_no_pad_decode_buf(claims, buf)?;
         serde_json::from_slice::<ValidationClaims>(buf)?.validate(
-            issuer,
+            &RauthyConfig::get().issuer,
             expected_type,
             allowed_clock_skew_seconds,
         )?;

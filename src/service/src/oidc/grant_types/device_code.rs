@@ -1,10 +1,9 @@
 use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenScopes, TokenSet};
-use actix_web::{HttpResponse, web};
+use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
 use rauthy_common::constants::DEVICE_GRANT_POLL_INTERVAL;
 use rauthy_common::utils::new_store_id;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::devices::{DeviceAuthCode, DeviceEntity};
 use rauthy_models::entity::users::User;
@@ -15,11 +14,7 @@ use tracing::{debug, error, warn};
 
 /// Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
 #[tracing::instrument(skip_all, fields(client_id = payload.client_id))]
-pub async fn grant_type_device_code(
-    data: &web::Data<AppState>,
-    peer_ip: IpAddr,
-    payload: TokenRequest,
-) -> HttpResponse {
+pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> HttpResponse {
     let device_code = match &payload.device_code {
         None => {
             return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
@@ -162,7 +157,6 @@ pub async fn grant_type_device_code(
 
         let ts = match TokenSet::from_user(
             &user,
-            data,
             &client,
             AuthTime::now(),
             None,

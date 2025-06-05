@@ -1,13 +1,12 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
+use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use cryptr::{EncKeys, EncValue, utils};
 use deadpool_postgres::GenericClient;
@@ -237,7 +236,6 @@ $18, $19, $20, $21, $22)"#;
     }
 
     pub async fn create_dynamic(
-        data: &web::Data<AppState>,
         client_req: DynamicClientRequest,
     ) -> Result<DynamicClientResponse, ErrorResponse> {
         let token_endpoint_auth_method = client_req
@@ -359,7 +357,7 @@ VALUES ($1, $2, $3, $4)"#;
             token_endpoint_auth_method,
         };
 
-        client.into_dynamic_client_response(data, client_dyn, true)
+        client.into_dynamic_client_response(client_dyn, true)
     }
 
     // Deletes a client
@@ -688,7 +686,6 @@ VALUES ($1, $2, $3, $4)"#;
     }
 
     pub async fn update_dynamic(
-        data: &web::Data<AppState>,
         client_req: DynamicClientRequest,
         mut client_dyn: ClientDyn,
     ) -> Result<DynamicClientResponse, ErrorResponse> {
@@ -770,7 +767,7 @@ WHERE id = $4"#;
             )
             .await?;
 
-        new_client.into_dynamic_client_response(data, client_dyn, *DYN_CLIENT_SECRET_AUTO_ROTATE)
+        new_client.into_dynamic_client_response(client_dyn, *DYN_CLIENT_SECRET_AUTO_ROTATE)
     }
 
     pub async fn cache_current_secret(
@@ -1620,7 +1617,6 @@ impl Client {
 
     pub fn into_dynamic_client_response(
         self,
-        data: &web::Data<AppState>,
         client_dyn: ClientDyn,
         map_registration_client_uri: bool,
     ) -> Result<DynamicClientResponse, ErrorResponse> {
@@ -1634,7 +1630,7 @@ impl Client {
         let (registration_access_token, registration_client_uri) = if map_registration_client_uri {
             (
                 Some(client_dyn.registration_token_plain()?),
-                Some(ClientDyn::registration_client_uri(data, &client_dyn.id)),
+                Some(ClientDyn::registration_client_uri(&client_dyn.id)),
             )
         } else {
             (None, None)

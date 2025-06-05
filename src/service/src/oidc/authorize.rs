@@ -1,13 +1,12 @@
+use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use rauthy_api_types::oidc::{LoginRefreshRequest, LoginRequest};
 use rauthy_common::constants::{COOKIE_MFA, SESSION_RENEW_MFA, WEBAUTHN_REQ_EXP};
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::sessions::Session;
@@ -18,7 +17,6 @@ use std::fmt::Write;
 use tracing::trace;
 
 pub async fn post_authorize(
-    data: &web::Data<AppState>,
     req: &HttpRequest,
     req_data: LoginRequest,
     mut session: Session,
@@ -83,7 +81,7 @@ pub async fn post_authorize(
 
     if let Some(pwd) = req_data.password {
         *has_password_been_hashed = true;
-        user.validate_password(data, pwd).await?;
+        user.validate_password(pwd).await?;
 
         // update user info
         // in case of webauthn login, the info will be updated in the oidc finish step

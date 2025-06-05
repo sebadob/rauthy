@@ -1,7 +1,5 @@
-use actix_web::web;
 use rauthy_common::utils::get_rand_between;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
@@ -14,7 +12,7 @@ use tokio::task::JoinSet;
 use tokio::time;
 use tracing::{error, info, warn};
 
-pub async fn backchannel_logout_retry(data: web::Data<AppState>) {
+pub async fn backchannel_logout_retry() {
     let retry_count = env::var("BACKCHANNEL_LOGOUT_RETRY_COUNT")
         .as_deref()
         .unwrap_or("100")
@@ -32,14 +30,13 @@ pub async fn backchannel_logout_retry(data: web::Data<AppState>) {
 
         clients.clear();
         kps.clear();
-        if let Err(err) = execute_logout_retries(&data, &mut clients, &mut kps, retry_count).await {
+        if let Err(err) = execute_logout_retries(&mut clients, &mut kps, retry_count).await {
             error!("Error during backchannel_logout_retry: {}", err.message);
         }
     }
 }
 
 async fn execute_logout_retries(
-    data: &web::Data<AppState>,
     clients: &mut Vec<Client>,
     kps: &mut Vec<JwkKeyPair>,
     retry_count: u16,
@@ -60,7 +57,7 @@ async fn execute_logout_retries(
                 &failure.sub,
                 failure.retry_count as i64,
             )
-            .send(&data.tx_events)
+            .send()
             .await?;
 
             failure.delete().await?;
@@ -105,7 +102,6 @@ async fn execute_logout_retries(
         match logout::send_backchannel_logout(
             client.id.clone(),
             client.backchannel_logout_uri.unwrap_or_default(),
-            &data.issuer,
             sub,
             sid,
             kp.unwrap(),

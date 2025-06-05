@@ -1,4 +1,3 @@
-use actix_web::web;
 use chrono::Utc;
 use rauthy_api_types::oidc::JktClaim;
 use rauthy_common::constants::{
@@ -11,7 +10,6 @@ use rauthy_jwt::claims::{
     JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
 };
 use rauthy_jwt::token::JwtToken;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::entity::refresh_tokens::RefreshToken;
@@ -21,6 +19,7 @@ use rauthy_models::entity::user_attr::UserAttrValueEntity;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webids::WebId;
+use rauthy_models::rauthy_config::RauthyConfig;
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -128,7 +127,6 @@ impl TokenSet {
     #[allow(clippy::too_many_arguments, clippy::type_complexity)]
     pub async fn build_access_token(
         user: Option<&User>,
-        data: &web::Data<AppState>,
         client: &Client,
         dpop_fingerprint: Option<DpopFingerprint>,
         lifetime: i64,
@@ -162,7 +160,7 @@ impl TokenSet {
                 iat: now,
                 nbf: now,
                 exp: now + lifetime,
-                iss: &data.issuer,
+                iss: &RauthyConfig::get().issuer,
                 jti: None,
                 aud: Cow::Borrowed(client.id.as_str()),
                 sub: user.map(|u| u.id.as_str()),
@@ -212,7 +210,6 @@ impl TokenSet {
     #[allow(clippy::too_many_arguments, clippy::type_complexity)]
     pub async fn build_id_token(
         user: &User,
-        data: &web::Data<AppState>,
         client: &Client,
         auth_time: AuthTime,
         dpop_fingerprint: Option<DpopFingerprint>,
@@ -244,7 +241,7 @@ impl TokenSet {
                 iat: now,
                 nbf: now,
                 exp: now + lifetime,
-                iss: &data.issuer,
+                iss: &RauthyConfig::get().issuer,
                 jti: None,
                 aud,
                 sub: Some(user.id.as_str()),
@@ -349,7 +346,6 @@ impl TokenSet {
     #[allow(clippy::too_many_arguments)]
     pub async fn build_refresh_token(
         user: &User,
-        data: &web::Data<AppState>,
         dpop_fingerprint: Option<DpopFingerprint>,
         client: &Client,
         auth_time: AuthTime,
@@ -384,7 +380,7 @@ impl TokenSet {
                     iat: now,
                     nbf,
                     exp,
-                    iss: &data.issuer,
+                    iss: &RauthyConfig::get().issuer,
                     jti: None,
                     aud: Cow::Borrowed(client.id.as_str()),
                     sub: None,
@@ -437,7 +433,6 @@ impl TokenSet {
     }
 
     pub async fn for_client_credentials(
-        data: &web::Data<AppState>,
         client: &Client,
         dpop_fingerprint: Option<DpopFingerprint>,
     ) -> Result<Self, ErrorResponse> {
@@ -448,7 +443,6 @@ impl TokenSet {
         };
         let access_token = Self::build_access_token(
             None,
-            data,
             client,
             dpop_fingerprint,
             client.access_token_lifetime as i64,
@@ -471,7 +465,6 @@ impl TokenSet {
     #[allow(clippy::too_many_arguments)]
     pub async fn from_user(
         user: &User,
-        data: &web::Data<AppState>,
         client: &Client,
         auth_time: AuthTime,
         dpop_fingerprint: Option<DpopFingerprint>,
@@ -565,7 +558,6 @@ impl TokenSet {
         };
         let access_token = Self::build_access_token(
             Some(user),
-            data,
             client,
             dpop_fingerprint.clone(),
             lifetime,
@@ -581,7 +573,6 @@ impl TokenSet {
         );
         let id_token = Self::build_id_token(
             user,
-            data,
             client,
             auth_time.clone(),
             dpop_fingerprint.clone(),
@@ -598,7 +589,6 @@ impl TokenSet {
             Some(
                 Self::build_refresh_token(
                     user,
-                    data,
                     dpop_fingerprint,
                     client,
                     auth_time,

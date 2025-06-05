@@ -1,7 +1,5 @@
-use actix_web::web;
 use chrono::Utc;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
 use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
@@ -12,7 +10,7 @@ use std::env;
 use std::time::Duration;
 use tracing::{debug, error, info};
 
-pub async fn user_expiry_checker(data: web::Data<AppState>) {
+pub async fn user_expiry_checker() {
     let secs = env::var("SCHED_USER_EXP_MINS")
         .as_deref()
         .unwrap_or("60")
@@ -41,16 +39,13 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
         }
 
         debug!("Running user_expiry_checker scheduler");
-        if let Err(err) = execute(&data, cleanup_after_secs).await {
+        if let Err(err) = execute(cleanup_after_secs).await {
             error!("Error during user_expiry_checker: {}", err.message);
         }
     }
 }
 
-async fn execute(
-    data: &web::Data<AppState>,
-    cleanup_after_secs: Option<u64>,
-) -> Result<(), ErrorResponse> {
+async fn execute(cleanup_after_secs: Option<u64>) -> Result<(), ErrorResponse> {
     let now = Utc::now().timestamp();
     for mut user in User::find_expired().await? {
         debug!("Found expired user {}: {}", user.id, user.email);
@@ -73,7 +68,7 @@ async fn execute(
 
         Session::invalidate_for_user(&user.id).await?;
         RefreshToken::invalidate_for_user(&user.id).await?;
-        logout::execute_backchannel_logout(data, None, Some(user.id.clone())).await?;
+        logout::execute_backchannel_logout(None, Some(user.id.clone())).await?;
 
         // possibly auto-cleanup expired user
         if let Some(secs) = cleanup_after_secs {

@@ -1,14 +1,12 @@
 // Copyright 2025 Sebastian Dobe <sebastiandobe@mailbox.org>
 
 use crate::logging::setup_logging;
-use actix_web::web;
 use rauthy_common::constants::{BUILD_TIME, RAUTHY_VERSION};
 use rauthy_common::password_hasher;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::swagger_ui::{
     OPENAPI_CONFIG, OPENAPI_JSON, SWAGGER_UI_ENABLE, SWAGGER_UI_PUBLIC,
 };
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::email;
 use rauthy_models::email::EMail;
@@ -123,20 +121,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     debug!("Starting E-Mail handler");
     tokio::spawn(email::sender(rx_email, test_mode));
 
-    debug!("Initializing AppState");
-    let app_state = web::Data::new(
-        AppState::new(
-            tx_email.clone(),
-            tx_events.clone(),
-            tx_events_router.clone(),
-        )
-        .await?,
-    );
-
     debug!("Applying database migrations");
-    DB::migrate(&app_state)
-        .await
-        .expect("Database migration error");
+    DB::migrate().await.expect("Database migration error");
 
     debug!("Starting Events handler");
     init_event_vars().unwrap();
@@ -151,7 +137,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     tokio::spawn(password_hasher::run());
 
     debug!("Starting health watch");
-    tokio::spawn(watch_health(app_state.tx_events.clone()));
+    tokio::spawn(watch_health());
 
     match env::var("SCHED_DISABLE")
         .unwrap_or_else(|_| String::from("false"))
@@ -162,7 +148,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         _ => {
             debug!("Starting Schedulers");
-            tokio::spawn(rauthy_schedulers::spawn(app_state.clone()));
+            tokio::spawn(rauthy_schedulers::spawn());
         }
     };
 
@@ -177,7 +163,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     DB::hql().clear_cache(Cache::Html).await.unwrap();
 
     if *SWAGGER_UI_ENABLE {
-        OPENAPI_JSON.set(ApiDoc::build(&app_state).to_json()?)?;
+        OPENAPI_JSON.set(ApiDoc::build().to_json()?)?;
         let _ = *OPENAPI_CONFIG;
         let _ = *SWAGGER_UI_PUBLIC;
     }
@@ -188,9 +174,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .parse::<bool>()
         .expect("Cannot parse METRICS_ENABLE to bool");
     if metrics_enable {
-        server::server_with_metrics(app_state).await?;
+        server::server_with_metrics().await?;
     } else {
-        server::server_without_metrics(app_state).await?;
+        server::server_without_metrics().await?;
     }
 
     DB::hql().shutdown().await.unwrap();

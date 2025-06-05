@@ -1,12 +1,12 @@
 use crate::api_cookie::ApiCookie;
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::users::{AccountType, User};
+use crate::rauthy_config::RauthyConfig;
+use actix_web::HttpResponse;
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
-use actix_web::{HttpResponse, web};
 use chrono::Utc;
 use cryptr::EncValue;
 use deadpool_postgres::GenericClient;
@@ -707,7 +707,6 @@ impl WebauthnServiceReq {
 }
 
 pub async fn auth_start(
-    data: &web::Data<AppState>,
     user_id: String,
     purpose: MfaPurpose,
 ) -> Result<WebauthnAuthStartResponse, ErrorResponse> {
@@ -750,7 +749,10 @@ pub async fn auth_start(
         ));
     }
 
-    match data.webauthn.start_passkey_authentication(pks.as_slice()) {
+    match RauthyConfig::get()
+        .webauthn
+        .start_passkey_authentication(pks.as_slice())
+    {
         Ok((mut rcr, auth_state)) => {
             // timeout expected in ms
             rcr.public_key.timeout = Some(*WEBAUTHN_REQ_EXP * 1000);
@@ -788,7 +790,6 @@ pub async fn auth_start(
 }
 
 pub async fn auth_finish(
-    data: &web::Data<AppState>,
     user_id: String,
     req: WebauthnAuthFinishRequest,
 ) -> Result<WebauthnAdditionalData, ErrorResponse> {
@@ -800,7 +801,7 @@ pub async fn auth_finish(
 
     let pks = PasskeyEntity::find_for_user(&user.id).await?;
 
-    match data
+    match RauthyConfig::get()
         .webauthn
         .finish_passkey_authentication(&req.data, &auth_state)
     {
@@ -874,7 +875,6 @@ pub struct WebauthnReg {
 }
 
 pub async fn reg_start(
-    data: &web::Data<AppState>,
     user_id: String,
     req: WebauthnRegStartRequest,
 ) -> Result<CreationChallengeResponse, ErrorResponse> {
@@ -886,7 +886,7 @@ pub async fn reg_start(
     };
     let cred_ids = PasskeyEntity::find_cred_ids_for_user(&user.id).await?;
 
-    match data.webauthn.start_passkey_registration(
+    match RauthyConfig::get().webauthn.start_passkey_registration(
         passkey_user_id,
         &user.email,
         &user.email,
@@ -938,11 +938,7 @@ pub async fn reg_start(
     }
 }
 
-pub async fn reg_finish(
-    data: &web::Data<AppState>,
-    id: String,
-    req: WebauthnRegFinishRequest,
-) -> Result<(), ErrorResponse> {
+pub async fn reg_finish(id: String, req: WebauthnRegFinishRequest) -> Result<(), ErrorResponse> {
     let mut user = User::find(id).await?;
 
     let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
@@ -960,7 +956,7 @@ pub async fn reg_finish(
     let reg_data = res.unwrap();
 
     let reg_state = serde_json::from_str::<PasskeyRegistration>(&reg_data.reg_state)?;
-    match data
+    match RauthyConfig::get()
         .webauthn
         .finish_passkey_registration(&req.data, &reg_state)
     {

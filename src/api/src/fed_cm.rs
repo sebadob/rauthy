@@ -1,7 +1,7 @@
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::web::{Form, Query};
-use actix_web::{HttpRequest, HttpResponse, get, post, web};
+use actix_web::{HttpRequest, HttpResponse, get, post};
 use chrono::Utc;
 use rauthy_api_types::clients::EphemeralClientRequest;
 use rauthy_api_types::fed_cm::{FedCMAssertionRequest, FedCMClientMetadataRequest};
@@ -13,7 +13,6 @@ use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::ListenScheme;
 use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::fed_cm::{
     FedCMAccount, FedCMAccounts, FedCMClientMetadata, FedCMIdPConfig, FedCMLoginStatus,
@@ -21,6 +20,7 @@ use rauthy_models::entity::fed_cm::{
 };
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenSet};
 use tracing::{debug, error, warn};
 use validator::Validate;
@@ -79,7 +79,6 @@ pub async fn get_fed_cm_accounts(req: HttpRequest) -> Result<HttpResponse, Error
 #[get("/fed_cm/client_meta")]
 #[tracing::instrument(level = "debug", skip_all, fields(client_id = params.client_id))]
 pub async fn get_fed_cm_client_meta(
-    data: web::Data<AppState>,
     req: HttpRequest,
     Query(params): Query<FedCMClientMetadataRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -101,7 +100,7 @@ pub async fn get_fed_cm_client_meta(
             "This client has been disabled".to_string(),
         ));
     }
-    let origin_header = client_origin_header(&data, &req, &client)?;
+    let origin_header = client_origin_header(&req, &client)?;
 
     let meta = FedCMClientMetadata::new();
     Ok(HttpResponse::Ok()
@@ -124,14 +123,11 @@ pub async fn get_fed_cm_client_meta(
 )]
 #[get("/fed_cm/config")]
 #[tracing::instrument(level = "debug", skip_all)]
-pub async fn get_fed_cm_config(
-    req: HttpRequest,
-    data: web::Data<AppState>,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_fed_cm_config(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
-    let config = FedCMIdPConfig::get(&data).await?;
+    let config = FedCMIdPConfig::get().await?;
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_JSON)
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
@@ -238,7 +234,6 @@ pub async fn get_fed_cm_status(req: HttpRequest) -> HttpResponse {
 #[tracing::instrument(level = "debug", skip_all, fields(client_id = payload.client_id))]
 pub async fn post_fed_cm_token(
     req: HttpRequest,
-    data: web::Data<AppState>,
     Form(payload): Form<FedCMAssertionRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
@@ -271,7 +266,7 @@ pub async fn post_fed_cm_token(
     // TODO what about confidential clients? Should we maybe return an auth_code?
     // TODO impl a new `FedCM` flow for client's and reject if not true?
 
-    let origin_header = client_origin_header(&data, &req, &client)?;
+    let origin_header = client_origin_header(&req, &client)?;
     debug!("built origin header for client: {:?}", origin_header.1);
 
     // find and check the user
@@ -290,7 +285,6 @@ pub async fn post_fed_cm_token(
     // We are good - issue a TokenSet
     let ts = TokenSet::from_user(
         &user,
-        &data,
         &client,
         AuthTime::given(user.last_login.unwrap_or_else(|| Utc::now().timestamp())),
         None,
@@ -324,17 +318,14 @@ pub async fn post_fed_cm_token(
     ),
 )]
 #[get("/.well-known/web-identity")]
-pub async fn get_fed_cm_well_known(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_fed_cm_well_known(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_JSON)
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
-        .json(WebIdentity::new(&data.issuer)))
+        .json(WebIdentity::default()))
 }
 
 #[inline(always)]
@@ -371,7 +362,6 @@ fn is_web_identity_fetch(req: &HttpRequest) -> Result<(), ErrorResponse> {
 }
 
 fn client_origin_header(
-    data: &web::Data<AppState>,
     req: &HttpRequest,
     client: &Client,
 ) -> Result<(HeaderName, HeaderValue), ErrorResponse> {
@@ -400,7 +390,8 @@ fn client_origin_header(
     if let Some(allowed_origins) = &client.allowed_origins {
         for ao in allowed_origins.split(',') {
             debug!("Comparing Allowed Origin '{}' to origin '{}'", ao, origin);
-            if (data.listen_scheme == ListenScheme::HttpHttps && ao.ends_with(origin))
+            if (RauthyConfig::get().listen_scheme == ListenScheme::HttpHttps
+                && ao.ends_with(origin))
                 || ao.eq(origin)
             {
                 debug!(

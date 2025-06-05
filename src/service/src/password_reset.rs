@@ -1,4 +1,4 @@
-use actix_web::{HttpRequest, HttpResponse, cookie, web};
+use actix_web::{HttpRequest, HttpResponse, cookie};
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_api_types::users::{
@@ -8,7 +8,6 @@ use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::magic_links::{MagicLink, MagicLinkUsage};
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::sessions::Session;
@@ -19,6 +18,7 @@ use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use rauthy_models::events::event::Event;
 use rauthy_models::html::templates::{PwdResetHtml, TplPasswordReset};
 use rauthy_models::language::Language;
+use rauthy_models::rauthy_config::RauthyConfig;
 use tracing::{debug, error};
 
 /// Returns `(response body, set-cookie)`
@@ -61,7 +61,6 @@ pub async fn handle_get_pwd_reset<'a>(
 
 #[tracing::instrument(level = "debug", skip_all, fields(user_id = user_id))]
 pub async fn handle_put_user_passkey_start<'a>(
-    data: &web::Data<AppState>,
     req: HttpRequest,
     user_id: String,
     req_data: WebauthnRegStartRequest,
@@ -87,14 +86,13 @@ pub async fn handle_put_user_passkey_start<'a>(
         }
     }
 
-    webauthn::reg_start(data, user.id, req_data)
+    webauthn::reg_start(user.id, req_data)
         .await
         .map(|ccr| HttpResponse::Ok().json(ccr))
 }
 
 #[tracing::instrument(level = "debug", skip_all, fields(user_id = user_id))]
 pub async fn handle_put_user_passkey_finish<'a>(
-    data: &web::Data<AppState>,
     req: HttpRequest,
     user_id: String,
     req_data: WebauthnRegFinishRequest,
@@ -106,7 +104,7 @@ pub async fn handle_put_user_passkey_finish<'a>(
 
     // finish webauthn request -> always force UV for passkey only accounts
     debug!("ml is valid - finishing webauthn request");
-    webauthn::reg_finish(data, user_id.clone(), req_data).await?;
+    webauthn::reg_finish(user_id.clone(), req_data).await?;
 
     // validate csrf token
     match req.headers().get(PWD_CSRF_HEADER) {
@@ -139,7 +137,6 @@ pub async fn handle_put_user_passkey_finish<'a>(
 /// Returns (magic link deletion cookie, optional custom redirect uri)
 #[tracing::instrument(level = "debug", skip_all, fields(user_id = user_id))]
 pub async fn handle_put_user_password_reset<'a>(
-    data: &web::Data<AppState>,
     req: HttpRequest,
     user_id: String,
     req_data: PasswordResetRequest,
@@ -189,7 +186,8 @@ pub async fn handle_put_user_password_reset<'a>(
         }
         Some(ip) => ip.to_string(),
     };
-    data.tx_events
+    RauthyConfig::get()
+        .tx_events
         .send_async(Event::user_password_reset(
             format!("Reset via Password Reset Form: {}", user.email),
             Some(ip),

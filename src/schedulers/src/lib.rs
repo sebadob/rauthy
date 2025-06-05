@@ -1,5 +1,3 @@
-use actix_web::web;
-use rauthy_models::app_state::AppState;
 use std::time::Duration;
 use tokio::time;
 use tracing::info;
@@ -19,11 +17,11 @@ mod user_login_states;
 mod users;
 
 /// Spawn all Rauthy schedulers and periodic tasks
-pub async fn spawn(data: web::Data<AppState>) {
+pub async fn spawn() {
     info!("Starting schedulers");
 
-    tokio::spawn(backchannel_logout::backchannel_logout_retry(data.clone()));
-    tokio::spawn(scim_tasks::scim_task_retry(data.clone()));
+    tokio::spawn(backchannel_logout::backchannel_logout_retry());
+    tokio::spawn(scim_tasks::scim_task_retry());
     tokio::spawn(dyn_clients::dyn_client_cleanup());
     tokio::spawn(events::events_cleanup());
     tokio::spawn(devices::devices_cleanup());
@@ -31,11 +29,11 @@ pub async fn spawn(data: web::Data<AppState>) {
     tokio::spawn(tokens::refresh_tokens_cleanup());
     tokio::spawn(user_login_states::user_login_states_cleanup());
     tokio::spawn(sessions::sessions_cleanup());
-    tokio::spawn(jwks::jwks_auto_rotate(data.clone()));
+    tokio::spawn(jwks::jwks_auto_rotate());
     tokio::spawn(jwks::jwks_cleanup());
-    tokio::spawn(passwords::password_expiry_checker(data.clone()));
-    tokio::spawn(users::user_expiry_checker(data.clone()));
-    tokio::spawn(app_version::app_version_check(data));
+    tokio::spawn(passwords::password_expiry_checker());
+    tokio::spawn(users::user_expiry_checker());
+    tokio::spawn(app_version::app_version_check());
 }
 
 /// sleeps until the next scheduled event

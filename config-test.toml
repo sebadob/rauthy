@@ -41,7 +41,7 @@ allowed_flows = ['authorization_code', 'refresh_token']
 argon2_m_cost = 32768
 argon2_t_cost = 1
 argon2_p_cost = 2
-max_hash_threads = 2
+max_hash_threads = 1
 
 [http_client]
 danger_unencrypted = true

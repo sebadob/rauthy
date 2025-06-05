@@ -1,6 +1,5 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
-use actix_web::web;
+use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
 use cryptr::EncValue;
 use hiqlite_macros::params;
@@ -118,8 +117,8 @@ impl ClientDyn {
         Ok(())
     }
 
-    pub fn registration_client_uri(data: &web::Data<AppState>, id: &str) -> String {
-        format!("{}/clients_dyn/{}", data.issuer, id)
+    pub fn registration_client_uri(id: &str) -> String {
+        format!("{}/clients_dyn/{}", RauthyConfig::get().issuer, id)
     }
 
     pub fn registration_token_plain(&self) -> Result<String, ErrorResponse> {

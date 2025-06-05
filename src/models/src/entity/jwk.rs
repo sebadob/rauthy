@@ -1,6 +1,6 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::events::event::Event;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::web;
 use cryptr::{EncKeys, EncValue};
 use ed25519_compact::Noise;
@@ -169,7 +169,7 @@ impl JWKS {
     }
 
     /// Rotates and generates a whole new Set of JWKs for signing JWT Tokens
-    pub async fn rotate(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn rotate() -> Result<(), ErrorResponse> {
         info!("Starting JWKS rotation - this might take some time");
 
         // let key = data.enc_keys.get(&data.enc_key_active).unwrap();
@@ -284,7 +284,8 @@ impl JWKS {
 
         info!("Finished JWKS rotation");
 
-        data.tx_events
+        RauthyConfig::get()
+            .tx_events
             .send_async(Event::jwks_rotated())
             .await
             .unwrap();

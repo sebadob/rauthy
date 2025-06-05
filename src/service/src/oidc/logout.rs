@@ -2,7 +2,7 @@ use crate::oidc::bcl_logout_token::LogoutToken;
 use actix_web::cookie::SameSite;
 use actix_web::http::header::{ACCESS_CONTROL_ALLOW_METHODS, HeaderValue};
 use actix_web::http::{StatusCode, header};
-use actix_web::{HttpRequest, HttpResponse, web};
+use actix_web::{HttpRequest, HttpResponse};
 use rauthy_api_types::oidc::{BackchannelLogoutRequest, LogoutRequest};
 use rauthy_common::constants::{
     COOKIE_SESSION, COOKIE_SESSION_FED_CM, EXPERIMENTAL_FED_CM_ENABLE, RAUTHY_VERSION,
@@ -11,7 +11,6 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtIdClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
 use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
@@ -21,6 +20,7 @@ use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::user_login_states::UserLoginState;
 use rauthy_models::entity::users::User;
 use rauthy_models::html::HtmlCached;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::borrow::Cow;
 use std::env;
 use std::str::FromStr;
@@ -65,7 +65,6 @@ pub async fn get_logout_html(
     req: HttpRequest,
     logout_request: LogoutRequest,
     session: Session,
-    data: &web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let theme_ts = ThemeCssFull::find_theme_ts_rauthy().await?;
     if logout_request.id_token_hint.is_none() {
@@ -79,7 +78,6 @@ pub async fn get_logout_html(
     let mut buf = Vec::with_capacity(512);
     JwtToken::validate_claims_into(
         &token_raw,
-        &data.issuer,
         Some(JwtTokenType::Id),
         LOGOUT_TOKEN_CLOCK_SKEW,
         &mut buf,
@@ -126,7 +124,6 @@ pub async fn get_logout_html(
 #[inline]
 pub async fn post_logout_handle(
     req: HttpRequest,
-    data: web::Data<AppState>,
     params: LogoutRequest,
     session: Option<Session>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -139,7 +136,6 @@ pub async fn post_logout_handle(
         if let Some(id_token_hint) = &params.id_token_hint {
             JwtToken::validate_claims_into(
                 id_token_hint,
-                &data.issuer,
                 Some(JwtTokenType::Id),
                 LOGOUT_TOKEN_CLOCK_SKEW,
                 &mut buf,
@@ -183,19 +179,21 @@ pub async fn post_logout_handle(
         let uid = session.user_id.clone();
         RefreshToken::delete_by_sid(session.id.clone()).await?;
         session.delete().await?;
-        execute_backchannel_logout(&data, sid.clone(), uid).await?;
+        execute_backchannel_logout(sid.clone(), uid).await?;
     }
 
     if let Some(user) = user {
         RefreshToken::invalidate_for_user(&user.id).await?;
         Session::invalidate_for_user(&user.id).await?;
-        execute_backchannel_logout(&data, None, Some(user.id)).await?;
+        execute_backchannel_logout(None, Some(user.id)).await?;
     }
 
     if is_backchannel {
         Ok(HttpResponse::build(StatusCode::OK).finish())
     } else {
-        let uri = post_logout_redirect_uri.as_ref().unwrap_or(&data.issuer);
+        let uri = post_logout_redirect_uri
+            .as_ref()
+            .unwrap_or(&RauthyConfig::get().issuer);
         let state = params
             .state
             .map(|st| format!("?state={}", st))
@@ -267,7 +265,6 @@ async fn find_session_with_user_fallback(
 /// Does NOT invalidate or delete any local sessions - only cares about remote clients with
 /// configured backchannel logout.
 pub async fn execute_backchannel_logout(
-    data: &web::Data<AppState>,
     sid: Option<String>,
     uid: Option<String>,
 ) -> Result<(), ErrorResponse> {
@@ -325,7 +322,6 @@ pub async fn execute_backchannel_logout(
             if let Err(err) = send_backchannel_logout(
                 client.id.clone(),
                 client.backchannel_logout_uri.unwrap_or_default(),
-                &data.issuer,
                 sub,
                 sid,
                 kp.as_ref().unwrap(),
@@ -359,9 +355,7 @@ pub async fn execute_backchannel_logout(
 }
 
 /// Executes a backchannel logout for every user on every client in the background.
-pub async fn execute_backchannel_logout_for_everything(
-    data: web::Data<AppState>,
-) -> Result<(), ErrorResponse> {
+pub async fn execute_backchannel_logout_for_everything() -> Result<(), ErrorResponse> {
     let clients = Client::find_all()
         .await?
         .into_iter()
@@ -369,16 +363,13 @@ pub async fn execute_backchannel_logout_for_everything(
         .collect::<Vec<_>>();
 
     for client in clients {
-        execute_backchannel_logout_by_client(&data, &client).await?;
+        execute_backchannel_logout_by_client(&client).await?;
     }
 
     Ok(())
 }
 
-pub async fn execute_backchannel_logout_by_client(
-    data: &web::Data<AppState>,
-    client: &Client,
-) -> Result<(), ErrorResponse> {
+pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(), ErrorResponse> {
     if client.backchannel_logout_uri.is_none() {
         return Ok(());
     }
@@ -396,7 +387,6 @@ pub async fn execute_backchannel_logout_by_client(
         if let Err(err) = send_backchannel_logout(
             client.id.clone(),
             uri.to_string(),
-            &data.issuer,
             Some(state.user_id),
             None,
             &kp,
@@ -424,14 +414,18 @@ pub async fn execute_backchannel_logout_by_client(
 pub async fn send_backchannel_logout(
     client_id: String,
     backchannel_logout_uri: String,
-    issuer: &str,
     sub: Option<String>,
     sid: Option<String>,
     kp: &JwkKeyPair,
     tasks: &mut JoinSet<Result<(), ErrorResponse>>,
 ) -> Result<(), ErrorResponse> {
-    let logout_token = LogoutToken::new(issuer, &client_id, sub.as_deref(), sid.as_deref())
-        .into_token_with_kp(kp)?;
+    let logout_token = LogoutToken::new(
+        &RauthyConfig::get().issuer,
+        &client_id,
+        sub.as_deref(),
+        sid.as_deref(),
+    )
+    .into_token_with_kp(kp)?;
 
     tasks.spawn(async move {
         debug!(

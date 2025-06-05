@@ -97,7 +97,6 @@ impl RauthyConfig {
             ListenScheme::HttpHttps | ListenScheme::Https | ListenScheme::UnixHttps
         ) || *PROXY_MODE;
         let issuer_scheme = if is_https { "https" } else { "http" };
-
         let issuer = format!("{}://{}/auth/v1", issuer_scheme, vars.server.pub_url);
         debug!("Issuer: {}", issuer);
 
@@ -1710,7 +1709,7 @@ impl Vars {
             self.server.scheme = v.into();
         }
         if let Some(v) = t_str(&mut table, "server", "pub_url", "PUB_URL") {
-            self.server.pub_url = v.into();
+            self.server.pub_url = v;
         }
         if let Some(v) = t_u16(&mut table, "server", "http_workers", "HTTP_WORKERS") {
             self.server.http_workers = v;
@@ -1777,7 +1776,7 @@ impl Vars {
             "blacklist",
             "SUSPICIOUS_REQUESTS_BLACKLIST",
         ) {
-            self.suspicious_requests.blacklist = v.into();
+            self.suspicious_requests.blacklist = v;
         }
         if let Some(v) = t_bool(
             &mut table,
@@ -1785,7 +1784,7 @@ impl Vars {
             "log",
             "SUSPICIOUS_REQUESTS_LOG",
         ) {
-            self.suspicious_requests.log = v.into();
+            self.suspicious_requests.log = v;
         }
     }
 
@@ -2405,7 +2404,6 @@ fn t_str_vec(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> O
         if let Ok(arr) = env::var(env_var) {
             return Some(
                 arr.lines()
-                    .into_iter()
                     .filter_map(|l| {
                         let trimmed = l.trim().to_string();
                         if trimmed.is_empty() {

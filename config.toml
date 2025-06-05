@@ -1325,13 +1325,13 @@ disable_app_version_check = false
 # Argon2ID hashing parameters. Take a look at the documentation
 # for more information:
 # https://sebadob.github.io/rauthy/config/argon2.html
-# M_COST muste never be below 32768 in production
+# M_COST must never be below 32768 in production
 # overwritten by: ARGON2_M_COST
 argon2_m_cost = 131072
-# T_COST muster never be below 1 in production
+# T_COST must never be below 1 in production
 # overwritten by: ARGON2_T_COST
 argon2_t_cost = 4
-# P_COST should never be below 2 in production
+# P_COST must never be below 2 in production
 # overwritten by: ARGON2_P_COST
 argon2_p_cost = 8
 

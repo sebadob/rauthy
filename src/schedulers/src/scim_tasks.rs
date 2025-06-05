@@ -1,7 +1,5 @@
-use actix_web::web;
 use rauthy_common::utils::get_rand_between;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use rauthy_models::entity::groups::Group;
@@ -14,7 +12,7 @@ use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
-pub async fn scim_task_retry(data: web::Data<AppState>) {
+pub async fn scim_task_retry() {
     let retry_count = env::var("SCIM_RETRY_COUNT")
         .as_deref()
         .unwrap_or("100")
@@ -31,14 +29,13 @@ pub async fn scim_task_retry(data: web::Data<AppState>) {
         time::sleep(Duration::from_millis(millis)).await;
 
         debug!("Running scim_task_retry scheduler");
-        if let Err(err) = execute(&data, &mut clients_scim, &mut groups_remote, retry_count).await {
+        if let Err(err) = execute(&mut clients_scim, &mut groups_remote, retry_count).await {
             error!("Error during scim_task_retry: {}", err.message);
         }
     }
 }
 
 async fn execute(
-    data: &web::Data<AppState>,
     clients_scim: &mut Vec<ClientScim>,
     groups_remote: &mut HashMap<String, ScimGroup>,
     retry_count: u16,
@@ -55,7 +52,7 @@ async fn execute(
             warn!("Retry count exceeded for scim task {:?}", failure);
 
             Event::scim_task_failed(&failure.client_id, &failure.action, failure.retry_count)
-                .send(&data.tx_events)
+                .send()
                 .await?;
 
             failure.delete().await?;

@@ -1,11 +1,10 @@
 use crate::oidc::helpers;
+use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{HttpRequest, web};
 use rauthy_api_types::users::Userinfo;
 use rauthy_common::constants::{ENABLE_WEB_ID, USERINFO_STRICT};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{AddressClaim, JwtCommonClaims, JwtTokenType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::users::User;
@@ -14,7 +13,6 @@ use rauthy_models::entity::webids::WebId;
 use std::borrow::Cow;
 
 pub async fn get_userinfo(
-    data: &web::Data<AppState>,
     req: HttpRequest,
 ) -> Result<(Userinfo, Option<(HeaderName, HeaderValue)>), ErrorResponse> {
     let bearer = helpers::get_bearer_token_from_header(req.headers())?;
@@ -22,7 +20,6 @@ pub async fn get_userinfo(
     let mut buf: Vec<u8> = Vec::with_capacity(256);
     rauthy_jwt::token::JwtToken::validate_claims_into(
         &bearer,
-        &data.issuer,
         Some(JwtTokenType::Bearer),
         0,
         buf.as_mut(),

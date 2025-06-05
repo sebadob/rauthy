@@ -1,14 +1,14 @@
 use crate::api_cookie::ApiCookie;
-use crate::app_state::AppState;
 use crate::entity::auth_providers::AuthProviderTemplate;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::language::Language;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::Cookie;
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, HttpResponseBuilder, web};
+use actix_web::{HttpResponse, HttpResponseBuilder};
 use askama::Template;
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
@@ -84,7 +84,6 @@ impl HtmlTemplate {
     ///
     /// TODO maybe deactivate completely without debug_assertions?
     pub async fn build_from_str(
-        data: web::Data<AppState>,
         s: &str,
         session: Option<Session>,
     ) -> Result<(Self, Option<Cookie<'_>>), ErrorResponse> {
@@ -159,8 +158,12 @@ impl HtmlTemplate {
                 } else {
                     MagicLinkUsage::PasswordReset(None)
                 };
-                let mut ml =
-                    MagicLink::create(user.id.clone(), data.ml_lt_pwd_reset as i64, usage).await?;
+                let mut ml = MagicLink::create(
+                    user.id.clone(),
+                    RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
+                    usage,
+                )
+                .await?;
                 let cookie_val = get_rand(48);
                 ml.cookie = Some(cookie_val);
                 ml.save().await?;

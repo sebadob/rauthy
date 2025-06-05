@@ -2,7 +2,7 @@ use crate::ReqPrincipal;
 use actix_web::http::header;
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, HeaderValue};
 use actix_web::web::{Json, Query};
-use actix_web::{HttpRequest, HttpResponse, Responder, get, post, put, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, get, post, put};
 use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_api_types::generic::{
@@ -16,7 +16,6 @@ use rauthy_common::constants::{
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::app_version::LatestAppVersion;
@@ -28,6 +27,7 @@ use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
 use std::env;
@@ -159,7 +159,6 @@ pub async fn get_enc_keys(principal: ReqPrincipal) -> Result<HttpResponse, Error
 )]
 #[post("/encryption/migrate")]
 pub async fn post_migrate_enc_key(
-    data: web::Data<AppState>,
     req: HttpRequest,
     principal: ReqPrincipal,
     Json(payload): Json<EncKeyMigrateRequest>,
@@ -168,9 +167,10 @@ pub async fn post_migrate_enc_key(
     payload.validate()?;
 
     let ip = real_ip_from_req(&req)?;
-    encryption::migrate_encryption_alg(&data, &payload.key_id).await?;
+    encryption::migrate_encryption_alg(&payload.key_id).await?;
 
-    data.tx_events
+    RauthyConfig::get()
+        .tx_events
         .send_async(Event::secrets_migrated(ip))
         .await
         .unwrap();
@@ -212,10 +212,7 @@ pub async fn get_i18n_config() -> Result<HttpResponse, ErrorResponse> {
     ),
 )]
 #[get("/login_time")]
-pub async fn get_login_time(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_login_time(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Generic, AccessRights::Read)?;
 
     let login_time: u32 = DB::hql()
@@ -223,10 +220,11 @@ pub async fn get_login_time(
         .await?
         .unwrap_or(2000);
 
+    let params = &RauthyConfig::get().argon2_params;
     let argon2_params = Argon2ParamsResponse {
-        m_cost: data.argon2_params.m_cost(),
-        t_cost: data.argon2_params.t_cost(),
-        p_cost: data.argon2_params.p_cost(),
+        m_cost: params.m_cost(),
+        t_cost: params.t_cost(),
+        p_cost: params.p_cost(),
     };
     let resp = LoginTimeResponse {
         argon2_params,

@@ -1,4 +1,3 @@
-use crate::app_state::AppState;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
@@ -7,7 +6,7 @@ use crate::i18n_email::confirm_change::I18nEmailConfirmChange;
 use crate::i18n_email::password_new::I18nEmailPasswordNew;
 use crate::i18n_email::reset::I18nEmailReset;
 use crate::i18n_email::reset_info::I18nEmailResetInfo;
-use actix_web::web;
+use crate::rauthy_config::RauthyConfig;
 use askama::Template;
 use chrono::DateTime;
 use lettre::message::{MultiPart, SinglePart};
@@ -200,15 +199,12 @@ pub async fn send_email_notification(
     }
 }
 
-pub async fn send_email_change_info_new(
-    data: &web::Data<AppState>,
-    magic_link: &MagicLink,
-    user: &User,
-    new_email: String,
-) {
+pub async fn send_email_change_info_new(magic_link: &MagicLink, user: &User, new_email: String) {
     let link = format!(
         "{}/users/{}/email_confirm/{}",
-        data.issuer, magic_link.user_id, &magic_link.id,
+        RauthyConfig::get().issuer,
+        magic_link.user_id,
+        &magic_link.id,
     );
     let exp = email_ts_prettify(magic_link.exp);
     let theme_vars = ThemeCssFull::find_theme_variables_email()
@@ -252,8 +248,10 @@ pub async fn send_email_change_info_new(
         ),
     };
 
-    let tx = &data.tx_email;
-    let res = tx.send_timeout(req, Duration::from_secs(10)).await;
+    let res = RauthyConfig::get()
+        .tx_email
+        .send_timeout(req, Duration::from_secs(10))
+        .await;
     match res {
         Ok(_) => {}
         Err(ref e) => {
@@ -266,7 +264,6 @@ pub async fn send_email_change_info_new(
 }
 
 pub async fn send_email_confirm_change(
-    data: &web::Data<AppState>,
     user: &User,
     email_addr: &str,
     email_changed_to: &str,
@@ -311,8 +308,10 @@ pub async fn send_email_confirm_change(
         ),
     };
 
-    let tx = &data.tx_email;
-    let res = tx.send_timeout(req, Duration::from_secs(10)).await;
+    let res = RauthyConfig::get()
+        .tx_email
+        .send_timeout(req, Duration::from_secs(10))
+        .await;
     match res {
         Ok(_) => {}
         Err(ref e) => {
@@ -324,10 +323,13 @@ pub async fn send_email_confirm_change(
     }
 }
 
-pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, user: &User) {
+pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
     let link = format!(
         "{}/users/{}/reset/{}?type={}",
-        data.issuer, magic_link.user_id, &magic_link.id, magic_link.usage,
+        RauthyConfig::get().issuer,
+        magic_link.user_id,
+        &magic_link.id,
+        magic_link.usage,
     );
     let exp = email_ts_prettify(magic_link.exp);
     let theme_vars = ThemeCssFull::find_theme_variables_email()
@@ -404,8 +406,10 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
         html: Some(html.render().expect("Template rendering: EmailResetHtml")),
     };
 
-    let tx = &data.tx_email;
-    let res = tx.send_timeout(req, Duration::from_secs(10)).await;
+    let res = RauthyConfig::get()
+        .tx_email
+        .send_timeout(req, Duration::from_secs(10))
+        .await;
     match res {
         Ok(_) => {}
         Err(ref e) => {
@@ -417,9 +421,12 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
     }
 }
 
-pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
+pub async fn send_pwd_reset_info(user: &User) {
     let exp = email_ts_prettify(user.password_expires.unwrap());
-    let link = format!("{}/auth/v1/account", data.public_url);
+    let link = format!(
+        "{}/auth/v1/account",
+        RauthyConfig::get().vars.server.pub_url
+    );
 
     let i18n = I18nEmailResetInfo::build(&user.language);
     let text = EmailResetInfoTxt {
@@ -459,8 +466,10 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
         ),
     };
 
-    let tx = &data.tx_email;
-    let res = tx.send_timeout(req, Duration::from_secs(10)).await;
+    let res = RauthyConfig::get()
+        .tx_email
+        .send_timeout(req, Duration::from_secs(10))
+        .await;
     match res {
         Ok(_) => {}
         Err(ref e) => {

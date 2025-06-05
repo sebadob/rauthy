@@ -1,7 +1,7 @@
 use crate::oidc;
 use crate::{auth_providers, users};
-use actix_web::FromRequest;
-use actix_web::{HttpRequest, HttpResponse, web};
+use actix_web::{FromRequest, web};
+use actix_web::{HttpRequest, HttpResponse};
 use futures::StreamExt;
 use rauthy_api_types::auth_providers::ProviderCallbackRequest;
 use rauthy_api_types::oidc::{LoginRequest, LogoutRequest};
@@ -9,7 +9,6 @@ use rauthy_api_types::users::NewUserRegistrationRequest;
 use rauthy_common::constants::DEV_MODE;
 use rauthy_error::ErrorResponse;
 use rauthy_error::ErrorResponseType;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::html::templates::HtmlTemplate;
 use rauthy_service::oidc::logout;
@@ -24,10 +23,9 @@ pub async fn get_template(
         return Ok(HttpResponse::NotFound().finish());
     }
 
-    let data = web::Data::<AppState>::extract(&req).await?;
     let principal = web::ReqData::<Principal>::extract(&req).await?;
     let session = principal.validate_session_auth().ok().cloned();
-    let (tpl, cookie) = HtmlTemplate::build_from_str(data, id.as_str(), session).await?;
+    let (tpl, cookie) = HtmlTemplate::build_from_str(id.as_str(), session).await?;
 
     if let Some(cookie) = cookie {
         Ok(HttpResponse::Ok()
@@ -61,13 +59,11 @@ pub async fn post_dev_only_endpoints(
     }
     let bytes = body.as_ref();
 
-    let data = web::Data::<AppState>::extract(&req).await?;
-
     match typ.as_str() {
         "authorize" => {
             let payload = serde_json::from_slice::<LoginRequest>(bytes)?;
             let principal = web::ReqData::<Principal>::extract(&req).await?;
-            oidc::post_authorize_handle(data, req, payload, principal).await
+            oidc::post_authorize_handle(req, payload, principal).await
         }
         "backchannel_logout" => {
             // This endpoint is only used in integration tests.
@@ -92,7 +88,7 @@ pub async fn post_dev_only_endpoints(
             params.validate()?;
             let principal = web::ReqData::<Principal>::extract(&req).await.ok();
             let session = principal.and_then(|p| p.validate_session_auth().ok().cloned());
-            logout::post_logout_handle(req, data, params, session).await
+            logout::post_logout_handle(req, params, session).await
         }
         "providers_callback" => {
             let payload = serde_json::from_slice::<ProviderCallbackRequest>(bytes)?;
@@ -101,7 +97,7 @@ pub async fn post_dev_only_endpoints(
         }
         "register" => {
             let payload = serde_json::from_slice::<NewUserRegistrationRequest>(bytes)?;
-            users::post_users_register_handle(data, req, payload).await
+            users::post_users_register_handle(req, payload).await
         }
         _ => {
             tracing::warn!("unhandled DEV template request: {}", typ);

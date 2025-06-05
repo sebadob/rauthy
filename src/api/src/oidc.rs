@@ -28,7 +28,6 @@ use rauthy_common::constants::{
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::clients::Client;
@@ -282,18 +281,16 @@ pub async fn get_authorize(
 )]
 #[post("/oidc/authorize")]
 pub async fn post_authorize(
-    data: web::Data<AppState>,
     req: HttpRequest,
     Json(payload): Json<LoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    post_authorize_handle(data, req, payload, principal).await
+    post_authorize_handle(req, payload, principal).await
 }
 
 // extracted to be easily usable by post_dev_only_endpoints()
 #[inline(always)]
 pub async fn post_authorize_handle(
-    data: web::Data<AppState>,
     req: HttpRequest,
     payload: LoginRequest,
     principal: ReqPrincipal,
@@ -312,7 +309,6 @@ pub async fn post_authorize_handle(
     let mut user_needs_mfa = false;
 
     let res = match authorize::post_authorize(
-        &data,
         &req,
         payload,
         session.clone(),
@@ -353,7 +349,7 @@ pub async fn post_authorize_handle(
     };
 
     let ip = real_ip_from_req(&req)?;
-    login_delay::handle_login_delay(&data, ip, start, res, has_password_been_hashed).await
+    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed).await
 }
 
 /// Immediate login refresh with valid session
@@ -657,7 +653,6 @@ pub async fn post_device_verify(
 )]
 #[get("/oidc/logout")]
 pub async fn get_logout(
-    data: web::Data<AppState>,
     req: HttpRequest,
     Query(params): Query<LogoutRequest>,
     principal: Option<ReqPrincipal>,
@@ -667,7 +662,7 @@ pub async fn get_logout(
     }
 
     if params.id_token_hint.is_some() {
-        logout::post_logout_handle(req, data, params, None).await
+        logout::post_logout_handle(req, params, None).await
     } else if let Some(principal) = principal {
         // If we get any logout errors, maybe because there is no session anymore or whatever happens,
         // just redirect to rauthy's root page, since the user is not logged-in anyway anymore.
@@ -678,7 +673,7 @@ pub async fn get_logout(
         }
 
         Ok(
-            logout::get_logout_html(req, params, principal.into_inner().session.unwrap(), &data)
+            logout::get_logout_html(req, params, principal.into_inner().session.unwrap())
                 .await
                 .unwrap_or_else(|_| {
                     HttpResponse::build(StatusCode::from_u16(302).unwrap())
@@ -709,14 +704,13 @@ pub async fn get_logout(
 )]
 #[post("/oidc/logout")]
 pub async fn post_logout(
-    data: web::Data<AppState>,
     Form(payload): Form<LogoutRequest>,
     principal: Option<ReqPrincipal>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
     let session = principal.and_then(|p| p.validate_session_auth().ok().cloned());
-    logout::post_logout_handle(req, data, payload, session).await
+    logout::post_logout_handle(req, payload, session).await
 }
 
 /// Rotate JWKs
@@ -738,15 +732,10 @@ pub async fn post_logout(
     ),
 )]
 #[post("/oidc/rotate_jwk")]
-pub async fn rotate_jwk(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn rotate_jwk(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
-    JWKS::rotate(&data)
-        .await
-        .map(|_| HttpResponse::Ok().finish())
+    JWKS::rotate().await.map(|_| HttpResponse::Ok().finish())
 }
 
 /// Create a new session
@@ -917,7 +906,6 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
 #[tracing::instrument(level = "debug", skip_all, fields(grant_type = payload.grant_type))]
 pub async fn post_token(
     req: HttpRequest,
-    data: web::Data<AppState>,
     Form(payload): Form<TokenRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
@@ -928,13 +916,13 @@ pub async fn post_token(
         // the `urn:ietf:params:oauth:grant-type:device_code` needs
         // a fully customized handling here with customized error response
         // to meet the oauth rfc
-        return Ok(oidc::grant_type_device_code(&data, ip, payload).await);
+        return Ok(oidc::grant_type_device_code(ip, payload).await);
     }
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let has_password_been_hashed = payload.grant_type == "password";
 
-    let res = match oidc::get_token_set(payload, &data, req).await {
+    let res = match oidc::get_token_set(payload, req).await {
         Ok((token_set, headers)) => {
             let mut builder = HttpResponseBuilder::new(StatusCode::OK);
             for h in headers {
@@ -953,7 +941,7 @@ pub async fn post_token(
         }
     };
 
-    login_delay::handle_login_delay(&data, ip, start, res, has_password_been_hashed).await
+    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed).await
 }
 
 /// The token introspection endpoint for OAuth2
@@ -980,13 +968,12 @@ pub async fn post_token(
 )]
 #[post("/oidc/introspect")]
 pub async fn post_token_introspect(
-    data: web::Data<AppState>,
     req: HttpRequest,
     Form(payload): Form<TokenValidationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let (info, cors_header) = token_info::get_token_info(&data, &req, &payload.token).await?;
+    let (info, cors_header) = token_info::get_token_info(&req, &payload.token).await?;
     if let Some((n, v)) = cors_header {
         Ok(HttpResponse::Ok()
             .insert_header((n, v))
@@ -1023,11 +1010,8 @@ pub async fn post_token_introspect(
     ),
 )]
 #[get("/oidc/userinfo")]
-pub async fn get_userinfo(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
-    let (info, cors_header) = userinfo::get_userinfo(&data, req).await?;
+pub async fn get_userinfo(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    let (info, cors_header) = userinfo::get_userinfo(req).await?;
     if let Some((n, v)) = cors_header {
         Ok(HttpResponse::Ok()
             .insert_header((n, v))
@@ -1061,11 +1045,8 @@ pub async fn get_userinfo(
     ),
 )]
 #[post("/oidc/userinfo")]
-pub async fn post_userinfo(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
-    let (info, cors_header) = userinfo::get_userinfo(&data, req).await?;
+pub async fn post_userinfo(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    let (info, cors_header) = userinfo::get_userinfo(req).await?;
     if let Some((n, v)) = cors_header {
         Ok(HttpResponse::Ok()
             .insert_header((n, v))
@@ -1107,11 +1088,8 @@ pub async fn post_userinfo(
     ),
 )]
 #[get("/oidc/forward_auth")]
-pub async fn get_forward_auth(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
-    let (info, _) = userinfo::get_userinfo(&data, req).await?;
+pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    let (info, _) = userinfo::get_userinfo(req).await?;
 
     if *AUTH_HEADERS_ENABLE {
         Ok(HttpResponse::Ok()
@@ -1154,8 +1132,8 @@ pub async fn get_forward_auth(
     ),
 )]
 #[get("/.well-known/openid-configuration")]
-pub async fn get_well_known(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
-    let wk = WellKnown::json(&data).await?;
+pub async fn get_well_known() -> Result<HttpResponse, ErrorResponse> {
+    let wk = WellKnown::json().await?;
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, APPLICATION_JSON))
         .insert_header((

@@ -1,16 +1,15 @@
-use actix_web::web;
 use rauthy_common::constants::RAUTHY_VERSION;
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
 use rauthy_models::entity::app_version::LatestAppVersion;
 use rauthy_models::events::event::Event;
+use rauthy_models::rauthy_config::RauthyConfig;
 use semver::Version;
 use std::env;
 use std::time::Duration;
 use tracing::{debug, error, info, warn};
 
 /// Checks for newly available Rauthy app versions
-pub async fn app_version_check(data: web::Data<AppState>) {
+pub async fn app_version_check() {
     let disable = env::var("DISABLE_APP_VERSION_CHECK")
         .as_deref()
         .unwrap_or("false")
@@ -25,19 +24,16 @@ pub async fn app_version_check(data: web::Data<AppState>) {
 
     // do a first check shortly after startup to not wait hours on a fresh install
     tokio::time::sleep(Duration::from_secs(120)).await;
-    check_app_version(&data, &mut last_version_notification).await;
+    check_app_version(&mut last_version_notification).await;
 
     let mut interval = tokio::time::interval(Duration::from_secs(3595 * 8));
     loop {
         interval.tick().await;
-        check_app_version(&data, &mut last_version_notification).await;
+        check_app_version(&mut last_version_notification).await;
     }
 }
 
-async fn check_app_version(
-    data: &web::Data<AppState>,
-    last_version_notification: &mut Option<Version>,
-) {
+async fn check_app_version(last_version_notification: &mut Option<Version>) {
     if !DB::hql().is_leader_cache().await {
         debug!("Running HA mode without being the leader - skipping app_version_check scheduler");
         return;
@@ -68,7 +64,8 @@ async fn check_app_version(
                         error!("Saving LatestAppVersion into DB: {:?}", err);
                     }
 
-                    data.tx_events
+                    RauthyConfig::get()
+                        .tx_events
                         .send_async(Event::new_rauthy_version(url))
                         .await
                         .unwrap();

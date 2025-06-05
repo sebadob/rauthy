@@ -5,7 +5,6 @@ use rauthy_api_types::generic::PaginationParams;
 use rauthy_api_types::sessions::SessionResponse;
 use rauthy_common::constants::SSP_THRESHOLD;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::continuation_token::ContinuationToken;
@@ -121,10 +120,7 @@ pub async fn get_sessions(
     ),
 )]
 #[delete("/sessions")]
-pub async fn delete_sessions(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn delete_sessions(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     Session::invalidate_all().await?;
@@ -132,7 +128,7 @@ pub async fn delete_sessions(
 
     // This task should run async in the background, as it could take quite a long time to finish.
     task::spawn(async move {
-        if let Err(err) = logout::execute_backchannel_logout_for_everything(data).await {
+        if let Err(err) = logout::execute_backchannel_logout_for_everything().await {
             // TODO we should throw an error or critical event in this case maybe, because
             // invalidations for everything usually come with a good reason.
             error!(
@@ -194,7 +190,6 @@ pub async fn delete_sessions_for_user(
 )]
 #[delete("/sessions/id/{session_id}")]
 pub async fn delete_session_by_id(
-    data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -205,7 +200,7 @@ pub async fn delete_session_by_id(
     session.delete().await?;
 
     RefreshToken::delete_by_sid(sid.clone()).await?;
-    logout::execute_backchannel_logout(&data, Some(sid), None).await?;
+    logout::execute_backchannel_logout(Some(sid), None).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

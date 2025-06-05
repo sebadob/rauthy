@@ -1,10 +1,11 @@
 use crate::database::DB;
 use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::jwk::{Jwk, JwkKeyPairAlg};
+use crate::rauthy_config::RauthyConfig;
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
-use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
+use argon2::{Algorithm, Argon2, PasswordHasher, Version};
 use cryptr::{EncKeys, EncValue};
 use hiqlite_macros::params;
 use rauthy_api_types::api_keys::ApiKeyRequest;
@@ -19,7 +20,7 @@ use tracing::{debug, info};
 use validator::Validate;
 
 /// Initializes an empty production database for a new deployment
-pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<(), ErrorResponse> {
+pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
     // check if the database is un-initialized by looking at the jwks table, which should be empty
     let sql = "SELECT * FROM JWKS";
     let jwks: Vec<Jwk> = if is_hiqlite() {
@@ -50,6 +51,7 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
         }
 
         // check if we should use manually provided bootstrap values
+        let issuer = &RauthyConfig::get().issuer;
         let email =
             env::var("BOOTSTRAP_ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
         let hash = match env::var("BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID") {
@@ -96,7 +98,8 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
                     }
                 };
 
-                let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon2_params);
+                let params = RauthyConfig::get().argon2_params.clone();
+                let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
                 let salt = SaltString::generate(&mut OsRng);
                 argon2
                     .hash_password(plain.as_bytes(), &salt)

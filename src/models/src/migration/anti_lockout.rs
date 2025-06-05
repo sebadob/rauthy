@@ -1,5 +1,6 @@
 use crate::database::DB;
 use crate::entity::clients::Client;
+use crate::rauthy_config::RauthyConfig;
 use deadpool_postgres::GenericClient;
 use rauthy_common::constants::{
     ADMIN_FORCE_MFA, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL,
@@ -8,9 +9,10 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use tracing::debug;
 
-pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
+pub async fn anti_lockout() -> Result<(), ErrorResponse> {
     debug!("Executing anti_lockout_check");
 
+    let issuer = &RauthyConfig::get().issuer;
     let (redirect_uris, allowed_origins) = if *DEV_MODE {
         let (ip, _) = PUB_URL.split_once(':').expect("PUB_URL must have a port");
         let origin = if ip != "localhost" {
