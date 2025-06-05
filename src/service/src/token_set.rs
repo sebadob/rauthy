@@ -138,10 +138,23 @@ impl TokenSet {
             .unwrap_or_else(|| Cow::from(client.default_scopes.replace(',', " ")));
 
         let email = if scope.contains("email") {
-            user.as_ref().map(|u| u.email.as_str())
+            if let Some(user) = user.as_ref() {
+                if let Some(cust_email_mapping) = &client.cust_email_mapping {
+                    let attrs = UserAttrValueEntity::find_for_user(&user.id).await.unwrap();
+
+                    let attr = attrs.iter().find(|v| v.key == *cust_email_mapping).unwrap();
+                    let email = serde_json::from_slice(&attr.value).unwrap();
+                    Some(email)
+                } else {
+                    Some(user.email.clone())
+                }
+            } else {
+                None
+            }
         } else {
             None
         };
+        let email = email.as_deref();
         let roles = user.map(|u| u.roles_iter().collect());
         let groups = if scope.contains("groups") {
             user.map(|u| u.groups_iter().collect())
@@ -162,7 +175,7 @@ impl TokenSet {
                 typ: JwtTokenType::Bearer,
                 azp: &client.id,
                 scope: Some(scope),
-                preferred_username: user.as_ref().map(|u| u.email.as_str()),
+                preferred_username: email,
                 did: did.as_deref(),
                 cnf: dpop_fingerprint
                     .as_ref()

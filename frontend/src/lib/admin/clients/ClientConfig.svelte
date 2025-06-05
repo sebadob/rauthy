@@ -33,13 +33,17 @@
         client = $bindable(),
         clients,
         scopesAll,
+        attrsAll,
         onSave,
     }: {
         client: ClientResponse,
         clients: ClientResponse[],
         scopesAll: string[],
+        attrsAll: string[],
         onSave: () => void,
     } = $props();
+
+    let attrsWithNone = $state(['None'].concat(attrsAll));
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -59,6 +63,7 @@
     let postLogoutRedirectURIs: string[] = $state(client.post_logout_redirect_uris ? Array.from(client.post_logout_redirect_uris) : []);
     let backchannel_logout_uri: string = $state(client.backchannel_logout_uri || '');
     let restrict_group_prefix: string = $state(client.restrict_group_prefix || '');
+    let cust_email_mapping: string = $state(client.cust_email_mapping || 'None');
 
     let scimEnabled = $state(client.scim !== undefined);
     let scim: ScimClientRequestResponse = $state({
@@ -117,6 +122,7 @@
             origins = client.allowed_origins ? Array.from(client.allowed_origins) : [];
             redirectURIs = Array.from(client.redirect_uris);
             postLogoutRedirectURIs = client.post_logout_redirect_uris ? Array.from(client.post_logout_redirect_uris) : [];
+            cust_email_mapping = client.cust_email_mapping || 'None';
 
             flows.authorizationCode = client.flows_enabled.includes('authorization_code');
             flows.clientCredentials = client.flows_enabled.includes('client_credentials');
@@ -204,6 +210,7 @@
             contacts: contacts.length > 0 ? contacts : undefined,
             backchannel_logout_uri: backchannel_logout_uri || undefined,
             restrict_group_prefix: restrict_group_prefix || undefined,
+            cust_email_mapping: cust_email_mapping != 'None' ? cust_email_mapping : undefined,
         }
 
         if (flows.authorizationCode) {
@@ -311,6 +318,14 @@
                 width={inputWidth}
                 pattern={PATTERN_GROUP}
         />
+        <div class="flex gap-05">
+            Todo
+            <Options
+                ariaLabel={ta.attrs.name}
+                options={attrsWithNone}
+                bind:value={cust_email_mapping}
+            />
+        </div>
 
         <p class="mb-0"><b>Authentication Flows</b></p>
         <InputCheckbox ariaLabel="authorization_code" bind:checked={flows.authorizationCode}>

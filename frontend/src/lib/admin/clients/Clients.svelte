@@ -13,6 +13,7 @@
     import ClientAddNew from "$lib5/admin/clients/ClientAddNew.svelte";
     import ClientDetails from "$lib5/admin/clients/ClientDetails.svelte";
     import {useTrigger} from "$state/callback.svelte";
+	import type { UserAttrConfigResponse } from "$api/types/user_attrs";
 
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
@@ -26,6 +27,7 @@
     let client: undefined | ClientResponse = $state();
     let cid = useParam('cid');
     let scopesAll: string[] = $state([]);
+    let attrsAll: string[] = $state([]);
 
     const searchOptions = ['ID'];
     let searchOption = $state(searchOptions[0]);
@@ -35,6 +37,7 @@
     onMount(() => {
         fetchClients();
         fetchScopes();
+        fetchAttrs();
     });
 
     $effect(() => {
@@ -68,6 +71,14 @@
         }
     }
 
+    async function fetchAttrs() {
+        let res = await fetchGet<UserAttrConfigResponse>('/auth/v1/users/attr');
+        if (res.body) {
+            attrsAll = res.body.values.map((a) => a.name);
+        } else {
+            err = res.error?.message || 'Error';
+        }
+    }
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
@@ -133,7 +144,7 @@
 
     <div id="groups">
         {#if client}
-            <ClientDetails {client} {clients} {scopesAll} {onSave}/>
+            <ClientDetails {client} {clients} {scopesAll} {attrsAll} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>

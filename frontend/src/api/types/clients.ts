@@ -65,6 +65,8 @@ export interface UpdateClientRequest {
     backchannel_logout_uri?: string,
     /// Validation: PATTERN_GROUP
     restrict_group_prefix?: string,
+    /// Validation: PATTERN_ATTR
+    cust_email_mapping?: string,
     scim?: ScimClientRequestResponse,
 }
 
@@ -95,6 +97,7 @@ export interface ClientResponse {
     backchannel_logout_uri?: string,
     restrict_group_prefix?: string,
     scim?: ScimClientRequestResponse,
+    cust_email_mapping?: string,
 }
 
 export interface ClientSecretResponse {
