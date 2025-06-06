@@ -543,7 +543,6 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
         .email
         .smtp_from
         .as_ref()
-        .expect("SMTP_FROM not set")
         .parse()
         .expect("SMTP_FROM could not be parsed correctly");
 

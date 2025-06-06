@@ -1,5 +1,9 @@
 [dev]
 dev_mode = true
+dpop_http = true
+
+[access]
+password_reset_cookie_binding = true
 
 [auth_headers]
 enable = true

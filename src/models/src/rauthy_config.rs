@@ -11,7 +11,7 @@ use std::borrow::Cow;
 use std::env;
 use std::error::Error;
 use std::str::FromStr;
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
 use tokio::fs;
 use tokio::sync::mpsc;
 use toml::Value;
@@ -33,7 +33,7 @@ pub struct RauthyConfig {
     pub tx_email: mpsc::Sender<EMail>,
     pub tx_events: flume::Sender<Event>,
     pub tx_events_router: flume::Sender<EventRouterMsg>,
-    pub webauthn: Arc<Webauthn>,
+    pub webauthn: Webauthn,
     pub vars: Vars,
 }
 
@@ -128,7 +128,10 @@ impl RauthyConfig {
         debug!("Issuer: {}", issuer);
 
         let Ok(log_level_access) = LogLevelAccess::from_str(&vars.logging.level_access) else {
-            panic!("Invalid value for `logging.level_access`");
+            panic!(
+                "Invalid value for `logging.level_access`: {}",
+                vars.logging.level_access
+            );
         };
 
         let pub_url = &vars.server.pub_url;
@@ -168,7 +171,7 @@ impl RauthyConfig {
             .expect("Invalid configuration")
             // Set a "nice" relying party name. Has no security properties - may be changed in the future.
             .rp_name(&vars.webauthn.rp_name);
-        let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
+        let webauthn = builder.build().expect("Invalid configuration");
 
         let slf = Self {
             argon2_params,
@@ -206,7 +209,7 @@ impl RauthyConfig {
         CONFIG.set(self).unwrap();
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn get() -> &'static Self {
         CONFIG.get().unwrap()
     }
@@ -337,7 +340,7 @@ impl Default for Vars {
                 smtp_port: None,
                 smtp_username: None,
                 smtp_password: None,
-                smtp_from: None,
+                smtp_from: "Rauthy <rauthy@localhost>".into(),
                 connect_retries: 3,
                 danger_insecure: false,
             },
@@ -432,7 +435,7 @@ impl Default for Vars {
             logging: VarsLogging {
                 level: "info".into(),
                 level_database: "info".into(),
-                level_access: "Basic".into(),
+                level_access: "modifying".into(),
                 log_fmt: "text".into(),
             },
             mfa: VarsMfa {
@@ -1127,7 +1130,7 @@ impl Vars {
             self.email.smtp_password = Some(v);
         }
         if let Some(v) = t_str(&mut table, "email", "smtp_from", "SMTP_FROM") {
-            self.email.smtp_from = Some(v);
+            self.email.smtp_from = v.into();
         }
         if let Some(v) = t_u16(
             &mut table,
@@ -2289,7 +2292,7 @@ pub struct VarsEmail {
     pub smtp_port: Option<u16>,
     pub smtp_username: Option<String>,
     pub smtp_password: Option<String>,
-    pub smtp_from: Option<String>,
+    pub smtp_from: Cow<'static, str>,
     pub connect_retries: u16,
     pub danger_insecure: bool,
 }

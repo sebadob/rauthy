@@ -164,17 +164,15 @@ fn compare_passwords(msg: ComparePasswords) {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
-    use std::env;
     use std::time::{Duration, Instant};
     use tokio::time;
 
     #[tokio::test]
     async fn test_limiter() {
-        unsafe { env::set_var("ARGON2_M_COST", "32768") };
-        unsafe { env::set_var("ARGON2_T_COST", "3") };
-        unsafe { env::set_var("ARGON2_P_COST", "2") };
-        unsafe { env::set_var("MAX_HASH_THREADS", "1") };
-        unsafe { env::set_var("HASH_AWAIT_WARN_TIME", "100") };
+        let argon2_params = argon2::Params::new(32768, 3, 2, None).unwrap();
+        let _ = ARGON2_PARAMS.set(argon2_params);
+        let _ = HASH_CHANNELS.set(flume::bounded(1));
+        let _ = HASH_AWAIT_WARN_TIME.set(100);
 
         let handle = tokio::spawn(run());
         time::sleep(Duration::from_secs(1)).await;

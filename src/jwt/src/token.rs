@@ -12,7 +12,7 @@ use tracing::warn;
 pub struct JwtHeader<'a> {
     pub alg: JwkKeyPairAlg,
     pub kid: &'a str,
-    // should always be JWT
+    // should always be JWT -> DPoP tokens have their own validation
     pub typ: &'a str,
 }
 

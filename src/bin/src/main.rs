@@ -67,33 +67,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    if !logging::is_log_fmt_json() {
-        println!(
-            r#"
-                                                  88
-                                            ,d    88
-                                            88    88
-        8b,dPPYba, ,adPPYYba, 88       88 MM88MMM 88,dPPYba,  8b       d8
-        88P'   "Y8 ""     `Y8 88       88   88    88P'    "8a `8b     d8'
-        88         ,adPPPPP88 88       88   88    88       88  `8b   d8'
-        88         88,    ,88 "8a,   ,a88   88,   88       88   `8b,d8'
-        88         `"8bbdP"Y8  `"YbbdP'Y8   "Y888 88       88     Y88'
-                                                                  d8'
-                                                                 d8'
-            "#
-        );
-        // On some terminals, the banner gets mixed up
-        // with the first other logs without this short sleep.
-        time::sleep(Duration::from_micros(20)).await;
-    }
-
-    let log_level = setup_logging();
-    info!("Starting Rauthy v{} ({})", RAUTHY_VERSION, *BUILD_TIME);
-    info!("Log Level set to '{}'", log_level);
-    if test_mode {
-        warn!("Application started in Integration Test Mode");
-    }
-
     let (tx_email, rx_email) = mpsc::channel::<EMail>(16);
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
@@ -112,7 +85,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
     rauthy_config.init_static();
     init_static_vars::trigger();
 
-    println!("Parsed Static AppConfig: \n\n{:?}\n", RauthyConfig::get());
+    if !logging::is_log_fmt_json() {
+        println!(
+            r#"
+                                                  88
+                                            ,d    88
+                                            88    88
+        8b,dPPYba, ,adPPYYba, 88       88 MM88MMM 88,dPPYba,  8b       d8
+        88P'   "Y8 ""     `Y8 88       88   88    88P'    "8a `8b     d8'
+        88         ,adPPPPP88 88       88   88    88       88  `8b   d8'
+        88         88,    ,88 "8a,   ,a88   88,   88       88   `8b,d8'
+        88         `"8bbdP"Y8  `"YbbdP'Y8   "Y888 88       88     Y88'
+                                                                  d8'
+                                                                 d8'
+            "#
+        );
+        // On some terminals, the banner gets mixed up
+        // with the first other logs without this short sleep.
+        time::sleep(Duration::from_micros(10)).await;
+    }
+
+    let log_level = setup_logging();
+    info!("Starting Rauthy v{} ({})", RAUTHY_VERSION, *BUILD_TIME);
+    info!("Log Level set to '{}'", log_level);
+    if test_mode {
+        warn!("Application started in Integration Test Mode");
+    }
 
     DB::init(node_config)
         .await

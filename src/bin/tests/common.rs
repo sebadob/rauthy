@@ -7,7 +7,6 @@ use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Response, header};
 use ring::digest;
 use spow::pow::Pow;
-use std::env;
 use std::error::Error;
 use std::sync::OnceLock;
 
@@ -232,7 +231,7 @@ pub fn code_state_from_headers(res: Response) -> Result<(String, Option<String>)
 }
 
 pub fn init_client_bcl_uri() -> String {
-    "http://localhost:80801/auth/v1/dev/backchannel_logout".to_string()
+    "http://localhost:8081/auth/v1/dev/backchannel_logout".to_string()
 }
 
 pub async fn get_solved_pow() -> String {

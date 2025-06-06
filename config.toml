@@ -1568,7 +1568,7 @@ level_database = 'info'
 #
 # default: 'modifying'
 # overwritten by: LOG_LEVEL_ACCESS
-#level_access = 'basic'
+#level_access = 'modifying'
 
 # You can change the log output format to JSON, if you set:
 # `log_fmt=json`.
