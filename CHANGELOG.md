@@ -38,6 +38,9 @@ so that it requires a little bit less memory.
 > and I think, everything is fine, but that many changed lines make it hard to keep track of everything, even though
 > this was necessary.
 
+> This is a tiny one, but the value for `logging.log_level_access` has been changed to all lowercase to match the other
+> log level values.
+
 ##### Lookup Table ENV var -> TOML value
 
 Here you have the lookup table. When there is a `-` somewhere, it means that either no TOML or ENV var exists in that
