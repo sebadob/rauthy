@@ -527,15 +527,15 @@ log_sync = "interval_200"
 #
 # values are optional, overwritten by: HQL_TLS_{RAFT|API}_{KEY|CERT}
 # overwritten by: HQL_TLS_RAFT_KEY
-#tls_raft_key = "tls/key.pem"
+#tls_raft_key = "tls/tls.key"
 # overwritten by: HQL_TLS_RAFT_CERT
-#tls_raft_cert = "tls/cert-chain.pem"
+#tls_raft_cert = "tls/tls.crt"
 #tls_raft_danger_tls_no_verify = true
 
 # overwritten by: HQL_TLS_API_KEY
-#tls_api_key = "tls/key.pem"
+#tls_api_key = "tls/tls.key"
 # overwritten by: HQL_TLS_RAFT_KEY
-#tls_api_cert = "tls/cert-chain.pem"
+#tls_api_cert = "tls/tls.crt"
 #tls_api_danger_tls_no_verify = true
 
 # Secrets for Raft internal authentication as well as for the API.

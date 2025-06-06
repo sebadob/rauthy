@@ -29,8 +29,8 @@ lto = false
 strip = false
 
 [patch.crates-io]
-#hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
-hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
+#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
 hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
 
 [workspace.dependencies]

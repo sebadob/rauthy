@@ -60,7 +60,7 @@ pub async fn handle_get_pwd_reset<'a>(
 }
 
 #[tracing::instrument(level = "debug", skip_all, fields(user_id = user_id))]
-pub async fn handle_put_user_passkey_start<'a>(
+pub async fn handle_put_user_passkey_start(
     req: HttpRequest,
     user_id: String,
     req_data: WebauthnRegStartRequest,
@@ -92,7 +92,7 @@ pub async fn handle_put_user_passkey_start<'a>(
 }
 
 #[tracing::instrument(level = "debug", skip_all, fields(user_id = user_id))]
-pub async fn handle_put_user_passkey_finish<'a>(
+pub async fn handle_put_user_passkey_finish(
     req: HttpRequest,
     user_id: String,
     req_data: WebauthnRegFinishRequest,

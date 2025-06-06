@@ -1016,9 +1016,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.17.0"
+version = "3.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1628fb46dfa0b37568d12e5edd512553eccf6a22a78e8bde00bb4aed84d5bdbf"
+checksum = "793db76d6187cd04dff33004d8e6c9cc4e05cd330500379d2394209271b4aeee"
 
 [[package]]
 name = "byte-unit"
@@ -1098,9 +1098,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.25"
+version = "1.2.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0fc897dc1e865cc67c0e05a836d9d3f1df3cbe442aa4a9473b18e12624a4951"
+checksum = "956a5e21988b87f372569b66183b78babf23ebc2e744b733e4350a752c4dafac"
 dependencies = [
  "jobserver",
  "libc",
@@ -2234,7 +2234,6 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.7.0-20250529"
-source = "git+https://github.com/sebadob/hiqlite.git#f225d2acadb1e50ae290bc0ca91722eb6f9f92cf"
 dependencies = [
  "argon2",
  "axum 0.8.4",
@@ -2254,7 +2253,7 @@ dependencies = [
  "futures-util",
  "getrandom 0.3.3",
  "hex",
- "hiqlite-wal",
+ "hiqlite-wal 0.7.0-20250529",
  "hostname",
  "http-body-util",
  "hyper",
@@ -2288,18 +2287,82 @@ dependencies = [
 ]
 
 [[package]]
+name = "hiqlite"
+version = "0.7.0-20250529"
+source = "git+https://github.com/sebadob/hiqlite.git#fc06b7ccca02811a1b185c5d9a73342d982668dd"
+dependencies = [
+ "axum 0.8.4",
+ "axum-server",
+ "bincode",
+ "byteorder",
+ "bytes",
+ "chrono",
+ "console-subscriber",
+ "cron",
+ "cryptr",
+ "deadpool",
+ "dotenvy",
+ "fastwebsockets",
+ "flume",
+ "getrandom 0.3.3",
+ "hex",
+ "hiqlite-wal 0.7.0-20250529 (git+https://github.com/sebadob/hiqlite.git)",
+ "hostname",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "lazy_static",
+ "lz4-sys",
+ "openraft",
+ "reqwest",
+ "rusqlite",
+ "rust-embed",
+ "rust_decimal",
+ "rustls",
+ "serde",
+ "serde_json",
+ "serde_rusqlite",
+ "sha2",
+ "strum",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-rustls",
+ "toml",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "hiqlite-macros"
 version = "0.7.0-20250529"
-source = "git+https://github.com/sebadob/hiqlite.git#f225d2acadb1e50ae290bc0ca91722eb6f9f92cf"
+source = "git+https://github.com/sebadob/hiqlite.git#fc06b7ccca02811a1b185c5d9a73342d982668dd"
 dependencies = [
- "hiqlite",
+ "hiqlite 0.7.0-20250529 (git+https://github.com/sebadob/hiqlite.git)",
  "rust-embed",
 ]
 
 [[package]]
 name = "hiqlite-wal"
 version = "0.7.0-20250529"
-source = "git+https://github.com/sebadob/hiqlite.git#f225d2acadb1e50ae290bc0ca91722eb6f9f92cf"
+dependencies = [
+ "bincode",
+ "byteorder",
+ "crc",
+ "flume",
+ "memmap2",
+ "openraft",
+ "serde",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "hiqlite-wal"
+version = "0.7.0-20250529"
+source = "git+https://github.com/sebadob/hiqlite.git#fc06b7ccca02811a1b185c5d9a73342d982668dd"
 dependencies = [
  "bincode",
  "byteorder",
@@ -2446,9 +2509,9 @@ dependencies = [
 
 [[package]]
 name = "hyper-rustls"
-version = "0.27.6"
+version = "0.27.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03a01595e11bdcec50946522c32dde3fc6914743000a68b93000965f2f02406d"
+checksum = "e3c93eb611681b207e1fe55d5a71ecf91572ec8a6705cdb6857f7d8d5242cf58"
 dependencies = [
  "http 1.3.1",
  "hyper",
@@ -2850,9 +2913,9 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
 name = "lettre"
-version = "0.11.16"
+version = "0.11.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87ffd14fa289730e3ad68edefdc31f603d56fe716ec38f2076bb7410e09147c2"
+checksum = "cb2a0354e9ece2fcdcf9fa53417f6de587230c0c248068eb058fa26c4a753179"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -2949,9 +3012,9 @@ dependencies = [
 
 [[package]]
 name = "libz-rs-sys"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6489ca9bd760fe9642d7644e827b0c9add07df89857b0416ee15c1cc1a3b8c5a"
+checksum = "172a788537a2221661b480fee8dc5f96c580eb34fa88764d3205dc356c7e4221"
 dependencies = [
  "zlib-rs",
 ]
@@ -4059,7 +4122,7 @@ dependencies = [
  "css-color",
  "deadpool",
  "ed25519-compact",
- "hiqlite",
+ "hiqlite 0.7.0-20250529",
  "image",
  "openssl",
  "openssl-sys",
@@ -4170,7 +4233,7 @@ dependencies = [
  "flume",
  "futures-util",
  "hex",
- "hiqlite",
+ "hiqlite 0.7.0-20250529",
  "hiqlite-macros",
  "hmac-sha256",
  "hmac-sha512",
@@ -4245,7 +4308,7 @@ dependencies = [
  "actix-web",
  "chrono",
  "cron",
- "hiqlite",
+ "hiqlite 0.7.0-20250529",
  "hiqlite-macros",
  "openssl",
  "openssl-sys",
@@ -5098,9 +5161,9 @@ dependencies = [
 
 [[package]]
 name = "serde_spanned"
-version = "0.6.8"
+version = "0.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87607cb1398ed59d48732e575a4c28a7a8ebf2454b964fe3f224f2afc07909e1"
+checksum = "bf41e0cfaf7226dca15e8197172c295a782857fcb97fad1808a166870dee75a3"
 dependencies = [
  "serde",
 ]
@@ -5664,9 +5727,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.8.22"
+version = "0.8.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05ae329d1f08c4d17a59bed7ff5b5a769d062e64a62d34a3261b219e62cd5aae"
+checksum = "dc1beb996b9d83529a9e75c17a1686767d148d70663143c7854d8b4a09ced362"
 dependencies = [
  "serde",
  "serde_spanned",
@@ -5676,18 +5739,18 @@ dependencies = [
 
 [[package]]
 name = "toml_datetime"
-version = "0.6.9"
+version = "0.6.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3da5db5a963e24bc68be8b17b6fa82814bb22ee8660f192bb182771d498f09a3"
+checksum = "22cddaf88f4fbc13c51aebbf5f8eceb5c7c5a9da2ac40a13519eb5b0a0e8f11c"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "toml_edit"
-version = "0.22.26"
+version = "0.22.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "310068873db2c5b3e7659d2cc35d21855dbafa50d1ce336397c666e3cb08137e"
+checksum = "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
 dependencies = [
  "indexmap 2.9.0",
  "serde",
@@ -5699,9 +5762,9 @@ dependencies = [
 
 [[package]]
 name = "toml_write"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfb942dfe1d8e29a7ee7fcbde5bd2b9a25fb89aa70caea2eba3bee836ff41076"
+checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
 
 [[package]]
 name = "tonic"
@@ -5813,9 +5876,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-attributes"
-version = "0.1.28"
+version = "0.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "395ae124c09f9e6918a2310af6038fba074bcf474ac352496d5910dd59a2226d"
+checksum = "1b1ffbcf9c6f6b99d386e7444eb608ba646ae452a36b39737deb9663b610f662"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5824,9 +5887,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-core"
-version = "0.1.33"
+version = "0.1.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e672c95779cf947c5311f83787af4fa8fffd12fb27e4993211a84bdfd9610f9c"
+checksum = "b9d12581f227e93f094d3af2ae690a574abb8a2b9b7a96e7cfe9647b2b617678"
 dependencies = [
  "once_cell",
  "valuable",
@@ -6827,9 +6890,9 @@ dependencies = [
 
 [[package]]
 name = "zlib-rs"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "868b928d7949e09af2f6086dfc1e01936064cc7a819253bce650d4e2a2d63ba8"
+checksum = "626bd9fa9734751fc50d6060752170984d7053f5a39061f524cda68023d4db8a"
 
 [[package]]
 name = "zopfli"

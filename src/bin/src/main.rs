@@ -34,38 +34,25 @@ mod version_migration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let mut test_mode = false;
-    {
+    let (config_file, test_mode) = {
         let args: Vec<String> = env::args().collect();
         if args.len() > 1 && args[1] == "test" {
-            test_mode = true;
-            // dotenvy::from_filename_override("rauthy-test.cfg").ok();
+            ("config-test.toml", true)
         } else {
+            dotenvy::dotenv().ok();
             let local_test = env::var("LOCAL_TEST")
                 .unwrap_or_else(|_| "false".to_string())
                 .parse::<bool>()
                 .expect("Cannot parse LOCAL_TEST as bool");
 
             if local_test {
-                eprintln!(
-                    "Using insecure config for testing - DO NOT USE IN PRODUCTION or on remote machines"
-                );
-                dotenvy::from_filename("rauthy-local_test.cfg")
-                    .expect("'rauthy-local_test.cfg' not found");
+                eprintln!("!!! Using insecure config for testing - DO NOT USE IN PRODUCTION !!!");
+                ("config-local-test.toml", false)
+            } else {
+                ("config.toml", false)
             }
-            // } else if let Err(err) = dotenvy::from_filename("rauthy.cfg") {
-            //     let cwd = env::current_dir()
-            //         .map(|pb| pb.to_str().unwrap_or_default().to_string())
-            //         .unwrap_or_default();
-            //     eprintln!(
-            //         "'{}/rauthy.cfg' not found, using environment variables only for configuration: {:?}",
-            //         cwd, err
-            //     );
-            // }
-
-            dotenvy::dotenv_override().ok();
         }
-    }
+    };
 
     let (tx_email, rx_email) = mpsc::channel::<EMail>(16);
     let (tx_events, rx_events) = flume::unbounded();
@@ -76,10 +63,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Initializing AppConfig");
 
     let (rauthy_config, node_config) = RauthyConfig::build(
+        config_file,
         tx_email.clone(),
         tx_events.clone(),
         tx_events_router.clone(),
-        test_mode,
     )
     .await?;
     rauthy_config.init_static();

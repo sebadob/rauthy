@@ -1,9 +1,5 @@
-[dev]
-dev_mode = true
-dpop_http = true
-
-[access]
-password_reset_cookie_binding = true
+#[access]
+#cookie_mode = 'danger-insecure'
 
 [auth_headers]
 enable = true
@@ -11,9 +7,7 @@ enable = true
 [cluster]
 node_id = 1
 nodes = ["1 localhost:8100 localhost:8200"]
-log_statements = true
-# we don't need to sync any data in integration tests
-log_sync = "interval_60000"
+# '123SuperMegaSafe'
 password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
 secret_raft = "SuperSecureSecret1337"
 secret_api = "SuperSecureSecret1337"
@@ -39,18 +33,9 @@ enable_web_id = true
 enable_solid_aud = true
 allowed_flows = ['authorization_code', 'refresh_token']
 
-[hashing]
-argon2_m_cost = 32768
-argon2_t_cost = 1
-argon2_p_cost = 2
-max_hash_threads = 1
-
 [http_client]
 danger_unencrypted = true
 danger_insecure = true
-
-[logging]
-level = 'debug'
 
 [mfa]
 admin_force_mfa = false
@@ -59,16 +44,21 @@ admin_force_mfa = false
 difficulty = 10
 
 [server]
-port_http = 8081
-port_https = 8444
-pub_url = 'localhost:8081'
-scheme = 'http'
+port_http = 8080
+port_https = 8443
+scheme = 'https'
+pub_url = 'localhost:8443'
 http_workers = 1
+metrics_enable = true
+swagger_ui_enable = true
 
 [tls]
 cert_path = 'tls/cert-chain.pem'
 key_path = 'tls/key.pem'
 
+[user_registration]
+enable = true
+
 [webauthn]
 rp_id = 'localhost'
-rp_origin = 'http://localhost:8081'
+rp_origin = 'http://localhost:8080'

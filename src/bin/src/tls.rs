@@ -11,9 +11,11 @@ pub async fn load_tls() -> rustls::ServerConfig {
     let paths = &RauthyConfig::get().vars.tls;
 
     let key_path = paths.key_path.as_deref().unwrap_or("tls/tls.key");
-    let cert_path = paths.cert_path.as_deref().unwrap_or("tls/tls.key");
+    let cert_path = paths.cert_path.as_deref().unwrap_or("tls/tls.crt");
 
-    let key_file = fs::read(key_path).await.expect("Reading TLS private key");
+    let key_file = fs::read(key_path)
+        .await
+        .expect("Cannot read TLS private key");
     let key = if key_path.ends_with(".der") {
         PrivateKeyDer::try_from(key_file).expect("TLS private key to be valid")
     } else {
@@ -36,7 +38,9 @@ pub async fn load_tls() -> rustls::ServerConfig {
         key.expect("no valid TLS private key found")
     };
 
-    let certs_file = fs::read(cert_path).await.expect("Reading TLS certificate");
+    let certs_file = fs::read(cert_path)
+        .await
+        .expect("Cannot read TLS certificate");
     let mut certs_reader = BufReader::new(certs_file.as_slice());
     let cert_chain = rustls_pemfile::certs(&mut certs_reader)
         .map(|cert| cert.expect("Invalid TLS certificate file"))

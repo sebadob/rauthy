@@ -39,28 +39,13 @@ pub struct RauthyConfig {
 
 impl RauthyConfig {
     pub async fn build(
+        config_file: &str,
         tx_email: mpsc::Sender<EMail>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
-        _test_mode: bool,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
         #[cfg(debug_assertions)]
-        let config = if _test_mode {
-            // make sure to un-set any possibly left-over env vars from testing, so that
-            // the config file is not overwritten
-            // unsafe {
-            //     env::set_var("LISTEN_SCHEME", "");
-            //     env::set_var("PUB_URL", "");
-            //     env::set_var("RP_ORIGIN", "");
-            // }
-
-            "config-test.toml"
-        } else {
-            "config.toml"
-        };
-        #[cfg(not(debug_assertions))]
-        let config = "config.toml";
-        let (vars, node_config) = Vars::load(config).await;
+        let (vars, node_config) = Vars::load(config_file).await;
         vars.validate();
         if let Err(err) = node_config.is_valid() {
             panic!("Invalid `[cluster]` config: {}", err);
