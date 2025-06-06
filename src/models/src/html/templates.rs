@@ -12,7 +12,7 @@ use actix_web::{HttpResponse, HttpResponseBuilder};
 use askama::Template;
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
-use rauthy_common::constants::{HEADER_HTML, PWD_RESET_COOKIE, USER_REG_DOMAIN_RESTRICTION};
+use rauthy_common::constants::{HEADER_HTML, PWD_RESET_COOKIE};
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Serialize;
@@ -124,7 +124,12 @@ impl HtmlTemplate {
             // "tpl_client_url" => todo!("extract info from referrer?"),
             "tpl_restricted_email_domain" => Ok((
                 Self::RestrictedEmailDomain(
-                    USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+                    RauthyConfig::get()
+                        .vars
+                        .user_registration
+                        .domain_restriction
+                        .clone()
+                        .unwrap_or_default(),
                 ),
                 None,
             )),
@@ -1015,7 +1020,12 @@ impl UserRegisterHtml<'_> {
             client_id: "rauthy",
             theme_ts,
             templates: &[HtmlTemplate::RestrictedEmailDomain(
-                USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+                RauthyConfig::get()
+                    .vars
+                    .user_registration
+                    .domain_restriction
+                    .clone()
+                    .unwrap_or_default(),
             )],
         }
         .render()

@@ -189,7 +189,7 @@ fn check_trusted_proxy(peer_ip: &IpAddr, use_dummy_addr: bool) -> Result<(), Err
     if use_dummy_addr && *peer_ip == DUMMY_ADDRESS {
         return Ok(());
     }
-    for cidr in &*TRUSTED_PROXIES {
+    for cidr in TRUSTED_PROXIES.get().unwrap() {
         if cidr.contains(peer_ip) {
             return Ok(());
         }
@@ -205,28 +205,18 @@ fn check_trusted_proxy(peer_ip: &IpAddr, use_dummy_addr: bool) -> Result<(), Err
     ))
 }
 
-pub(crate) fn build_trusted_proxies() -> Vec<cidr::IpCidr> {
-    let raw = env::var("TRUSTED_PROXIES").expect("TRUSTED_PROXIES is not net set");
-    let mut proxies = Vec::new();
-
-    for line in raw.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        match cidr::IpCidr::from_str(trimmed) {
-            Ok(cidr) => {
-                proxies.push(cidr);
-            }
+pub fn build_trusted_proxies(proxies: &[String]) -> Vec<cidr::IpCidr> {
+    let mut proxies = proxies
+        .iter()
+        .map(|range| match cidr::IpCidr::from_str(range.trim()) {
+            Ok(cidr) => cidr,
             Err(err) => {
-                panic!(
-                    "Cannot parse trusted proxy entry {trimmed} to CIDR: {}",
-                    err
-                );
+                panic!("Cannot parse trusted proxy entry {range} to CIDR: {}", err);
             }
-        }
-    }
-    // will never increase and is lazy static afterward
+        })
+        .collect::<Vec<_>>();
+
+    // will never increase and is static afterward
     proxies.shrink_to_fit();
 
     proxies
@@ -299,18 +289,15 @@ mod tests {
 
     #[test]
     fn test_trusted_proxy_check() {
-        unsafe {
-            env::set_var(
-                "TRUSTED_PROXIES",
-                r#"
-            192.168.100.0/24
-            192.168.0.96/28
-            172.16.0.1/32
-            10.10.10.10/31"#,
-            )
-        };
-
-        println!("{:?}", build_trusted_proxies());
+        let raw = vec![
+            "192.168.100.0/24".to_string(),
+            "192.168.0.96/28".to_string(),
+            "172.16.0.1/32".to_string(),
+            "10.10.10.10/31".to_string(),
+        ];
+        let proxies = build_trusted_proxies(&raw);
+        let _ = TRUSTED_PROXIES.set(proxies);
+        println!("{:?}", build_trusted_proxies(&raw));
 
         assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.1").unwrap(), false).is_ok());
         assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.255").unwrap(), false).is_ok());

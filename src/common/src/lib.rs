@@ -74,14 +74,15 @@ pub static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         warn!("HTTP Client allows insecure TLS connections");
     }
 
+    let dev_mode = *DEV_MODE.get().unwrap();
     let mut builder = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(connect_timeout as u64))
         .timeout(Duration::from_secs(request_timeout as u64))
         .pool_idle_timeout(Duration::from_secs(idle_timeout as u64))
         .min_tls_version(tls_version)
         .user_agent(format!("Rauthy v{}", RAUTHY_VERSION))
-        .https_only(!allow_plain_http || !*DEV_MODE)
-        .danger_accept_invalid_certs(allow_insecure || *DEV_MODE);
+        .https_only(!allow_plain_http || !dev_mode)
+        .danger_accept_invalid_certs(allow_insecure || dev_mode);
 
     if let Ok(bundle) = env::var("HTTP_CUST_ROOT_CA_BUNDLE").as_deref() {
         let certs = reqwest::Certificate::from_pem_bundle(bundle.trim().as_bytes())

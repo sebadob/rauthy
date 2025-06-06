@@ -19,8 +19,7 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::constants::{
     COOKIE_MFA, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, PWD_CSRF_HEADER,
-    PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_BLACKLIST,
-    USER_REG_DOMAIN_RESTRICTION, USER_REG_OPEN_REDIRECT,
+    PWD_RESET_COOKIE, TEXT_TURTLE,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -104,7 +103,7 @@ pub async fn get_users(
     params.validate()?;
 
     let user_count = User::count().await?;
-    if user_count >= *SSP_THRESHOLD as i64 {
+    if user_count >= RauthyConfig::get().vars.server.ssp_threshold as i64 {
         let page_size = params.page_size.unwrap_or(20) as i64;
         let offset = params.offset.unwrap_or(0) as i64;
         let backwards = params.backwards.unwrap_or(false);
@@ -402,7 +401,9 @@ pub async fn post_users_register_handle(
     }
     payload.validate()?;
 
-    if let Some(restriction) = &*USER_REG_DOMAIN_RESTRICTION {
+    let reg = &RauthyConfig::get().vars.user_registration;
+
+    if let Some(restriction) = &reg.domain_restriction {
         if !payload.email.ends_with(restriction) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -412,8 +413,8 @@ pub async fn post_users_register_handle(
                 ),
             ));
         }
-    } else if let Some(blacklist) = &*USER_REG_DOMAIN_BLACKLIST {
-        for blacklisted in blacklist {
+    } else if !reg.domain_blacklist.is_empty() {
+        for blacklisted in &reg.domain_blacklist {
             if payload.email.ends_with(blacklisted) {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -423,7 +424,7 @@ pub async fn post_users_register_handle(
         }
     }
     if let Some(redirect_uri) = &payload.redirect_uri {
-        if !*USER_REG_OPEN_REDIRECT {
+        if !reg.allow_open_redirect {
             let mut allow = false;
             for uri in Client::find_all_client_uris().await? {
                 if uri.starts_with(redirect_uri) {

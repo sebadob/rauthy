@@ -4,7 +4,6 @@ use actix_web::{HttpRequest, HttpResponse, Responder, get, post};
 use actix_web_lab::sse;
 use chrono::Utc;
 use rauthy_api_types::events::{EventResponse, EventsListenParams, EventsRequest};
-use rauthy_common::constants::SSE_KEEP_ALIVE;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
@@ -94,7 +93,9 @@ pub async fn sse_events(
         ))
     } else {
         Ok(sse::Sse::from_infallible_receiver(rx)
-            .with_keep_alive(Duration::from_secs(*SSE_KEEP_ALIVE as u64))
+            .with_keep_alive(Duration::from_secs(
+                RauthyConfig::get().vars.server.see_keep_alive as u64,
+            ))
             .with_retry_duration(Duration::from_secs(10)))
     }
 }
@@ -120,7 +121,7 @@ pub async fn post_event_test(
     Event::test(real_ip_from_req(&req)?).send().await?;
 
     #[cfg(debug_assertions)]
-    if *rauthy_common::constants::DEV_MODE {
+    if RauthyConfig::get().vars.dev.dev_mode {
         use rauthy_models::entity::failed_scim_tasks::ScimAction;
         use std::net::IpAddr;
 

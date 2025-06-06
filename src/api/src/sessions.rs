@@ -3,7 +3,6 @@ use actix_web::web::Query;
 use actix_web::{HttpResponse, delete, get, web};
 use rauthy_api_types::generic::PaginationParams;
 use rauthy_api_types::sessions::SessionResponse;
-use rauthy_common::constants::SSP_THRESHOLD;
 use rauthy_error::ErrorResponse;
 use rauthy_models::entity;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
@@ -11,6 +10,7 @@ use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::logout;
 use tokio::task;
 use tracing::error;
@@ -49,7 +49,7 @@ pub async fn get_sessions(
 
     // sessions will be dynamically paginated based on the same setting as users
     let user_count = User::count().await?;
-    if user_count >= *SSP_THRESHOLD as i64 {
+    if user_count >= RauthyConfig::get().vars.server.ssp_threshold as i64 {
         // TODO outsource the setup stuff here or keep it duplicated for better readability?
         // currently used here and in GET /users
         let page_size = params.page_size.unwrap_or(20) as i64;

@@ -31,7 +31,6 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::constants::{
     CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
-    WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
@@ -1449,7 +1448,7 @@ impl User {
             }
         }
 
-        if *WEBAUTHN_NO_PASSWORD_EXPIRY && self.has_webauthn_enabled() {
+        if RauthyConfig::get().vars.webauthn.no_password_exp && self.has_webauthn_enabled() {
             self.password_expires = None;
         } else {
             let password_expires = rules.valid_days.map(|d| {

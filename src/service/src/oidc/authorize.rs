@@ -3,7 +3,7 @@ use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
 use rauthy_api_types::oidc::{LoginRefreshRequest, LoginRequest};
-use rauthy_common::constants::{COOKIE_MFA, WEBAUTHN_REQ_EXP};
+use rauthy_common::constants::COOKIE_MFA;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
@@ -109,8 +109,9 @@ pub async fn post_authorize(
     let header_origin = client.get_validated_origin_header(req)?;
 
     // build authorization code
+    let webauthn_req_exp = RauthyConfig::get().vars.webauthn.req_exp;
     let code_lifetime = if user.has_webauthn_enabled() {
-        client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
+        client.auth_code_lifetime + webauthn_req_exp as i32
     } else {
         client.auth_code_lifetime
     };
@@ -142,7 +143,7 @@ pub async fn post_authorize(
             header_origin,
             user_id: user.id.clone(),
             email: user.email,
-            exp: *WEBAUTHN_REQ_EXP as u64,
+            exp: webauthn_req_exp as u64,
             session,
         };
 
@@ -189,8 +190,9 @@ pub async fn post_authorize_refresh(
     client.validate_mfa(&user)?;
 
     let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
+    let webauthn_req_exp = RauthyConfig::get().vars.webauthn.req_exp;
     let code_lifetime = if user.has_webauthn_enabled() {
-        client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
+        client.auth_code_lifetime + webauthn_req_exp as i32
     } else {
         client.auth_code_lifetime
     };
@@ -222,7 +224,7 @@ pub async fn post_authorize_refresh(
             header_origin,
             user_id: user.id.clone(),
             email: user.email,
-            exp: *WEBAUTHN_REQ_EXP as u64,
+            exp: webauthn_req_exp as u64,
             session: session.clone(),
         };
 

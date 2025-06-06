@@ -12,7 +12,6 @@ use rauthy_api_types::generic::{
 };
 use rauthy_common::constants::{
     APP_START, APPLICATION_JSON, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME, RAUTHY_VERSION,
-    SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::ErrorResponse;
@@ -464,12 +463,13 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
     let path = req.path();
     let ip = real_ip_from_req(&req)?.to_string();
 
-    if *SUSPICIOUS_REQUESTS_LOG && path.len() > 1 {
+    let vars = &RauthyConfig::get().vars.suspicious_requests;
+    if vars.log && path.len() > 1 {
         // TODO create a new event type for these? maybe too many events ...?
         warn!("Suspicious request path '{}' from {}", path, ip)
     }
 
-    if *SUSPICIOUS_REQUESTS_BLACKLIST > 0
+    if vars.blacklist > 0
         // `/` will be the path of length 1
         && path.len() > 1
         && suspicious_request_block::is_scan_target(path)
@@ -479,9 +479,7 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
             path, ip,
         );
 
-        if let Err(err) =
-            IpBlacklist::put(ip.to_string(), *SUSPICIOUS_REQUESTS_BLACKLIST as i64).await
-        {
+        if let Err(err) = IpBlacklist::put(ip.to_string(), vars.blacklist as i64).await {
             error!(
                 "Error blacklisting suspicious request - please repot this bug: {:?}",
                 err

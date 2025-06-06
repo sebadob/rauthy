@@ -1,11 +1,11 @@
 use crate::entity::db_version::DbVersion;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, db_migrate, init_prod};
+use crate::rauthy_config::RauthyConfig;
 use futures_util::StreamExt;
 use hiqlite::NodeConfig;
 use hiqlite::cache_idx::CacheIndex;
 use hiqlite_macros::embed::*;
-use rauthy_common::constants::DEV_MODE;
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
 use std::env;
@@ -217,7 +217,7 @@ impl DB {
         }
 
         // migrate dynamic DB data
-        if !*DEV_MODE {
+        if !RauthyConfig::get().vars.dev.dev_mode {
             init_prod::migrate_init_prod().await?;
         }
 
@@ -261,7 +261,7 @@ impl DB {
                     );
                 };
             }
-        } else if *DEV_MODE {
+        } else if RauthyConfig::get().vars.dev.dev_mode {
             migrate_dev_data().await.expect("Migrating DEV DATA");
         }
 

@@ -6,11 +6,11 @@ use futures::StreamExt;
 use rauthy_api_types::auth_providers::ProviderCallbackRequest;
 use rauthy_api_types::oidc::{LoginRequest, LogoutRequest};
 use rauthy_api_types::users::NewUserRegistrationRequest;
-use rauthy_common::constants::DEV_MODE;
 use rauthy_error::ErrorResponse;
 use rauthy_error::ErrorResponseType;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::html::templates::HtmlTemplate;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::logout;
 use tokio::fs;
 use validator::Validate;
@@ -19,7 +19,7 @@ pub async fn get_template(
     id: web::Path<String>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*DEV_MODE {
+    if !RauthyConfig::get().vars.dev.dev_mode {
         return Ok(HttpResponse::NotFound().finish());
     }
 
@@ -41,7 +41,7 @@ pub async fn post_dev_only_endpoints(
     req: HttpRequest,
     mut payload: web::Payload,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*DEV_MODE {
+    if !RauthyConfig::get().vars.dev.dev_mode {
         return Ok(HttpResponse::NotFound().finish());
     }
 

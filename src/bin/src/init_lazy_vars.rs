@@ -4,6 +4,7 @@ use rauthy_common::compression::*;
 use rauthy_common::constants::*;
 use rauthy_common::password_hasher::*;
 use rauthy_common::regex::*;
+use rauthy_common::utils::build_trusted_proxies;
 use rauthy_handlers::generic::I18N_CONFIG;
 use rauthy_models::rauthy_config::RauthyConfig;
 use regex::Regex;
@@ -25,25 +26,7 @@ pub fn trigger() {
     // constants
     let _ = *APP_START;
     let _ = *BUILD_TIME;
-    let _ = *CACHE_TTL_AUTH_CODE;
-    let _ = *CACHE_TTL_WEBAUTHN;
-    let _ = *CACHE_TTL_WEBAUTHN_DATA;
     let _ = *DB_TYPE;
-    if vars.server.proxy_mode {
-        let _ = *TRUSTED_PROXIES;
-    }
-    let _ = *SUSPICIOUS_REQUESTS_BLACKLIST;
-    let _ = *SUSPICIOUS_REQUESTS_LOG;
-    let _ = *SSE_KEEP_ALIVE;
-    let _ = *SSP_THRESHOLD;
-    let _ = *USER_REG_DOMAIN_RESTRICTION;
-    let _ = *USER_REG_DOMAIN_BLACKLIST;
-    let _ = *USER_REG_OPEN_REDIRECT;
-    let _ = *WEBAUTHN_REQ_EXP;
-    let _ = *WEBAUTHN_DATA_EXP;
-    let _ = *WEBAUTHN_RENEW_EXP;
-    let _ = *WEBAUTHN_FORCE_UV;
-    let _ = *WEBAUTHN_NO_PASSWORD_EXPIRY;
 
     // regexes
     let _ = *RE_ALNUM;
@@ -113,8 +96,12 @@ pub fn trigger() {
             .set(Uri::from_str(&uri).unwrap())
             .unwrap()
     }
+    DEV_MODE.set(vars.dev.dev_mode).unwrap();
     PEER_IP_HEADER_NAME
         .set(vars.access.peer_ip_header_name.clone())
         .unwrap();
-    PROXY_MODE.set(vars.server.proxy_mode).unwrap()
+    PROXY_MODE.set(vars.server.proxy_mode).unwrap();
+    TRUSTED_PROXIES
+        .set(build_trusted_proxies(&vars.server.trusted_proxies))
+        .unwrap();
 }

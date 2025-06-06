@@ -31,7 +31,7 @@ use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
     IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_LINK_COOKIE,
-    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
+    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, deserialize,
@@ -1015,8 +1015,9 @@ impl AuthProviderCallback {
         // all good, we can generate an auth code
 
         // authorization code
+        let webauthn_req_exp = RauthyConfig::get().vars.webauthn.req_exp;
         let code_lifetime = if force_mfa && user.has_webauthn_enabled() {
-            client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
+            client.auth_code_lifetime + webauthn_req_exp as i32
         } else {
             client.auth_code_lifetime
         };
@@ -1046,7 +1047,7 @@ impl AuthProviderCallback {
                 header_origin,
                 user_id: user.id.clone(),
                 email: user.email,
-                exp: *WEBAUTHN_REQ_EXP as u64,
+                exp: webauthn_req_exp as u64,
                 session,
             };
 
