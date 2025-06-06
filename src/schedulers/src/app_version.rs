@@ -6,6 +6,7 @@ use rauthy_models::rauthy_config::RauthyConfig;
 use semver::Version;
 use std::env;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error, info, warn};
 
 /// Checks for newly available Rauthy app versions
@@ -30,6 +31,10 @@ pub async fn app_version_check() {
     loop {
         interval.tick().await;
         check_app_version(&mut last_version_notification).await;
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }
 

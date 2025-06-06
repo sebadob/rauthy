@@ -10,6 +10,7 @@ use std::env;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error, info};
 
 /// Auto-Rotates JWKS
@@ -117,5 +118,9 @@ pub async fn jwks_cleanup() {
             }
         }
         info!("Cleaned up old JWKs: {}", count);
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }

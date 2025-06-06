@@ -5,6 +5,7 @@ use rauthy_models::database::DB;
 use std::env;
 use std::ops::Sub;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error};
 
 /// Cleans up all Events that exceed the configured EVENT_CLEANUP_DAYS
@@ -49,5 +50,9 @@ pub async fn events_cleanup() {
                 Err(err) => error!("Events cleanup error: {:?}", err),
             }
         };
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }

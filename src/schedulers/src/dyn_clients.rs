@@ -6,6 +6,7 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::rauthy_config::RauthyConfig;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error, info};
 
 /// Cleans up unused dynamically registered clients
@@ -85,5 +86,9 @@ pub async fn dyn_client_cleanup() {
         if cleaned_up > 0 {
             info!("Cleaned up {} unused dynamic clients", cleaned_up);
         }
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }

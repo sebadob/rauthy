@@ -5,6 +5,7 @@ use rauthy_error::ErrorResponse;
 use rauthy_models::database::DB;
 use std::ops::Sub;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error, info};
 
 /// Cleans up old / expired magic links and deletes users, that have never used their
@@ -34,6 +35,10 @@ pub async fn magic_link_cleanup() {
         if let Err(err) = cleanup(exp).await {
             error!("{:?}", err);
         }
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }
 

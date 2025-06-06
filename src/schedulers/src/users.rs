@@ -8,6 +8,7 @@ use rauthy_models::entity::users::User;
 use rauthy_service::oidc::logout;
 use std::env;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error, info};
 
 pub async fn user_expiry_checker() {
@@ -42,6 +43,10 @@ pub async fn user_expiry_checker() {
         if let Err(err) = execute(cleanup_after_secs).await {
             error!("Error during user_expiry_checker: {}", err.message);
         }
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }
 

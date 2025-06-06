@@ -4,6 +4,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_models::database::DB;
 use std::ops::Sub;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error};
 
 /// Cleans up fully expired devices. These need to do a full re-authentication anyway.
@@ -48,5 +49,9 @@ AND (refresh_exp IS NULL OR refresh_exp < $1)"#;
                 }
             }
         };
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }

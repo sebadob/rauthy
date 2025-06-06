@@ -4,6 +4,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_models::database::DB;
 use rauthy_models::rauthy_config::RauthyConfig;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error};
 
 pub async fn user_login_states_cleanup() {
@@ -35,5 +36,9 @@ pub async fn user_login_states_cleanup() {
         } else if let Err(err) = DB::pg_execute(sql, &[&threshold]).await {
             error!("User Login State Cleanup Error: {:?}", err)
         }
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }

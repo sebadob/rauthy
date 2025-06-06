@@ -4,6 +4,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_models::database::DB;
 use std::ops::Sub;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error};
 
 /// Cleans up old / expired Sessions.
@@ -38,5 +39,9 @@ pub async fn sessions_cleanup() {
         } else if let Err(err) = DB::pg_execute(sql, &[&thres]).await {
             error!("Session Cleanup Error: {:?}", err)
         }
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }
