@@ -232,7 +232,6 @@ pub fn code_state_from_headers(res: Response) -> Result<(String, Option<String>)
 }
 
 pub fn init_client_bcl_uri() -> String {
-    // let host = env::var("PUB_URL").expect("PUB_URL env var is not set");
     "http://localhost:80801/auth/v1/dev/backchannel_logout".to_string()
 }
 

@@ -14,7 +14,6 @@ use lettre::transport::smtp::authentication;
 use lettre::{AsyncSmtpTransport, AsyncTransport, message};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::Notification;
-use std::env;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Receiver;
@@ -489,7 +488,8 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
 
     // to make the integration tests not panic, results are taken and just thrown away
     // not the nicest approach for now, but it works
-    let url = &RauthyConfig::get().vars.email.smtp_url;
+    let vars = &RauthyConfig::get().vars.email;
+    let url = &vars.smtp_url;
     if test_mode || url.is_none() {
         if url.is_none() {
             error!("SMTP_URL is not configured, cannot send out any E-Mails!");
@@ -511,40 +511,28 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
 
     let mailer = {
         let smtp_url = url.as_deref().unwrap();
-        let smtp_port = env::var("SMTP_PORT")
-            .map(|s| s.parse::<u16>().expect("SMTP_PORT cannot be parsed to u16"))
-            .ok();
-        let smtp_insecure = env::var("SMTP_DANGER_INSECURE")
-            .unwrap_or_else(|_| "false".to_string())
-            .parse::<bool>()
-            .expect("Cannot parse SMTP_DANGER_INSECURE to bool");
 
         let mut retries = 0;
-        let retries_max = env::var("SMTP_CONNECT_RETRIES")
-            .unwrap_or_else(|_| "3".to_string())
-            .trim()
-            .parse::<u16>()
-            .expect("Cannot parse SMTP_CONNECT_RETRIES to u16");
 
-        let mut conn = if smtp_insecure {
-            conn_test_smtp_insecure(smtp_url, smtp_port).await
+        let mut conn = if vars.danger_insecure {
+            conn_test_smtp_insecure(smtp_url, vars.smtp_port).await
         } else {
-            connect_test_smtp(smtp_url, smtp_port).await
+            connect_test_smtp(smtp_url, vars.smtp_port).await
         };
 
         while let Err(err) = conn {
             error!("{:?}", err);
 
-            if retries >= retries_max {
+            if retries >= vars.connect_retries {
                 panic!("SMTP connection retries exceeded");
             }
             retries += 1;
             tokio::time::sleep(Duration::from_secs(5)).await;
 
-            conn = if smtp_insecure {
-                conn_test_smtp_insecure(smtp_url, smtp_port).await
+            conn = if vars.danger_insecure {
+                conn_test_smtp_insecure(smtp_url, vars.smtp_port).await
             } else {
-                connect_test_smtp(smtp_url, smtp_port).await
+                connect_test_smtp(smtp_url, vars.smtp_port).await
             }
         }
         conn.unwrap()
@@ -598,11 +586,16 @@ async fn connect_test_smtp(
     smtp_url: &str,
     smtp_port: Option<u16>,
 ) -> Result<AsyncSmtpTransport<lettre::Tokio1Executor>, ErrorResponse> {
-    let username = env::var("SMTP_USERNAME")
+    let vars = &RauthyConfig::get().vars.email;
+    let username = vars
+        .smtp_username
+        .as_deref()
         .expect("SMTP_USERNAME is not set")
         .trim()
         .to_string();
-    let password = env::var("SMTP_PASSWORD")
+    let password = vars
+        .smtp_password
+        .as_deref()
         .expect("SMTP_PASSWORD is not set")
         .trim()
         .to_string();

@@ -6,19 +6,13 @@ use rauthy_models::entity::groups::Group;
 use rauthy_models::entity::scim_types::ScimGroup;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::collections::HashMap;
-use std::env;
 use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
 pub async fn scim_task_retry() {
-    let retry_count = env::var("SCIM_RETRY_COUNT")
-        .as_deref()
-        .unwrap_or("100")
-        .parse::<u16>()
-        .expect("Cannot parse SCIM_RETRY_COUNT as u16");
-
     let mut clients_scim: Vec<ClientScim> = Vec::with_capacity(1);
     let mut groups_remote = HashMap::with_capacity(4);
 
@@ -29,7 +23,7 @@ pub async fn scim_task_retry() {
         time::sleep(Duration::from_millis(millis)).await;
 
         debug!("Running scim_task_retry scheduler");
-        if let Err(err) = execute(&mut clients_scim, &mut groups_remote, retry_count).await {
+        if let Err(err) = execute(&mut clients_scim, &mut groups_remote).await {
             error!("Error during scim_task_retry: {}", err.message);
         }
     }
@@ -38,7 +32,6 @@ pub async fn scim_task_retry() {
 async fn execute(
     clients_scim: &mut Vec<ClientScim>,
     groups_remote: &mut HashMap<String, ScimGroup>,
-    retry_count: u16,
 ) -> Result<(), ErrorResponse> {
     let failures = FailedScimTask::find_all().await?;
     if failures.is_empty() {
@@ -48,7 +41,7 @@ async fn execute(
     let groups_local = Group::find_all().await?;
 
     for failure in failures {
-        if failure.retry_count >= retry_count as i64 {
+        if failure.retry_count >= RauthyConfig::get().vars.scim.retry_count as i64 {
             warn!("Retry count exceeded for scim task {:?}", failure);
 
             Event::scim_task_failed(&failure.client_id, &failure.action, failure.retry_count)

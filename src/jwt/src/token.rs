@@ -5,18 +5,8 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::rauthy_config::RauthyConfig;
 use serde::{Deserialize, Serialize};
-use std::env;
 use std::fmt::Debug;
-use std::sync::LazyLock;
 use tracing::warn;
-
-static TOKEN_LEN_LIMIT: LazyLock<usize> = LazyLock::new(|| {
-    env::var("TOKEN_LEN_LIMIT")
-        .as_deref()
-        .unwrap_or("4096")
-        .parse::<usize>()
-        .expect("Cannot parse TOKEN_LEN_LIMIT as usize")
-});
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct JwtHeader<'a> {
@@ -63,7 +53,7 @@ impl JwtToken {
     ) -> Result<(), ErrorResponse> {
         debug_assert!(buf.is_empty());
 
-        if token.len() > *TOKEN_LEN_LIMIT {
+        if token.len() > RauthyConfig::get().vars.access.token_len_limit as usize {
             warn!(
                 "Received a JWT token above the size limit TOKEN_LEN_LIMIT. Either this is an \
                 exhaustion attack, or you create very big tokens and might need to increase the \

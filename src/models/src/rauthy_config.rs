@@ -141,9 +141,9 @@ impl RauthyConfig {
                 "https"
             };
             let pub_url = if vars.dev.dev_mode {
-                env::var("DEV_MODE_PROVIDER_CALLBACK_URL").unwrap_or_else(|_| pub_url.clone())
+                vars.dev.provider_callback_url.as_deref().unwrap_or(pub_url)
             } else {
-                pub_url.clone()
+                pub_url
             };
             format!("{}://{}/auth/v1/providers/callback", scheme, pub_url)
         };
@@ -306,7 +306,7 @@ impl Default for Vars {
                 migrate_pg_port: 5432,
                 migrate_pg_user: None,
                 migrate_pg_password: None,
-                migrate_pg_db_name: None,
+                migrate_pg_db_name: "rauthy".into(),
                 sched_user_exp_mins: 60,
                 sched_user_exp_delete_mins: None,
             },
@@ -954,7 +954,7 @@ impl Vars {
             "migrate_pg_db_name",
             "MIGRATE_PG_DB_NAME",
         ) {
-            self.database.migrate_pg_db_name = Some(v);
+            self.database.migrate_pg_db_name = v.into();
         }
 
         if let Some(v) = t_u32(
@@ -2249,7 +2249,7 @@ pub struct VarsDatabase {
     pub migrate_pg_port: u16,
     pub migrate_pg_user: Option<String>,
     pub migrate_pg_password: Option<String>,
-    pub migrate_pg_db_name: Option<String>,
+    pub migrate_pg_db_name: Cow<'static, str>,
 
     pub sched_user_exp_mins: u32,
     pub sched_user_exp_delete_mins: Option<u32>,

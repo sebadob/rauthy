@@ -18,7 +18,7 @@ use rauthy_models::rauthy_config::RauthyConfig;
 use std::cmp::max;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
-use std::{env, thread};
+use std::thread;
 use tracing::{error, info};
 // TODO Currently, we have some duplicated code in here for building the HttpServer.
 // This is due to the strict typing from actix_web. We want to be able to conditionally `.wrap`
@@ -43,14 +43,13 @@ pub async fn server_with_metrics() -> std::io::Result<()> {
         .unwrap();
 
     thread::spawn(move || {
-        let addr = env::var("METRICS_ADDR").unwrap_or_else(|_| "0.0.0.0".to_string());
-        let port = env::var("METRICS_PORT").unwrap_or_else(|_| "9090".to_string());
-        if let Err(err) = Ipv4Addr::from_str(&addr) {
+        let vars = &RauthyConfig::get().vars.server;
+        if let Err(err) = Ipv4Addr::from_str(&vars.metrics_addr) {
             let msg = format!("Error parsing METRICS_ADDR: {}", err);
             error!(msg);
             panic!("{}", msg);
         }
-        let addr_full = format!("{}:{}", addr, port);
+        let addr_full = format!("{}:{}", vars.metrics_addr, vars.metrics_port);
 
         info!("Metrics available on: http://{}/metrics", addr_full);
         // TODO create single threaded runtime specifically -> probably use tokio

@@ -27,6 +27,7 @@ use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::migration::inserts;
+use crate::rauthy_config::RauthyConfig;
 use hiqlite_macros::params;
 use itertools::Itertools;
 use rauthy_common::constants::RAUTHY_VERSION;
@@ -34,7 +35,6 @@ use rauthy_common::utils::deserialize;
 use rauthy_error::ErrorResponse;
 use semver::Version;
 use serde::Deserialize;
-use std::env;
 use std::fmt::Debug;
 use std::str::FromStr;
 use tracing::{debug, info};
@@ -296,15 +296,21 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     info!("Starting migration from Postgres to another DB");
 
-    let host = env::var("MIGRATE_PG_HOST").expect("MIGRATE_PG_HOST is not set");
-    let port = env::var("MIGRATE_PG_PORT")
-        .unwrap_or_else(|_| "5432".to_string())
-        .parse::<u16>()
-        .expect("Cannot parse MIGRATE_PG_PORT to u16");
-    let user = env::var("MIGRATE_PG_USER").expect("MIGRATE_PG_USER is not set");
-    let password = env::var("MIGRATE_PG_PASSWORD").expect("MIGRATE_PG_PASSWORD is not set");
-    let db_name = env::var("MIGRATE_PG_DB_NAME").unwrap_or_else(|_| "rauthy".to_string());
-    let pool = DB::connect_postgres(&host, port, &user, &password, &db_name, 1).await?;
+    let vars = &RauthyConfig::get().vars.database;
+    let host = vars
+        .migrate_pg_host
+        .as_ref()
+        .expect("MIGRATE_PG_HOST is not set");
+    let user = vars
+        .migrate_pg_user
+        .as_ref()
+        .expect("MIGRATE_PG_USER is not set");
+    let password = vars
+        .migrate_pg_password
+        .as_ref()
+        .expect("MIGRATE_PG_PASSWORD is not set");
+    let db_name = vars.migrate_pg_db_name.as_ref();
+    let pool = DB::connect_postgres(host, vars.migrate_pg_port, user, password, db_name, 1).await?;
     let cl = pool.get().await?;
 
     // before doing anything, make sure that we are on the same feature version
