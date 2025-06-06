@@ -1,27 +1,28 @@
 use crate::sleep_schedule_next;
-use actix_web::web;
 use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_common::constants::IDX_JWK_KID;
 use rauthy_common::is_hiqlite;
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::jwk::{JWKS, Jwk};
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::collections::HashSet;
-use std::env;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error, info};
 
 /// Auto-Rotates JWKS
-pub async fn jwks_auto_rotate(data: web::Data<AppState>) {
+pub async fn jwks_auto_rotate() {
     // sec min hour day_of_month month day_of_week year
     let schedule = {
         cron::Schedule::from_str(
-            env::var("JWK_AUTOROTATE_CRON")
-                .as_deref()
-                .unwrap_or("0 30 3 1 * * *"),
+            RauthyConfig::get()
+                .vars
+                .lifetimes
+                .jwk_autorotate_cron
+                .as_ref(),
         )
         .unwrap()
     };
@@ -34,7 +35,7 @@ pub async fn jwks_auto_rotate(data: web::Data<AppState>) {
             continue;
         }
 
-        if let Err(err) = JWKS::rotate(&data).await {
+        if let Err(err) = JWKS::rotate().await {
             error!("Error during JWKS auto-rotation: {}", err.message);
         }
     }
@@ -119,5 +120,9 @@ pub async fn jwks_cleanup() {
             }
         }
         info!("Cleaned up old JWKs: {}", count);
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }

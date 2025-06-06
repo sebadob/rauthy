@@ -10,10 +10,8 @@ use rauthy_api_types::clients::{
     DynamicClientResponse, NewClientRequest, UpdateClientRequest,
 };
 use rauthy_api_types::generic::LogoParams;
-use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
@@ -21,6 +19,7 @@ use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_models::entity::groups::Group;
 use rauthy_models::entity::logos::{Logo, LogoType};
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::client;
 use rauthy_service::oidc::{helpers, logout};
 use std::collections::HashMap;
@@ -168,16 +167,15 @@ pub async fn post_clients(
 )]
 #[post("/clients_dyn")]
 pub async fn post_clients_dyn(
-    data: web::Data<AppState>,
     Json(payload): Json<DynamicClientRequest>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*ENABLE_DYN_CLIENT_REG {
+    if !RauthyConfig::get().vars.dynamic_clients.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
     payload.validate()?;
 
-    if let Some(token) = &*DYN_CLIENT_REG_TOKEN {
+    if let Some(token) = &RauthyConfig::get().vars.dynamic_clients.reg_token {
         let bearer = helpers::get_bearer_token_from_header(req.headers())?;
         if token != &bearer {
             return Ok(HttpResponse::Unauthorized()
@@ -193,7 +191,7 @@ pub async fn post_clients_dyn(
         ClientDyn::rate_limit_ip(ip).await?;
     }
 
-    Client::create_dynamic(&data, payload).await.map(|resp| {
+    Client::create_dynamic(payload).await.map(|resp| {
         HttpResponse::Created()
             // The registration should be possible from another Web UI by RFC
             .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
@@ -215,11 +213,10 @@ pub async fn post_clients_dyn(
 )]
 #[get("/clients_dyn/{id}")]
 pub async fn get_clients_dyn(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*ENABLE_DYN_CLIENT_REG {
+    if !RauthyConfig::get().vars.dynamic_clients.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
 
@@ -229,7 +226,7 @@ pub async fn get_clients_dyn(
     client_dyn.validate_token(&bearer)?;
 
     let client = Client::find(id).await?;
-    let resp = client.into_dynamic_client_response(&data, client_dyn, false)?;
+    let resp = client.into_dynamic_client_response(client_dyn, false)?;
     Ok(HttpResponse::Ok().json(resp))
 }
 
@@ -248,12 +245,11 @@ pub async fn get_clients_dyn(
 )]
 #[put("/clients_dyn/{id}")]
 pub async fn put_clients_dyn(
-    data: web::Data<AppState>,
     Json(payload): Json<DynamicClientRequest>,
     id: web::Path<String>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*ENABLE_DYN_CLIENT_REG {
+    if !RauthyConfig::get().vars.dynamic_clients.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
     payload.validate()?;
@@ -263,7 +259,7 @@ pub async fn put_clients_dyn(
     let client_dyn = ClientDyn::find(id.clone()).await?;
     client_dyn.validate_token(&bearer)?;
 
-    let resp = Client::update_dynamic(&data, payload, client_dyn).await?;
+    let resp = Client::update_dynamic(payload, client_dyn).await?;
     Ok(HttpResponse::Ok().json(resp))
 }
 
@@ -512,7 +508,6 @@ pub async fn put_generate_client_secret(
 )]
 #[delete("/clients/{id}")]
 pub async fn delete_client(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -534,7 +529,7 @@ pub async fn delete_client(
     let client_clone = client.clone();
     task::spawn(async move {
         let cid = client_clone.id.clone();
-        if let Err(err) = logout::execute_backchannel_logout_by_client(&data, &client_clone).await {
+        if let Err(err) = logout::execute_backchannel_logout_by_client(&client_clone).await {
             error!(
                 "Error during async backchannel logout after client delete: {:?}",
                 err

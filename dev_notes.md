@@ -6,7 +6,13 @@ TODO before v0.30:
 
 - add just recipe that archives a pre-built static HTML folder for FreeBSD like systems
 - update book with the "new" K8s sts setup to show how to do an HA deployment
-- hiqlite env var for more granular sync config
+- double check weird backup push error on staging
+
+## Config Rework Notes
+
+- `TPL_*` values are not possible via pure ENV vars anymore
+- log_level_access is now lowercase
+- backchannel http client was merged
 
 ## Stage 1 - essentials
 

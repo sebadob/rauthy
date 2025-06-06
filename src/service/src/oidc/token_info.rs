@@ -1,22 +1,20 @@
+use actix_web::HttpRequest;
 use actix_web::http::header::{AUTHORIZATION, HeaderName, HeaderValue};
-use actix_web::{HttpRequest, web};
 use rauthy_api_types::oidc::TokenInfo;
-use rauthy_common::constants::DANGER_DISABLE_INTROSPECT_AUTH;
 use rauthy_common::utils::base64_decode_buf;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtAccessClaims, JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
+use rauthy_models::rauthy_config::RauthyConfig;
 use tracing::error;
 
 pub async fn get_token_info(
-    data: &web::Data<AppState>,
     req: &HttpRequest,
     token: &str,
 ) -> Result<(String, Option<(HeaderName, HeaderValue)>), ErrorResponse> {
     let mut buf = Vec::with_capacity(512);
-    if JwtToken::validate_claims_into(token, &data.issuer, Some(JwtTokenType::Bearer), 0, &mut buf)
+    if JwtToken::validate_claims_into(token, Some(JwtTokenType::Bearer), 0, &mut buf)
         .await
         .is_err()
     {
@@ -57,7 +55,7 @@ pub async fn get_token_info(
     })?;
 
     buf.clear();
-    let client = check_client_auth(data, req, client_id, &mut buf).await?;
+    let client = check_client_auth(req, client_id, &mut buf).await?;
     client.validate_enabled()?;
     let cors_header = client.get_validated_origin_header(req)?;
 
@@ -66,7 +64,6 @@ pub async fn get_token_info(
 
 #[inline]
 async fn check_client_auth(
-    data: &web::Data<AppState>,
     req: &HttpRequest,
     client_id: String,
     buf: &mut Vec<u8>,
@@ -80,7 +77,11 @@ async fn check_client_auth(
         )
     })?;
 
-    if *DANGER_DISABLE_INTROSPECT_AUTH {
+    if RauthyConfig::get()
+        .vars
+        .access
+        .danger_disable_introspect_auth
+    {
         return Ok(client);
     }
 
@@ -100,8 +101,7 @@ async fn check_client_auth(
     }
 
     if let Some(token) = header.strip_prefix("Bearer ") {
-        JwtToken::validate_claims_into(token, &data.issuer, Some(JwtTokenType::Bearer), 0, buf)
-            .await?;
+        JwtToken::validate_claims_into(token, Some(JwtTokenType::Bearer), 0, buf).await?;
         // Just make sure it deserializes fine
         serde_json::from_slice::<JwtAccessClaims>(buf)?;
         Ok(client)

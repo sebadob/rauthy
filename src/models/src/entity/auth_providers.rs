@@ -30,15 +30,14 @@ use rauthy_api_types::auth_providers::{
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
-    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI,
-    PROVIDER_CALLBACK_URI_ENCODED, PROVIDER_LINK_COOKIE, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
-    WEBAUTHN_REQ_EXP,
+    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_LINK_COOKIE,
+    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, deserialize,
     get_rand, new_store_id, serialize,
 };
-use rauthy_common::{HTTP_CLIENT, is_hiqlite};
+use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
 use ring::digest;
@@ -49,6 +48,7 @@ use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
 
+use crate::rauthy_config::RauthyConfig;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
@@ -569,7 +569,7 @@ impl AuthProvider {
         };
 
         debug!("AuthProvider lookup to {}", config_url);
-        let res = HTTP_CLIENT.get(config_url.as_ref()).send().await?;
+        let res = http_client().get(config_url.as_ref()).send().await?;
         let status = res.status();
         if !status.is_success() {
             let body = res.text().await?;
@@ -784,7 +784,7 @@ impl AuthProviderCallback {
                 '?'
             },
             provider.client_id,
-            *PROVIDER_CALLBACK_URI_ENCODED,
+            RauthyConfig::get().provider_callback_uri_encoded,
             provider.scope,
             slf.callback_id
         );
@@ -874,14 +874,14 @@ impl AuthProviderCallback {
             code: &payload.code,
             code_verifier: provider.use_pkce.then_some(&payload.pkce_verifier),
             grant_type: "authorization_code",
-            redirect_uri: &PROVIDER_CALLBACK_URI,
+            redirect_uri: &RauthyConfig::get().provider_callback_uri,
         };
         if provider.client_secret_post {
             payload.client_secret = AuthProvider::get_secret_cleartext(&provider.secret)?;
         }
 
         let res = {
-            let mut builder = HTTP_CLIENT
+            let mut builder = http_client()
                 .post(&provider.token_endpoint)
                 .header(ACCEPT, APPLICATION_JSON);
 
@@ -944,7 +944,7 @@ impl AuthProviderCallback {
                     // the id_token only exists, if we actually have an OIDC provider.
                     // If we only get an access token, we need to do another request to the
                     // userinfo endpoint
-                    let res = HTTP_CLIENT
+                    let res = http_client()
                         .get(&provider.userinfo_endpoint)
                         .header(AUTHORIZATION, format!("Bearer {}", access_token))
                         .header(ACCEPT, APPLICATION_JSON)
@@ -1015,8 +1015,9 @@ impl AuthProviderCallback {
         // all good, we can generate an auth code
 
         // authorization code
+        let webauthn_req_exp = RauthyConfig::get().vars.webauthn.req_exp;
         let code_lifetime = if force_mfa && user.has_webauthn_enabled() {
-            client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
+            client.auth_code_lifetime + webauthn_req_exp as i32
         } else {
             client.auth_code_lifetime
         };
@@ -1046,7 +1047,7 @@ impl AuthProviderCallback {
                 header_origin,
                 user_id: user.id.clone(),
                 email: user.email,
-                exp: *WEBAUTHN_REQ_EXP as u64,
+                exp: webauthn_req_exp as u64,
                 session,
             };
 
@@ -1604,31 +1605,10 @@ struct OidcCodeRequestParams<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cryptr::EncKeys;
 
+    // exists only to understand the query syntax and experiment with it
     #[test]
-    fn test_auth_provider_link_cookie() {
-        dotenvy::from_filename("rauthy-test.cfg").ok();
-        let _ = EncKeys::from_env().unwrap().init();
-
-        let value = AuthProviderLinkCookie {
-            provider_id: "my_id_1337".to_string(),
-            user_id: "batman123".to_string(),
-            user_email: "batman@gotham.io".to_string(),
-        };
-
-        let cookie = value.build_cookie().unwrap();
-
-        let cookie_val = ApiCookie::cookie_into_value(Some(cookie)).unwrap();
-        let res = AuthProviderLinkCookie::try_from(cookie_val.as_str()).unwrap();
-
-        assert_eq!(value.provider_id, res.provider_id);
-        assert_eq!(value.user_id, res.user_id);
-        assert_eq!(value.user_email, res.user_email);
-    }
-
-    // ... just to understand the query syntax
-    #[test]
+    #[ignore]
     fn test_json_path() {
         let value = serde_json::json!({
             "foo": {

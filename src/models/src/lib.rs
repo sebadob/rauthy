@@ -5,7 +5,6 @@ use actix_web::http::header::{HeaderName, HeaderValue};
 use std::fmt::{Display, Formatter};
 
 pub mod api_cookie;
-pub mod app_state;
 pub mod database;
 pub mod email;
 pub mod entity;
@@ -14,6 +13,7 @@ pub mod html;
 pub mod i18n_email;
 pub mod language;
 pub mod migration;
+pub mod rauthy_config;
 pub mod temp_migrate_federation_idp;
 
 pub enum AuthStep {

@@ -1,6 +1,6 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::events::event::Event;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::web;
 use cryptr::{EncKeys, EncValue};
 use ed25519_compact::Noise;
@@ -13,7 +13,7 @@ use rauthy_common::constants::{
 use rauthy_common::utils::{
     base64_url_encode, base64_url_no_pad_decode, base64_url_no_pad_decode_buf, get_rand,
 };
-use rauthy_common::{HTTP_CLIENT, is_hiqlite};
+use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
 use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey};
@@ -169,7 +169,7 @@ impl JWKS {
     }
 
     /// Rotates and generates a whole new Set of JWKs for signing JWT Tokens
-    pub async fn rotate(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn rotate() -> Result<(), ErrorResponse> {
         info!("Starting JWKS rotation - this might take some time");
 
         // let key = data.enc_keys.get(&data.enc_key_active).unwrap();
@@ -284,7 +284,8 @@ impl JWKS {
 
         info!("Finished JWKS rotation");
 
-        data.tx_events
+        RauthyConfig::get()
+            .tx_events
             .send_async(Event::jwks_rotated())
             .await
             .unwrap();
@@ -414,7 +415,7 @@ impl JWKSPublicKey {
             return res;
         }
 
-        let res = match HTTP_CLIENT
+        let res = match http_client()
             .get(jwks_uri)
             .header(CONTENT_TYPE, APPLICATION_JSON)
             .send()

@@ -17,6 +17,7 @@ container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
+test_env_vars := "PUB_URL=localhost:8081 RP_ORIGIN=http://localhost:8081"
 jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:8,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000"
 postgres := "HIQLITE=false"
 
@@ -220,7 +221,7 @@ test-backend: test-backend-stop delete-hiqlite
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    cargo run test
+    {{ test_env_vars }} cargo run test
 
 # starts the test backend with memory profiling - expects `heaptrack` to be available
 test-backend-heaptrack: test-backend-stop delete-hiqlite
@@ -234,7 +235,7 @@ test-backend-heaptrack: test-backend-stop delete-hiqlite
     #echo 'grant temporary access to performance events until reboot'
     #echo '1' | sudo tee /proc/sys/kernel/perf_event_paranoid
     #echo 'if you get an mmap error, try: sudo sysctl kernel.perf_event_mlock_kb=2048'
-    heaptrack ./target/profiling/rauthy test
+    {{ test_env_vars }} heaptrack ./target/profiling/rauthy test
 
 # stops a possibly running test backend that may have spawned in the background for integration tests
 test-backend-stop:
@@ -260,11 +261,11 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
     clear
 
     cargo build
-    ./target/debug/rauthy test &
+    {{ test_env_vars }} ./target/debug/rauthy test &
     echo $! > {{ file_test_pid }}
 
     # Wait for the fresh Raft
-    sleep 3
+    sleep 5
 
     if cargo test {{ test }}; then
       echo "All SQLite tests successful"
@@ -284,11 +285,11 @@ test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlit
 
     cargo build
     # the Hiqlite tests are disk-backed, lets check postgres in-memory to cover this as well
-    {{ postgres }} HQL_CACHE_STORAGE_DISK=false ./target/debug/rauthy test &
+    {{ test_env_vars }} {{ postgres }} HQL_CACHE_STORAGE_DISK=false ./target/debug/rauthy test &
     echo $! > {{ file_test_pid }}
 
     # Wait for the fresh Raft
-    sleep 3
+    sleep 5
 
     if {{ postgres }} cargo test {{ test }}; then
       echo "All Postgres tests successful"

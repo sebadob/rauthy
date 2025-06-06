@@ -1,9 +1,10 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::DB;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
 use chrono::Utc;
 use hiqlite_macros::params;
-use rauthy_common::constants::{PASSWORD_RESET_COOKIE_BINDING, PWD_CSRF_HEADER, PWD_RESET_COOKIE};
+use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -261,10 +262,14 @@ impl MagicLink {
             );
 
             let cookie_opt = ApiCookie::from_req(req, PWD_RESET_COOKIE);
+            let cookie_binding = RauthyConfig::get()
+                .vars
+                .access
+                .password_reset_cookie_binding;
             if let Some(cookie) = cookie_opt {
                 // the extracted cookie from the request starts with 'rauthy-pwd-reset='
                 if !cookie.ends_with(self.cookie.as_ref().unwrap()) {
-                    if *PASSWORD_RESET_COOKIE_BINDING {
+                    if cookie_binding {
                         return Err(err);
                     } else {
                         let ip = real_ip_from_req(req)?;
@@ -274,7 +279,7 @@ impl MagicLink {
                         );
                     }
                 }
-            } else if *PASSWORD_RESET_COOKIE_BINDING {
+            } else if cookie_binding {
                 return Err(err);
             } else {
                 let ip = real_ip_from_req(req)?;

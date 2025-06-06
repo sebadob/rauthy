@@ -2,7 +2,7 @@ use crate::ReqPrincipal;
 use actix_web::http::header;
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, HeaderValue};
 use actix_web::web::{Json, Query};
-use actix_web::{HttpRequest, HttpResponse, Responder, get, post, put, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, get, post, put};
 use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_api_types::generic::{
@@ -11,12 +11,10 @@ use rauthy_api_types::generic::{
     PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
-    APP_START, APPLICATION_JSON, HEADER_ALLOW_ALL_ORIGINS, HEALTH_CHECK_DELAY_SECS, IDX_LOGIN_TIME,
-    RAUTHY_VERSION, SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
+    APP_START, APPLICATION_JSON, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME, RAUTHY_VERSION,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::app_version::LatestAppVersion;
@@ -28,9 +26,9 @@ use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
-use std::env;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -38,38 +36,29 @@ use tracing::{error, info, warn};
 use validator::Validate;
 
 pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
-    let common = env::var("FILTER_LANG_COMMON")
-        .as_deref()
-        .unwrap_or("en de zhhans ko")
-        .trim()
-        .split(" ")
-        .filter_map(|v| {
-            let tr = v.trim();
-            if tr.is_empty() {
-                None
-            } else {
-                if !["en", "de", "zhhans", "ko"].contains(&tr) {
-                    panic!("Invalid config for FILTER_LANG_COMMON.\nAllowed values: en de zhhans ko\nfound: {}", tr);
+    let common = RauthyConfig::get().vars.i18n.filter_lang_common
+        .iter()
+        .map(|v| {
+                if !["en", "de", "zhhans", "ko"].contains(&v.as_ref()) {
+                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de zhhans ko\nfound: {}", v);
                 }
-                Some(Language::from(tr).into())
-            }
+                Language::from(v.as_ref()).into()
         })
         .collect::<Vec<_>>();
-    let admin = env::var("FILTER_LANG_ADMIN")
-        .as_deref()
-        .unwrap_or("en de ko")
-        .trim()
-        .split(" ")
-        .filter_map(|v| {
-            let tr = v.trim();
-            if tr.is_empty() {
-                None
-            } else {
-                if !["en", "de", "ko"].contains(&tr) {
-                    panic!("Invalid config for FILTER_LANG_ADMIN.\nAllowed values: en de ko\nfound: {}", tr);
-                }
-                Some(Language::from(tr).into())
+
+    let admin = RauthyConfig::get()
+        .vars
+        .i18n
+        .filter_lang_admin
+        .iter()
+        .map(|v| {
+            if !["en", "de", "zhhans", "ko"].contains(&v.as_ref()) {
+                panic!(
+                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de zhhans ko\nfound: {}",
+                    v
+                );
             }
+            Language::from(v.as_ref()).into()
         })
         .collect::<Vec<_>>();
 
@@ -159,7 +148,6 @@ pub async fn get_enc_keys(principal: ReqPrincipal) -> Result<HttpResponse, Error
 )]
 #[post("/encryption/migrate")]
 pub async fn post_migrate_enc_key(
-    data: web::Data<AppState>,
     req: HttpRequest,
     principal: ReqPrincipal,
     Json(payload): Json<EncKeyMigrateRequest>,
@@ -168,9 +156,10 @@ pub async fn post_migrate_enc_key(
     payload.validate()?;
 
     let ip = real_ip_from_req(&req)?;
-    encryption::migrate_encryption_alg(&data, &payload.key_id).await?;
+    encryption::migrate_encryption_alg(&payload.key_id).await?;
 
-    data.tx_events
+    RauthyConfig::get()
+        .tx_events
         .send_async(Event::secrets_migrated(ip))
         .await
         .unwrap();
@@ -212,10 +201,7 @@ pub async fn get_i18n_config() -> Result<HttpResponse, ErrorResponse> {
     ),
 )]
 #[get("/login_time")]
-pub async fn get_login_time(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_login_time(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Generic, AccessRights::Read)?;
 
     let login_time: u32 = DB::hql()
@@ -223,10 +209,11 @@ pub async fn get_login_time(
         .await?
         .unwrap_or(2000);
 
+    let params = &RauthyConfig::get().argon2_params;
     let argon2_params = Argon2ParamsResponse {
-        m_cost: data.argon2_params.m_cost(),
-        t_cost: data.argon2_params.t_cost(),
-        p_cost: data.argon2_params.p_cost(),
+        m_cost: params.m_cost(),
+        t_cost: params.t_cost(),
+        p_cost: params.p_cost(),
     };
     let resp = LoginTimeResponse {
         argon2_params,
@@ -419,7 +406,9 @@ pub async fn post_update_language(
 )]
 #[get("/health")]
 pub async fn get_health() -> impl Responder {
-    if Utc::now().sub(*APP_START).num_seconds() < *HEALTH_CHECK_DELAY_SECS as i64 {
+    if Utc::now().sub(*APP_START).num_seconds()
+        < RauthyConfig::get().vars.database.health_check_delay_secs as i64
+    {
         info!("Early health check within the HEALTH_CHECK_DELAY_SECS timeframe - returning true");
         HttpResponse::Ok().json(HealthResponse {
             db_healthy: true,
@@ -464,12 +453,13 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
     let path = req.path();
     let ip = real_ip_from_req(&req)?.to_string();
 
-    if *SUSPICIOUS_REQUESTS_LOG && path.len() > 1 {
+    let vars = &RauthyConfig::get().vars.suspicious_requests;
+    if vars.log && path.len() > 1 {
         // TODO create a new event type for these? maybe too many events ...?
         warn!("Suspicious request path '{}' from {}", path, ip)
     }
 
-    if *SUSPICIOUS_REQUESTS_BLACKLIST > 0
+    if vars.blacklist > 0
         // `/` will be the path of length 1
         && path.len() > 1
         && suspicious_request_block::is_scan_target(path)
@@ -479,9 +469,7 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
             path, ip,
         );
 
-        if let Err(err) =
-            IpBlacklist::put(ip.to_string(), *SUSPICIOUS_REQUESTS_BLACKLIST as i64).await
-        {
+        if let Err(err) = IpBlacklist::put(ip.to_string(), vars.blacklist as i64).await {
             error!(
                 "Error blacklisting suspicious request - please repot this bug: {:?}",
                 err

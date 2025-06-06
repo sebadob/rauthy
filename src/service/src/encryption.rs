@@ -1,6 +1,5 @@
 use cryptr::{EncKeys, EncValue};
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
 use rauthy_models::entity::auth_providers::AuthProvider;
 use rauthy_models::entity::clients::Client;
@@ -9,10 +8,7 @@ use tracing::{error, info};
 
 /// Migrates encrypted data in the backend to a new key.
 /// JWKS's are just rotated and a new set will be created.
-pub async fn migrate_encryption_alg(
-    data: &actix_web::web::Data<AppState>,
-    new_kid: &str,
-) -> Result<(), ErrorResponse> {
+pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> {
     // check that the requested Key ID exists
     EncKeys::get_static_key(new_kid)?;
 
@@ -47,7 +43,7 @@ pub async fn migrate_encryption_alg(
     info!("Finished clients secrets migration to key id: {}", new_kid);
 
     // JWKS will just be rotated, which is better for security anyway
-    JWKS::rotate(data).await?;
+    JWKS::rotate().await?;
 
     // migrate ApiKey's
     info!("Starting ApiKeys migration to key id: {}", new_kid);

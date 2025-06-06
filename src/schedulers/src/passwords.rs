@@ -1,10 +1,8 @@
 use crate::sleep_schedule_next;
-use actix_web::web;
 use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
 use rauthy_models::email::send_pwd_reset_info;
 use rauthy_models::entity::users::User;
@@ -14,7 +12,7 @@ use tracing::{debug, error};
 
 /// Checks soon expiring passwords and notifies the user accordingly.
 /// Runs once every night at 04:30.
-pub async fn password_expiry_checker(data: web::Data<AppState>) {
+pub async fn password_expiry_checker() {
     // sec min hour day_of_month month day_of_week year
     // TODO convert to interval that runs multiple times a day + keep track of sent warnings?
     // -> would require persisting sent emails and other things though
@@ -52,7 +50,7 @@ pub async fn password_expiry_checker(data: web::Data<AppState>) {
         match expiring_users {
             Ok(users_to_notify) => {
                 for user in users_to_notify {
-                    send_pwd_reset_info(&data, &user).await;
+                    send_pwd_reset_info(&user).await;
                     debug!("User {} notified about password expiry", user.email);
                 }
             }

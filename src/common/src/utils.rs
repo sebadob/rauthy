@@ -8,8 +8,8 @@ use rand::Rng;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::fmt::Debug;
 use std::net::IpAddr;
+use std::net::Ipv4Addr;
 use std::str::FromStr;
-use std::{env, net::Ipv4Addr};
 use tracing::{error, trace};
 
 const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE;
@@ -101,20 +101,6 @@ pub fn base64_url_no_pad_decode_buf(b64: &str, buf: &mut Vec<u8>) -> Result<(), 
         .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
 }
 
-/// Uses the `HQL_NODES` to determine if Rauthy is running in a HA deployment.
-#[inline]
-pub fn is_ha_deployment() -> bool {
-    env::var("HQL_NODES")
-        .unwrap_or_else(|_| "".to_string())
-        .lines()
-        .filter_map(|l| {
-            let trim = l.trim();
-            if trim.is_empty() { None } else { Some(trim) }
-        })
-        .count()
-        > 1
-}
-
 #[inline(always)]
 pub fn new_store_id() -> String {
     get_rand(24)
@@ -138,7 +124,7 @@ pub fn real_ip_from_req(req: &HttpRequest) -> Result<IpAddr, ErrorResponse> {
     if let Some(ip) = ip_from_cust_header(req.headers()) {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         Ok(ip)
-    } else if *PROXY_MODE {
+    } else if *PROXY_MODE.get().unwrap() {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         parse_peer_addr(req.connection_info().realip_remote_addr(), false)
     } else {
@@ -153,7 +139,7 @@ pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Result<IpAddr, ErrorRespons
     if let Some(ip) = ip_from_cust_header(req.headers()) {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         Ok(ip)
-    } else if *PROXY_MODE {
+    } else if *PROXY_MODE.get().unwrap() {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         parse_peer_addr(req.connection_info().realip_remote_addr(), false)
     } else {
@@ -189,7 +175,7 @@ fn check_trusted_proxy(peer_ip: &IpAddr, use_dummy_addr: bool) -> Result<(), Err
     if use_dummy_addr && *peer_ip == DUMMY_ADDRESS {
         return Ok(());
     }
-    for cidr in &*TRUSTED_PROXIES {
+    for cidr in TRUSTED_PROXIES.get().unwrap() {
         if cidr.contains(peer_ip) {
             return Ok(());
         }
@@ -205,28 +191,18 @@ fn check_trusted_proxy(peer_ip: &IpAddr, use_dummy_addr: bool) -> Result<(), Err
     ))
 }
 
-pub(crate) fn build_trusted_proxies() -> Vec<cidr::IpCidr> {
-    let raw = env::var("TRUSTED_PROXIES").expect("TRUSTED_PROXIES is not net set");
-    let mut proxies = Vec::new();
-
-    for line in raw.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        match cidr::IpCidr::from_str(trimmed) {
-            Ok(cidr) => {
-                proxies.push(cidr);
-            }
+pub fn build_trusted_proxies(proxies: &[String]) -> Vec<cidr::IpCidr> {
+    let mut proxies = proxies
+        .iter()
+        .map(|range| match cidr::IpCidr::from_str(range.trim()) {
+            Ok(cidr) => cidr,
             Err(err) => {
-                panic!(
-                    "Cannot parse trusted proxy entry {trimmed} to CIDR: {}",
-                    err
-                );
+                panic!("Cannot parse trusted proxy entry {range} to CIDR: {}", err);
             }
-        }
-    }
-    // will never increase and is lazy static afterward
+        })
+        .collect::<Vec<_>>();
+
+    // will never increase and is static afterward
     proxies.shrink_to_fit();
 
     proxies
@@ -235,7 +211,7 @@ pub(crate) fn build_trusted_proxies() -> Vec<cidr::IpCidr> {
 #[inline(always)]
 fn ip_from_cust_header(headers: &HeaderMap) -> Option<IpAddr> {
     // If a custom override has been set, try this first and use the default as fallback
-    if let Some(header_name) = &*PEER_IP_HEADER_NAME {
+    if let Some(header_name) = PEER_IP_HEADER_NAME.get().unwrap() {
         if let Some(Ok(value)) = headers.get(header_name).map(|s| s.to_str()) {
             match IpAddr::from_str(value) {
                 Ok(ip) => {
@@ -299,18 +275,15 @@ mod tests {
 
     #[test]
     fn test_trusted_proxy_check() {
-        unsafe {
-            env::set_var(
-                "TRUSTED_PROXIES",
-                r#"
-            192.168.100.0/24
-            192.168.0.96/28
-            172.16.0.1/32
-            10.10.10.10/31"#,
-            )
-        };
-
-        println!("{:?}", build_trusted_proxies());
+        let raw = vec![
+            "192.168.100.0/24".to_string(),
+            "192.168.0.96/28".to_string(),
+            "172.16.0.1/32".to_string(),
+            "10.10.10.10/31".to_string(),
+        ];
+        let proxies = build_trusted_proxies(&raw);
+        let _ = TRUSTED_PROXIES.set(proxies);
+        println!("{:?}", build_trusted_proxies(&raw));
 
         assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.1").unwrap(), false).is_ok());
         assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.255").unwrap(), false).is_ok());

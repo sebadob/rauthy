@@ -3,16 +3,14 @@ use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use chrono::{DateTime, Utc};
 use hiqlite_macros::params;
 use rauthy_api_types::users::DeviceResponse;
-use rauthy_common::constants::{
-    CACHE_TTL_DEVICE_CODE, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_USER_CODE_LENGTH,
-    DEVICE_KEY_LENGTH, PUB_URL_WITH_SCHEME,
-};
+use rauthy_common::constants::DEVICE_KEY_LENGTH;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, Sub};
 
+use crate::rauthy_config::RauthyConfig;
 use tracing::info;
 
 #[derive(Debug, Deserialize)]
@@ -212,9 +210,8 @@ impl DeviceAuthCode {
         client_secret: Option<String>,
     ) -> Result<Self, ErrorResponse> {
         let now = Utc::now();
-        let exp = now.add(chrono::Duration::seconds(
-            *DEVICE_GRANT_CODE_LIFETIME as i64,
-        ));
+        let ttl = RauthyConfig::get().vars.device_grant.code_lifetime as i64;
+        let exp = now.add(chrono::Duration::seconds(ttl));
         let slf = Self {
             client_id,
             device_code: get_rand(DEVICE_KEY_LENGTH as usize),
@@ -231,7 +228,7 @@ impl DeviceAuthCode {
                 Cache::DeviceCode,
                 slf.user_code().to_string(),
                 &slf,
-                *CACHE_TTL_DEVICE_CODE,
+                Some(ttl),
             )
             .await?;
 
@@ -239,7 +236,8 @@ impl DeviceAuthCode {
     }
 
     pub async fn find_by_device_code(device_code: &str) -> Result<Option<Self>, ErrorResponse> {
-        let key = &device_code[..(*DEVICE_GRANT_USER_CODE_LENGTH as usize)];
+        let len = RauthyConfig::get().vars.device_grant.user_code_length as usize;
+        let key = &device_code[..len];
         Self::find(key.to_string()).await
     }
 
@@ -266,12 +264,13 @@ impl DeviceAuthCode {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
+        let ttl = RauthyConfig::get().vars.device_grant.code_lifetime as i64;
         DB::hql()
             .put(
                 Cache::DeviceCode,
                 self.user_code().to_string(),
                 self,
-                *CACHE_TTL_DEVICE_CODE,
+                Some(ttl),
             )
             .await?;
         Ok(())
@@ -282,18 +281,19 @@ impl DeviceAuthCode {
     /// Validates the given `user_code`
     #[inline]
     pub fn user_code(&self) -> &str {
-        &self.device_code[..(*DEVICE_GRANT_USER_CODE_LENGTH as usize)]
+        let len = RauthyConfig::get().vars.device_grant.user_code_length as usize;
+        &self.device_code[..len]
     }
 
     pub fn verification_uri(&self) -> String {
         // TODO config var if we should host at / as well for better UX ?
-        format!("{}/auth/v1/device", *PUB_URL_WITH_SCHEME)
+        format!("{}/auth/v1/device", RauthyConfig::get().pub_url_with_scheme)
     }
 
     pub fn verification_uri_complete(&self) -> String {
         format!(
             "{}/auth/v1/device?code={}",
-            *PUB_URL_WITH_SCHEME,
+            RauthyConfig::get().pub_url_with_scheme,
             self.user_code()
         )
     }

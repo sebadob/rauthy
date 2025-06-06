@@ -1,13 +1,13 @@
-use actix_web::{HttpResponse, web};
+use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_common::constants::IDX_LOGIN_TIME;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::failed_login_counter::FailedLoginCounter;
 use rauthy_models::entity::ip_blacklist::IpBlacklist;
 use rauthy_models::events::event::Event;
 use rauthy_models::html::templates::TooManyRequestsHtml;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::cmp::min;
 use std::net::IpAddr;
 use std::ops::{Add, Sub};
@@ -22,7 +22,6 @@ long it took for a successful login. If a login failed though, the answer will b
 current average for a successful login, to prevent things like username enumeration.
  */
 pub async fn handle_login_delay(
-    data: &web::Data<AppState>,
     peer_ip: IpAddr,
     start: Duration,
     res: Result<HttpResponse, ErrorResponse>,
@@ -56,7 +55,8 @@ pub async fn handle_login_delay(
             let failed_logins = min(failed_logins, u32::MAX as i64) as u32;
             warn!("Failed Logins from {}: {}", peer_ip, failed_logins);
 
-            data.tx_events
+            RauthyConfig::get()
+                .tx_events
                 .send_async(Event::invalid_login(failed_logins, peer_ip.to_string()))
                 .await
                 .unwrap();
@@ -74,23 +74,23 @@ pub async fn handle_login_delay(
             let sleep_time = match failed_logins as u64 {
                 // n-th blacklist -> blocks for 24h with each invalid request
                 t if t >= 25 => {
-                    return build_send_event(data, &peer_ip, 86400).await;
+                    return build_send_event(&peer_ip, 86400).await;
                 }
                 t if t > 20 => sleep_time_median + t * 20_000,
                 20 => {
-                    return build_send_event(data, &peer_ip, 3600).await;
+                    return build_send_event(&peer_ip, 3600).await;
                 }
                 t if t > 15 => sleep_time_median + t * 15_000,
                 15 => {
-                    return build_send_event(data, &peer_ip, 900).await;
+                    return build_send_event(&peer_ip, 900).await;
                 }
                 t if t > 10 => sleep_time_median + t * 10_000,
                 10 => {
-                    return build_send_event(data, &peer_ip, 600).await;
+                    return build_send_event(&peer_ip, 600).await;
                 }
                 t if t > 7 => sleep_time_median + t * 5_000,
                 7 => {
-                    return build_send_event(data, &peer_ip, 60).await;
+                    return build_send_event(&peer_ip, 60).await;
                 }
                 t if t >= 5 => sleep_time_median + t * 3_000,
                 t if t >= 3 => sleep_time_median + t * 2_000,
@@ -106,7 +106,6 @@ pub async fn handle_login_delay(
 }
 
 async fn build_send_event(
-    data: &web::Data<AppState>,
     peer_ip: &IpAddr,
     nbf_seconds: u32,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -114,7 +113,8 @@ async fn build_send_event(
     let ts = not_before.timestamp();
     let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
 
-    data.tx_events
+    RauthyConfig::get()
+        .tx_events
         .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
         .await
         .unwrap();

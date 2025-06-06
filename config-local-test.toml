@@ -1,0 +1,64 @@
+#[access]
+#cookie_mode = 'danger-insecure'
+
+[auth_headers]
+enable = true
+
+[cluster]
+node_id = 1
+nodes = ["1 localhost:8100 localhost:8200"]
+# '123SuperMegaSafe'
+password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
+secret_raft = "SuperSecureSecret1337"
+secret_api = "SuperSecureSecret1337"
+
+[database]
+pg_host = 'localhost'
+pg_user = 'rauthy'
+pg_password = '123SuperSafe'
+
+[dynamic_clients]
+enable = true
+
+[email]
+rauthy_admin_email = 'admin@localhost'
+
+[encryption]
+keys = ['bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=']
+key_active = 'bVCyTsGaggVy5yqQ'
+
+[ephemeral_clients]
+enable = true
+enable_web_id = true
+enable_solid_aud = true
+allowed_flows = ['authorization_code', 'refresh_token']
+
+[http_client]
+danger_unencrypted = true
+danger_insecure = true
+
+[mfa]
+admin_force_mfa = false
+
+[pow]
+difficulty = 10
+
+[server]
+port_http = 8080
+port_https = 8443
+scheme = 'https'
+pub_url = 'localhost:8443'
+http_workers = 1
+metrics_enable = true
+swagger_ui_enable = true
+
+[tls]
+cert_path = 'tls/cert-chain.pem'
+key_path = 'tls/key.pem'
+
+[user_registration]
+enable = true
+
+[webauthn]
+rp_id = 'localhost'
+rp_origin = 'http://localhost:8080'

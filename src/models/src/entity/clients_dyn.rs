@@ -1,10 +1,8 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
-use actix_web::web;
+use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
 use cryptr::EncValue;
 use hiqlite_macros::params;
-use rauthy_common::constants::{CACHE_TTL_DYN_CLIENT, DEVICE_GRANT_RATE_LIMIT};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -58,12 +56,13 @@ impl ClientDyn {
             DB::pg_query_one(sql, &[&id]).await?
         };
 
+        let ttl = RauthyConfig::get().vars.dynamic_clients.rate_limit_sec as i64;
         client
             .put(
                 Cache::ClientDynamic,
                 ClientDyn::get_cache_entry(&slf.id),
                 &slf,
-                *CACHE_TTL_DYN_CLIENT,
+                Some(ttl),
             )
             .await?;
 
@@ -104,13 +103,13 @@ impl ClientDyn {
             }
             None => {
                 let now = Utc::now().timestamp();
+                let ttl = RauthyConfig::get()
+                    .vars
+                    .device_grant
+                    .rate_limit
+                    .map(|l| l as i64);
                 client
-                    .put(
-                        Cache::IpRateLimit,
-                        ip.to_string(),
-                        &now,
-                        (*DEVICE_GRANT_RATE_LIMIT).map(|i| i as i64),
-                    )
+                    .put(Cache::IpRateLimit, ip.to_string(), &now, ttl)
                     .await?;
             }
         }
@@ -118,8 +117,8 @@ impl ClientDyn {
         Ok(())
     }
 
-    pub fn registration_client_uri(data: &web::Data<AppState>, id: &str) -> String {
-        format!("{}/clients_dyn/{}", data.issuer, id)
+    pub fn registration_client_uri(id: &str) -> String {
+        format!("{}/clients_dyn/{}", RauthyConfig::get().issuer, id)
     }
 
     pub fn registration_token_plain(&self) -> Result<String, ErrorResponse> {

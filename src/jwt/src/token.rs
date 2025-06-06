@@ -3,25 +3,16 @@ use chrono::Utc;
 use rauthy_common::utils::{base64_url_no_pad_decode_buf, base64_url_no_pad_encode_buf};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
+use rauthy_models::rauthy_config::RauthyConfig;
 use serde::{Deserialize, Serialize};
-use std::env;
 use std::fmt::Debug;
-use std::sync::LazyLock;
 use tracing::warn;
-
-static TOKEN_LEN_LIMIT: LazyLock<usize> = LazyLock::new(|| {
-    env::var("TOKEN_LEN_LIMIT")
-        .as_deref()
-        .unwrap_or("4096")
-        .parse::<usize>()
-        .expect("Cannot parse TOKEN_LEN_LIMIT as usize")
-});
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct JwtHeader<'a> {
     pub alg: JwkKeyPairAlg,
     pub kid: &'a str,
-    // should always be JWT
+    // should always be JWT -> DPoP tokens have their own validation
     pub typ: &'a str,
 }
 
@@ -56,14 +47,13 @@ impl JwtToken {
     /// claims bytes will be written into `buf`.
     pub async fn validate_claims_into(
         token: &str,
-        issuer: &str,
         expected_type: Option<JwtTokenType>,
         allowed_clock_skew_seconds: u16,
         buf: &mut Vec<u8>,
     ) -> Result<(), ErrorResponse> {
         debug_assert!(buf.is_empty());
 
-        if token.len() > *TOKEN_LEN_LIMIT {
+        if token.len() > RauthyConfig::get().vars.access.token_len_limit as usize {
             warn!(
                 "Received a JWT token above the size limit TOKEN_LEN_LIMIT. Either this is an \
                 exhaustion attack, or you create very big tokens and might need to increase the \
@@ -123,7 +113,7 @@ impl JwtToken {
         buf.clear();
         base64_url_no_pad_decode_buf(claims, buf)?;
         serde_json::from_slice::<ValidationClaims>(buf)?.validate(
-            issuer,
+            &RauthyConfig::get().issuer,
             expected_type,
             allowed_clock_skew_seconds,
         )?;

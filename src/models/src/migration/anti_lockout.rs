@@ -1,18 +1,23 @@
 use crate::database::DB;
 use crate::entity::clients::Client;
+use crate::rauthy_config::RauthyConfig;
 use deadpool_postgres::GenericClient;
-use rauthy_common::constants::{
-    ADMIN_FORCE_MFA, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL,
-};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use tracing::debug;
 
-pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
+pub async fn anti_lockout() -> Result<(), ErrorResponse> {
     debug!("Executing anti_lockout_check");
 
-    let (redirect_uris, allowed_origins) = if *DEV_MODE {
-        let (ip, _) = PUB_URL.split_once(':').expect("PUB_URL must have a port");
+    let vars = &RauthyConfig::get().vars;
+    let issuer = &RauthyConfig::get().issuer;
+    let (redirect_uris, allowed_origins) = if vars.dev.dev_mode {
+        let (ip, _) = RauthyConfig::get()
+            .vars
+            .server
+            .pub_url
+            .split_once(':')
+            .expect("PUB_URL must have a port");
         let origin = if ip != "localhost" {
             format!("https://{}:5173", ip)
         } else {
@@ -49,9 +54,9 @@ pub async fn anti_lockout(issuer: &str) -> Result<(), ErrorResponse> {
         scopes: "openid".to_string(),
         default_scopes: "openid".to_string(),
         challenge: Some("S256".to_string()),
-        force_mfa: *ADMIN_FORCE_MFA,
-        client_uri: Some(PUB_URL_WITH_SCHEME.to_string()),
-        contacts: RAUTHY_ADMIN_EMAIL.clone(),
+        force_mfa: RauthyConfig::get().vars.mfa.admin_force_mfa,
+        client_uri: Some(RauthyConfig::get().pub_url_with_scheme.clone()),
+        contacts: vars.email.rauthy_admin_email.clone(),
         backchannel_logout_uri: None,
         restrict_group_prefix: None,
     };

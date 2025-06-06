@@ -1,8 +1,7 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
-use actix_web::web;
-use rauthy_common::constants::{CACHE_TTL_APP, ENABLE_DYN_CLIENT_REG, GRANT_TYPE_DEVICE_CODE};
+use crate::rauthy_config::RauthyConfig;
+use rauthy_common::constants::{CACHE_TTL_APP, GRANT_TYPE_DEVICE_CODE};
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -41,7 +40,7 @@ pub struct WellKnown {
 const IDX: &str = ".well-known";
 
 impl WellKnown {
-    pub async fn json(data: &web::Data<AppState>) -> Result<String, ErrorResponse> {
+    pub async fn json() -> Result<String, ErrorResponse> {
         let client = DB::hql();
         if let Some(slf) = client.get(Cache::App, IDX).await? {
             return Ok(slf);
@@ -52,7 +51,7 @@ impl WellKnown {
             .into_iter()
             .map(|s| s.name)
             .collect::<Vec<String>>();
-        let slf = Self::new(&data.issuer, scopes);
+        let slf = Self::new(scopes);
         let json = serde_json::to_string(&slf)?;
 
         client.put(Cache::App, IDX, &json, CACHE_TTL_APP).await?;
@@ -62,13 +61,13 @@ impl WellKnown {
 
     /// Rebuilds the WellKnown, serializes it as json and updates it inside the cache.
     /// Should be called after any update on the Scopes.
-    pub async fn rebuild(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn rebuild() -> Result<(), ErrorResponse> {
         let scopes = Scope::find_all()
             .await?
             .into_iter()
             .map(|s| s.name)
             .collect::<Vec<String>>();
-        let slf = Self::new(&data.issuer, scopes);
+        let slf = Self::new(scopes);
         let json = serde_json::to_string(&slf)?;
 
         DB::hql().put(Cache::App, IDX, &json, CACHE_TTL_APP).await?;
@@ -78,14 +77,19 @@ impl WellKnown {
 }
 
 impl WellKnown {
-    pub fn new(issuer: &str, scopes_supported: Vec<String>) -> Self {
+    pub fn new(scopes_supported: Vec<String>) -> Self {
+        let issuer = &RauthyConfig::get().issuer;
+
         let authorization_endpoint = format!("{}/oidc/authorize", issuer);
         let device_authorization_endpoint = format!("{}/oidc/device", issuer);
         let token_endpoint = format!("{}/oidc/token", issuer);
         let introspection_endpoint = format!("{}/oidc/introspect", issuer);
         let userinfo_endpoint = format!("{}/oidc/userinfo", issuer);
-        let registration_endpoint =
-            ENABLE_DYN_CLIENT_REG.then_some(format!("{}/clients_dyn", issuer));
+        let registration_endpoint = RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .enable
+            .then_some(format!("{}/clients_dyn", issuer));
         let end_session_endpoint = format!("{}/oidc/logout", issuer);
         let jwks_uri = format!("{}/oidc/certs", issuer);
         let grant_types_supported = vec![

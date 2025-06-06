@@ -4,7 +4,6 @@ use actix_web::{App, HttpServer, middleware, web};
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
 use rauthy_common::is_hiqlite;
-use rauthy_common::password_hasher::MAX_HASH_THREADS;
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, dev_only, events, fed_cm, generic, groups, html,
@@ -15,11 +14,11 @@ use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::ListenScheme;
-use rauthy_models::app_state::AppState;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::cmp::max;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
-use std::{env, thread};
+use std::thread;
 use tracing::{error, info};
 // TODO Currently, we have some duplicated code in here for building the HttpServer.
 // This is due to the strict typing from actix_web. We want to be able to conditionally `.wrap`
@@ -30,9 +29,9 @@ use tracing::{error, info};
 // There is most probably a way to do this when we wrap it inside something like
 // `Box<dyn ServiceFactory<_>>`, but I have not figured out the correct type for that yet.
 
-pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Result<()> {
-    let listen_scheme = app_state.listen_scheme.clone();
-    let listen_addr = app_state.listen_addr.clone();
+pub async fn server_with_metrics() -> std::io::Result<()> {
+    let listen_scheme = RauthyConfig::get().listen_scheme.clone();
+    let listen_addr = RauthyConfig::get().vars.server.listen_address.to_string();
 
     let shared_registry = Registry::new();
     let metrics = PrometheusMetricsBuilder::new("api")
@@ -44,14 +43,13 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
         .unwrap();
 
     thread::spawn(move || {
-        let addr = env::var("METRICS_ADDR").unwrap_or_else(|_| "0.0.0.0".to_string());
-        let port = env::var("METRICS_PORT").unwrap_or_else(|_| "9090".to_string());
-        if let Err(err) = Ipv4Addr::from_str(&addr) {
+        let vars = &RauthyConfig::get().vars.server;
+        if let Err(err) = Ipv4Addr::from_str(&vars.metrics_addr) {
             let msg = format!("Error parsing METRICS_ADDR: {}", err);
             error!(msg);
             panic!("{}", msg);
         }
-        let addr_full = format!("{}:{}", addr, port);
+        let addr_full = format!("{}:{}", vars.metrics_addr, vars.metrics_port);
 
         info!("Metrics available on: http://{}/metrics", addr_full);
         // TODO create single threaded runtime specifically -> probably use tokio
@@ -77,7 +75,6 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
     let server = HttpServer::new(move || {
         let mut app = App::new()
             .wrap(RauthyLoggingMiddleware)
-            .app_data(app_state.clone())
             .wrap(RauthyPrincipalMiddleware)
             .wrap(CsrfProtectionMiddleware)
             .wrap(default_headers())
@@ -100,7 +97,7 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
-            &app_state.listen_scheme,
+            &RauthyConfig::get().listen_scheme,
             ListenScheme::UnixHttp | ListenScheme::UnixHttps
         ) {
             app = app.app_data(UseDummyAddress);
@@ -115,7 +112,11 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
     match listen_scheme {
         ListenScheme::Http => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{}:{}",
+                    &listen_addr,
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .run()
                 .await
         }
@@ -123,7 +124,11 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
         ListenScheme::Https => {
             server
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{}:{}",
+                        &listen_addr,
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -132,9 +137,17 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
 
         ListenScheme::HttpHttps => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{}:{}",
+                    &listen_addr,
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{}:{}",
+                        &listen_addr,
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -148,14 +161,13 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
     }
 }
 
-pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::Result<()> {
-    let listen_scheme = app_state.listen_scheme.clone();
-    let listen_addr = app_state.listen_addr.clone();
+pub async fn server_without_metrics() -> std::io::Result<()> {
+    let listen_scheme = RauthyConfig::get().listen_scheme.clone();
+    let listen_addr = RauthyConfig::get().vars.server.listen_address.to_string();
 
     let server = HttpServer::new(move || {
         let mut app = App::new()
             .wrap(RauthyLoggingMiddleware)
-            .app_data(app_state.clone())
             .wrap(RauthyPrincipalMiddleware)
             .wrap(CsrfProtectionMiddleware)
             .wrap(default_headers())
@@ -169,7 +181,7 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
-            &app_state.listen_scheme,
+            &RauthyConfig::get().listen_scheme,
             ListenScheme::UnixHttp | ListenScheme::UnixHttps
         ) {
             app = app.app_data(UseDummyAddress);
@@ -184,7 +196,11 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
     match listen_scheme {
         ListenScheme::Http => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{}:{}",
+                    &listen_addr,
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .run()
                 .await
         }
@@ -192,7 +208,11 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
         ListenScheme::Https => {
             server
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{}:{}",
+                        &listen_addr,
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -201,9 +221,17 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
 
         ListenScheme::HttpHttps => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{}:{}",
+                    &listen_addr,
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{}:{}",
+                        &listen_addr,
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -215,18 +243,6 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
             server.bind_uds(listen_addr)?.run().await
         }
     }
-}
-
-fn get_http_port() -> String {
-    let port = env::var("LISTEN_PORT_HTTP").unwrap_or_else(|_| "8080".to_string());
-    info!("HTTP listen port: {}", port);
-    port
-}
-
-fn get_https_port() -> String {
-    let port = env::var("LISTEN_PORT_HTTPS").unwrap_or_else(|_| "8443".to_string());
-    info!("HTTPS listen port: {}", port);
-    port
 }
 
 fn default_headers() -> middleware::DefaultHeaders {
@@ -422,18 +438,18 @@ fn api_services() -> actix_web::Scope {
 }
 
 fn workers() -> usize {
-    let mut workers = env::var("HTTP_WORKERS")
-        .as_deref()
-        .unwrap_or("0")
-        .parse::<usize>()
-        .expect("Unable to parse HTTP_WORKERS");
+    let vars = &RauthyConfig::get().vars;
+    let mut workers = vars.server.http_workers as usize;
     if workers == 0 {
         let cores = num_cpus::get();
         if cores < 4 {
             workers = 1;
         } else {
             let reserve = if is_hiqlite() { 2 } else { 1 };
-            workers = max(2, cores as i64 - *MAX_HASH_THREADS as i64 - reserve) as usize;
+            workers = max(
+                2,
+                cores as i64 - vars.hashing.max_hash_threads as i64 - reserve,
+            ) as usize;
         }
     }
     workers

@@ -1,31 +1,24 @@
-use actix_web::web;
 use chrono::Utc;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
 use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::logout;
-use std::env;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error, info};
 
-pub async fn user_expiry_checker(data: web::Data<AppState>) {
-    let secs = env::var("SCHED_USER_EXP_MINS")
-        .as_deref()
-        .unwrap_or("60")
-        .parse::<u64>()
-        .expect("Cannot parse 'SCHED_USER_EXP_MINS' to u64");
+pub async fn user_expiry_checker() {
+    let secs = RauthyConfig::get().vars.database.sched_user_exp_mins as u64;
     let mut interval = tokio::time::interval(Duration::from_secs(secs * 60));
-    let cleanup_after_secs = env::var("SCHED_USER_EXP_DELETE_MINS")
-        .map(|s| {
-            s.parse::<u64>()
-                .expect("Cannot parse 'SCHED_USER_EXP_DELETE_MINS' to u64")
-                * 60
-        })
-        .ok();
+    let cleanup_after_secs = RauthyConfig::get()
+        .vars
+        .database
+        .sched_user_exp_delete_mins
+        .map(|s| s as u64 * 60);
     if cleanup_after_secs.is_none() {
         info!("Auto cleanup for expired users disabled");
     }
@@ -41,16 +34,17 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
         }
 
         debug!("Running user_expiry_checker scheduler");
-        if let Err(err) = execute(&data, cleanup_after_secs).await {
+        if let Err(err) = execute(cleanup_after_secs).await {
             error!("Error during user_expiry_checker: {}", err.message);
         }
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }
 
-async fn execute(
-    data: &web::Data<AppState>,
-    cleanup_after_secs: Option<u64>,
-) -> Result<(), ErrorResponse> {
+async fn execute(cleanup_after_secs: Option<u64>) -> Result<(), ErrorResponse> {
     let now = Utc::now().timestamp();
     for mut user in User::find_expired().await? {
         debug!("Found expired user {}: {}", user.id, user.email);
@@ -73,7 +67,7 @@ async fn execute(
 
         Session::invalidate_for_user(&user.id).await?;
         RefreshToken::invalidate_for_user(&user.id).await?;
-        logout::execute_backchannel_logout(data, None, Some(user.id.clone())).await?;
+        logout::execute_backchannel_logout(None, Some(user.id.clone())).await?;
 
         // possibly auto-cleanup expired user
         if let Some(secs) = cleanup_after_secs {

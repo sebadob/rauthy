@@ -8,11 +8,11 @@ use crate::events::{
     EVENT_LEVEL_RAUTHY_START, EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED,
     EVENT_LEVEL_USER_EMAIL_CHANGE, EVENT_LEVEL_USER_PASSWORD_RESET,
 };
+use crate::rauthy_config::RauthyConfig;
 use chrono::{DateTime, Timelike, Utc};
 use hiqlite::Row;
 use hiqlite_macros::params;
 use rauthy_api_types::events::EventResponse;
-use rauthy_common::constants::EMAIL_SUB_PREFIX;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_local_hostname, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -403,7 +403,8 @@ impl From<&Event> for Notification {
             EventLevel::Warning => "⚠️",
             EventLevel::Critical => "🆘",
         };
-        let head = format!("{} {} - {}", icon, *EMAIL_SUB_PREFIX, value.level.as_str());
+        let prefix = RauthyConfig::get().vars.email.sub_prefix.as_ref();
+        let head = format!("{} {} - {}", icon, prefix, value.level.as_str());
 
         let d = DateTime::from_timestamp(value.timestamp / 1000, 0).unwrap_or_default();
         let row_1 = format!("{} {}", d.format("%Y/%m/%d %H:%M:%S"), value.typ);
@@ -869,8 +870,8 @@ impl Event {
     }
 
     #[inline(always)]
-    pub async fn send(self, tx: &flume::Sender<Self>) -> Result<(), ErrorResponse> {
-        match tx.send_async(self).await {
+    pub async fn send(self) -> Result<(), ErrorResponse> {
+        match RauthyConfig::get().tx_events.send_async(self).await {
             Ok(_) => Ok(()),
             Err(err) => {
                 error!("Event::send: {:?}", err);

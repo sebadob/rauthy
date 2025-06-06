@@ -1,13 +1,11 @@
-use crate::app_state::AppState;
 use crate::entity::db_version::DbVersion;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, db_migrate, init_prod};
-use actix_web::web;
+use crate::rauthy_config::RauthyConfig;
 use futures_util::StreamExt;
 use hiqlite::NodeConfig;
 use hiqlite::cache_idx::CacheIndex;
 use hiqlite_macros::embed::*;
-use rauthy_common::constants::DEV_MODE;
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
 use std::env;
@@ -64,12 +62,11 @@ pub struct DB;
 
 impl DB {
     /// Builds the NodeConfig and starts the Hiqlite node
-    pub async fn init() -> Result<(), ErrorResponse> {
+    pub async fn init(config: hiqlite::NodeConfig) -> Result<(), ErrorResponse> {
         if HIQLITE_CLIENT.get().is_some() {
             panic!("DB::init() must only be called once at startup");
         }
 
-        let config = NodeConfig::from_env();
         // Note: At the time of writing, I have not included the option to not start the DB
         // layer when the feature is enabled, as this would mean many adoptions and additional
         // checks in the Hiqlite code.
@@ -121,7 +118,7 @@ impl DB {
         user: &str,
         password: &str,
         db_name: &str,
-        db_max_conn: u32,
+        db_max_conn: u16,
     ) -> Result<deadpool_postgres::Pool, ErrorResponse> {
         // let mut config: tokio_postgres::Config = db_host.parse().expect("invalid database url");
         let mut config: tokio_postgres::Config = tokio_postgres::Config::default();
@@ -137,7 +134,7 @@ impl DB {
         config.load_balance_hosts(LoadBalanceHosts::Random);
         config.ssl_mode(SslMode::Prefer);
 
-        let tls_config = if let Some("true") = env::var("PG_TLS_NO_VERIFY").ok().as_deref() {
+        let tls_config = if RauthyConfig::get().vars.database.pg_tls_no_verify {
             rustls::ClientConfig::builder()
                 .dangerous()
                 .with_custom_certificate_verifier(Arc::new(NoTlsVerifier {}))
@@ -179,21 +176,15 @@ impl DB {
     }
 
     async fn init_connect_postgres() -> Result<(), ErrorResponse> {
-        let db_max_conn = env::var("PG_MAX_CONN")
-            .unwrap_or_else(|_| "20".to_string())
-            .parse::<u32>()
-            .expect("Error parsing DATABASE_MAX_CONN to u32");
+        let cfg = &RauthyConfig::get().vars.database;
+        let host = cfg.pg_host.as_ref().expect("PG_HOST is not set");
+        let user = cfg.pg_user.as_ref().expect("PG_USER is not set");
+        let password = cfg.pg_password.as_ref().expect("PG_PASSWORD is not set");
+        let db_name = cfg.pg_db_name.as_ref();
 
-        let host = env::var("PG_HOST").expect("PG_HOST is not set");
-        let port = env::var("PG_PORT")
-            .unwrap_or_else(|_| "5432".to_string())
-            .parse::<u16>()
-            .expect("Cannot parse PG_PORT to u16");
-        let user = env::var("PG_USER").expect("PG_USER is not set");
-        let password = env::var("PG_PASSWORD").expect("PG_PASSWORD is not set");
-        let db_name = env::var("PG_DB_NAME").unwrap_or_else(|_| "rauthy".to_string());
         let pool =
-            Self::connect_postgres(&host, port, &user, &password, &db_name, db_max_conn).await?;
+            Self::connect_postgres(host, cfg.pg_port, user, password, db_name, cfg.pg_max_conn)
+                .await?;
 
         PG_POOL
             .set(pool)
@@ -202,7 +193,7 @@ impl DB {
         Ok(())
     }
 
-    pub async fn migrate(app_state: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn migrate() -> Result<(), ErrorResponse> {
         // before we do any db migrations, we need to check the current DB version
         // for compatibility
         let db_version = DbVersion::check_app_version().await?;
@@ -220,9 +211,8 @@ impl DB {
         }
 
         // migrate dynamic DB data
-        if !*DEV_MODE {
-            init_prod::migrate_init_prod(app_state.argon2_params.clone(), &app_state.issuer)
-                .await?;
+        if !RauthyConfig::get().vars.dev.dev_mode {
+            init_prod::migrate_init_prod().await?;
         }
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {
@@ -265,13 +255,11 @@ impl DB {
                     );
                 };
             }
-        } else if *DEV_MODE {
-            migrate_dev_data(&app_state.issuer)
-                .await
-                .expect("Migrating DEV DATA");
+        } else if RauthyConfig::get().vars.dev.dev_mode {
+            migrate_dev_data().await.expect("Migrating DEV DATA");
         }
 
-        if let Err(err) = anti_lockout::anti_lockout(&app_state.issuer).await {
+        if let Err(err) = anti_lockout::anti_lockout().await {
             error!("Error when applying anti-lockout check: {:?}", err);
         }
 

@@ -2,7 +2,6 @@ use crate::{
     api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
     scopes, sessions, themes, users,
 };
-use actix_web::web;
 use rauthy_api_types::*;
 use rauthy_api_types::{
     api_keys::*, auth_providers::*, blacklist::*, clients::*, events::*, fed_cm::*, generic::*,
@@ -11,9 +10,9 @@ use rauthy_api_types::{
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::ListenScheme;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity;
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::token_set;
 use utoipa::openapi::{ExternalDocs, Server};
 use utoipa::{OpenApi, openapi};
@@ -314,7 +313,7 @@ use utoipa::{OpenApi, openapi};
 pub struct ApiDoc;
 
 impl ApiDoc {
-    pub fn build(app_state: &web::Data<AppState>) -> openapi::OpenApi {
+    pub fn build() -> openapi::OpenApi {
         let mut doc = Self::openapi();
 
         doc.info = openapi::Info::new("Rauthy Single Sign-on", &format!("v{}", RAUTHY_VERSION));
@@ -338,15 +337,16 @@ impl ApiDoc {
         };
 
         #[cfg(not(target_os = "windows"))]
-        let scheme = if (!*PROXY_MODE && app_state.listen_scheme == ListenScheme::Http)
-            || app_state.listen_scheme == ListenScheme::UnixHttp
+        let listen_scheme = &RauthyConfig::get().listen_scheme;
+        let scheme = if (!*PROXY_MODE.get().unwrap() && listen_scheme == &ListenScheme::Http)
+            || listen_scheme == &ListenScheme::UnixHttp
         {
             "http://"
         } else {
             "https://"
         };
 
-        let pub_url = &app_state.public_url;
+        let pub_url = &RauthyConfig::get().vars.server.pub_url;
         let url = format!("{}{}/auth/v1", scheme, pub_url);
         doc.servers = Some(vec![Server::new(url)]);
 

@@ -14,10 +14,9 @@ WORKDIR /app
 COPY --chown=$TARGET_USER ./out/rauthy_$TARGETARCH ./rauthy
 COPY --chown=$TARGET_USER ./out/empty/ ./data
 
-COPY --chown=$TARGET_USER ./tls/ca-chain.pem ./tls/ca-chain.pem
 COPY --chown=$TARGET_USER ./tls/cert-chain.pem ./tls/cert-chain.pem
 COPY --chown=$TARGET_USER ./tls/key.pem ./tls/key.pem
 
-COPY --chown=$TARGET_USER ./rauthy-local_test.cfg ./rauthy-local_test.cfg
+COPY --chown=$TARGET_USER ./config-local-test.toml ./config-local-test.toml
 
 CMD ["/app/rauthy"]

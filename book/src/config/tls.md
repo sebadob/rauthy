@@ -103,7 +103,8 @@ At the time of writing, it does not accept a custom Root CA yet. In this case yo
 
 ### Rauthy Server / API
 
-By default, rauthy will expect a certificate and a key file in `/app/tls/tls.key` and `/app/tls/tls.crt`, which is the
+By default, rauthy will expect a certificate and a key file in `/app/tls/tls.key` and `/app/tls/tls.crt`, which
+is the
 default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER format too,
 if you rename the file-ending to `*.der`.
 

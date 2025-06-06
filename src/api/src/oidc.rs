@@ -18,17 +18,11 @@ use rauthy_api_types::sessions::SessionState;
 use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
 use rauthy_common::compression::{compress_br_dyn, compress_gzip};
 use rauthy_common::constants::{
-    APPLICATION_JSON, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED, AUTH_HEADER_FAMILY_NAME,
-    AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA, AUTH_HEADER_ROLES,
-    AUTH_HEADER_USER, AUTH_HEADERS_ENABLE, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
-    DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, EXPERIMENTAL_FED_CM_ENABLE,
-    GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
-    SESSION_TIMEOUT,
+    APPLICATION_JSON, COOKIE_MFA, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::clients::Client;
@@ -47,6 +41,7 @@ use rauthy_models::html::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
 };
 use rauthy_models::language::Language;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::{authorize, logout, token_info, userinfo, validation};
 use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
@@ -54,7 +49,7 @@ use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tracing::{debug, error};
+use tracing::{error, warn};
 use validator::Validate;
 
 /// OIDC Authorization HTML
@@ -116,7 +111,8 @@ pub async fn get_authorize(
         true
     } else if let Some(max_age) = params.max_age {
         if let Some(session) = &principal.session {
-            let session_created = session.exp - *SESSION_LIFETIME as i64;
+            let session_created =
+                session.exp - RauthyConfig::get().vars.lifetimes.session_lifetime as i64;
             Utc::now().timestamp() > session_created + max_age
         } else {
             true
@@ -170,7 +166,7 @@ pub async fn get_authorize(
                 HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
                 HtmlTemplate::ClientLogoUpdated(logo_updated),
                 HtmlTemplate::CsrfToken(csrf.to_string()),
-                HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
+                HtmlTemplate::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
                 HtmlTemplate::LoginAction(FrontendAction::Refresh),
             ],
         );
@@ -187,10 +183,16 @@ pub async fn get_authorize(
     let session = if let Some(session) = &principal.session {
         match principal.validate_session_auth_or_init() {
             Ok(_) => session.clone(),
-            Err(_) => Session::new(*SESSION_LIFETIME, Some(real_ip_from_req(&req)?)),
+            Err(_) => Session::new(
+                RauthyConfig::get().vars.lifetimes.session_lifetime,
+                Some(real_ip_from_req(&req)?),
+            ),
         }
     } else {
-        Session::new(*SESSION_LIFETIME, Some(real_ip_from_req(&req)?))
+        Session::new(
+            RauthyConfig::get().vars.lifetimes.session_lifetime,
+            Some(real_ip_from_req(&req)?),
+        )
     };
 
     if let Err(err) = session.save().await {
@@ -209,7 +211,7 @@ pub async fn get_authorize(
             HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
             HtmlTemplate::ClientLogoUpdated(logo_updated),
             HtmlTemplate::CsrfToken(session.csrf_token.clone()),
-            HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
+            HtmlTemplate::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
             HtmlTemplate::LoginAction(action),
         ],
     );
@@ -240,7 +242,7 @@ pub async fn get_authorize(
             .body(body_bytes));
     }
 
-    if *EXPERIMENTAL_FED_CM_ENABLE {
+    if RauthyConfig::get().vars.fedcm.experimental_enable {
         Ok(HttpResponse::build(StatusCode::OK)
             .cookie(session.client_cookie_fed_cm())
             .cookie(cookie)
@@ -282,18 +284,16 @@ pub async fn get_authorize(
 )]
 #[post("/oidc/authorize")]
 pub async fn post_authorize(
-    data: web::Data<AppState>,
     req: HttpRequest,
     Json(payload): Json<LoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    post_authorize_handle(data, req, payload, principal).await
+    post_authorize_handle(req, payload, principal).await
 }
 
 // extracted to be easily usable by post_dev_only_endpoints()
 #[inline(always)]
 pub async fn post_authorize_handle(
-    data: web::Data<AppState>,
     req: HttpRequest,
     payload: LoginRequest,
     principal: ReqPrincipal,
@@ -312,7 +312,6 @@ pub async fn post_authorize_handle(
     let mut user_needs_mfa = false;
 
     let res = match authorize::post_authorize(
-        &data,
         &req,
         payload,
         session.clone(),
@@ -324,7 +323,7 @@ pub async fn post_authorize_handle(
     {
         Ok(auth_step) => map_auth_step(auth_step, &req).await,
         Err(err) => {
-            debug!("POST /authorize Error: {:?}", err);
+            warn!("POST /authorize Error: {:?}", err);
             // We always must return the exact same error type, no matter what the actual error is,
             // to prevent information enumeration. The only exception is when the user needs to add
             // a passkey to the account while having given the correct credentials. In that case,
@@ -353,7 +352,7 @@ pub async fn post_authorize_handle(
     };
 
     let ip = real_ip_from_req(&req)?;
-    login_delay::handle_login_delay(&data, ip, start, res, has_password_been_hashed).await
+    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed).await
 }
 
 /// Immediate login refresh with valid session
@@ -469,7 +468,7 @@ pub async fn post_device_auth(
         return ErrorResponse::from(err).error_response();
     }
 
-    if DEVICE_GRANT_RATE_LIMIT.is_some() {
+    if RauthyConfig::get().vars.device_grant.rate_limit.is_some() {
         match real_ip_from_req(&req) {
             Err(err) => {
                 error!("{err}");
@@ -585,8 +584,8 @@ pub async fn post_device_auth(
         user_code,
         verification_uri,
         verification_uri_complete,
-        expires_in: *DEVICE_GRANT_CODE_LIFETIME,
-        interval: Some(*DEVICE_GRANT_POLL_INTERVAL),
+        expires_in: RauthyConfig::get().vars.device_grant.code_lifetime,
+        interval: Some(RauthyConfig::get().vars.device_grant.poll_interval),
     };
 
     HttpResponse::Ok().json(resp)
@@ -657,7 +656,6 @@ pub async fn post_device_verify(
 )]
 #[get("/oidc/logout")]
 pub async fn get_logout(
-    data: web::Data<AppState>,
     req: HttpRequest,
     Query(params): Query<LogoutRequest>,
     principal: Option<ReqPrincipal>,
@@ -667,7 +665,7 @@ pub async fn get_logout(
     }
 
     if params.id_token_hint.is_some() {
-        logout::post_logout_handle(req, data, params, None).await
+        logout::post_logout_handle(req, params, None).await
     } else if let Some(principal) = principal {
         // If we get any logout errors, maybe because there is no session anymore or whatever happens,
         // just redirect to rauthy's root page, since the user is not logged-in anyway anymore.
@@ -678,7 +676,7 @@ pub async fn get_logout(
         }
 
         Ok(
-            logout::get_logout_html(req, params, principal.into_inner().session.unwrap(), &data)
+            logout::get_logout_html(req, params, principal.into_inner().session.unwrap())
                 .await
                 .unwrap_or_else(|_| {
                     HttpResponse::build(StatusCode::from_u16(302).unwrap())
@@ -709,14 +707,13 @@ pub async fn get_logout(
 )]
 #[post("/oidc/logout")]
 pub async fn post_logout(
-    data: web::Data<AppState>,
     Form(payload): Form<LogoutRequest>,
     principal: Option<ReqPrincipal>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
     let session = principal.and_then(|p| p.validate_session_auth().ok().cloned());
-    logout::post_logout_handle(req, data, payload, session).await
+    logout::post_logout_handle(req, payload, session).await
 }
 
 /// Rotate JWKs
@@ -738,15 +735,10 @@ pub async fn post_logout(
     ),
 )]
 #[post("/oidc/rotate_jwk")]
-pub async fn rotate_jwk(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn rotate_jwk(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
-    JWKS::rotate(&data)
-        .await
-        .map(|_| HttpResponse::Ok().finish())
+    JWKS::rotate().await.map(|_| HttpResponse::Ok().finish())
 }
 
 /// Create a new session
@@ -768,13 +760,18 @@ pub async fn rotate_jwk(
 )]
 #[post("/oidc/session")]
 pub async fn post_session(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req).ok());
+    let session = Session::new(
+        RauthyConfig::get().vars.lifetimes.session_lifetime,
+        real_ip_from_req(&req).ok(),
+    );
     session.save().await?;
     let cookie = session.client_cookie();
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(*SESSION_TIMEOUT as i64));
+        .add(::time::Duration::seconds(
+            RauthyConfig::get().vars.lifetimes.session_lifetime as i64,
+        ));
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
@@ -786,7 +783,7 @@ pub async fn post_session(req: HttpRequest) -> Result<HttpResponse, ErrorRespons
         state: SessionState::from(session.state()?),
     };
 
-    if *EXPERIMENTAL_FED_CM_ENABLE {
+    if RauthyConfig::get().vars.fedcm.experimental_enable {
         Ok(HttpResponse::Created()
             .cookie(cookie)
             .cookie(session.client_cookie_fed_cm())
@@ -832,7 +829,9 @@ pub async fn get_session_info(principal: ReqPrincipal) -> HttpResponse {
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(*SESSION_TIMEOUT as i64));
+        .add(::time::Duration::seconds(
+            RauthyConfig::get().vars.lifetimes.session_timeout as i64,
+        ));
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: None,
@@ -881,7 +880,9 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(*SESSION_TIMEOUT as i64));
+        .add(::time::Duration::seconds(
+            RauthyConfig::get().vars.lifetimes.session_timeout as i64,
+        ));
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
@@ -917,7 +918,6 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
 #[tracing::instrument(level = "debug", skip_all, fields(grant_type = payload.grant_type))]
 pub async fn post_token(
     req: HttpRequest,
-    data: web::Data<AppState>,
     Form(payload): Form<TokenRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
@@ -928,13 +928,13 @@ pub async fn post_token(
         // the `urn:ietf:params:oauth:grant-type:device_code` needs
         // a fully customized handling here with customized error response
         // to meet the oauth rfc
-        return Ok(oidc::grant_type_device_code(&data, ip, payload).await);
+        return Ok(oidc::grant_type_device_code(ip, payload).await);
     }
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let has_password_been_hashed = payload.grant_type == "password";
 
-    let res = match oidc::get_token_set(payload, &data, req).await {
+    let res = match oidc::get_token_set(payload, req).await {
         Ok((token_set, headers)) => {
             let mut builder = HttpResponseBuilder::new(StatusCode::OK);
             for h in headers {
@@ -953,7 +953,7 @@ pub async fn post_token(
         }
     };
 
-    login_delay::handle_login_delay(&data, ip, start, res, has_password_been_hashed).await
+    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed).await
 }
 
 /// The token introspection endpoint for OAuth2
@@ -980,13 +980,12 @@ pub async fn post_token(
 )]
 #[post("/oidc/introspect")]
 pub async fn post_token_introspect(
-    data: web::Data<AppState>,
     req: HttpRequest,
     Form(payload): Form<TokenValidationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let (info, cors_header) = token_info::get_token_info(&data, &req, &payload.token).await?;
+    let (info, cors_header) = token_info::get_token_info(&req, &payload.token).await?;
     if let Some((n, v)) = cors_header {
         Ok(HttpResponse::Ok()
             .insert_header((n, v))
@@ -1023,11 +1022,8 @@ pub async fn post_token_introspect(
     ),
 )]
 #[get("/oidc/userinfo")]
-pub async fn get_userinfo(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
-    let (info, cors_header) = userinfo::get_userinfo(&data, req).await?;
+pub async fn get_userinfo(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    let (info, cors_header) = userinfo::get_userinfo(req).await?;
     if let Some((n, v)) = cors_header {
         Ok(HttpResponse::Ok()
             .insert_header((n, v))
@@ -1061,11 +1057,8 @@ pub async fn get_userinfo(
     ),
 )]
 #[post("/oidc/userinfo")]
-pub async fn post_userinfo(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
-    let (info, cors_header) = userinfo::get_userinfo(&data, req).await?;
+pub async fn post_userinfo(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    let (info, cors_header) = userinfo::get_userinfo(req).await?;
     if let Some((n, v)) = cors_header {
         Ok(HttpResponse::Ok()
             .insert_header((n, v))
@@ -1107,34 +1100,32 @@ pub async fn post_userinfo(
     ),
 )]
 #[get("/oidc/forward_auth")]
-pub async fn get_forward_auth(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
-    let (info, _) = userinfo::get_userinfo(&data, req).await?;
+pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    let (info, _) = userinfo::get_userinfo(req).await?;
 
-    if *AUTH_HEADERS_ENABLE {
+    let headers = &RauthyConfig::get().vars.auth_headers;
+    if headers.enable {
         Ok(HttpResponse::Ok()
-            .insert_header((AUTH_HEADER_USER.as_str(), info.id))
-            .insert_header((AUTH_HEADER_ROLES.as_str(), info.roles.join(",")))
+            .insert_header((headers.user.as_ref(), info.id))
+            .insert_header((headers.roles.as_ref(), info.roles.join(",")))
             .insert_header((
-                AUTH_HEADER_GROUPS.as_str(),
+                headers.groups.as_ref(),
                 info.groups.map(|g| g.join(",")).unwrap_or_default(),
             ))
-            .insert_header((AUTH_HEADER_EMAIL.as_str(), info.email.unwrap_or_default()))
+            .insert_header((headers.email.as_ref(), info.email.unwrap_or_default()))
             .insert_header((
-                AUTH_HEADER_EMAIL_VERIFIED.as_str(),
+                headers.email_verified.as_ref(),
                 info.email_verified.unwrap_or(false).to_string(),
             ))
             .insert_header((
-                AUTH_HEADER_FAMILY_NAME.as_str(),
+                headers.family_name.as_ref(),
                 info.family_name.unwrap_or_default(),
             ))
             .insert_header((
-                AUTH_HEADER_GIVEN_NAME.as_str(),
+                headers.given_name.as_ref(),
                 info.given_name.unwrap_or_default(),
             ))
-            .insert_header((AUTH_HEADER_MFA.as_str(), info.mfa_enabled.to_string()))
+            .insert_header((headers.mfa.as_ref(), info.mfa_enabled.to_string()))
             .finish())
     } else {
         Ok(HttpResponse::Ok().finish())
@@ -1154,8 +1145,8 @@ pub async fn get_forward_auth(
     ),
 )]
 #[get("/.well-known/openid-configuration")]
-pub async fn get_well_known(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
-    let wk = WellKnown::json(&data).await?;
+pub async fn get_well_known() -> Result<HttpResponse, ErrorResponse> {
+    let wk = WellKnown::json().await?;
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, APPLICATION_JSON))
         .insert_header((

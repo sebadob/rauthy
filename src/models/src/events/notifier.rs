@@ -1,12 +1,12 @@
 use crate::email;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel, EventType};
+use crate::rauthy_config::RauthyConfig;
 use async_trait::async_trait;
 use rauthy_error::ErrorResponse;
 use rauthy_notify::matrix::NotifierMatrix;
 use rauthy_notify::slack::NotifierSlack;
 use rauthy_notify::{Notification, Notify};
-use std::env;
 use std::sync::OnceLock;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
@@ -62,15 +62,11 @@ impl EventNotifier {
     }
 
     pub async fn init_notifiers(tx_email: mpsc::Sender<EMail>) -> Result<(), ErrorResponse> {
+        let vars = &RauthyConfig::get().vars.events;
+
         // E-Mail
-        if let Ok(email) = env::var("EVENT_EMAIL") {
-            let level = env::var("EVENT_NOTIFY_LEVEL_EMAIL")
-                .map(|level| {
-                    level.parse::<EventLevel>().expect(
-                        "Cannot parse EVENT_NOTIFY_LEVEL_EMAIL. Possible values: info, notice, warning, critical",
-                    )
-                })
-                .unwrap_or(EventLevel::Warning);
+        if let Some(email) = vars.email.clone() {
+            let level = vars.notify_level_email.clone();
             info!(
                 "E-Mail Event Notification's will be sent to {} with level: {:?}",
                 email, level
@@ -87,14 +83,8 @@ impl EventNotifier {
         }
 
         // Slack
-        if let Ok(url) = env::var("EVENT_SLACK_WEBHOOK") {
-            let level = env::var("EVENT_NOTIFY_LEVEL_SLACK")
-                .map(|level| {
-                    level.parse::<EventLevel>().expect(
-                        "Cannot parse EVENT_NOTIFY_LEVEL_SLACK. Possible values: info, notice, warning, critical",
-                    )
-                })
-                .unwrap_or(EventLevel::Notice);
+        if let Some(url) = vars.slack_webhook.clone() {
+            let level = vars.notify_level_slack.clone();
             info!(
                 "Event Notification's will be sent to Slack with level: {:?}",
                 level
@@ -107,42 +97,33 @@ impl EventNotifier {
         }
 
         // Matrix
-        if let Ok(user_id) = env::var("EVENT_MATRIX_USER_ID") {
-            let level = env::var("EVENT_NOTIFY_LEVEL_MATRIX")
-                .map(|level| {
-                    level.parse::<EventLevel>().expect(
-                        "Cannot parse EVENT_NOTIFY_LEVEL_MATRIX. Possible values: info, notice, warning, critical",
-                    )
-                })
-                .unwrap_or(EventLevel::Notice);
+        if let Some(user_id) = vars.matrix_user_id.as_ref() {
+            let level = vars.notify_level_matrix.clone();
+            let server_url = vars
+                .matrix_server_url
+                .clone()
+                .expect("`event.matrix_server_url` not set");
+            let room_id = vars
+                .matrix_room_id
+                .as_ref()
+                .expect("`event.matrix_room_id` not set");
 
-            let server_url = env::var("EVENT_MATRIX_SERVER_URL")
-                .unwrap_or_else(|_| "https://matrix-client.matrix.org".to_string());
-
-            let room_id = env::var("EVENT_MATRIX_ROOM_ID")
-                .expect("EVENT_MATRIX_USER_ID is given but no EVENT_MATRIX_ROOM_ID");
-
-            let access_token = env::var("EVENT_MATRIX_ACCESS_TOKEN").ok();
-            let user_password = env::var("EVENT_MATRIX_USER_PASSWORD").ok();
-
+            let access_token = vars.matrix_access_token.clone();
+            let user_password = vars.matrix_user_password.clone();
             if access_token.is_none() && user_password.is_none() {
-                panic!("Specific one of: EVENT_MATRIX_ACCESS_TOKEN or EVENT_MATRIX_USER_PASSWORD");
+                panic!(
+                    "Specific one of: `event.matrix_access_token` or `event.matrix_user_password`"
+                );
             }
-
-            let disable_tls_validation = env::var("EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION")
-                .unwrap_or_else(|_| "false".to_string())
-                .parse::<bool>()
-                .expect("Cannot parse EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION to bool");
-            let root_ca_path = env::var("EVENT_MATRIX_ROOT_CA_PATH").ok();
 
             match NotifierMatrix::try_new(
                 server_url,
-                &user_id,
-                &room_id,
+                user_id,
+                room_id,
                 access_token,
                 user_password,
-                disable_tls_validation,
-                root_ca_path.as_deref(),
+                vars.matrix_danger_disable_tls_validation,
+                vars.matrix_root_ca_path.as_deref(),
             )
             .await
             {
@@ -154,13 +135,8 @@ impl EventNotifier {
                     info!("Event Notifications will be sent to Matrix");
                 }
                 Err(err) => {
-                    let no_panic = env::var("EVENT_MATRIX_ERROR_NO_PANIC")
-                        .unwrap_or_else(|_| "false".to_string())
-                        .parse::<bool>()
-                        .expect("Cannot parse EVENT_MATRIX_ERROR_NO_PANIC to bool");
-
                     let msg = format!("Error creating the Matrix Notifier: {:?}", err.message);
-                    if no_panic {
+                    if vars.matrix_error_no_panic {
                         error!("{msg}");
                     } else {
                         panic!("{msg}");

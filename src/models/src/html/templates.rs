@@ -1,25 +1,23 @@
 use crate::api_cookie::ApiCookie;
-use crate::app_state::AppState;
 use crate::entity::auth_providers::AuthProviderTemplate;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::language::Language;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::Cookie;
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, HttpResponseBuilder, web};
+use actix_web::{HttpResponse, HttpResponseBuilder};
 use askama::Template;
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
-use rauthy_common::constants::{
-    DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE,
-    USER_REG_DOMAIN_RESTRICTION,
-};
+use rauthy_common::constants::{HEADER_HTML, PWD_RESET_COOKIE};
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Serialize;
 use std::borrow::Cow;
+use std::cmp::max;
 use std::fmt::{Debug, Display, Formatter};
 use tracing::warn;
 
@@ -84,7 +82,6 @@ impl HtmlTemplate {
     ///
     /// TODO maybe deactivate completely without debug_assertions?
     pub async fn build_from_str(
-        data: web::Data<AppState>,
         s: &str,
         session: Option<Session>,
     ) -> Result<(Self, Option<Cookie<'_>>), ErrorResponse> {
@@ -108,12 +105,18 @@ impl HtmlTemplate {
                 }
             }
             "tpl_device_user_code_length" => Ok((
-                Self::DeviceUserCodeLength(*DEVICE_GRANT_USER_CODE_LENGTH),
+                Self::DeviceUserCodeLength(max(
+                    RauthyConfig::get().vars.device_grant.user_code_length,
+                    255,
+                ) as u8),
                 None,
             )),
             "tpl_email_old" => Ok((Self::EmailOld("OLD@EMAIL.LOCAL".to_string()), None)),
             "tpl_email_new" => Ok((Self::EmailOld("NEW@EMAIL.LOCAL".to_string()), None)),
-            "tpl_is_reg_open" => Ok((Self::IsRegOpen(*OPEN_USER_REG), None)),
+            "tpl_is_reg_open" => Ok((
+                Self::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
+                None,
+            )),
             // the LoginAction requires a complex logic + validation.
             // Simply always return None during local dev.
             "tpl_login_action" => Ok((Self::LoginAction(FrontendAction::None), None)),
@@ -121,7 +124,12 @@ impl HtmlTemplate {
             // "tpl_client_url" => todo!("extract info from referrer?"),
             "tpl_restricted_email_domain" => Ok((
                 Self::RestrictedEmailDomain(
-                    USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+                    RauthyConfig::get()
+                        .vars
+                        .user_registration
+                        .domain_restriction
+                        .clone()
+                        .unwrap_or_default(),
                 ),
                 None,
             )),
@@ -159,8 +167,12 @@ impl HtmlTemplate {
                 } else {
                     MagicLinkUsage::PasswordReset(None)
                 };
-                let mut ml =
-                    MagicLink::create(user.id.clone(), data.ml_lt_pwd_reset as i64, usage).await?;
+                let mut ml = MagicLink::create(
+                    user.id.clone(),
+                    RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
+                    usage,
+                )
+                .await?;
                 let cookie_val = get_rand(48);
                 ml.cookie = Some(cookie_val);
                 ml.save().await?;
@@ -245,7 +257,9 @@ impl IndexHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::IsRegOpen(*OPEN_USER_REG)],
+            templates: &[HtmlTemplate::IsRegOpen(
+                RauthyConfig::get().vars.user_registration.enable,
+            )],
         };
 
         res.render().unwrap()
@@ -310,9 +324,10 @@ impl DeviceHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::DeviceUserCodeLength(
-                *DEVICE_GRANT_USER_CODE_LENGTH,
-            )],
+            templates: &[HtmlTemplate::DeviceUserCodeLength(max(
+                RauthyConfig::get().vars.device_grant.user_code_length,
+                255,
+            ) as u8)],
         };
 
         res.render().unwrap()
@@ -1005,7 +1020,12 @@ impl UserRegisterHtml<'_> {
             client_id: "rauthy",
             theme_ts,
             templates: &[HtmlTemplate::RestrictedEmailDomain(
-                USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+                RauthyConfig::get()
+                    .vars
+                    .user_registration
+                    .domain_restriction
+                    .clone()
+                    .unwrap_or_default(),
             )],
         }
         .render()

@@ -2,16 +2,15 @@ use crate::token_set::{
     AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce, TokenScopes,
     TokenSet,
 };
+use actix_web::HttpRequest;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
 };
-use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::utils::{base64_url_encode, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
@@ -28,7 +27,6 @@ use tracing::warn;
     fields(client_id = req_data.client_id, username = req_data.username)
 )]
 pub async fn grant_type_authorization_code(
-    data: &web::Data<AppState>,
     req: HttpRequest,
     req_data: TokenRequest,
 ) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
@@ -157,7 +155,6 @@ pub async fn grant_type_authorization_code(
     let user = User::find(code.user_id.clone()).await?;
     let token_set = TokenSet::from_user(
         &user,
-        data,
         &client,
         AuthTime::given(user.last_login.unwrap_or_else(|| Utc::now().timestamp())),
         dpop_fingerprint,

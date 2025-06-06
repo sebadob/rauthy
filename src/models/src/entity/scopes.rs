@@ -1,9 +1,7 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::clients::Client;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::entity::well_known::WellKnown;
-use actix_web::web;
 use deadpool_postgres::GenericClient;
 use hiqlite::Params;
 use hiqlite_macros::params;
@@ -46,10 +44,7 @@ impl Scope {
         Ok(())
     }
 
-    pub async fn create(
-        data: &web::Data<AppState>,
-        scope_req: ScopeRequest,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn create(scope_req: ScopeRequest) -> Result<Self, ErrorResponse> {
         // check for already existing scope
         let mut scopes = Scope::find_all().await?;
         for s in &scopes {
@@ -116,12 +111,12 @@ VALUES ($1, $2, $3, $4)"#,
             .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
             .await?;
 
-        WellKnown::rebuild(data).await?;
+        WellKnown::rebuild().await?;
 
         Ok(new_scope)
     }
 
-    pub async fn delete(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
+    pub async fn delete(id: &str) -> Result<(), ErrorResponse> {
         let scope = Scope::find(id).await?;
         if scope.name == "openid" {
             return Err(ErrorResponse::new(
@@ -178,7 +173,7 @@ VALUES ($1, $2, $3, $4)"#,
             .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
             .await?;
 
-        WellKnown::rebuild(data).await?;
+        WellKnown::rebuild().await?;
 
         Ok(())
     }
@@ -232,11 +227,7 @@ VALUES ($1, $2, $3, $4)"#,
             .collect::<Vec<_>>())
     }
 
-    pub async fn update(
-        data: &web::Data<AppState>,
-        id: &str,
-        scope_req: ScopeRequest,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn update(id: &str, scope_req: ScopeRequest) -> Result<Self, ErrorResponse> {
         let scope = Scope::find(id).await?;
         if scope.name == "openid" {
             return Err(ErrorResponse::new(
@@ -363,7 +354,7 @@ WHERE id = $4"#,
 
         if is_name_update {
             client.delete(Cache::App, IDX_CLIENTS).await?;
-            WellKnown::rebuild(data).await?;
+            WellKnown::rebuild().await?;
         }
 
         Ok(new_scope)
