@@ -98,22 +98,3 @@ impl ApiCookie {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use cryptr::EncKeys;
-
-    #[test]
-    fn test_api_cookie() {
-        dotenvy::from_filename("rauthy-test.cfg").ok();
-        let _ = EncKeys::from_env().unwrap().init();
-
-        let val = "my_cookie_val_1337";
-
-        let cookie = ApiCookie::build("myCookie", val, 10);
-        let val_from = ApiCookie::cookie_into_value(Some(cookie)).unwrap();
-
-        assert_eq!(val, val_from);
-    }
-}

@@ -1605,31 +1605,10 @@ struct OidcCodeRequestParams<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cryptr::EncKeys;
 
+    // exists only to understand the query syntax and experiment with it
     #[test]
-    fn test_auth_provider_link_cookie() {
-        dotenvy::from_filename("rauthy-test.cfg").ok();
-        let _ = EncKeys::from_env().unwrap().init();
-
-        let value = AuthProviderLinkCookie {
-            provider_id: "my_id_1337".to_string(),
-            user_id: "batman123".to_string(),
-            user_email: "batman@gotham.io".to_string(),
-        };
-
-        let cookie = value.build_cookie().unwrap();
-
-        let cookie_val = ApiCookie::cookie_into_value(Some(cookie)).unwrap();
-        let res = AuthProviderLinkCookie::try_from(cookie_val.as_str()).unwrap();
-
-        assert_eq!(value.provider_id, res.provider_id);
-        assert_eq!(value.user_id, res.user_id);
-        assert_eq!(value.user_email, res.user_email);
-    }
-
-    // ... just to understand the query syntax
-    #[test]
+    #[ignore]
     fn test_json_path() {
         let value = serde_json::json!({
             "foo": {

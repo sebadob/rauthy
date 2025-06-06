@@ -1443,7 +1443,8 @@ pub async fn put_user_webid_data(
     principal: ReqPrincipal,
     Json(payload): Json<WebIdRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !RauthyConfig::get().vars.ephemeral_clients.enable_web_id {
+    let vars = &RauthyConfig::get().vars;
+    if !vars.ephemeral_clients.enable_web_id {
         return Ok(HttpResponse::MethodNotAllowed().finish());
     }
     payload.validate()?;
@@ -1453,13 +1454,18 @@ pub async fn put_user_webid_data(
     let id = id.into_inner();
     principal.is_user(&id)?;
 
-    let web_id = WebId::try_new(id, payload.custom_triples.as_deref(), payload.expose_email)
-        .map_err(|e| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!("Invalid custom data. {}", e),
-            )
-        })?;
+    let web_id = WebId::try_new(
+        id,
+        payload.custom_triples.as_deref(),
+        payload.expose_email,
+        vars.server.pub_url.as_str(),
+    )
+    .map_err(|e| {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("Invalid custom data. {}", e),
+        )
+    })?;
 
     WebId::upsert(web_id).await?;
 

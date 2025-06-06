@@ -46,9 +46,10 @@ impl LogoutToken<'_> {
         aud: &'a str,
         sub: Option<&'a str>,
         sid: Option<&'a str>,
+        token_lifetime: u32,
     ) -> LogoutToken<'a> {
         let iat = Utc::now().timestamp();
-        let exp = iat + RauthyConfig::get().vars.backchannel_logout.token_lifetime as i64;
+        let exp = iat + token_lifetime as i64;
 
         let events = serde_json::Value::Object(serde_json::Map::from_iter([(
             EVENT.to_string(),
@@ -198,6 +199,18 @@ impl LogoutToken<'_> {
         &self,
         header: serde_json::Value,
     ) -> Result<(String, JwkKeyPairAlg), ErrorResponse> {
+        let lifetime = RauthyConfig::get().vars.backchannel_logout.token_lifetime as i64;
+        let skew = RauthyConfig::get().vars.backchannel_logout.allow_clock_skew as i64;
+        self.validate_claims_with(header, lifetime, skew)
+    }
+
+    #[inline]
+    fn validate_claims_with(
+        &self,
+        header: serde_json::Value,
+        token_lifetime: i64,
+        allow_clock_skew: i64,
+    ) -> Result<(String, JwkKeyPairAlg), ErrorResponse> {
         let alg = JwkKeyPairAlg::from_str(
             header
                 .get("alg")
@@ -226,10 +239,8 @@ impl LogoutToken<'_> {
 
         let now = Utc::now().timestamp();
 
-        let lifetime = RauthyConfig::get().vars.backchannel_logout.token_lifetime as i64;
-        let skew = RauthyConfig::get().vars.backchannel_logout.allow_clock_skew as i64;
-        let iat_limit = now - lifetime - skew;
-        let exp_limit = now + skew;
+        let iat_limit = now - token_lifetime - allow_clock_skew;
+        let exp_limit = now + allow_clock_skew;
 
         if self.iat < iat_limit {
             return Err(ErrorResponse::new(
@@ -356,51 +367,59 @@ mod tests {
         let sub = "admin";
         let sid = "sid_1337";
 
+        let lifetime = 120;
+        let skew = 5;
+
         // ed25519 with sub and no sid
-        let token = LogoutToken::new(iss, aud, Some(sub), None)
+        let token = LogoutToken::new(iss, aud, Some(sub), None, lifetime)
             .into_token_with_kp(&kp_25519)
             .unwrap();
         let mut buf = Vec::with_capacity(256);
 
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims(header).unwrap();
+        lt.validate_claims_with(header, lifetime as i64, skew)
+            .unwrap();
         assert_eq!(lt.typ.unwrap().as_str(), "logout+jwt");
         assert_eq!(lt.aud, aud);
         assert_eq!(lt.sub.unwrap(), sub);
         assert!(lt.sid.is_none());
 
         // rs256 with sid and no sub
-        let token = LogoutToken::new(iss, aud, None, Some(sid))
+        let token = LogoutToken::new(iss, aud, None, Some(sid), lifetime)
             .into_token_with_kp(&kp_256)
             .unwrap();
 
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims(header).unwrap();
+        lt.validate_claims_with(header, lifetime as i64, skew)
+            .unwrap();
         assert_eq!(lt.sid.unwrap(), sid);
         assert!(lt.sub.is_none());
 
         // make sure building + validation is fine with rs384 and rs512 as well
-        let token = LogoutToken::new(iss, aud, None, Some(sid))
+        let token = LogoutToken::new(iss, aud, None, Some(sid), lifetime)
             .into_token_with_kp(&kp_384)
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims(header).unwrap();
+        lt.validate_claims_with(header, lifetime as i64, skew)
+            .unwrap();
 
-        let token = LogoutToken::new(iss, aud, None, Some(sid))
+        let token = LogoutToken::new(iss, aud, None, Some(sid), lifetime)
             .into_token_with_kp(&kp_512)
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims(header).unwrap();
+        lt.validate_claims_with(header, lifetime as i64, skew)
+            .unwrap();
 
         // no sub + sid - expect failure
-        let token = LogoutToken::new(iss, aud, None, None)
+        let token = LogoutToken::new(iss, aud, None, None, lifetime)
             .into_token_with_kp(&kp_25519)
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims(header).expect_err("empty sub and sid");
+        lt.validate_claims_with(header, lifetime as i64, skew)
+            .expect_err("empty sub and sid");
     }
 }

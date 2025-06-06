@@ -40,12 +40,8 @@ impl WebId {
     }
 
     #[inline]
-    pub fn resolve_webid_card_uri(user_id: &str) -> String {
-        format!(
-            "{}/auth/{}/profile",
-            RauthyConfig::get().pub_url_with_scheme,
-            user_id
-        )
+    pub fn resolve_webid_card_uri(user_id: &str, pub_url: &str) -> String {
+        format!("{}/auth/{}/profile", pub_url, user_id)
     }
 
     /// Returns the WebId from the database, if it exists, and a default otherwise.
@@ -130,11 +126,12 @@ impl WebId {
         user_id: String,
         custom_data_turtle: Option<&str>,
         expose_email: bool,
+        pub_url: &str,
     ) -> Result<Self, ErrorResponse> {
         let custom_triples = if let Some(data) = custom_data_turtle {
             let mut ttl_parser = TurtleParser::new(
                 data.as_bytes(),
-                Some(Self::resolve_webid_card_uri(&user_id).parse()?),
+                Some(Self::resolve_webid_card_uri(&user_id, pub_url).parse()?),
             );
             let mut ntriples_fmt = NTriplesFormatter::new(Vec::<u8>::new());
             ttl_parser.parse_all(&mut |t| ntriples_fmt.format(&t))?;
@@ -184,7 +181,10 @@ impl WebId {
             iri: &WebId::resolve_webid_uri(&webid.user_id),
         };
         let t_card = NamedNode {
-            iri: &WebId::resolve_webid_card_uri(&webid.user_id),
+            iri: &WebId::resolve_webid_card_uri(
+                &webid.user_id,
+                RauthyConfig::get().pub_url_with_scheme.as_str(),
+            ),
         };
         let t_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
@@ -283,12 +283,10 @@ impl From<rauthy_api_types::users::WebId> for WebId {
 
 #[cfg(test)]
 mod tests {
+    use crate::entity::webids::WebId;
     use rauthy_api_types::generic::Language;
     use rauthy_api_types::users::WebIdResponse;
     use rstest::rstest;
-    use std::env;
-
-    use crate::entity::webids::WebId;
 
     // Tests the validation for a String that comes from the UI account page in the end.
     // Whatever input should work in the UI must be passing this test.
@@ -310,11 +308,12 @@ mod tests {
 "#
     ))]
     fn test_custom_triple_validation(#[case] custom_data_turtle: Option<&str>) {
-        unsafe { env::set_var("PUB_URL", "localhost:8081".to_string()) };
         let user_id = "SomeId123".to_owned();
         let expose_email = false;
 
-        assert!(WebId::try_new(user_id, custom_data_turtle, expose_email).is_ok());
+        assert!(
+            WebId::try_new(user_id, custom_data_turtle, expose_email, "localhost:8081").is_ok()
+        );
     }
 
     #[rstest]
@@ -330,12 +329,15 @@ mod tests {
     )]
     #[ignore] // this is currently ignored, because setting the PUB_URL here interferes with other tests in CI
     fn test_web_id_response(#[case] custom_triples: Option<&str>, #[case] expected_resp: &str) {
-        unsafe { env::set_var("PUB_URL", "localhost:8081".to_string()) };
-
         let resp = WebIdResponse {
-            webid: WebId::try_new("SomeId123".to_string(), custom_triples, true)
-                .expect("Invalid custom triples in test case")
-                .into(),
+            webid: WebId::try_new(
+                "SomeId123".to_string(),
+                custom_triples,
+                true,
+                "localhost:8081",
+            )
+            .expect("Invalid custom triples in test case")
+            .into(),
             issuer: "http://localhost:8080/auth/v1".to_string(),
             email: "mail@example.com".to_string(),
             given_name: "Given".to_string(),

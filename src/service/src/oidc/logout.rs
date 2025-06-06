@@ -395,6 +395,7 @@ pub async fn send_backchannel_logout(
         &client_id,
         sub.as_deref(),
         sid.as_deref(),
+        RauthyConfig::get().vars.backchannel_logout.token_lifetime,
     )
     .into_token_with_kp(kp)?;
 
