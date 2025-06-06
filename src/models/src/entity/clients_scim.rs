@@ -6,33 +6,17 @@ use crate::entity::scim_types::{ScimError, ScimGroup, ScimListResponse, ScimReso
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
+use crate::rauthy_config::RauthyConfig;
 use cryptr::EncValue;
 use hiqlite_macros::params;
 use rauthy_common::constants::APPLICATION_JSON_SCIM;
-use rauthy_common::{HTTP_CLIENT, is_hiqlite};
+use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use std::collections::HashMap;
 use std::default::Default;
-use std::env;
 use std::fmt::Debug;
-use std::sync::LazyLock;
 use tracing::{debug, error, info};
-
-static SCIM_SYNC_DELETE_GROUPS: LazyLock<bool> = LazyLock::new(|| {
-    env::var("SCIM_SYNC_DELETE_GROUPS")
-        .as_deref()
-        .unwrap_or("false")
-        .parse::<bool>()
-        .expect("Cannot parse SCIM_SYNC_DELETE_GROUPS as bool")
-});
-static SCIM_SYNC_DELETE_USERS: LazyLock<bool> = LazyLock::new(|| {
-    env::var("SCIM_SYNC_DELETE_USERS")
-        .as_deref()
-        .unwrap_or("false")
-        .parse::<bool>()
-        .expect("Cannot parse SCIM_SYNC_DELETE_USERS as bool")
-});
 
 #[derive(Clone, PartialEq)]
 pub struct ClientScim {
@@ -271,7 +255,7 @@ impl ClientScim {
         let mut url = self.url_groups(start_index, count);
         let mut group_pairs = Vec::with_capacity(groups.len());
         loop {
-            let res = HTTP_CLIENT
+            let res = http_client()
                 .get(url)
                 .header(AUTHORIZATION, self.auth_header())
                 .header(ACCEPT, APPLICATION_JSON_SCIM)
@@ -341,7 +325,7 @@ impl ClientScim {
             for (local, remote) in group_pairs {
                 if self.is_group_sync_prefix_match(&local) {
                     self.update_group(local, remote, false).await?;
-                } else if *SCIM_SYNC_DELETE_GROUPS {
+                } else if RauthyConfig::get().vars.scim.sync_delete_groups {
                     info!(
                         "Deleting group {:?} on SCIM client {}",
                         remote, self.client_id
@@ -354,7 +338,7 @@ impl ClientScim {
                     self.update_group(local, remote, true).await?;
                 }
             }
-        } else if *SCIM_SYNC_DELETE_GROUPS {
+        } else if RauthyConfig::get().vars.scim.sync_delete_groups {
             // we need to clean up groups that might have been synced before,
             // in case sync was now turned off
             for (local, remote) in group_pairs {
@@ -397,7 +381,7 @@ impl ClientScim {
         group: &Group,
         url: String,
     ) -> Result<Option<ScimGroup>, ErrorResponse> {
-        let res = HTTP_CLIENT
+        let res = http_client()
             .get(url)
             .header(AUTHORIZATION, self.auth_header())
             .send()
@@ -467,7 +451,7 @@ impl ClientScim {
                     FailedScimTask::upsert(&ScimAction::GroupCreateUpdate(gid), &self.client_id)
                         .await?;
                 }
-            } else if *SCIM_SYNC_DELETE_GROUPS {
+            } else if RauthyConfig::get().vars.scim.sync_delete_groups {
                 self.delete_group(group, Some(remote)).await?;
             }
         } else if let Err(err) = self.create_group(group).await {
@@ -495,7 +479,7 @@ impl ClientScim {
         debug!("Creating SCIM group on remote with payload: {:?}", payload);
         let json = serde_json::to_string(&payload)?;
         let url = format!("{}/Groups", self.base_uri);
-        let res = HTTP_CLIENT
+        let res = http_client()
             .post(url)
             .header(AUTHORIZATION, self.auth_header())
             .header(ACCEPT, APPLICATION_JSON_SCIM)
@@ -594,7 +578,7 @@ impl ClientScim {
             )
         };
 
-        let res = HTTP_CLIENT
+        let res = http_client()
             .patch(url)
             .header(AUTHORIZATION, self.auth_header())
             .header(ACCEPT, APPLICATION_JSON_SCIM)
@@ -639,7 +623,7 @@ impl ClientScim {
         group: Group,
         remote_group: Option<ScimGroup>,
     ) -> Result<(), ErrorResponse> {
-        if !self.should_sync_groups() && !*SCIM_SYNC_DELETE_GROUPS {
+        if !self.should_sync_groups() && !RauthyConfig::get().vars.scim.sync_delete_groups {
             return Ok(());
         }
 
@@ -661,7 +645,7 @@ impl ClientScim {
         };
         let url = format!("{}/Groups/{}", self.base_uri, remote_id);
 
-        let res = HTTP_CLIENT
+        let res = http_client()
             .delete(url)
             .header(AUTHORIZATION, self.auth_header())
             .send()
@@ -712,7 +696,7 @@ impl ClientScim {
         user_email: &str,
         url: String,
     ) -> Result<Option<ScimUser>, ErrorResponse> {
-        let res = HTTP_CLIENT
+        let res = http_client()
             .get(url)
             .header(AUTHORIZATION, self.auth_header())
             .send()
@@ -815,7 +799,7 @@ impl ClientScim {
                     false
                 };
 
-                match if is_no_prefix_match && *SCIM_SYNC_DELETE_USERS {
+                match if is_no_prefix_match && RauthyConfig::get().vars.scim.sync_delete_users {
                     self.delete_user(&user).await
                 } else {
                     self.create_update_user_exec(
@@ -897,7 +881,7 @@ impl ClientScim {
                     )
                     .await?;
                 }
-            } else if *SCIM_SYNC_DELETE_USERS {
+            } else if RauthyConfig::get().vars.scim.sync_delete_users {
                 client_scim.delete_user(&user).await?;
             }
         }
@@ -958,7 +942,7 @@ impl ClientScim {
         groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
         let json = serde_json::to_string(&update_payload)?;
-        let res = HTTP_CLIENT
+        let res = http_client()
             .post(format!("{}/Users", self.base_uri))
             .header(AUTHORIZATION, self.auth_header())
             .header(ACCEPT, APPLICATION_JSON_SCIM)
@@ -1010,7 +994,7 @@ impl ClientScim {
         }
 
         let json = serde_json::to_string(&update_payload)?;
-        let res = HTTP_CLIENT
+        let res = http_client()
             .put(format!(
                 "{}/Users/{}",
                 self.base_uri,
@@ -1080,7 +1064,7 @@ impl ClientScim {
         };
         let url = format!("{}/Users/{}", self.base_uri, remote_id);
 
-        let res = HTTP_CLIENT
+        let res = http_client()
             .delete(url)
             .header(AUTHORIZATION, self.auth_header())
             .send()
@@ -1203,7 +1187,7 @@ impl ClientScim {
                 let json = format!("{json_1}{}{json_2}{}{json_3}", user_id_remote, user_email);
                 debug!("Sending PatchOp for Group {}:\n{}", url, json);
 
-                let res = HTTP_CLIENT
+                let res = http_client()
                     .patch(url)
                     .header(AUTHORIZATION, self.auth_header())
                     .header(ACCEPT, APPLICATION_JSON_SCIM)
@@ -1232,7 +1216,7 @@ impl ClientScim {
             let json = format!("{json_1}{}{json_2}", user_id_remote);
 
             let url = format!("{}/Groups/{}", self.base_uri, group_remote.value);
-            let res = HTTP_CLIENT
+            let res = http_client()
                 .patch(url)
                 .header(AUTHORIZATION, self.auth_header())
                 .header(ACCEPT, APPLICATION_JSON_SCIM)

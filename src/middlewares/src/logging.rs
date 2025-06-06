@@ -5,49 +5,13 @@ use actix_web::{
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
 };
 use futures::future::LocalBoxFuture;
+use rauthy_common::logging::LogLevelAccess;
 use rauthy_common::utils::real_ip_from_svc_req;
-use rauthy_error::{ErrorResponse, ErrorResponseType};
-use std::env;
+use rauthy_error::ErrorResponse;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::future::{Ready, ready};
 use std::rc::Rc;
-use std::str::FromStr;
-use std::sync::LazyLock;
 use tracing::{debug, info};
-
-static LOG_LEVEL_ACCESS: LazyLock<LogLevelAccess> = LazyLock::new(|| {
-    env::var("LOG_LEVEL_ACCESS")
-        .as_deref()
-        .unwrap_or("Modifying")
-        .parse::<LogLevelAccess>()
-        .expect("Cannot parse LOG_LEVEL_ACCESS")
-});
-
-#[derive(Debug, PartialEq, Eq)]
-enum LogLevelAccess {
-    Debug,
-    Verbose,
-    Basic,
-    Modifying,
-    Off,
-}
-
-impl FromStr for LogLevelAccess {
-    type Err = ErrorResponse;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Debug" => Ok(Self::Debug),
-            "Verbose" => Ok(Self::Verbose),
-            "Basic" => Ok(Self::Basic),
-            "Modifying" => Ok(Self::Modifying),
-            "Off" => Ok(Self::Off),
-            _ => Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Cannot parse to LogLevelAccess".to_string(),
-            )),
-        }
-    }
-}
 
 pub struct RauthyLoggingMiddleware;
 
@@ -102,7 +66,7 @@ async fn log_access(req: &ServiceRequest) -> Result<(), ErrorResponse> {
     let path = req.uri().path();
     let ip = real_ip_from_svc_req(req)?;
 
-    match *LOG_LEVEL_ACCESS {
+    match RauthyConfig::get().log_level_access {
         LogLevelAccess::Debug => {
             debug!("{:?}", req)
         }

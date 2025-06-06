@@ -29,6 +29,7 @@ num_cpus = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
 prometheus = { workspace = true }
+reqwest = { workspace = true }
 rustls = { workspace = true }
 rustls-pki-types = { workspace = true }
 rustls-pemfile = { workspace = true }

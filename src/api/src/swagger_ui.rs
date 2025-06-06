@@ -5,7 +5,6 @@ use actix_web::{HttpResponse, get};
 use rauthy_common::constants::APPLICATION_JSON;
 use rauthy_error::ErrorResponse;
 use rauthy_models::rauthy_config::RauthyConfig;
-use std::env;
 use std::sync::{Arc, LazyLock, OnceLock};
 
 pub static OPENAPI_JSON: OnceLock<String> = OnceLock::new();
@@ -17,27 +16,14 @@ pub static OPENAPI_CONFIG: LazyLock<Arc<utoipa_swagger_ui::Config>> = LazyLock::
             .filter(true),
     )
 });
-pub static SWAGGER_UI_ENABLE: LazyLock<bool> = LazyLock::new(|| {
-    env::var("SWAGGER_UI_ENABLE")
-        .as_deref()
-        .unwrap_or("false")
-        .parse::<bool>()
-        .expect("Cannot parse SWAGGER_UI_ENABLE to bool")
-});
-pub static SWAGGER_UI_PUBLIC: LazyLock<bool> = LazyLock::new(|| {
-    env::var("SWAGGER_UI_PUBLIC")
-        .as_deref()
-        .unwrap_or("false")
-        .parse::<bool>()
-        .expect("Cannot parse SWAGGER_UI_PUBLIC to bool")
-});
 
 #[get("/docs/openapi.json")]
 pub async fn get_openapi_doc(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    if !*SWAGGER_UI_ENABLE {
+    let cfg = &RauthyConfig::get().vars.server;
+    if !cfg.swagger_ui_enable {
         return Ok(HttpResponse::NotFound().finish());
     }
-    if !*SWAGGER_UI_PUBLIC && principal.validate_session_auth().is_err() {
+    if !cfg.swagger_ui_public && principal.validate_session_auth().is_err() {
         return Ok(HttpResponse::Unauthorized().finish());
     }
 
@@ -51,10 +37,11 @@ pub async fn get_swagger_ui(
     path: Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*SWAGGER_UI_ENABLE {
+    let cfg = &RauthyConfig::get().vars.server;
+    if !cfg.swagger_ui_enable {
         return Ok(HttpResponse::NotFound().finish());
     }
-    if !*SWAGGER_UI_PUBLIC && principal.validate_session_auth().is_err() {
+    if !cfg.swagger_ui_public && principal.validate_session_auth().is_err() {
         return Ok(HttpResponse::Unauthorized().finish());
     }
 

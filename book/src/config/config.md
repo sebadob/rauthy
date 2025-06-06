@@ -243,16 +243,6 @@ deploying with Kubernetes, extract these values into Kubernetes Secrets.
 # default: 100
 #BACKCHANNEL_LOGOUT_RETRY_COUNT=100
 
-# Can be set to `true` to allow plain HTTP backchannel
-# logout requests.
-# default: false
-#BACKCHANNEL_DANGER_ALLOW_HTTP=false
-
-# Can be set to `true` to allow insecure HTTPS logout requests.
-# This will disable TLS certificate validation.
-# default: false
-#BACKCHANNEL_DANGER_ALLOW_INSECURE=false
-
 # The lifetime / validity for Logout Tokens in seconds.
 # These Logout Tokens are being generated during OIDC
 # Backchannel Logout requests to configured clients.
@@ -591,9 +581,6 @@ PG_PASSWORD=
 # Max DB connections for the Postgres pool.
 # default: 20
 PG_MAX_CONN=20
-
-# Disables the housekeeping schedulers (default: false)
-#SCHED_DISABLE=true
 
 # The interval in minutes in which the scheduler for expired 
 # users should run. If this finds expired users, it invalidates 

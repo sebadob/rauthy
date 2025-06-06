@@ -1,60 +1,18 @@
 use actix_web::web;
 use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Algorithm, Argon2, PasswordHash, PasswordHasher, PasswordVerifier, Version};
-use once_cell::sync::Lazy;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use std::{env, thread};
+use std::sync::OnceLock;
+use std::thread;
 use tokio::time::Instant;
 use tracing::{debug, error, warn};
 
-pub static ARGON2_PARAMS: Lazy<argon2::Params> = Lazy::new(|| {
-    let mut argon2_m_cost = env::var("ARGON2_M_COST")
-        .as_deref()
-        .unwrap_or("32768")
-        .parse::<u32>()
-        .expect("Could not parse ARGON2_M_COST value");
-    if argon2_m_cost < 32768 {
-        warn!("ARGON2_M_COST must never be lower than 32768 - changing the value to 32768");
-        argon2_m_cost = 32768;
-    }
-    let argon2_t_cost = env::var("ARGON2_T_COST")
-        .as_deref()
-        .unwrap_or("3")
-        .parse::<u32>()
-        .expect("Could not parse ARGON2_T_COST value");
-    let argon2_p_cost = env::var("ARGON2_P_COST")
-        .as_deref()
-        .unwrap_or("1")
-        .parse::<u32>()
-        .expect("Could not parse ARGON2_P_COST value");
-
-    let params = argon2::Params::new(argon2_m_cost, argon2_t_cost, argon2_p_cost, None)
-        .expect("Unable to build Argon2id params");
-    debug!(
-        "Argon2id Params: m_cost: {}, t_cost: {}, p_cost: {}",
-        argon2_m_cost, argon2_t_cost, argon2_p_cost
-    );
-    params
-});
-
-pub static MAX_HASH_THREADS: Lazy<usize> = Lazy::new(|| {
-    env::var("MAX_HASH_THREADS")
-        .as_deref()
-        .unwrap_or("2")
-        .parse::<usize>()
-        .expect("Cannot parse MAX_HASH_THREADS to usize")
-});
-pub static HASH_AWAIT_WARN_TIME: Lazy<u64> = Lazy::new(|| {
-    env::var("HASH_AWAIT_WARN_TIME")
-        .as_deref()
-        .unwrap_or("500")
-        .parse::<u64>()
-        .expect("Cannot parse HASH_AWAIT_WARN_TIME to u64")
-});
-pub static HASH_CHANNELS: Lazy<(
+pub static ARGON2_PARAMS: OnceLock<argon2::Params> = OnceLock::new();
+pub static HASH_CHANNELS: OnceLock<(
     flume::Sender<PasswordHashMessage>,
     flume::Receiver<PasswordHashMessage>,
-)> = Lazy::new(|| flume::bounded(*MAX_HASH_THREADS));
+)> = OnceLock::new();
+pub static HASH_AWAIT_WARN_TIME: OnceLock<u32> = OnceLock::new();
 
 pub struct HashPassword {
     plain_text: String,
@@ -72,6 +30,8 @@ impl HashPassword {
         };
 
         HASH_CHANNELS
+            .get()
+            .unwrap()
             .0
             .send_async(PasswordHashMessage::Hash(s))
             .await
@@ -100,6 +60,8 @@ impl ComparePasswords {
         };
 
         HASH_CHANNELS
+            .get()
+            .unwrap()
             .0
             .send_async(PasswordHashMessage::Compare(c))
             .await
@@ -121,7 +83,7 @@ pub enum PasswordHashMessage {
 // operation, this simple function makes sure that at no point in time, any more than the configured
 // amount of max concurrent hashes do happen to not exceed system memory.
 pub async fn run() {
-    while let Ok(msg) = HASH_CHANNELS.1.recv_async().await {
+    while let Ok(msg) = HASH_CHANNELS.get().unwrap().1.recv_async().await {
         let res = match msg {
             PasswordHashMessage::Hash(m) => {
                 check_await_threshold(&m.created);
@@ -142,7 +104,7 @@ pub async fn run() {
 fn check_await_threshold(instant: &Instant) {
     // This cast from u128 -> u64 is "unsafe", but in reality, this threshold can never be reached
     // in this context. Having the HASH_AWAIT_WARN_TIME as u64 is a small bonus though.
-    if instant.elapsed().as_millis() as u64 > *HASH_AWAIT_WARN_TIME {
+    if instant.elapsed().as_millis() as u64 > *HASH_AWAIT_WARN_TIME.get().unwrap() as u64 {
         warn!(
             "Password hash request await warn time of {} ms exceeded",
             instant.elapsed().as_millis()
@@ -156,7 +118,7 @@ fn hash_password(msg: HashPassword) {
     let argon2 = Argon2::new(
         Algorithm::Argon2id,
         Version::V0x13,
-        (*ARGON2_PARAMS).clone(),
+        (*ARGON2_PARAMS.get().unwrap()).clone(),
     );
     let salt = SaltString::generate(&mut OsRng);
 

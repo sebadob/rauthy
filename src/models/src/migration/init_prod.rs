@@ -14,7 +14,6 @@ use rauthy_common::utils::{base64_decode, get_rand, new_store_id};
 use rauthy_error::ErrorResponse;
 use ring::digest;
 use rsa::pkcs8::EncodePrivateKey;
-use std::env;
 use time::OffsetDateTime;
 use tracing::{debug, info};
 use validator::Validate;
@@ -52,10 +51,10 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
 
         // check if we should use manually provided bootstrap values
         let issuer = &RauthyConfig::get().issuer;
-        let email =
-            env::var("BOOTSTRAP_ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
-        let hash = match env::var("BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID") {
-            Ok(hash) => {
+        let bootstrap = &RauthyConfig::get().vars.bootstrap;
+        let email = &bootstrap.admin_email;
+        let hash = match bootstrap.pasword_argon2id.clone() {
+            Some(hash) => {
                 info!(
                     r#"
 
@@ -67,9 +66,9 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
                 );
                 hash
             }
-            Err(_) => {
-                let plain = match env::var("BOOTSTRAP_ADMIN_PASSWORD_PLAIN") {
-                    Ok(plain) => {
+            None => {
+                let plain = match bootstrap.password_plain.clone() {
+                    Some(plain) => {
                         info!(
                             r#"
 
@@ -81,7 +80,7 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
                         );
                         plain
                     }
-                    Err(_) => {
+                    None => {
                         let plain = get_rand(24);
                         info!(
                             r#"
@@ -125,9 +124,9 @@ WHERE email = 'admin@localhost'"#;
         }
 
         // now check if we should bootstrap an API Key
-        if let Ok(api_key_raw) = env::var("BOOTSTRAP_API_KEY") {
+        if let Some(api_key_raw) = RauthyConfig::get().vars.bootstrap.api_key.as_ref() {
             // this is expected to be base64 encoded
-            let bytes = base64_decode(&api_key_raw)?;
+            let bytes = base64_decode(api_key_raw)?;
             // ... and then a JSON string
             let s = String::from_utf8_lossy(&bytes);
             let req = serde_json::from_str::<ApiKeyRequest>(&s)?;
@@ -143,7 +142,7 @@ WHERE email = 'admin@localhost'"#;
             )
             .await?;
 
-            if let Ok(secret_plain) = env::var("BOOTSTRAP_API_KEY_SECRET") {
+            if let Some(secret_plain) = RauthyConfig::get().vars.bootstrap.api_key_secret.as_ref() {
                 assert!(secret_plain.len() >= 64);
                 let secret_hash = digest::digest(&digest::SHA256, secret_plain.as_bytes());
                 let secret_enc = EncValue::encrypt(secret_hash.as_ref())?

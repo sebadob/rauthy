@@ -5,8 +5,8 @@ use rauthy_common::constants::IDX_JWK_KID;
 use rauthy_common::is_hiqlite;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::jwk::{JWKS, Jwk};
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::collections::HashSet;
-use std::env;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::time::Duration;
@@ -18,9 +18,11 @@ pub async fn jwks_auto_rotate() {
     // sec min hour day_of_month month day_of_week year
     let schedule = {
         cron::Schedule::from_str(
-            env::var("JWK_AUTOROTATE_CRON")
-                .as_deref()
-                .unwrap_or("0 30 3 1 * * *"),
+            RauthyConfig::get()
+                .vars
+                .lifetimes
+                .jwk_autorotate_cron
+                .as_ref(),
         )
         .unwrap()
     };

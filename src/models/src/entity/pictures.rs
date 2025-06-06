@@ -1,6 +1,7 @@
 use crate::database::DB;
 use crate::entity::logos::Logo;
 use crate::entity::users::User;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::http::StatusCode;
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, HeaderName, HeaderValue};
 use actix_web::{HttpResponse, HttpResponseBuilder, web};
@@ -9,11 +10,10 @@ use hiqlite_macros::params;
 use image::ImageFormat;
 use image::imageops::FilterType;
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::{is_ha_deployment, new_store_id};
+use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use std::env;
 use std::io::Cursor;
 use std::string::ToString;
 use std::sync::LazyLock;
@@ -24,28 +24,29 @@ const CACHE_CTRL_PICTURE: &str = "max-age=31104000, stale-while-revalidate=25920
 const PICTURE_SIZE_PX: u32 = 192;
 
 pub static PICTURE_STORAGE_TYPE: LazyLock<PictureStorage> = LazyLock::new(|| {
-    let s = env::var("PICTURE_STORAGE_TYPE").unwrap_or_else(|_| "db".to_string());
-    PictureStorage::from(s.as_str())
+    PictureStorage::from(RauthyConfig::get().vars.user_pictures.storage_type.as_ref())
 });
-static PICTURE_PATH: LazyLock<String> =
-    LazyLock::new(|| env::var("PICTURE_PATH").unwrap_or_else(|_| "./pictures".to_string()));
 static PICTURE_S3_BUCKET: LazyLock<s3_simple::Bucket> = LazyLock::new(|| {
-    let host = env::var("PIC_S3_URL")
-        .expect("PIC_S3_URL not set")
+    let cfg = &RauthyConfig::get().vars.user_pictures;
+    let host = cfg
+        .s3_url
+        .as_ref()
+        .expect("`user_pictures.s3_url` not set")
         .parse::<Url>()
-        .expect("invalid PIC_S3_URL");
-    let name = env::var("PIC_S3_BUCKET").expect("PIC_S3_BUCKET not set");
-    let region = s3_simple::Region(env::var("PIC_S3_REGION").expect("PIC_S3_REGION not set"));
+        .expect("invalid `user_pictures.s3_url`");
 
-    let key = env::var("PIC_S3_KEY").expect("PIC_S3_KEY not set");
-    let secret = env::var("PIC_S3_SECRET").expect("PIC_S3_SECRET not set");
+    let name = cfg.bucket.clone().expect("`user_pictures.bucket` not set");
+    let region = s3_simple::Region(cfg.region.clone().expect("PIC_S3_REGION not set"));
+
+    let key = cfg.s3_key.clone().expect("`user_pictures.s3_key` not set");
+    let secret = cfg
+        .s3_secret
+        .clone()
+        .expect("`user_pictures.s3_secret` not set");
     let creds = s3_simple::Credentials::new(key, secret);
 
     let opts = s3_simple::BucketOptions {
-        path_style: env::var("PIC_S3_PATH_STYLE")
-            .unwrap_or_else(|_| "true".to_string())
-            .parse::<bool>()
-            .expect("Cannot parse PIC_S3_PATH_STYLE as bool"),
+        path_style: cfg.s3_path_style,
         list_objects_v2: true,
     };
 
@@ -160,7 +161,7 @@ impl UserPicture {
     fn local_file_path(picture_id: &str, content_type: &str) -> String {
         format!(
             "{}/{}.{}",
-            PICTURE_PATH.as_str(),
+            RauthyConfig::get().vars.user_pictures.path,
             picture_id,
             Self::file_ending(content_type)
         )
@@ -380,17 +381,18 @@ impl UserPicture {
                 info!("Using Database as User Picture Storage");
             }
             PictureStorage::File => {
-                if is_ha_deployment() {
+                if RauthyConfig::get().is_ha_deployment {
                     panic!(
                         "You can only use local file storage for User Pictures for a single instance"
                     );
                 }
 
                 // make sure the path exists and is available
-                fs::create_dir_all(PICTURE_PATH.as_str()).await?;
+                let cfg = &RauthyConfig::get().vars.user_pictures;
+                fs::create_dir_all(cfg.path.as_ref()).await?;
                 info!(
                     "Using local filesystem as User Picture Storage: {}",
-                    PICTURE_PATH.as_str()
+                    cfg.path.as_ref()
                 );
             }
             PictureStorage::S3 => {

@@ -48,19 +48,7 @@ pub async fn get_auth_headers() -> Result<HeaderMap, Box<dyn Error>> {
 }
 
 pub fn get_backend_url() -> String {
-    dotenvy::from_filename_override("rauthy-test.cfg").ok();
-    let scheme = match env::var("LISTEN_SCHEME")
-        .unwrap_or_else(|_| String::from("http"))
-        .to_lowercase()
-    {
-        x if x == "https" || x == "http" || x == "http_https" => x,
-        x if x == "unix_http" => "http".to_string(),
-        x if x == "unix_https" => "https".to_string(),
-        _ => panic!("Bad 'LISTEN_SCHEME'"),
-    };
-    let host = env::var("PUB_URL").expect("PUB_URL env var is not set");
-    let public_url = format!("{}://{}", scheme, host);
-    format!("{}/auth/v1", public_url)
+    "http://localhost:8081/auth/v1".to_string()
 }
 
 #[allow(dead_code)]
@@ -244,8 +232,8 @@ pub fn code_state_from_headers(res: Response) -> Result<(String, Option<String>)
 }
 
 pub fn init_client_bcl_uri() -> String {
-    let host = env::var("PUB_URL").expect("PUB_URL env var is not set");
-    format!("http://{host}/auth/v1/dev/backchannel_logout")
+    // let host = env::var("PUB_URL").expect("PUB_URL env var is not set");
+    "http://localhost:80801/auth/v1/dev/backchannel_logout".to_string()
 }
 
 pub async fn get_solved_pow() -> String {

@@ -6,34 +6,14 @@ use rauthy_error::ErrorResponseType;
 use rauthy_jwt::claims::{JwtCommonClaims, JwtLogoutClaims, JwtTokenType};
 use rauthy_models::entity::auth_providers::AuthProvider;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg};
+use rauthy_models::rauthy_config::RauthyConfig;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use std::env;
 use std::str::FromStr;
 use std::string::ToString;
-use std::sync::LazyLock;
 use tracing::error;
 
 static EVENT: &str = "http://schemas.openid.net/event/backchannel-logout";
-
-static LOGOUT_TOKEN_LIFETIME: LazyLock<u8> = LazyLock::new(|| {
-    env::var("LOGOUT_TOKEN_LIFETIME")
-        .unwrap_or_else(|_| "30".to_string())
-        .parse::<u8>()
-        .expect("Cannot parse LOGOUT_TOKEN_LIFETIME as u8")
-});
-static LOGOUT_TOKEN_ALLOW_CLOCK_SKEW: LazyLock<u8> = LazyLock::new(|| {
-    env::var("LOGOUT_TOKEN_ALLOW_CLOCK_SKEW")
-        .unwrap_or_else(|_| "5".to_string())
-        .parse::<u8>()
-        .expect("Cannot parse LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as u8")
-});
-static LOGOUT_TOKEN_ALLOWED_LIFETIME: LazyLock<u16> = LazyLock::new(|| {
-    env::var("LOGOUT_TOKEN_ALLOWED_LIFETIME")
-        .unwrap_or_else(|_| "120".to_string())
-        .parse::<u16>()
-        .expect("Cannot parse LOGOUT_TOKEN_ALLOWED_LIFETIME as u16")
-});
 
 /// Logout Token for OIDC backchannel logout specified in
 /// https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken
@@ -68,7 +48,7 @@ impl LogoutToken<'_> {
         sid: Option<&'a str>,
     ) -> LogoutToken<'a> {
         let iat = Utc::now().timestamp();
-        let exp = iat + *LOGOUT_TOKEN_LIFETIME as i64;
+        let exp = iat + RauthyConfig::get().vars.backchannel_logout.token_lifetime as i64;
 
         let events = serde_json::Value::Object(serde_json::Map::from_iter([(
             EVENT.to_string(),
@@ -245,9 +225,11 @@ impl LogoutToken<'_> {
         }
 
         let now = Utc::now().timestamp();
-        let iat_limit =
-            now - *LOGOUT_TOKEN_ALLOWED_LIFETIME as i64 - *LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as i64;
-        let exp_limit = now + *LOGOUT_TOKEN_ALLOW_CLOCK_SKEW as i64;
+
+        let lifetime = RauthyConfig::get().vars.backchannel_logout.token_lifetime as i64;
+        let skew = RauthyConfig::get().vars.backchannel_logout.allow_clock_skew as i64;
+        let iat_limit = now - lifetime - skew;
+        let exp_limit = now + skew;
 
         if self.iat < iat_limit {
             return Err(ErrorResponse::new(

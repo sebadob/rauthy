@@ -4,19 +4,13 @@ use rauthy_models::entity::app_version::LatestAppVersion;
 use rauthy_models::events::event::Event;
 use rauthy_models::rauthy_config::RauthyConfig;
 use semver::Version;
-use std::env;
 use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
 /// Checks for newly available Rauthy app versions
 pub async fn app_version_check() {
-    let disable = env::var("DISABLE_APP_VERSION_CHECK")
-        .as_deref()
-        .unwrap_or("false")
-        .parse::<bool>()
-        .expect("Cannot parse DISABLE_APP_VERSION_CHECK to bool");
-    if disable {
+    if RauthyConfig::get().vars.events.disable_app_version_check {
         warn!("The automatic Rauthy version checker is disabled");
         return;
     }

@@ -21,9 +21,9 @@
 | AUTH_HEADER_FAMILY_NAME                    | auth_headers.family_name                    | String     |          |
 | AUTH_HEADER_GIVEN_NAME                     | auth_headers.given_name                     | String     |          |
 | AUTH_HEADER_MFA                            | auth_headers.mfa                            | String     |          |
-| BACKCHANNEL_LOGOUT_RETRY_COUNT             | backchannel_logout.retry_count              | u32        |          |
-| BACKCHANNEL_DANGER_ALLOW_HTTP              | backchannel_logout.danger_allow_http        | bool       |          |
-| BACKCHANNEL_DANGER_ALLOW_INSECURE          | backchannel_logout.danger_allow_insecure    | bool       |          |
+| BACKCHANNEL_LOGOUT_RETRY_COUNT             | backchannel_logout.retry_count              | u16        |          |
+| BACKCHANNEL_DANGER_ALLOW_HTTP              | REMOVED -> global http_client used now      |            |          |
+| BACKCHANNEL_DANGER_ALLOW_INSECURE          | REMOVED -> global http_client used now      |            |          |
 | LOGOUT_TOKEN_LIFETIME                      | backchannel_logout.token_lifetime           | u32        |          |
 | LOGOUT_TOKEN_ALLOW_CLOCK_SKEW              | backchannel_logout.allow_clock_skew         | u32        |          |
 | LOGOUT_TOKEN_ALLOWED_LIFETIME              | backchannel_logout.allowed_token_lifetime   | u32        |          |

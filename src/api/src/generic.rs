@@ -29,7 +29,6 @@ use rauthy_models::language::Language;
 use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
-use std::env;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -37,38 +36,29 @@ use tracing::{error, info, warn};
 use validator::Validate;
 
 pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
-    let common = env::var("FILTER_LANG_COMMON")
-        .as_deref()
-        .unwrap_or("en de zhhans ko")
-        .trim()
-        .split(" ")
-        .filter_map(|v| {
-            let tr = v.trim();
-            if tr.is_empty() {
-                None
-            } else {
-                if !["en", "de", "zhhans", "ko"].contains(&tr) {
-                    panic!("Invalid config for FILTER_LANG_COMMON.\nAllowed values: en de zhhans ko\nfound: {}", tr);
+    let common = RauthyConfig::get().vars.i18n.filter_lang_common
+        .iter()
+        .map(|v| {
+                if !["en", "de", "zhhans", "ko"].contains(&v.as_ref()) {
+                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de zhhans ko\nfound: {}", v);
                 }
-                Some(Language::from(tr).into())
-            }
+                Language::from(v.as_ref()).into()
         })
         .collect::<Vec<_>>();
-    let admin = env::var("FILTER_LANG_ADMIN")
-        .as_deref()
-        .unwrap_or("en de ko")
-        .trim()
-        .split(" ")
-        .filter_map(|v| {
-            let tr = v.trim();
-            if tr.is_empty() {
-                None
-            } else {
-                if !["en", "de", "ko"].contains(&tr) {
-                    panic!("Invalid config for FILTER_LANG_ADMIN.\nAllowed values: en de ko\nfound: {}", tr);
-                }
-                Some(Language::from(tr).into())
+
+    let admin = RauthyConfig::get()
+        .vars
+        .i18n
+        .filter_lang_admin
+        .iter()
+        .map(|v| {
+            if !["en", "de", "zhhans", "ko"].contains(&v.as_ref()) {
+                panic!(
+                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de zhhans ko\nfound: {}",
+                    v
+                );
             }
+            Language::from(v.as_ref()).into()
         })
         .collect::<Vec<_>>();
 

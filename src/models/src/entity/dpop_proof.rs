@@ -290,7 +290,7 @@ impl DPoPProof {
 
         // 9. The htu claim matches the HTTP URI value for the HTTP request in
         // which the JWT was received, ignoring any query and fragment parts.
-        if self.claims.htu != DPOP_TOKEN_ENDPOINT.get().unwrap().to_string() {
+        if Some(&self.claims.htu) != DPOP_TOKEN_ENDPOINT.get() {
             return Err("Invalid 'htu' claim".to_string());
         }
 
@@ -378,10 +378,12 @@ mod tests {
             kid: None,
         };
 
+        let _ = DPOP_TOKEN_ENDPOINT.set("http://localhost:8081/auth/v1/oidc/token".to_string());
+
         let claims = DPoPClaims {
             jti: "-BwC3ESc6acc2lTc".to_string(),
             htm: http::Method::POST.to_string(),
-            htu: DPOP_TOKEN_ENDPOINT.clone().to_string(),
+            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().to_string(),
             iat: Utc::now().timestamp(),
             nonce: None,
         };
@@ -433,10 +435,12 @@ mod tests {
             kid: None,
         };
 
+        let _ = DPOP_TOKEN_ENDPOINT.set("http://localhost:8081/auth/v1/oidc/token".to_string());
+
         let claims = DPoPClaims {
             jti: "-BwC3ESc6acc2lTc".to_string(),
             htm: http::Method::POST.to_string(),
-            htu: DPOP_TOKEN_ENDPOINT.clone().to_string(),
+            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().to_string(),
             iat: Utc::now().timestamp(),
             nonce: None,
         };

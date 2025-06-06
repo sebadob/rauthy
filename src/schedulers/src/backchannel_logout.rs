@@ -4,8 +4,8 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::events::event::Event;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::logout;
-use std::env;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::task::JoinSet;
@@ -13,12 +13,7 @@ use tokio::time;
 use tracing::{error, info, warn};
 
 pub async fn backchannel_logout_retry() {
-    let retry_count = env::var("BACKCHANNEL_LOGOUT_RETRY_COUNT")
-        .as_deref()
-        .unwrap_or("100")
-        .parse::<u16>()
-        .expect("Cannot parse BACKCHANNEL_LOGOUT_RETRY_COUNT as u16");
-
+    let retry_count = RauthyConfig::get().vars.backchannel_logout.retry_count;
     let mut clients: Vec<Client> = Vec::with_capacity(1);
     let mut kps: Vec<JwkKeyPair> = Vec::with_capacity(1);
 

@@ -4,7 +4,8 @@ use actix_web::http::header::{ACCESS_CONTROL_ALLOW_METHODS, HeaderValue};
 use actix_web::http::{StatusCode, header};
 use actix_web::{HttpRequest, HttpResponse};
 use rauthy_api_types::oidc::{BackchannelLogoutRequest, LogoutRequest};
-use rauthy_common::constants::{COOKIE_SESSION, COOKIE_SESSION_FED_CM, RAUTHY_VERSION};
+use rauthy_common::constants::{COOKIE_SESSION, COOKIE_SESSION_FED_CM};
+use rauthy_common::http_client;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtIdClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
@@ -20,38 +21,10 @@ use rauthy_models::entity::users::User;
 use rauthy_models::html::HtmlCached;
 use rauthy_models::rauthy_config::RauthyConfig;
 use std::borrow::Cow;
-use std::env;
 use std::str::FromStr;
 use std::string::ToString;
-use std::sync::LazyLock;
-use std::time::Duration;
 use tokio::task::JoinSet;
-use tracing::{debug, error, info};
-
-static LOGOUT_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    let allow_http = env::var("BACKCHANNEL_DANGER_ALLOW_HTTP")
-        .unwrap_or_else(|_| "false".to_string())
-        .parse::<bool>()
-        .expect("Cannot parse BACKCHANNEL_DANGER_ALLOW_HTTP as bool");
-    let allow_insecure = env::var("BACKCHANNEL_DANGER_ALLOW_INSECURE")
-        .unwrap_or_else(|_| "false".to_string())
-        .parse::<bool>()
-        .expect("Cannot parse BACKCHANNEL_DANGER_ALLOW_INSECURE as bool");
-
-    info!(
-        "Building backchannel logout client with: BACKCHANNEL_DANGER_ALLOW_HTTP: {allow_http}, \
-    BACKCHANNEL_DANGER_ALLOW_INSECURE: {allow_insecure}"
-    );
-
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .connect_timeout(Duration::from_secs(10))
-        .https_only(!allow_http)
-        .danger_accept_invalid_certs(allow_insecure)
-        .user_agent(format!("Rauthy OIDC Client v{}", RAUTHY_VERSION))
-        .build()
-        .unwrap()
-});
+use tracing::{debug, error};
 
 // We will allow more clock skew here for the token expiration validation to not be too
 // strict, as long as the signature of the token and all other things are valid.
@@ -430,7 +403,7 @@ pub async fn send_backchannel_logout(
             "Sending backchannel logout to {}: {}",
             client_id, backchannel_logout_uri
         );
-        let res = LOGOUT_CLIENT
+        let res = http_client()
             .post(backchannel_logout_uri)
             .form(&BackchannelLogoutRequest { logout_token })
             .send()

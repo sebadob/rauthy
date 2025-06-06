@@ -628,10 +628,12 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
         },
         kid: None,
     };
+
+    let _ = DPOP_TOKEN_ENDPOINT.set("http://localhost:8081/auth/v1/oidc/token".to_string());
     let mut claims = DPoPClaims {
         jti: "-BwC3ESc6acc2lTc".to_string(),
         htm: http::Method::POST.to_string(),
-        htu: DPOP_TOKEN_ENDPOINT.clone().to_string(),
+        htu: DPOP_TOKEN_ENDPOINT.get().unwrap().to_string(),
         iat: Utc::now().timestamp(),
         // ath: None,
         nonce: None,

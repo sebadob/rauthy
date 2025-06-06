@@ -52,26 +52,9 @@ use rauthy_service::oidc::logout;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::collections::HashMap;
-use std::env;
-use std::sync::LazyLock;
 use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
-
-pub static PICTURE_PUBLIC: LazyLock<bool> = LazyLock::new(|| {
-    env::var("PICTURE_PUBLIC")
-        .as_deref()
-        .unwrap_or("false")
-        .parse::<bool>()
-        .expect("Cannot parse PICTURE_PUBLIC as bool")
-});
-pub static PICTURE_UPLOAD_LIMIT_MB: LazyLock<u16> = LazyLock::new(|| {
-    env::var("PICTURE_UPLOAD_LIMIT_MB")
-        .as_deref()
-        .unwrap_or("10")
-        .parse::<u16>()
-        .expect("Cannot parse PICTURE_UPLOAD_LIMIT_MB as u16")
-});
 
 /// Returns all existing users
 ///
@@ -339,7 +322,9 @@ pub async fn get_user_picture_config(
 
     Ok(HttpResponse::Ok().json(UserPictureConfig {
         upload_allowed: *PICTURE_STORAGE_TYPE != PictureStorage::Disabled,
-        content_len_limit: *PICTURE_UPLOAD_LIMIT_MB as u32 * 1024 * 1024,
+        content_len_limit: RauthyConfig::get().vars.user_pictures.upload_limit_mb as u32
+            * 1024
+            * 1024,
     }))
 }
 
@@ -682,7 +667,7 @@ pub async fn put_user_picture(
         }
     }
 
-    content_len_limit(&req, *PICTURE_UPLOAD_LIMIT_MB)?;
+    content_len_limit(&req, RauthyConfig::get().vars.user_pictures.upload_limit_mb)?;
 
     let resp = UserPicture::upload(user_id.clone(), payload).await?;
 
@@ -720,7 +705,7 @@ pub async fn get_user_picture(
 ) -> Result<HttpResponse, ErrorResponse> {
     let (user_id, picture_id) = path.into_inner();
 
-    let cors_header = if !*PICTURE_PUBLIC {
+    let cors_header = if !RauthyConfig::get().vars.user_pictures.public {
         validate_user_picture_access(&req, principal, &user_id).await?
     } else {
         None

@@ -5,26 +5,20 @@ use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::logout;
-use std::env;
 use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info};
 
 pub async fn user_expiry_checker() {
-    let secs = env::var("SCHED_USER_EXP_MINS")
-        .as_deref()
-        .unwrap_or("60")
-        .parse::<u64>()
-        .expect("Cannot parse 'SCHED_USER_EXP_MINS' to u64");
+    let secs = RauthyConfig::get().vars.database.sched_user_exp_mins as u64;
     let mut interval = tokio::time::interval(Duration::from_secs(secs * 60));
-    let cleanup_after_secs = env::var("SCHED_USER_EXP_DELETE_MINS")
-        .map(|s| {
-            s.parse::<u64>()
-                .expect("Cannot parse 'SCHED_USER_EXP_DELETE_MINS' to u64")
-                * 60
-        })
-        .ok();
+    let cleanup_after_secs = RauthyConfig::get()
+        .vars
+        .database
+        .sched_user_exp_delete_mins
+        .map(|s| s as u64 * 60);
     if cleanup_after_secs.is_none() {
         info!("Auto cleanup for expired users disabled");
     }

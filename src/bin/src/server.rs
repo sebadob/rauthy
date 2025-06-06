@@ -4,7 +4,6 @@ use actix_web::{App, HttpServer, middleware, web};
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
 use rauthy_common::is_hiqlite;
-use rauthy_common::password_hasher::MAX_HASH_THREADS;
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, dev_only, events, fed_cm, generic, groups, html,
@@ -114,7 +113,11 @@ pub async fn server_with_metrics() -> std::io::Result<()> {
     match listen_scheme {
         ListenScheme::Http => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{}:{}",
+                    &listen_addr,
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .run()
                 .await
         }
@@ -122,7 +125,11 @@ pub async fn server_with_metrics() -> std::io::Result<()> {
         ListenScheme::Https => {
             server
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{}:{}",
+                        &listen_addr,
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -131,9 +138,17 @@ pub async fn server_with_metrics() -> std::io::Result<()> {
 
         ListenScheme::HttpHttps => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{}:{}",
+                    &listen_addr,
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{}:{}",
+                        &listen_addr,
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -182,7 +197,11 @@ pub async fn server_without_metrics() -> std::io::Result<()> {
     match listen_scheme {
         ListenScheme::Http => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{}:{}",
+                    &listen_addr,
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .run()
                 .await
         }
@@ -190,7 +209,11 @@ pub async fn server_without_metrics() -> std::io::Result<()> {
         ListenScheme::Https => {
             server
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{}:{}",
+                        &listen_addr,
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -199,9 +222,17 @@ pub async fn server_without_metrics() -> std::io::Result<()> {
 
         ListenScheme::HttpHttps => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{}:{}",
+                    &listen_addr,
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{}:{}",
+                        &listen_addr,
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -213,18 +244,6 @@ pub async fn server_without_metrics() -> std::io::Result<()> {
             server.bind_uds(listen_addr)?.run().await
         }
     }
-}
-
-fn get_http_port() -> String {
-    let port = env::var("LISTEN_PORT_HTTP").unwrap_or_else(|_| "8080".to_string());
-    info!("HTTP listen port: {}", port);
-    port
-}
-
-fn get_https_port() -> String {
-    let port = env::var("LISTEN_PORT_HTTPS").unwrap_or_else(|_| "8443".to_string());
-    info!("HTTPS listen port: {}", port);
-    port
 }
 
 fn default_headers() -> middleware::DefaultHeaders {
@@ -420,18 +439,18 @@ fn api_services() -> actix_web::Scope {
 }
 
 fn workers() -> usize {
-    let mut workers = env::var("HTTP_WORKERS")
-        .as_deref()
-        .unwrap_or("0")
-        .parse::<usize>()
-        .expect("Unable to parse HTTP_WORKERS");
+    let vars = &RauthyConfig::get().vars;
+    let mut workers = vars.server.http_workers as usize;
     if workers == 0 {
         let cores = num_cpus::get();
         if cores < 4 {
             workers = 1;
         } else {
             let reserve = if is_hiqlite() { 2 } else { 1 };
-            workers = max(2, cores as i64 - *MAX_HASH_THREADS as i64 - reserve) as usize;
+            workers = max(
+                2,
+                cores as i64 - vars.hashing.max_hash_threads as i64 - reserve,
+            ) as usize;
         }
     }
     workers

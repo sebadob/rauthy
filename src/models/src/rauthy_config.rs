@@ -5,6 +5,7 @@ use crate::events::listener::EventRouterMsg;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
+use rauthy_common::logging::LogLevelAccess;
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::env;
@@ -14,7 +15,7 @@ use std::sync::{Arc, OnceLock};
 use tokio::fs;
 use tokio::sync::mpsc;
 use toml::Value;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use webauthn_rs::Webauthn;
 
 static CONFIG: OnceLock<RauthyConfig> = OnceLock::new();
@@ -22,8 +23,10 @@ static CONFIG: OnceLock<RauthyConfig> = OnceLock::new();
 #[derive(Debug)]
 pub struct RauthyConfig {
     pub argon2_params: argon2::Params,
+    pub is_ha_deployment: bool,
     pub issuer: String,
     pub listen_scheme: ListenScheme,
+    pub log_level_access: LogLevelAccess,
     pub provider_callback_uri: String,
     pub provider_callback_uri_encoded: String,
     pub pub_url_with_scheme: String,
@@ -39,8 +42,29 @@ impl RauthyConfig {
         tx_email: mpsc::Sender<EMail>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
+        _test_mode: bool,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
-        let (vars, node_config) = Vars::load("config.toml").await;
+        #[cfg(debug_assertions)]
+        let config = if _test_mode {
+            // make sure to un-set any possibly left-over env vars from testing, so that
+            // the config file is not overwritten
+            // unsafe {
+            //     env::set_var("LISTEN_SCHEME", "");
+            //     env::set_var("PUB_URL", "");
+            //     env::set_var("RP_ORIGIN", "");
+            // }
+
+            "config-test.toml"
+        } else {
+            "config.toml"
+        };
+        #[cfg(not(debug_assertions))]
+        let config = "config.toml";
+        let (vars, node_config) = Vars::load(config).await;
+        vars.validate();
+        if let Err(err) = node_config.is_valid() {
+            panic!("Invalid `[cluster]` config: {}", err);
+        }
 
         let listen_scheme = match vars.server.scheme.as_ref() {
             "http" => {
@@ -103,6 +127,10 @@ impl RauthyConfig {
         let issuer = format!("{}://{}/auth/v1", issuer_scheme, vars.server.pub_url);
         debug!("Issuer: {}", issuer);
 
+        let Ok(log_level_access) = LogLevelAccess::from_str(&vars.logging.level_access) else {
+            panic!("Invalid value for `logging.level_access`");
+        };
+
         let pub_url = &vars.server.pub_url;
         let provider_callback_uri = {
             let scheme = if (listen_scheme == ListenScheme::Http && !vars.server.proxy_mode)
@@ -144,8 +172,10 @@ impl RauthyConfig {
 
         let slf = Self {
             argon2_params,
+            is_ha_deployment: node_config.nodes.len() > 1,
             issuer,
             listen_scheme,
+            log_level_access,
             provider_callback_uri,
             provider_callback_uri_encoded,
             pub_url_with_scheme,
@@ -188,6 +218,7 @@ pub struct Vars {
     pub access: VarsAccess,
     pub auth_headers: VarsAuthHeaders,
     pub backchannel_logout: VarsBackchannelLogout,
+    pub bootstrap: VarsBootstrap,
     pub database: VarsDatabase,
     pub device_grant: VarsDeviceGrant,
     pub dpop: VarsDpop,
@@ -208,6 +239,7 @@ pub struct Vars {
     pub server: VarsServer,
     pub suspicious_requests: VarsSuspiciousRequests,
     pub templates: VarsTemplates,
+    pub tls: VarsTls,
     pub user_pictures: VarsUserPictures,
     pub user_registration: VarsUserRegistration,
     pub webauthn: VarsWebauthn,
@@ -252,6 +284,13 @@ impl Default for Vars {
                 token_lifetime: 30,
                 allow_clock_skew: 5,
                 allowed_token_lifetime: 120,
+            },
+            bootstrap: VarsBootstrap {
+                admin_email: "admin@localhost".to_string(),
+                password_plain: None,
+                pasword_argon2id: None,
+                api_key: None,
+                api_key_secret: None,
             },
             database: VarsDatabase {
                 hiqlite: true,
@@ -366,7 +405,6 @@ impl Default for Vars {
                 argon2_p_cost: 8,
                 max_hash_threads: 2,
                 hash_await_warn_time: 500,
-                jwk_autorotate_cron: "0 30 3 1 * * *".into(),
             },
             http_client: VarsHttpClient {
                 connect_timeout: 10,
@@ -389,6 +427,7 @@ impl Default for Vars {
                 session_timeout: 5400,
                 magic_link_pwd_reset: 30,
                 magic_link_pwd_first: 4320,
+                jwk_autorotate_cron: "0 30 3 1 * * *".into(),
             },
             logging: VarsLogging {
                 level: "info".into(),
@@ -526,6 +565,10 @@ impl Default for Vars {
                     footer: None,
                 },
             },
+            tls: VarsTls {
+                cert_path: None,
+                key_path: None,
+            },
             user_pictures: VarsUserPictures {
                 storage_type: "db".into(),
                 path: "./pictures".into(),
@@ -580,6 +623,7 @@ impl Vars {
         slf.parse_access(&mut table);
         slf.parse_auth_headers(&mut table);
         slf.parse_backchannel_logout(&mut table);
+        slf.parse_bootstrap(&mut table);
         slf.parse_database(&mut table);
         slf.parse_device_grant(&mut table);
         slf.parse_dpop(&mut table);
@@ -600,6 +644,7 @@ impl Vars {
         slf.parse_server(&mut table);
         slf.parse_suspicious_requests(&mut table);
         slf.parse_templates(&mut table);
+        slf.parse_tls(&mut table);
         slf.parse_user_pictures(&mut table);
         slf.parse_user_registration(&mut table);
         slf.parse_webauthn(&mut table);
@@ -750,7 +795,7 @@ impl Vars {
             return;
         };
 
-        if let Some(v) = t_u32(
+        if let Some(v) = t_u16(
             &mut table,
             "backchannel_logout",
             "retry_count",
@@ -797,6 +842,48 @@ impl Vars {
             "LOGOUT_TOKEN_ALLOWED_LIFETIME",
         ) {
             self.backchannel_logout.allowed_token_lifetime = v;
+        }
+    }
+
+    fn parse_bootstrap(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "bootstrap") else {
+            return;
+        };
+
+        if let Some(v) = t_str(
+            &mut table,
+            "bootstrap",
+            "admin_email",
+            "BOOTSTRAP_ADMIN_EMAIL",
+        ) {
+            self.bootstrap.admin_email = v;
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "bootstrap",
+            "password_plain",
+            "BOOTSTRAP_ADMIN_PASSWORD_PLAIN",
+        ) {
+            self.bootstrap.password_plain = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "bootstrap",
+            "pasword_argon2id",
+            "BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID",
+        ) {
+            self.bootstrap.pasword_argon2id = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "bootstrap", "api_key", "BOOTSTRAP_API_KEY") {
+            self.bootstrap.api_key = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "bootstrap",
+            "api_key_secret",
+            "BOOTSTRAP_API_KEY_SECRET",
+        ) {
+            self.bootstrap.api_key_secret = Some(v);
         }
     }
 
@@ -1479,15 +1566,6 @@ impl Vars {
         ) {
             self.hashing.hash_await_warn_time = v;
         }
-
-        if let Some(v) = t_str(
-            &mut table,
-            "hashing",
-            "jwk_autorotate_cron",
-            "JWK_AUTOROTATE_CRON",
-        ) {
-            self.hashing.jwk_autorotate_cron = v.into();
-        }
     }
 
     async fn parse_hiqlite_config(&mut self, table: &mut toml::Table) -> hiqlite::NodeConfig {
@@ -1495,8 +1573,9 @@ impl Vars {
             panic!("Missing mandatory `[cluster]` section");
         };
 
-        debug_assert!(!self.encryption.key_active.is_empty());
-        debug_assert!(!self.encryption.keys.is_empty());
+        if self.encryption.key_active.is_empty() || self.encryption.keys.is_empty() {
+            panic!("Missing `encryption.keys` / `encryption.key_active`");
+        }
         let Ok(enc_keys) = cryptr::EncKeys::try_parse(
             self.encryption.key_active.clone(),
             self.encryption.keys.clone(),
@@ -1648,6 +1727,14 @@ impl Vars {
             "ML_LT_PWD_FIRST",
         ) {
             self.lifetimes.magic_link_pwd_first = v;
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "lifetimes",
+            "jwk_autorotate_cron",
+            "JWK_AUTOROTATE_CRON",
+        ) {
+            self.lifetimes.jwk_autorotate_cron = v.into();
         }
     }
 
@@ -1823,7 +1910,7 @@ impl Vars {
 
     fn parse_templates(&mut self, table: &mut toml::Table) {
         let Some(Value::Array(arr)) = table.remove("templates") else {
-            panic!("{}", err_t("templates", "", "Array"));
+            return;
         };
 
         for entry in arr {
@@ -1912,6 +1999,19 @@ impl Vars {
             }
 
             println!("template: {:?}", table);
+        }
+    }
+
+    fn parse_tls(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "tls") else {
+            return;
+        };
+
+        if let Some(v) = t_str(&mut table, "tls", "cert_path", "TLS_CERT") {
+            self.tls.cert_path = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "tls", "key_path", "TLS_KEY") {
+            self.tls.key_path = Some(v);
         }
     }
 
@@ -2033,6 +2133,49 @@ impl Vars {
             self.webauthn.no_password_exp = v;
         }
     }
+
+    fn validate(&self) {
+        if !self.database.hiqlite
+            && (self.database.pg_host.is_none()
+                || self.database.pg_user.is_none()
+                || self.database.pg_password.is_none())
+        {
+            panic!("Database set to Postgres but missing `database.pg_*` config");
+        }
+
+        if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
+            warn!(
+                "Open dynamic client registration - consider setting a registration token, if possible."
+            );
+        }
+
+        if self.encryption.keys.is_empty() || self.encryption.key_active.is_empty() {
+            panic!("Missing `encryption.keys` / `encryption.key_active`");
+        }
+
+        if self.server.pub_url.is_empty() {
+            panic!("Empty `server.pub_url`");
+        }
+
+        if self.server.proxy_mode && self.server.trusted_proxies.is_empty() {
+            panic!("`server.proxy_mode` is set but `server.trusted_proxies` is empty");
+        }
+
+        if self.webauthn.rp_id.is_empty() {
+            panic!("`webauthn.rp_id` is missing");
+        }
+        if self.webauthn.rp_origin.is_empty() {
+            panic!("`webauthn.rp_origin` is missing");
+        }
+        let (_, webauthn_port) = self
+            .webauthn
+            .rp_origin
+            .rsplit_once(':')
+            .expect("Invalid format for `webauthn.rp_origin` - missing port");
+        if webauthn_port.parse::<u16>().is_err() {
+            panic!("Invalid value for `webauthn.rp_origin` port");
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -2072,12 +2215,21 @@ pub struct VarsAuthHeaders {
 
 #[derive(Debug)]
 pub struct VarsBackchannelLogout {
-    pub retry_count: u32,
+    pub retry_count: u16,
     pub danger_allow_http: bool,
     pub danger_allow_insecure: bool,
     pub token_lifetime: u32,
     pub allow_clock_skew: u32,
     pub allowed_token_lifetime: u32,
+}
+
+#[derive(Debug)]
+pub struct VarsBootstrap {
+    pub admin_email: String,
+    pub password_plain: Option<String>,
+    pub pasword_argon2id: Option<String>,
+    pub api_key: Option<String>,
+    pub api_key_secret: Option<String>,
 }
 
 #[derive(Debug)]
@@ -2215,7 +2367,6 @@ pub struct VarsHashing {
     pub argon2_p_cost: u32,
     pub max_hash_threads: u32,
     pub hash_await_warn_time: u32,
-    pub jwk_autorotate_cron: Cow<'static, str>,
 }
 
 #[derive(Debug)]
@@ -2244,6 +2395,7 @@ pub struct VarsLifetimes {
     pub session_timeout: u32,
     pub magic_link_pwd_reset: u32,
     pub magic_link_pwd_first: u32,
+    pub jwk_autorotate_cron: Cow<'static, str>,
 }
 
 #[derive(Debug)]
@@ -2321,6 +2473,12 @@ pub struct VarsTemplate {
     pub expires: Cow<'static, str>,
     pub button: Cow<'static, str>,
     pub footer: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct VarsTls {
+    pub cert_path: Option<String>,
+    pub key_path: Option<String>,
 }
 
 #[derive(Debug)]
@@ -2491,35 +2649,14 @@ fn err_t(key: &str, parent: &str, typ: &str) -> String {
     format!("Expected type `{}` for {}{}{}", typ, parent, sep, key)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_config_vars_build() {
-        let vars = Vars::load("../../config.toml").await;
-        //
-        // let s = fs::read_to_string("../../config.toml").unwrap();
-        //
-        // let mut table_root = s.parse::<toml::Table>().unwrap();
-        //
-        // let mut table = t_table(&mut table_root, "dev").unwrap();
-        // let mut vars = VarsDev {
-        //     dev_mode: false,
-        //     dpop_http: false,
-        //     insecure_cookie: false,
-        //     provider_callback_url: None,
-        // };
-        //
-        // let vars_dev = VarsDev {
-        //     dev_mode: t_bool(&mut table, "dev", "dev_mode", "DEV_MODE").unwrap(),
-        //     dpop_http: t_bool(&mut table, "dev", "dpop_http", "").unwrap(),
-        //     insecure_cookie: t_bool(&mut table, "dev", "insecure_cookie", "INSECURE_COOKIE")
-        //         .unwrap(),
-        //     provider_callback_url: t_str(&mut table, "dev", "provider_callback_url", ""),
-        // };
-        // println!("size of vars: {}", std::mem::size_of::<Vars>());
-
-        let dev_mode = assert_eq!(1, 2);
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//
+//     #[tokio::test]
+//     async fn test_config_vars_build() {
+//         let vars = Vars::load("../../config.toml").await;
+//         // println!("size of vars: {}", std::mem::size_of::<Vars>());
+//         let dev_mode = assert_eq!(1, 2);
+//     }
+// }

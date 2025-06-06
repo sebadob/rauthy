@@ -8,8 +8,8 @@ use rand::Rng;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::fmt::Debug;
 use std::net::IpAddr;
+use std::net::Ipv4Addr;
 use std::str::FromStr;
-use std::{env, net::Ipv4Addr};
 use tracing::{error, trace};
 
 const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE;
@@ -99,20 +99,6 @@ pub fn base64_url_no_pad_decode_buf(b64: &str, buf: &mut Vec<u8>) -> Result<(), 
     B64_URL_SAFE_NO_PAD
         .decode_vec(b64, buf)
         .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
-}
-
-/// Uses the `HQL_NODES` to determine if Rauthy is running in a HA deployment.
-#[inline]
-pub fn is_ha_deployment() -> bool {
-    env::var("HQL_NODES")
-        .unwrap_or_else(|_| "".to_string())
-        .lines()
-        .filter_map(|l| {
-            let trim = l.trim();
-            if trim.is_empty() { None } else { Some(trim) }
-        })
-        .count()
-        > 1
 }
 
 #[inline(always)]

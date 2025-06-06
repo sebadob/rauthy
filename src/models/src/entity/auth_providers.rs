@@ -37,7 +37,7 @@ use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, deserialize,
     get_rand, new_store_id, serialize,
 };
-use rauthy_common::{HTTP_CLIENT, is_hiqlite};
+use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
 use ring::digest;
@@ -569,7 +569,7 @@ impl AuthProvider {
         };
 
         debug!("AuthProvider lookup to {}", config_url);
-        let res = HTTP_CLIENT.get(config_url.as_ref()).send().await?;
+        let res = http_client().get(config_url.as_ref()).send().await?;
         let status = res.status();
         if !status.is_success() {
             let body = res.text().await?;
@@ -881,7 +881,7 @@ impl AuthProviderCallback {
         }
 
         let res = {
-            let mut builder = HTTP_CLIENT
+            let mut builder = http_client()
                 .post(&provider.token_endpoint)
                 .header(ACCEPT, APPLICATION_JSON);
 
@@ -944,7 +944,7 @@ impl AuthProviderCallback {
                     // the id_token only exists, if we actually have an OIDC provider.
                     // If we only get an access token, we need to do another request to the
                     // userinfo endpoint
-                    let res = HTTP_CLIENT
+                    let res = http_client()
                         .get(&provider.userinfo_endpoint)
                         .header(AUTHORIZATION, format!("Bearer {}", access_token))
                         .header(ACCEPT, APPLICATION_JSON)

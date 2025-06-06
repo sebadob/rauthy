@@ -1,5 +1,3 @@
-use crate::DbType;
-use actix_web::http::Uri;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::env;
@@ -119,19 +117,9 @@ pub const IDX_WEBAUTHN: &str = "webauthn_";
 pub static APP_START: LazyLock<DateTime<Utc>> = LazyLock::new(Utc::now);
 pub static RAUTHY_ADMIN_ROLE: &str = "rauthy_admin";
 
-// Cache TTLS
-// pub static CACHE_TTL_AUTH_CODE: LazyLock<Option<i64>> =
-//     LazyLock::new(|| Some(300 + *WEBAUTHN_REQ_EXP as i64));
-// pub static CACHE_TTL_WEBAUTHN: LazyLock<Option<i64>> =
-//     LazyLock::new(|| Some(*WEBAUTHN_REQ_EXP as i64));
-// pub static CACHE_TTL_WEBAUTHN_DATA: LazyLock<Option<i64>> =
-//     LazyLock::new(|| Some(*WEBAUTHN_DATA_EXP as i64));
-
-pub static DB_TYPE: LazyLock<DbType> = LazyLock::new(DbType::build);
-
 pub static DEV_MODE: OnceLock<bool> = OnceLock::new();
 
-pub static DPOP_TOKEN_ENDPOINT: OnceLock<Uri> = OnceLock::new();
+pub static DPOP_TOKEN_ENDPOINT: OnceLock<String> = OnceLock::new();
 pub static PEER_IP_HEADER_NAME: OnceLock<Option<String>> = OnceLock::new();
 pub static PROXY_MODE: OnceLock<bool> = OnceLock::new();
 

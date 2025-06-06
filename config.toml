@@ -246,20 +246,6 @@ mfa = 'x-forwarded-user-mfa'
 # overwritten by: BACKCHANNEL_LOGOUT_RETRY_COUNT
 retry_count = 100
 
-# Can be set to `true` to allow plain HTTP backchannel logout
-# requests.
-#
-# default: false
-# overwritten by: BACKCHANNEL_DANGER_ALLOW_HTTP
-danger_allow_http = true
-
-# Can be set to `true` to allow insecure HTTPS logout requests.
-# This will disable TLS certificate validation.
-#
-# default: false
-# overwritten by: BACKCHANNEL_DANGER_ALLOW_INSECURE
-danger_allow_insecure = true
-
 # The lifetime / validity for Logout Tokens issued by Rauthy in
 # seconds. These Logout Tokens are being generated during OIDC
 # Backchannel Logout requests to configured clients. The token
@@ -298,12 +284,14 @@ allowed_token_lifetime = 120
 # If set, the email of the default admin will be changed during
 # the initialization of an empty production database.
 #
+# default: 'admin@localhost'
 # overwritten by: BOOTSTRAP_ADMIN_EMAIL
 admin_email = 'admin@localhost'
 
 # If set, this plain text password will be used for the initial
 # admin password instead of generating a random password.
 #
+# default: random -> see logs on first start
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_PLAIN
 password_plain = '123SuperSafe'
 
@@ -312,6 +300,7 @@ password_plain = '123SuperSafe'
 # `password_plain` and `pasword_argon2id` are set, the hashed
 # version will always be prioritized.
 #
+# default: random -> see logs on first start
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
 pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 
@@ -1355,17 +1344,6 @@ max_hash_threads = 2
 # overwritten by: HASH_AWAIT_WARN_TIME
 hash_await_warn_time = 500
 
-# JWKS auto rotate cronjob. This will (by default) rotate all JWKs every
-# 1. day of the month. If you need smaller intervals, you may adjust this
-# value. For security reasons, you cannot fully disable it.
-# In a HA deployment, this job will only be executed on the current cache
-# leader at that time.
-# Format: "sec min hour day_of_month month day_of_week year"
-#
-# default: "0 30 3 1 * * *"
-# overwritten by: JWK_AUTOROTATE_CRON
-jwk_autorotate_cron = '0 30 3 1 * * *'
-
 [http_client]
 ## In this section, you can configure the HTTP Client
 ## that Rauthy uses for all different kind's of tasks,
@@ -1545,6 +1523,17 @@ magic_link_pwd_reset = 30
 # overwritten by: ML_LT_PWD_FIRST
 magic_link_pwd_first = 4320
 
+# JWKS auto rotate cronjob. This will (by default) rotate all JWKs every
+# 1. day of the month. If you need smaller intervals, you may adjust this
+# value. For security reasons, you cannot fully disable it.
+# In a HA deployment, this job will only be executed on the current cache
+# leader at that time.
+# Format: "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 30 3 1 * * *"
+# overwritten by: JWK_AUTOROTATE_CRON
+jwk_autorotate_cron = '0 30 3 1 * * *'
+
 [logging]
 # This is the log level for stdout logs
 # Accepts: error, warn, info, debug, trace
@@ -1564,22 +1553,22 @@ level_database = 'info'
 # customized access logs. These logs will be logged with each
 # request in addition to the normal LOG_LEVEL logs.
 # The following values are valid:
-# - `Debug`
+# - `debug`
 #   CAUTION: The Debug setting logs every information available
 #   to the middleware which includes SENSITIVE HEADERS
 #   DO NOT use the Debug level in a working production environment!
-# - `Verbose`
+# - `verbose`
 #   Verbose logging without headers - generates huge outputs
-# - `Basic`
+# - `basic`
 #   Logs access to all endpoints apart from the Frontend ones which
 #   all js, css, ...
-# - `Modifying`
+# - `modifying`
 #   Logs only requests to modifying endpoints and skips all GET
-# - `Off`
+# - `off`
 #
-# default: Modifying
+# default: 'modifying'
 # overwritten by: LOG_LEVEL_ACCESS
-level_access = 'Basic'
+#level_access = 'basic'
 
 # You can change the log output format to JSON, if you set:
 # `log_fmt=json`.
@@ -1591,7 +1580,7 @@ level_access = 'Basic'
 #
 # default: text
 # overwritten by: LOG_FMT
-log_fmt = 'json'
+#log_fmt = 'json'
 
 [mfa]
 # If 'true', MFA for an account must be enabled to access the

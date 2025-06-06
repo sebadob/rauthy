@@ -1,35 +1,33 @@
 [dev]
 dev_mode = true
 
-[access]
-password_reset_cookie_binding = false
-
 [auth_headers]
 enable = true
+
+[cluster]
+node_id = 1
+nodes = ["1 localhost:8100 localhost:8200"]
+log_statements = true
+# we don't need to sync any data in integration tests
+log_sync = "interval_60000"
+password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
+secret_raft = "SuperSecureSecret1337"
+secret_api = "SuperSecureSecret1337"
 
 [database]
 pg_host = 'localhost'
 pg_user = 'rauthy'
 pg_password = '123SuperSafe'
 
-[backchannel_logout]
-danger_allow_http = true
-danger_allow_insecure = true
-
-[cluster]
-node_id = 1
-nodes = ["1 localhost:8100 localhost:8200"]
-log_statements = true
-log_sync = "interval_200"
-password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
-secret_raft = "SuperSecureSecret1337"
-secret_api = "SuperSecureSecret1337"
-
 [dynamic_clients]
 enable = true
 
 [email]
 rauthy_admin_email = 'admin@localhost'
+
+[encryption]
+keys = ['bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=']
+key_active = 'bVCyTsGaggVy5yqQ'
 
 [ephemeral_clients]
 enable = true
@@ -61,3 +59,7 @@ port_http = 8081
 port_https = 8444
 pub_url = 'localhost:8081'
 http_workers = 1
+
+[webauthn]
+rp_id = 'localhost'
+rp_origin = 'http://localhost:8081'

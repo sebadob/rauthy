@@ -19,7 +19,7 @@ use rauthy_api_types::clients::{
 };
 use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
-use rauthy_common::{HTTP_CLIENT, is_hiqlite};
+use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
 use reqwest::header::CONTENT_TYPE;
@@ -1354,7 +1354,7 @@ impl Client {
 
 impl Client {
     async fn ephemeral_from_url(value: &str) -> Result<Self, ErrorResponse> {
-        let res = HTTP_CLIENT
+        let res = http_client()
             .get(value)
             .header(CONTENT_TYPE, APPLICATION_JSON)
             .send()

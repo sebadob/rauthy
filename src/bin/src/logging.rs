@@ -1,3 +1,4 @@
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::env;
 use tracing::Level;
 
@@ -6,13 +7,13 @@ pub fn setup_logging() -> tracing::Level {
     use tracing::Level;
 
     // setup logging
-    dotenvy::dotenv().ok();
     let log_level = read_level("LOG_LEVEL");
     let log_level_db = read_level("LOG_LEVEL_DATABASE");
 
     let filter = format!(
-        "{},cryptr=info,hyper=info,h2=info,openraft={}",
+        "{},cryptr=info,hyper=info,h2=info,hiqlite={},openraft={}",
         log_level.as_str(),
+        log_level_db.as_str(),
         log_level_db.as_str(),
     );
 
@@ -49,9 +50,7 @@ pub fn setup_logging() -> tracing::Level {
 }
 
 pub fn is_log_fmt_json() -> bool {
-    env::var("LOG_FMT")
-        .map(|fmt| &fmt == "json")
-        .unwrap_or(false)
+    RauthyConfig::get().vars.logging.log_fmt.as_ref() == "json"
 }
 
 fn read_level(env_var: &str) -> Level {

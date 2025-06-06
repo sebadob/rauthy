@@ -118,7 +118,7 @@ impl DB {
         user: &str,
         password: &str,
         db_name: &str,
-        db_max_conn: u32,
+        db_max_conn: u16,
     ) -> Result<deadpool_postgres::Pool, ErrorResponse> {
         // let mut config: tokio_postgres::Config = db_host.parse().expect("invalid database url");
         let mut config: tokio_postgres::Config = tokio_postgres::Config::default();
@@ -134,7 +134,7 @@ impl DB {
         config.load_balance_hosts(LoadBalanceHosts::Random);
         config.ssl_mode(SslMode::Prefer);
 
-        let tls_config = if let Some("true") = env::var("PG_TLS_NO_VERIFY").ok().as_deref() {
+        let tls_config = if RauthyConfig::get().vars.database.pg_tls_no_verify {
             rustls::ClientConfig::builder()
                 .dangerous()
                 .with_custom_certificate_verifier(Arc::new(NoTlsVerifier {}))
@@ -176,21 +176,15 @@ impl DB {
     }
 
     async fn init_connect_postgres() -> Result<(), ErrorResponse> {
-        let db_max_conn = env::var("PG_MAX_CONN")
-            .unwrap_or_else(|_| "20".to_string())
-            .parse::<u32>()
-            .expect("Error parsing DATABASE_MAX_CONN to u32");
+        let cfg = &RauthyConfig::get().vars.database;
+        let host = cfg.pg_host.as_ref().expect("PG_HOST is not set");
+        let user = cfg.pg_user.as_ref().expect("PG_USER is not set");
+        let password = cfg.pg_password.as_ref().expect("PG_PASSWORD is not set");
+        let db_name = cfg.pg_db_name.as_ref();
 
-        let host = env::var("PG_HOST").expect("PG_HOST is not set");
-        let port = env::var("PG_PORT")
-            .unwrap_or_else(|_| "5432".to_string())
-            .parse::<u16>()
-            .expect("Cannot parse PG_PORT to u16");
-        let user = env::var("PG_USER").expect("PG_USER is not set");
-        let password = env::var("PG_PASSWORD").expect("PG_PASSWORD is not set");
-        let db_name = env::var("PG_DB_NAME").unwrap_or_else(|_| "rauthy".to_string());
         let pool =
-            Self::connect_postgres(&host, port, &user, &password, &db_name, db_max_conn).await?;
+            Self::connect_postgres(host, cfg.pg_port, user, password, db_name, cfg.pg_max_conn)
+                .await?;
 
         PG_POOL
             .set(pool)

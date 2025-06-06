@@ -11,6 +11,8 @@ TODO before v0.30:
 ## Config Rework Notes
 
 - `TPL_*` values are not possible via pure ENV vars anymore
+- log_level_access is now lowercase
+- backchannel http client was merged
 
 ## Stage 1 - essentials
 

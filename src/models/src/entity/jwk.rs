@@ -13,7 +13,7 @@ use rauthy_common::constants::{
 use rauthy_common::utils::{
     base64_url_encode, base64_url_no_pad_decode, base64_url_no_pad_decode_buf, get_rand,
 };
-use rauthy_common::{HTTP_CLIENT, is_hiqlite};
+use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
 use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey};
@@ -415,7 +415,7 @@ impl JWKSPublicKey {
             return res;
         }
 
-        let res = match HTTP_CLIENT
+        let res = match http_client()
             .get(jwks_uri)
             .header(CONTENT_TYPE, APPLICATION_JSON)
             .send()
