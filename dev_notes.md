@@ -8,12 +8,6 @@ TODO before v0.30:
 - update book with the "new" K8s sts setup to show how to do an HA deployment
 - double check weird backup push error on staging
 
-## Config Rework Notes
-
-- `TPL_*` values are not possible via pure ENV vars anymore
-- log_level_access is now lowercase
-- backchannel http client was merged
-
 ## Stage 1 - essentials
 
 [x] finished

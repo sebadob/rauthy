@@ -731,7 +731,7 @@ pg_port = 5432
 # overwritten by: PG_USER
 pg_user = 'rauthy'
 # overwritten by: PG_PASSWORD
-pg_password = 'PG_PASSWORD'
+pg_password = '123SuperSafe'
 # default: rauthy
 # overwritten by: PG_DB_NAME
 pg_db_name = 'rauthy'
