@@ -6,6 +6,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{AddressClaim, JwtCommonClaims, JwtTokenType};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::devices::DeviceEntity;
+use rauthy_models::entity::user_attr::UserAttrValueEntity;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webids::WebId;
@@ -125,8 +126,25 @@ pub async fn get_userinfo(
     };
 
     if scope.contains("email") {
-        userinfo.email = Some(user.email.clone());
-        userinfo.email_verified = Some(user.email_verified);
+        let client = Client::find(claims.azp.to_string()).await.map_err(|_| {
+            ErrorResponse::new(
+                ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),
+                "The client has not been found",
+            )
+        })?;
+
+        let (email, email_verified) = if let Some(cust_email_mapping) = client.cust_email_mapping {
+            let attrs = UserAttrValueEntity::find_for_user(&user.id).await.unwrap();
+
+            let attr = attrs.iter().find(|v| v.key == cust_email_mapping).unwrap();
+
+            (String::from_utf8(attr.value.clone()).unwrap(), true)
+        } else {
+            (user.email.clone(), user.email_verified)
+        };
+
+        userinfo.email = Some(email);
+        userinfo.email_verified = Some(email_verified);
     }
 
     let mut user_values = None;

@@ -46,6 +46,7 @@
 
     async function fetchAttrs() {
         let res = await fetchGet<UserAttrConfigResponse>('/auth/v1/users/attr');
+        console.log(res)
         if (res.body) {
             attrs = res.body.values;
         } else {
