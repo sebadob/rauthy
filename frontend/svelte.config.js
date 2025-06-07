@@ -1,7 +1,5 @@
 import adapter from '@sveltejs/adapter-static';
 
-const isDev = process.env.DEV_MODE === 'true';
-
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
     compilerOptions: {
@@ -29,7 +27,7 @@ const config = {
             $utils: 'src/utils',
             $webauthn: 'src/webauthn',
         },
-        csp: isDev ? {} : {
+        csp: {
             directives: {
                 'default-src': ['none'],
                 'connect-src': ['self'],

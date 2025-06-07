@@ -9,6 +9,7 @@
     import Input from "$lib5/form/Input.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import {
+        IS_DEV,
         PKCE_VERIFIER_UPSTREAM,
         TPL_AUTH_PROVIDERS, TPL_CLIENT_LOGO_UPDATED,
         TPL_CLIENT_NAME,
@@ -28,7 +29,6 @@
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
     import {fetchPost, type IResponse} from "$api/fetch";
-    import {useIsDev} from "$state/is_dev.svelte";
     import type {
         CodeChallengeMethod,
         LoginRefreshRequest,
@@ -48,15 +48,14 @@
     const inputWidth = "18rem";
 
     let t = useI18n();
-    let isDev = useIsDev().get();
 
-    let authorizeUrl = $derived(isDev ? '/auth/v1/dev/authorize' : '/auth/v1/oidc/authorize');
+    let authorizeUrl = $derived(IS_DEV ? '/auth/v1/dev/authorize' : '/auth/v1/oidc/authorize');
 
     let clientId = useParam('client_id').get();
     let clientName = $state('');
     // we can't use undefined to avoid a JSON error in the Template component
     let clientLogoUpdated = $state(-1);
-    let clientUri = $state(isDev ? '/auth/v1' : '');
+    let clientUri = $state(IS_DEV ? '/auth/v1' : '');
     let redirectUri = useParam('redirect_uri').get();
     let nonce = useParam('nonce').get();
     let scopes = useParam('scope').get()?.split(' ') || [];
@@ -129,7 +128,7 @@
     });
 
     $effect(() => {
-        if (isDev) {
+        if (IS_DEV) {
             // Make sure to create a session manually during dev.
             // In prod, it will be handled automatically during the GET already.
             createSessionDev();
@@ -226,7 +225,7 @@
         }
 
         let url = '/auth/v1/oidc/authorize';
-        if (useIsDev().get()) {
+        if (IS_DEV) {
             url = '/auth/v1/dev/authorize';
         }
 
