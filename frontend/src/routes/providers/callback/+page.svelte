@@ -13,8 +13,8 @@
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
     import {fetchPost} from "$api/fetch";
     import type {WebauthnLoginResponse} from "$api/types/authorize.ts";
-    import {useIsDev} from "$state/is_dev.svelte";
     import type {ProviderCallbackRequest} from "$api/types/auth_provider.ts";
+    import {IS_DEV} from "$utils/constants";
 
     let t = useI18n();
     let clientMfaForce = $state(false);
@@ -51,7 +51,7 @@
         };
 
         let url = '/auth/v1/providers/callback';
-        if (useIsDev().get()) {
+        if (IS_DEV) {
             url = '/auth/v1/dev/providers_callback';
         }
         let res = await fetchPost<undefined | WebauthnLoginResponse>(url, payload);

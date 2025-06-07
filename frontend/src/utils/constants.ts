@@ -1,3 +1,4 @@
+export const IS_DEV = import.meta.env.MODE === 'development';
 export const PKCE_VERIFIER = 'pkce_verifier';
 export const PKCE_VERIFIER_UPSTREAM = 'pkce_verifier_upstream';
 export const CSRF_TOKEN = 'sct';

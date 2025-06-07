@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "cross-env DEV_MODE=true vite dev",
-    "build": "cross-env DEV_MODE=false vite build",
+    "dev": "vite dev",
+    "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -30,8 +30,7 @@
     "vite": "^6.3.4",
     "vite-plugin-top-level-await": "^1.5.0",
     "vite-plugin-wasm": "^3.4.1",
-    "@swc/core": "^1.11.4",
-    "cross-env": "^7.0.3"
+    "@swc/core": "^1.11.4"
   },
   "type": "module"
 }
