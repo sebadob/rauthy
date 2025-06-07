@@ -44,7 +44,6 @@ impl RauthyConfig {
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
-        #[cfg(debug_assertions)]
         let (vars, node_config) = Vars::load(config_file).await;
         vars.validate();
         if let Err(err) = node_config.is_valid() {
