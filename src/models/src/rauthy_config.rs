@@ -138,6 +138,18 @@ impl RauthyConfig {
             .replace(':', "%3A")
             .replace('/', "%2F");
 
+        #[cfg(target_os = "windows")]
+        let pub_url_with_scheme = {
+            let scheme = if listen_scheme == ListenScheme::Http && !vars.server.proxy_mode
+            {
+                "http"
+            } else {
+                "https"
+            };
+            format!("{}://{}", scheme, pub_url)
+        };
+
+        #[cfg(not(target_os = "windows"))]
         let pub_url_with_scheme = {
             let scheme = if (listen_scheme == ListenScheme::Http && !vars.server.proxy_mode)
                 || listen_scheme == ListenScheme::UnixHttp
