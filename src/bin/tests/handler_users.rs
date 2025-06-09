@@ -211,7 +211,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
     // upload a picture
     let url_picture = format!("{}/users/{}/picture", get_backend_url(), user_id);
 
-    let path = "../../logo/rauthy_dark_small.png";
+    let path = "../../assets/logo/rauthy_dark_small.png";
     let part = reqwest::multipart::Part::file(path).await.unwrap();
     let form = reqwest::multipart::Form::new();
     let form = form.part("image.png", part);
@@ -304,7 +304,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
     // make sure access with token for another user fails
     let url_picture = format!("{}/users/{}/picture", get_backend_url(), user_id_admin);
 
-    let path = "../../logo/rauthy_dark_small.png";
+    let path = "../../assets/logo/rauthy_dark_small.png";
     let part = reqwest::multipart::Part::file(path).await.unwrap();
     let form = reqwest::multipart::Form::new();
     let form = form.part("image.png", part);
