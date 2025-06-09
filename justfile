@@ -325,8 +325,32 @@ build-ui where="local":
         {{ npm }} run build
     fi
 
-#    git add static/v1/*
-#    git add templates/html/*
+# archives static pre-built HTML into `assets/static_html/`
+archive-ui: build-ui
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    # cleanup
+    mkdir -p assets/static_html
+    rm -rf assets/static_html/*
+
+    tar -czf assets/static_html/templates_html.tar.gz templates/html
+    tar -czf assets/static_html/static_v1.tar.gz static/v1
+
+    git add assets/static_html/*
+
+# extracts archived UI files into target folders
+extract-ui-archive:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    mkdir static
+
+    rm -rf static/v1
+    rm -rf templates/html/
+
+    tar -xf assets/static_html/static_v1.tar.gz static/
+    tar -xf assets/static_html/templates_html.tar.gz templates/
 
 # builds the rauthy book
 build-docs:
