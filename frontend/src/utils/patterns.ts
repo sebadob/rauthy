@@ -1,4 +1,4 @@
-export const PATTERN_ALNUM = '^[a-zA-Z0-9]$';
+export const PATTERN_ALNUM = '^[a-zA-Z0-9]*$';
 // export const PATTERN_ALNUM_64 = '^[a-zA-Z0-9]{64}$';
 export const PATTERN_ATTR = '^[a-zA-Z0-9\\-_\\/]{2,32}$';
 export const PATTERN_ATTR_DESC = '^[a-zA-Z0-9\\-_\\/\\s]{0,128}$';

@@ -57,7 +57,7 @@ impl ScimAddress {
             slf.street_address = Some(street.clone());
         }
 
-        if let Some(zip) = values.zip {
+        if let Some(zip) = &values.zip {
             slf.postal_code = Some(zip.to_string());
 
             if let Some(city) = &values.city {

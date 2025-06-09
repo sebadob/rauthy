@@ -16,10 +16,7 @@ panic = "abort"
 codegen-units = 1
 lto = true
 strip = true
-# We do not want to abort in production, even though it would produce smaller binaries.
-# We want to let Rust handle the unwinding and therefore give Hiqlite a chance to at least
-# try to flush possibly open file buffers to disk.
-#panic = "abort"
+panic = "abort"
 
 [profile.profiling]
 inherits = "release"
