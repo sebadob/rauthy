@@ -317,7 +317,7 @@ export let I18nAdminEn: I18nAdmin = {
     scopes: {
         defaultNoMod: "This is a default OIDC Scope. These are immutable.",
         delete1: "Are you sure you want to delete this scope?",
-        deleteDefault: "OIDC Default Scopes können nicht gelöscht werden.",
+        deleteDefault: "Default OIDC scopes cannot be deleted.",
         mapping1: "You can map custom scopes to attributes.",
         mapping2: `All additional attributes, that were configured, can have a custom value for each user.
             When they are mapped to a scope, they can be included in the Access and / or ID Tokens.`,
