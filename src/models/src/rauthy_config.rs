@@ -120,10 +120,8 @@ impl RauthyConfig {
 
         let pub_url = &vars.server.pub_url;
         let provider_callback_uri = {
-            
             #[cfg(target_os = "windows")]
-            let scheme = if listen_scheme == ListenScheme::Http && !vars.server.proxy_mode
-            {
+            let scheme = if listen_scheme == ListenScheme::Http && !vars.server.proxy_mode {
                 "http"
             } else {
                 "https"
@@ -137,7 +135,7 @@ impl RauthyConfig {
             } else {
                 "https"
             };
-            
+
             let pub_url = if vars.dev.dev_mode {
                 vars.dev.provider_callback_url.as_deref().unwrap_or(pub_url)
             } else {
@@ -151,8 +149,7 @@ impl RauthyConfig {
 
         #[cfg(target_os = "windows")]
         let pub_url_with_scheme = {
-            let scheme = if listen_scheme == ListenScheme::Http && !vars.server.proxy_mode
-            {
+            let scheme = if listen_scheme == ListenScheme::Http && !vars.server.proxy_mode {
                 "http"
             } else {
                 "https"
@@ -375,7 +372,7 @@ impl Default for Vars {
                 matrix_room_id: None,
                 matrix_access_token: None,
                 matrix_user_password: None,
-                matrix_server_url: None,
+                matrix_server_url: "https://matrix.org".into(),
                 matrix_root_ca_path: None,
                 matrix_danger_disable_tls_validation: false,
                 matrix_error_no_panic: false,
@@ -1283,7 +1280,7 @@ impl Vars {
             "matrix_server_url",
             "EVENT_MATRIX_SERVER_URL",
         ) {
-            self.events.matrix_server_url = Some(v);
+            self.events.matrix_server_url = v.into();
         }
         if let Some(v) = t_str(
             &mut table,
@@ -2329,7 +2326,7 @@ pub struct VarsEvents {
     pub matrix_room_id: Option<String>,
     pub matrix_access_token: Option<String>,
     pub matrix_user_password: Option<String>,
-    pub matrix_server_url: Option<String>,
+    pub matrix_server_url: Cow<'static, str>,
     pub matrix_root_ca_path: Option<String>,
     pub matrix_danger_disable_tls_validation: bool,
     pub matrix_error_no_panic: bool,
