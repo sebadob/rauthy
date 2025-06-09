@@ -130,7 +130,7 @@ pub struct AddressClaim {
     pub formatted: String,
     pub street_address: Option<String>,
     pub locality: Option<String>,
-    pub postal_code: Option<i32>,
+    pub postal_code: Option<String>,
     pub country: Option<String>,
 }
 
