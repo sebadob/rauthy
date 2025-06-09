@@ -329,15 +329,16 @@ impl ApiDoc {
         // contact.email = Some(ADMIN);
         // doc.info.contact = Some(contact);
 
+        let listen_scheme = &RauthyConfig::get().listen_scheme;
+
         #[cfg(target_os = "windows")]
-        let scheme = if !*PROXY_MODE && app_state.listen_scheme == ListenScheme::Http {
+        let scheme = if !*PROXY_MODE.get().unwrap() && listen_scheme == &ListenScheme::Http {
             "http://"
         } else {
             "https://"
         };
 
         #[cfg(not(target_os = "windows"))]
-        let listen_scheme = &RauthyConfig::get().listen_scheme;
         let scheme = if (!*PROXY_MODE.get().unwrap() && listen_scheme == &ListenScheme::Http)
             || listen_scheme == &ListenScheme::UnixHttp
         {

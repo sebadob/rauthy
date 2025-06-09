@@ -120,6 +120,16 @@ impl RauthyConfig {
 
         let pub_url = &vars.server.pub_url;
         let provider_callback_uri = {
+            
+            #[cfg(target_os = "windows")]
+            let scheme = if listen_scheme == ListenScheme::Http && !vars.server.proxy_mode
+            {
+                "http"
+            } else {
+                "https"
+            };
+
+            #[cfg(not(target_os = "windows"))]
             let scheme = if (listen_scheme == ListenScheme::Http && !vars.server.proxy_mode)
                 || listen_scheme == ListenScheme::UnixHttp
             {
@@ -127,6 +137,7 @@ impl RauthyConfig {
             } else {
                 "https"
             };
+            
             let pub_url = if vars.dev.dev_mode {
                 vars.dev.provider_callback_url.as_deref().unwrap_or(pub_url)
             } else {
@@ -138,6 +149,18 @@ impl RauthyConfig {
             .replace(':', "%3A")
             .replace('/', "%2F");
 
+        #[cfg(target_os = "windows")]
+        let pub_url_with_scheme = {
+            let scheme = if listen_scheme == ListenScheme::Http && !vars.server.proxy_mode
+            {
+                "http"
+            } else {
+                "https"
+            };
+            format!("{}://{}", scheme, pub_url)
+        };
+
+        #[cfg(not(target_os = "windows"))]
         let pub_url_with_scheme = {
             let scheme = if (listen_scheme == ListenScheme::Http && !vars.server.proxy_mode)
                 || listen_scheme == ListenScheme::UnixHttp
