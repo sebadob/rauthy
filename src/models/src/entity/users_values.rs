@@ -12,7 +12,7 @@ pub struct UserValues {
     pub birthdate: Option<String>,
     pub phone: Option<String>,
     pub street: Option<String>,
-    pub zip: Option<i32>,
+    pub zip: Option<String>,
     pub city: Option<String>,
     pub country: Option<String>,
 }
@@ -78,7 +78,7 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#
                         &values.birthdate,
                         &values.phone,
                         &values.street,
-                        values.zip,
+                        &values.zip,
                         &values.city,
                         &values.country
                     ),

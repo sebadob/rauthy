@@ -16,7 +16,7 @@
     import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
-    import {PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME} from "$utils/patterns";
+    import {PATTERN_ALNUM, PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME} from "$utils/patterns";
     import Options from "$lib5/Options.svelte";
     import SelectList from "$lib5/select_list/SelectList.svelte";
     import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
@@ -242,10 +242,9 @@
                 payload.del.push('user_values.street');
             }
         }
-        let zp = zip ? Number.parseInt(zip) : null;
-        if (zp !== userOrig?.user_values?.zip) {
+        if (zip !== userOrig?.user_values?.zip) {
             if (zip) {
-                payload.put.push({key: 'user_values.zip', value: zp});
+                payload.put.push({key: 'user_values.zip', value: zip});
             } else {
                 payload.del.push('user_values.zip');
             }
@@ -376,13 +375,12 @@
                         pattern={PATTERN_STREET}
                 />
                 <Input
-                        typ="number"
                         bind:value={zip}
                         autocomplete="off"
                         label={t.account.zip}
                         placeholder={t.account.zip}
-                        min="1000"
-                        max="9999999"
+                        maxLength={24}
+                        pattern={PATTERN_ALNUM}
                 />
                 <Input
                         bind:value={city}

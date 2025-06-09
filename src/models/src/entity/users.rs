@@ -37,7 +37,7 @@ use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use std::cmp::{max, min};
+use std::cmp::max;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
@@ -659,7 +659,7 @@ LIMIT $2"#;
                     birthdate: row.get("birthdate"),
                     phone: row.get("phone"),
                     street: row.get("street"),
-                    zip: row.get::<Option<i64>>("zip").map(|zip| zip as i32),
+                    zip: row.get("zip"),
                     city: row.get("city"),
                     country: row.get("country"),
                 };
@@ -1041,9 +1041,8 @@ LIMIT $2"#;
                             "birthdate" => uv.birthdate = put.value.as_str().map(String::from),
                             "phone" => uv.phone = put.value.as_str().map(String::from),
                             "street" => uv.street = put.value.as_str().map(String::from),
-                            "zip" => {
-                                uv.zip = put.value.as_i64().map(|i| min(i32::MAX as i64, i) as i32)
-                            }
+                            "zip" => uv.zip = put.value.as_str().map(String::from),
+
                             "city" => uv.city = put.value.as_str().map(String::from),
                             "country" => uv.country = put.value.as_str().map(String::from),
                             v => {

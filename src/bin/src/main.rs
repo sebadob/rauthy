@@ -103,6 +103,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await
         .expect("Error starting the database / cache layer");
 
+    // TODO check all init code from here on - we don't want any possible panics because of
+    //  mis-config after DB init to avoid WAL corruption.
+
     debug!("Starting E-Mail handler");
     tokio::spawn(email::sender(rx_email, test_mode));
 

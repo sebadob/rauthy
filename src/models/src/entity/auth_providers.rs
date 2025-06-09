@@ -1138,7 +1138,7 @@ pub struct AuthProviderAddressClaims<'a> {
     pub formatted: Option<&'a str>,
     pub street_address: Option<&'a str>,
     pub locality: Option<&'a str>,
-    pub postal_code: Option<i32>,
+    pub postal_code: Option<&'a str>,
     pub country: Option<&'a str>,
 }
 
@@ -1571,7 +1571,7 @@ impl AuthProviderIdClaims<'_> {
                 user_values.country = Some(country.to_string());
             }
             if let Some(zip) = addr.postal_code {
-                user_values.zip = Some(zip);
+                user_values.zip = Some(zip.to_string());
             }
             found_values = true;
         }

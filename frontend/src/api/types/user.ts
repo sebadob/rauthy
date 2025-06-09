@@ -1,4 +1,5 @@
 import type {Language} from "./i18n";
+import {PATTERN_ALNUM} from "$utils/patterns";
 
 export interface UserPictureConfig {
     upload_allowed: boolean,
@@ -28,8 +29,8 @@ export interface UserValuesRequest {
     phone?: string | null,
     // Validation: PATTERN_STREET / 48
     street?: string | null,
-    // Validation: min 1000 max 9999999
-    zip?: number | null,
+    // Validation: PATTERN_ALNUM / 24
+    zip?: string | null,
     // Validation: PATTERN_CITY / 48
     city?: string | null,
     // Validation: PATTERN_CITY / 48
@@ -127,7 +128,7 @@ export interface UserValuesResponse {
     birthdate?: string,
     phone?: string,
     street?: string,
-    zip?: number,
+    zip?: string,
     city?: string,
     country?: string,
 }

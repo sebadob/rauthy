@@ -25,7 +25,7 @@ pub struct AddressClaim {
     pub locality: Option<String>,
     // pub region: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub postal_code: Option<i32>,
+    pub postal_code: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<String>,
 }

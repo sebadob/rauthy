@@ -6,6 +6,7 @@
     import type {UpdateUserSelfRequest, UserResponse} from "$api/types/user.ts";
     import Form from "$lib5/form/Form.svelte";
     import {
+        PATTERN_ALNUM,
         PATTERN_CITY,
         PATTERN_PHONE,
         PATTERN_STREET,
@@ -40,8 +41,7 @@
         const birthdate = params.get('birthdate') || undefined;
         const phone = params.get('phone')?.replaceAll(' ', '') || undefined;
         const street = params.get('street') || undefined;
-        const zipStr = params.get('zip') || undefined;
-        const zip = zipStr ? Number.parseInt(zipStr) : undefined;
+        const zip = params.get('zip') || undefined;
         const city = params.get('city') || undefined;
         const country = params.get('country') || undefined;
 
@@ -134,14 +134,13 @@
                         pattern={PATTERN_STREET}
                 />
                 <Input
-                        typ="number"
                         name="zip"
                         autocomplete="postal-code"
                         label={t.account.zip}
                         placeholder={t.account.zip}
                         value={user.user_values.zip}
-                        min="1000"
-                        max="9999999"
+                        maxLength={24}
+                        pattern={PATTERN_ALNUM}
                 />
                 <Input
                         name="city"

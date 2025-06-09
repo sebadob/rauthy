@@ -42,7 +42,7 @@ pub struct AddressClaim<'a> {
     pub locality: Option<&'a str>,
     // pub region: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub postal_code: Option<i32>,
+    pub postal_code: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<&'a str>,
 }
@@ -53,7 +53,7 @@ impl From<AddressClaim<'_>> for rauthy_api_types::oidc::AddressClaim {
             formatted: a.formatted,
             street_address: a.street_address.map(String::from),
             locality: a.locality.map(String::from),
-            postal_code: a.postal_code,
+            postal_code: a.postal_code.map(String::from),
             country: a.country.map(String::from),
         }
     }
@@ -74,7 +74,7 @@ impl AddressClaim<'_> {
             slf.street_address = Some(street);
         }
 
-        if let Some(zip) = values.zip {
+        if let Some(zip) = &values.zip {
             slf.postal_code = Some(zip);
 
             if let Some(city) = &values.city {
@@ -108,7 +108,7 @@ impl<'a> From<&'a rauthy_api_types::oidc::AddressClaim> for AddressClaim<'a> {
             formatted: value.formatted.to_string(),
             street_address: value.street_address.as_deref(),
             locality: value.locality.as_deref(),
-            postal_code: value.postal_code,
+            postal_code: value.postal_code.as_deref(),
             country: value.country.as_deref(),
         }
     }

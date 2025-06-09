@@ -114,7 +114,7 @@ export const I18nEn: I18n = {
         webIdDesc: "You can configure the fields that should be exposed with your WebID.\nThis is a feature used by some networks for decentralized logins. If you do not know what it is,\nyou most probably do not need it.",
         webIdDescData: "You can add custom data fields to your WebID in valid FOAF Vocabulary",
         webIdExpertMode: "Enable Expert Mode",
-        zip: "ZIP"
+        zip: "ZIP / Postal Code"
     },
     authorize: {
         clientForceMfa: "This login forces MFA to achieve higher security.\nTo get access, you need to log in to your account and add at least one additional Passkey",

@@ -14,7 +14,7 @@
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import type {SessionResponse} from "$api/types/session.ts";
     import {fetchGet, fetchPost} from "$api/fetch";
-    import {PATTERN_ALNUM, PATTERN_URI} from "$utils/patterns";
+    import {PATTERN_ALNUM} from "$utils/patterns";
     import type {DeviceVerifyRequest, DeviceVerifyResponse} from "$api/types/device.ts";
 
     let t = useI18n();

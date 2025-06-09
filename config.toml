@@ -497,7 +497,7 @@ log_sync = "interval_200"
 #
 # default: true
 # overwritten by: HQL_CACHE_STORAGE_DISK
-#cache_storage_disk = true
+cache_storage_disk = false
 
 # Sets the limit when the Raft will trigger the creation of a new
 # state machine snapshot and purge all logs that are included in
