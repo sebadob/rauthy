@@ -319,6 +319,52 @@ For a complete documentation for each value, please take a look at the reference
 > Quite a few of these values, even when they are a `String` type, expect a certain format. Take a look at the reference
 > config for more information on each one.
 
+[#991](https://github.com/sebadob/rauthy/pull/991)
+
+#### SwaggerUI Location Change
+
+The way the SwaggerUI used to work was annoying since the very beginning. Even though it's an open source project, you
+usually don't want to have your whole API documentation publicly available. The issue was, that it was hard to work
+with the SwaggerUI because of some internals that made it impossible to have much manual control. For this reason, up
+until `v0.29`, you had the option to expose it internally only in addition to metrics on the internal HTTP server. This
+was very annoying as well, just in another way.
+
+After memory profiling and optimizations lately, I found out that the SwaggerUI internal config has additional issues.
+It does a deep clone of the complete dataset instead of using pointers for each additional HTTP worker, which led to
+very high memory consumption by default on machines with many cores.
+
+I did a complete rework of the way how it's being served and luckily, in the newer versions you can get manual handles
+to the internal data, which finally made it possible to move it out of its location. Instead of being available under
+`/docs/v1`, it's now under `/auth/v1/docs`, which makes a lot more sense in the first place. Because it's served
+manually, a single instance will be kept in static memory instead of cloning the data into each worker. This improves
+memory usage a lot already. The other improvement this made possible, is that Rauthy can finally check the session and
+(optionally) only serve it when a valid `rauthy_admin` session was found.
+
+This change made it possible to always have it on the same port while still being able to serve all the different
+use cases from before. You can enable or disable it, and you can decide whether it should be public or not. No weird
+"internal only" stuff anymore. The config variables are still in the server section and the non-public version is now
+fully independent of the metrics server.
+
+```toml
+[server]
+# Can be set to `true` to enable the Swagger UI.
+# This will consume ~13mb of additional memory.
+#
+# default: false
+# overwritten by: SWAGGER_UI_ENABLE
+swagger_ui_enable = false
+
+# Can be set to `true` to make the Swagger UI publicly
+# available. By default, you can only access it with a
+# valid `rauthy_admin` session.
+#
+# default: false
+# overwritten by: SWAGGER_UI_PUBLIC
+swagger_ui_public = false
+```
+
+[#981](https://github.com/sebadob/rauthy/pull/981)
+
 ### Changes
 
 #### Hiqlite Optimizations
@@ -507,6 +553,23 @@ TOKEN_LEN_LIMIT=4096
 
 [#941](https://github.com/sebadob/rauthy/pull/941)
 
+#### IP Blacklisting Rework
+
+The IP blacklisting has been reworked. This was done via listen / notify and an instance-local thread, that manages
+all blacklisted IPs purely in memory. We usually do not want to trigger any DB writes in such a case to keep the work
+as low a possible in case of a DDoS for instance.
+
+However, this old design was from a time when Hiqlite did not even exist yet. The latest version brings distributed
+counters, which made it possible to easily push blacklisted IPs into the Hiqlite caching layer. In combination with
+another new feature in the latest Hiqlite, which is an optionally persistent WAL + Snapshot on disk for the Cache as
+well (enabled by default), you can now have blacklisted IPs in memory for very fast access, while still being able to
+persist them in a way, that the full in-memory cache can be rebuilt after a restart.
+
+Pushing this logic into Hiqlite removes a maintenance burden from the Rauthy code. It exists inside Hiqlite anyway
+already.
+
+[#985](https://github.com/sebadob/rauthy/pull/985)
+
 #### `PATCH` is possible on `/users/{id}`
 
 The user modification endpoint now provides a `PATCH` operation, which the Admin UI user config uses by default. It will
@@ -526,6 +589,21 @@ but handle this many concurrent allocations better. Take a look at the book for 
 The `jemalloc` feature flag will be enabled by default from this version on.
 
 [#949](https://github.com/sebadob/rauthy/pull/949)
+
+#### Rauthy theme as fallback
+
+The custom theme you apply for the `rauthy` client will now be used as a fallback for all other clients, when they don't
+have their own custom values.
+
+[#982](https://github.com/sebadob/rauthy/pull/982)
+
+#### Production Init Hardening
+
+To harden the production initialization of the database for a fresh instance a bit more, the user ID for the very first
+initial admin account is being re-generated randomly. In combination with `bootstrap.admin_email`, this makes it now
+100% impossible to guess any value for a possibly existing default admin for any Rauthy instance.
+
+[#983](https://github.com/sebadob/rauthy/pull/983)
 
 #### Memory optimizations
 
@@ -549,8 +627,9 @@ overall memory allocations in general.
   [#962](https://github.com/sebadob/rauthy/pull/962)
 - The default value for the `SMTP_FROM` was changed from `rauthy@localhost.de` to just `rauthy@localhost`.
   [#963](https://github.com/sebadob/rauthy/pull/963)
-- The default value for `SWAGGER_UI_EXTERNAL` was `true` since the last server init rework with `v0.29` when it should
-  have been `false`
+- The `state` encoding during `/authorize` was broken in some situations, because the urlencoding was removed in some
+  situations, when this param should be sent back to the client unchanged.
+  [#980](https://github.com/sebadob/rauthy/pull/980)
 
 ## v0.29.4
 

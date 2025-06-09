@@ -473,7 +473,7 @@ release:
     git push origin "v$TAG"
 
 # publishes the application images - full pipeline incl clippy and testing you can provide a custom image name as variable
-publish: build-docs fmt test-hiqlite test-postgres build
+publish: build-docs fmt test-hiqlite test-postgres build archive-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
