@@ -1,5 +1,12 @@
 # Changelog
 
+## UNRELEASED
+
+### Breaking
+
+The type of the `postal_code` in the `id_token` -> address claims has been changed from `i32` to `String`. This has
+been changed with Rauthy `v0.30` for more compatibility.
+
 ## v0.8.0
 
 ### OIDC Backchannel Logout
