@@ -99,10 +99,7 @@ impl EventNotifier {
         // Matrix
         if let Some(user_id) = vars.matrix_user_id.as_ref() {
             let level = vars.notify_level_matrix.clone();
-            let server_url = vars
-                .matrix_server_url
-                .clone()
-                .expect("`event.matrix_server_url` not set");
+            let server_url = vars.matrix_server_url.to_string();
             let room_id = vars
                 .matrix_room_id
                 .as_ref()

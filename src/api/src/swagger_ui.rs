@@ -6,6 +6,7 @@ use rauthy_common::constants::APPLICATION_JSON;
 use rauthy_error::ErrorResponse;
 use rauthy_models::rauthy_config::RauthyConfig;
 use std::sync::{Arc, LazyLock, OnceLock};
+use tracing::warn;
 
 pub static OPENAPI_JSON: OnceLock<String> = OnceLock::new();
 pub static OPENAPI_CONFIG: LazyLock<Arc<utoipa_swagger_ui::Config>> = LazyLock::new(|| {
@@ -21,9 +22,11 @@ pub static OPENAPI_CONFIG: LazyLock<Arc<utoipa_swagger_ui::Config>> = LazyLock::
 pub async fn get_openapi_doc(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     let cfg = &RauthyConfig::get().vars.server;
     if !cfg.swagger_ui_enable {
+        warn!("Request for /docs/openapi.json but `swagger_ui_enable` is set to `false`");
         return Ok(HttpResponse::NotFound().finish());
     }
     if !cfg.swagger_ui_public && principal.validate_session_auth().is_err() {
+        warn!("Public request for /docs/openapi.json but `swagger_ui_public` is set to `false`");
         return Ok(HttpResponse::Unauthorized().finish());
     }
 
@@ -39,9 +42,11 @@ pub async fn get_swagger_ui(
 ) -> Result<HttpResponse, ErrorResponse> {
     let cfg = &RauthyConfig::get().vars.server;
     if !cfg.swagger_ui_enable {
+        warn!("Request for the Swagger UI but `swagger_ui_enable` is set to `false`");
         return Ok(HttpResponse::NotFound().finish());
     }
     if !cfg.swagger_ui_public && principal.validate_session_auth().is_err() {
+        warn!("Public request for the Swagger UI but `swagger_ui_public` is set to `false`");
         return Ok(HttpResponse::Unauthorized().finish());
     }
 
