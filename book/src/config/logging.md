@@ -147,31 +147,31 @@ it should post the events.
 # Format: `@<user_id>:<server address>`
 #
 # overwritten by: EVENT_MATRIX_USER_ID
-#matrix_user_id = ''
+matrix_user_id = ''
 # Format: `!<random string>:<server address>`
 # overwritten by: EVENT_MATRIX_ROOM_ID
-#matrix_room_id = ''
+matrix_room_id = ''
 # overwritten by: EVENT_MATRIX_ACCESS_TOKEN
-#matrix_access_token = ''
+matrix_access_token = ''
 # overwritten by: EVENT_MATRIX_USER_PASSWORD
-#matrix_user_password = ''
+matrix_user_password = ''
 # URL of your Matrix server.
 # default: https://matrix.org
 # overwritten by: EVENT_MATRIX_SERVER_URL
-#matrix_server_url = 'https://matrix.org'
+matrix_server_url = 'https://matrix.org'
 
 # Optional path to a PEM Root CA certificate file for the
 # Matrix client.
 #
 # overwritten by: EVENT_MATRIX_ROOT_CA_PATH
-#matrix_root_ca_path = 'tls/root.cert.pem'
+matrix_root_ca_path = 'tls/root.cert.pem'
 
 # May be set to disable the TLS validation for the Matrix
 # client.
 #
 # default: false
 # overwritten by: EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION
-#matrix_danger_disable_tls_validation = false
+matrix_danger_disable_tls_validation = false
 
 # The default behavior is, that Rauthy will panic at startup
 # if it cannot connect to a configured Matrix server. The
@@ -207,7 +207,7 @@ config variable you need to set:
 # If left empty, no messages will be sent to Slack.
 #
 # overwritten by: EVENT_SLACK_WEBHOOK
-#slack_webhook = ''
+slack_webhook = ""
 ```
 
 #### Custom Target

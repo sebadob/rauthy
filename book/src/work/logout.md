@@ -95,49 +95,50 @@ You have quite a few config options regarding Backchannel Logout. All these valu
 might take a look at them if you have issues like e.g. an upstream provider with self-signed certificates or inside
 test environments.
 
-```
-#####################################
-######## BACKCHANNEL LOGOUT #########
-#####################################
-
+```toml
+[backchannel_logout]
 # The maximum amount of retries made for a failed backchannel logout.
 # Failed backchannel logouts will be retried every 60 - 90 seconds
 # from all cluster nodes. The timeout between retries is randomized
 # to avoid overloading clients. It will be executed on each cluster
 # member to increase the chance of a successful logout in case of
 # network segmentations.
-# default: 100
-#BACKCHANNEL_LOGOUT_RETRY_COUNT=100
-
-# The lifetime / validity for Logout Tokens in seconds.
-# These Logout Tokens are being generated during OIDC
-# Backchannel Logout requests to configured clients.
-# The token lifetime should be as short as possible and
-# at most 120 seconds.
-# default: 30
-#LOGOUT_TOKEN_LIFETIME=30
-
-# You can allow a clock skew during the validation of
-# Logout Tokens, when Rauthy is being used as a client
-# for an upstream auth provider that uses backchannel
-# logout.
 #
-# The allowed skew will be in seconds and a value of
-# e.g. 5 would mean, that 5 seconds are added to the
-# `iat` and `exp` claim validations and expand the range.
+# default: 100
+# overwritten by: BACKCHANNEL_LOGOUT_RETRY_COUNT
+retry_count = 100
+
+# The lifetime / validity for Logout Tokens issued by Rauthy in
+# seconds. These Logout Tokens are being generated during OIDC
+# Backchannel Logout requests to configured clients. The token
+# lifetime should be as short as possible and at most 120 seconds.
+#
+# default: 30
+# overwritten by: LOGOUT_TOKEN_LIFETIME
+token_lifetime = 30
+
+# You can allow a clock skew during the validation of Logout Tokens,
+# when Rauthy is being used as a client for an upstream auth
+# provider that uses backchannel logout.
+#
+# The allowed skew will be in seconds and a value of e.g. 5 would
+# mean, that 5 seconds are added to the `iat` and `exp` claim
+# validations and expand the range.
 #
 # default: 5
-#LOGOUT_TOKEN_ALLOW_CLOCK_SKEW=5
+# overwritten by: LOGOUT_TOKEN_ALLOW_CLOCK_SKEW
+allow_clock_skew = 5
 
-# The maximum allowed lifetime for Logout Tokens.
-# This value is a security check for upstream auth
-# providers. If Rauthy receives a Logout Token, it will
-# check and validate, that the difference between `iat`
-# and `exp` is not greater than LOGOUT_TOKEN_ALLOWED_LIFETIME.
-# This means Rauthy will reject Logout Tokens from clients
-# with a way too long validity and therefore poor
-# implementations. The RFC states that tokens should
-# be valid for at most 120 seconds.
+# The maximum allowed lifetime for Logout Tokens. This value is
+# a security check for upstream auth providers. If Rauthy
+# receives a Logout Token, it will check and validate, that the
+# difference between `iat` and `exp` is not greater than
+# `allowed_token_lifetime`. This means Rauthy will reject Logout
+# Tokens from clients with a way too long validity and therefore
+# poor implementations. The RFC states that tokens should be
+# valid for at most 120 seconds.
+#
 # default: 120
-#LOGOUT_TOKEN_ALLOWED_LIFETIME=120
+# overwritten by: LOGOUT_TOKEN_ALLOWED_LIFETIME
+allowed_token_lifetime = 120
 ```

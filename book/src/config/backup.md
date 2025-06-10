@@ -17,21 +17,21 @@ If Rauthy is using Hiqlite, it does automatic backups, which can be configured w
 #
 # default: "0 30 2 * * * *"
 # overwritten by: HQL_BACKUP_CRON
-#backup_cron = "0 30 2 * * * *"
+backup_cron = "0 30 2 * * * *"
 
 # Backups older than the configured days will be cleaned up on S3
 # after the backup cron job `backup_cron`.
 #
 # default: 30
 # overwritten by: HQL_BACKUP_KEEP_DAYS
-#backup_keep_days = 30
+backup_keep_days = 30
 
 # Backups older than the configured days will be cleaned up locally
 # after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
 #
 # default: 3
 # overwritten by: HQL_BACKUP_KEEP_DAYS_LOCAL
-#backup_keep_days_local = 3
+backup_keep_days_local = 3
 ```
 
 All these backups are written inside the pod / container into `data/state_machine/backups`.
@@ -57,17 +57,17 @@ The configuration is done with the following values:
 [cluster]
 # Access values for the S3 bucket where backups will be pushed to.
 # overwritten by: HQL_S3_URL
-#s3_url = "https://s3.example.com"
+s3_url = "https://s3.example.com"
 # overwritten by: HQL_S3_BUCKET
-#s3_bucket = "my_bucket"
+s3_bucket = "my_bucket"
 # overwritten by: HQL_S3_REGION
-#s3_region = "my_region"
+s3_region = "my_region"
 # overwritten by: HQL_S3_PATH_STYLE
-#s3_path_style = true
+s3_path_style = true
 # overwritten by: HQL_S3_KEY
-#s3_key = "my_key"
+s3_key = "my_key"
 # overwritten by: HQL_S3_SECRET
-#s3_secret = "my_secret"
+s3_secret = "my_secret"
 ```
 
 ## Disaster Recovery
@@ -104,5 +104,5 @@ You only need to set this single value:
 # 3. Start up the cluster again.
 # 4. After the restart, make sure to remove the HQL_BACKUP_RESTORE
 #    env value.
-#HQL_BACKUP_RESTORE=
+HQL_BACKUP_RESTORE = ""
 ```

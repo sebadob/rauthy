@@ -215,4 +215,4 @@ submit the form at all.
 
 You can configure PoWs with `pow.difficulty` and `pow.exp`.  
 Keep in mind, that the `pow.exp` should be a high as necessary but always as low as possible.
-
+```
