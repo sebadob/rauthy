@@ -47,7 +47,7 @@ It seems that in some environments, the above `openssl` command does not output 
 panic on startup, when it checks the given values. If you run into that situation, you can generate them without 
 `openssl` as well, with e.g:
 
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+<pre><code>echo"$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
 ```
 
 ## Key Rotation

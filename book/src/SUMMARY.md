@@ -36,6 +36,6 @@
     - [I18n](work/i18n.md)
     - [User Logout](work/logout.md)
 
-- [Minimal Config](./config/config_minimal.md)
+- [Minimal Production Config](./config/config_minimal.md)
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)
