@@ -1,4 +1,4 @@
-{{ header }} {{ email_sub_prefix }}
+{{ header }} {{ email_sub_prefix -}}
 
 {{ text }}
 
@@ -10,3 +10,7 @@
 {{ link }}
 
 {{ footer }}
+
+{%- if !link_request_new.is_empty() -%}
+{{ link_request_new }}
+{%- endif -%}

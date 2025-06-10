@@ -1477,11 +1477,6 @@ pub async fn put_user_webid_data(
 /// This Endpoint will always return an `OK` to not provide any additional attack surface.
 /// Only if the provided E-Mail exists in the Database, a password reset E-Mail will be sent out,
 /// otherwise it will just be ignored but still return an `OK`.
-///
-/// **Permissions**
-/// - authenticated
-/// - session-init
-/// - session-auth
 #[utoipa::path(
     post,
     path = "/users/request_reset",
@@ -1489,17 +1484,14 @@ pub async fn put_user_webid_data(
     request_body = RequestResetRequest,
     responses(
         (status = 200, description = "Ok"),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
     ),
 )]
 #[post("/users/request_reset")]
 pub async fn post_user_password_request_reset(
     req: HttpRequest,
     Json(payload): Json<RequestResetRequest>,
-    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
     info!(

@@ -1823,6 +1823,9 @@ validity = 'This link is only valid for a short period of time for security reas
 expires = 'Link expires:'
 footer = ''
 
+# Exists only for password reset E-Mails for initialized accounts.
+button_text_request_new = ''
+
 [tls]
 ## UI + API TLS
 

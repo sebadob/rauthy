@@ -1032,3 +1032,25 @@ impl UserRegisterHtml<'_> {
         .expect("rendering register.html")
     }
 }
+
+#[derive(Default, Template)]
+#[template(path = "html/users/password_reset.html")]
+pub struct UserPasswordResetHtml<'a> {
+    lang: &'a str,
+    client_id: &'a str,
+    theme_ts: i64,
+    templates: &'a [HtmlTemplate],
+}
+
+impl UserPasswordResetHtml<'_> {
+    pub fn build(lang: &Language, theme_ts: i64, logo_updated: Option<i64>) -> String {
+        UserPasswordResetHtml {
+            lang: lang.as_str(),
+            client_id: "rauthy",
+            theme_ts,
+            templates: &[HtmlTemplate::ClientLogoUpdated(logo_updated)],
+        }
+        .render()
+        .expect("rendering password_reset.html")
+    }
+}

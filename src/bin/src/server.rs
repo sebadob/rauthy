@@ -360,6 +360,7 @@ fn api_services() -> actix_web::Scope {
                 .service(users::get_users)
                 .service(users::get_users_register)
                 .service(users::post_users_register)
+                .service(html::get_user_password_reset_fixed)
                 .service(users::get_cust_attr)
                 .service(users::post_cust_attr)
                 .service(users::put_cust_attr)

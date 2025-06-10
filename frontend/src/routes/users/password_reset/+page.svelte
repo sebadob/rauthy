@@ -14,8 +14,12 @@
     import type {NewUserRegistrationRequest} from "$api/types/register.ts";
     import {fetchPost} from "$api/fetch";
     import ClientLogo from "$lib/ClientLogo.svelte";
+    import {fetchSolvePow} from "$utils/pow";
+    import type {RequestResetRequest} from "$api/types/authorize";
 
     let t = useI18n();
+
+    let email_hint = useParam('email_hint');
 
     let clientLogoUpdated = $state(-1);
     let isLoading = $state(false);
@@ -24,6 +28,22 @@
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         isLoading = true;
+
+        let email = params.get("email");
+        if (!email) {
+            console.error('email is empty');
+            return;
+        }
+        let pow = await fetchSolvePow() || '';
+        let payload: RequestResetRequest = {email, pow};
+
+        let res = await fetchPost(form.action, payload);
+        if (res.error) {
+            err = res.error.message;
+        } else {
+            success = true;
+        }
+
         isLoading = false;
     }
 </script>
@@ -52,6 +72,7 @@
                         label={t.common.email}
                         placeholder={t.common.email}
                         required
+                        value={email_hint.get()}
                 />
 
                 <div class="submit">
