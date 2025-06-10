@@ -16,10 +16,14 @@ You can configure not only different levels for logging, but also different targ
 The `LOG_LEVEL` variable configures the default logging in most situations. This defines the logging for instance
 for logging information from different function runs or things that have been triggered.
 
-```
+```toml
+[logging]
 # This is the log level for stdout logs
-# Accepts: error, info, debug, trace (default: info)
-LOG_LEVEL=info
+# Accepts: error, warn, info, debug, trace
+#
+# default: 'info'
+# overwritten by: LOG_LEVEL
+level = 'info'
 ```
 
 ### `LOG_LEVEL_DATABASE`
@@ -31,10 +35,14 @@ something.
 
 You can reduce the default logging and for instance set it to `warn` or `error` only.
 
-```
+```toml
+[logging]
 # The log level for the `Hiqlite` persistence layer.
+# At the time of writing, only the cache will use `hiqlite`
+#
 # default: info
-LOG_LEVEL_DATABASE=info
+# overwritten by: LOG_LEVEL_DATABASE
+level_database = 'info'
 ```
 
 ### `LOG_LEVEL_ACCESS`
@@ -43,41 +51,47 @@ For changing the logging behavior for access logs to the API endpoints, you will
 If you have access logging configured at your firewall or reverse proxy, you can disable the `LOG_LEVEL_ACCESS` fully
 to reduce duplicated log outputs.
 
-```
+```toml
+[logging]
 # This is a special config which allows the configuration of
 # customized access logs. These logs will be logged with each
 # request in addition to the normal LOG_LEVEL logs.
 # The following values are valid:
-# - Debug
+# - `debug`
 #   CAUTION: The Debug setting logs every information available
 #   to the middleware which includes SENSITIVE HEADERS
 #   DO NOT use the Debug level in a working production environment!
-# - Verbose
+# - `verbose`
 #   Verbose logging without headers - generates huge outputs
-# - Basic
-#   Logs access to all endpoints apart from the Frontend ones
-#   which all js, css, ...
-# - Modifying
+# - `basic`
+#   Logs access to all endpoints apart from the Frontend ones which
+#   all js, css, ...
+# - `modifying`
 #   Logs only requests to modifying endpoints and skips all GET
-# - Off
-# default: Modifying
-LOG_LEVEL_ACCESS=Basic
+# - `off`
+#
+# default: 'modifying'
+# overwritten by: LOG_LEVEL_ACCESS
+level_access = 'modifying'
 ```
 
 ### `LOG_FMT`
 
 Rauthy can output logs as JSON data with the following variable:
 
-```
+```toml
+[logging]
 # You can change the log output format to JSON, if you set:
-# `LOG_FMT=json`.
+# `log_fmt=json`.
 # Keep in mind, that some logs will include escaped values,
 # for instance when `Text` already logs a JSON in debug level.
-# Some other logs like an Event for instance will be formatted 
-# as Text anyway. If you need to auto-parse events, please consider 
+# Some other logs like an Event for instance will be formatted
+# as Text anyway. If you need to auto-parse events, please consider
 # using an API token and listen ot them actively.
+#
 # default: text
-#LOG_FMT=text
+# overwritten by: LOG_FMT
+log_fmt = 'json'
 ```
 
 ## Events
@@ -94,16 +108,19 @@ Rauthy has the following Event targets built-in:
 - Matrix
 - Slack
 
-You can see the full set of config option in the `EVENTS / AUDIT` in the [Reference Config](config.md).
+You can see the full set of config option in the `[events]` in the [Reference Config](config.md).
 
 #### E-Mail
 
 To be able to receive Events via E-Mail, you need to have set up an SMTP server and have a working connection. With
-a working SMTP, you only need to set `EVENT_EMAIL`, that's it.
+a working SMTP, you only need to set `events.email`, that's it.
 
-```
+```toml
+[events]
 # The E-Mail address event notifications should be sent to.
-EVENT_EMAIL=admin@localhost
+#
+# overwritten by: EVENT_EMAIL
+email = 'admin@localhost'
 ```
 
 #### Matrix
@@ -113,42 +130,64 @@ doors, may use self-signed certificates. To make it work in all of these situati
 the connection to Matrix. In the end, you will only need to have some credentials and a room ID, so Rauthy knows where
 it should post the events.
 
-```
+```toml
+[events]
 # Matrix variables for event notifications.
-# `EVENT_MATRIX_USER_ID` and `EVENT_MATRIX_ROOM_ID` are mandatory.
+# `matrix_user_id` and `matrix_room_id` are mandatory.
 # Depending on your Matrix setup, additionally one of
-# `EVENT_MATRIX_ACCESS_TOKEN` or `EVENT_MATRIX_USER_PASSWORD` is needed.
-# If you log in to Matrix with User + Password, you may use `EVENT_MATRIX_USER_PASSWORD`.
-# If you log in via OIDC SSO (or just want to use a session token you can revoke),
-# you should provide `EVENT_MATRIX_ACCESS_TOKEN`.
-# If both are given, the `EVENT_MATRIX_ACCESS_TOKEN` will be preferred.
+# `matrix_access_token` or `matrix_user_password` is needed.
+#
+# If you log in to Matrix with User + Password, you may use
+# `matrix_user_password`. If you log in via OIDC SSO (or just
+# want to use a session token you can revoke), you should
+# provide `matrix_access_token`.
+# If both are given, the `matrix_access_token` will be preferred.
 #
 # If left empty, no messages will not be sent to Matrix.
 # Format: `@<user_id>:<server address>`
-#EVENT_MATRIX_USER_ID=
+#
+# overwritten by: EVENT_MATRIX_USER_ID
+#matrix_user_id = ''
 # Format: `!<random string>:<server address>`
-#EVENT_MATRIX_ROOM_ID=
-#EVENT_MATRIX_ACCESS_TOKEN=
-#EVENT_MATRIX_USER_PASSWORD=
+# overwritten by: EVENT_MATRIX_ROOM_ID
+#matrix_room_id = ''
+# overwritten by: EVENT_MATRIX_ACCESS_TOKEN
+#matrix_access_token = ''
+# overwritten by: EVENT_MATRIX_USER_PASSWORD
+#matrix_user_password = ''
 # URL of your Matrix server.
 # default: https://matrix.org
-#EVENT_MATRIX_SERVER_URL=https://matrix.org
-# Optional path to a PEM Root CA certificate file for the Matrix client.
-#EVENT_MATRIX_ROOT_CA_PATH=path/to/my/root_ca_cert.pem
-# May be set to disable the TLS validation for the Matrix client.
+# overwritten by: EVENT_MATRIX_SERVER_URL
+#matrix_server_url = 'https://matrix.org'
+
+# Optional path to a PEM Root CA certificate file for the
+# Matrix client.
+#
+# overwritten by: EVENT_MATRIX_ROOT_CA_PATH
+#matrix_root_ca_path = 'tls/root.cert.pem'
+
+# May be set to disable the TLS validation for the Matrix
+# client.
+#
 # default: false
-#EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION=false
-# The default behavior is, that Rauthy will panic at startup if it cannot connect
-# to a configured Matrix server. The reason is that event notifications cannot be
-# dropped silently.
-# However, if you use a self-hosted Matrix server which uses Rauthy as its OIDC
-# provider and both instances went offline, you will have a chicken and egg problem:
+# overwritten by: EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION
+#matrix_danger_disable_tls_validation = false
+
+# The default behavior is, that Rauthy will panic at startup
+# if it cannot connect to a configured Matrix server. The
+# reason is that event notifications cannot be dropped silently.
+#
+# However, if you use a self-hosted Matrix server which uses
+# Rauthy as its OIDC provider and both instances went offline,
+# you will have a chicken-and-egg problem:
 # - Rauthy cannot connect to Matrix and will panic
 # - Your Matrix server cannot connect to Rauthy and will panic
-# To solve this issue, you can temporarily set this value to 'true' and revert
-# back, after the system is online again.
+# To solve this issue, you can temporarily set this value to
+# 'true' and revert back, after the system is online again.
+#
 # default: false
-#EVENT_MATRIX_ERROR_NO_PANIC=false
+# overwritten by: EVENT_MATRIX_ERROR_NO_PANIC
+matrix_error_no_panic = false
 ```
 
 ```admonish hint
@@ -162,10 +201,13 @@ using a session token which has been created on another machine.
 To receive messages via Slack, you need to create a legacy webhook inside your Slack account. This is then the only
 config variable you need to set:
 
-```
+```toml
+[events]
 # The Webhook for Slack Notifications.
 # If left empty, no messages will be sent to Slack.
-#EVENT_SLACK_WEBHOOK=
+#
+# overwritten by: EVENT_SLACK_WEBHOOK
+#slack_webhook = ''
 ```
 
 #### Custom Target
@@ -270,10 +312,11 @@ properly.
 You can set different levels for each target. By default, Only events with `warning` or higher are sent via E-Mail
 while Matrix / Slack would receive Events with `notice` or higher. If you want a different behavior, you can get this:
 
-```
-# The notification level for events. Works the same way as a logging level. 
-# For instance: 'notice' means send out a notifications for all events with 
-# the notice level or higher.
+```toml
+[events]
+# The notification level for events. Works the same way as
+# a logging level. For instance: 'notice' means send out a
+# notifications for all events with the notice level or higher.
 # Possible values:
 # - info
 # - notice
@@ -281,107 +324,155 @@ while Matrix / Slack would receive Events with `notice` or higher. If you want a
 # - critical
 #
 # default: 'warning'
-EVENT_NOTIFY_LEVEL_EMAIL=warning
+# overwritten by: EVENT_NOTIFY_LEVEL_EMAIL
+notify_level_email = 'warning'
 # default: 'notice'
-EVENT_NOTIFY_LEVEL_MATRIX=notice
+# overwritten by: EVENT_NOTIFY_LEVEL_MATRIX
+notify_level_matrix = 'notice'
 # default: 'notice'
-EVENT_NOTIFY_LEVEL_SLACK=notice
+# overwritten by: EVENT_NOTIFY_LEVEL_SLACK
+notify_level_slack = 'notice'
 ```
 
 ### Event Persistence
 
-Rauthy's Admin UI has a component for inspecting Events from the past for analytical purposes. By default, events with
+Rauthys Admin UI has a component for inspecting Events from the past for analytical purposes. By default, events with
 the level `info` or higher are persisted for `31` days. After this period, they will be removed from the database to
 keep it clean.
 
 You can configure both the level which should be persisted, for instance set "only persist Events with level warning
 or higher" and the days how long they should be kept.
 
-```
-# Define the level from which on events should be persisted inside the 
-# database. All events with a lower level will be lost, if there is no 
-# active event subscriber.
+```toml
+[events]
+# Define the level from which on events should be persisted
+# inside the database. All events with a lower level will be
+# lost, if there is no active event subscriber.
 # Possible values:
 # - info
 # - notice
 # - warning
 # - critical
+#
 # default: 'info'
-#EVENT_PERSIST_LEVEL=info
+# overwritten by: EVENT_PERSIST_LEVEL
+persist_level = 'info'
 
-# Define the number of days when events should be cleaned up from the database.
-# default: 31
-#EVENT_CLEANUP_DAYS=31
+# Define the number of days when events should be cleaned
+# up from the database.
+#
+# default: 30
+# overwritten by: EVENT_CLEANUP_DAYS
+cleanup_days = 30
 ```
 
-### `EVENT_LEVEL_` Values
+### `level_*` Values
 
-There are a lot of values starting with `EVENT_LEVEL_`. These can be used to configure the level for different kinds
+There are a lot of values starting with `level_*`. These can be used to configure the level for different kinds
 of event being fired by Rauthy.
 
 For instance, let's say you only want to receive events with a level of `warning` or higher, but you also want to
 receive a notification when there are more than 7 failed logins from an IP. By default, 7 failed logins would trigger an
 event with the level of `notice`. You can then set
 
-```
-EVENT_LEVEL_FAILED_LOGINS_7=warning
+```toml
+[events]
+# default: notice
+# overwritten by: EVENT_LEVEL_FAILED_LOGINS_7
+level_failed_logins_7 = 'notice'
 ```
 
 to also receive these while still only receiving `warning` events.
 
 The full list of these configurable levels is the following:
 
-```
-# The level for the generated Event after a new user has been registered.
+```toml
+[events]
+# The level for the generated Event after a new user has
+# been registered.
+#
 # default: info
-EVENT_LEVEL_NEW_USER=info
-# The level for the generated Event after a user has changed his E-Mail
+# overwritten by: EVENT_LEVEL_NEW_USER
+level_new_user = 'info'
+# The level for the generated Event after a user has
+# changed his E-Mail
+#
 # default: notice
-EVENT_LEVEL_USER_EMAIL_CHANGE=notice
-# The level for the generated Event after a user has reset its password
+# overwritten by: EVENT_LEVEL_USER_EMAIL_CHANGE
+level_user_email_change = 'notice'
+# The level for the generated Event after a user has
+# reset its password
+#
 # default: notice
-EVENT_LEVEL_USER_PASSWORD_RESET=notice
-# The level for the generated Event after a user has been given the 
-# 'rauthy_admin' role
+# overwritten by: EVENT_LEVEL_USER_PASSWORD_RESET
+level_user_password_reset = 'notice'
+# The level for the generated Event after a user has
+# been given the 'rauthy_admin' role
+#
 # default: notice
-EVENT_LEVEL_RAUTHY_ADMIN=notice
-# The level for the generated Event after a new App version has been found
+# overwritten by: EVENT_LEVEL_RAUTHY_ADMIN
+level_rauthy_admin = 'notice'
+# The level for the generated Event after a new App
+# version has been found
+#
 # default: notice
-EVENT_LEVEL_RAUTHY_VERSION=notice
-# The level for the generated Event after the JWKS has been rotated
+# overwritten by: EVENT_LEVEL_RAUTHY_VERSION
+level_rauthy_version = 'notice'
+# The level for the generated Event after the JWKS has
+# been rotated
+#
 # default: notice
-EVENT_LEVEL_JWKS_ROTATE=notice
-# The level for the generated Event after DB secrets have been migrated 
-# to a new key
+# overwritten by: EVENT_LEVEL_JWKS_ROTATE
+level_jwks_rotate = 'notice'
+# The level for the generated Event after DB secrets
+# have been migrated to a new key
+#
 # default: notice
-EVENT_LEVEL_SECRETS_MIGRATED=notice
-# The level for the generated Event after a Rauthy instance has been 
-# started
+# overwritten by: EVENT_LEVEL_SECRETS_MIGRATED
+level_secrets_migrated = 'notice'
+# The level for the generated Event after a Rauthy
+# instance has been started
+#
 # default: info
-EVENT_LEVEL_RAUTHY_START=info
-# The level for the generated Event after a Rauthy entered a healthy 
-# state (again)
+# overwritten by: EVENT_LEVEL_RAUTHY_START
+level_rauthy_start = 'info'
+# The level for the generated Event after a Rauthy
+# entered a healthy state (again)
+#
 # default: notice
-EVENT_LEVEL_RAUTHY_HEALTHY=notice
-# The level for the generated Event after a Rauthy entered an unhealthy 
-#state
+# overwritten by: EVENT_LEVEL_RAUTHY_HEALTHY
+level_rauthy_healthy = 'notice'
+# The level for the generated Event after a Rauthy
+# entered an unhealthy state
+#
 # default: critical
-EVENT_LEVEL_RAUTHY_UNHEALTHY=critical
-# The level for the generated Event after an IP has been blacklisted
-# default: warning
-EVENT_LEVEL_IP_BLACKLISTED=warning
-# The level for the generated Event after certain amounts of false 
-# logins from an IP
+# overwritten by: EVENT_LEVEL_RAUTHY_UNHEALTHY
+level_rauthy_unhealthy = 'critical'
+# The level for the generated Event after an IP has
+# been blacklisted
+#
+# default: warning+
+# overwritten by: EVENT_LEVEL_IP_BLACKLISTED
+level_ip_blacklisted = 'warning'
+# The level for the generated Event after certain
+# amounts of false logins from an IP
+#
 # default: critical
-EVENT_LEVEL_FAILED_LOGINS_25=critical
+# overwritten by: EVENT_LEVEL_FAILED_LOGINS_25
+level_failed_logins_25 = 'critical'
 # default: critical
-EVENT_LEVEL_FAILED_LOGINS_20=critical
+# overwritten by: EVENT_LEVEL_FAILED_LOGINS_20
+level_failed_logins_20 = 'critical'
 # default: warning
-EVENT_LEVEL_FAILED_LOGINS_15=warning
+# overwritten by: EVENT_LEVEL_FAILED_LOGINS_15
+level_failed_logins_15 = 'warning'
 # default: warning
-EVENT_LEVEL_FAILED_LOGINS_10=warning
+# overwritten by: EVENT_LEVEL_FAILED_LOGINS_10
+level_failed_logins_10 = 'warning'
 # default: notice
-EVENT_LEVEL_FAILED_LOGINS_7=notice
+# overwritten by: EVENT_LEVEL_FAILED_LOGINS_7
+level_failed_logins_7 = 'notice'
 # default: info
-EVENT_LEVEL_FAILED_LOGIN=info
+# overwritten by: EVENT_LEVEL_FAILED_LOGIN
+level_failed_login = 'info'
 ```

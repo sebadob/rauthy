@@ -7,11 +7,14 @@ However, you might want users to register themselves for whatever reason. In tha
 
 To open the registration to anyone, just set
 
-```
-# If the User Registration endpoint should be accessible by anyone. 
+```toml
+[user_registration]
+# If the User Registration endpoint should be accessible by anyone.
 # If not, an admin must create each new user.
-# (default: false)
-OPEN_USER_REG=true
+#
+# default: false
+# overwritten by: OPEN_USER_REG
+enable = true
 ```
 
 This will open the registration endpoint and make it accessible without upfront authentication.  
@@ -41,9 +44,6 @@ bots, so it does what it should while providing a way better UX than any traditi
 
 ```admonish info
 If you are interested in how it works, take a look at [spow](https://github.com/sebadob/spow).  
-
-This tiny crate has very few external dependencies and is really easy to use. There is a special version for 
-[Leptos](https://github.com/leptos-rs/leptos) as well: [leptos-captcha](https://github.com/sebadob/leptos-captcha)
 ```
 
 ## Restricted Registration
@@ -52,13 +52,15 @@ You may want your users to register themselves, but at the same time restrict th
 For instance, when you deploy Rauthy at your company for all internal applications, you may only want users to
 register with their work E-Mail:
 
-```
-# Can be used when 'OPEN_USER_REG=true' to restrict the domains for a registration. 
-# For instance, set it to
-# 'USER_REG_DOMAIN_RESTRICTION=github.com' 
-# to allow only registrations with 'whatever-user@github.com'.
-# default: (not set)
-USER_REG_DOMAIN_RESTRICTION=@some-mail-domain.com
+```toml
+[user_registration]
+# Can be used when 'open_user_reg = true' to restrict the domains for
+# a registration. For instance, set it to
+# 'user_reg_domain_restriction = gmail.com' to allow only
+# registrations with 'user@gmail.com'.
+#
+# overwritten by: USER_REG_DOMAIN_RESTRICTION
+domain_restriction = 'my-domain.com'
 ```
 
 ## Domain Blacklisting
@@ -84,14 +86,25 @@ anymore.
 
 You have the following config option:
 
-```
-# If `OPEN_USER_REG=true`, you can blacklist certain domains
-# on the open registration endpoint.
-# Provide the domains as a `\n` separated list.
-USER_REG_DOMAIN_BLACKLIST="
-example.com
-evil.net
-"
+```toml
+[user_registration]
+# Can be used when 'open_user_reg = true' to restrict the domains for
+# a registration. For instance, set it to
+# 'user_reg_domain_restriction = gmail.com' to allow only
+# registrations with 'user@gmail.com'.
+#
+# overwritten by: USER_REG_DOMAIN_RESTRICTION
+#domain_restriction = 'my-domain.com'
+
+# If `open_user_reg = true`, you can blacklist certain domains on
+# the open registration endpoint.
+#
+# default: []
+# overwritten by: USER_REG_DOMAIN_BLACKLIST - single String, \n separated values
+domain_blacklist = [
+    'example.com',
+    'evil.net',
+]
 ```
 
 ```admonish note
@@ -136,23 +149,27 @@ By default, the allowed `redirect_uri`s are restricted to all existing `client_u
 compared via `client_uri.startsWith(redirect_uri)`. If you want to opt-out of the additional redirect_uri checks and
 configure and open redirect to allow just anything, you can do so:
 
-```
-# If set to `true`, any validation of the `redirect_uri` provided during
-# a user registration will be disabled.
-# Clients can use this feature to redirect the user back to their application
-# after a successful registration, so instead of ending up in the user
-# dashboard, they come back to the client app that initiated the registration.
+```toml
+[user_registration]
+# If set to `true`, any validation of the `redirect_uri` provided
+# during a user registration will be disabled. Clients can use
+# this feature to redirect the user back to their application
+# after a successful registration, so instead of ending up in the
+# user dashboard, they come back to the client app that initiated
+# the registration.
 #
 # The given `redirect_uri` will be compared against all registered
-# `client_uri`s and will throw an error, if there is no match. However,
-# this check will prevent ephemeral clients from using this feature. Only
-# if you need it in combination with ephemeral clients, you should
-# set this option to `true`. Otherwise it is advised to set the correct
-# Client URI in the admin UI. The `redirect_uri` will be allowed if it starts
-# with any registered `client_uri`.
+# `client_uri`s and will throw an error, if there is no match.
+# However, this check will prevent ephemeral clients from using
+# this feature. Only if you need it in combination with ephemeral
+# clients, you should set this option to `true`. Otherwise, it is
+# advised to set the correct Client URI in the admin UI. The
+# `redirect_uri` will be allowed if it starts with any registered
+# `client_uri`.
 #
 # default: false
-#USER_REG_OPEN_REDIRECT=true
+# overwritten by: USER_REG_OPEN_REDIRECT
+allow_open_redirect = false
 ```
 
 ### Custom Frontend
@@ -196,6 +213,6 @@ The PoWs have a very short lifetime by default to prevent them from being used m
 re-use prevention, but a POST to get a PoW will modify the backend state. This is unnecessary if the user decides to not
 submit the form at all.
 
-You can configure PoWs with `POW_DIFFICULTY` and `POW_EXP`.  
-Keep in mind, that the `POW_EXP` should be a high as necessary but always as low as possible.
-```
+You can configure PoWs with `pow.difficulty` and `pow.exp`.  
+Keep in mind, that the `pow.exp` should be a high as necessary but always as low as possible.
+
