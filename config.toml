@@ -380,7 +380,8 @@ api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQyn
 # overwritten by: HQL_NODE_ID
 node_id = 1
 
-# All cluster member nodes.
+# All cluster member nodes. For a single instance deployment,
+# `"1 localhost:8100 localhost:8200"` will work just fine.
 # Each array value must have the following format:
 # `id addr_raft addr_api`
 #

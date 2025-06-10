@@ -80,8 +80,9 @@ Adjust the following variables in your config, to make sure it works correctly.
 This is the *Relaying Party (RP) ID*, which should be your effective domain name.  
 Let's say our application is available at `auth.example.com`, then this should be:
 
-```
-RP_ID=auth.example.com
+```toml
+[webauthn]
+rp_id = "auth.example.com"
 ```
 
 ```admonish caution
@@ -91,26 +92,27 @@ Be very careful, if you want / need to do this in production.
 
 ### `RP_ORIGIN`
 
-The second important variable is the `RP_ORIGIN`. This needs to be set to the scheme + URL containing the effective
-domain name + port.
+The second important variable is the `webauthn.rp_origin`. This needs to be set to the scheme + URL containing the
+effective domain name + port.
 
 ```admonish caution
-The `RP_ORIGIN` must always include the port number, even if it is just the default 443 for HTTPS.
+The `rp_origin` must always include the port number, even if it is just the default 443 for HTTPS.
 ```
 
 In this example, assuming Rauthy will be available at port 443, correct would be:
 
-```
-RP_ORIGIN=https://auth.example.com:443
+```toml
+[webauthn]
+rp_origin = https://auth.example.com:443
 ```
 
 ### `RP_NAME`
 
 This variable can be set to anything "pretty".  
-This may be shown to the user in a way like "`RP_BNAE` requests your security key ...". If this is shown depends on the
+This may be shown to the user in a way like "`rp_name` requests your security key ...". If this is shown depends on the
 OS and the browser the client uses. Firefox, for instance, does not show this at the time of writing.
 
-You can change the `RP_NAME` later on without affecting the validation of already registered keys.
+You can change the `rp_name` later on without affecting the validation of already registered keys.
 
 ### `WEBAUTHN_RENEW_EXP`
 
@@ -120,8 +122,8 @@ passkeys. The keys are used either as a strong second factor, when they do not w
 login to real MFA, if the OS / Browser / Key does support this.
 
 When a user has logged in successfully on a new device and active 2FA / MFA, Rauthy will set an encrypted cookie as a
-"remember me". The lifetime of this cookie can be configured with `WEBAUTHN_RENEW_EXP`. The **default** of this value
-is **2160 hours**.
+"remember me". The lifetime of this cookie can be configured with `renew_exp`. The **default** of this value is **2160
+hours**.
 
 As long as this cookie is present and can be decrypted by the backend, the user can log in from this very
 device with the registered Passkey key only, which makes a very good user experience for the whole login flow.

@@ -9,8 +9,7 @@ as they require an additional network round trip to where ever their document is
 Just to make clear what I am talking about, a high level comparison of these different clients:
 
 **Static clients** are the ones that you register and configure via the Admin UI. These are the most efficient and
-secure
-ones. They require less work in the backend and exist inside the Rauthy database.
+secure ones. They require less work in the backend and exist inside the Rauthy database.
 
 Then there is OIDC **Dynamic Client Registration** (DCR), which is an OIDC extension that Rauthy supports as well. If a
 downstream application has support for this feature, it can self-register a client, which then can be used for the
@@ -19,7 +18,7 @@ login afterward. This sound very nice in the beginning, but brings quite a few p
 - If the endpoint is open, anyone can register a client, also bots and spammers
 - If the endpoint is secured an additional token for the registration, there is not much benefit from it, because the
   token must be communicated upfront anyway. If so, you could simply register a faster and more efficient static client.
-- The downstream application must manage its own client. If they don't do it properly, they can spam Rauthy's database
+- The downstream application must manage its own client. If they don't do it properly, they can spam Rauthys database
   again.
 - As mentioned already, dynamic clients are a bit less efficient than static ones and require at least one additional
   database round trip during each login.
@@ -71,11 +70,14 @@ The JSON document for the ephemeral clients follows the same rules and works in 
 
 The support for ephemeral clients is opt-in. You need to set at least
 
-```
-# Can be set to 'true' to allow the dynamic client lookup via URLs as
-# 'client_id's during authorization_code flow initiation.
+```toml
+[ephemeral_clients]
+# Can be set to 'true' to allow the dynamic client lookup via
+# URLs as 'client_id's during authorization_code flow initiation.
+#
 # default: false
-ENABLE_EPHEMERAL_CLIENTS=true
+# overwritten by: ENABLE_EPHEMERAL_CLIENTS
+enable = false
 ```
 
 Apart from this, there are more options you can modify. Ephemeral clients are the least flexible, and they share some
@@ -83,47 +85,64 @@ common restrictions. These are valid for all ephemeral clients used with this in
 something else in their JSON document. This is important so a Rauthy admin can configure a security standard that
 can't be broken or ignored.
 
-```
-# If set to 'true', MFA / Passkeys will be forced for ephemeral clients.
+```toml
+[ephemeral_clients]
+# If set to 'true', MFA / Passkeys will be forced for ephemeral
+# clients.
+#
 # default: false
-#EPHEMERAL_CLIENTS_FORCE_MFA=false
+# overwritten by: EPHEMERAL_CLIENTS_FORCE_MFA
+force_mfa = false
 
-# The allowed flows separated by ' ' for ephemeral clients.
-# default: "authorization_code"
-#EPHEMERAL_CLIENTS_ALLOWED_FLOWS="authorization_code refresh_token"
+# The allowed flows for ephemeral clients.
+#
+# default: ['authorization_code', 'refresh_token']
+# overwritten by: EPHEMERAL_CLIENTS_ALLOWED_FLOWS - single String, \n separated values
+allowed_flows = ['authorization_code', 'refresh_token']
 
 # The allowed scopes separated by ' ' for ephemeral clients.
-# default: "openid profile email webid"
-#EPHEMERAL_CLIENTS_ALLOWED_SCOPES="openid profile email webid"
+#
+# default: ['openid', 'profile', 'email', 'webid']
+# overwritten by: EPHEMERAL_CLIENTS_ALLOWED_SCOPES - single String, \n separated values
+allowed_scopes = ['openid', 'profile', 'email', 'webid']
 ```
 
 If you need support for Solid OIDC, you need to at least enable web IDs and the solid `aud`:
 
-```
+```toml
+[ephemeral_clients]
 # Can be set to 'true' to enable WebID functionality like needed
 # for things like Solid OIDC.
+#
 # default: false
-#ENABLE_WEB_ID=false
+# overwritten by: ENABLE_WEB_ID
+enable_web_id = false
 
-# If set to 'true', 'solid' will be added to the 'aud' claim from the ID token
-# for ephemeral clients.
+# If set to 'true', 'solid' will be added to the 'aud' claim from
+# the ID token for ephemeral clients.
+#
 # default: false
-#ENABLE_SOLID_AUD=true
+# overwritten by: ENABLE_SOLID_AUD
+enable_solid_aud = false
 ```
 
 The last option is the caching timeout. The cache for these documents is very important for performance. Without any
 cache, Rauthy would need to do an additional network round trip to the client JSON **with each login**. This is very
 inefficient, because usually these documents rarely change after the initial setup.
 
-```
-# The lifetime in seconds ephemeral clients will be kept inside the cache.
+```toml
+[ephemeral_clients]
+# The lifetime in seconds ephemeral clients will be kept inside
+# the cache.
+#
 # default: 3600
-#EPHEMERAL_CLIENTS_CACHE_LIFETIME=3600
+# overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
+cache_lifetime = 3600
 ```
 
 ```admonish hint
-If you are developing or testing, set the <code>EPHEMERAL_CLIENTS_CACHE_LIFETIME</code> to a very low value. Otherwise,
-Rauthy would not see any changes you do to this document as long as the internal cache has not expired.
+If you are developing or testing, set the <code>cache_lifetime</code> to a very low value. Otherwise, Rauthy would not 
+see any changes you do to this document as long as the internal cache has not expired.
 ```
 
 ## Minimal Client JSON Document

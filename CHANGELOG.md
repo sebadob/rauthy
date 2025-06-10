@@ -365,6 +365,14 @@ swagger_ui_public = false
 
 [#981](https://github.com/sebadob/rauthy/pull/981)
 
+#### Type change for `zip` / `postcal_code`
+
+The type for `zip` / `postcal_code` has been changed from an Integer to a String in all locations. This means not only
+the Admin + Account Dashboards, but of course also inside the `address` claim for `id_token`s. This change brings
+compatibility for countries that use non-numeric postal codes.
+
+[#1002](https://github.com/sebadob/rauthy/pull/1002)
+
 ### Changes
 
 #### Hiqlite Optimizations
@@ -448,7 +456,8 @@ The default value for `HTTP_WORKERS` has been changed. Even though you probably 
 manually in production, especially when running your instance on a huge underlying host, the default has been tuned to
 fit smaller hosts a bit better. Here is the new description in the config:
 
-```
+```toml
+[server]
 # Limits the amount of HTTP worker threads. This value
 # heavily impacts memory usage, even in idle. The default
 # values are:
@@ -460,9 +469,11 @@ fit smaller hosts a bit better. Here is the new description in the config:
 # you almost always want to manually set an appropriate
 # value. Rauthy can only see all available cores and not any
 # possibly set container limits. This means if it runs inside
-# a container on something like a a 96 core host, Rauthy will 
+# a container on something like a 96 core host, Rauthy will
 # by default spawn very many threads.
-#HTTP_WORKERS=1
+#
+# overwritten by: HTTP_WORKERS
+http_workers = 1
 ```
 
 [#975](https://github.com/sebadob/rauthy/pull/975)
@@ -537,18 +548,20 @@ only the default values, so you should never have any problems reaching the limi
 possible, so you get a new config variable to tune this:
 
 ```
-# Sets the limit in characters for the maximum JWT token length that 
-# will be accepted when validating it. The default of 4096 is high 
-# enough that you should never worry about this value. A typical 
-# `id_token` with quite a few additional custom attributes and scopes, 
-# signed with RS512, will usually be below 2000 characters. 
-# 
-# Only if you create very big tokens and you get errors on the 
+[access]
+# Sets the limit in characters for the maximum JWT token length that
+# will be accepted when validating it. The default of 4096 is high
+# enough that you should never worry about this value. A typical
+# `id_token` with quite a few additional custom attributes and scopes,
+# signed with RS512, will usually be below 2000 characters.
+#
+# Only if you create very big tokens and you get errors on the
 # `/userinfo` for instance, you might want to increase this value.
 # Otherwise, don't worry about it.
 #
-# default: 4096 
-TOKEN_LEN_LIMIT=4096
+# default: 4096
+# overwritten by: TOKEN_LEN_LIMIT
+token_len_limit = 4096
 ```
 
 [#941](https://github.com/sebadob/rauthy/pull/941)
