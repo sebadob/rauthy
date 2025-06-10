@@ -44,7 +44,7 @@ const config = {
             '/auth/v1/encryption/keys': backend,
             '/auth/v1/encryption/migrate': backend,
             '/auth/v1/login_time': backend,
-            '^^(?!\/auth\/v1\/users\/(register|%7Bid%7D))\/auth\/v1\/users.*': backend,
+            '^^(?!\/auth\/v1\/users\/(password_reset|register|%7Bid%7D))\/auth\/v1\/users.*': backend,
             '/auth/v1/pow': backend,
             '/auth/v1/roles': backend,
             '/auth/v1/groups': backend,

@@ -44,6 +44,7 @@ export interface RequestResetRequest {
     email: string,
     /// Validation: PATTERN_URI
     redirect_uri?: string,
+    pow: string,
 }
 
 // export interface TokenSet {

@@ -188,3 +188,12 @@ pub async fn get_fed_cm_html(req: HttpRequest) -> Result<HttpResponse, ErrorResp
         .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
         .await
 }
+
+#[get("/users/password_reset")]
+pub async fn get_user_password_reset_fixed(
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::PasswordReset
+        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
+        .await
+}

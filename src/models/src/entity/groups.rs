@@ -221,7 +221,7 @@ impl Group {
         }
 
         let groups = groups_opt.unwrap();
-        let mut res = String::with_capacity(groups.len());
+        let mut res = String::with_capacity(groups.len() * 8);
         Group::find_all().await?.into_iter().for_each(|g| {
             if groups.contains(&g.name) {
                 res.push_str(g.name.as_str());
@@ -232,7 +232,7 @@ impl Group {
         if res.is_empty() {
             Ok(None)
         } else {
-            res.remove(res.len() - 1);
+            res.pop();
             Ok(Some(res))
         }
     }

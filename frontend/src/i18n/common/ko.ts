@@ -134,6 +134,9 @@ export const I18nKo: I18n = {
         passwordForgotten: "비밀번호를 잊으셨나요?",
         passwordRequest: "요청",
         passwordRequired: "비밀번호는 필수입니다.",
+        passwordResetDesc: `Please provide your E-Mail to request a password reset link. If your address exists in out
+            database, you will receive a link via E-Mail.`,
+        passwordResetSuccess: "Request received. You can close this window now.",
         requestExpires: "만료일",
         requestExpired: "요청이 만료되었습니다.",
         signUp: "사용자 가입",
