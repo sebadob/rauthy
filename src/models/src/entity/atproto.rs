@@ -12,8 +12,8 @@ use atrium_identity::{
     },
 };
 use atrium_oauth::{
-    AtprotoClientMetadata, AuthMethod, DefaultHttpClient, GrantType, KnownScope,
-    OAuthClient, OAuthClientConfig, OAuthResolverConfig, Scope,
+    AtprotoClientMetadata, AuthMethod, DefaultHttpClient, GrantType, KnownScope, OAuthClient,
+    OAuthClientConfig, OAuthResolverConfig, Scope,
     store::{
         self,
         session::SessionStore,
@@ -25,21 +25,16 @@ use hickory_resolver::{
     proto::rr::rdata::TXT,
 };
 use rauthy_api_types::auth_providers::ProviderRequest;
-use rauthy_common::constants::{
-    CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION,
-};
+use rauthy_common::constants::{CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION};
 use rauthy_error::ErrorResponse;
 use serde::Serialize;
 use utoipa::{PartialSchema, ToSchema};
 
 use crate::{
     database::{Cache, DB},
-    entity::{
-        auth_providers::{AuthProvider, AuthProviderType},
-    },
+    entity::auth_providers::{AuthProvider, AuthProviderType},
     rauthy_config::RauthyConfig,
 };
-
 
 #[derive(Serialize)]
 struct Parameters {
@@ -147,7 +142,9 @@ impl Client {
         OAuthClient::new(config).map(Arc::new).map(Client)
     }
 
-    pub async fn init_provider() -> Result<AuthProvider, ErrorResponse> {
+    pub async fn init_provider() -> Result<(), ErrorResponse> {
+        let config = RauthyConfig::get();
+
         let payload = ProviderRequest {
             name: "ATProto".to_owned(),
             typ: AuthProviderType::Custom.into(),
@@ -169,10 +166,21 @@ impl Client {
             mfa_claim_value: None,
         };
 
+        tracing::info!(atproto = %config.vars.atproto.enable, "test");
+
         match AuthProvider::find_by_iss("atproto".to_owned()).await {
-            Ok(provider) => Ok(provider),
-            Err(_) => AuthProvider::create(payload).await,
-        }
+            Ok(provider) if !config.vars.atproto.enable => {
+                AuthProvider::delete(&provider.id).await?;
+            }
+            Err(_) if config.vars.atproto.enable => {
+                let _ = AuthProvider::create(payload).await?;
+            }
+            res => {
+                tracing::info!(atproto = ?res, "test");
+            }
+        };
+
+        Ok(())
     }
 }
 

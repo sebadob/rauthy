@@ -1,5 +1,6 @@
-export type CodeChallengeMethod = 'plain' | 'S256';
-export type JwtTokenType = 'Bearer' | 'DPoP' | 'Id' | 'Refresh';
+export type CodeChallengeMethod = 'plain' | 'S256',
+export type JwtTokenType = 'Bearer' | 'DPoP' | 'Id' | 'Refresh',
+export type LoginMethod = 'OIDC' | 'ATProto',
 
 export interface LoginRequest {
     /// Validation: `email`

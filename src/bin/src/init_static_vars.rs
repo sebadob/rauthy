@@ -124,6 +124,7 @@ pub fn trigger() {
     };
     HTTP_CLIENT.set(http_client).unwrap();
 
+
     // constants
     let _ = *APP_START;
     let _ = *BUILD_TIME;

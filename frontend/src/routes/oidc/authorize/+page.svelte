@@ -16,7 +16,8 @@
         TPL_CLIENT_URL,
         TPL_CSRF_TOKEN,
         TPL_IS_REG_OPEN,
-        TPL_LOGIN_ACTION
+        TPL_LOGIN_ACTION,
+        TPL_ATPROTO_ID
     } from "$utils/constants.js";
     import IconHome from "$icons/IconHome.svelte";
     import Main from "$lib5/Main.svelte";
@@ -31,6 +32,7 @@
     import {fetchPost, type IResponse} from "$api/fetch";
     import type {
         CodeChallengeMethod,
+        LoginMethod,
         LoginRefreshRequest,
         LoginRequest,
         RequestResetRequest,
@@ -44,6 +46,7 @@
     import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
     import {fetchSolvePow} from "$utils/pow";
     import {generatePKCE} from "$utils/pkce";
+    import {PATTERN_ATPROTO_ID} from "$utils/patterns";
 
     const inputWidth = "18rem";
 
@@ -86,10 +89,16 @@
     let emailAfterSubmit = $state('');
     let isRegOpen = $state(false);
 
+    let atprotoId: string | undefined = $state();
+    let atprotoHandle = $state('');
+
+    let loginMethod: LoginMethod = $state("OIDC");
+    const isAtproto = $derived("ATProto" as LoginMethod === loginMethod);
+
     let email = $state(useParam('login_hint').get() || '');
     let password = $state('');
     let userId = $state('');
-    let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset);
+    let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset && !isAtproto);
 
     onMount(() => {
         if (!needsPassword) {
@@ -147,6 +156,10 @@
     }
 
     function handleShowReset() {
+        if (isAtproto) {
+          return;
+        }
+
         err = '';
         showReset = true;
         password = '';
@@ -181,6 +194,10 @@
     }
 
     async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
+        if (isAtproto && atprotoId) {
+          return providerLogin(atprotoId);
+        }
+
         err = '';
 
         if (!clientId) {
@@ -302,6 +319,10 @@
     }
 
     function onEmailInput() {
+        if (isAtproto) {
+          return;
+        }
+
         // this will basically remove the password input again if the user was asked to provide
         // a password and afterward changes his email again
         if (needsPassword && emailAfterSubmit !== email) {
@@ -346,7 +367,7 @@
             nonce: nonce,
             code_challenge: challenge,
             code_challenge_method: challengeMethod,
-            provider_id: id,
+            provider_id: isAtproto ? "atproto" : id,
             pkce_challenge,
             pow,
         };
@@ -398,6 +419,9 @@
         isLoading = false;
     }
 
+    function toggleAtproto() {
+      loginMethod = loginMethod == "ATProto" ? "OIDC" : "ATProto";
+    }
 </script>
 
 <svelte:head>
@@ -405,6 +429,7 @@
 </svelte:head>
 
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
+<Template id={TPL_ATPROTO_ID} bind:value={atprotoId}/>
 <Template id={TPL_CLIENT_NAME} bind:value={clientName}/>
 <Template id={TPL_CLIENT_URL} bind:value={clientUri}/>
 <Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated}/>
@@ -449,6 +474,20 @@
                 {#if !clientMfaForce}
                     <Form action={authorizeUrl} {onSubmit}>
                         <div class:emailMinHeight={!showPasswordInput}>
+                          {#if isAtproto}
+                            <Input
+                                    typ="text"
+                                    name="handle"
+                                    bind:value={atprotoHandle}
+                                    label="Handle or DID"
+                                    placeholder="Handle or DID"
+                                    errMsg="Provide valid handle or DID"
+                                    pattern={PATTERN_ATPROTO_ID}
+                                    disabled={tooManyRequests}
+                                    width={inputWidth}
+                                    required
+                            />
+                          {:else}
                             <Input
                                     bind:ref={refEmail}
                                     typ="email"
@@ -463,6 +502,7 @@
                                     width={inputWidth}
                                     required
                             />
+                          {/if}
                         </div>
 
                         {#if showPasswordInput}
@@ -488,8 +528,8 @@
                             {/if}
                         {/if}
 
-                        {#if !tooManyRequests && !clientMfaForce}
-                            {#if showReset}
+                        {#if !tooManyRequests && !clientMfaForce }
+                            {#if showReset && !isAtproto}
                                 <div class="btn flex-col">
                                     <Button onclick={requestReset}>
                                         {t.authorize.passwordRequest}
@@ -501,6 +541,13 @@
                                         {t.authorize.login}
                                     </Button>
                                 </div>
+                                {#if isAtproto}
+                                  <div class="btn flex-col">
+                                    <Button onclick={toggleAtproto}>
+                                        Back
+                                      </Button>
+                                  </div>
+                                {/if}
                             {/if}
                         {/if}
                     </Form>
@@ -538,7 +585,7 @@
                     </div>
                 {/if}
 
-                {#if !clientMfaForce && providers.length > 0}
+                {#if !clientMfaForce && providers.length > 0 || atprotoId}
                     <div class="providers flex-col">
                         <div class="providersSeparator">
                             <div class="separator"></div>
@@ -548,13 +595,19 @@
                                 </div>
                             </div>
                         </div>
+                        <ButtonAuthProvider
+                          ariaLabel={`Login: ATProto`}
+                          provider={{id: "atproto", name: "ATProto", updated: 0}}
+                          onclick={toggleAtproto}
+                          {isLoading}
+                        />
                         {#each providers as provider (provider.id)}
-                            <ButtonAuthProvider
-                                    ariaLabel={`Login: ${provider.name}`}
-                                    {provider}
-                                    onclick={providerLogin}
-                                    {isLoading}
-                            />
+                          <ButtonAuthProvider
+                            ariaLabel={`Login: ${provider.name}`}
+                            {provider}
+                            onclick={providerLogin}
+                            {isLoading}
+                          />
                         {/each}
                     </div>
                 {/if}

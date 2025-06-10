@@ -8,6 +8,7 @@ use rauthy_handlers::swagger_ui::{OPENAPI_CONFIG, OPENAPI_JSON};
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::email;
 use rauthy_models::email::EMail;
+use rauthy_models::entity::atproto;
 use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::init_event_vars;
@@ -19,7 +20,7 @@ use std::error::Error;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, warn, error};
 
 // #[cfg(all(feature = "jemalloc", not(target_env = "msvc")))]
 // #[global_allocator]
@@ -144,6 +145,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let _ = *OPENAPI_CONFIG;
         }
     }
+
+    atproto::Client::init_provider().await.map_err(|error| {
+        error!(%error, "failed to initialize atproto provider");
+    }).unwrap();
 
     if RauthyConfig::get().vars.server.metrics_enable {
         server::server_with_metrics().await?;

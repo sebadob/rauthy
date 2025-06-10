@@ -78,6 +78,13 @@ tokio-postgres = { workspace = true }
 tokio-postgres-rustls = { workspace = true }
 webpki-roots = { workspace = true }
 
+atrium-api = { workspace = true }
+atrium-common = { workspace = true }
+atrium-identity = { workspace = true }
+atrium-oauth = { workspace = true }
+
+hickory-resolver = { workspace = true }
+serde_html_form = { workspace = true }
 [dev-dependencies]
 pretty_assertions = "1"
 rstest = "0.18.2"

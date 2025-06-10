@@ -605,7 +605,7 @@ impl Default for Vars {
                 force_uv: false,
                 no_password_exp: true,
             },
-            atproto: VarsAtproto { enable: false },
+            atproto: VarsAtproto { enable: true },
         }
     }
 }
