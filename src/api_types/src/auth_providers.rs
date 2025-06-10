@@ -72,8 +72,8 @@ pub struct ProviderRequest {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ProviderCallbackRequest {
-    /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub state: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]

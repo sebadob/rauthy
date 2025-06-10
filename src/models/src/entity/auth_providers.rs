@@ -805,7 +805,7 @@ impl AuthProviderCallback {
 
             let options = AuthorizeOptions {
                 state: Some(slf.callback_id.clone()),
-                redirect_uri: Some(RauthyConfig::get().provider_callback_uri_encoded.clone()),
+                redirect_uri: Some(RauthyConfig::get().provider_callback_uri.clone()),
                 scopes: vec![
                     Scope::Unknown("transition:email".to_owned()),
                     Scope::Known(KnownScope::Atproto),
@@ -827,6 +827,9 @@ impl AuthProviderCallback {
         );
 
         slf.save().await?;
+
+dbg!(&location);
+
 
         Ok((
             cookie,
@@ -850,15 +853,15 @@ impl AuthProviderCallback {
         })?;
 
         // validate state
-        if callback_id != payload.state {
-            Self::delete(callback_id).await?;
+        // if callback_id != payload.state {
+        //     Self::delete(callback_id).await?;
 
-            error!("`state` does not match");
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "`state` does not match",
-            ));
-        }
+        //     error!("`state` does not match");
+        //     return Err(ErrorResponse::new(
+        //         ErrorResponseType::BadRequest,
+        //         "`state` does not match",
+        //     ));
+        // }
         debug!("callback state is valid");
 
         // validate csrf token

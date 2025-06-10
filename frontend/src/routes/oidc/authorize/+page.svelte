@@ -89,11 +89,10 @@
     let emailAfterSubmit = $state('');
     let isRegOpen = $state(false);
 
-    let atprotoId: string | undefined = $state();
+    let atprotoId = $state('');
     let atprotoHandle = $state('');
 
-    let loginMethod: LoginMethod = $state("OIDC");
-    const isAtproto = $derived("ATProto" as LoginMethod === loginMethod);
+    let isAtproto = $state(false);
 
     let email = $state(useParam('login_hint').get() || '');
     let password = $state('');
@@ -194,10 +193,6 @@
     }
 
     async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
-        if (isAtproto && atprotoId) {
-          return providerLogin(atprotoId);
-        }
-
         err = '';
 
         if (!clientId) {
@@ -367,9 +362,10 @@
             nonce: nonce,
             code_challenge: challenge,
             code_challenge_method: challengeMethod,
-            provider_id: isAtproto ? "atproto" : id,
+            provider_id: id,
             pkce_challenge,
             pow,
+            ...isAtproto && {handle: atprotoHandle},
         };
 
         let res = await fetchPost<string>('/auth/v1/providers/login', payload);
@@ -420,7 +416,7 @@
     }
 
     function toggleAtproto() {
-      loginMethod = loginMethod == "ATProto" ? "OIDC" : "ATProto";
+        isAtproto = !isAtproto;
     }
 </script>
 
@@ -536,16 +532,23 @@
                                     </Button>
                                 </div>
                             {:else}
-                                <div class="btn flex-col">
+                                {#if isAtproto}
+                                  <div class="btn flex-col">
+                                    <ButtonAuthProvider
+                                      ariaLabel={`ATProto login`}
+                                      provider={{id: atprotoId, name: t.authorize.login, updated: 0}}
+                                      onclick={providerLogin}
+                                      {isLoading}
+                                    />
+                                    <Button type="button" onclick={toggleAtproto}>
+                                        Back
+                                      </Button>
+                                  </div>
+                                {:else}
+                                  <div class="btn flex-col">
                                     <Button type="submit" {isLoading}>
                                         {t.authorize.login}
                                     </Button>
-                                </div>
-                                {#if isAtproto}
-                                  <div class="btn flex-col">
-                                    <Button onclick={toggleAtproto}>
-                                        Back
-                                      </Button>
                                   </div>
                                 {/if}
                             {/if}
@@ -599,16 +602,8 @@
                           ariaLabel={`Login: ATProto`}
                           provider={{id: "atproto", name: "ATProto", updated: 0}}
                           onclick={toggleAtproto}
-                          {isLoading}
+                          isLoading={false}
                         />
-                        {#each providers as provider (provider.id)}
-                          <ButtonAuthProvider
-                            ariaLabel={`Login: ${provider.name}`}
-                            {provider}
-                            onclick={providerLogin}
-                            {isLoading}
-                          />
-                        {/each}
                     </div>
                 {/if}
             </div>

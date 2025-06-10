@@ -88,7 +88,7 @@ impl HtmlTemplate {
     ) -> Result<(Self, Option<Cookie<'_>>), ErrorResponse> {
         match s {
             "tpl_atproto_id" => {
-                let provider = AuthProvider::find_by_iss("atproto").await?;
+                let provider = AuthProvider::find_by_iss("atproto".to_owned()).await?;
                 Ok((Self::AtprotoId(provider.id), None))
             }
             "tpl_auth_providers" => {

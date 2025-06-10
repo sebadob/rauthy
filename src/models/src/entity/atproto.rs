@@ -82,7 +82,7 @@ impl Client {
             Scope::Known(KnownScope::TransitionGeneric),
         ];
 
-        let redirect_uris = vec![RauthyConfig::get().provider_callback_uri_encoded.clone()];
+        let redirect_uris = vec![RauthyConfig::get().provider_callback_uri.clone()];
 
         let client_id = if config.vars.dev.dev_mode {
             let query = serde_html_form::to_string(Parameters {
@@ -95,10 +95,10 @@ impl Client {
             })
             .unwrap();
 
-            let mut client_id = config.pub_url_with_scheme.clone();
+            let mut client_id = String::from("http://localhost");
 
             if !query.is_empty() {
-                client_id.push_str(&format!("/?{query}"));
+                client_id.push_str(&format!("?{query}"));
             }
 
             client_id
@@ -157,7 +157,7 @@ impl Client {
             use_pkce: true,
             client_secret_basic: false,
             client_secret_post: false,
-            client_id: "atproto".to_owned(),
+            client_id: "rauthy".to_owned(),
             client_secret: None,
             scope: String::new(),
             admin_claim_path: None,
