@@ -134,6 +134,9 @@ export const I18nZh: I18n = {
         passwordForgotten: "忘记密码",
         passwordRequest: "请求",
         passwordRequired: "密码必填。",
+        passwordResetDesc: `Please provide your E-Mail to request a password reset link. If your address exists in out
+            database, you will receive a link via E-Mail.`,
+        passwordResetSuccess: "Request received. You can close this window now.",
         requestExpires: "请求过期于",
         requestExpired: "请求已过期",
         signUp: "用户注册",

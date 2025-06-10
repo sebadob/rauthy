@@ -1507,6 +1507,7 @@ pub async fn post_user_password_request_reset(
         payload.email,
         real_ip_from_req(&req)?
     );
+    Pow::validate(&payload.pow)?;
 
     match User::find_by_email(payload.email).await {
         Ok(user) => user

@@ -134,6 +134,9 @@ export const I18nEn: I18n = {
         passwordForgotten: "Password forgotten?",
         passwordRequest: "Request",
         passwordRequired: "Password is required",
+        passwordResetDesc: `Please provide your E-Mail to request a password reset link. If your address exists in out
+            database, you will receive a link via E-Mail.`,
+        passwordResetSuccess: "Request received. You can close this window now.",
         requestExpires: "Request expires",
         requestExpired: "Request has expired",
         signUp: "User Registration",

@@ -381,12 +381,13 @@
     }
 
     async function requestReset() {
-        let payload: RequestResetRequest = {email};
+        isLoading = true;
+        let pow = await fetchSolvePow() || '';
+        
+        let payload: RequestResetRequest = {email, pow};
         if (clientUri) {
             payload.redirect_uri = encodeURI(clientUri);
         }
-
-        isLoading = true;
 
         let res = await fetchPost('/auth/v1/users/request_reset', payload);
         if (res.error) {
