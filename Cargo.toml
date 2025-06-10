@@ -123,3 +123,11 @@ webauthn-rs = { version = "0.5", features = [
 ] }
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"
+
+atrium-api = "0.25.3"
+atrium-common = "0.1.2"
+atrium-identity = "0.1.4"
+atrium-oauth = "0.1.2"
+
+hickory-resolver = "0.25.2"
+serde_html_form = "0.2.7"

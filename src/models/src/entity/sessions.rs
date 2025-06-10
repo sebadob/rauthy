@@ -686,6 +686,7 @@ impl Session {
                 ];
                 #[cfg(not(debug_assertions))]
                 let exceptions = [
+                    "/auth/v1/atproto/client_metadata",
                     "/auth/v1/oidc/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",

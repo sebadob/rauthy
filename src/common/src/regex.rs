@@ -66,3 +66,7 @@ pub static RE_TOKEN_68: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap());
 pub static RE_TOKEN_ENDPOINT_AUTH_METHOD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(client_secret_post|client_secret_basic|none)$").unwrap());
+
+pub static RE_ATPROTO_HANDLE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$").unwrap()
+});

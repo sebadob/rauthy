@@ -21,9 +21,9 @@ use tokio::sync::mpsc;
 use tokio::time;
 use tracing::{debug, info, warn};
 
-#[cfg(all(feature = "jemalloc", not(target_env = "msvc")))]
-#[global_allocator]
-static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+// #[cfg(all(feature = "jemalloc", not(target_env = "msvc")))]
+// #[global_allocator]
+// static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 mod dummy_data;
 mod init_static_vars;
