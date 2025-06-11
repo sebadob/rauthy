@@ -408,14 +408,28 @@ The other new value is `HQL_CACHE_STORAGE_DISK`, which is `true` by default. Thi
 in-memory cache on disk and therefore free up that memory. If you would rather have everything in-memory though, set
 this value to `false`.
 
-```
+```toml
+[cluster]
+# Hiqlite WAL files (when not using the `rocksdb` feature) will
+# always have a fixed size, even when they are still "empty", to
+# reduce disk operations while writing. You can set the WAL size
+# in bytes. The default value is 2 MB, while the minimum size is
+# 8 kB.
+#
+# default: 2097152
+# overwritten by: HQL_WAL_SIZE
+#wal_size = 2097152
+
 # Set to `false` to store Cache WAL files + Snapshots in-memory only.
-# Depending on your environment and setup, this can lead to cluster
-# issues if a node crashes and cannot do a graceful shutdown. It is not
-# recommended to keep the Raft state in-memory only, apart from for
-# testing and in special cases.
+# If you run a Cluster, a Node can re-sync cache data after a restart.
+# However, if you restart too quickly or shut down the whole cluster,
+# all your cached data will be gone.
+# In-memory only hugegly increases the throughput though, so it
+# depends on your needs, what you should prefer.
+#
 # default: true
-#HQL_CACHE_STORAGE_DISK=true
+# overwritten by: HQL_CACHE_STORAGE_DISK
+cache_storage_disk = true
 
 # Can be set to true to start the WAL handler even if the
 # `lock.hql` file exists. This may be necessary after a
@@ -425,7 +439,7 @@ this value to `false`.
 # IMPORTANT: Even though the Database can "heal" itself by
 # simply rebuilding from the existing Raft log files without
 # even needing to think about it, you may want to only
-# set `HQL_IGNORE_WAL_LOCK` when necessary to have more
+# set `HQL_WAL_IGNORE_LOCK` when necessary to have more
 # control. Depending on the type of crash (whole OS, maybe
 # immediate power loss, force killed, ...), it may be the
 # case that the WAL files + metadata could not be synced
@@ -440,7 +454,8 @@ this value to `false`.
 # process is still running and accessing the WAL files!
 #
 # default: false
-#HQL_IGNORE_WAL_LOCK=false
+# overwritten by: HQL_WAL_IGNORE_LOCK
+wal_ignore_lock = false
 ```
 
 And if all of this was not enough yet, I was able to improve the overall throughput of `hiqlite` by ~30%. For more
@@ -553,7 +568,7 @@ characters) is now limited to 4096. This is more than double the amount of an RS
 only the default values, so you should never have any problems reaching the limit. Theoretically, it is of course
 possible, so you get a new config variable to tune this:
 
-```
+```toml
 [access]
 # Sets the limit in characters for the maximum JWT token length that
 # will be accepted when validating it. The default of 4096 is high
