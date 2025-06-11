@@ -216,11 +216,13 @@
 {#snippet passwordInput()}
     {#if tplData}
         <Form action="" onSubmit={passwordReset}>
-            <PasswordPolicy
-                    bind:accepted
-                    policy={tplData.password_policy}
-                    password={password}
-            />
+            <div class="policy">
+                <PasswordPolicy
+                        bind:accepted
+                        policy={tplData.password_policy}
+                        password={password}
+                />
+            </div>
 
             <InputPassword
                     bind:ref={refPassword}
@@ -380,6 +382,13 @@
 <LangSelector absolute/>
 
 <style>
+    .container {
+        margin-top: -1.75rem;
+        max-height: calc(100dvh - 2.5rem);
+        max-width: 100dvw;
+        overflow-y: auto;
+    }
+
     .err {
         margin-top: .5rem;
         max-width: 20rem;
@@ -397,6 +406,11 @@
 
     .generate {
         margin-bottom: .66rem;
+    }
+
+    .policy {
+        max-width: 100dvw;
+        overflow: clip;
     }
 
     .typeChoice {
