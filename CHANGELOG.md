@@ -506,6 +506,12 @@ get the error message during Rauthys login already and not after the token was e
 
 [#952](https://github.com/sebadob/rauthy/pull/952)
 
+#### Less strict group names
+
+Group names can now contain uppercase letters and spaces.
+
+[#1012](https://github.com/sebadob/rauthy/pull/1012)
+
 #### User-Editable custom attributes
 
 User attributes can now be set to be user-editable. A new section has been added to the account dashboard which shows
@@ -609,6 +615,13 @@ The custom theme you apply for the `rauthy` client will now be used as a fallbac
 have their own custom values.
 
 [#982](https://github.com/sebadob/rauthy/pull/982)
+
+#### Dedicated Password Reset Request Page
+
+A link to a dedicated password reset request page has been added to password reset E-Mails. This helps users request a
+new magic link quickly when they have an expired one for a password reset in their inbox.
+
+[#1011](https://github.com/sebadob/rauthy/pull/1011)
 
 #### Production Init Hardening
 
