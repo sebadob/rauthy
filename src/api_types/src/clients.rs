@@ -191,8 +191,8 @@ pub struct UpdateClientRequest {
     pub contacts: Option<Vec<String>>,
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub backchannel_logout_uri: Option<String>,
-    /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
+    /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
+    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub restrict_group_prefix: Option<String>,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
@@ -216,8 +216,8 @@ pub struct ScimClientRequestResponse {
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub base_uri: String,
     pub sync_groups: bool,
-    /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
+    /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
+    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub group_sync_prefix: Option<String>,
 }
 
