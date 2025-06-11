@@ -474,15 +474,12 @@ release:
 
 # publishes the application images - full pipeline incl clippy and testing you can provide a custom image name as variable
 publish: build-docs fmt test-hiqlite test-postgres build archive-ui
-    #!/usr/bin/env bash
-    set -euxo pipefail
 
 # publishes the application images - full pipeline incl clippy and testing
 publish-latest:
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # the `latest` image will always point to the postgres x86 version, which is used the most (probably)
     {{ docker }} pull ghcr.io/sebadob/rauthy:$TAG
     {{ docker }} tag ghcr.io/sebadob/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
     {{ docker }} push ghcr.io/sebadob/rauthy:latest

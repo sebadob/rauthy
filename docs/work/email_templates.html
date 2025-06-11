@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -181,50 +192,34 @@ others.</p>
 <h2 id="existing-config-values"><a class="header" href="#existing-config-values">Existing Config Values</a></h2>
 <p>Modifying the E-Mail contents via config variables is very straight forward. You don't need to compile from source,
 therefore can't make any mistakes and for all variables that are not set, Rauthy will simply fall back to the default.</p>
-<p>At the time of writing, translations do exist for english (default) and german only. Values starting with <code>TPL_EN</code>
-will set the english translation while <code>TPL_DE</code> will set german.</p>
 <p>You can take a look at the raw templates directly in the repo, so you can see which value will be mapped to which
 location in the final message.</p>
 <p><a href="https://github.com/sebadob/rauthy/blob/main/templates/email/reset.txt">Text Version</a></p>
 <p><a href="https://github.com/sebadob/rauthy/blob/main/templates/email/reset.html">HTML Version</a></p>
-<p>The values to modify the sections are the following:</p>
-<pre><code># New Password E-Mail
-#TPL_EN_PASSWORD_NEW_SUBJECT="New Password"
-#TPL_EN_PASSWORD_NEW_HEADER="New password for"
-#TPL_EN_PASSWORD_NEW_TEXT=""
-#TPL_EN_PASSWORD_NEW_CLICK_LINK="Click the link below to get forwarded to the password form."
-#TPL_EN_PASSWORD_NEW_VALIDITY="This link is only valid for a short period of time for security reasons."
-#TPL_EN_PASSWORD_NEW_EXPIRES="Link expires:"
-#TPL_EN_PASSWORD_NEW_BUTTON="Set Password"
-#TPL_EN_PASSWORD_NEW_FOOTER=""
+<p>The values are given as multiplem <code>[[templates]]</code> blocks. Each given block must match a separate <code>lang</code> / <code>typ</code>
+combination to be valid:</p>
+<pre><code class="language-toml">[[templates]]
+# You can overwrite some default email templating values.
+# If you want to modify the basic templates themselves, this is
+# only possible with a custom build from source. The content
+# however can mostly be set here.
+# If the below values are not set, the default will be taken.
+#
+# NOTE: This is an array value, and you can specify it multiple
+# times for different `lang` / `typ` combinations.
 
-#TPL_DE_PASSWORD_NEW_SUBJECT="Passwort Reset angefordert"
-#TPL_DE_PASSWORD_NEW_HEADER="Passwort Reset angefordert für"
-#TPL_DE_PASSWORD_NEW_TEXT=""
-#TPL_DE_PASSWORD_NEW_CLICK_LINK="Klicken Sie auf den unten stehenden Link für den Passwort Reset."
-#TPL_DE_PASSWORD_NEW_VALIDITY="Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
-#TPL_DE_PASSWORD_NEW_EXPIRES="Link gültig bis:"
-#TPL_DE_PASSWORD_NEW_BUTTON="Passwort Setzen"
-#TPL_DE_PASSWORD_NEW_FOOTER=""
+# one of: en de ko zh_hans
+lang = 'en'
+# pme of: password_new, password_reset
+typ = 'password_new'
 
-# Password Reset E-Mail
-#TPL_EN_RESET_SUBJECT="Password Reset Request"
-#TPL_EN_RESET_HEADER="Password reset request for"
-#TPL_EN_RESET_TEXT=""
-#TPL_EN_RESET_CLICK_LINK="Click the link below to get forwarded to the password request form."
-#TPL_EN_RESET_VALIDITY="This link is only valid for a short period of time for security reasons."
-#TPL_EN_RESET_EXPIRES="Link expires:"
-#TPL_EN_RESET_BUTTON="Reset Password"
-#TPL_EN_RESET_FOOTER=""
-
-#TPL_DE_RESET_SUBJECT="Passwort Reset angefordert"
-#TPL_DE_RESET_HEADER="Passwort Reset angefordert für"
-#TPL_DE_RESET_TEXT=""
-#TPL_DE_RESET_CLICK_LINK="Klicken Sie auf den unten stehenden Link für den Passwort Reset."
-#TPL_DE_RESET_VALIDITY="Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
-#TPL_DE_RESET_EXPIRES="Link gültig bis:"
-#TPL_DE_RESET_BUTTON="Passwort Zurücksetzen"
-#TPL_DE_RESET_FOOTER=""
+subject = 'New Password'
+header = 'New password for'
+text = ''
+click_link = 'Click the link below to get forwarded to the password form.'
+validity = 'This link is only valid for a short period of time for security reasons.'
+expires = 'Link expires:'
+footer = ''
 </code></pre>
 <h2 id="modify-templates-directly"><a class="header" href="#modify-templates-directly">Modify Templates Directly</a></h2>
 <p>Modifying templates directly gives you the most amount of control of course. You can change everything you like about
