@@ -736,6 +736,14 @@ spec:
               mountPath: /app/config.toml
               readOnly: true
               subPath: config.toml
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              # adjust if you change the Raft API port
+              port: 8200
+              path: /ping
+            initialDelaySeconds: 5
+            periodSeconds: 1
           livenessProbe:
             httpGet:
               # You may need to adjust this, if you decide to start in https only
