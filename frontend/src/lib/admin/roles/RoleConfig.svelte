@@ -8,7 +8,7 @@
     import Form from "$lib5/form/Form.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import type {RoleRequest, RoleResponse} from "$api/types/roles.ts";
-    import {PATTERN_GROUP} from "$utils/patterns";
+    import {PATTERN_ROLE_SCOPE} from "$utils/patterns";
 
     let {
         role,
@@ -73,7 +73,7 @@
             disabled={isRauthyAdmin}
             width="14.5rem"
             required
-            pattern={PATTERN_GROUP}
+            pattern={PATTERN_ROLE_SCOPE}
     />
 
     {#if isRauthyAdmin}

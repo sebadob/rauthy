@@ -57,7 +57,7 @@ export interface ProviderLoginRequest {
     client_id: string,
     /// Validation: PATTERN_URI
     redirect_uri: string,
-    /// Validation: PATTERN_GROUP
+    /// Validation: PATTERN_ROLE_SCOPE
     scopes?: string[],
     /// Validation: PATTERN_URI
     state?: string,

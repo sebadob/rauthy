@@ -1,5 +1,5 @@
 export interface RoleRequest {
-    /// Validation: PATTERN_GROUP
+    /// Validation: PATTERN_ROLE_SCOPE
     role: string,
 }
 
