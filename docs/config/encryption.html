@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -158,11 +169,13 @@
                     <main>
                         <h1 id="encryption"><a class="header" href="#encryption">Encryption</a></h1>
 <p>Rauthy does additional encryption for values in lots of places, like for instance <code>client_secret</code>s in the database
-or session cookies. In the Getting Started for Kubernetes, we have set up the <code>ENC_KEYS</code> and <code>ENC_KEY_ACTIVE</code>.</p>
-<p>The <code>ENC_KEYS</code> defines the static keys used for additional data encryption in a few places. This values may contain
-multiple keys, if you want to rotate them at some point without breaking the decryption of all already existing secrets.</p>
-<p><code>ENC_KEY_ACTIVE</code> defines the key inside <code>ENC_KEYS</code> which will be used as the default. This means that all new / current
-encryption's performed by the backend will use the key with the given ID.</p>
+or session cookies. In the Getting Started for Kubernetes, we have set up the <code>encryption.keys</code> and
+<code>encryption.key_active</code>.</p>
+<p>The <code>encryption.keys</code> defines the static keys used for additional data encryption in a few places. This values may
+contain multiple keys, if you want to rotate them at some point without breaking the decryption of all already existing
+secrets.</p>
+<p><code>encryption.key_active</code> defines the key inside <code>encryption.keys</code> which will be used as the default. This means that all
+new / current encryption's performed by the backend will use the key with the given ID.</p>
 <h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
 <p>If you followed the Getting Started for Kubernetes, you already completed this step. If not, this is how you can
 generate an encryption key.</p>
@@ -176,13 +189,12 @@ then be base64 encoded. If it is not, Rauthy will yell at startup and panic earl
 90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI=
 </code></pre>
 <p>Your config value should look like this:</p>
-<pre><code>ENC_KEYS="
-90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI=
-"
-ENC_KEY_ACTIVE=90eb6d69
+<pre><code class="language-toml">[encryption]
+keys = ["90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI="]
+key_active = "90eb6d69"
 </code></pre>
 <p>You can add more keys if you like, <strong>separated by new lines</strong>, which is needed for the key rotation described below.
-The <code>ENC_KEY_ACTIVE</code> will be the key being used for all new encryption's.</p>
+The <code>encryption.key_active</code> will be the key being used for all new encryption's.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -194,13 +206,13 @@ The <code>ENC_KEY_ACTIVE</code> will be the key being used for all new encryptio
 <p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which will make Rauthy
 panic on startup, when it checks the given values. If you run into that situation, you can generate them without
 <code>openssl</code> as well, with e.g:</p>
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+<pre><code>echo"$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
 </div>
 </div>
 <h2 id="key-rotation"><a class="header" href="#key-rotation">Key Rotation</a></h2>
 <p>A good practice is to rotate encryption keys from time to time. Rauthy does auto-rotate the keys for signing tokens,
 but the admin is responsible for the encryption keys, since they have a greater impact.</p>
-<p><strong>1. Add a new key to the <code>ENC_KEYS</code> in you secrets</strong></p>
+<p><strong>1. Add a new key to the <code>encryption.keys</code> in you secrets</strong></p>
 <div id="admonition-fail" class="admonition admonish-failure" role="note" aria-labelledby="admonition-fail-title">
 <div class="admonition-title">
 <div id="admonition-fail-title">
@@ -216,24 +228,26 @@ If the old key is gone, the migration will fail.</p>
 <p><strong>2. Generate a new key + id</strong></p>
 <pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 </code></pre>
-<p>The part before the first <code>/</code> is the <code>ENC_KEY_ID</code> and the part afterwards is the key base64 encoded.
-You might set the new <code>ENC_KEY_ACTIVE</code> to the newly generated key ID.</p>
+<p>The part before the first <code>/</code> is the <code>key_active</code> and the part afterwards is the key base64 encoded.
+You might set the new <code>encryption.key_active</code> to the newly generated key ID.</p>
 <p>Keep in mind, you need to ADD this to your existing keys and not just replace them! If you just replace them, almost
 all things will break and fall apart.</p>
-<p>The final format of the <code>ENC_KEYS</code> should look something like this, for instance:</p>
-<pre><code>ENC_KEYS="
-Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=
-6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=
-"
+<p>The final format of the <code>encryption.keys</code> should look something like this, for instance:</p>
+<pre><code class="language-toml">[encryption]
+key = [
+    "Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=",
+    "6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=",
+]
 </code></pre>
-<p>In this example, if the first key should be the new active default, set your <code>ENC_KEY</code>ACTIVE` to</p>
-<pre><code>ENC_KEY_ACTIVE=Wx1zrbLF
+<p>In this example, if the first key should be the new active default, set your <code>key_active</code> to</p>
+<pre><code class="language-toml">[encryption]
+key_active = "Wx1zrbLF"
 </code></pre>
-<p><strong>3. Set the <code>ENC_KEY_ACTIVE</code> to the ID of your newly generated key</strong></p>
+<p><strong>3. Set the <code>key_active</code> to the ID of your newly generated key</strong></p>
 <p>This will make sure, that all new encryptions will use the new key. If you do not care about removing the old keys,
 because you maybe just want to rotate because its good practice, the secrets will migrate "by themselves" over time.
 If Rauthy finds any secrets during its normal operation, that have been encrypted with an older key than the current
-<code>ENC_KEY_ACTIVE</code>, it will re-encrypt these secrets and update the values.<br />
+<code>key_active</code>, it will re-encrypt these secrets and update the values.<br />
 This means, you may just stop at this point, if this is good enough for you.</p>
 <p><strong>4. Migrate Keys</strong></p>
 <p>If you however want to trigger a re-encryption of all existing secrets on purpose, there is a small tool in the
@@ -244,7 +258,7 @@ You will see the currently recognized keys and the currently active ID.</p>
 Please keep in mind, that if you have a lot of data, it might take a few seconds to perform this operation.
 This will migrate all encrypted data for existing OIDC clients, all JWKs, and so on, with the new key.</p>
 <p><strong>5. Remove old keys</strong></p>
-<p>After a successful migration via the UI tool, you could remove old keys from the <code>ENC_KEYS</code> value, but it is not
+<p>After a successful migration via the UI tool, you could remove old keys from the <code>keys</code> value, but it is not
 recommended as long as you did not have a known data breach. Just keep them around for some time because of
 encrypted cookies with older keys.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
@@ -255,7 +269,7 @@ encrypted cookies with older keys.</p>
 <a class="admonition-anchor-link" href="#admonition-caution"></a>
 </div>
 <div>
-<p>All cookies are encrypted with the <code>ENC_KEY_ACTIVE</code>. This means, if you remove something from the <code>ENC_KEYS</code> which has
+<p>All cookies are encrypted with the <code>key_active</code>. This means, if you remove something from the <code>keys</code> which has
 been used to encrypt cookies, the user will be prompted to log in again, even if cookies have not expired yet.</p>
 </div>
 </div>

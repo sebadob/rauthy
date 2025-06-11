@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -222,15 +233,22 @@ public facing HTTPS server.</p>
 <p>Hiqlite can run the whole database layer, and it will always take care of caching. It can be configured to use TLS
 internally, if you provide certificates. Simply provide the following values from the <code>TLS</code> section in the reference
 config:</p>
-<pre><code># If given, these keys / certificates will be used to establish
+<pre><code class="language-toml">[cluster]
+# If given, these keys / certificates will be used to establish
 # TLS connections between nodes.
-HQL_TLS_RAFT_KEY=tls/hiqlite/tls.key
-HQL_TLS_RAFT_CERT=tls/hiqlite/tls.crt
-#HQL_TLS_RAFT_DANGER_TLS_NO_VERIFY=false
+#
+# values are optional, overwritten by: HQL_TLS_{RAFT|API}_{KEY|CERT}
+# overwritten by: HQL_TLS_RAFT_KEY
+tls_raft_key = "tls/tls.key"
+# overwritten by: HQL_TLS_RAFT_CERT
+tls_raft_cert = "tls/tls.crt"
+#tls_raft_danger_tls_no_verify = true
 
-HQL_TLS_API_KEY=tls/hiqlite/tls.key
-HQL_TLS_API_CERT=tls/hiqlite/tls.crt
-#HQL_TLS_API_DANGER_TLS_NO_VERIFY=false
+# overwritten by: HQL_TLS_API_KEY
+tls_api_key = "tls/tls.key"
+# overwritten by: HQL_TLS_RAFT_KEY
+tls_api_cert = "tls/tls.crt"
+#tls_api_danger_tls_no_verify = true
 </code></pre>
 <p>There is no problem using the same certificates for both networks, but you can optionally even separate them if you need
 to. You could even re-use the Server TLS, if your DNS setup allows for this.</p>
@@ -243,14 +261,31 @@ to. You could even re-use the Server TLS, if your DNS setup allows for this.</p>
 </div>
 <div>
 <p>At the time of writing, it does not accept a custom Root CA yet. In this case you have to set the
-<code>*_DANGER_TLS_NO_VERIFY</code> to <code>true</code></p>
+<code>*_danger_tls_no_verify</code> to <code>true</code></p>
 </div>
 </div>
 <h3 id="rauthy-server--api"><a class="header" href="#rauthy-server--api">Rauthy Server / API</a></h3>
-<p>By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the
-default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER format too,
-if you rename the file-ending to <code>*.der</code>.</p>
-<p>You can change the default path for the files with the config variables <code>TLS_CERT</code> and <code>TLS_KEY</code>.</p>
+<p>By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which
+is the default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER
+format too, if you rename the file-ending to <code>*.der</code>.</p>
+<pre><code class="language-toml">[tls]
+## UI + API TLS
+
+# Overwrite the path to the TLS certificate file in PEM
+# format for rauthy
+#
+#default: 'tls/tls.crt'
+# overwritten by: TLS_CERT
+cert_path = 'tls/cert-chain.pem'
+
+# Overwrite the path to the TLS private key file in PEM
+# format for rauthy. If the path / filename ends with '.der',
+# rauthy will parse it as DER, otherwise as PEM.
+#
+# default: 'tls/tls.key'
+# overwritten by: TLS_KEY
+key_path = 'tls/key.pem'
+</code></pre>
 <h3 id="kubernetes"><a class="header" href="#kubernetes">Kubernetes</a></h3>
 <p>If you did not follow the above procedure to generate the CA and certificates, you may need to rename the files in the
 following command, to create the Kubernetes secrets.</p>
