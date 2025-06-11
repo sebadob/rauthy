@@ -1,4 +1,6 @@
-use crate::common::{get_auth_headers, get_backend_url, get_token_set, get_token_set_init_client};
+use crate::common::{
+    get_auth_headers, get_backend_url, get_solved_pow, get_token_set, get_token_set_init_client,
+};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
 use rauthy_api_types::generic::Language;
@@ -133,6 +135,7 @@ async fn test_password_reset_always_ok() -> Result<(), Box<dyn Error>> {
     let mut payload = RequestResetRequest {
         email: "admin@localhost".to_string(),
         redirect_uri: None,
+        pow: get_solved_pow().await,
     };
     let url = format!("{}/users/request_reset", get_backend_url());
     let res = client

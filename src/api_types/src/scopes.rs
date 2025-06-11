@@ -1,5 +1,5 @@
 use crate::cust_validation::validate_vec_attr;
-use rauthy_common::regex::RE_GROUPS_ROLES_SCOPES;
+use rauthy_common::regex::RE_ROLES_SCOPES;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -8,7 +8,7 @@ use validator::Validate;
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ScopeRequest {
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS_ROLES_SCOPES", code = "^[a-z0-9-_/,:*]{2,64}$"))]
+    #[validate(regex(path = "*RE_ROLES_SCOPES", code = "^[a-z0-9-_/,:*]{2,64}$"))]
     pub scope: String,
     /// Validation: `^[a-zA-Z0-9-_/]{2,128}$`
     #[validate(custom(function = "validate_vec_attr"))]

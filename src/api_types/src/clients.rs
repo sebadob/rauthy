@@ -1,7 +1,7 @@
 use crate::cust_validation::*;
 use crate::oidc::JwkKeyPairAlg;
 use rauthy_common::regex::{
-    RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_GROUPS_ROLES_SCOPES, RE_LOWERCASE, RE_SCOPE_SPACE,
+    RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_GROUPS, RE_LOWERCASE, RE_SCOPE_SPACE,
     RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
 };
 use serde::{Deserialize, Serialize};
@@ -192,7 +192,7 @@ pub struct UpdateClientRequest {
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub backchannel_logout_uri: Option<String>,
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS_ROLES_SCOPES", code = "^[a-z0-9-_/,:*]{2,64}$"))]
+    #[validate(regex(path = "*RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
     pub restrict_group_prefix: Option<String>,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
@@ -217,7 +217,7 @@ pub struct ScimClientRequestResponse {
     pub base_uri: String,
     pub sync_groups: bool,
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS_ROLES_SCOPES", code = "^[a-z0-9-_/,:*]{2,64}$"))]
+    #[validate(regex(path = "*RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
     pub group_sync_prefix: Option<String>,
 }
 

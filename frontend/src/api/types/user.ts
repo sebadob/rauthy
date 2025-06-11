@@ -16,7 +16,7 @@ export interface NewUserRequest {
     language: Language,
     /// Validation: PATTERN_GROUP
     groups?: string[],
-    /// Validation: PATTERN_GROUP
+    /// Validation: PATTERN_ROLE_SCOPE
     roles: string[],
     /// Unix timestamp in seconds
     user_expires?: number,
@@ -47,7 +47,7 @@ export interface UpdateUserRequest {
     language?: Language,
     /// Validation: Applies password policy - max 256 characters
     password?: string,
-    /// Validation: PATTERN_GROUP
+    /// Validation: PATTERN_ROLE_SCOPE
     roles: string[],
     /// Validation: PATTERN_GROUP
     groups?: string[],
