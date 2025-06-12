@@ -1,13 +1,5 @@
 use crate::database::DB;
 use crate::entity::failed_scim_tasks::ScimAction;
-use crate::events::{
-    EVENT_LEVEL_FAILED_LOGIN, EVENT_LEVEL_FAILED_LOGINS_7, EVENT_LEVEL_FAILED_LOGINS_10,
-    EVENT_LEVEL_FAILED_LOGINS_15, EVENT_LEVEL_FAILED_LOGINS_20, EVENT_LEVEL_FAILED_LOGINS_25,
-    EVENT_LEVEL_IP_BLACKLISTED, EVENT_LEVEL_JWKS_ROTATE, EVENT_LEVEL_NEW_RAUTHY_ADMIN,
-    EVENT_LEVEL_NEW_RAUTHY_VERSION, EVENT_LEVEL_NEW_USER, EVENT_LEVEL_RAUTHY_HEALTHY,
-    EVENT_LEVEL_RAUTHY_START, EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED,
-    EVENT_LEVEL_USER_EMAIL_CHANGE, EVENT_LEVEL_USER_PASSWORD_RESET,
-};
 use crate::rauthy_config::RauthyConfig;
 use chrono::{DateTime, Timelike, Utc};
 use hiqlite::Row;
@@ -619,13 +611,14 @@ impl Event {
 
     /// The EventLevel will change depending on the amount of invalid logins
     pub fn invalid_login(failed_logins: u32, ip: String) -> Self {
+        let events = &RauthyConfig::get().vars.events;
         let level = match failed_logins {
-            l if l >= 25 => EVENT_LEVEL_FAILED_LOGINS_25.get().unwrap(),
-            l if l >= 20 => EVENT_LEVEL_FAILED_LOGINS_20.get().unwrap(),
-            l if l >= 15 => EVENT_LEVEL_FAILED_LOGINS_15.get().unwrap(),
-            l if l >= 10 => EVENT_LEVEL_FAILED_LOGINS_10.get().unwrap(),
-            l if l >= 7 => EVENT_LEVEL_FAILED_LOGINS_7.get().unwrap(),
-            _ => EVENT_LEVEL_FAILED_LOGIN.get().unwrap(),
+            l if l >= 25 => events.level_failed_logins_25.clone(),
+            l if l >= 20 => events.level_failed_logins_20.clone(),
+            l if l >= 15 => events.level_failed_logins_15.clone(),
+            l if l >= 10 => events.level_failed_logins_10.clone(),
+            l if l >= 7 => events.level_failed_logins_7.clone(),
+            _ => events.level_failed_login.clone(),
         };
         Self::new(
             level.clone(),
@@ -658,7 +651,7 @@ impl Event {
 
     pub fn ip_blacklisted(exp: DateTime<Utc>, ip: String) -> Self {
         Self::new(
-            EVENT_LEVEL_IP_BLACKLISTED.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_ip_blacklisted.clone(),
             EventType::IpBlacklisted,
             Some(ip),
             Some(exp.timestamp()),
@@ -668,7 +661,7 @@ impl Event {
 
     pub fn ip_blacklist_removed(ip: String) -> Self {
         Self::new(
-            EVENT_LEVEL_IP_BLACKLISTED.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_ip_blacklisted.clone(),
             EventType::IpBlacklistRemoved,
             Some(ip),
             None,
@@ -678,7 +671,7 @@ impl Event {
 
     pub fn new_user(email: String, ip: String) -> Self {
         Self::new(
-            EVENT_LEVEL_NEW_USER.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_new_user.clone(),
             EventType::NewUserRegistered,
             Some(ip),
             None,
@@ -688,7 +681,7 @@ impl Event {
 
     pub fn new_rauthy_admin(email: String, ip: String) -> Self {
         Self::new(
-            EVENT_LEVEL_NEW_RAUTHY_ADMIN.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_rauthy_admin.clone(),
             EventType::NewRauthyAdmin,
             Some(ip),
             None,
@@ -698,7 +691,7 @@ impl Event {
 
     pub fn new_rauthy_version(version_url: String) -> Self {
         Self::new(
-            EVENT_LEVEL_NEW_RAUTHY_VERSION.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_rauthy_version.clone(),
             EventType::NewRauthyVersion,
             None,
             None,
@@ -708,7 +701,7 @@ impl Event {
 
     pub fn jwks_rotated() -> Self {
         Self::new(
-            EVENT_LEVEL_JWKS_ROTATE.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_jwks_rotate.clone(),
             EventType::JwksRotated,
             None,
             None,
@@ -719,7 +712,7 @@ impl Event {
     pub fn rauthy_started() -> Self {
         let text = format!("Rauthy has been started on host {}", get_local_hostname());
         Self::new(
-            EVENT_LEVEL_RAUTHY_START.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_rauthy_start.clone(),
             EventType::RauthyStarted,
             None,
             None,
@@ -730,7 +723,7 @@ impl Event {
     pub fn rauthy_healthy() -> Self {
         let text = format!("Rauthy is healthy now on host {}", get_local_hostname());
         Self::new(
-            EVENT_LEVEL_RAUTHY_HEALTHY.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_rauthy_healthy.clone(),
             EventType::RauthyHealthy,
             None,
             None,
@@ -744,7 +737,11 @@ impl Event {
             get_local_hostname()
         );
         Self::new(
-            EVENT_LEVEL_RAUTHY_UNHEALTHY.get().cloned().unwrap(),
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_rauthy_unhealthy
+                .clone(),
             EventType::RauthyUnhealthy,
             None,
             None,
@@ -754,7 +751,11 @@ impl Event {
 
     pub fn rauthy_unhealthy_db() -> Self {
         Self::new(
-            EVENT_LEVEL_RAUTHY_UNHEALTHY.get().cloned().unwrap(),
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_rauthy_unhealthy
+                .clone(),
             EventType::RauthyUnhealthy,
             None,
             None,
@@ -774,7 +775,11 @@ impl Event {
 
     pub fn secrets_migrated(ip: IpAddr) -> Self {
         Self::new(
-            EVENT_LEVEL_SECRETS_MIGRATED.get().cloned().unwrap(),
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_secrets_migrated
+                .clone(),
             EventType::SecretsMigrated,
             Some(ip.to_string()),
             None,
@@ -794,7 +799,11 @@ impl Event {
 
     pub fn user_email_change(text: String, ip: Option<IpAddr>) -> Self {
         Self::new(
-            EVENT_LEVEL_USER_EMAIL_CHANGE.get().cloned().unwrap(),
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_user_email_change
+                .clone(),
             EventType::UserEmailChange,
             ip.map(|ip| ip.to_string()),
             None,
@@ -804,7 +813,11 @@ impl Event {
 
     pub fn user_password_reset(text: String, ip: Option<String>) -> Self {
         Self::new(
-            EVENT_LEVEL_USER_PASSWORD_RESET.get().cloned().unwrap(),
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_user_password_reset
+                .clone(),
             EventType::UserPasswordReset,
             ip,
             None,

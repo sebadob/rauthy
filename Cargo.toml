@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.30.1"
+version = "0.30.1-20250612-1"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
