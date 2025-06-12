@@ -329,6 +329,8 @@ pub async fn ping() -> impl Responder {
 )]
 #[post("/pow")]
 pub async fn post_pow() -> Result<HttpResponse, ErrorResponse> {
+    // TODO can we limit the creation of new pows in a way thae makes sense?
+    //  By IP could be problematic if lots of users have the same public IP.
     let pow = PowEntity::create().await?;
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
@@ -500,6 +502,8 @@ pub async fn redirect_v1() -> HttpResponse {
 )]
 #[get("/version")]
 pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
+    // TODO maybe require an auth session here and only show to admins?
+
     let resp = match LatestAppVersion::find().await {
         Some(latest) => {
             let update_available = match Version::from_str(RAUTHY_VERSION) {
