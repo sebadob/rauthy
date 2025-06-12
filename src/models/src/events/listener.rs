@@ -1,7 +1,7 @@
 use crate::database::DB;
-use crate::events::EVENT_PERSIST_LEVEL;
 use crate::events::event::{Event, EventLevel};
 use crate::events::notifier::EventNotifier;
+use crate::rauthy_config::RauthyConfig;
 use actix_web_lab::sse;
 use rauthy_common::constants::EVENTS_LATEST_LIMIT;
 use rauthy_error::ErrorResponse;
@@ -46,7 +46,7 @@ impl EventListener {
     #[tracing::instrument(level = "debug", skip_all)]
     async fn handle_event(event: Event) {
         // insert into DB
-        if &event.level.value() >= EVENT_PERSIST_LEVEL.get().unwrap() {
+        if event.level.value() >= RauthyConfig::get().vars.events.persist_level.value() {
             while let Err(err) = event.insert().await {
                 error!("Inserting Event into Database: {:?}", err);
                 time::sleep(Duration::from_secs(1)).await;

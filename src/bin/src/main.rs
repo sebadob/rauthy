@@ -10,7 +10,6 @@ use rauthy_models::email;
 use rauthy_models::email::EMail;
 use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::events::health_watch::watch_health;
-use rauthy_models::events::init_event_vars;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::rauthy_config::RauthyConfig;
@@ -113,7 +112,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     DB::migrate().await.expect("Database migration error");
 
     debug!("Starting Events handler");
-    init_event_vars().unwrap();
     EventNotifier::init_notifiers(tx_email).await.unwrap();
     tokio::spawn(EventListener::listen(
         tx_events_router,

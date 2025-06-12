@@ -386,7 +386,7 @@ impl JWKSPublicKey {
             }
             JwkKeyPairAlg::EdDSA => {
                 let key = ed25519_compact::SecretKey::from_der(&key_pair.bytes)?;
-                let x = base64_url_encode(&key.public_key().as_slice());
+                let x = base64_url_encode(key.public_key().as_slice());
                 Self {
                     kty: JwkKeyPairType::OKP,
                     alg: Some(key_pair.typ.clone()),
