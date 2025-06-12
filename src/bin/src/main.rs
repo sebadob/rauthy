@@ -151,6 +151,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         server::server_without_metrics().await?;
     }
 
+    time::sleep(Duration::from_secs(3)).await;
     DB::hql().shutdown().await.unwrap();
 
     Ok(())
