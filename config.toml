@@ -389,8 +389,8 @@ node_id = 1
 # overwritten by: HQL_NODES
 nodes = [
     "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
+    "2 localhost:8101 localhost:8201",
+    "3 localhost:8102 localhost:8202",
 ]
 
 # The data dir hiqlite will store raft logs and state machine data in.
@@ -410,7 +410,7 @@ nodes = [
 #
 # default: false
 # overwritten by: HQL_LOG_STATEMENTS
-log_statements = true
+log_statements = false
 
 # The size of the internal cache for prepared statements.
 #
@@ -498,7 +498,7 @@ log_sync = "interval_200"
 #
 # default: true
 # overwritten by: HQL_CACHE_STORAGE_DISK
-cache_storage_disk = false
+cache_storage_disk = true
 
 # Sets the limit when the Raft will trigger the creation of a new
 # state machine snapshot and purge all logs that are included in
@@ -1541,7 +1541,7 @@ jwk_autorotate_cron = '0 30 3 1 * * *'
 #
 # default: 'info'
 # overwritten by: LOG_LEVEL
-level = 'debug'
+level = 'info'
 
 # The log level for the `Hiqlite` persistence layer.
 # At the time of writing, only the cache will use `hiqlite`
@@ -1727,7 +1727,7 @@ proxy_mode = false
 #
 # default: false
 # overwritten by: METRICS_ENABLE
-metrics_enable = true
+metrics_enable = false
 
 # The IP address to listen on for the /metrics endpoint.
 # You do not want to expose your metrics on a publicly
