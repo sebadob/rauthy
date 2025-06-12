@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.30.1
+
+### Bugfix
+
+- Fixed the encoding for `EdDSA` public keys. They have changed to b64 encoded DER format during the big JWt rework,
+  when it should have been just raw bytes.
+  [#1018](https://github.com/sebadob/rauthy/pull/1018)
+- Added a short 3 second pre-shutdown delay to smooth out rolling releases inside K8s and also have a bit more headroom
+  for bigger in-memory cache's replication
+  [#1019](https://github.com/sebadob/rauthy/pull/1019)
+- Small CSS fix to match the input width for group prefix login restriction for clients
+  [#1020](https://github.com/sebadob/rauthy/pull/1020)
+
 ## v0.30.0
 
 ### Breaking
