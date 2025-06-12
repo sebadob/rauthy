@@ -22,13 +22,13 @@ rauthy-service = { path = "../service" }
 actix-web = { workspace = true }
 actix-web-prom = { workspace = true }
 chrono = { workspace = true }
-cryptr = { workspace = true }
 dotenvy = { workspace = true }
 flume = { workspace = true }
 num_cpus = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
 prometheus = { workspace = true }
+regex = { workspace = true }
 reqwest = { workspace = true }
 rustls = { workspace = true }
 rustls-pki-types = { workspace = true }
@@ -39,7 +39,6 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
-regex = "1.11.1"
 
 # jemalloc does not work properly on msvc targets
 [target.'cfg(not(target_env = "msvc"))'.dependencies]

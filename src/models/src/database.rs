@@ -73,11 +73,20 @@ impl DB {
         // This means, even if Postgres is configured, this will still create and start the Hiqlite
         // DB, but it simply won't do anything else than heartbeats between the nodes.
         let client = hiqlite::start_node_with_cache::<Cache>(config).await?;
-        let _ = HIQLITE_CLIENT.set(client);
 
         if is_postgres() {
             Self::init_connect_postgres().await?;
+        } else {
+            client.wait_until_healthy_db().await;
+            let mut metrics = client.metrics_db().await?;
+            while metrics.state.is_learner() {
+                info!("Waiting to become a full Raft member");
+                sleep(Duration::from_secs(1)).await;
+                metrics = client.metrics_db().await?;
+            }
         }
+
+        let _ = HIQLITE_CLIENT.set(client);
 
         Ok(())
     }
@@ -211,7 +220,7 @@ impl DB {
         }
 
         // migrate dynamic DB data
-        if !RauthyConfig::get().vars.dev.dev_mode {
+        if !RauthyConfig::get().vars.dev.dev_mode && RauthyConfig::get().is_primary_node {
             init_prod::migrate_init_prod().await?;
         }
 
@@ -255,7 +264,7 @@ impl DB {
                     );
                 };
             }
-        } else if RauthyConfig::get().vars.dev.dev_mode {
+        } else if RauthyConfig::get().vars.dev.dev_mode && RauthyConfig::get().is_primary_node {
             migrate_dev_data().await.expect("Migrating DEV DATA");
         }
 

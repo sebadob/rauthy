@@ -18,7 +18,7 @@ use std::error::Error;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 #[cfg(all(feature = "jemalloc", not(target_env = "msvc")))]
 #[global_allocator]
@@ -125,9 +125,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     debug!("Starting health watch");
     tokio::spawn(watch_health());
 
-    version_migration::manual_version_migrations()
-        .await
-        .expect("Error during Rauthy version migration");
+    // Loop, because you could get into a race condition when recovery a HA Leader after lost volume
+    while let Err(err) = version_migration::manual_version_migrations().await {
+        error!("Error during version migration: {:?}", err);
+        time::sleep(Duration::from_secs(1)).await;
+    }
 
     UserPicture::test_config().await.unwrap();
 
