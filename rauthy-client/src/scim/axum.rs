@@ -1,5 +1,5 @@
 use crate::scim::types::{
-    ScimError, ScimGroup, ScimListQuery, ScimListResponse, ScimPatchOp, ScimUser,
+    ScimError, ScimGroup, ScimListQuery, ScimListResponse, ScimPatchOp, ScimToken, ScimUser,
     SCIM_SCHEMA_GROUP, SCIM_SCHEMA_PATCH_OP, SCIM_SCHEMA_USER,
 };
 use crate::scim::{is_content_type_scim, validate_scim_token, CONTENT_TYPE_SCIM};
@@ -174,5 +174,18 @@ where
             Err(_) => ScimListQuery::default(),
         };
         Ok(params)
+    }
+}
+
+impl<S> FromRequestParts<S> for ScimToken
+where
+    S: Send + Sync,
+{
+    type Rejection = ScimError;
+
+    #[inline]
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        validate_scim_token(&parts.headers)?;
+        Ok(ScimToken)
     }
 }
