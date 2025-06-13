@@ -184,7 +184,7 @@ where
     type Rejection = ScimError;
 
     #[inline]
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
         validate_scim_token(&parts.headers)?;
         Ok(ScimToken)
     }
