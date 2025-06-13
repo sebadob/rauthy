@@ -8,6 +8,11 @@ pub static SCIM_SCHEMA_LIST_RESPONSE: &str = "urn:ietf:params:scim:api:messages:
 pub static SCIM_SCHEMA_PATCH_OP: &str = "urn:ietf:params:scim:api:messages:2.0:PatchOp";
 pub static SCIM_SCHEMA_USER: &str = "urn:ietf:params:scim:schemas:core:2.0:User";
 
+/// Empty struct, exists only for ease of use in SCIM endpoints for automatic SCIM token validation,
+/// if no other `Scim*` type is being used.
+#[derive(Debug)]
+pub struct ScimToken;
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScimName {

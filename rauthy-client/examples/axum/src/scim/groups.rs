@@ -2,7 +2,7 @@ use crate::scim::users::USERS;
 use axum::extract::Path;
 use rauthy_client::scim::types::{
     ScimError, ScimFilterBy, ScimGroup, ScimGroupMember, ScimGroupValue, ScimListQuery,
-    ScimListResponse, ScimPatchOp, ScimResource,
+    ScimListResponse, ScimPatchOp, ScimResource, ScimToken,
 };
 use rauthy_client::secure_random;
 use std::sync::LazyLock;
@@ -42,7 +42,11 @@ pub async fn post_group(group: ScimGroup) -> Result<ScimGroup, ScimError> {
     save_group(group).await
 }
 
-pub async fn get_group(Path(id): Path<String>) -> Result<ScimGroup, ScimError> {
+// The `_: ScimToken` makes sure that the `Bearer` token will be checked against the configured
+// SCIM token. This struct is empty and does nothing than adding the check inside the extractor.
+// This is much more straight forward than manually passing the header value into a helper function.
+// All other `Scim*` structs in extractors already do this token check.
+pub async fn get_group(Path(id): Path<String>, _: ScimToken) -> Result<ScimGroup, ScimError> {
     match GROUPS
         .read()
         .await
@@ -159,7 +163,7 @@ pub async fn patch_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Resul
     Ok(())
 }
 
-pub async fn delete_group(Path(id): Path<String>) -> Result<(), ScimError> {
+pub async fn delete_group(Path(id): Path<String>, _: ScimToken) -> Result<(), ScimError> {
     info!("Delete group {:?}", id);
 
     GROUPS

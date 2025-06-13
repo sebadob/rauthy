@@ -1,6 +1,6 @@
 use axum::extract::Path;
 use rauthy_client::scim::types::{
-    ScimError, ScimFilterBy, ScimListQuery, ScimListResponse, ScimResource, ScimUser,
+    ScimError, ScimFilterBy, ScimListQuery, ScimListResponse, ScimResource, ScimToken, ScimUser,
 };
 use rauthy_client::secure_random;
 use std::sync::LazyLock;
@@ -40,7 +40,11 @@ pub async fn post_user(user: ScimUser) -> Result<ScimUser, ScimError> {
     save_user(user).await
 }
 
-pub async fn get_user(Path(id): Path<String>) -> Result<ScimUser, ScimError> {
+// The `_: ScimToken` makes sure that the `Bearer` token will be checked against the configured
+// SCIM token. This struct is empty and does nothing than adding the check inside the extractor.
+// This is much more straight forward than manually passing the header value into a helper function.
+// All other `Scim*` structs in extractors already do this token check.
+pub async fn get_user(Path(id): Path<String>, _: ScimToken) -> Result<ScimUser, ScimError> {
     match USERS
         .read()
         .await
@@ -60,7 +64,7 @@ pub async fn put_user(Path(id): Path<String>, mut user: ScimUser) -> Result<Scim
     save_user(user).await
 }
 
-pub async fn delete_user(Path(id): Path<String>) -> Result<(), ScimError> {
+pub async fn delete_user(Path(id): Path<String>, _: ScimToken) -> Result<(), ScimError> {
     USERS.write().await.retain(|u| u.id.as_deref() != Some(&id));
     Ok(())
 }
