@@ -112,7 +112,7 @@ pub async fn patch_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Resul
             // Update / Replace the group name / externalId
             for group in GROUPS.write().await.iter_mut() {
                 if group.id.as_deref() == Some(&id) {
-                    group.external_id = replace.external_id.to_string();
+                    group.external_id = Some(replace.external_id.to_string());
                     group.display_name = replace.group_name.to_string();
                     break;
                 }
@@ -189,7 +189,7 @@ async fn find_groups(start_index: u32, query: &ScimListQuery) -> Vec<ScimResourc
             .await
             .iter()
             .filter_map(|u| {
-                if u.external_id == id {
+                if u.external_id.as_deref() == Some(id) {
                     Some(ScimResource::Group(Box::new(u.clone())))
                 } else {
                     None
