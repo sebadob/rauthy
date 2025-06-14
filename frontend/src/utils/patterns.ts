@@ -1,5 +1,6 @@
 export const PATTERN_ALNUM = '^[a-zA-Z0-9]*$';
 // export const PATTERN_ALNUM_64 = '^[a-zA-Z0-9]{64}$';
+export const PATTERN_ATPROTO_ID = '^(([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?)|(did:[a-z]+:[a-zA-Z0-9._:%\\-]*[a-zA-Z0-9._\\-])$';
 export const PATTERN_ATTR = '^[a-zA-Z0-9\\-_\\/]{2,32}$';
 export const PATTERN_ATTR_DESC = '^[a-zA-Z0-9\\-_\\/\\s]{0,128}$';
 export const PATTERN_API_KEY = '^[a-zA-Z0-9_\\/\\-]{2,24}$';

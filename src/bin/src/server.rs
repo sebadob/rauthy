@@ -6,8 +6,8 @@ use prometheus::Registry;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_handlers::{
-    api_keys, auth_providers, blacklist, clients, dev_only, events, fed_cm, generic, groups, html,
-    oidc, roles, scopes, sessions, swagger_ui, themes, users,
+    api_keys, atproto, auth_providers, blacklist, clients, dev_only, events, fed_cm, generic,
+    groups, html, oidc, roles, scopes, sessions, swagger_ui, themes, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -274,6 +274,7 @@ fn api_services() -> actix_web::Scope {
                 .service(api_keys::delete_api_key)
                 .service(api_keys::get_api_key_test)
                 .service(api_keys::put_api_key_secret)
+                .service(atproto::get_atproto_client_metadata)
                 .service(auth_providers::post_providers)
                 .service(auth_providers::get_providers_minimal)
                 .service(auth_providers::post_provider)

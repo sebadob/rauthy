@@ -254,6 +254,7 @@ pub struct Vars {
     pub user_pictures: VarsUserPictures,
     pub user_registration: VarsUserRegistration,
     pub webauthn: VarsWebauthn,
+    pub atproto: VarsAtproto,
 }
 
 impl Default for Vars {
@@ -619,6 +620,7 @@ impl Default for Vars {
                 force_uv: false,
                 no_password_exp: true,
             },
+            atproto: VarsAtproto { enable: true },
         }
     }
 }
@@ -2563,6 +2565,11 @@ pub struct VarsWebauthn {
     pub renew_exp: u16,
     pub force_uv: bool,
     pub no_password_exp: bool,
+}
+
+#[derive(Debug)]
+pub struct VarsAtproto {
+    pub enable: bool,
 }
 
 fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<bool> {

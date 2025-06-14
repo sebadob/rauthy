@@ -1,5 +1,5 @@
 use crate::api_cookie::ApiCookie;
-use crate::entity::auth_providers::AuthProviderTemplate;
+use crate::entity::auth_providers::{AuthProvider, AuthProviderTemplate};
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
@@ -58,6 +58,7 @@ pub struct TplPasswordReset {
 // -> frontend/src/utils/constants.ts -> TPL_* values
 #[derive(Debug)]
 pub enum HtmlTemplate {
+    AtprotoId(String),
     /// Auth providers as pre-built, cached JSON value
     AuthProviders(String),
     ClientName(String),
@@ -86,6 +87,10 @@ impl HtmlTemplate {
         session: Option<Session>,
     ) -> Result<(Self, Option<Cookie<'_>>), ErrorResponse> {
         match s {
+            "tpl_atproto_id" => {
+                let provider = AuthProvider::find_by_iss("atproto".to_owned()).await?;
+                Ok((Self::AtprotoId(provider.id), None))
+            }
             "tpl_auth_providers" => {
                 let json = AuthProviderTemplate::get_all_json_template().await?;
                 Ok((Self::AuthProviders(json), None))
@@ -201,6 +206,7 @@ impl HtmlTemplate {
     /// Returns the `id` that will be used for the HTML `<template>` element.
     pub fn id(&self) -> &'static str {
         match self {
+            Self::AtprotoId(_) => "tpl_atproto_id",
             Self::AuthProviders(_) => "tpl_auth_providers",
             Self::ClientName(_) => "tpl_client_name",
             Self::ClientUrl(_) => "tpl_client_url",
@@ -223,6 +229,7 @@ impl HtmlTemplate {
     // -> does rinja accept generic traits like `Display`?
     pub fn inner(&self) -> String {
         match self {
+            Self::AtprotoId(i) => i.to_string(),
             Self::AuthProviders(i) => i.to_string(),
             Self::ClientName(i) => i.to_string(),
             Self::ClientUrl(i) => i.to_string(),
