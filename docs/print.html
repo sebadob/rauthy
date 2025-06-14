@@ -3947,6 +3947,83 @@ allow_clock_skew = 5
 # overwritten by: LOGOUT_TOKEN_ALLOWED_LIFETIME
 allowed_token_lifetime = 120
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="scim"><a class="header" href="#scim">SCIM</a></h1>
+<h2 id="tldr"><a class="header" href="#tldr">tl;dr</a></h2>
+<p>Rauthy requires:</p>
+<ul>
+<li>the following SCIM v2 endpoints under <code>{scim_base_uri}</code>:
+<ul>
+<li><code>GET /Users?filter=...</code></li>
+<li><code>POST /Users</code></li>
+<li><code>GET /Users/{id}</code></li>
+<li><code>PUT /Users/{id}</code></li>
+<li><code>DELETE /Users/{id}</code> with <code>scim.sync_delete_users = true</code></li>
+<li><code>GET /Groups?filter=...</code></li>
+<li><code>POST /Groups</code></li>
+<li><code>GET /Groups/{id}</code></li>
+<li><code>PATCH /Groups/{id}</code> with <code>PatchOp</code></li>
+<li><code>DELETE /Groups/{id}</code> with <code>scim.sync_delete_groups = true</code></li>
+</ul>
+</li>
+<li>the client to handle <code>externalId</code> properly</li>
+<li><code>fitler=externalId</code> on both <code>{base_url}/Users</code> and <code>{base_url}/Groups</code></li>
+<li><code>filter=userName</code> on <code>{base_url}/Users</code></li>
+<li><code>filter=displayName</code> on <code>{base_url}/Groups</code></li>
+<li><code>userName</code> to be set properly to the users <code>email</code> to match against the DB</li>
+<li><code>display</code> to be set properly for <code>ScimGroup</code>s to match against the DB</li>
+<li><code>PatchOp</code>s to be working properly on <code>PATCH {base_url}/Groups/{id}</code>
+<ul>
+<li><code>replace</code> will be used for updating the group itself</li>
+<li><code>add</code> / <code>remove</code> ops will be used to modify membership</li>
+</ul>
+</li>
+</ul>
+<h2 id="scim-requests"><a class="header" href="#scim-requests">SCIM Requests</a></h2>
+<p>This is just a short section about the SCIM flow Rauthy uses. If you only care about an implementation with Rauthy, you
+don't need to implement the full SCIM RFC.</p>
+<p>As an example, we will go through what happens, when you add SCIM v2 to a client. This will trigger a complete sync
+which involves all steps. SCIM syncs are also triggered for instance when updating a single user or a group name, but
+these are sub sets of what will happen during a full client sync. So, let's assume you add a SCIM v2 base URL with
+enabled Groups sync to a client. It will then do the following requests to the client:</p>
+<ol>
+<li><code>GET {base_url}/Users</code> with first <code>filter=externalId</code> and if nothing was found, with <code>filter=userName</code>
+<ol>
+<li>If the User exists and should not be synced because of a group prefix filter, <code>DELETE {base_url}/Users/{id}</code>
+(<code>scim.sync_delete_users</code>)</li>
+<li>If the user does not exist on the client, <code>POST {base_url}/Users</code> and create the new user</li>
+<li>If it was found by the <code>GET</code>, update all values and make sure <code>externalId</code> is set properly, if it has been found
+by <code>userName</code></li>
+</ol>
+</li>
+<li>Check if Rauthy should sync groups for this client, and skip groups if not
+<ol>
+<li>Get all remote groups via  <code>GET {base_url}/Groups</code> with optional <code>filter=externalId</code> or <code>filter=displayName</code></li>
+<li>Compare the <code>user.groups</code> from remote against the assignments on Rauthys side</li>
+<li>Only delete groups on remote if they have a matching <code>externalId</code> and should be deleted according to Rauthys
+config (<code>scim.sync_delete_groups</code>)</li>
+<li>If groups don't exist on remote while they should, <code>POST {base_url}/Groups</code> to create them</li>
+<li>If a match was found by <code>externalId</code> with an outdated name, <code>PATCH {base_url}/Groups{id}</code> to update it properly</li>
+</ol>
+</li>
+<li>When Users and Groups exist like they should, make sure Groups assignments are correct. These are done via <code>PatchOp</code>s
+to <code>PATCH {base_url}/Groups/{id}</code></li>
+</ol>
+<p>These steps cover everything that could happen, apart from a group name update. If this happens, Rauthy will do a
+<code>PATCH {base_url}/Groups{id}</code> with the <code>replace</code> setting to replace the groups name / <code>externalId</code>.</p>
+<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<div class="admonition-title">
+<div id="admonition-info-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="work/scim.html#admonition-info"></a>
+</div>
+<div>
+<p>If <code>scim.sync_delete_groups</code> / <code>scim.sync_delete_users</code> is disabled, Rauthy will not delete the resources on remote, it
+will only remove the <code>externalId</code> value to indicate, that this resource is not managed by Rauthy anymore. This is
+important for instance in some scenarios, where you may have important data linked to a user, that you want to keep,
+even if the user does not exist anymore.</p>
+</div>
+</div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="minimal-production-config"><a class="header" href="#minimal-production-config">Minimal Production Config</a></h1>
 <p>This section gives you a template for probably the most minimal config you could do when going into production.</p>
 <p>You can either copy &amp; paste this (with adjustments of course) and expand it when necessary, or take a look at the

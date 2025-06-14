@@ -291,9 +291,22 @@ pub async fn delete_cust_attr(
     principal
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Delete)?;
 
-    // No need for SCIM sync's - these attrs are custom and do not exist for SCIM
+    let attr_name = path.into_inner();
 
-    UserAttrConfigEntity::delete(path.into_inner()).await?;
+    let clients_scim = ClientScim::find_with_attr_mapping(&attr_name).await?;
+    if !clients_scim.is_empty() {
+        let groups = Group::find_all().await?;
+        tokio::spawn(async move {
+            let mut groups_remote = HashMap::with_capacity(groups.len());
+            for scim in clients_scim {
+                if let Err(err) = scim.sync_users(None, &groups, &mut groups_remote).await {
+                    error!("{}", err);
+                }
+            }
+        });
+    }
+
+    UserAttrConfigEntity::delete(attr_name).await?;
     Ok(HttpResponse::Ok().finish())
 }
 

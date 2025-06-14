@@ -3781,7 +3781,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.30.1"
+version = "0.30.2-20250613"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -3822,7 +3822,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.30.1"
+version = "0.30.2-20250613"
 dependencies = [
  "actix-web",
  "openssl",
@@ -3840,7 +3840,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.30.1"
+version = "0.30.2-20250613"
 dependencies = [
  "actix-web",
  "argon2",
@@ -3867,7 +3867,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.30.1"
+version = "0.30.2-20250613"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -3905,7 +3905,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.30.1"
+version = "0.30.2-20250613"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -3938,7 +3938,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.30.1"
+version = "0.30.2-20250613"
 dependencies = [
  "chrono",
  "openssl",
@@ -3955,7 +3955,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.30.1"
+version = "0.30.2-20250613"
 dependencies = [
  "actix-web",
  "chrono",
@@ -3971,7 +3971,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.30.1"
+version = "0.30.2-20250613"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -4042,7 +4042,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.30.1"
+version = "0.30.2-20250613"
 dependencies = [
  "async-trait",
  "openssl",
@@ -4058,7 +4058,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.30.1"
+version = "0.30.2-20250613"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4078,7 +4078,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.30.1"
+version = "0.30.2-20250613"
 dependencies = [
  "actix-web",
  "chrono",
