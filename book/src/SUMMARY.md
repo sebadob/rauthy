@@ -8,6 +8,7 @@
     - [First Start](./getting_started/first_start.md)
 
 - [Production Config](config/production_config.md)
+    - [Minimal Production Config](config/config_minimal.md)
     - [Password Hashing](config/argon2.md)
     - [Passkeys](config/passkeys.md)
     - [Encryption](config/encryption.md)
@@ -37,6 +38,5 @@
     - [User Logout](work/logout.md)
     - [SCIM](work/scim.md)
 
-- [Minimal Production Config](./config/config_minimal.md)
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)
