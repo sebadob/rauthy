@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Minimal Production Config - Rauthy Documentation</title>
+        <title>SCIM - Rauthy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -167,221 +167,93 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="minimal-production-config"><a class="header" href="#minimal-production-config">Minimal Production Config</a></h1>
-<p>This section gives you a template for probably the most minimal config you could do when going into production.</p>
-<p>You can either copy &amp; paste this (with adjustments of course) and expand it when necessary, or take a look at the
-complete <a href="config.html">Reference Config</a> and check each existing value.</p>
-<pre><code class="language-toml">[bootstrap]
-# If set, the email of the default admin will be changed during
-# the initialization of an empty production database.
-#
-# default: 'admin@localhost'
-# overwritten by: BOOTSTRAP_ADMIN_EMAIL
-admin_email = "admin@localhost"
-
-[cluster]
-# Can be set to 'k8s' to try to split off the node id from the hostname
-# when Hiqlite is running as a StatefulSet inside Kubernetes.
-#
-# default: unset
-# overwritten by: HQL_NODE_ID_FROM
-#node_id_from = "k8s"
-
-# The node id must exist in the nodes and there must always be
-# at least a node with ID 1
-# Will be ignored if `node_id_from = k8s`
-#
-# At least `node_id_from` or `node_id` are required.
-#
-# default: 0 (invalid)
-# overwritten by: HQL_NODE_ID
-node_id = 1
-
-# All cluster member nodes. For a single instance deployment, 
-# `"1 localhost:8100 localhost:8200"` will work just fine.
-# Each array value must have the following format:
-# `id addr_raft addr_api`
-#
-# default: ["1 localhost:8100 localhost:8200"]
-# overwritten by: HQL_NODES
-nodes = [
-    "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
-]
-
-# Secrets for Raft internal authentication as well as for the API.
-# These must be at least 16 characters long and you should provide
-# different ones for both variables.
-#
-# default: not set - required
-# overwritten by: HQL_SECRET_RAFT
-secret_raft = "SuperSecureSecret1337"
-# default: not set - required
-# overwritten by: HQL_SECRET_API
-secret_api = "SuperSecureSecret1337"
-
-# Can be set to true to start the WAL handler even if the
-# `lock.hql` file exists. This may be necessary after a
-# crash, when the lock file could not be removed during a
-# graceful shutdown.
-#
-# IMPORTANT: Even though the Database can "heal" itself by
-# simply rebuilding from the existing Raft log files without
-# even needing to think about it, you may want to only
-# set `HQL_WAL_IGNORE_LOCK` when necessary to have more
-# control. Depending on the type of crash (whole OS, maybe
-# immediate power loss, force killed, ...), it may be the
-# case that the WAL files + metadata could not be synced
-# to disk properly and that quite a bit of data is lost.
-#
-# In such a case, it is usually a better idea to delete
-# the whole volume and let the broken node rebuild from
-# other healthy cluster members, just to be sure.
-#
-# However, you can decide to ignore the lock file and start
-# anyway. But you must be 100% sure, that no orphaned
-# process is still running and accessing the WAL files!
-#
-# default: false
-# overwritten by: HQL_WAL_IGNORE_LOCK
-wal_ignore_lock = false
-
-[email]
-# Rauthy will force TLS and try a downgrade to STARTTLS, if
-# TLS fails. It will never allow an unencrypted connection.
-# You might want to set `SMTP_DANGER_INSECURE=true` if you
-# need this for local dev.
-#
-# overwritten by: SMTP_URL
-smtp_url = "localhost"
-# optional, default will be used depending on TLS / STARTTLS
-# overwritten by: SMTP_PORT
-#smtp_port = 
-# overwritten by: SMTP_USERNAME
-smtp_username = "username"
-# overwritten by: SMTP_PASSWORD
-smtp_password = "password"
-# Format: "Rauthy &lt;rauthy@localhost&gt;"
-# default: "Rauthy &lt;rauthy@localhost&gt;"
-# overwritten by: SMTP_FROM
-smtp_from = "Rauthy &lt;rauthy@localhost&gt;"
-
-[encryption]
-# You need to define at least one valid encryption key.
-# These keys are used in various places, like for instance
-# encrypting confidential client secrets in the database, or
-# encryption cookies, and so on.
-#
-# The first part until the first `/` is the key ID.
-# The ID must match '[a-zA-Z0-9]{2,20}'
-#
-# The key itself begins after the first `/` has been found.
-# The key must be exactly 32 bytes long, encoded as base64.
-#
-# You can find a more detailed explanation on how to generate
-# keys in the documentation:
-# 1. https://sebadob.github.io/rauthy/getting_started/k8s.html#create-and-apply-secrets
-# 2. https://sebadob.github.io/rauthy/config/encryption.html
-#
-# You can provide multiple keys to make things like key
-# rotation work. Be careful with removing old keys. Make sure
-# that all secrets have been migrated beforehand.
-# You can find a utility in the Admin UI to do this for you.
-#
-# overwritten by: ENC_KEYS - single String, \n separated values
-keys = ["q6u26/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E="]
-
-# This identifies the key ID from the `ENC_KEYS` list, that
-# should actively be used for new encryptions.
-#
-# overwritten by: ENC_KEY_ACTIVE
-key_active = "q6u26"
-
-[events]
-# The E-Mail address event notifications should be sent to.
-#
-# overwritten by: EVENT_EMAIL
-email = "admin@localhost"
-
-[server]
-# The scheme to use locally, valid values:
-# http | https | http_https | unix_http | unix_https
-# For more details about the UNIX domain socket, check out its
-# documentation page.
-#
-# default: http_https
-# overwritten by: LISTEN_SCHEME
-scheme = "http"
-
-# The Public URL of the whole deployment
-# The LISTEN_SCHEME + PUB_URL must match the HTTP ORIGIN HEADER
-# later on, which is especially important when running Rauthy
-# behind a reverse proxy. In case of a non-standard port (80/443),
-# you need to add the port to the PUB_URL
-#
-# default: not set - mandatory
-# overwritten by: PUB_URL
-pub_url = "localhost:8080"
-
-# When rauthy is running behind a reverse proxy, set to true
-#
-# default: false
-# overwritten by: PROXY_MODE
-proxy_mode = false
-
-# A list of trusted proxy CIDRs. When `proxy_mode = true`
-# or `peer_ip_header_name` is set, these are mandatory to
-# be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
-# different source will be blocked.
-#
-# default: []
-# overwritten by: TRUSTED_PROXIES - single String, \n separated values
-#trusted_proxies = ['192.168.14.0/24']
-
-[webauthn]
-# The 'Relaying Party (RP) ID' - effective domain name.
-#
-# CAUTION: When this changes, already registered devices will
-# stop working and users cannot log in anymore!
-#
-# default: 'localhost'
-# overwritten by: RP_ID
-rp_id = "localhost"
-
-# Url containing the effective domain name.
-#
-# DEV: If you want to test Webauthn via the Svelte DEV UI,
-# change the port number to :5173.
-#
-# !!! CAUTION: Must ALWAYS include the port number !!!
-#
-# default: 'http://localhost:8080'
-# overwritten by: RP_ORIGIN
-rp_origin = "http://localhost:5173"
-</code></pre>
-<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+                        <h1 id="scim"><a class="header" href="#scim">SCIM</a></h1>
+<h2 id="tldr"><a class="header" href="#tldr">tl;dr</a></h2>
+<p>Rauthy requires:</p>
+<ul>
+<li>the following SCIM v2 endpoints under <code>{scim_base_uri}</code>:
+<ul>
+<li><code>GET /Users?filter=...</code></li>
+<li><code>POST /Users</code></li>
+<li><code>GET /Users/{id}</code></li>
+<li><code>PUT /Users/{id}</code></li>
+<li><code>DELETE /Users/{id}</code> with <code>scim.sync_delete_users = true</code></li>
+<li><code>GET /Groups?filter=...</code></li>
+<li><code>POST /Groups</code></li>
+<li><code>GET /Groups/{id}</code></li>
+<li><code>PATCH /Groups/{id}</code> with <code>PatchOp</code></li>
+<li><code>DELETE /Groups/{id}</code> with <code>scim.sync_delete_groups = true</code></li>
+</ul>
+</li>
+<li>the client to handle <code>externalId</code> properly</li>
+<li><code>fitler=externalId</code> on both <code>{base_url}/Users</code> and <code>{base_url}/Groups</code></li>
+<li><code>filter=userName</code> on <code>{base_url}/Users</code></li>
+<li><code>filter=displayName</code> on <code>{base_url}/Groups</code></li>
+<li><code>userName</code> to be set properly to the users <code>email</code> to match against the DB</li>
+<li><code>display</code> to be set properly for <code>ScimGroup</code>s to match against the DB</li>
+<li><code>PatchOp</code>s to be working properly on <code>PATCH {base_url}/Groups/{id}</code>
+<ul>
+<li><code>replace</code> will be used for updating the group itself</li>
+<li><code>add</code> / <code>remove</code> ops will be used to modify membership</li>
+</ul>
+</li>
+</ul>
+<h2 id="scim-requests"><a class="header" href="#scim-requests">SCIM Requests</a></h2>
+<p>This is just a short section about the SCIM flow Rauthy uses. If you only care about an implementation with Rauthy, you
+don't need to implement the full SCIM RFC.</p>
+<p>As an example, we will go through what happens, when you add SCIM v2 to a client. This will trigger a complete sync
+which involves all steps. SCIM syncs are also triggered for instance when updating a single user or a group name, but
+these are sub sets of what will happen during a full client sync. So, let's assume you add a SCIM v2 base URL with
+enabled Groups sync to a client. It will then do the following requests to the client:</p>
+<ol>
+<li><code>GET {base_url}/Users</code> with first <code>filter=externalId</code> and if nothing was found, with <code>filter=userName</code>
+<ol>
+<li>If the User exists and should not be synced because of a group prefix filter, <code>DELETE {base_url}/Users/{id}</code>
+(<code>scim.sync_delete_users</code>)</li>
+<li>If the user does not exist on the client, <code>POST {base_url}/Users</code> and create the new user</li>
+<li>If it was found by the <code>GET</code>, update all values and make sure <code>externalId</code> is set properly, if it has been found
+by <code>userName</code></li>
+</ol>
+</li>
+<li>Check if Rauthy should sync groups for this client, and skip groups if not
+<ol>
+<li>Get all remote groups via  <code>GET {base_url}/Groups</code> with optional <code>filter=externalId</code> or <code>filter=displayName</code></li>
+<li>Compare the <code>user.groups</code> from remote against the assignments on Rauthys side</li>
+<li>Only delete groups on remote if they have a matching <code>externalId</code> and should be deleted according to Rauthys
+config (<code>scim.sync_delete_groups</code>)</li>
+<li>If groups don't exist on remote while they should, <code>POST {base_url}/Groups</code> to create them</li>
+<li>If a match was found by <code>externalId</code> with an outdated name, <code>PATCH {base_url}/Groups{id}</code> to update it properly</li>
+</ol>
+</li>
+<li>When Users and Groups exist like they should, make sure Groups assignments are correct. These are done via <code>PatchOp</code>s
+to <code>PATCH {base_url}/Groups/{id}</code></li>
+</ol>
+<p>These steps cover everything that could happen, apart from a group name update. If this happens, Rauthy will do a
+<code>PATCH {base_url}/Groups{id}</code> with the <code>replace</code> setting to replace the groups name / <code>externalId</code>.</p>
+<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
 <div class="admonition-title">
-<div id="admonition-hint-title">
-<p>Hint</p>
+<div id="admonition-info-title">
+<p>Info</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-hint"></a>
+<a class="admonition-anchor-link" href="#admonition-info"></a>
 </div>
 <div>
-<p>TL;DR for generating a <code>encryption.keys</code>:</p>
-<pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"</code></pre>
+<p>If <code>scim.sync_delete_groups</code> / <code>scim.sync_delete_users</code> is disabled, Rauthy will not delete the resources on remote, it
+will only remove the <code>externalId</code> value to indicate, that this resource is not managed by Rauthy anymore. This is
+important for instance in some scenarios, where you may have important data linked to a user, that you want to keep,
+even if the user does not exist anymore.</p>
 </div>
 </div>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../work/scim.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../work/logout.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../config/config.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../config/config_minimal.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -391,11 +263,11 @@ rp_origin = "http://localhost:5173"
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../work/scim.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../work/logout.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../config/config.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../config/config_minimal.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

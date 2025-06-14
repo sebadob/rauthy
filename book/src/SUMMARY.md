@@ -35,6 +35,7 @@
     - [JSON Web Keys](work/jwks.md)
     - [I18n](work/i18n.md)
     - [User Logout](work/logout.md)
+    - [SCIM](work/scim.md)
 
 - [Minimal Production Config](./config/config_minimal.md)
 - [Reference Config](./config/config.md)
