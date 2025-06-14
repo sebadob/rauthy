@@ -373,6 +373,25 @@ rp_origin = "http://localhost:5173"
 <pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"</code></pre>
 </div>
 </div>
+<div id="admonition-hint-1" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-1-title">
+<div class="admonition-title">
+<div id="admonition-hint-1-title">
+<p>Hint</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-hint-1"></a>
+</div>
+<div>
+<p>If you can guarantee that there can only ever be a single process / container that uses your volume mount, you probably
+always want to set <code>cluster.wal_ignore_lock = true</code>. This will start an auto-recovery process after a container crashed
+or was force-killed. If <code>hiqlite-wal</code> finds an existing lockfile, it will ignore it and try to recover orphaned logs,
+and it does a deep integrity check of the latest WAL file to make sure all open in-memory buffers from before the crash
+were written, or it will throw some away if their CRC does not match the header value.</p>
+<p>Such a guarantee is given for instance when you only ever run Rauthy inside a container with a fixed name, that uses
+some directory on disk. If that is true, your container runtime will only allow a single one, because there would be a
+name conflict otherwise. Or if you run inside K8s with <code>ReadWriteOnce</code> volumes, a volume can only be mounted to a single
+Pod at a time. In these situations, you always want <code>cluster.wal_ignore_lock = true</code>.</p>
+</div>
+</div>
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
