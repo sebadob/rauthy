@@ -191,6 +191,14 @@ cookie_set_path = true
 # overwritten by: TOKEN_LEN_LIMIT
 token_len_limit = 4096
 
+[atproto]
+# Set to `true` to enable the ATProto provider. If the public URL is
+# 'localhost' it should be changed to '127.0.0.1', if `dev_mode = true`
+# this also applies for the `provider_callback_url`.
+#
+# default: false
+# enable = false
+
 [auth_headers]
 # You can enable authn/authz headers which would be added to the
 # response of the `/auth/v1/oidc/forward_auth` endpoint. When set to
@@ -380,7 +388,8 @@ api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQyn
 # overwritten by: HQL_NODE_ID
 node_id = 1
 
-# All cluster member nodes.
+# All cluster member nodes. For a single instance deployment,
+# `"1 localhost:8100 localhost:8200"` will work just fine.
 # Each array value must have the following format:
 # `id addr_raft addr_api`
 #
@@ -388,8 +397,8 @@ node_id = 1
 # overwritten by: HQL_NODES
 nodes = [
     "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
+    "2 localhost:8101 localhost:8201",
+    "3 localhost:8102 localhost:8202",
 ]
 
 # The data dir hiqlite will store raft logs and state machine data in.
@@ -409,7 +418,7 @@ nodes = [
 #
 # default: false
 # overwritten by: HQL_LOG_STATEMENTS
-log_statements = true
+log_statements = false
 
 # The size of the internal cache for prepared statements.
 #
@@ -497,7 +506,7 @@ log_sync = "interval_200"
 #
 # default: true
 # overwritten by: HQL_CACHE_STORAGE_DISK
-cache_storage_disk = false
+cache_storage_disk = true
 
 # Sets the limit when the Raft will trigger the creation of a new
 # state machine snapshot and purge all logs that are included in
@@ -1540,7 +1549,7 @@ jwk_autorotate_cron = '0 30 3 1 * * *'
 #
 # default: 'info'
 # overwritten by: LOG_LEVEL
-level = 'debug'
+level = 'info'
 
 # The log level for the `Hiqlite` persistence layer.
 # At the time of writing, only the cache will use `hiqlite`
@@ -1726,7 +1735,7 @@ proxy_mode = false
 #
 # default: false
 # overwritten by: METRICS_ENABLE
-metrics_enable = true
+metrics_enable = false
 
 # The IP address to listen on for the /metrics endpoint.
 # You do not want to expose your metrics on a publicly
@@ -1821,6 +1830,9 @@ click_link = 'Click the link below to get forwarded to the password form.'
 validity = 'This link is only valid for a short period of time for security reasons.'
 expires = 'Link expires:'
 footer = ''
+
+# Exists only for password reset E-Mails for initialized accounts.
+button_text_request_new = ''
 
 [tls]
 ## UI + API TLS

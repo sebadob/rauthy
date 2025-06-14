@@ -20,9 +20,6 @@ others.
 Modifying the E-Mail contents via config variables is very straight forward. You don't need to compile from source,
 therefore can't make any mistakes and for all variables that are not set, Rauthy will simply fall back to the default.
 
-At the time of writing, translations do exist for english (default) and german only. Values starting with `TPL_EN`
-will set the english translation while `TPL_DE` will set german.
-
 You can take a look at the raw templates directly in the repo, so you can see which value will be mapped to which
 location in the final message.
 
@@ -30,46 +27,32 @@ location in the final message.
 
 [HTML Version](https://github.com/sebadob/rauthy/blob/main/templates/email/reset.html)
 
-The values to modify the sections are the following:
+The values are given as multiplem `[[templates]]` blocks. Each given block must match a separate `lang` / `typ`
+combination to be valid:
 
-```
-# New Password E-Mail
-#TPL_EN_PASSWORD_NEW_SUBJECT="New Password"
-#TPL_EN_PASSWORD_NEW_HEADER="New password for"
-#TPL_EN_PASSWORD_NEW_TEXT=""
-#TPL_EN_PASSWORD_NEW_CLICK_LINK="Click the link below to get forwarded to the password form."
-#TPL_EN_PASSWORD_NEW_VALIDITY="This link is only valid for a short period of time for security reasons."
-#TPL_EN_PASSWORD_NEW_EXPIRES="Link expires:"
-#TPL_EN_PASSWORD_NEW_BUTTON="Set Password"
-#TPL_EN_PASSWORD_NEW_FOOTER=""
+```toml
+[[templates]]
+# You can overwrite some default email templating values.
+# If you want to modify the basic templates themselves, this is
+# only possible with a custom build from source. The content
+# however can mostly be set here.
+# If the below values are not set, the default will be taken.
+#
+# NOTE: This is an array value, and you can specify it multiple
+# times for different `lang` / `typ` combinations.
 
-#TPL_DE_PASSWORD_NEW_SUBJECT="Passwort Reset angefordert"
-#TPL_DE_PASSWORD_NEW_HEADER="Passwort Reset angefordert für"
-#TPL_DE_PASSWORD_NEW_TEXT=""
-#TPL_DE_PASSWORD_NEW_CLICK_LINK="Klicken Sie auf den unten stehenden Link für den Passwort Reset."
-#TPL_DE_PASSWORD_NEW_VALIDITY="Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
-#TPL_DE_PASSWORD_NEW_EXPIRES="Link gültig bis:"
-#TPL_DE_PASSWORD_NEW_BUTTON="Passwort Setzen"
-#TPL_DE_PASSWORD_NEW_FOOTER=""
+# one of: en de ko zh_hans
+lang = 'en'
+# pme of: password_new, password_reset
+typ = 'password_new'
 
-# Password Reset E-Mail
-#TPL_EN_RESET_SUBJECT="Password Reset Request"
-#TPL_EN_RESET_HEADER="Password reset request for"
-#TPL_EN_RESET_TEXT=""
-#TPL_EN_RESET_CLICK_LINK="Click the link below to get forwarded to the password request form."
-#TPL_EN_RESET_VALIDITY="This link is only valid for a short period of time for security reasons."
-#TPL_EN_RESET_EXPIRES="Link expires:"
-#TPL_EN_RESET_BUTTON="Reset Password"
-#TPL_EN_RESET_FOOTER=""
-
-#TPL_DE_RESET_SUBJECT="Passwort Reset angefordert"
-#TPL_DE_RESET_HEADER="Passwort Reset angefordert für"
-#TPL_DE_RESET_TEXT=""
-#TPL_DE_RESET_CLICK_LINK="Klicken Sie auf den unten stehenden Link für den Passwort Reset."
-#TPL_DE_RESET_VALIDITY="Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
-#TPL_DE_RESET_EXPIRES="Link gültig bis:"
-#TPL_DE_RESET_BUTTON="Passwort Zurücksetzen"
-#TPL_DE_RESET_FOOTER=""
+subject = 'New Password'
+header = 'New password for'
+text = ''
+click_link = 'Click the link below to get forwarded to the password form.'
+validity = 'This link is only valid for a short period of time for security reasons.'
+expires = 'Link expires:'
+footer = ''
 ```
 
 ## Modify Templates Directly

@@ -168,6 +168,7 @@ pub async fn delete_sessions_for_user(
     for sid in Session::invalidate_for_user(&uid).await? {
         RefreshToken::delete_by_sid(sid).await?;
     }
+    logout::execute_backchannel_logout(None, Some(uid)).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

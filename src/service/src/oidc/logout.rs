@@ -24,7 +24,7 @@ use std::borrow::Cow;
 use std::str::FromStr;
 use std::string::ToString;
 use tokio::task::JoinSet;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 // We will allow more clock skew here for the token expiration validation to not be too
 // strict, as long as the signature of the token and all other things are valid.
@@ -239,7 +239,7 @@ pub async fn execute_backchannel_logout(
     sid: Option<String>,
     uid: Option<String>,
 ) -> Result<(), ErrorResponse> {
-    debug!("Executing backchannel logout for uid {uid:?} / sid {sid:?}");
+    info!("Executing backchannel logout for uid {uid:?} / sid {sid:?}");
 
     let (states, sid) = if let Some(sid) = sid {
         let states = UserLoginState::find_by_session(sid.clone()).await?;
@@ -345,6 +345,8 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
         return Ok(());
     }
     let uri = client.backchannel_logout_uri.as_ref().unwrap();
+
+    info!("Executing full backchannel logout for client {}", client.id);
 
     // We don't care about specific sessions here. Everything for this client should be logged out.
     // Skipping sessions and logging out whole users reduces the load.

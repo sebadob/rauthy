@@ -156,7 +156,7 @@ pub async fn get_api_key_test(
         if name != api_key.name {
             Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "Wrong API Key given".to_string(),
+                "Wrong API Key given",
             ))
         } else {
             Ok(HttpResponse::Ok().json(ApiKeyResponse::from(api_key)))
@@ -164,7 +164,7 @@ pub async fn get_api_key_test(
     } else {
         Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
-            "No API Key given".to_string(),
+            "No API Key given",
         ))
     }
 }

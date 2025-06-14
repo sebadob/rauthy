@@ -1,6 +1,5 @@
-export type CodeChallengeMethod = 'plain' | 'S256',
-export type JwtTokenType = 'Bearer' | 'DPoP' | 'Id' | 'Refresh',
-export type LoginMethod = 'OIDC' | 'ATProto',
+export type CodeChallengeMethod = 'plain' | 'S256';
+export type JwtTokenType = 'Bearer' | 'DPoP' | 'Id' | 'Refresh';
 
 export interface LoginRequest {
     /// Validation: `email`
@@ -12,7 +11,7 @@ export interface LoginRequest {
     client_id: string,
     /// Validation: PATTERN_URI
     redirect_uri: string,
-    /// Validation: PATTERN_GROUP
+    /// Validation: PATTERN_ROLE_SCOPE
     scopes?: string[],
     /// Validation: PATTERN_URI
     state?: string,
@@ -29,7 +28,7 @@ export interface LoginRefreshRequest {
     client_id: string,
     /// Validation: PATTERN_URI
     redirect_uri: string,
-    /// Validation: PATTERN_GROUP
+    /// Validation: PATTERN_ROLE_SCOPE
     scopes?: string[],
     /// Validation: PATTERN_URI
     state?: string,
@@ -45,6 +44,7 @@ export interface RequestResetRequest {
     email: string,
     /// Validation: PATTERN_URI
     redirect_uri?: string,
+    pow: string,
 }
 
 // export interface TokenSet {

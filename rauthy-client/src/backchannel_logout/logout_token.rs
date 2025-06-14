@@ -62,6 +62,7 @@ impl LogoutToken {
         )?;
 
         let mut lt = claims.custom;
+        lt.sub = claims.subject;
         lt.jti = claims.jwt_id;
 
         Ok(lt)

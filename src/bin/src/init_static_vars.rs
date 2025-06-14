@@ -151,7 +151,8 @@ pub fn trigger() {
     let _ = *RE_DATE_STR;
     let _ = *RE_GRANT_TYPES;
     let _ = *RE_GRANT_TYPES_EPHEMERAL;
-    let _ = *RE_GROUPS_ROLES_SCOPES;
+    let _ = *RE_GROUPS;
+    let _ = *RE_ROLES_SCOPES;
     let _ = *RE_LOWERCASE;
     let _ = *RE_LOWERCASE_SPACE;
     let _ = *RE_MFA_CODE;

@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -161,10 +172,9 @@
 <p>Some values, like authentication codes for instance, do live in the cache only. Because of this, all instances create
 and share a single HA cache layer, which means at the same time, that you cannot just scale up the replicas infinitely
 without adjusting the config. The optimal amount of replicas for a HA mode would be 3, or if you need even higher
-resilience 5. More replicas should work just fine, but this has never been really tested and the latency will
-increase at some point.</p>
-<p>The Cache layer uses another project of mine called <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>. It uses the Raft
-algorithm under the hood to achieve consistency.</p>
+resilience 5. More replicas should work just fine, but at some point, the write throughput will degrade.</p>
+<p>The Cache layer uses <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>. It uses the Raft algorithm under the hood to achieve
+consistency.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -174,51 +184,64 @@ algorithm under the hood to achieve consistency.</p>
 </div>
 <div>
 <p>Even though everything is authenticated, you should not expose the
-Hiqlite ports to the public, if not really necessary for some reason. You configure these ports with the <code>HQL_NODES</code>
-config value in the <code>CLUSTER</code> section.</p>
+Hiqlite ports to the public, if not really necessary for some reason. You configure these ports with the <code>cluster.nodes</code>
+config value.</p>
 </div>
 </div>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>Earlier versions of Rauthy have been using <a href="https://github.com/sebadob/redhac">redhac</a> for the HA cache layer. While
 <code>redhac</code> was working fine, it had a few design issues I wanted to get rid of. Since <code>v0.26.0</code>, Rauthy uses the
 above-mentioned <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> instead. You only need to configure a few variables:</p>
-<h3 id="hql_node_id"><a class="header" href="#hql_node_id"><code>HQL_NODE_ID</code></a></h3>
-<p>The <code>HQL_NODE_ID</code> is mandatory, even for a single replica deployment with only a single node in <code>HQL_NODES</code>.
+<h3 id="node_id"><a class="header" href="#node_id"><code>node_id</code></a></h3>
+<p>The <code>cluster.node_id</code> is mandatory, even for a single replica deployment with only a single node in <code>cluster.nodes</code>.
 If you deploy Rauthy as a StatefulSet inside Kubernetes, you can ignore this value and just set <code>HQL_NODE_ID_FROM</code>
-below. If you deploy anywhere else, or you are not using a StatefulSet, you need to set the <code>HQL_NODE_ID</code> to tell Rauthy
+below. If you deploy anywhere else, or you are not using a StatefulSet, you need to set the <code>node_id_from</code> to tell
+Rauthy
 which node of the Raft cluster it should be.</p>
-<pre><code># The node id must exist in the nodes and there must always be
+<pre><code class="language-toml">[cluster]
+# The node id must exist in the nodes and there must always be
 # at least a node with ID 1
-# Will be ignored if `HQL_NODE_ID_FROM=k8s`
-HQL_NODE_ID=1
+# Will be ignored if `node_id_from = k8s`
+#
+# At least `node_id_from` or `node_id` are required.
+#
+# default: 0 (invalid)
+# overwritten by: HQL_NODE_ID
+node_id = 1
 </code></pre>
-<h3 id="hql_node_id_from"><a class="header" href="#hql_node_id_from"><code>HQL_NODE_ID_FROM</code></a></h3>
-<p>If you deploy to Kubernetes as a StatefulSet, you should ignore the <code>HQL_NODE_ID</code> and just set <code>HQL_NODE_ID_FROM=k8s</code>.
-This will parse the correct NodeID from the Pod hostname, so you don't have to worry about it.</p>
-<pre><code># Can be set to 'k8s' to try to split off the node id from the hostname
+<h3 id="node_id_from"><a class="header" href="#node_id_from"><code>node_id_from</code></a></h3>
+<p>If you deploy to Kubernetes as a StatefulSet, you should ignore the <code>cluster.node_id</code> and just set
+<code>cluster.node_id_from = "k8s"</code>. This will parse the correct NodeID from the Pod hostname, so you don't have to worry
+about it.</p>
+<pre><code class="language-toml">
+[cluster]
+# Can be set to 'k8s' to try to split off the node id from the hostname
 # when Hiqlite is running as a StatefulSet inside Kubernetes.
-#HQL_NODE_ID_FROM=k8s
-</code></pre>
-<h3 id="hql_nodes"><a class="header" href="#hql_nodes"><code>HQL_NODES</code></a></h3>
-<p>This value defines the Cache / Raft members. It must be given even if you just deploy a single instance. The description
-from the reference config should be clear enough:</p>
-<pre><code># All cluster member nodes.
-# To make setting the env var easy, the values are separated by `\s`
-# while nodes are separated by `\n`
-# in the following format:
 #
-# id addr_raft addr_api
-# id addr_raft addr_api
-# id addr_raft addr_api
-#
-# 2 nodes must be separated by 2 `\n`
-HQL_NODES="
-1 localhost:8100 localhost:8200
-"
+# default: unset
+# overwritten by: HQL_NODE_ID_FROM
+node_id_from = "k8s"
 </code></pre>
-<h3 id="hql_secret_raft--hql_secret_api"><a class="header" href="#hql_secret_raft--hql_secret_api"><code>HQL_SECRET_RAFT</code> + <code>HQL_SECRET_API</code></a></h3>
-<p>Since you need both <code>HQL_SECRET_RAFT</code> and <code>HQL_SECRET_API</code> in any case, there is nothing to change here. These define
-the secrets being used internally to authenticate against the Raft or the API server for <code>Hiqlite</code>.
+<h3 id="nodes"><a class="header" href="#nodes"><code>nodes</code></a></h3>
+<p>This value defines the Raft members. It must be given even if you just deploy a single instance. The description from
+the reference config should be clear enough:</p>
+<pre><code class="language-toml">[cluster]
+# All cluster member nodes. For a single instance deployment,
+# `"1 localhost:8100 localhost:8200"` will work just fine.
+# Each array value must have the following format:
+# `id addr_raft addr_api`
+#
+# default: ["1 localhost:8100 localhost:8200"]
+# overwritten by: HQL_NODES
+nodes = [
+    "1 localhost:8100 localhost:8200",
+    #    "2 localhost:8101 localhost:8201",
+    #    "3 localhost:8102 localhost:8202",
+]
+</code></pre>
+<h3 id="secret_raft--secret_api"><a class="header" href="#secret_raft--secret_api"><code>secret_raft</code> + <code>secret_api</code></a></h3>
+<p>Since you need both <code>cluster.secret_raft</code> and <code>cluster.secret_api</code> in any case, there is nothing to change here. These
+define the secrets being used internally to authenticate against the Raft or the API server for <code>Hiqlite</code>.
 You can generate safe values with for instance</p>
 <pre><code>cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
 </code></pre>

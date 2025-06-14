@@ -176,9 +176,10 @@ delete-hiqlite:
     rm -rf data/logs_cache
     rm -rf data/state_machine
     rm -rf data/state_machine_cache
+    rm -rf data/node_*
 
 # runs any of: none (hiqlite), postgres, ui
-run ty="hiqlite":
+run ty="hiqlite" node_id="1":
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -190,6 +191,16 @@ run ty="hiqlite":
       {{ npm }} run dev -- --host=0.0.0.0
     elif [[ {{ ty }} == "hiqlite" ]]; then
       cargo run
+    elif [[ {{ ty }} == "node" ]]; then
+      if [[ {{ node_id }} == "1" ]]; then
+        LISTEN_PORT_HTTP=8001 PUB_URL="localhost:8001" HQL_DATA_DIR=data/node_1 HQL_NODE_ID=1 cargo run -- 1
+      elif [[ {{ node_id }} == "2" ]]; then
+        LISTEN_PORT_HTTP=8002 PUB_URL="localhost:8002" HQL_DATA_DIR=data/node_2 HQL_NODE_ID=2 cargo run -- 2
+      elif [[ {{ node_id }} == "3" ]]; then
+        LISTEN_PORT_HTTP=8003 PUB_URL="localhost:8003" HQL_DATA_DIR=data/node_3 HQL_NODE_ID=3 cargo run -- 3
+      else
+        echo "Only node_id from 1 - 3 supported"
+      fi
     fi
 
 # runs (and stops) Postgres, Mailcrab, normal `just run` command
@@ -474,15 +485,12 @@ release:
 
 # publishes the application images - full pipeline incl clippy and testing you can provide a custom image name as variable
 publish: build-docs fmt test-hiqlite test-postgres build archive-ui
-    #!/usr/bin/env bash
-    set -euxo pipefail
 
 # publishes the application images - full pipeline incl clippy and testing
 publish-latest:
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # the `latest` image will always point to the postgres x86 version, which is used the most (probably)
     {{ docker }} pull ghcr.io/sebadob/rauthy:$TAG
     {{ docker }} tag ghcr.io/sebadob/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
     {{ docker }} push ghcr.io/sebadob/rauthy:latest

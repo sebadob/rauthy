@@ -17,12 +17,10 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
-use rauthy_models::entity::groups::Group;
 use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::client;
 use rauthy_service::oidc::{helpers, logout};
-use std::collections::HashMap;
 use tokio::task;
 use tracing::{debug, error};
 use validator::Validate;
@@ -295,27 +293,10 @@ pub async fn put_clients(
 
     let resp = if let Some((scim, needs_sync)) = scim {
         let resp = client.into_response(Some(scim.clone()));
-
         debug!("scim needs sync: {:?}", needs_sync);
         if needs_sync {
-            // We want to sync the groups synchronous to catch possible config errors early.
-            // The user sync however can take a very long time depending on the amount of users,
-            // so it will be pushed into the background.
-            let groups = if scim.sync_groups {
-                scim.sync_groups().await?;
-                Group::find_all().await?
-            } else {
-                Vec::default()
-            };
-
-            task::spawn(async move {
-                let mut groups_remote = HashMap::with_capacity(groups.len());
-                if let Err(err) = scim.sync_users(None, &groups, &mut groups_remote).await {
-                    error!("{}", err);
-                }
-            });
+            scim.sync_full().await?;
         }
-
         resp
     } else {
         client.into_response(None)

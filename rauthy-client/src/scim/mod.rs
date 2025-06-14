@@ -12,7 +12,7 @@ pub static CONTENT_TYPE_SCIM: &str = "application/scim+json";
 
 #[allow(unused)]
 #[inline]
-fn is_content_type_scim(headers: &HeaderMap) -> Result<(), ScimError> {
+pub fn is_content_type_scim(headers: &HeaderMap) -> Result<(), ScimError> {
     let Some(ct_val) = headers.get(CONTENT_TYPE) else {
         return Err(ScimError::new(400, Some("Content-Type missing".into())));
     };
@@ -28,7 +28,7 @@ fn is_content_type_scim(headers: &HeaderMap) -> Result<(), ScimError> {
 
 #[allow(unused)]
 #[inline]
-fn validate_scim_token(headers: &HeaderMap) -> Result<(), ScimError> {
+pub fn validate_scim_token(headers: &HeaderMap) -> Result<(), ScimError> {
     let Some(auth_val) = headers.get(AUTHORIZATION) else {
         error!("SCIM request no token");
         return Err(ScimError::new(

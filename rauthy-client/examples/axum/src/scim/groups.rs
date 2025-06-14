@@ -2,7 +2,7 @@ use crate::scim::users::USERS;
 use axum::extract::Path;
 use rauthy_client::scim::types::{
     ScimError, ScimFilterBy, ScimGroup, ScimGroupMember, ScimGroupValue, ScimListQuery,
-    ScimListResponse, ScimPatchOp, ScimResource,
+    ScimListResponse, ScimPatchOp, ScimResource, ScimToken,
 };
 use rauthy_client::secure_random;
 use std::sync::LazyLock;
@@ -42,7 +42,11 @@ pub async fn post_group(group: ScimGroup) -> Result<ScimGroup, ScimError> {
     save_group(group).await
 }
 
-pub async fn get_group(Path(id): Path<String>) -> Result<ScimGroup, ScimError> {
+// The `_: ScimToken` makes sure that the `Bearer` token will be checked against the configured
+// SCIM token. This struct is empty and does nothing than adding the check inside the extractor.
+// This is much more straight forward than manually passing the header value into a helper function.
+// All other `Scim*` structs in extractors already do this token check.
+pub async fn get_group(Path(id): Path<String>, _: ScimToken) -> Result<ScimGroup, ScimError> {
     match GROUPS
         .read()
         .await
@@ -93,8 +97,7 @@ pub async fn patch_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Resul
                         }
                         user.groups.as_mut().unwrap().push(ScimGroupValue {
                             value: id.clone(),
-                            _ref: None, // Rauthy does not care about `ref`
-                            display: Some(group_name.clone()),
+                            display: group_name.clone(),
                         })
                     }
                 }
@@ -108,7 +111,7 @@ pub async fn patch_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Resul
             // Update / Replace the group name / externalId
             for group in GROUPS.write().await.iter_mut() {
                 if group.id.as_deref() == Some(&id) {
-                    group.external_id = replace.external_id.to_string();
+                    group.external_id = Some(replace.external_id.to_string());
                     group.display_name = replace.group_name.to_string();
                     break;
                 }
@@ -120,7 +123,7 @@ pub async fn patch_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Resul
                 }
                 for group in user.groups.as_mut().unwrap().iter_mut() {
                     if group.value == id {
-                        group.display = Some(replace.group_name.to_string());
+                        group.display = replace.group_name.to_string();
                         break;
                     }
                 }
@@ -159,7 +162,7 @@ pub async fn patch_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Resul
     Ok(())
 }
 
-pub async fn delete_group(Path(id): Path<String>) -> Result<(), ScimError> {
+pub async fn delete_group(Path(id): Path<String>, _: ScimToken) -> Result<(), ScimError> {
     info!("Delete group {:?}", id);
 
     GROUPS
@@ -185,7 +188,7 @@ async fn find_groups(start_index: u32, query: &ScimListQuery) -> Vec<ScimResourc
             .await
             .iter()
             .filter_map(|u| {
-                if u.external_id == id {
+                if u.external_id.as_deref() == Some(id) {
                     Some(ScimResource::Group(Box::new(u.clone())))
                 } else {
                     None

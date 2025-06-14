@@ -2,18 +2,12 @@
 
 ## CURRENT WORK
 
-TODO before v0.30:
-
-- update book with the "new" K8s sts setup to show how to do an HA deployment
-- document breaking change for `postal_code` in JWT address claim
-
 ## Stage 1 - essentials
 
 [x] finished
 
 ## Stage 2 - features - do before v1.0.0
 
-- `amr` is not correctly set to `mfa` using the `device_code` flow, even when the user has used a passkey
 - check if `REFRESH_TOKEN_GRACE_TIME` can be dropped with Hiqlite
 - "known host cookie" with connection between accounts and IPs to send out warnings in case
   of a login on a new device

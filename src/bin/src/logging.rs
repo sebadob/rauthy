@@ -7,8 +7,9 @@ pub fn setup_logging() -> tracing::Level {
     use tracing::Level;
 
     // setup logging
-    let log_level = read_level("LOG_LEVEL");
-    let log_level_db = read_level("LOG_LEVEL_DATABASE");
+    let config = &RauthyConfig::get().vars.logging;
+    let log_level = parse_level(&config.level);
+    let log_level_db = parse_level(&config.level_database);
 
     let filter = format!(
         "{},cryptr=info,hyper=info,h2=info,hiqlite={},openraft={}",
@@ -53,14 +54,8 @@ pub fn is_log_fmt_json() -> bool {
     RauthyConfig::get().vars.logging.log_fmt.as_ref() == "json"
 }
 
-fn read_level(env_var: &str) -> Level {
-    match env::var(env_var)
-        .as_deref()
-        .unwrap_or("info")
-        .trim()
-        .to_lowercase()
-        .as_str()
-    {
+fn parse_level(level: &str) -> Level {
+    match level {
         "error" => Level::ERROR,
         "warn" => Level::WARN,
         "info" => Level::INFO,

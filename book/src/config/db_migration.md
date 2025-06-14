@@ -8,12 +8,12 @@ footprint by switching to Hiqlite. All of this is easily possible.
 
 **Solution:** `MIGRATE_DB_FROM`
 
-If you set the `MIGRATE_DB_FROM` in Rauthy's config, it will perform a migration at the next restart.  
+If you set the `MIGRATE_DB_FROM` ENV var, it will perform a migration at the next restart.   
 The way it works is the following:
 
-1. At startup, have a look if `MIGRATE_DB_FROM` is configured
+1. At startup, have a look if `MIGRATE_DB_FROM` is given
 2. If yes, then connect to the given database
-3. At the same time, connect to the database specified via `HIQLITE` and `DATABASE_URL`
+3. At the same time, connect to the database specified via the normal config values
 4. Overwrite all existing data in the target database with the data from the `MIGRATE_DB_FROM` source
 5. Close the connection to `MIGRATE_DB_FROM`
 6. Start normal operation
@@ -23,14 +23,4 @@ The way it works is the following:
 
 If you do not remove the `MIGRATE_DB_FROM` after the migration has been done, it will overwrite the target again with
 the next restart of the application. Remove the config variable immediately after the migration has finished.
-```
-
-```admonish info
-**any version below 0.27.0:** if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
-switch to the correct Rauthy image as well.
-```
-
-```admonish hint
-The easiest to do is to just set `MIGRATE_DB_FROM` as an environmant variable, which is easier and quicker to remove 
-again afterwards. 
 ```

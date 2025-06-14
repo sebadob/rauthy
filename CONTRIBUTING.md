@@ -36,6 +36,9 @@ To work with this project, you need to have the following tools available on you
 > `npm` is not strictly necessary, but recommended to have. If you just want to build the static UI files, you can also
 > do it inside a container. However, if you want to do any form of development on the UI, you need `npm` to run it in
 > dev mode locally.
+> Another solution, if you cannot build the UI, is to `just extract-ui-archive`. A pre-built version of the static UI
+> files is checked into version control with each new release, and this recipe will extract the files into the correct
+> locations.
 
 ### Building from source
 
@@ -167,7 +170,9 @@ just run postgres
 ```
 
 > If you don't want to keep running your Postgres and Mailcrab containers up and running, you can instead of `just run`
-> also use `just watch` (or `just watch posgres`), which will start dev containers as needed and watch for changes in the Rust code to automatically recompile and restart rauthy. This command requires the [watchexec](https://watchexec.github.io/) tool.
+> also use `just watch` (or `just watch posgres`), which will start dev containers as needed and watch for changes in
+> the Rust code to automatically recompile and restart rauthy. This command requires
+> the [watchexec](https://watchexec.github.io/) tool.
 
 ### Default Credentials
 
@@ -184,7 +189,8 @@ admin@localhost
 
 ### Dev Env Containers
 
-If you want to stop the dev containers, `just dev-env-stop` will take care of this, to remove the containers use `just dev-env-rm`. If you are working on DB migrations
+If you want to stop the dev containers, `just dev-env-stop` will take care of this, to remove the containers use
+`just dev-env-rm`. If you are working on DB migrations
 and are still changing your new migration, you probably need to clean upt he DB while tuning, because of hash
 mismatches. For Postgres, `just postgres-rm` and `just postgres-start`. For Hiqlite, `just delete-hiqlite`.
 
@@ -371,7 +377,8 @@ just pre-pr-checks
 
 If you want to compile from source on FreeBSD, you may have a few limitations. Compiling the UI on FreeBSD seems to not
 work. You can use `just build-ui container` to use a `node` container to build the static UI files in that case, or run
-the docker command from the recipe manually, if you don't have `just` available.
+the docker command from the recipe manually, if you don't have `just` available.  
+You could also `just extract-ui-archive`, which will extract pre-built archives from the last release build.
 
 Since FreeBSD uses some cargo mechanism at build time differently, you may also run into linking issues like e.g. for
 `openssl`, `sqlite` or `rocksdb`. In these situations, you should be able to fix it by installing the dependency on your

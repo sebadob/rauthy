@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -164,8 +175,7 @@ easy to use and provide a completely new functionality, but keep in mind that th
 as they require an additional network round trip to where ever their document is hosted (apart from caching).</p>
 <p>Just to make clear what I am talking about, a high level comparison of these different clients:</p>
 <p><strong>Static clients</strong> are the ones that you register and configure via the Admin UI. These are the most efficient and
-secure
-ones. They require less work in the backend and exist inside the Rauthy database.</p>
+secure ones. They require less work in the backend and exist inside the Rauthy database.</p>
 <p>Then there is OIDC <strong>Dynamic Client Registration</strong> (DCR), which is an OIDC extension that Rauthy supports as well. If a
 downstream application has support for this feature, it can self-register a client, which then can be used for the
 login afterward. This sound very nice in the beginning, but brings quite a few problems:</p>
@@ -173,7 +183,7 @@ login afterward. This sound very nice in the beginning, but brings quite a few p
 <li>If the endpoint is open, anyone can register a client, also bots and spammers</li>
 <li>If the endpoint is secured an additional token for the registration, there is not much benefit from it, because the
 token must be communicated upfront anyway. If so, you could simply register a faster and more efficient static client.</li>
-<li>The downstream application must manage its own client. If they don't do it properly, they can spam Rauthy's database
+<li>The downstream application must manage its own client. If they don't do it properly, they can spam Rauthys database
 again.</li>
 <li>As mentioned already, dynamic clients are a bit less efficient than static ones and require at least one additional
 database round trip during each login.</li>
@@ -238,44 +248,64 @@ redirect URI without further validation. You must never use this apart from mayb
 <p>The JSON document for the ephemeral clients follows the same rules and works in the same ways any other OIDC client.</p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>The support for ephemeral clients is opt-in. You need to set at least</p>
-<pre><code># Can be set to 'true' to allow the dynamic client lookup via URLs as
-# 'client_id's during authorization_code flow initiation.
+<pre><code class="language-toml">[ephemeral_clients]
+# Can be set to 'true' to allow the dynamic client lookup via
+# URLs as 'client_id's during authorization_code flow initiation.
+#
 # default: false
-ENABLE_EPHEMERAL_CLIENTS=true
+# overwritten by: ENABLE_EPHEMERAL_CLIENTS
+enable = false
 </code></pre>
 <p>Apart from this, there are more options you can modify. Ephemeral clients are the least flexible, and they share some
 common restrictions. These are valid for all ephemeral clients used with this instance, no matter if they define
 something else in their JSON document. This is important so a Rauthy admin can configure a security standard that
 can't be broken or ignored.</p>
-<pre><code># If set to 'true', MFA / Passkeys will be forced for ephemeral clients.
+<pre><code class="language-toml">[ephemeral_clients]
+# If set to 'true', MFA / Passkeys will be forced for ephemeral
+# clients.
+#
 # default: false
-#EPHEMERAL_CLIENTS_FORCE_MFA=false
+# overwritten by: EPHEMERAL_CLIENTS_FORCE_MFA
+force_mfa = false
 
-# The allowed flows separated by ' ' for ephemeral clients.
-# default: "authorization_code"
-#EPHEMERAL_CLIENTS_ALLOWED_FLOWS="authorization_code refresh_token"
+# The allowed flows for ephemeral clients.
+#
+# default: ['authorization_code', 'refresh_token']
+# overwritten by: EPHEMERAL_CLIENTS_ALLOWED_FLOWS - single String, \n separated values
+allowed_flows = ['authorization_code', 'refresh_token']
 
 # The allowed scopes separated by ' ' for ephemeral clients.
-# default: "openid profile email webid"
-#EPHEMERAL_CLIENTS_ALLOWED_SCOPES="openid profile email webid"
+#
+# default: ['openid', 'profile', 'email', 'webid']
+# overwritten by: EPHEMERAL_CLIENTS_ALLOWED_SCOPES - single String, \n separated values
+allowed_scopes = ['openid', 'profile', 'email', 'webid']
 </code></pre>
 <p>If you need support for Solid OIDC, you need to at least enable web IDs and the solid <code>aud</code>:</p>
-<pre><code># Can be set to 'true' to enable WebID functionality like needed
+<pre><code class="language-toml">[ephemeral_clients]
+# Can be set to 'true' to enable WebID functionality like needed
 # for things like Solid OIDC.
+#
 # default: false
-#ENABLE_WEB_ID=false
+# overwritten by: ENABLE_WEB_ID
+enable_web_id = false
 
-# If set to 'true', 'solid' will be added to the 'aud' claim from the ID token
-# for ephemeral clients.
+# If set to 'true', 'solid' will be added to the 'aud' claim from
+# the ID token for ephemeral clients.
+#
 # default: false
-#ENABLE_SOLID_AUD=true
+# overwritten by: ENABLE_SOLID_AUD
+enable_solid_aud = false
 </code></pre>
 <p>The last option is the caching timeout. The cache for these documents is very important for performance. Without any
 cache, Rauthy would need to do an additional network round trip to the client JSON <strong>with each login</strong>. This is very
 inefficient, because usually these documents rarely change after the initial setup.</p>
-<pre><code># The lifetime in seconds ephemeral clients will be kept inside the cache.
+<pre><code class="language-toml">[ephemeral_clients]
+# The lifetime in seconds ephemeral clients will be kept inside
+# the cache.
+#
 # default: 3600
-#EPHEMERAL_CLIENTS_CACHE_LIFETIME=3600
+# overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
+cache_lifetime = 3600
 </code></pre>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
 <div class="admonition-title">
@@ -285,8 +315,8 @@ inefficient, because usually these documents rarely change after the initial set
 <a class="admonition-anchor-link" href="#admonition-hint"></a>
 </div>
 <div>
-<p>If you are developing or testing, set the <code>EPHEMERAL_CLIENTS_CACHE_LIFETIME</code> to a very low value. Otherwise,
-Rauthy would not see any changes you do to this document as long as the internal cache has not expired.</p>
+<p>If you are developing or testing, set the <code>cache_lifetime</code> to a very low value. Otherwise, Rauthy would not
+see any changes you do to this document as long as the internal cache has not expired.</p>
 </div>
 </div>
 <h2 id="minimal-client-json-document"><a class="header" href="#minimal-client-json-document">Minimal Client JSON Document</a></h2>

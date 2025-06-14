@@ -30,15 +30,18 @@ However, it is good practice to do this regularly. Usually, you don't need to ca
 **automatically** with default settings. This will happen on each 1. of the month at 03:30 in the morning.  
 You can change this behavior with the following setting:
 
-```
+```toml
+[lifetimes]
 # JWKS auto rotate cronjob. This will (by default) rotate all JWKs every
 # 1. day of the month. If you need smaller intervals, you may adjust this
 # value. For security reasons, you cannot fully disable it.
 # In a HA deployment, this job will only be executed on the current cache
 # leader at that time.
 # Format: "sec min hour day_of_month month day_of_week year"
+#
 # default: "0 30 3 1 * * *"
-JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
+# overwritten by: JWK_AUTOROTATE_CRON
+jwk_autorotate_cron = '0 30 3 1 * * *'
 ```
 
 If you however had a secret's leak or something like this, you can of course rotate **manually**. You just need to log
@@ -58,8 +61,12 @@ auto-deleted after 30 days, you don't need to care about cleanup.
 Rauthy creates a new event when keys are rotated. The default level is `notice`. If you want to change this,
 you can do so with:
 
-```
-# The level for the generated Event after the JWKS has been rotated
+```toml
+[events]
+# The level for the generated Event after the JWKS has
+# been rotated
+#
 # default: notice
-EVENT_LEVEL_JWKS_ROTATE=notice
+# overwritten by: EVENT_LEVEL_JWKS_ROTATE
+level_jwks_rotate = 'notice'
 ```

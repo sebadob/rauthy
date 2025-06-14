@@ -1,11 +1,12 @@
 use crate::database::{Cache, DB};
 use crate::entity::auth_providers::AuthProviderTemplate;
+use crate::entity::logos::{Logo, LogoType};
 use crate::html::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigArgon2Html, AdminConfigEncryptionHtml, AdminConfigJwksHtml, AdminConfigPolicyHtml,
     AdminEventsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
     AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml, HtmlTemplate, IndexHtml, LogoutHtml,
-    ProviderCallbackHtml, ProvidersHtml, UserRegisterHtml,
+    ProviderCallbackHtml, ProvidersHtml, UserPasswordResetHtml, UserRegisterHtml,
 };
 use crate::language::Language;
 use actix_web::http::header::ACCEPT_ENCODING;
@@ -44,6 +45,7 @@ pub enum HtmlCached {
     FedCM,
     Index,
     Logout(String),
+    PasswordReset,
     UserRegistration,
 }
 
@@ -74,6 +76,7 @@ impl HtmlCached {
             Self::FedCM => "fed_cm",
             Self::Index => "index",
             Self::Logout(_) => "logout",
+            Self::PasswordReset => "password_reset",
             Self::UserRegistration => "user_reg",
         }
     }
@@ -149,6 +152,10 @@ impl HtmlCached {
             Self::FedCM => FedCMHtml::build(&lang, theme_ts),
             Self::Index => IndexHtml::build(&lang, theme_ts),
             Self::Logout(csrf_token) => LogoutHtml::build(csrf_token, &lang, theme_ts),
+            Self::PasswordReset => {
+                let logo_updated = Logo::find_updated("rauthy", &LogoType::Client).await?;
+                UserPasswordResetHtml::build(&lang, theme_ts, logo_updated)
+            }
             Self::UserRegistration => UserRegisterHtml::build(&lang, theme_ts),
         };
         let body_bytes = match encoding {

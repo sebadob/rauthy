@@ -291,9 +291,22 @@ pub async fn delete_cust_attr(
     principal
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Delete)?;
 
-    // No need for SCIM sync's - these attrs are custom and do not exist for SCIM
+    let attr_name = path.into_inner();
 
-    UserAttrConfigEntity::delete(path.into_inner()).await?;
+    let clients_scim = ClientScim::find_with_attr_mapping(&attr_name).await?;
+    if !clients_scim.is_empty() {
+        let groups = Group::find_all().await?;
+        tokio::spawn(async move {
+            let mut groups_remote = HashMap::with_capacity(groups.len());
+            for scim in clients_scim {
+                if let Err(err) = scim.sync_users(None, &groups, &mut groups_remote).await {
+                    error!("{}", err);
+                }
+            }
+        });
+    }
+
+    UserAttrConfigEntity::delete(attr_name).await?;
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -1477,11 +1490,6 @@ pub async fn put_user_webid_data(
 /// This Endpoint will always return an `OK` to not provide any additional attack surface.
 /// Only if the provided E-Mail exists in the Database, a password reset E-Mail will be sent out,
 /// otherwise it will just be ignored but still return an `OK`.
-///
-/// **Permissions**
-/// - authenticated
-/// - session-init
-/// - session-auth
 #[utoipa::path(
     post,
     path = "/users/request_reset",
@@ -1489,17 +1497,14 @@ pub async fn put_user_webid_data(
     request_body = RequestResetRequest,
     responses(
         (status = 200, description = "Ok"),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
     ),
 )]
 #[post("/users/request_reset")]
 pub async fn post_user_password_request_reset(
     req: HttpRequest,
     Json(payload): Json<RequestResetRequest>,
-    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
     info!(
@@ -1507,6 +1512,7 @@ pub async fn post_user_password_request_reset(
         payload.email,
         real_ip_from_req(&req)?
     );
+    Pow::validate(&payload.pow)?;
 
     match User::find_by_email(payload.email).await {
         Ok(user) => user

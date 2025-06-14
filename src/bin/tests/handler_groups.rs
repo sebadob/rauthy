@@ -23,7 +23,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
 
     // add a group
     let new_group = GroupRequest {
-        group: "group123".to_string(),
+        group: "My Group 123".to_string(),
     };
     let res = reqwest::Client::new()
         .post(&url)
@@ -33,7 +33,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
     let group = res.json::<Group>().await?;
-    assert_eq!(group.name, "group123");
+    assert_eq!(group.name, "My Group 123");
 
     // modify the group
     let upd_group = GroupRequest {

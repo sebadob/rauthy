@@ -113,6 +113,8 @@ pub struct EMailResetHtml<'a> {
     pub expires: &'a str,
     pub button_text: &'a str,
     pub footer: &'a str,
+    pub link_request_new: &'a str,
+    pub button_text_request_new: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -128,6 +130,7 @@ pub struct EmailResetTxt<'a> {
     pub validity: &'a str,
     pub expires: &'a str,
     pub footer: &'a str,
+    pub link_request_new: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -336,8 +339,11 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
         .await
         .unwrap_or_default();
 
+    let is_new_user = user.password.is_none() && !user.has_webauthn_enabled();
+    let link_request_new: Option<String>;
+
     let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
-    let (subject, text, html) = if user.password.is_none() {
+    let (subject, text, html) = if is_new_user {
         let i18n = I18nEmailPasswordNew::build(&user.language);
         let text = EmailResetTxt {
             email_sub_prefix,
@@ -348,7 +354,8 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
             text: i18n.text.unwrap_or_default(),
             validity: i18n.validity,
             expires: i18n.expires,
-            footer: i18n.text.unwrap_or_default(),
+            footer: i18n.footer.unwrap_or_default(),
+            link_request_new: "",
         };
 
         let html = EMailResetHtml {
@@ -363,12 +370,20 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
             validity: i18n.validity,
             expires: i18n.expires,
             button_text: i18n.button_text,
-            footer: i18n.text.unwrap_or_default(),
+            footer: i18n.footer.unwrap_or_default(),
+            link_request_new: "",
+            button_text_request_new: "",
         };
 
         (i18n.subject, text, html)
     } else {
         let i18n = I18nEmailReset::build(&user.language);
+        link_request_new = Some(format!(
+            "{}/users/password_reset?email_hint={}",
+            RauthyConfig::get().issuer,
+            user.email
+        ));
+
         let text = EmailResetTxt {
             email_sub_prefix,
             link: &link,
@@ -378,7 +393,8 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
             text: i18n.text.unwrap_or_default(),
             validity: i18n.validity,
             expires: i18n.expires,
-            footer: i18n.text.unwrap_or_default(),
+            footer: i18n.footer.unwrap_or_default(),
+            link_request_new: link_request_new.as_ref().unwrap(),
         };
 
         let html = EMailResetHtml {
@@ -393,7 +409,9 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
             validity: i18n.validity,
             expires: i18n.expires,
             button_text: i18n.button_text,
-            footer: i18n.text.unwrap_or_default(),
+            footer: i18n.footer.unwrap_or_default(),
+            link_request_new: link_request_new.as_ref().unwrap(),
+            button_text_request_new: i18n.button_text_request_new.unwrap_or_default(),
         };
 
         (i18n.subject, text, html)

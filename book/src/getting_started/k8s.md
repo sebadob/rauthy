@@ -5,19 +5,18 @@ on purpose though, so it should not be a big deal to get it running inside Kuber
 
 ## Single Instance
 
-Since rauthy uses pretty aggressive caching for different reasons, you cannot just have a single deployment and
-scale up the replicas without enabling `HA_MODE`. How to deploy a HA version is described below.
+Since Rauthy uses pretty aggressive caching for different reasons, you cannot just have a single deployment and
+scale up the replicas without a proper HA setup. How to deploy a HA version is described below.
 
 The steps to deploy on Kubernetes are pretty simple.
 
-- Create namespace
-- Create and apply the config
-- Create and apply secrets
-- Create and apply the stateful set
+1. Create namespace
+2. Create and apply the config
+3. Create and apply the stateful set
 
 ### Create Namespace
 
-For the purpose of this documentation, we assume that rauthy will be deployed in the `rauthy` namespace.  
+For the purpose of this documentation, we assume that Rauthy will be deployed in the `rauthy` namespace.  
 If this is not the case for you, change the following commands accordingly.
 
 ```
@@ -32,134 +31,55 @@ This documentation will manage the Kubernetes files in a folder called `rauthy`.
 mkdir rauthy && cd rauthy
 ```
 
-Create the config file, paste the [reference config](../config/config.html) and adjust it to your needs.  
-There is no "nice 1-liner" available yet.
+Create the config file, paste the [Reference Config](../config/config.md) and adjust it to your needs. We are putting
+the complete config in a K8s secret. Rauthy's config contains quite a few different secret values and it's just a lot
+simpler to maintain everything in a single secret, than splitting it into a `ConfigMap` and overwrite each secret
+manually.
 
 ```
-echo 'apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rauthy-config
-  namespace: rauthy
-data:
-  rauthy.cfg: |+
-    PASTE CONFIG HERE - WATCH THE INDENTATION' > config.yaml
-```
-
-Open the config with your favorite editor and paste the [reference config](../config/config.html) in place.  
-Make sure to watch the indentation.
-
-```admonish caution
-Do not include sensitive information like for instance the ENC_KEYS inside the normal Config.
-Use the secrets from the next step for this.  
-```
-
-```admonish note
-I recommend to just always set `HQL_NODE_ID_FROM=k8s` when deploying a StatefulSet. This will parse the Raft NodeID 
-automatically from the K8s Pod / Hostname and you don't have to worry about the `HQL_NODE_ID`. For instance, a Pod
-named `rauthy-0` will be translated to `HQL_NODE_ID=1` automatically.
-```
-
-### Create and apply secrets
-
-```
-touch secrets.yaml
-```
-
-Paste the following content into the `secrets.yaml` file:
-
-```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: rauthy-secrets
+  name: rauthy-config
   namespace: rauthy
 type: Opaque
 stringData:
-  HQL_S3_KEY:
-  HQL_S3_SECRET:
-
-  # Secrets for Raft internal authentication as well as for the Hiqlite API.
-  # These must be at least 16 characters long and you should provide
-  # different ones for both variables.
-  HQL_SECRET_RAFT:
-  HQL_SECRET_API:
-
-  # The password for the Hiqlite dashboard as Argon2ID hash.
-  # '123SuperMegaSafe' in this example
-  #
-  # You should only provide it, if you really need to access the DB
-  # directly for some reasons.
-  #HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ==
-
-  # You need to define at least one valid encryption key.
-  # These keys are used in various places, like for instance
-  # encrypting confidential client secrets in the database, or
-  # encryption cookies, and so on.
-  #
-  # The format must match:
-  # ENC_KEYS: |-
-  #   q6u26vXV/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
-  #   bVCyaggQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
-  ENC_KEYS: |-
-
-  # This identifies the key ID from the `ENC_KEYS` list, that
-  # should actively be used for new encryption's.
-  ENC_KEY_ACTIVE:
-
-  # Needed for sending E-Mails for password resets and so on
-  SMTP_PASSWORD:
-
-  # The Webhook for Slack Notifications.
-  # If left empty, no messages will be sent to Slack.
-  #EVENT_SLACK_WEBHOOK=
-
-  # Matrix variables for event notifications.
-  # `EVENT_MATRIX_USER_ID` and `EVENT_MATRIX_ROOM_ID` are mandatory.
-  # Depending on your Matrix setup, additionally one of
-  # `EVENT_MATRIX_ACCESS_TOKEN` or `EVENT_MATRIX_USER_PASSWORD` 
-  # is needed. If you log in to Matrix with User + Password, you 
-  # may use `EVENT_MATRIX_USER_PASSWORD`.
-  # If you log in via OIDC SSO (or just want to use a session token 
-  # you can revoke), you should provide `EVENT_MATRIX_ACCESS_TOKEN`.
-  # If both are given, the `EVENT_MATRIX_ACCESS_TOKEN` will be preferred.
-  #
-  # If left empty, no messages will be sent to Slack.
-  # Format: `@<user_id>:<server address>`
-  #EVENT_MATRIX_USER_ID=
-  # Format: `!<random string>:<server address>`
-  #EVENT_MATRIX_ROOM_ID=
-  #EVENT_MATRIX_ACCESS_TOKEN=
-  #EVENT_MATRIX_USER_PASSWORD=
-
-  #PG_USER=
-  #PG_PASSWORD=
+  config.toml: |
+    PASTE CONFIG HERE - WATCH THE INDENTATION'
 ```
 
-All variables specified here should be out-commented in the `rauthy-config` from above.  
-Make sure that things like `CACHE_AUTH_TOKEN` and `ENC_KEYS` are generated in a secure random way.
+Open the config with your favorite editor and paste the [Reference Config](../config/config.md) in place.  
+Make sure to watch the indentation.
 
-Generate a new encryption key with ID in the correct format.
+```admonish note
+I recommend to just always set `cluster.node_id_from = "k8s"` when deploying a StatefulSet. This will parse the Raft 
+NodeID automatically from the K8s Pod / Hostname and you don't have to worry about the `node_id`. For instance, a Pod
+named `rauthy-0` will be translated to `node_id = 1` automatically.
+```
+
+There are some values that you need to generate on your own. These are:
+
+- `cluster.secret_raft` + `cluster.secret_api`
+- `encryption.keys` + `encryption.key_active`
+
+The secrets for the `cluster` can be just some long random alphanumeric values. They are used for authentication for the
+Hiqlite Raft + API layer. The encryption keys must be generated. More detailed explanation is in
+the [Encryption](../config/encryption.md) section. The tl;dr is:
 
 ```
 echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 ```
 
-Paste the String quoted in the secrets for `ENC_KEYS`.
-The `ENC_KEY_ID` are the characters in the beginning until the first `/`, for instance when
+Copy the output and add it to keys. The `key_active` will be the first part of the output until the first `/`. For
+instance:
 
-```
-❯ echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
-d4d1a581/mNIqEpxz4UudPggRpF1QJtjVdZ6JEeVAHepDLZZYI2M=
-```
-
-The `ENC_KEY_ID` would be
-
-```
-d4d1a581
+```toml
+[encryption]
+keys = ["XLCcaQ/f2xmq/nxVFgJN0CN311miyvVlBxXOQISyw1nPEPOqiI="]
+key_active = "XLCcaQ"
 ```
 
-You can generate safe values for both `HQL_SECRET_RAFT` and `HQL_SECRET_API` in many ways. You can just provide a random
+You can generate safe values for both `secret_raft` and `secret_api` in many ways. You can just provide a random
 alphanumeric value, which for instance:
 
 ```
@@ -172,8 +92,7 @@ or you can use the above `openssl` command again, even though Hiqlite does not n
 openssl rand -base64 48
 ```
 
-If you plan on using S3 for backups, paste the proper values into `HQL_S3_KEY` and `HQL_S3_SECRET`, otherwise
-out-comment them.
+If you plan on using S3 for backups, paste the proper values into `cluster.s3_*` values.
 
 ```admonish note
 It seems that in some environments, the above `openssl` command does not output proper values, which will make Rauthy
@@ -201,7 +120,28 @@ spec:
   selector:
     app: rauthy
   ports:
-    # Ports 8100 and 8200 (by default) are used for the Hiqlite internal communication.
+    # chose whatever fits your needs here, you usually only need either http or https
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: https
+      port: 8443
+      targetPort: 8443
+---
+# The headless service is used for the Raft Cluster setup, so Nodes 
+# can connect to each other without any load balancer in between.
+apiVersion: v1
+kind: Service
+metadata:
+  name: rauthy-headless
+  namespace: rauthy
+spec:
+  type: ClusterIP
+  clusterIP: None
+  sessionAffinity: None
+  selector:
+    app: rauthy
+  ports:
     - name: hiqlite-raft
       protocol: TCP
       port: 8100
@@ -210,15 +150,18 @@ spec:
       protocol: TCP
       port: 8200
       targetPort: 8200
-    # Assuming that this example file will run behind a Kubernetes ingress and does
-    # use HTTP internally.
-    - name: http
-      port: 8080
-      targetPort: 8080
-    # Uncomment, if you change to direct HTTPS without a reverse proxy
-    #- name: https
-    #  port: 8443
-    #  targetPort: 8443
+---
+# The PDB is only necessary for a HA deployment. You can take it out for a single instance.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rauthy
+  namespace: rauthy
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: rauthy
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -228,8 +171,12 @@ metadata:
   labels:
     app: rauthy
 spec:
-  serviceName: rauthy
-  # Do not just scale up replicas without a proper HA Setup
+  serviceName: rauthy-headless
+  # If you start a fresh cluster without a bootstrapped Admin password, it is
+  # highly suggested to start a single replica for the first setup + login.
+  # It will work with 3 replicas directly, but if you are not quick enough and
+  # your logs buffer size is small, you might miss the auto-generated password
+  # in Pod `rauthy-0` because of many logs.
   replicas: 1
   selector:
     matchLabels:
@@ -253,11 +200,10 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.29.4
-          imagePullPolicy: IfNotPresent
+          image: ghcr.io/sebadob/rauthy:0.30.1
           securityContext:
-            # User ID 10001 is actually built into the container at the creation for
-            # better security
+            # User ID 10001 is actually built into the container 
+            # at the creation for better security
             runAsUser: 10001
             runAsGroup: 10001
             allowPrivilegeEscalation: false
@@ -265,94 +211,26 @@ spec:
             # Hiqlite internal ports
             - containerPort: 8100
             - containerPort: 8200
-            # You may need to adjust this, if you decide to start in https only mode
-            # or use another port
+            # You may need to adjust this, if you decide to start 
+            # in https only mode or use another port
             - containerPort: 8080
             - containerPort: 8443
-          env:
-            # You must set both Hiqlite secrets even for a single node deployment
-            - name: HQL_SECRET_RAFT
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: HQL_SECRET_RAFT
-            - name: HQL_SECRET_API
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: HQL_SECRET_API
-
-            # If you don't want to use S3 for backups, out-comment these 2.
-            - name: HQL_S3_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: HQL_S3_KEY
-            - name: HQL_S3_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: HQL_S3_SECRET
-
-            # Only out-comment if you use Postgres
-            #- name: DATABASE_URL
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: DATABASE_URL
-
-            # Encryption keys used for encryption in many places
-            - name: ENC_KEYS
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: ENC_KEYS
-            - name: ENC_KEY_ACTIVE
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: ENC_KEY_ACTIVE
-
-            - name: SMTP_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: SMTP_PASSWORD
-
-            #- name: EVENT_SLACK_WEBHOOK
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: EVENT_SLACK_WEBHOOK
-
-            #- name: EVENT_MATRIX_USER_ID
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: EVENT_MATRIX_USER_ID
-            #- name: EVENT_MATRIX_ROOM_ID
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: EVENT_MATRIX_ROOM_ID
-            #- name: EVENT_MATRIX_ACCESS_TOKEN
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: EVENT_MATRIX_ACCESS_TOKEN
-            #- name: EVENT_MATRIX_USER_PASSWORD
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: EVENT_MATRIX_USER_PASSWORD
           volumeMounts:
-            - mountPath: /app/data
-              name: rauthy-data
+            - name: rauthy-data
+              mountPath: /app/data
               readOnly: false
-            - mountPath: /app/rauthy.cfg
-              subPath: rauthy.cfg
-              name: rauthy-config
+            - name: rauthy-config
+              mountPath: /app/config.toml
               readOnly: true
+              subPath: config.toml
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              # adjust if you change the Raft API port
+              port: 8200
+              path: /ping
+            initialDelaySeconds: 5
+            periodSeconds: 1
           livenessProbe:
             httpGet:
               # You may need to adjust this, if you decide to start in https only
@@ -369,7 +247,10 @@ spec:
               # Tune the memory requests value carefully. Make sure, that the
               # pods request at least:
               # `ARGON2_M_COST` / 1024 * `MAX_HASH_THREADS` Mi + idle memory
-              memory: 164Mi
+              # The actual usage also heavily depends on the Memory Allocator
+              # tuning. You can find more information in the Tuning section
+              # in this book.
+              memory: 64Mi
               # The CPU needs to be adjusted during runtime. This heavily
               # depends on your use case.
               cpu: 100m
@@ -388,8 +269,8 @@ spec:
             #cpu: 1000m
       volumes:
         - name: rauthy-config
-          configMap:
-            name: rauthy-config
+          secret:
+            secretName: rauthy-config
   volumeClaimTemplates:
     - metadata:
         name: rauthy-data
@@ -518,25 +399,30 @@ spec:
 
 #### Hiqlite Internal TLS
 
-You can of course also provide TLS certificates for the Hiqlite internal communication. Two Independent networks are
+You can of course also provide TLS certificates for the Hiqlite internal communication. Two independent networks are
 created: one for the Raft-Internal network traffic like heartbeats and data replication, and a second one for the
 "external" Hiqlite API. This is used by other Hiqlite cluster members for management purposes and to execute things
 like consistent queries on the leader node.
 
 You can provide TLS certificates for both of them independently via the following config variables:
 
-```
-## Hiqlite TLS
-
+```toml
+[cluster]
 # If given, these keys / certificates will be used to establish
 # TLS connections between nodes.
-HQL_TLS_RAFT_KEY=tls/key.pem
-HQL_TLS_RAFT_CERT=tls/cert-chain.pem
-HQL_TLS_RAFT_DANGER_TLS_NO_VERIFY=true
+#
+# values are optional, overwritten by: HQL_TLS_{RAFT|API}_{KEY|CERT}
+# overwritten by: HQL_TLS_RAFT_KEY
+tls_raft_key = "tls/tls.key"
+# overwritten by: HQL_TLS_RAFT_CERT
+tls_raft_cert = "tls/tls.crt"
+tls_raft_danger_tls_no_verify = true
 
-HQL_TLS_API_KEY=tls/key.pem
-HQL_TLS_API_CERT=tls/cert-chain.pem
-HQL_TLS_API_DANGER_TLS_NO_VERIFY=true
+# overwritten by: HQL_TLS_API_KEY
+tls_api_key = "tls/tls.key"
+# overwritten by: HQL_TLS_RAFT_KEY
+tls_api_cert = "tls/tls.crt"
+tls_api_danger_tls_no_verify = true
 ```
 
 #### Additional steps

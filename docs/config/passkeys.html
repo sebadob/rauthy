@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -255,7 +266,8 @@ To make sure it works, you need to check your the config.</p>
 <h3 id="rp_id"><a class="header" href="#rp_id"><code>RP_ID</code></a></h3>
 <p>This is the <em>Relaying Party (RP) ID</em>, which should be your effective domain name.<br />
 Let's say our application is available at <code>auth.example.com</code>, then this should be:</p>
-<pre><code>RP_ID=auth.example.com
+<pre><code class="language-toml">[webauthn]
+rp_id = "auth.example.com"
 </code></pre>
 <div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">
 <div class="admonition-title">
@@ -270,8 +282,8 @@ Be very careful, if you want / need to do this in production.</p>
 </div>
 </div>
 <h3 id="rp_origin"><a class="header" href="#rp_origin"><code>RP_ORIGIN</code></a></h3>
-<p>The second important variable is the <code>RP_ORIGIN</code>. This needs to be set to the scheme + URL containing the effective
-domain name + port.</p>
+<p>The second important variable is the <code>webauthn.rp_origin</code>. This needs to be set to the scheme + URL containing the
+effective domain name + port.</p>
 <div id="admonition-caution-2" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-2-title">
 <div class="admonition-title">
 <div id="admonition-caution-2-title">
@@ -280,25 +292,26 @@ domain name + port.</p>
 <a class="admonition-anchor-link" href="#admonition-caution-2"></a>
 </div>
 <div>
-<p>The <code>RP_ORIGIN</code> must always include the port number, even if it is just the default 443 for HTTPS.</p>
+<p>The <code>rp_origin</code> must always include the port number, even if it is just the default 443 for HTTPS.</p>
 </div>
 </div>
 <p>In this example, assuming Rauthy will be available at port 443, correct would be:</p>
-<pre><code>RP_ORIGIN=https://auth.example.com:443
+<pre><code class="language-toml">[webauthn]
+rp_origin = https://auth.example.com:443
 </code></pre>
 <h3 id="rp_name"><a class="header" href="#rp_name"><code>RP_NAME</code></a></h3>
 <p>This variable can be set to anything "pretty".<br />
-This may be shown to the user in a way like "<code>RP_BNAE</code> requests your security key ...". If this is shown depends on the
+This may be shown to the user in a way like "<code>rp_name</code> requests your security key ...". If this is shown depends on the
 OS and the browser the client uses. Firefox, for instance, does not show this at the time of writing.</p>
-<p>You can change the <code>RP_NAME</code> later on without affecting the validation of already registered keys.</p>
+<p>You can change the <code>rp_name</code> later on without affecting the validation of already registered keys.</p>
 <h3 id="webauthn_renew_exp"><a class="header" href="#webauthn_renew_exp"><code>WEBAUTHN_RENEW_EXP</code></a></h3>
 <p>For all non Passkey only accounts, Rauthy will always prompt a user at least once for the password on a new machine,
 even with active
 passkeys. The keys are used either as a strong second factor, when they do not work with a PIN, or bump up the whole
 login to real MFA, if the OS / Browser / Key does support this.</p>
 <p>When a user has logged in successfully on a new device and active 2FA / MFA, Rauthy will set an encrypted cookie as a
-"remember me". The lifetime of this cookie can be configured with <code>WEBAUTHN_RENEW_EXP</code>. The <strong>default</strong> of this value
-is <strong>2160 hours</strong>.</p>
+"remember me". The lifetime of this cookie can be configured with <code>renew_exp</code>. The <strong>default</strong> of this value is <strong>2160
+hours</strong>.</p>
 <p>As long as this cookie is present and can be decrypted by the backend, the user can log in from this very
 device with the registered Passkey key only, which makes a very good user experience for the whole login flow.
 The E-Mail will already be filled automatically and only a single click on the login button is necessary.</p>

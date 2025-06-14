@@ -11,7 +11,6 @@ use rauthy_models::email::EMail;
 use rauthy_models::entity::atproto;
 use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::events::health_watch::watch_health;
-use rauthy_models::events::init_event_vars;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::rauthy_config::RauthyConfig;
@@ -20,11 +19,11 @@ use std::error::Error;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, info, warn, error};
+use tracing::{debug, error, info, warn};
 
-// #[cfg(all(feature = "jemalloc", not(target_env = "msvc")))]
-// #[global_allocator]
-// static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+#[cfg(all(feature = "jemalloc", not(target_env = "msvc")))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 mod dummy_data;
 mod init_static_vars;
@@ -114,7 +113,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     DB::migrate().await.expect("Database migration error");
 
     debug!("Starting Events handler");
-    init_event_vars().unwrap();
     EventNotifier::init_notifiers(tx_email).await.unwrap();
     tokio::spawn(EventListener::listen(
         tx_events_router,
@@ -128,9 +126,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     debug!("Starting health watch");
     tokio::spawn(watch_health());
 
-    version_migration::manual_version_migrations()
-        .await
-        .expect("Error during Rauthy version migration");
+    // Loop, because you could get into a race condition when recovery a HA Leader after lost volume
+    while let Err(err) = version_migration::manual_version_migrations().await {
+        error!("Error during version migration: {:?}", err);
+        time::sleep(Duration::from_secs(1)).await;
+    }
 
     UserPicture::test_config().await.unwrap();
 
@@ -156,6 +156,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         server::server_without_metrics().await?;
     }
 
+    if RauthyConfig::get().is_ha_cluster {
+        // this short sleep smoothes out K8s rolling releases and makes sure there is enough
+        // time for in-memory cache replication before the next node is shutting down
+        time::sleep(Duration::from_secs(5)).await;
+    }
     DB::hql().shutdown().await.unwrap();
 
     Ok(())

@@ -85,23 +85,20 @@ impl Client {
         let redirect_uris = vec![RauthyConfig::get().provider_callback_uri.clone()];
 
         let client_id = if config.vars.dev.dev_mode {
-            let query = serde_html_form::to_string(Parameters {
-                redirect_uri: redirect_uris.clone(),
-                scope: scopes
-                    .iter()
-                    .map(AsRef::as_ref)
-                    .collect::<Vec<_>>()
-                    .join(" "),
-            })
-            .unwrap();
+            let mut url = reqwest::Url::parse("http://localhost").unwrap();
 
-            let mut client_id = String::from("http://localhost");
-
-            if !query.is_empty() {
-                client_id.push_str(&format!("?{query}"));
+            for redirect_uri in &redirect_uris {
+                url.query_pairs_mut()
+                    .append_pair("redirect_uri", &redirect_uri);
             }
 
-            client_id
+            if !scopes.is_empty() {
+                let scope: Vec<_> = scopes.iter().map(Scope::as_ref).collect();
+
+                url.query_pairs_mut().append_pair("scope", &scope.join(" "));
+            }
+
+            url.to_string()
         } else {
             format!(
                 "{}/auth/v1/atproto/client_metadata",
@@ -166,18 +163,14 @@ impl Client {
             mfa_claim_value: None,
         };
 
-        tracing::info!(atproto = %config.vars.atproto.enable, "test");
-
         match AuthProvider::find_by_iss("atproto".to_owned()).await {
             Ok(provider) if !config.vars.atproto.enable => {
                 AuthProvider::delete(&provider.id).await?;
             }
             Err(_) if config.vars.atproto.enable => {
-                let _ = AuthProvider::create(payload).await?;
+                AuthProvider::create(payload).await?;
             }
-            res => {
-                tracing::info!(atproto = ?res, "test");
-            }
+            _ => {}
         };
 
         Ok(())
@@ -256,7 +249,7 @@ impl Store<String, InternalStateData> for DB {
     }
 
     async fn del(&self, key: &String) -> Result<(), Self::Error> {
-        Self::hql().delete(Cache::Atproto, key.to_string()).await
+        Self::hql().delete(Cache::Atproto, key.to_owned()).await
     }
 
     async fn clear(&self) -> Result<(), Self::Error> {
@@ -270,10 +263,7 @@ impl Store<Did, store::session::Session> for DB {
     type Error = hiqlite::Error;
 
     async fn get(&self, key: &Did) -> Result<Option<store::session::Session>, Self::Error> {
-        let Some(value) = Self::hql()
-            .get_bytes(Cache::Atproto, &key.to_string())
-            .await?
-        else {
+        let Some(value) = Self::hql().get_bytes(Cache::Atproto, key.as_str()).await? else {
             return Ok(None);
         };
 

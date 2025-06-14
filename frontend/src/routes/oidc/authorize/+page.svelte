@@ -32,7 +32,6 @@
     import {fetchPost, type IResponse} from "$api/fetch";
     import type {
         CodeChallengeMethod,
-        LoginMethod,
         LoginRefreshRequest,
         LoginRequest,
         RequestResetRequest,
@@ -155,10 +154,6 @@
     }
 
     function handleShowReset() {
-        if (isAtproto) {
-          return;
-        }
-
         err = '';
         showReset = true;
         password = '';
@@ -193,6 +188,10 @@
     }
 
     async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
+        if (isAtproto) {
+          return providerLogin(atprotoId);
+        }
+
         err = '';
 
         if (!clientId) {
@@ -398,12 +397,13 @@
     }
 
     async function requestReset() {
-        let payload: RequestResetRequest = {email};
+        isLoading = true;
+        let pow = await fetchSolvePow() || '';
+        
+        let payload: RequestResetRequest = {email, pow};
         if (clientUri) {
             payload.redirect_uri = encodeURI(clientUri);
         }
-
-        isLoading = true;
 
         let res = await fetchPost('/auth/v1/users/request_reset', payload);
         if (res.error) {
@@ -532,25 +532,16 @@
                                     </Button>
                                 </div>
                             {:else}
-                                {#if isAtproto}
-                                  <div class="btn flex-col">
-                                    <ButtonAuthProvider
-                                      ariaLabel={`ATProto login`}
-                                      provider={{id: atprotoId, name: t.authorize.login, updated: 0}}
-                                      onclick={providerLogin}
-                                      {isLoading}
-                                    />
-                                    <Button type="button" onclick={toggleAtproto}>
-                                        Back
-                                      </Button>
-                                  </div>
-                                {:else}
-                                  <div class="btn flex-col">
+                                <div class="btn flex-col">
                                     <Button type="submit" {isLoading}>
                                         {t.authorize.login}
                                     </Button>
-                                  </div>
-                                {/if}
+                                    {#if isAtproto}
+                                        <Button type="button" onclick={toggleAtproto}>
+                                          Back
+                                        </Button>
+                                    {/if}
+                                </div>
                             {/if}
                         {/if}
                     </Form>
@@ -588,7 +579,7 @@
                     </div>
                 {/if}
 
-                {#if !clientMfaForce && providers.length > 0 || atprotoId}
+                {#if !clientMfaForce && providers.length > 0 && !isAtproto}
                     <div class="providers flex-col">
                         <div class="providersSeparator">
                             <div class="separator"></div>
@@ -598,12 +589,20 @@
                                 </div>
                             </div>
                         </div>
-                        <ButtonAuthProvider
-                          ariaLabel={`Login: ATProto`}
-                          provider={{id: "atproto", name: "ATProto", updated: 0}}
-                          onclick={toggleAtproto}
-                          isLoading={false}
-                        />
+                        {#each providers as provider (provider.id)}
+                          <ButtonAuthProvider
+                            ariaLabel={`Login: ${provider.name}`}
+                            {provider}
+                            {...provider.id !== atprotoId ? {
+                                onclick: providerLogin,
+                                isLoading,
+                              } : {
+                                onclick: toggleAtproto,
+                                isLoading: false,
+                              }
+                            }
+                          />
+                        {/each}
                     </div>
                 {/if}
             </div>

@@ -1,6 +1,23 @@
 # Changelog
 
-## UNRELEASED
+## v0.30.1
+
+### Bugfix
+
+- Fixed the encoding for `EdDSA` public keys. They have changed to b64 encoded DER format during the big JWt rework,
+  when it should have been just raw bytes.
+  [#1018](https://github.com/sebadob/rauthy/pull/1018)
+- Added a short 3-second pre-shutdown delay to smooth out rolling releases inside K8s and also have a bit more headroom
+  for bigger in-memory cache's replication
+  [#1019](https://github.com/sebadob/rauthy/pull/1019)
+- Small CSS fix to match the input width for group prefix login restriction for clients
+  [#1020](https://github.com/sebadob/rauthy/pull/1020)
+- In HA deployments, when the Leader was killed with an appended but not yet fully commited WAL log, there was a bug
+  that made it possible that the log truncate would fail after restart and that the start-, instead of the end-offset
+  would be adjusted. This has been fixed in `hiqlite-wal` in combination with a bump in patch version for `openraft`.
+  If you run a **HA cluster, you should upgrade immediately**!.
+
+## v0.30.0
 
 ### Breaking
 
@@ -365,6 +382,14 @@ swagger_ui_public = false
 
 [#981](https://github.com/sebadob/rauthy/pull/981)
 
+#### Type change for `zip` / `postcal_code`
+
+The type for `zip` / `postcal_code` has been changed from an Integer to a String in all locations. This means not only
+the Admin + Account Dashboards, but of course also inside the `address` claim for `id_token`s. This change brings
+compatibility for countries that use non-numeric postal codes.
+
+[#1002](https://github.com/sebadob/rauthy/pull/1002)
+
 ### Changes
 
 #### Hiqlite Optimizations
@@ -400,14 +425,28 @@ The other new value is `HQL_CACHE_STORAGE_DISK`, which is `true` by default. Thi
 in-memory cache on disk and therefore free up that memory. If you would rather have everything in-memory though, set
 this value to `false`.
 
-```
+```toml
+[cluster]
+# Hiqlite WAL files (when not using the `rocksdb` feature) will
+# always have a fixed size, even when they are still "empty", to
+# reduce disk operations while writing. You can set the WAL size
+# in bytes. The default value is 2 MB, while the minimum size is
+# 8 kB.
+#
+# default: 2097152
+# overwritten by: HQL_WAL_SIZE
+#wal_size = 2097152
+
 # Set to `false` to store Cache WAL files + Snapshots in-memory only.
-# Depending on your environment and setup, this can lead to cluster
-# issues if a node crashes and cannot do a graceful shutdown. It is not
-# recommended to keep the Raft state in-memory only, apart from for
-# testing and in special cases.
+# If you run a Cluster, a Node can re-sync cache data after a restart.
+# However, if you restart too quickly or shut down the whole cluster,
+# all your cached data will be gone.
+# In-memory only hugegly increases the throughput though, so it
+# depends on your needs, what you should prefer.
+#
 # default: true
-#HQL_CACHE_STORAGE_DISK=true
+# overwritten by: HQL_CACHE_STORAGE_DISK
+cache_storage_disk = true
 
 # Can be set to true to start the WAL handler even if the
 # `lock.hql` file exists. This may be necessary after a
@@ -417,7 +456,7 @@ this value to `false`.
 # IMPORTANT: Even though the Database can "heal" itself by
 # simply rebuilding from the existing Raft log files without
 # even needing to think about it, you may want to only
-# set `HQL_IGNORE_WAL_LOCK` when necessary to have more
+# set `HQL_WAL_IGNORE_LOCK` when necessary to have more
 # control. Depending on the type of crash (whole OS, maybe
 # immediate power loss, force killed, ...), it may be the
 # case that the WAL files + metadata could not be synced
@@ -432,7 +471,8 @@ this value to `false`.
 # process is still running and accessing the WAL files!
 #
 # default: false
-#HQL_IGNORE_WAL_LOCK=false
+# overwritten by: HQL_WAL_IGNORE_LOCK
+wal_ignore_lock = false
 ```
 
 And if all of this was not enough yet, I was able to improve the overall throughput of `hiqlite` by ~30%. For more
@@ -448,7 +488,8 @@ The default value for `HTTP_WORKERS` has been changed. Even though you probably 
 manually in production, especially when running your instance on a huge underlying host, the default has been tuned to
 fit smaller hosts a bit better. Here is the new description in the config:
 
-```
+```toml
+[server]
 # Limits the amount of HTTP worker threads. This value
 # heavily impacts memory usage, even in idle. The default
 # values are:
@@ -460,9 +501,11 @@ fit smaller hosts a bit better. Here is the new description in the config:
 # you almost always want to manually set an appropriate
 # value. Rauthy can only see all available cores and not any
 # possibly set container limits. This means if it runs inside
-# a container on something like a a 96 core host, Rauthy will 
+# a container on something like a 96 core host, Rauthy will
 # by default spawn very many threads.
-#HTTP_WORKERS=1
+#
+# overwritten by: HTTP_WORKERS
+http_workers = 1
 ```
 
 [#975](https://github.com/sebadob/rauthy/pull/975)
@@ -494,6 +537,12 @@ these cases, you can now do it on Rauthys side, or maybe just in addition to pro
 get the error message during Rauthys login already and not after the token was exchanged with the client.
 
 [#952](https://github.com/sebadob/rauthy/pull/952)
+
+#### Less strict group names
+
+Group names can now contain uppercase letters and spaces.
+
+[#1012](https://github.com/sebadob/rauthy/pull/1012)
 
 #### User-Editable custom attributes
 
@@ -536,19 +585,21 @@ characters) is now limited to 4096. This is more than double the amount of an RS
 only the default values, so you should never have any problems reaching the limit. Theoretically, it is of course
 possible, so you get a new config variable to tune this:
 
-```
-# Sets the limit in characters for the maximum JWT token length that 
-# will be accepted when validating it. The default of 4096 is high 
-# enough that you should never worry about this value. A typical 
-# `id_token` with quite a few additional custom attributes and scopes, 
-# signed with RS512, will usually be below 2000 characters. 
-# 
-# Only if you create very big tokens and you get errors on the 
+```toml
+[access]
+# Sets the limit in characters for the maximum JWT token length that
+# will be accepted when validating it. The default of 4096 is high
+# enough that you should never worry about this value. A typical
+# `id_token` with quite a few additional custom attributes and scopes,
+# signed with RS512, will usually be below 2000 characters.
+#
+# Only if you create very big tokens and you get errors on the
 # `/userinfo` for instance, you might want to increase this value.
 # Otherwise, don't worry about it.
 #
-# default: 4096 
-TOKEN_LEN_LIMIT=4096
+# default: 4096
+# overwritten by: TOKEN_LEN_LIMIT
+token_len_limit = 4096
 ```
 
 [#941](https://github.com/sebadob/rauthy/pull/941)
@@ -596,6 +647,13 @@ The custom theme you apply for the `rauthy` client will now be used as a fallbac
 have their own custom values.
 
 [#982](https://github.com/sebadob/rauthy/pull/982)
+
+#### Dedicated Password Reset Request Page
+
+A link to a dedicated password reset request page has been added to password reset E-Mails. This helps users request a
+new magic link quickly when they have an expired one for a password reset in their inbox.
+
+[#1011](https://github.com/sebadob/rauthy/pull/1011)
 
 #### Production Init Hardening
 

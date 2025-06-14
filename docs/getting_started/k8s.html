@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -160,17 +171,16 @@
 <p>At the time of writing, there is no Helm Chart or Kustomize files available yet. The whole setup is pretty simple
 on purpose though, so it should not be a big deal to get it running inside Kubernetes.</p>
 <h2 id="single-instance"><a class="header" href="#single-instance">Single Instance</a></h2>
-<p>Since rauthy uses pretty aggressive caching for different reasons, you cannot just have a single deployment and
-scale up the replicas without enabling <code>HA_MODE</code>. How to deploy a HA version is described below.</p>
+<p>Since Rauthy uses pretty aggressive caching for different reasons, you cannot just have a single deployment and
+scale up the replicas without a proper HA setup. How to deploy a HA version is described below.</p>
 <p>The steps to deploy on Kubernetes are pretty simple.</p>
-<ul>
+<ol>
 <li>Create namespace</li>
 <li>Create and apply the config</li>
-<li>Create and apply secrets</li>
 <li>Create and apply the stateful set</li>
-</ul>
+</ol>
 <h3 id="create-namespace"><a class="header" href="#create-namespace">Create Namespace</a></h3>
-<p>For the purpose of this documentation, we assume that rauthy will be deployed in the <code>rauthy</code> namespace.<br />
+<p>For the purpose of this documentation, we assume that Rauthy will be deployed in the <code>rauthy</code> namespace.<br />
 If this is not the case for you, change the following commands accordingly.</p>
 <pre><code>kubectl create ns rauthy
 </code></pre>
@@ -178,31 +188,22 @@ If this is not the case for you, change the following commands accordingly.</p>
 <p>This documentation will manage the Kubernetes files in a folder called <code>rauthy</code>.</p>
 <pre><code>mkdir rauthy &amp;&amp; cd rauthy
 </code></pre>
-<p>Create the config file, paste the <a href="../config/config.html">reference config</a> and adjust it to your needs.<br />
-There is no "nice 1-liner" available yet.</p>
-<pre><code>echo 'apiVersion: v1
-kind: ConfigMap
+<p>Create the config file, paste the <a href="../config/config.html">Reference Config</a> and adjust it to your needs. We are putting
+the complete config in a K8s secret. Rauthy's config contains quite a few different secret values and it's just a lot
+simpler to maintain everything in a single secret, than splitting it into a <code>ConfigMap</code> and overwrite each secret
+manually.</p>
+<pre><code>apiVersion: v1
+kind: Secret
 metadata:
   name: rauthy-config
   namespace: rauthy
-data:
-  rauthy.cfg: |+
-    PASTE CONFIG HERE - WATCH THE INDENTATION' &gt; config.yaml
+type: Opaque
+stringData:
+  config.toml: |
+    PASTE CONFIG HERE - WATCH THE INDENTATION'
 </code></pre>
-<p>Open the config with your favorite editor and paste the <a href="../config/config.html">reference config</a> in place.<br />
+<p>Open the config with your favorite editor and paste the <a href="../config/config.html">Reference Config</a> in place.<br />
 Make sure to watch the indentation.</p>
-<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
-<div class="admonition-title">
-<div id="admonition-caution-title">
-<p>Caution</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-caution"></a>
-</div>
-<div>
-<p>Do not include sensitive information like for instance the ENC_KEYS inside the normal Config.
-Use the secrets from the next step for this.</p>
-</div>
-</div>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -211,103 +212,35 @@ Use the secrets from the next step for this.</p>
 <a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
-<p>I recommend to just always set <code>HQL_NODE_ID_FROM=k8s</code> when deploying a StatefulSet. This will parse the Raft NodeID
-automatically from the K8s Pod / Hostname and you don't have to worry about the <code>HQL_NODE_ID</code>. For instance, a Pod
-named <code>rauthy-0</code> will be translated to <code>HQL_NODE_ID=1</code> automatically.</p>
+<p>I recommend to just always set <code>cluster.node_id_from = "k8s"</code> when deploying a StatefulSet. This will parse the Raft
+NodeID automatically from the K8s Pod / Hostname and you don't have to worry about the <code>node_id</code>. For instance, a Pod
+named <code>rauthy-0</code> will be translated to <code>node_id = 1</code> automatically.</p>
 </div>
 </div>
-<h3 id="create-and-apply-secrets"><a class="header" href="#create-and-apply-secrets">Create and apply secrets</a></h3>
-<pre><code>touch secrets.yaml
-</code></pre>
-<p>Paste the following content into the <code>secrets.yaml</code> file:</p>
-<pre><code class="language-yaml">apiVersion: v1
-kind: Secret
-metadata:
-  name: rauthy-secrets
-  namespace: rauthy
-type: Opaque
-stringData:
-  HQL_S3_KEY:
-  HQL_S3_SECRET:
-
-  # Secrets for Raft internal authentication as well as for the Hiqlite API.
-  # These must be at least 16 characters long and you should provide
-  # different ones for both variables.
-  HQL_SECRET_RAFT:
-  HQL_SECRET_API:
-
-  # The password for the Hiqlite dashboard as Argon2ID hash.
-  # '123SuperMegaSafe' in this example
-  #
-  # You should only provide it, if you really need to access the DB
-  # directly for some reasons.
-  #HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ==
-
-  # You need to define at least one valid encryption key.
-  # These keys are used in various places, like for instance
-  # encrypting confidential client secrets in the database, or
-  # encryption cookies, and so on.
-  #
-  # The format must match:
-  # ENC_KEYS: |-
-  #   q6u26vXV/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
-  #   bVCyaggQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
-  ENC_KEYS: |-
-
-  # This identifies the key ID from the `ENC_KEYS` list, that
-  # should actively be used for new encryption's.
-  ENC_KEY_ACTIVE:
-
-  # Needed for sending E-Mails for password resets and so on
-  SMTP_PASSWORD:
-
-  # The Webhook for Slack Notifications.
-  # If left empty, no messages will be sent to Slack.
-  #EVENT_SLACK_WEBHOOK=
-
-  # Matrix variables for event notifications.
-  # `EVENT_MATRIX_USER_ID` and `EVENT_MATRIX_ROOM_ID` are mandatory.
-  # Depending on your Matrix setup, additionally one of
-  # `EVENT_MATRIX_ACCESS_TOKEN` or `EVENT_MATRIX_USER_PASSWORD` 
-  # is needed. If you log in to Matrix with User + Password, you 
-  # may use `EVENT_MATRIX_USER_PASSWORD`.
-  # If you log in via OIDC SSO (or just want to use a session token 
-  # you can revoke), you should provide `EVENT_MATRIX_ACCESS_TOKEN`.
-  # If both are given, the `EVENT_MATRIX_ACCESS_TOKEN` will be preferred.
-  #
-  # If left empty, no messages will be sent to Slack.
-  # Format: `@&lt;user_id&gt;:&lt;server address&gt;`
-  #EVENT_MATRIX_USER_ID=
-  # Format: `!&lt;random string&gt;:&lt;server address&gt;`
-  #EVENT_MATRIX_ROOM_ID=
-  #EVENT_MATRIX_ACCESS_TOKEN=
-  #EVENT_MATRIX_USER_PASSWORD=
-
-  #PG_USER=
-  #PG_PASSWORD=
-</code></pre>
-<p>All variables specified here should be out-commented in the <code>rauthy-config</code> from above.<br />
-Make sure that things like <code>CACHE_AUTH_TOKEN</code> and <code>ENC_KEYS</code> are generated in a secure random way.</p>
-<p>Generate a new encryption key with ID in the correct format.</p>
+<p>There are some values that you need to generate on your own. These are:</p>
+<ul>
+<li><code>cluster.secret_raft</code> + <code>cluster.secret_api</code></li>
+<li><code>encryption.keys</code> + <code>encryption.key_active</code></li>
+</ul>
+<p>The secrets for the <code>cluster</code> can be just some long random alphanumeric values. They are used for authentication for the
+Hiqlite Raft + API layer. The encryption keys must be generated. More detailed explanation is in
+the <a href="../config/encryption.html">Encryption</a> section. The tl;dr is:</p>
 <pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 </code></pre>
-<p>Paste the String quoted in the secrets for <code>ENC_KEYS</code>.
-The <code>ENC_KEY_ID</code> are the characters in the beginning until the first <code>/</code>, for instance when</p>
-<pre><code>❯ echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
-d4d1a581/mNIqEpxz4UudPggRpF1QJtjVdZ6JEeVAHepDLZZYI2M=
+<p>Copy the output and add it to keys. The <code>key_active</code> will be the first part of the output until the first <code>/</code>. For
+instance:</p>
+<pre><code class="language-toml">[encryption]
+keys = ["XLCcaQ/f2xmq/nxVFgJN0CN311miyvVlBxXOQISyw1nPEPOqiI="]
+key_active = "XLCcaQ"
 </code></pre>
-<p>The <code>ENC_KEY_ID</code> would be</p>
-<pre><code>d4d1a581
-</code></pre>
-<p>You can generate safe values for both <code>HQL_SECRET_RAFT</code> and <code>HQL_SECRET_API</code> in many ways. You can just provide a random
+<p>You can generate safe values for both <code>secret_raft</code> and <code>secret_api</code> in many ways. You can just provide a random
 alphanumeric value, which for instance:</p>
 <pre><code>cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
 </code></pre>
 <p>or you can use the above <code>openssl</code> command again, even though Hiqlite does not need or utilize base64:</p>
 <pre><code>openssl rand -base64 48
 </code></pre>
-<p>If you plan on using S3 for backups, paste the proper values into <code>HQL_S3_KEY</code> and <code>HQL_S3_SECRET</code>, otherwise
-out-comment them.</p>
+<p>If you plan on using S3 for backups, paste the proper values into <code>cluster.s3_*</code> values.</p>
 <div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
 <div class="admonition-title">
 <div id="admonition-note-1-title">
@@ -335,7 +268,28 @@ spec:
   selector:
     app: rauthy
   ports:
-    # Ports 8100 and 8200 (by default) are used for the Hiqlite internal communication.
+    # chose whatever fits your needs here, you usually only need either http or https
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: https
+      port: 8443
+      targetPort: 8443
+---
+# The headless service is used for the Raft Cluster setup, so Nodes 
+# can connect to each other without any load balancer in between.
+apiVersion: v1
+kind: Service
+metadata:
+  name: rauthy-headless
+  namespace: rauthy
+spec:
+  type: ClusterIP
+  clusterIP: None
+  sessionAffinity: None
+  selector:
+    app: rauthy
+  ports:
     - name: hiqlite-raft
       protocol: TCP
       port: 8100
@@ -344,15 +298,18 @@ spec:
       protocol: TCP
       port: 8200
       targetPort: 8200
-    # Assuming that this example file will run behind a Kubernetes ingress and does
-    # use HTTP internally.
-    - name: http
-      port: 8080
-      targetPort: 8080
-    # Uncomment, if you change to direct HTTPS without a reverse proxy
-    #- name: https
-    #  port: 8443
-    #  targetPort: 8443
+---
+# The PDB is only necessary for a HA deployment. You can take it out for a single instance.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rauthy
+  namespace: rauthy
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: rauthy
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -362,8 +319,12 @@ metadata:
   labels:
     app: rauthy
 spec:
-  serviceName: rauthy
-  # Do not just scale up replicas without a proper HA Setup
+  serviceName: rauthy-headless
+  # If you start a fresh cluster without a bootstrapped Admin password, it is
+  # highly suggested to start a single replica for the first setup + login.
+  # It will work with 3 replicas directly, but if you are not quick enough and
+  # your logs buffer size is small, you might miss the auto-generated password
+  # in Pod `rauthy-0` because of many logs.
   replicas: 1
   selector:
     matchLabels:
@@ -387,11 +348,10 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.29.4
-          imagePullPolicy: IfNotPresent
+          image: ghcr.io/sebadob/rauthy:0.30.1
           securityContext:
-            # User ID 10001 is actually built into the container at the creation for
-            # better security
+            # User ID 10001 is actually built into the container 
+            # at the creation for better security
             runAsUser: 10001
             runAsGroup: 10001
             allowPrivilegeEscalation: false
@@ -399,94 +359,26 @@ spec:
             # Hiqlite internal ports
             - containerPort: 8100
             - containerPort: 8200
-            # You may need to adjust this, if you decide to start in https only mode
-            # or use another port
+            # You may need to adjust this, if you decide to start 
+            # in https only mode or use another port
             - containerPort: 8080
             - containerPort: 8443
-          env:
-            # You must set both Hiqlite secrets even for a single node deployment
-            - name: HQL_SECRET_RAFT
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: HQL_SECRET_RAFT
-            - name: HQL_SECRET_API
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: HQL_SECRET_API
-
-            # If you don't want to use S3 for backups, out-comment these 2.
-            - name: HQL_S3_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: HQL_S3_KEY
-            - name: HQL_S3_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: HQL_S3_SECRET
-
-            # Only out-comment if you use Postgres
-            #- name: DATABASE_URL
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: DATABASE_URL
-
-            # Encryption keys used for encryption in many places
-            - name: ENC_KEYS
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: ENC_KEYS
-            - name: ENC_KEY_ACTIVE
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: ENC_KEY_ACTIVE
-
-            - name: SMTP_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: SMTP_PASSWORD
-
-            #- name: EVENT_SLACK_WEBHOOK
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: EVENT_SLACK_WEBHOOK
-
-            #- name: EVENT_MATRIX_USER_ID
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: EVENT_MATRIX_USER_ID
-            #- name: EVENT_MATRIX_ROOM_ID
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: EVENT_MATRIX_ROOM_ID
-            #- name: EVENT_MATRIX_ACCESS_TOKEN
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: EVENT_MATRIX_ACCESS_TOKEN
-            #- name: EVENT_MATRIX_USER_PASSWORD
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: EVENT_MATRIX_USER_PASSWORD
           volumeMounts:
-            - mountPath: /app/data
-              name: rauthy-data
+            - name: rauthy-data
+              mountPath: /app/data
               readOnly: false
-            - mountPath: /app/rauthy.cfg
-              subPath: rauthy.cfg
-              name: rauthy-config
+            - name: rauthy-config
+              mountPath: /app/config.toml
               readOnly: true
+              subPath: config.toml
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              # adjust if you change the Raft API port
+              port: 8200
+              path: /ping
+            initialDelaySeconds: 5
+            periodSeconds: 1
           livenessProbe:
             httpGet:
               # You may need to adjust this, if you decide to start in https only
@@ -503,7 +395,10 @@ spec:
               # Tune the memory requests value carefully. Make sure, that the
               # pods request at least:
               # `ARGON2_M_COST` / 1024 * `MAX_HASH_THREADS` Mi + idle memory
-              memory: 164Mi
+              # The actual usage also heavily depends on the Memory Allocator
+              # tuning. You can find more information in the Tuning section
+              # in this book.
+              memory: 64Mi
               # The CPU needs to be adjusted during runtime. This heavily
               # depends on your use case.
               cpu: 100m
@@ -522,8 +417,8 @@ spec:
             #cpu: 1000m
       volumes:
         - name: rauthy-config
-          configMap:
-            name: rauthy-config
+          secret:
+            secretName: rauthy-config
   volumeClaimTemplates:
     - metadata:
         name: rauthy-data
@@ -622,22 +517,27 @@ spec:
           port: 8080
 </code></pre>
 <h4 id="hiqlite-internal-tls"><a class="header" href="#hiqlite-internal-tls">Hiqlite Internal TLS</a></h4>
-<p>You can of course also provide TLS certificates for the Hiqlite internal communication. Two Independent networks are
+<p>You can of course also provide TLS certificates for the Hiqlite internal communication. Two independent networks are
 created: one for the Raft-Internal network traffic like heartbeats and data replication, and a second one for the
 "external" Hiqlite API. This is used by other Hiqlite cluster members for management purposes and to execute things
 like consistent queries on the leader node.</p>
 <p>You can provide TLS certificates for both of them independently via the following config variables:</p>
-<pre><code>## Hiqlite TLS
-
+<pre><code class="language-toml">[cluster]
 # If given, these keys / certificates will be used to establish
 # TLS connections between nodes.
-HQL_TLS_RAFT_KEY=tls/key.pem
-HQL_TLS_RAFT_CERT=tls/cert-chain.pem
-HQL_TLS_RAFT_DANGER_TLS_NO_VERIFY=true
+#
+# values are optional, overwritten by: HQL_TLS_{RAFT|API}_{KEY|CERT}
+# overwritten by: HQL_TLS_RAFT_KEY
+tls_raft_key = "tls/tls.key"
+# overwritten by: HQL_TLS_RAFT_CERT
+tls_raft_cert = "tls/tls.crt"
+tls_raft_danger_tls_no_verify = true
 
-HQL_TLS_API_KEY=tls/key.pem
-HQL_TLS_API_CERT=tls/cert-chain.pem
-HQL_TLS_API_DANGER_TLS_NO_VERIFY=true
+# overwritten by: HQL_TLS_API_KEY
+tls_api_key = "tls/tls.key"
+# overwritten by: HQL_TLS_RAFT_KEY
+tls_api_cert = "tls/tls.crt"
+tls_api_danger_tls_no_verify = true
 </code></pre>
 <h4 id="additional-steps"><a class="header" href="#additional-steps">Additional steps</a></h4>
 <p>There are a few more things to do when going into production, but these are the same for Kubernetes and Docker and will

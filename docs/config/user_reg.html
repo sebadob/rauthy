@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -161,10 +172,13 @@
 However, you might want users to register themselves for whatever reason. In that case, follow the next step.</p>
 <h2 id="open-registration"><a class="header" href="#open-registration">Open Registration</a></h2>
 <p>To open the registration to anyone, just set</p>
-<pre><code># If the User Registration endpoint should be accessible by anyone. 
+<pre><code class="language-toml">[user_registration]
+# If the User Registration endpoint should be accessible by anyone.
 # If not, an admin must create each new user.
-# (default: false)
-OPEN_USER_REG=true
+#
+# default: false
+# overwritten by: OPEN_USER_REG
+enable = true
 </code></pre>
 <p>This will open the registration endpoint and make it accessible without upfront authentication.<br />
 You will now see a new button at the page root which directs you to the very simple registration form.</p>
@@ -203,20 +217,20 @@ bots, so it does what it should while providing a way better UX than any traditi
 </div>
 <div>
 <p>If you are interested in how it works, take a look at <a href="https://github.com/sebadob/spow">spow</a>.</p>
-<p>This tiny crate has very few external dependencies and is really easy to use. There is a special version for
-<a href="https://github.com/leptos-rs/leptos">Leptos</a> as well: <a href="https://github.com/sebadob/leptos-captcha">leptos-captcha</a></p>
 </div>
 </div>
 <h2 id="restricted-registration"><a class="header" href="#restricted-registration">Restricted Registration</a></h2>
 <p>You may want your users to register themselves, but at the same time restrict the E-Mail domains they are using.
 For instance, when you deploy Rauthy at your company for all internal applications, you may only want users to
 register with their work E-Mail:</p>
-<pre><code># Can be used when 'OPEN_USER_REG=true' to restrict the domains for a registration. 
-# For instance, set it to
-# 'USER_REG_DOMAIN_RESTRICTION=github.com' 
-# to allow only registrations with 'whatever-user@github.com'.
-# default: (not set)
-USER_REG_DOMAIN_RESTRICTION=@some-mail-domain.com
+<pre><code class="language-toml">[user_registration]
+# Can be used when 'open_user_reg = true' to restrict the domains for
+# a registration. For instance, set it to
+# 'user_reg_domain_restriction = gmail.com' to allow only
+# registrations with 'user@gmail.com'.
+#
+# overwritten by: USER_REG_DOMAIN_RESTRICTION
+domain_restriction = 'my-domain.com'
 </code></pre>
 <h2 id="domain-blacklisting"><a class="header" href="#domain-blacklisting">Domain Blacklisting</a></h2>
 <p>If you have opened your registration to anyone, you will get into the situation at some point, where evil people will
@@ -234,13 +248,24 @@ If you have such a list of evil providers, you can blacklist and exclude them fr
 will keep working and an Admin can still create users with these domains. They just cannot be used for self-registration
 anymore.</p>
 <p>You have the following config option:</p>
-<pre><code># If `OPEN_USER_REG=true`, you can blacklist certain domains
-# on the open registration endpoint.
-# Provide the domains as a `\n` separated list.
-USER_REG_DOMAIN_BLACKLIST="
-example.com
-evil.net
-"
+<pre><code class="language-toml">[user_registration]
+# Can be used when 'open_user_reg = true' to restrict the domains for
+# a registration. For instance, set it to
+# 'user_reg_domain_restriction = gmail.com' to allow only
+# registrations with 'user@gmail.com'.
+#
+# overwritten by: USER_REG_DOMAIN_RESTRICTION
+#domain_restriction = 'my-domain.com'
+
+# If `open_user_reg = true`, you can blacklist certain domains on
+# the open registration endpoint.
+#
+# default: []
+# overwritten by: USER_REG_DOMAIN_BLACKLIST - single String, \n separated values
+domain_blacklist = [
+    'example.com',
+    'evil.net',
+]
 </code></pre>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
@@ -279,22 +304,26 @@ know about it in detail, which again leads to less confusion.</p>
 <p>By default, the allowed <code>redirect_uri</code>s are restricted to all existing <code>client_uri</code>s in the database. They will be
 compared via <code>client_uri.startsWith(redirect_uri)</code>. If you want to opt-out of the additional redirect_uri checks and
 configure and open redirect to allow just anything, you can do so:</p>
-<pre><code># If set to `true`, any validation of the `redirect_uri` provided during
-# a user registration will be disabled.
-# Clients can use this feature to redirect the user back to their application
-# after a successful registration, so instead of ending up in the user
-# dashboard, they come back to the client app that initiated the registration.
+<pre><code class="language-toml">[user_registration]
+# If set to `true`, any validation of the `redirect_uri` provided
+# during a user registration will be disabled. Clients can use
+# this feature to redirect the user back to their application
+# after a successful registration, so instead of ending up in the
+# user dashboard, they come back to the client app that initiated
+# the registration.
 #
 # The given `redirect_uri` will be compared against all registered
-# `client_uri`s and will throw an error, if there is no match. However,
-# this check will prevent ephemeral clients from using this feature. Only
-# if you need it in combination with ephemeral clients, you should
-# set this option to `true`. Otherwise it is advised to set the correct
-# Client URI in the admin UI. The `redirect_uri` will be allowed if it starts
-# with any registered `client_uri`.
+# `client_uri`s and will throw an error, if there is no match.
+# However, this check will prevent ephemeral clients from using
+# this feature. Only if you need it in combination with ephemeral
+# clients, you should set this option to `true`. Otherwise, it is
+# advised to set the correct Client URI in the admin UI. The
+# `redirect_uri` will be allowed if it starts with any registered
+# `client_uri`.
 #
 # default: false
-#USER_REG_OPEN_REDIRECT=true
+# overwritten by: USER_REG_OPEN_REDIRECT
+allow_open_redirect = false
 </code></pre>
 <h3 id="custom-frontend"><a class="header" href="#custom-frontend">Custom Frontend</a></h3>
 <p>Depending on your application, you may want to create your own frontend for the registration. For speed and efficiency
@@ -339,10 +368,11 @@ reasons, Rauthy does not allow you to overwrite the existing templates, but you 
 <p>The PoWs have a very short lifetime by default to prevent them from being used multiple times. Rauthy has additional
 re-use prevention, but a POST to get a PoW will modify the backend state. This is unnecessary if the user decides to not
 submit the form at all.</p>
-<p>You can configure PoWs with <code>POW_DIFFICULTY</code> and <code>POW_EXP</code>.<br />
-Keep in mind, that the <code>POW_EXP</code> should be a high as necessary but always as low as possible.</p>
+<p>You can configure PoWs with <code>pow.difficulty</code> and <code>pow.exp</code>.<br />
+Keep in mind, that the <code>pow.exp</code> should be a high as necessary but always as low as possible.</p>
 </div>
 </div>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">

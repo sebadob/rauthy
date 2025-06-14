@@ -25,6 +25,8 @@ pub struct RauthyConfig {
     pub argon2_params: argon2::Params,
     pub is_ha_deployment: bool,
     pub issuer: String,
+    pub is_primary_node: bool,
+    pub is_ha_cluster: bool,
     pub listen_scheme: ListenScheme,
     pub log_level_access: LogLevelAccess,
     pub provider_callback_uri: String,
@@ -96,7 +98,7 @@ impl RauthyConfig {
             vars.hashing.argon2_p_cost,
             None,
         )
-        .expect("Unable to build Argon2id params");
+        .expect("Unable to build Argon2id params, check the values in the [hashing] section");
         debug!("Argon2id Params: {:?}", argon2_params);
 
         #[cfg(target_os = "windows")]
@@ -170,17 +172,19 @@ impl RauthyConfig {
         };
 
         let rp_origin = webauthn_rs::prelude::Url::parse(&vars.webauthn.rp_origin)
-            .expect("Cannot parse webauthn.rp_origin to URL");
+            .expect("Cannot parse `webauthn.rp_origin` to URL");
         let builder = webauthn_rs::WebauthnBuilder::new(&vars.webauthn.rp_id, &rp_origin)
-            .expect("Invalid configuration")
+            .expect("Invalid `webauthn.rp_id`")
             // Set a "nice" relying party name. Has no security properties - may be changed in the future.
             .rp_name(&vars.webauthn.rp_name);
-        let webauthn = builder.build().expect("Invalid configuration");
+        let webauthn = builder.build().expect("Invalid `webauthn.rp_name`");
 
         let slf = Self {
             argon2_params,
             is_ha_deployment: node_config.nodes.len() > 1,
             issuer,
+            is_primary_node: node_config.node_id == 1 || node_config.nodes.len() == 1,
+            is_ha_cluster: node_config.nodes.len() > 1,
             listen_scheme,
             log_level_access,
             provider_callback_uri,
@@ -490,6 +494,7 @@ impl Default for Vars {
                     expires: "Link expires:".into(),
                     button: "Set Password".into(),
                     footer: None,
+                    button_text_request_new: None,
                 },
                 password_new_de: VarsTemplate {
                     subject: "Neues Passwort".into(),
@@ -503,6 +508,7 @@ impl Default for Vars {
                     expires: "Link gültig bis:".into(),
                     button: "Passwort Setzen".into(),
                     footer: None,
+                    button_text_request_new: None,
                 },
                 password_new_ko: VarsTemplate {
                     subject: "新密码".into(),
@@ -513,6 +519,7 @@ impl Default for Vars {
                     expires: "链接过期时间：".into(),
                     button: "设置密码".into(),
                     footer: None,
+                    button_text_request_new: None,
                 },
                 password_new_zhhans: VarsTemplate {
                     subject: "새 비밀번호".into(),
@@ -524,6 +531,7 @@ impl Default for Vars {
                     expires: "링크 만료일:".into(),
                     button: "비밀번호 설정".into(),
                     footer: None,
+                    button_text_request_new: None,
                 },
                 password_reset_en: VarsTemplate {
                     subject: "Password Reset Request".into(),
@@ -536,7 +544,8 @@ impl Default for Vars {
                             .into(),
                     expires: "Link expires:".into(),
                     button: "Reset Password".into(),
-                    footer: None,
+                    footer: Some("If this link has expired, you can request a new one.".into()),
+                    button_text_request_new: Some("Request New Link".into()),
                 },
                 password_reset_de: VarsTemplate {
                     subject: "Passwort Reset angefordert".into(),
@@ -548,7 +557,11 @@ impl Default for Vars {
                         .into(),
                     expires: "Link gültig bis:".into(),
                     button: "Passwort Zurücksetzen".into(),
-                    footer: None,
+                    footer: Some(
+                        "Sollte der Link abgelaufen sein, kann ein neuer angefordert werden."
+                            .into(),
+                    ),
+                    button_text_request_new: Some("Neuen Link Anfordern".into()),
                 },
                 password_reset_ko: VarsTemplate {
                     subject: "密码重置请求".into(),
@@ -558,7 +571,8 @@ impl Default for Vars {
                     validity: "出于安全考虑，此链接仅在短时间内有效。".into(),
                     expires: "链接过期时间".into(),
                     button: "重置密码".into(),
-                    footer: None,
+                    footer: Some("If this link has expired, you can request a new one.".into()),
+                    button_text_request_new: Some("Request New Link".into()),
                 },
                 password_reset_zhhans: VarsTemplate {
                     subject: "비밀번호 초기화 요청".into(),
@@ -570,7 +584,8 @@ impl Default for Vars {
                     validity: "이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into(),
                     expires: "링크 만료일:".into(),
                     button: "비밀번호 초기화".into(),
-                    footer: None,
+                    footer: Some("If this link has expired, you can request a new one.".into()),
+                    button_text_request_new: Some("Request New Link".into()),
                 },
             },
             tls: VarsTls {
@@ -1926,21 +1941,54 @@ impl Vars {
             let Value::Table(mut table) = entry else {
                 panic!("{}", err_t("<entry>", "templates", "Table"));
             };
-            let mut tpl = VarsTemplate {
-                subject: Default::default(),
-                header: Default::default(),
-                text: None,
-                click_link: Default::default(),
-                validity: Default::default(),
-                expires: Default::default(),
-                button: Default::default(),
-                footer: None,
-            };
 
             let lang = t_str(&mut table, "[templates]", "lang", "")
                 .expect("`lang` is mandatory for `[[templates]]`");
             let typ = t_str(&mut table, "[templates]", "typ", "")
                 .expect("`typ` is mandatory for `[[templates]]`");
+
+            let is_password_new = match typ.as_str() {
+                "password_new" => true,
+                "password_reset" => false,
+                _ => {
+                    panic!(
+                        "Invalid value for `templates.typ`, allowed are: password_new password_reset"
+                    )
+                }
+            };
+            let mut tpl = match lang.as_str() {
+                "en" => {
+                    if is_password_new {
+                        self.templates.password_new_en.clone()
+                    } else {
+                        self.templates.password_reset_en.clone()
+                    }
+                }
+                "de" => {
+                    if is_password_new {
+                        self.templates.password_new_de.clone()
+                    } else {
+                        self.templates.password_reset_de.clone()
+                    }
+                }
+                "ko" => {
+                    if is_password_new {
+                        self.templates.password_new_ko.clone()
+                    } else {
+                        self.templates.password_reset_ko.clone()
+                    }
+                }
+                "zh_hans" => {
+                    if is_password_new {
+                        self.templates.password_new_zhhans.clone()
+                    } else {
+                        self.templates.password_reset_zhhans.clone()
+                    }
+                }
+                _ => {
+                    panic!("Invalid value for `templates.lang`, allowed are: en de ko zh_hans")
+                }
+            };
 
             if let Some(v) = t_str(&mut table, "templates", "subject", "") {
                 tpl.subject = v.into();
@@ -1963,16 +2011,10 @@ impl Vars {
             if let Some(v) = t_str(&mut table, "templates", "footer", "") {
                 tpl.footer = Some(v);
             }
+            if let Some(v) = t_str(&mut table, "templates", "button_text_request_new", "") {
+                tpl.button_text_request_new = Some(v.into());
+            }
 
-            let is_password_new = match typ.as_str() {
-                "password_new" => true,
-                "password_reset" => false,
-                _ => {
-                    panic!(
-                        "Invalid value for `templates.typ`, allowed are: password_new password_reset"
-                    )
-                }
-            };
             match lang.as_str() {
                 "en" => {
                     if is_password_new {
@@ -2472,7 +2514,7 @@ pub struct VarsTemplates {
     pub password_reset_zhhans: VarsTemplate,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VarsTemplate {
     pub subject: Cow<'static, str>,
     pub header: Cow<'static, str>,
@@ -2482,6 +2524,7 @@ pub struct VarsTemplate {
     pub expires: Cow<'static, str>,
     pub button: Cow<'static, str>,
     pub footer: Option<String>,
+    pub button_text_request_new: Option<Cow<'static, str>>,
 }
 
 #[derive(Debug)]

@@ -1,6 +1,3 @@
-#[access]
-#cookie_mode = 'danger-insecure'
-
 [auth_headers]
 enable = true
 

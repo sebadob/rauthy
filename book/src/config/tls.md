@@ -81,16 +81,23 @@ Hiqlite can run the whole database layer, and it will always take care of cachin
 internally, if you provide certificates. Simply provide the following values from the `TLS` section in the reference
 config:
 
-```
+```toml
+[cluster]
 # If given, these keys / certificates will be used to establish
 # TLS connections between nodes.
-HQL_TLS_RAFT_KEY=tls/hiqlite/tls.key
-HQL_TLS_RAFT_CERT=tls/hiqlite/tls.crt
-#HQL_TLS_RAFT_DANGER_TLS_NO_VERIFY=false
+#
+# values are optional, overwritten by: HQL_TLS_{RAFT|API}_{KEY|CERT}
+# overwritten by: HQL_TLS_RAFT_KEY
+tls_raft_key = "tls/tls.key"
+# overwritten by: HQL_TLS_RAFT_CERT
+tls_raft_cert = "tls/tls.crt"
+#tls_raft_danger_tls_no_verify = true
 
-HQL_TLS_API_KEY=tls/hiqlite/tls.key
-HQL_TLS_API_CERT=tls/hiqlite/tls.crt
-#HQL_TLS_API_DANGER_TLS_NO_VERIFY=false
+# overwritten by: HQL_TLS_API_KEY
+tls_api_key = "tls/tls.key"
+# overwritten by: HQL_TLS_RAFT_KEY
+tls_api_cert = "tls/tls.crt"
+#tls_api_danger_tls_no_verify = true
 ```
 
 There is no problem using the same certificates for both networks, but you can optionally even separate them if you need
@@ -98,17 +105,34 @@ to. You could even re-use the Server TLS, if your DNS setup allows for this.
 
 ```admonish note
 At the time of writing, it does not accept a custom Root CA yet. In this case you have to set the 
-`*_DANGER_TLS_NO_VERIFY` to `true`
+`*_danger_tls_no_verify` to `true`
 ```
 
 ### Rauthy Server / API
 
 By default, rauthy will expect a certificate and a key file in `/app/tls/tls.key` and `/app/tls/tls.crt`, which
-is the
-default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER format too,
-if you rename the file-ending to `*.der`.
+is the default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER
+format too, if you rename the file-ending to `*.der`.
 
-You can change the default path for the files with the config variables `TLS_CERT` and `TLS_KEY`.
+```toml
+[tls]
+## UI + API TLS
+
+# Overwrite the path to the TLS certificate file in PEM
+# format for rauthy
+#
+#default: 'tls/tls.crt'
+# overwritten by: TLS_CERT
+cert_path = 'tls/cert-chain.pem'
+
+# Overwrite the path to the TLS private key file in PEM
+# format for rauthy. If the path / filename ends with '.der',
+# rauthy will parse it as DER, otherwise as PEM.
+#
+# default: 'tls/tls.key'
+# overwritten by: TLS_KEY
+key_path = 'tls/key.pem'
+```
 
 ### Kubernetes
 

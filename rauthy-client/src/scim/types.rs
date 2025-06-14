@@ -8,6 +8,11 @@ pub static SCIM_SCHEMA_LIST_RESPONSE: &str = "urn:ietf:params:scim:api:messages:
 pub static SCIM_SCHEMA_PATCH_OP: &str = "urn:ietf:params:scim:api:messages:2.0:PatchOp";
 pub static SCIM_SCHEMA_USER: &str = "urn:ietf:params:scim:schemas:core:2.0:User";
 
+/// Empty struct, exists only for ease of use in SCIM endpoints for automatic SCIM token validation,
+/// if no other `Scim*` type is being used.
+#[derive(Debug)]
+pub struct ScimToken;
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScimName {
@@ -51,10 +56,11 @@ pub struct ScimGroupValue {
     pub value: String,
     /// `_ref` MUST be the URI of the corresponding "Group"
     /// resources to which the user belongs, basically the PUT URI.
-    #[serde(rename = "$ref", skip_serializing_if = "Option::is_none")]
-    pub _ref: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub display: Option<String>,
+    // #[serde(rename = "$ref", skip_serializing_if = "Option::is_none")]
+    // pub _ref: Option<String>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // Optional by RFC, but Rauthy requests it
+    pub display: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -80,7 +86,7 @@ pub struct ScimUser {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     /// Rauthy's User ID
-    pub external_id: String,
+    pub external_id: Option<String>,
     pub user_name: String,
     pub name: Option<ScimName>,
     pub display_name: Option<String>,
@@ -116,7 +122,7 @@ impl Default for ScimUser {
         Self {
             schemas: vec![SCIM_SCHEMA_USER.into()],
             id: None,
-            external_id: String::default(),
+            external_id: None,
             user_name: String::default(),
             name: Default::default(),
             display_name: None,
@@ -142,7 +148,7 @@ pub struct ScimGroup {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     /// Rauthy's Group ID
-    pub external_id: String,
+    pub external_id: Option<String>,
     pub display_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub members: Option<Vec<ScimGroupMember>>,
@@ -153,7 +159,7 @@ impl Default for ScimGroup {
         ScimGroup {
             schemas: vec![SCIM_SCHEMA_GROUP.into()],
             id: None,
-            external_id: String::default(),
+            external_id: None,
             display_name: String::default(),
             members: None,
         }
@@ -164,6 +170,7 @@ impl Default for ScimGroup {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScimGroupMember {
+    /// Must be the local user ID, which returns this resource on `/Users/{id}`
     pub value: String,
     // /// `_ref` MUST be the URI of the corresponding "User"
     // #[serde(rename = "$ref", skip_serializing_if = "Option::is_none")]

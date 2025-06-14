@@ -12,7 +12,7 @@
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import type {SelectItem} from "$lib5/select_list/props.ts";
     import SelectList from "$lib5/select_list/SelectList.svelte";
-    import {PATTERN_GROUP} from "$utils/patterns";
+    import {PATTERN_ROLE_SCOPE} from "$utils/patterns";
 
     let {
         attrs,
@@ -119,7 +119,7 @@
             disabled={isDefault}
             width="14.5rem"
             required
-            pattern={PATTERN_GROUP}
+            pattern={PATTERN_ROLE_SCOPE}
     />
 
     {#if isDefault}

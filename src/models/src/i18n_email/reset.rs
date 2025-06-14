@@ -12,6 +12,7 @@ pub struct I18nEmailReset<'a> {
     pub expires: &'a str,
     pub button_text: &'a str,
     pub footer: Option<&'a str>,
+    pub button_text_request_new: Option<&'a str>,
 }
 
 impl From<&'static VarsTemplate> for I18nEmailReset<'_> {
@@ -25,6 +26,7 @@ impl From<&'static VarsTemplate> for I18nEmailReset<'_> {
             expires: tpl.expires.as_ref(),
             button_text: tpl.button.as_ref(),
             footer: tpl.footer.as_deref(),
+            button_text_request_new: tpl.button_text_request_new.as_deref(),
         }
     }
 }

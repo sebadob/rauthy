@@ -114,6 +114,8 @@ export interface I18n {
         passwordForgotten: string,
         passwordRequest: string,
         passwordRequired: string,
+        passwordResetDesc: string,
+        passwordResetSuccess: string,
         expectingPasskey: string,
         requestExpires: string,
         requestExpired: string,
