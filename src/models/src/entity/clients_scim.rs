@@ -16,6 +16,7 @@ use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use std::collections::HashMap;
 use std::default::Default;
 use std::fmt::Debug;
+use tokio::task;
 use tracing::{debug, error, info};
 
 #[derive(Clone, PartialEq)]
@@ -78,8 +79,8 @@ impl ClientScim {
         let sql = r#"
 INSERT INTO clients_scim (client_id, bearer_token, base_endpoint, sync_groups, group_sync_prefix)
 VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (client_id) DO UPDATE SET
-    bearer_token = $2, base_endpoint = $3, sync_groups = $4, group_sync_prefix = $5"#;
+ON CONFLICT (client_id) DO UPDATE
+SET bearer_token = $2, base_endpoint = $3, sync_groups = $4, group_sync_prefix = $5"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -229,6 +230,31 @@ impl ClientScim {
         } else {
             true
         }
+    }
+
+    /// Triggers a complete SCIM sync for this client.
+    /// Groups are synced in the foreground to catch possible config errors early. They should
+    /// finish rather fast. User + group assignment syncs will be pushed into a background task,
+    /// because this can take a very long time depending on the amount of existing users.
+    pub async fn sync_full(self) -> Result<(), ErrorResponse> {
+        // We want to sync the groups synchronous to catch possible config errors early.
+        // The user sync however can take a very long time depending on the amount of users,
+        // so it will be pushed into the background.
+        let groups = if self.sync_groups {
+            self.sync_groups().await?;
+            Group::find_all().await?
+        } else {
+            Vec::default()
+        };
+
+        task::spawn(async move {
+            let mut groups_remote = HashMap::with_capacity(groups.len());
+            if let Err(err) = self.sync_users(None, &groups, &mut groups_remote).await {
+                error!("{}", err);
+            }
+        });
+
+        Ok(())
     }
 
     /// Should be called if SCIM has been newly configured for a client or the config has been
