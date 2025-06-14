@@ -77,7 +77,7 @@ async fn find_users(start_index: u32, query: &ScimListQuery) -> Vec<ScimResource
             .await
             .iter()
             .filter_map(|u| {
-                if u.external_id == id {
+                if u.external_id.as_deref() == Some(id) {
                     Some(ScimResource::User(Box::new(u.clone())))
                 } else {
                     None

@@ -97,8 +97,7 @@ pub async fn patch_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Resul
                         }
                         user.groups.as_mut().unwrap().push(ScimGroupValue {
                             value: id.clone(),
-                            _ref: None, // Rauthy does not care about `ref`
-                            display: Some(group_name.clone()),
+                            display: group_name.clone(),
                         })
                     }
                 }
@@ -124,7 +123,7 @@ pub async fn patch_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Resul
                 }
                 for group in user.groups.as_mut().unwrap().iter_mut() {
                     if group.value == id {
-                        group.display = Some(replace.group_name.to_string());
+                        group.display = replace.group_name.to_string();
                         break;
                     }
                 }
