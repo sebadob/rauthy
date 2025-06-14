@@ -98,7 +98,7 @@ impl RauthyConfig {
             vars.hashing.argon2_p_cost,
             None,
         )
-        .expect("Unable to build Argon2id params");
+        .expect("Unable to build Argon2id params, check the values in the [hashing] section");
         debug!("Argon2id Params: {:?}", argon2_params);
 
         #[cfg(target_os = "windows")]
@@ -172,12 +172,12 @@ impl RauthyConfig {
         };
 
         let rp_origin = webauthn_rs::prelude::Url::parse(&vars.webauthn.rp_origin)
-            .expect("Cannot parse webauthn.rp_origin to URL");
+            .expect("Cannot parse `webauthn.rp_origin` to URL");
         let builder = webauthn_rs::WebauthnBuilder::new(&vars.webauthn.rp_id, &rp_origin)
-            .expect("Invalid configuration")
+            .expect("Invalid `webauthn.rp_id`")
             // Set a "nice" relying party name. Has no security properties - may be changed in the future.
             .rp_name(&vars.webauthn.rp_name);
-        let webauthn = builder.build().expect("Invalid configuration");
+        let webauthn = builder.build().expect("Invalid `webauthn.rp_name`");
 
         let slf = Self {
             argon2_params,
