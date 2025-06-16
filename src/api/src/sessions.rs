@@ -198,10 +198,11 @@ pub async fn delete_session_by_id(
 
     let sid = path.into_inner();
     let session = Session::find(sid.clone()).await?;
-    session.delete().await?;
+    let uid = session.user_id.clone();
 
+    session.delete().await?;
     RefreshToken::delete_by_sid(sid.clone()).await?;
-    logout::execute_backchannel_logout(Some(sid), None).await?;
+    logout::execute_backchannel_logout(Some(sid), uid).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

@@ -54,7 +54,7 @@ pub async fn get_theme(
         .body(body))
 }
 
-/// Get the theme as a JSON opbject for the Admin UI for the given `client_id`.
+/// Get the theme as a JSON object for the Admin UI for the given `client_id`.
 ///
 /// Returns the Rauthy default, if no custom theme exists.
 #[utoipa::path(
