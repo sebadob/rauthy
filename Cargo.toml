@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.30.2-20250614"
+version = "0.30.2-20250616"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -58,10 +58,10 @@ futures = "0.3"
 futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
-hiqlite = { version = "0.7", features = [
+hiqlite = { version = "0.8", features = [
     "cache", "counters", "dashboard", "listen_notify_local", "migrate-rocksdb"
 ] }
-hiqlite-macros = { version = "0.7" }
+hiqlite-macros = { version = "0.8" }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
