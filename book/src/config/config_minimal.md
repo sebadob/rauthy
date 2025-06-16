@@ -56,32 +56,6 @@ secret_raft = "SuperSecureSecret1337"
 # overwritten by: HQL_SECRET_API
 secret_api = "SuperSecureSecret1337"
 
-# Can be set to true to start the WAL handler even if the
-# `lock.hql` file exists. This may be necessary after a
-# crash, when the lock file could not be removed during a
-# graceful shutdown.
-#
-# IMPORTANT: Even though the Database can "heal" itself by
-# simply rebuilding from the existing Raft log files without
-# even needing to think about it, you may want to only
-# set `HQL_WAL_IGNORE_LOCK` when necessary to have more
-# control. Depending on the type of crash (whole OS, maybe
-# immediate power loss, force killed, ...), it may be the
-# case that the WAL files + metadata could not be synced
-# to disk properly and that quite a bit of data is lost.
-#
-# In such a case, it is usually a better idea to delete
-# the whole volume and let the broken node rebuild from
-# other healthy cluster members, just to be sure.
-#
-# However, you can decide to ignore the lock file and start
-# anyway. But you must be 100% sure, that no orphaned
-# process is still running and accessing the WAL files!
-#
-# default: false
-# overwritten by: HQL_WAL_IGNORE_LOCK
-wal_ignore_lock = false
-
 [email]
 # Rauthy will force TLS and try a downgrade to STARTTLS, if
 # TLS fails. It will never allow an unencrypted connection.
