@@ -235,31 +235,45 @@ async fn find_session_with_user_fallback(
 ///
 /// Does NOT invalidate or delete any local sessions - only cares about remote clients with
 /// configured backchannel logout.
+///
+/// If you provide an `sid`, also provide a `uid` which would be used as fallback, if no login
+/// states for the given `sid` could be found.
+#[tracing::instrument(level = "debug")]
 pub async fn execute_backchannel_logout(
     sid: Option<String>,
     uid: Option<String>,
 ) -> Result<(), ErrorResponse> {
+    debug_assert!(sid.is_some() || uid.is_some());
     info!("Executing backchannel logout for uid {uid:?} / sid {sid:?}");
 
     let (states, sid) = if let Some(sid) = sid {
         let states = UserLoginState::find_by_session(sid.clone()).await?;
+        debug!("Login States for sid {}: {:?}", sid, states);
         // As a fallback, we will log out the whole user if we cannot find the session, just to
         // be sure we never miss any logout. Better logging out some unindented ones than missing
         // an important one.
         if states.is_empty() {
-            if uid.is_none() {
+            debug!("No Login States for sid {}", sid);
+
+            if let Some(uid) = uid {
+                debug!("Searching Login States by user_id {:?}", uid);
+                (UserLoginState::find_by_user(uid).await?, None)
+            } else {
+                debug!("No Login States found for both sid and uid - nothing to do");
                 return Ok(());
             }
-            (UserLoginState::find_by_user(uid.unwrap()).await?, None)
         } else {
             (states, Some(sid))
         }
-    } else if uid.is_none() {
-        return Ok(());
+    } else if let Some(uid) = uid {
+        (UserLoginState::find_by_user(uid).await?, None)
     } else {
-        (UserLoginState::find_by_user(uid.unwrap()).await?, None)
+        debug!("Both sid and uid are None - nothing to od");
+        return Ok(());
     };
+    debug!("sid: {:?} / Login States: {:?}", sid, states);
     if states.is_empty() {
+        debug!("no login states found");
         return Ok(());
     }
 
@@ -269,6 +283,7 @@ pub async fn execute_backchannel_logout(
         .map(|st| st.client_id.as_str())
         .collect::<Vec<_>>();
     let clients = Client::find_all_bcl(&client_ids).await?;
+    debug!("Backchannel Logout Clients: {:?}", clients);
 
     if !clients.is_empty() {
         let mut kps: Vec<JwkKeyPair> = Vec::with_capacity(1);
@@ -281,6 +296,7 @@ pub async fn execute_backchannel_logout(
                 None
             };
             let sid = sid.clone();
+            debug!("sub: {:?}, sid: {:?} for LogoutToken", sub, sid);
 
             let mut kp = kps.iter().find(|kp| kp.typ.as_str() == client.id_token_alg);
             if kp.is_none() {
@@ -326,6 +342,7 @@ pub async fn execute_backchannel_logout(
 }
 
 /// Executes a backchannel logout for every user on every client in the background.
+#[tracing::instrument(level = "debug")]
 pub async fn execute_backchannel_logout_for_everything() -> Result<(), ErrorResponse> {
     let clients = Client::find_all()
         .await?
@@ -340,17 +357,22 @@ pub async fn execute_backchannel_logout_for_everything() -> Result<(), ErrorResp
     Ok(())
 }
 
+#[tracing::instrument(level = "debug")]
 pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(), ErrorResponse> {
     if client.backchannel_logout_uri.is_none() {
         return Ok(());
     }
     let uri = client.backchannel_logout_uri.as_ref().unwrap();
 
-    info!("Executing full backchannel logout for client {}", client.id);
+    info!(
+        "Executing full backchannel logout for client '{}' via '{}'",
+        client.id, uri
+    );
 
     // We don't care about specific sessions here. Everything for this client should be logged out.
     // Skipping sessions and logging out whole users reduces the load.
     let states = UserLoginState::find_by_client_without_session(client.id.clone()).await?;
+    debug!("{:?}", states);
 
     let alg = JwkKeyPairAlg::from_str(client.id_token_alg.as_str())?;
     let kp = JwkKeyPair::find_latest(alg).await?;
@@ -392,6 +414,8 @@ pub async fn send_backchannel_logout(
     kp: &JwkKeyPair,
     tasks: &mut JoinSet<Result<(), ErrorResponse>>,
 ) -> Result<(), ErrorResponse> {
+    debug_assert!(sub.is_some() || sid.is_some());
+
     let logout_token = LogoutToken::new(
         &RauthyConfig::get().issuer,
         &client_id,
