@@ -545,8 +545,6 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
             if retries >= vars.connect_retries {
                 // do a graceful shutdown of the DB before `panic`king
                 if RauthyConfig::get().is_ha_cluster {
-                    // this short sleep smoothes out K8s rolling releases and makes sure there is enough
-                    // time for in-memory cache replication before the next node is shutting down
                     tokio::time::sleep(Duration::from_secs(5)).await;
                 }
                 DB::hql().shutdown().await.unwrap();
