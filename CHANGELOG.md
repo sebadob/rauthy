@@ -1,5 +1,55 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Hiqlite upgrade
+
+Internally, `hiqlite` was updated to the latest stable version. This brings 2 advantages:
+
+1. `cluster.wal_ignore_lock` has been removed completely. It is not necessary anymore, because `hiqlite` now can do
+   proper cross-platform file locking and therefore can resolve all possible situations on it's own. It can detect, if
+   another `hiqlite` process is currently using an existing WAL directory and also do a proper cleanup / deep integrity
+   check after a restart.
+2. You have 2 additional config variables to configure the listen address for Hiqlites API and Raft server. This solves
+   an issue in IPv6-only environments, because it used a hardcoded `0.0.0.0` before. You can now also restrict to a
+   specific interface as well, which is beneficial for single instance deployments, or when you have lots of NICs.
+
+```toml
+[cluster]
+# You can set the listen addresses for both the API and Raft servers.
+# These need to somewaht match the definition for the `nodes` above,
+# with the difference, that a `node` address can be resolved via DNS,
+# while the listen addresses must be IP addresses.
+#
+# The default for both of these is "0.0.0.0" which makes them listen
+# on all interfaces.
+# overwritten by: HQL_LISTEN_ADDR_API
+listen_addr_api = "0.0.0.0"
+# overwritten by: HQL_LISTEN_ADDR_RAFT
+listen_addr_raft = "0.0.0.0"
+```
+
+#### DB shutdown on unavailable SMTP
+
+If the retries to connect to a configured SMTP server were exceeded, Rauthy panics, which is on purpose. However, the
+behavior has been updated slightly and it will now trigger a graceful DB shutdown before it executes the panic, which
+is just cleaner overall.
+
+[#1045](https://github.com/sebadob/rauthy/pull/1045)
+
+### Bugfix
+
+- A trigger for Backchannel Logout was missing for `DELETE /sessions/{user_id}`
+  [#1031](https://github.com/sebadob/rauthy/pull/1031)
+- `state` deserialization validation during `GET /authorize` was too strict in some cases.
+  [#1032](https://github.com/sebadob/rauthy/pull/1032)
+- The pre-shutdown delay should only be added in HA deployments, not for single instances.
+  [#1038](https://github.com/sebadob/rauthy/pull/1038)
+- The error messages in case of `webauthn` misconfiguration were not always very helpful.
+  [#1040](https://github.com/sebadob/rauthy/pull/1040)
+
 ## v0.30.1
 
 ### Bugfix
