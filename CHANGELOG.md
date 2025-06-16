@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.30.2
 
 ### Changes
 
@@ -9,9 +9,9 @@
 Internally, `hiqlite` was updated to the latest stable version. This brings 2 advantages:
 
 1. `cluster.wal_ignore_lock` has been removed completely. It is not necessary anymore, because `hiqlite` now can do
-   proper cross-platform file locking and therefore can resolve all possible situations on it's own. It can detect, if
+   proper cross-platform file locking and therefore can resolve all possible situations on its own. It can detect, if
    another `hiqlite` process is currently using an existing WAL directory and also do a proper cleanup / deep integrity
-   check after a restart.
+   check after a restart as well.
 2. You have 2 additional config variables to configure the listen address for Hiqlites API and Raft server. This solves
    an issue in IPv6-only environments, because it used a hardcoded `0.0.0.0` before. You can now also restrict to a
    specific interface as well, which is beneficial for single instance deployments, or when you have lots of NICs.
