@@ -43,6 +43,8 @@ is just cleaner overall.
 
 - A trigger for Backchannel Logout was missing for `DELETE /sessions/{user_id}`
   [#1031](https://github.com/sebadob/rauthy/pull/1031)
+- `state` deserialization validation during `GET /authorize` was too strict in some cases.
+  [#1032](https://github.com/sebadob/rauthy/pull/1032)
 - The pre-shutdown delay should only be added in HA deployments, not for single instances.
   [#1038](https://github.com/sebadob/rauthy/pull/1038)
 - The error messages in case of `webauthn` misconfiguration were not always very helpful.
