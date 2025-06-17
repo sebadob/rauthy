@@ -13,6 +13,7 @@ use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::rauthy_config::RauthyConfig;
+use rauthy_models::vault_config::VaultConfig;
 use std::env;
 use std::error::Error;
 use std::time::Duration;
@@ -39,6 +40,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             ("config-test.toml", true)
         } else {
             dotenvy::dotenv().ok();
+
+            let vault = match env::var("VAULT_TOKEN")
+            {
+                 Ok(token) => true,
+                _ => false,
+            };
+
             let local_test = env::var("LOCAL_TEST")
                 .unwrap_or_else(|_| "false".to_string())
                 .parse::<bool>()
@@ -47,7 +55,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if local_test {
                 eprintln!("!!! Using insecure config for testing - DO NOT USE IN PRODUCTION !!!");
                 ("config-local-test.toml", false)
-            } else {
+            }
+            else if vault {
+                println!("####### VAULT #########");
+                //write vault_soruce_env_vars to file config.vault or just do a check later and use RauthyConfig::build_from_vault 
+                ("config.vault", false)
+            }
+            else {
                 ("config.toml", false)
             }
         }
@@ -61,13 +75,70 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //  and all constants
     info!("Initializing AppConfig");
 
-    let (rauthy_config, node_config) = RauthyConfig::build(
-        config_file,
-        tx_email.clone(),
-        tx_events.clone(),
-        tx_events_router.clone(),
-    )
-    .await?;
+ let (rauthy_config, node_config) = match config_file {
+        "config.vault" =>
+        { 
+            println!("####### config.vault #########");
+
+            let vault_addr = env::var("VAULT_ADDR").unwrap();
+            let vault_token = env::var("VAULT_TOKEN").unwrap();
+            let vault_mount = env::var("VAULT_MOUNT").unwrap();
+            let vault_path = env::var("VAULT_PATH").unwrap();
+            let vault_path_certs_result = env::var("VAULT_PATH_CERTS");
+            let vault_version = env::var("VAULT_VERSION").unwrap();
+            //let vault_secret_key = env::var("VAULT_SECRET_KEY").unwrap();
+
+            let mut vault_source = rauthy_models::vault_config::VaultSource::new(
+                vault_addr.to_string(),     // Vault address
+                vault_token.to_string(),    // Vault token
+                vault_mount.to_string(),    // KV mount name
+                vault_path.to_string(),     // Secret path
+                "".to_string(),
+            );
+
+            if vault_version == "1" {
+                vault_source.set_kv_version(rauthy_models::vault_config::KvVersion::V1);
+            }
+
+            println!("####### vault_source: {:?}", vault_source);
+
+            match vault_path_certs_result {
+                Ok(vault_path_certs) => {
+                    vault_source.set_certs_path(vault_path_certs);
+                },
+                Err(e) => {
+                    println!("{:?}",e);
+                }
+            }
+
+            let vault_conf = VaultConfig::new(vault_source);
+            vault_conf.init_static();
+  
+
+
+        RauthyConfig::build_from_vault(
+                &VaultConfig::get().vault_rauthy,
+                tx_email.clone(),
+                tx_events.clone(),
+                tx_events_router.clone(),
+            )
+            .await?
+        
+        },
+        _ =>
+        {
+            RauthyConfig::build(
+                        config_file,
+                        tx_email.clone(),
+                        tx_events.clone(),
+                        tx_events_router.clone(),
+                    )
+                    .await?
+                
+        },
+    };
+
+   
     rauthy_config.init_static();
     init_static_vars::trigger();
 

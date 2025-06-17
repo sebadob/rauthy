@@ -2,6 +2,7 @@ use crate::ListenScheme;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
+use crate::vault_config::VaultSource;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
@@ -17,6 +18,7 @@ use tokio::sync::mpsc;
 use toml::Value;
 use tracing::{debug, info, warn};
 use webauthn_rs::Webauthn;
+
 
 static CONFIG: OnceLock<RauthyConfig> = OnceLock::new();
 
@@ -40,13 +42,33 @@ pub struct RauthyConfig {
 }
 
 impl RauthyConfig {
-    pub async fn build(
+     pub async fn build(
         config_file: &str,
         tx_email: mpsc::Sender<EMail>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
         let (vars, node_config) = Vars::load(config_file).await;
+        Self::build_from_vars(vars,node_config,tx_email,tx_events,tx_events_router).await
+    }
+
+    pub async fn build_from_vault(
+        vault_source: &VaultSource,
+        tx_email: mpsc::Sender<EMail>,
+        tx_events: flume::Sender<Event>,
+        tx_events_router: flume::Sender<EventRouterMsg>,
+    ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
+        let (vars, node_config) = Vars::load_from_vault(vault_source).await;
+        Self::build_from_vars(vars,node_config,tx_email,tx_events,tx_events_router).await
+    }
+
+    pub async fn build_from_vars(
+        vars: Vars,
+        node_config: NodeConfig,
+        tx_email: mpsc::Sender<EMail>,
+        tx_events: flume::Sender<Event>,
+        tx_events_router: flume::Sender<EventRouterMsg>,
+    ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
         vars.validate();
         if let Err(err) = node_config.is_valid() {
             panic!("Invalid `[cluster]` config: {}", err);
@@ -590,6 +612,8 @@ impl Default for Vars {
             tls: VarsTls {
                 cert_path: None,
                 key_path: None,
+                cert_path_vault: None,
+                key_path_vault: None,
             },
             user_pictures: VarsUserPictures {
                 storage_type: "db".into(),
@@ -624,12 +648,26 @@ impl Default for Vars {
 }
 
 impl Vars {
-    async fn load(path_config: &str) -> (Self, hiqlite::NodeConfig) {
-        let mut slf = Self::default();
-
+     async fn load(path_config: &str) -> (Self, hiqlite::NodeConfig) {
         let Ok(config) = fs::read_to_string(path_config).await else {
             panic!("Cannot read config file from {}", path_config);
         };
+
+        Self::load_from_string(&config).await
+    }
+
+    async fn load_from_vault(vault_source: &VaultSource,) -> (Self, hiqlite::NodeConfig) {
+
+        let config_from_vault = vault_source.get_config().await.unwrap();
+
+        println!("\nconfig_from_vault:");
+        println!("{:?}",config_from_vault);
+
+        Self::load_from_string(&config_from_vault["config"].as_str().unwrap().to_string()).await
+    }
+
+    async fn load_from_string(config: &String) -> (Self, hiqlite::NodeConfig) {
+        let mut slf = Self::default();
 
         // Note: these inner parsers are very verbose, but they allow the upfront memory allocation
         // and memory fragmentation, after the quite big toml has been freed and the config stays
@@ -2062,6 +2100,12 @@ impl Vars {
         if let Some(v) = t_str(&mut table, "tls", "key_path", "TLS_KEY") {
             self.tls.key_path = Some(v);
         }
+        if let Some(v) = t_str(&mut table, "tls", "cert_path_vault", "cert.pem") {
+            self.tls.cert_path_vault = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "tls", "key_path_vault", "cert.key") {
+            self.tls.key_path_vault = Some(v);
+        }        
     }
 
     fn parse_user_pictures(&mut self, table: &mut toml::Table) {
@@ -2529,6 +2573,8 @@ pub struct VarsTemplate {
 pub struct VarsTls {
     pub cert_path: Option<String>,
     pub key_path: Option<String>,
+    pub cert_path_vault: Option<String>,
+    pub key_path_vault: Option<String>,
 }
 
 #[derive(Debug)]
