@@ -32,7 +32,7 @@ use semver::Version;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::sync::LazyLock;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use validator::Validate;
 
 pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
@@ -543,8 +543,34 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
 )]
 #[get("/whoami")]
 pub async fn get_whoami(req: HttpRequest) -> String {
-    match real_ip_from_req(&req) {
-        Ok(ip) => ip.to_string(),
-        Err(_) => "UNKNOWN".to_string(),
-    }
+    #[cfg(debug_assertions)]
+    let res = {
+        use std::fmt::Write;
+
+        let mut s = String::with_capacity(32);
+
+        let ip = real_ip_from_req(&req)
+            .map(|ip| ip.to_string())
+            .unwrap_or_default();
+        let _ = writeln!(s, "IP: {}\n", ip);
+
+        for (k, v) in req.headers() {
+            let name = k.as_str();
+            // if name == "cookie" {
+            //     debug!("/whoami cookies: {:?}", v);
+            //     let _ = writeln!(s, "{}: <hidden>, ", k.as_str());
+            // } else {
+            let _ = writeln!(s, "{}: {}, ", k.as_str(), v.to_str().unwrap_or_default());
+            // }
+        }
+
+        s
+    };
+
+    #[cfg(not(debug_assertions))]
+    let res = real_ip_from_req(&req)
+        .map(|ip| ip.to_string())
+        .unwrap_or_default();
+
+    res
 }

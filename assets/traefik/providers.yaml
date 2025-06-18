@@ -1,0 +1,34 @@
+http:
+  routers:
+    rauthy:
+      #      rule: PathPrefix(`/`)
+      rule: Host(`localhost:8443`)
+      middlewares:
+        - test-ipallowlist
+        - add-prefix
+        - test-auth
+      service: rauthy
+
+  middlewares:
+    add-prefix:
+      addPrefix:
+        prefix: /auth/v1
+    test-auth:
+      basicAuth:
+        users:
+          - "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
+    fwd-auth:
+      forwardAuth:
+        address: http://localhost:8080/auth/v1/forward_auth
+    test-ipallowlist:
+      ipAllowList:
+        sourceRange:
+          - "127.0.0.1/32"
+          - "192.168.1.7"
+
+  services:
+    rauthy:
+      loadBalancer:
+        servers:
+          #          - url: http://192.168.14.20:8080
+          - url: http://localhost:8080

@@ -5,12 +5,14 @@ use actix_web::{HttpRequest, cookie};
 use chrono::Utc;
 use cryptr::EncValue;
 use rauthy_common::utils::{
-    base64_decode, base64_encode, base64_url_decode, base64_url_encode, deserialize, serialize,
+    base64_decode, base64_encode, base64_url_no_pad_decode, base64_url_no_pad_encode, deserialize,
+    serialize,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::net::IpAddr;
+use tracing::{debug, warn};
 
 #[derive(Debug)]
 pub struct ForwardAuthSession {
@@ -20,7 +22,7 @@ pub struct ForwardAuthSession {
 impl ForwardAuthSession {
     #[inline]
     pub fn build_cookies(&self, danger_insecure: bool) -> (Cookie<'_>, Cookie<'_>) {
-        let max_age = Utc::now().timestamp() - self.inner.exp;
+        let max_age = self.inner.exp - Utc::now().timestamp();
 
         let cookie_session = build_cookie(
             Self::cookie_name(danger_insecure),
@@ -30,7 +32,7 @@ impl ForwardAuthSession {
             danger_insecure,
         );
         let cookie_csrf = build_cookie(
-            Self::cookie_name(danger_insecure),
+            Self::cookie_name_csrf(danger_insecure),
             self.inner.csrf_token.as_bytes(),
             max_age,
             SameSite::Strict,
@@ -112,6 +114,7 @@ impl ForwardAuthSession {
         danger_insecure: bool,
     ) -> Result<(), ErrorResponse> {
         let Some(cookie) = req.cookie(Self::cookie_name_csrf(danger_insecure)) else {
+            debug!("CSRF cookie missing");
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "CSRF Token missing",
@@ -122,11 +125,27 @@ impl ForwardAuthSession {
         let token = String::from_utf8_lossy(decrypted.as_ref());
 
         if token != self.inner.csrf_token {
+            warn!("CSRF Token mismatch");
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "CSRF Token mismatch",
             ));
         };
+
+        if let Some(site) = req.headers().get("sec-fetch-site") {
+            let site = site.to_str().unwrap_or_default();
+
+            // site == "none" will be set for user-originated operations
+            return if site == "none" || site == "same-origin" {
+                Ok(())
+            } else {
+                debug!("sec-fetch-site forbidden: {}", site);
+                Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "CORS requests forbidden",
+                ))
+            };
+        }
 
         Ok(())
     }
@@ -138,6 +157,7 @@ pub struct ForwardAuthCallbackState {
     pub peer_ip: IpAddr,
     pub origin: String,
     pub forwarded_uri: String,
+    pub danger_cookie_insecure: bool,
 }
 
 impl TryFrom<&str> for ForwardAuthCallbackState {
@@ -145,7 +165,7 @@ impl TryFrom<&str> for ForwardAuthCallbackState {
 
     #[inline]
     fn try_from(s: &str) -> Result<Self, Self::Error> {
-        let decoded = base64_url_decode(s)?;
+        let decoded = base64_url_no_pad_decode(s)?;
         let decrypted = EncValue::try_from_bytes(decoded)?.decrypt()?;
         deserialize(decrypted.as_ref())
     }
@@ -156,7 +176,7 @@ impl ForwardAuthCallbackState {
     pub fn encrypted_str(&self) -> Result<String, ErrorResponse> {
         let json = serialize(self)?;
         let enc = EncValue::encrypt(&json)?;
-        let b64 = base64_url_encode(enc.into_bytes().as_ref());
+        let b64 = base64_url_no_pad_encode(enc.into_bytes().as_ref());
         Ok(b64)
     }
 }

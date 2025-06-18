@@ -1515,7 +1515,7 @@ jwk_autorotate_cron = '0 30 3 1 * * *'
 #
 # default: 'info'
 # overwritten by: LOG_LEVEL
-level = 'info'
+level = 'debug'
 
 # The log level for the `Hiqlite` persistence layer.
 # At the time of writing, only the cache will use `hiqlite`
@@ -1682,7 +1682,10 @@ proxy_mode = false
 #
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
-#trusted_proxies = ['192.168.14.0/24']
+trusted_proxies = [
+    '127.0.0.1/32',
+    '192.168.14.0/24'
+]
 
 # To bring support for applications using deep-linking, you
 # can set custom URL schemes to be accepted when present in

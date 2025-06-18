@@ -14,7 +14,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::rauthy_config::RauthyConfig;
 use std::net::IpAddr;
 use std::str::FromStr;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 #[tracing::instrument(level = "debug", skip(req))]
 pub async fn get_forward_auth_client(
@@ -24,21 +24,24 @@ pub async fn get_forward_auth_client(
 ) -> Result<HttpResponse, ErrorResponse> {
     validate_proxy(&req)?;
 
-    let origin = get_header("X-Forwarded-Host", &req)?;
-    let forwarded_uri = get_header_alt("X-Forwarded-URI", "X-Original-URL", &req)?;
-    // TODO can we do it safely without the method here?
-    //  -> check if reverse proxies forward `Sec-*` headers by default
-    let is_cors = !get_header("X-Forwarded-Method", &req)?.eq_ignore_ascii_case("GET");
-    debug!("Proxied Headers: {:?}", req.headers());
-
-    if !forwarded_uri.starts_with(origin) {
+    let proto = get_header("X-Forwarded-Proto", &req)?;
+    if !params.danger_cookie_insecure && proto.eq_ignore_ascii_case("http")
+        || proto.eq_ignore_ascii_case("ws")
+    {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            format!("The URI '{forwarded_uri}' does not match the given Origin '{origin}'"),
+            "Non-encrypted requests are forbidden",
         ));
     }
 
-    let client = get_client_validated(client_id, origin).await?;
+    let host = get_header("X-Forwarded-Host", &req)?;
+    let origin = format!("{}://{}", proto, host);
+
+    let forwarded_uri = get_header_alt("X-Forwarded-URI", "X-Original-URL", &req)?;
+    let method = get_header("X-Forwarded-Method", &req)?;
+    let check_csrf = !method.eq_ignore_ascii_case("GET") && !method.eq_ignore_ascii_case("HEAD");
+
+    let client = get_client_validated(client_id, &origin).await?;
     client.validate_enabled()?;
     let session = match ForwardAuthSession::from_cookie(&req, params.danger_cookie_insecure).await {
         None => {
@@ -49,12 +52,16 @@ pub async fn get_forward_auth_client(
             debug!("Session during forward auth: {:?}", s);
             let ip = Some(real_ip_from_req(&req)?);
             if s.validate(ip).is_ok() {
-                if is_cors && s.validate_csrf(&req, params.danger_cookie_insecure).is_ok() {
-                    debug!("CSRF check succesful");
-                    Some(s)
+                if check_csrf {
+                    match s.validate_csrf(&req, params.danger_cookie_insecure) {
+                        Ok(_) => Some(s),
+                        Err(err) => {
+                            error!("Error during CSRF token check: {:?}", err);
+                            None
+                        }
+                    }
                 } else {
-                    debug!("CSRF check failed");
-                    None
+                    Some(s)
                 }
             } else {
                 None
@@ -72,7 +79,7 @@ pub async fn get_forward_auth_client(
                 ));
             }
             Some(uri) => {
-                if !uri.starts_with(origin) {
+                if !uri.starts_with(&origin) {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
                         "The first configured `redirect_uri` must start with the `X-Forwarded-Host`",
@@ -93,8 +100,9 @@ pub async fn get_forward_auth_client(
         let state = ForwardAuthCallbackState {
             client_id: cid.clone(),
             peer_ip: real_ip_from_req(&req)?,
-            origin: origin.to_string(),
+            origin,
             forwarded_uri: forwarded_uri.to_string(),
+            danger_cookie_insecure: params.danger_cookie_insecure,
         }
         .encrypted_str()?;
         let location = format!(
@@ -156,9 +164,23 @@ pub async fn get_forward_auth_client_callback(
     validate_proxy(&req)?;
 
     let ip = real_ip_from_req(&req)?;
-    let origin = get_header("X-Forwarded-Host", &req)?;
+    let proto = get_header("X-Forwarded-Proto", &req)?;
+    let host = get_header("X-Forwarded-Host", &req)?;
+    let origin = format!("{}://{}", proto, host);
+    debug!("origin: {}", origin);
 
     let state = ForwardAuthCallbackState::try_from(params.state.as_str())?;
+    debug!("{:?}", state);
+
+    if !state.danger_cookie_insecure && proto.eq_ignore_ascii_case("http")
+        || proto.eq_ignore_ascii_case("ws")
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Non-encrypted requests are forbidden",
+        ));
+    }
+
     if state.client_id != client_id {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
@@ -178,7 +200,7 @@ pub async fn get_forward_auth_client_callback(
         ));
     }
 
-    let client = get_client_validated(client_id, origin).await?;
+    let client = get_client_validated(client_id, &origin).await?;
     client.validate_enabled()?;
 
     let Some(auth_code) = AuthCode::find(params.code).await? else {
@@ -219,9 +241,9 @@ pub async fn get_forward_auth_client_callback(
     let session = ForwardAuthSession {
         inner: Session::find(sid).await?,
     };
-    let (cookie_session, cookie_csrf) = session.build_cookies(params.danger_cookie_insecure);
+    let (cookie_session, cookie_csrf) = session.build_cookies(state.danger_cookie_insecure);
 
-    Ok(HttpResponse::MovedPermanently()
+    Ok(HttpResponse::build(StatusCode::from_u16(302).unwrap())
         .insert_header((LOCATION, state.forwarded_uri))
         .cookie(cookie_session)
         .cookie(cookie_csrf)

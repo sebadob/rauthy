@@ -156,6 +156,26 @@ postgres-stop:
 postgres-rm:
     {{ docker }} rm {{ container_postgres }} || echo ">>> Postgres does not exists - nothing to do"
 
+# Starts Traefik for `/forward_auth` testing
+traefik-start:
+    docker run -it --rm \
+        -v ./assets/traefik/traefik.yaml:/traefik.yaml:ro \
+        -v ./assets/traefik/providers.yaml:/providers.yaml:ro \
+        -v ./assets/traefik/access.log:/access.log \
+        {{ map_docker_user }} \
+        --network host \
+        --name traefik-rauthy-test \
+        traefik:v3.4
+
+# Starts nginx for `/forward_auth` testing
+nginx-start:
+    docker run -it --rm \
+            -v ./assets/nginx/conf.d:/etc/nginx/conf.d:ro \
+            -v ./assets/nginx/access.log:/var/log/nginx/access.log \
+            --network host \
+            --name nginx-rauthy-test \
+            nginx
+
 # Just uses `cargo fmt --all`
 fmt:
     cargo fmt --all

@@ -21,8 +21,6 @@ pub struct ForwardAuthCallbackParams {
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub code: String,
-    #[serde(default)]
-    pub danger_cookie_insecure: bool,
     /// Validation: max length 2048
     #[validate(length(max = 2048))]
     pub state: String,

@@ -23,7 +23,7 @@ use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::{helpers, logout};
 use rauthy_service::{client, forward_auth};
 use tokio::task;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use validator::Validate;
 
 /// Returns all existing OIDC clients with all their information, except for the client secrets.
@@ -553,7 +553,17 @@ pub async fn get_forward_auth_oidc(
     params: Query<ForwardAuthParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
     params.validate()?;
-    forward_auth::get_forward_auth_client(id.into_inner(), req, params.into_inner()).await
+
+    match forward_auth::get_forward_auth_client(id.into_inner(), req, params.into_inner()).await {
+        Ok(r) => {
+            debug!("/clients/{{id}}/forward_auth OK: {:?}", r);
+            Ok(r)
+        }
+        Err(err) => {
+            debug!("Error during GET /clients/{{id}}/forward_auth: {:?}", err);
+            Err(err)
+        }
+    }
 }
 
 #[utoipa::path(
@@ -573,5 +583,20 @@ pub async fn get_forward_auth_callback(
     params: Query<ForwardAuthCallbackParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
     params.validate()?;
-    forward_auth::get_forward_auth_client_callback(id.into_inner(), req, params.into_inner()).await
+
+    match forward_auth::get_forward_auth_client_callback(id.into_inner(), req, params.into_inner())
+        .await
+    {
+        Ok(r) => {
+            debug!("/clients/{{id}}/forward_auth/callback OK: {:?}", r);
+            Ok(r)
+        }
+        Err(err) => {
+            debug!(
+                "Error during GET /clients/{{id}}/forward_auth/callback: {:?}",
+                err
+            );
+            Err(err)
+        }
+    }
 }
