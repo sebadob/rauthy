@@ -158,6 +158,12 @@ postgres-rm:
 
 # Starts Traefik for `/forward_auth` testing
 traefik-start:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    rm assets/traefik/access.log
+    touch assets/traefik/access.log
+
     docker run -it --rm \
         -v ./assets/traefik/traefik.yaml:/traefik.yaml:ro \
         -v ./assets/traefik/providers.yaml:/providers.yaml:ro \
@@ -169,6 +175,12 @@ traefik-start:
 
 # Starts nginx for `/forward_auth` testing
 nginx-start:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    rm assets/nginx/access.log
+    touch assets/nginx/access.log
+
     docker run -it --rm \
             -v ./assets/nginx/conf.d:/etc/nginx/conf.d:ro \
             -v ./assets/nginx/access.log:/var/log/nginx/access.log \
