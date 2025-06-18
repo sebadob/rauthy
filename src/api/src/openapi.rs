@@ -4,8 +4,9 @@ use crate::{
 };
 use rauthy_api_types::*;
 use rauthy_api_types::{
-    api_keys::*, auth_providers::*, blacklist::*, clients::*, events::*, fed_cm::*, generic::*,
-    groups::*, oidc::*, roles::*, scopes::*, sessions::*, themes::*, users::*,
+    api_keys::*, auth_providers::*, blacklist::*, clients::*, events::*, fed_cm::*,
+    forward_auth::*, generic::*, groups::*, oidc::*, roles::*, scopes::*, sessions::*, themes::*,
+    users::*,
 };
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -207,6 +208,8 @@ use utoipa::{OpenApi, openapi};
             EventLevel,
             EventsListenParams,
             EventsRequest,
+            ForwardAuthParams,
+            ForwardAuthCallbackParams,
             LoginRefreshRequest,
             GroupRequest,
             NewUserRequest,

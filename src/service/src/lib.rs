@@ -4,6 +4,7 @@
 
 pub mod client;
 pub mod encryption;
+pub mod forward_auth;
 pub mod login_delay;
 pub mod oidc;
 pub mod password_reset;

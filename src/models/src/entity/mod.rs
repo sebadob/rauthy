@@ -19,6 +19,7 @@ pub mod failed_backchannel_logout;
 pub mod failed_login_counter;
 pub mod failed_scim_tasks;
 pub mod fed_cm;
+pub mod forward_auth;
 pub mod groups;
 pub mod ip_blacklist;
 pub mod ip_rate_limit;

@@ -9,6 +9,7 @@ use rauthy_api_types::clients::{
     ClientResponse, ClientSecretRequest, ClientSecretResponse, DynamicClientRequest,
     DynamicClientResponse, NewClientRequest, UpdateClientRequest,
 };
+use rauthy_api_types::forward_auth::{ForwardAuthCallbackParams, ForwardAuthParams};
 use rauthy_api_types::generic::LogoParams;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -19,8 +20,8 @@ use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_models::rauthy_config::RauthyConfig;
-use rauthy_service::client;
 use rauthy_service::oidc::{helpers, logout};
+use rauthy_service::{client, forward_auth};
 use tokio::task;
 use tracing::{debug, error};
 use validator::Validate;
@@ -528,4 +529,49 @@ pub async fn delete_client(
     client.delete().await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+/// Forward auth endpoint with OIDC flow.
+///
+/// In contrast to the much more simple `/oidc/forward_auth`, which only check the `Authorization`
+/// header for a valid JWT token, this endpoint expects an encrypted cookie and redirects to the
+/// login / callback if invalid.
+#[utoipa::path(
+    get,
+    path = "/clients/{id}/forward_auth",
+    tag = "clients",
+    params(ForwardAuthParams),
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+    ),
+)]
+#[get("/clients/{id}/forward_auth")]
+pub async fn get_forward_auth_oidc(
+    id: web::Path<String>,
+    req: HttpRequest,
+    params: Query<ForwardAuthParams>,
+) -> Result<HttpResponse, ErrorResponse> {
+    params.validate()?;
+    forward_auth::get_forward_auth_client(id.into_inner(), req, params.into_inner()).await
+}
+
+#[utoipa::path(
+    get,
+    path = "/clients/{id}/forward_auth/callback",
+    tag = "clients",
+    params(ForwardAuthCallbackParams),
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+    ),
+)]
+#[get("/clients/{id}/forward_auth/callback")]
+pub async fn get_forward_auth_callback(
+    id: web::Path<String>,
+    req: HttpRequest,
+    params: Query<ForwardAuthCallbackParams>,
+) -> Result<HttpResponse, ErrorResponse> {
+    params.validate()?;
+    forward_auth::get_forward_auth_client_callback(id.into_inner(), req, params.into_inner()).await
 }
