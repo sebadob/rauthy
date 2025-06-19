@@ -105,7 +105,8 @@ pub fn trigger() {
             .min_tls_version(tls_version)
             .user_agent(format!("Rauthy Client v{}", RAUTHY_VERSION))
             .https_only(!vars.http_client.danger_unencrypted || !vars.dev.dev_mode)
-            .danger_accept_invalid_certs(vars.http_client.danger_insecure || vars.dev.dev_mode);
+            .danger_accept_invalid_certs(vars.http_client.danger_insecure || vars.dev.dev_mode)
+            .use_rustls_tls();
 
         if let Some(bundle) = vars.http_client.root_ca_bundle.as_ref() {
             let certs = reqwest::Certificate::from_pem_bundle(bundle.trim().as_bytes())

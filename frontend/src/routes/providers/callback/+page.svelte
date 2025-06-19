@@ -47,7 +47,7 @@
         let payload: ProviderCallbackRequest = {
             state,
             code,
-            iss,
+            iss_atproto: iss,
             pkce_verifier: getVerifierUpstreamFromStorage(),
             xsrf_token: getProviderToken(),
         };

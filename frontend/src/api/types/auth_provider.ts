@@ -49,7 +49,7 @@ export interface ProviderCallbackRequest {
     pkce_verifier: string,
 
     /// Validation: PATTERN_ALNUM
-    iss?: string,
+    iss_atproto?: string,
 }
 
 export interface ProviderLoginRequest {

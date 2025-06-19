@@ -146,9 +146,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    atproto::Client::init_provider().await.map_err(|error| {
-        error!(%error, "failed to initialize atproto provider");
-    }).unwrap();
+    if RauthyConfig::get().vars.atproto.enable {
+        atproto::Client::init_provider().await.map_err(|error| {
+            error!(%error, "failed to initialize atproto provider");
+        }).unwrap();
+    }
 
     if RauthyConfig::get().vars.server.metrics_enable {
         server::server_with_metrics().await?;
