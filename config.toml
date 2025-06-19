@@ -191,6 +191,15 @@ cookie_set_path = true
 # overwritten by: TOKEN_LEN_LIMIT
 token_len_limit = 4096
 
+# If set to `true`, the `/auth/v1/whoami` endpoint will return all
+# request headers. Only the `Cookie` and Rauthys internal CSRF headers
+# will be hidden. Since this has the potential to leak sensitive
+# information, depending on you networking, this is disabled by default.
+#
+# default: false
+# overwritten by: WHOAMI_HEADERS
+whoami_headers = true
+
 [auth_headers]
 # You can enable authn/authz headers which would be added to the
 # response of the `/auth/v1/oidc/forward_auth` endpoint. When set to

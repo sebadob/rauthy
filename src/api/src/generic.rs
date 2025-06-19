@@ -11,7 +11,8 @@ use rauthy_api_types::generic::{
     PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
-    APP_START, APPLICATION_JSON, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME, RAUTHY_VERSION,
+    APP_START, APPLICATION_JSON, CSRF_HEADER, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME,
+    PWD_CSRF_HEADER, RAUTHY_VERSION,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::ErrorResponse;
@@ -29,6 +30,7 @@ use rauthy_models::language::Language;
 use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
+use std::fmt::Write;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -548,11 +550,7 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
 )]
 #[get("/whoami")]
 pub async fn get_whoami(req: HttpRequest) -> String {
-    #[cfg(debug_assertions)]
-    let res = {
-        use rauthy_common::constants::{CSRF_HEADER, PWD_CSRF_HEADER};
-        use std::fmt::Write;
-
+    if RauthyConfig::get().vars.access.whoami_headers {
         let mut s = String::with_capacity(32);
 
         let ip = real_ip_from_req(&req)
@@ -571,12 +569,9 @@ pub async fn get_whoami(req: HttpRequest) -> String {
         }
 
         s
-    };
-
-    #[cfg(not(debug_assertions))]
-    let res = real_ip_from_req(&req)
-        .map(|ip| ip.to_string())
-        .unwrap_or_default();
-
-    res
+    } else {
+        real_ip_from_req(&req)
+            .map(|ip| ip.to_string())
+            .unwrap_or_default()
+    }
 }
