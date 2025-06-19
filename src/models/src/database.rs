@@ -33,6 +33,7 @@ struct MigrationsHiqlite;
 /// Cache Index for the `hiqlite` cache layer
 #[derive(Debug, strum::EnumIter)]
 pub enum Cache {
+    Atproto,
     App,
     AuthCode,
     DeviceCode,

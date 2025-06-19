@@ -24,7 +24,7 @@ use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_models::entity::auth_providers::AuthProviderTemplate;
+use rauthy_models::entity::auth_providers::{AuthProviderTemplate, AuthProvider};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::devices::DeviceAuthCode;
 use rauthy_models::entity::fed_cm::FedCMLoginStatus;
@@ -151,6 +151,7 @@ pub async fn get_authorize(
     }
 
     let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
+    let provider = AuthProvider::find_by_iss("atproto".to_owned()).await?;
     let logo_updated = Logo::find_updated(&client.id, &LogoType::Client).await?;
 
     // if the user is still authenticated and everything is valid -> immediate refresh
@@ -162,6 +163,7 @@ pub async fn get_authorize(
             theme_ts,
             &[
                 HtmlTemplate::AuthProviders(auth_providers_json),
+                HtmlTemplate::AtprotoId(provider.id),
                 HtmlTemplate::ClientName(client.name.unwrap_or_default()),
                 HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
                 HtmlTemplate::ClientLogoUpdated(logo_updated),
@@ -207,6 +209,7 @@ pub async fn get_authorize(
         theme_ts,
         &[
             HtmlTemplate::AuthProviders(auth_providers_json),
+            HtmlTemplate::AtprotoId(provider.id),
             HtmlTemplate::ClientName(client.name.unwrap_or_default()),
             HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
             HtmlTemplate::ClientLogoUpdated(logo_updated),

@@ -1,6 +1,6 @@
 use crate::cust_validation::validate_vec_scopes;
 use rauthy_common::regex::{
-    RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_SCOPE_SPACE, RE_URI,
+    RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_ATPROTO_HANDLE, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_SCOPE_SPACE, RE_URI,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -72,8 +72,8 @@ pub struct ProviderRequest {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ProviderCallbackRequest {
-    /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub state: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
@@ -84,6 +84,10 @@ pub struct ProviderCallbackRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub pkce_verifier: String,
+
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub iss_atproto: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -131,6 +135,11 @@ pub struct ProviderLoginRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub pkce_challenge: String,
+
+    /// Validation:
+    /// `^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$`
+    #[validate(regex(path = "*RE_ATPROTO_HANDLE", code = "^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$"))]
+    pub handle: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

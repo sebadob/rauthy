@@ -8,6 +8,7 @@ use rauthy_handlers::swagger_ui::{OPENAPI_CONFIG, OPENAPI_JSON};
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::email;
 use rauthy_models::email::EMail;
+use rauthy_models::entity::atproto;
 use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
@@ -143,6 +144,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
             OPENAPI_JSON.set(ApiDoc::build().to_json()?)?;
             let _ = *OPENAPI_CONFIG;
         }
+    }
+
+    if RauthyConfig::get().vars.atproto.enable {
+        atproto::Client::init_provider().await.map_err(|error| {
+            error!(%error, "failed to initialize atproto provider");
+        }).unwrap();
     }
 
     if RauthyConfig::get().vars.server.metrics_enable {
