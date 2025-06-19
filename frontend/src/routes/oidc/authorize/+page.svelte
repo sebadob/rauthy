@@ -475,9 +475,9 @@
                                     typ="text"
                                     name="handle"
                                     bind:value={atprotoHandle}
-                                    label="Handle or DID"
-                                    placeholder="Handle or DID"
-                                    errMsg="Provide valid handle or DID"
+                                    label="Handle / DID"
+                                    placeholder="Handle / DID"
+                                    errMsg="Provide a valid handle / DID"
                                     pattern={PATTERN_ATPROTO_ID}
                                     disabled={tooManyRequests}
                                     width={inputWidth}
@@ -536,17 +536,19 @@
                                     <Button type="submit" {isLoading}>
                                         {t.authorize.login}
                                     </Button>
-                                    {#if isAtproto}
-                                        <Button type="button" onclick={toggleAtproto}>
-                                          Back
-                                        </Button>
-                                    {/if}
                                 </div>
+                                {#if isAtproto}
+                                <div class="btn flex-col">
+                                    <Button level={2} onclick={toggleAtproto}>
+                                        {t.common.cancel}
+                                    </Button>
+                                </div>
+                                {/if}
                             {/if}
                         {/if}
                     </Form>
 
-                    {#if isRegOpen && !showResetRequest && !tooManyRequests}
+                    {#if isRegOpen && !showResetRequest && !tooManyRequests && !isAtproto}
                         {#if clientUri}
                             <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
                                 {t.authorize.signUp}

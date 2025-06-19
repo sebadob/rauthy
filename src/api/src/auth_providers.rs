@@ -76,7 +76,7 @@ pub async fn post_provider(
     if payload.issuer == "atproto" {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Must not contain a reserved name".to_string(),
+            "Must not contain a reserved name",
         ));
     }
 

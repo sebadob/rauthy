@@ -853,15 +853,15 @@ dbg!(&location);
         })?;
 
         // validate state
-        // if callback_id != payload.state {
-        //     Self::delete(callback_id).await?;
+        if callback_id != payload.state {
+            Self::delete(callback_id).await?;
 
-        //     error!("`state` does not match");
-        //     return Err(ErrorResponse::new(
-        //         ErrorResponseType::BadRequest,
-        //         "`state` does not match",
-        //     ));
-        // }
+            error!("`state` does not match");
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "`state` does not match",
+            ));
+        }
         debug!("callback state is valid");
 
         // validate csrf token
@@ -906,7 +906,7 @@ dbg!(&location);
             let params = CallbackParams {
                 code: payload.code.clone(),
                 state: Some(payload.state.clone()),
-                iss: payload.iss.clone(),
+                iss: payload.iss_atproto.clone(),
             };
             // return early if we got any error
             let (session_manager, app_state) = atproto.callback(params).await.map_err(|error| {

@@ -29,20 +29,13 @@ use rauthy_common::constants::{CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSI
 use rauthy_error::ErrorResponse;
 use serde::Serialize;
 use utoipa::{PartialSchema, ToSchema};
+use tracing::info;
 
 use crate::{
     database::{Cache, DB},
     entity::auth_providers::{AuthProvider, AuthProviderType},
     rauthy_config::RauthyConfig,
 };
-
-#[derive(Serialize)]
-struct Parameters {
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    redirect_uri: Vec<String>,
-    #[serde(skip_serializing_if = "String::is_empty")]
-    scope: String,
-}
 
 pub static ATPROTO_CLIENT: OnceLock<Client> = OnceLock::new();
 
@@ -140,6 +133,8 @@ impl Client {
     }
 
     pub async fn init_provider() -> Result<(), ErrorResponse> {
+        info!("Initializing ATProto provider");
+
         let config = RauthyConfig::get();
 
         let payload = ProviderRequest {

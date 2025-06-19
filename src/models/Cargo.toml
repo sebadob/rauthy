@@ -22,6 +22,10 @@ actix-web-lab = { workspace = true }
 argon2 = { workspace = true }
 askama = { workspace = true }
 async-trait = { workspace = true }
+atrium-api = { workspace = true }
+atrium-common = { workspace = true }
+atrium-identity = { workspace = true }
+atrium-oauth = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }
 dotenvy = { workspace = true }
@@ -29,6 +33,7 @@ ed25519-compact = { workspace = true }
 flume = { workspace = true }
 futures-util = { workspace = true }
 hex = { workspace = true }
+hickory-resolver = { workspace = true }
 hiqlite = { workspace = true }
 hiqlite-macros = { workspace = true }
 hmac-sha256 = { workspace = true }
@@ -76,13 +81,6 @@ refinery = { workspace = true }
 tokio-postgres = { workspace = true }
 tokio-postgres-rustls = { workspace = true }
 webpki-roots = { workspace = true }
-
-atrium-api = { workspace = true }
-atrium-common = { workspace = true }
-atrium-identity = { workspace = true }
-atrium-oauth = { workspace = true }
-
-hickory-resolver = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1"

@@ -87,7 +87,7 @@ pub struct ProviderCallbackRequest {
 
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-    pub iss: Option<String>,
+    pub iss_atproto: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

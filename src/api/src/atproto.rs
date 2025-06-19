@@ -9,6 +9,9 @@ use rauthy_models::{
 };
 
 
+/// ATProto public client metadata
+///
+/// Returns the public client metadata to securely facilitate the authorization process.
 #[utoipa::path(
     get,
     path = "/atproto/client_metadata",
@@ -25,7 +28,7 @@ pub async fn get_atproto_client_metadata() -> Result<HttpResponse, ErrorResponse
         Ok(HttpResponse::Ok()
             .insert_header((
                 header::ACCESS_CONTROL_ALLOW_ORIGIN,
-                HeaderValue::from_str("*").unwrap(),
+                HeaderValue::from_static("*"),
             ))
             .json(&atproto::Client::get().client_metadata))
     } else {

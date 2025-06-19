@@ -620,7 +620,7 @@ impl Default for Vars {
                 force_uv: false,
                 no_password_exp: true,
             },
-            atproto: VarsAtproto { enable: true },
+            atproto: VarsAtproto { enable: false },
         }
     }
 }
@@ -644,6 +644,7 @@ impl Vars {
             .expect("Cannot parse TOML file");
 
         slf.parse_dev(&mut table);
+        slf.parse_atproto(&mut table);
         slf.parse_access(&mut table);
         slf.parse_auth_headers(&mut table);
         slf.parse_backchannel_logout(&mut table);
@@ -699,6 +700,16 @@ impl Vars {
             "DEV_MODE_PROVIDER_CALLBACK_URL",
         ) {
             self.dev.provider_callback_url = Some(v);
+        }
+    }
+
+    fn parse_atproto(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "atproto") else {
+            return;
+        };
+
+        if let Some(v) = t_bool(&mut table, "atproto", "enable", "ATPROTO_ENABLE") {
+            self.atproto.enable = v;
         }
     }
 
