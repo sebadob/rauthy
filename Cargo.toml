@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.30.3-20250619-fwd-auth"
+version = "0.30.3-20250619-fwd-auth-1"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
