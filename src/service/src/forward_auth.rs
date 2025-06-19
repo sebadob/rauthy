@@ -9,7 +9,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::forward_auth::{ForwardAuthCallbackState, ForwardAuthSession};
-use rauthy_models::entity::sessions::Session;
+use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::User;
 use rauthy_models::rauthy_config::RauthyConfig;
 use std::net::IpAddr;
@@ -245,9 +245,21 @@ pub async fn get_forward_auth_client_callback(
 
     // all good
 
-    let session = ForwardAuthSession {
-        inner: Session::find(sid).await?,
-    };
+    // update session metadata
+    let mut session = Session::find(sid).await?;
+    if session.state != SessionState::Auth {
+        // A Session is only set to `SessionState::Auth` AFTER a successful and complete
+        // auth code flow. Because of this, it is possible to get here with an `init` session.
+        session.last_seen = Utc::now().timestamp();
+        session.state = SessionState::Auth;
+        session.validate_user_expiry(&user)?;
+        session.user_id = Some(user.id.clone());
+        session.roles = Some(user.roles);
+        session.groups = user.groups;
+        session.upsert().await?;
+    }
+
+    let session = ForwardAuthSession { inner: session };
     let (cookie_session, cookie_csrf) = session.build_cookies(state.danger_cookie_insecure);
 
     Ok(HttpResponse::build(StatusCode::from_u16(302).unwrap())
