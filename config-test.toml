@@ -4,6 +4,7 @@ dpop_http = true
 
 [access]
 password_reset_cookie_binding = true
+whoami_headers = true
 
 [auth_headers]
 enable = true
