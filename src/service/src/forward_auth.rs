@@ -38,13 +38,6 @@ pub async fn get_forward_auth_client(
     let origin = format!("{}://{}", proto, host);
 
     let forwarded_uri = get_header_alt("X-Forwarded-URI", "X-Original-URL", &req)?;
-    if !forwarded_uri.starts_with(&origin) {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "X-Forwarded-URI / X-Original-URL does not match the origin",
-        ));
-    }
-
     let method = get_header("X-Forwarded-Method", &req)?;
     let check_csrf = !method.eq_ignore_ascii_case("GET") && !method.eq_ignore_ascii_case("HEAD");
 
