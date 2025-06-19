@@ -13,7 +13,7 @@ entryPoints:
   websecure:
     address: :8443
 log:
-  level: debug
+  level: info
 accessLog:
   filePath: /access.log
   #    middlewares:

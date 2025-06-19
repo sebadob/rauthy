@@ -32,7 +32,7 @@ use semver::Version;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::sync::LazyLock;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 use validator::Validate;
 
 pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
@@ -533,6 +533,11 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
 }
 
 /// Returns the remote IP that Rauthy has extracted for this client
+///
+/// During development, with `debug_assertions` enabled, this endpoint returns the full set of HTTP
+/// headers the request comes in with. A release build though will only return the extracted
+/// "real IP". This is useful for checking any reverse proxy configuration and making sure the
+/// setup is correct.
 #[utoipa::path(
     get,
     path = "/whoami",
@@ -545,6 +550,7 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
 pub async fn get_whoami(req: HttpRequest) -> String {
     #[cfg(debug_assertions)]
     let res = {
+        use rauthy_common::constants::{CSRF_HEADER, PWD_CSRF_HEADER};
         use std::fmt::Write;
 
         let mut s = String::with_capacity(32);
@@ -552,16 +558,16 @@ pub async fn get_whoami(req: HttpRequest) -> String {
         let ip = real_ip_from_req(&req)
             .map(|ip| ip.to_string())
             .unwrap_or_default();
-        let _ = writeln!(s, "IP: {}\n", ip);
+        let _ = writeln!(s, "{}\n", ip);
 
         for (k, v) in req.headers() {
-            let name = k.as_str();
-            // if name == "cookie" {
-            //     debug!("/whoami cookies: {:?}", v);
-            //     let _ = writeln!(s, "{}: <hidden>, ", k.as_str());
-            // } else {
-            let _ = writeln!(s, "{}: {}, ", k.as_str(), v.to_str().unwrap_or_default());
-            // }
+            let key = k.as_str();
+            let value = if key == "cookie" || key == CSRF_HEADER || key == PWD_CSRF_HEADER {
+                "<hidden>"
+            } else {
+                v.to_str().unwrap_or_default()
+            };
+            let _ = writeln!(s, "{}: {}, ", key, value);
         }
 
         s

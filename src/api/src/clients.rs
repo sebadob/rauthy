@@ -23,7 +23,7 @@ use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::{helpers, logout};
 use rauthy_service::{client, forward_auth};
 use tokio::task;
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 use validator::Validate;
 
 /// Returns all existing OIDC clients with all their information, except for the client secrets.

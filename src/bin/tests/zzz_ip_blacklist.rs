@@ -28,7 +28,10 @@ async fn test_ip_blacklist() -> Result<(), Box<dyn Error>> {
     let url_ip = format!("{}/whoami", get_backend_url());
     let res = client.get(&url_ip).send().await?;
     assert_eq!(res.status(), StatusCode::OK);
-    let ip = res.text().await?.parse::<Ipv4Addr>().unwrap();
+
+    let text = res.text().await.unwrap();
+    let (ip, _) = text.split_once('\n').unwrap();
+    let ip = ip.parse::<Ipv4Addr>().unwrap();
     println!("parsed ip: {:?}", ip);
 
     // let's blacklist ourselves

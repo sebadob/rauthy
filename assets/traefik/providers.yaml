@@ -1,34 +1,34 @@
 http:
   routers:
     rauthy:
-      #      rule: PathPrefix(`/`)
-      rule: Host(`localhost:8443`)
+      entrypoints: websecure
+      rule: Path(`/whoami`)
       middlewares:
-        - test-ipallowlist
         - add-prefix
-        - test-auth
-      service: rauthy
+        - fwd-auth
+      service: whoami
 
   middlewares:
     add-prefix:
       addPrefix:
         prefix: /auth/v1
-    test-auth:
-      basicAuth:
-        users:
-          - "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
     fwd-auth:
       forwardAuth:
-        address: http://localhost:8080/auth/v1/forward_auth
-    test-ipallowlist:
-      ipAllowList:
-        sourceRange:
-          - "127.0.0.1/32"
-          - "192.168.1.7"
+        # the id for the properly configured client is `test` in this case
+        address: http://localhost:8080/auth/v1/clients/test/forward_auth?redirect_state=302
+        trustForwardHeader: true
+        authResponseHeaders:
+          - x-forwarded-user
+          - x-forwarded-user-roles
+          - x-forwarded-user-groups
+          - x-forwarded-user-email
+          - x-forwarded-user-email-verified
+          - x-forwarded-user-family-name
+          - x-forwarded-user-given-name
+          - x-forwarded-user-mfa
 
   services:
-    rauthy:
+    whoami:
       loadBalancer:
         servers:
-          #          - url: http://192.168.14.20:8080
           - url: http://localhost:8080

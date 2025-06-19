@@ -165,6 +165,7 @@ traefik-start:
     touch assets/traefik/access.log
 
     docker run -it --rm \
+        -v /var/run/docker.sock:/var/run/docker.sock \
         -v ./assets/traefik/traefik.yaml:/traefik.yaml:ro \
         -v ./assets/traefik/providers.yaml:/providers.yaml:ro \
         -v ./assets/traefik/access.log:/access.log \
