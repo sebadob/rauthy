@@ -3893,13 +3893,11 @@ version = "0.30.3-20250619-fwd-auth-1"
 dependencies = [
  "actix-web",
  "actix-web-prom",
- "arc-swap",
  "chrono",
  "dotenvy",
  "ed25519-compact",
  "flume",
  "josekit",
- "notify",
  "num_cpus",
  "openssl",
  "openssl-sys",
@@ -3928,7 +3926,6 @@ dependencies = [
  "tokio-test",
  "tracing",
  "tracing-subscriber",
- "utoipa-swagger-ui",
 ]
 
 [[package]]
