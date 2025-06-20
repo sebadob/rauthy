@@ -1,7 +1,6 @@
-const START_WITH_TARGETS: [&str; 14] = [
-    "/2018",
-    "/2019",
-    "/2020",
+const START_WITH_TARGETS: [&str; 13] = [
+    "/201",
+    "/202",
     "/../",
     "/.aws/",
     "/.env",
