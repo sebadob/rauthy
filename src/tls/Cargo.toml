@@ -1,0 +1,16 @@
+[package]
+name = "rauthy-tls"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+rauthy-error = { path = "../error" }
+
+arc-swap = { workspace = true }
+notify = { workspace = true }
+rustls = { workspace = true }
+rustls-pemfile = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }

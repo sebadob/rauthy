@@ -37,6 +37,7 @@ actix-multipart = "0.7.2"
 actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-lab = "0.24"
 actix-web-prom = "0.10"
+arc-swap = "1.7.1"
 askama = "0.14"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
 async-trait = "0.1.74"
@@ -74,6 +75,7 @@ lettre = { version = "0.11", default-features = false, features = [
 libflate = "2.1.0"
 mime = "0.3.17"
 mime_guess = "2"
+notify = "8.0.0"
 num_cpus = "1"
 openssl = { version = "0.10.72", features = ["vendored"] }
 openssl-sys = { version = "0.9.105", features = ["vendored"] }

@@ -46,7 +46,7 @@ port_https = 8443
 scheme = 'https'
 pub_url = 'localhost:8443'
 http_workers = 1
-metrics_enable = true
+metrics_enable = false
 swagger_ui_enable = true
 
 [tls]

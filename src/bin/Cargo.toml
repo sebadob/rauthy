@@ -18,12 +18,15 @@ rauthy-middlewares = { path = "../middlewares" }
 rauthy-models = { path = "../models" }
 rauthy-schedulers = { path = "../schedulers" }
 rauthy-service = { path = "../service" }
+rauthy-tls = { path = "../tls" }
 
 actix-web = { workspace = true }
 actix-web-prom = { workspace = true }
+arc-swap = { workspace = true }
 chrono = { workspace = true }
 dotenvy = { workspace = true }
 flume = { workspace = true }
+notify = { workspace = true }
 num_cpus = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
