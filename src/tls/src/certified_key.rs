@@ -1,7 +1,7 @@
+use crate::error::Error;
 use arc_swap::ArcSwap;
 use notify::event::CreateKind;
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rustls::crypto::CryptoProvider;
 use rustls::pki_types::PrivateKeyDer;
 use rustls::server::{ClientHello, ResolvesServerCert};
@@ -26,17 +26,21 @@ pub struct CertifiedKeyWatched {
 impl ResolvesServerCert for CertifiedKeyWatched {
     #[inline(always)]
     fn resolve(&self, _: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
-        Some(self.cert_key.load_full())
+        Some(self.cloned())
     }
 }
 
 impl CertifiedKeyWatched {
-    pub async fn new(key_path: String, cert_path: String) -> Result<Arc<Self>, ErrorResponse> {
+    #[inline(always)]
+    pub fn cloned(&self) -> Arc<CertifiedKey> {
+        self.cert_key.load_full()
+    }
+
+    pub async fn new(key_path: String, cert_path: String) -> Result<Arc<Self>, Error> {
         let kp_cloned = key_path.clone();
         let cp_cloned = cert_path.clone();
-        let cert_key = task::spawn_blocking(move || Self::try_load(&kp_cloned, &cp_cloned))
-            .await
-            .map_err(|err| ErrorResponse::new(ErrorResponseType::Internal, err.to_string()))??;
+        let cert_key =
+            task::spawn_blocking(move || Self::try_load(&kp_cloned, &cp_cloned)).await??;
 
         let slf = Arc::new(Self {
             key_path,
@@ -51,15 +55,10 @@ impl CertifiedKeyWatched {
         Ok(slf)
     }
 
-    fn try_load(key_path: &str, cert_path: &str) -> Result<Arc<CertifiedKey>, ErrorResponse> {
+    fn try_load(key_path: &str, cert_path: &str) -> Result<Arc<CertifiedKey>, Error> {
         let key_file = fs::read(key_path)?;
         let key = if key_path.ends_with(".der") {
-            PrivateKeyDer::try_from(key_file).map_err(|err| {
-                ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    format!("Cannot load TLS key: {}", err),
-                )
-            })?
+            PrivateKeyDer::try_from(key_file).map_err(|err| Error::PrivateKey(err.to_string()))?
         } else {
             let mut reader = BufReader::new(key_file.as_slice());
             let mut key = None;
@@ -80,10 +79,7 @@ impl CertifiedKeyWatched {
             }
             match key {
                 None => {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::Internal,
-                        "No TLS key found",
-                    ));
+                    return Err(Error::NotFound("To TLS key found"));
                 }
                 Some(k) => k,
             }
@@ -91,34 +87,26 @@ impl CertifiedKeyWatched {
 
         let certs_file = fs::read(cert_path)?;
         let mut certs_reader = BufReader::new(certs_file.as_slice());
-        let cert_chain = rustls_pemfile::certs(&mut certs_reader)
-            .filter_map(|res| match res {
-                Ok(cert) => Some(cert),
-                Err(err) => {
-                    error!("Error parsing certificate data: {:?}", err);
-                    None
+        let mut cert_chain = Vec::with_capacity(2);
+        for res in rustls_pemfile::certs(&mut certs_reader) {
+            match res {
+                Ok(cert) => {
+                    cert_chain.push(cert);
                 }
-            })
-            .collect::<Vec<_>>();
+                Err(err) => return Err(Error::InvalidData(err.to_string())),
+            }
+        }
 
         let provider = CryptoProvider::get_default().expect("rustls CryptoProvider not installed");
-        let ck = CertifiedKey::from_der(cert_chain, key, provider).map_err(|err| {
-            ErrorResponse::new(
-                ErrorResponseType::Internal,
-                format!("Cannot build TLS CertifiedKey from Key + Cert: {:?}", err),
-            )
-        })?;
-        ck.keys_match().map_err(|err| {
-            ErrorResponse::new(
-                ErrorResponseType::Internal,
-                format!("TLS Key and Certificate don't match: {:?}", err),
-            )
-        })?;
+        let ck = CertifiedKey::from_der(cert_chain, key, provider)
+            .map_err(|err| Error::InvalidData(err.to_string()))?;
+        ck.keys_match()
+            .map_err(|err| Error::KeyMismatch(err.to_string()))?;
 
         Ok(Arc::new(ck))
     }
 
-    fn watch_files(slf: Arc<Self>) -> Result<RecommendedWatcher, ErrorResponse> {
+    fn watch_files(slf: Arc<Self>) -> Result<RecommendedWatcher, Error> {
         let key_path = slf.key_path.clone();
         let cert_path = slf.cert_path.clone();
 
@@ -145,30 +133,10 @@ impl CertifiedKeyWatched {
                 Err(err) => {
                     error!("File watch error: {:?}", err);
                 }
-            })
-            .map_err(|err| {
-                ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    format!("Cannot start File Watcher: {:?}", err),
-                )
             })?;
 
-        watcher
-            .watch(Path::new(&key_path), RecursiveMode::NonRecursive)
-            .map_err(|err| {
-                ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    format!("Cannot watch path {}: {:?}", key_path, err),
-                )
-            })?;
-        watcher
-            .watch(Path::new(&cert_path), RecursiveMode::NonRecursive)
-            .map_err(|err| {
-                ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    format!("Cannot watch path {}: {:?}", cert_path, err),
-                )
-            })?;
+        watcher.watch(Path::new(&key_path), RecursiveMode::NonRecursive)?;
+        watcher.watch(Path::new(&cert_path), RecursiveMode::NonRecursive)?;
 
         Ok(watcher)
     }
