@@ -15,7 +15,7 @@ use rauthy_common::constants::{
     PWD_CSRF_HEADER, RAUTHY_VERSION,
 };
 use rauthy_common::utils::real_ip_from_req;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::app_version::LatestAppVersion;
@@ -452,7 +452,7 @@ pub async fn get_ready() -> impl Responder {
 /// Catch all - redirects from root to the "real root" /auth/v1/
 /// If `BLACKLIST_SUSPICIOUS_REQUESTS` is set, it will also compare the
 /// request path against common bot / hacker scan targets and blacklist preemptively.
-#[get("/")]
+#[get("/{_:.*}")]
 pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     let path = req.path();
     let ip = real_ip_from_req(&req)?.to_string();
@@ -479,6 +479,10 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
                 err
             );
         }
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotFound,
+            "You have been blocked because of API scanning. This incident has been reported.",
+        ));
     }
 
     Ok(HttpResponse::MovedPermanently()

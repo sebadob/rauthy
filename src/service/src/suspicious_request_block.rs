@@ -1,20 +1,24 @@
-const START_WITH_TARGETS: [&str; 10] = [
-    "../",
-    ".aws/",
-    ".env",
-    ".git/",
-    ".kube/",
-    ".ssh/",
-    "docker-compose",
-    "etc/",
-    "http",
-    "wp-",
+const START_WITH_TARGETS: [&str; 13] = [
+    "/201",
+    "/202",
+    "/../",
+    "/.aws/",
+    "/.env",
+    "/.git/",
+    "/.kube/",
+    "/.ssh/",
+    "/.well-knownold/",
+    "/blog",
+    "/docker-compose",
+    "/etc/",
+    "/http",
 ];
 
 const ENDS_WITH_TARGETS: [&str; 8] = [
     ".json", ".yaml", ".yml", ".php", ".sql", ".xml", ".tar.gz", ".zip",
 ];
 
+const CONTAINS_TARGETS: [&str; 1] = ["/wp-"];
 /// Scans the given url path for common scan targets from bots and attackers.
 pub fn is_scan_target(request_path: &str) -> bool {
     for target in START_WITH_TARGETS {
@@ -25,6 +29,12 @@ pub fn is_scan_target(request_path: &str) -> bool {
 
     for target in ENDS_WITH_TARGETS {
         if request_path.ends_with(target) {
+            return true;
+        }
+    }
+
+    for target in CONTAINS_TARGETS {
+        if request_path.contains(target) {
             return true;
         }
     }
