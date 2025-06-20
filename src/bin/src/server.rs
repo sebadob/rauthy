@@ -89,11 +89,11 @@ pub async fn server_with_metrics() -> std::io::Result<()> {
             .wrap(metrics_collector.clone())
             .service(oidc::get_well_known)
             .service(fed_cm::get_fed_cm_well_known)
-            .service(generic::catch_all)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
             .wrap(RauthyIpBlacklistMiddleware)
-            .service(api_services());
+            .service(api_services())
+            .service(generic::catch_all);
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
@@ -173,11 +173,11 @@ pub async fn server_without_metrics() -> std::io::Result<()> {
             .wrap(default_headers())
             .service(oidc::get_well_known)
             .service(fed_cm::get_fed_cm_well_known)
-            .service(generic::catch_all)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
             .wrap(RauthyIpBlacklistMiddleware)
-            .service(api_services());
+            .service(api_services())
+            .service(generic::catch_all);
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
