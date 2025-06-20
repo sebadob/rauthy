@@ -24,6 +24,7 @@ pub struct CertifiedKeyWatched {
 }
 
 impl ResolvesServerCert for CertifiedKeyWatched {
+    #[inline(always)]
     fn resolve(&self, _: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
         Some(self.cert_key.load_full())
     }
