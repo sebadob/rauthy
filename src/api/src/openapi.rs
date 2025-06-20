@@ -56,6 +56,8 @@ use utoipa::{OpenApi, openapi};
         clients::put_clients,
         clients::put_generate_client_secret,
         clients::delete_client,
+        clients::get_forward_auth_oidc,
+        clients::get_forward_auth_callback,
 
         events::post_events,
         events::sse_events,
