@@ -177,11 +177,10 @@ pub async fn grant_type_authorization_code(
             code.delete().await?;
             return Err(err);
         }
-        session.validate_user_expiry(&user)?;
         session.user_id = Some(user.id.clone());
         session.roles = Some(user.roles);
         session.groups = user.groups;
-        session.save().await?;
+        session.upsert().await?;
     }
     code.delete().await?;
 

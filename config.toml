@@ -191,6 +191,15 @@ cookie_set_path = true
 # overwritten by: TOKEN_LEN_LIMIT
 token_len_limit = 4096
 
+# If set to `true`, the `/auth/v1/whoami` endpoint will return all
+# request headers. Only the `Cookie` and Rauthys internal CSRF headers
+# will be hidden. Since this has the potential to leak sensitive
+# information, depending on you networking, this is disabled by default.
+#
+# default: false
+# overwritten by: WHOAMI_HEADERS
+whoami_headers = true
+
 [auth_headers]
 # You can enable authn/authz headers which would be added to the
 # response of the `/auth/v1/oidc/forward_auth` endpoint. When set to
@@ -1515,7 +1524,7 @@ jwk_autorotate_cron = '0 30 3 1 * * *'
 #
 # default: 'info'
 # overwritten by: LOG_LEVEL
-level = 'info'
+level = 'debug'
 
 # The log level for the `Hiqlite` persistence layer.
 # At the time of writing, only the cache will use `hiqlite`
@@ -1682,7 +1691,7 @@ proxy_mode = false
 #
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
-#trusted_proxies = ['192.168.14.0/24']
+trusted_proxies = ['127.0.0.1/32']
 
 # To bring support for applications using deep-linking, you
 # can set custom URL schemes to be accepted when present in

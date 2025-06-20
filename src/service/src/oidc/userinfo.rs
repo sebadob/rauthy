@@ -40,7 +40,7 @@ pub async fn get_userinfo(
         .map_err(|_| {
             ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
-                "The user has not been found".to_string(),
+                "The user has not been found",
             )
         })?;
 
@@ -48,7 +48,7 @@ pub async fn get_userinfo(
     if !user.enabled || user.check_expired().is_err() {
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("user-disabled".to_string()),
-            "The user has been disabled".to_string(),
+            "The user has been disabled",
         ));
     }
 

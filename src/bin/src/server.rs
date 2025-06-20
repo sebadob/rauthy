@@ -349,6 +349,8 @@ fn api_services() -> actix_web::Scope {
                 .service(clients::post_clients_dyn)
                 .service(clients::get_clients_dyn)
                 .service(clients::put_clients_dyn)
+                .service(clients::get_forward_auth_oidc)
+                .service(clients::get_forward_auth_callback)
                 .service(generic::get_login_time)
                 .service(fed_cm::get_fed_cm_accounts)
                 .service(fed_cm::get_fed_cm_config)
