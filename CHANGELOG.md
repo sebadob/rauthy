@@ -1,5 +1,41 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### OIDC-backed Forward Auth
+
+In addition to the already existing, very simple `/forward_auth` endpoint, which has limited compatibility, Rauthy now
+provides a very much advanced version of it. This new version is not a replacement of the old approach, but an addition.
+
+The already existing endpoint is very simple: It expects a valid JWT token to be present in the `Authorization` header,
+parses and validates it, and if it's valid, it returns an HTTP 200 and a 401 otherwise. Depending on
+`auth_headers.enable`, it will also append the Forward-Auth headers to the request, which the reverse proxy could inject
+into the request sent to the downstream client.
+
+The new version is much improved. It does not work with stateless JWT tokens, but it binds to the Rauthy session. This
+makes it possible to revoke access as any time. It can also do proper CSRF checks, validates the client and user
+configuration, and it can make everything work without any modification to the client. On auth success, it behaves in
+the same way as the already existing endpoint. On invalid though, it will redirect to Rauthys Login, which then again
+will do another redirect to a Callback UI and therefore trigger a complete OIDC flow. On the callback page, Rauthy can
+now set fully-secured session cookies and do others things like check the `Sec-Fetch-Site` header. This is the most
+secure it can get, without modifications to the client. The callback page is exposed by Rauthy itself, and can be
+"injected" into the client app at your reverse proxy level, which makes all of this as secure as possible.
+
+You can do this new Forward-Auth for any client, as long as it's configured properly. Rauthy is quite a bit more strict
+about the correct client config upfront. This makes it possible to have a few additional safety hooks which will help
+you prevent unwanted, invalid reverse proxy config, which can happen very quickly for complex setups.
+
+!!! TODO update the book and provide a link. !!!!
+
+> CAUTION: Even though this is probably the most secure you can get with Forward-Auth, it should still only be the last
+> resort, and you should always prefer a native OIDC client implementation, if it exists! If you screw up the reverse
+> proxy config, or if an attacker can find a way around your reverse proxy and skip it, all your security will be gone
+> immediately.
+
+[#1053](https://github.com/sebadob/rauthy/pull/1053)
+
 ## v0.30.2
 
 ### Changes
