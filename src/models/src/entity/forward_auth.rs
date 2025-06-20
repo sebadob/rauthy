@@ -95,18 +95,6 @@ impl ForwardAuthSession {
         Ok(())
     }
 
-    pub async fn update_last_seen(&mut self) -> Result<(), ErrorResponse> {
-        let now = Utc::now().timestamp();
-        if now - self.inner.last_seen < 10 {
-            // avoid excessive writes
-            return Ok(());
-        }
-        self.inner.last_seen = now;
-        self.inner.upsert().await?;
-
-        Ok(())
-    }
-
     #[inline]
     pub fn validate_csrf(
         &self,

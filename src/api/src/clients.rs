@@ -546,6 +546,7 @@ pub async fn delete_client(
         (status = 400, description = "BadRequest", body = ErrorResponse),
     ),
 )]
+#[tracing::instrument(level = "debug", skip(req))]
 #[get("/clients/{id}/forward_auth")]
 pub async fn get_forward_auth_oidc(
     id: web::Path<String>,
@@ -556,7 +557,7 @@ pub async fn get_forward_auth_oidc(
 
     match forward_auth::get_forward_auth_client(id.into_inner(), req, params.into_inner()).await {
         Ok(r) => {
-            debug!("/clients/{{id}}/forward_auth OK: {:?}", r);
+            debug!("Forward Auth is OK");
             Ok(r)
         }
         Err(err) => {
@@ -576,6 +577,7 @@ pub async fn get_forward_auth_oidc(
         (status = 400, description = "BadRequest", body = ErrorResponse),
     ),
 )]
+#[tracing::instrument(level = "debug", skip(req))]
 #[get("/clients/{id}/forward_auth/callback")]
 pub async fn get_forward_auth_callback(
     id: web::Path<String>,
@@ -587,15 +589,9 @@ pub async fn get_forward_auth_callback(
     match forward_auth::get_forward_auth_client_callback(id.into_inner(), req, params.into_inner())
         .await
     {
-        Ok(r) => {
-            debug!("/clients/{{id}}/forward_auth/callback OK: {:?}", r);
-            Ok(r)
-        }
+        Ok(r) => Ok(r),
         Err(err) => {
-            debug!(
-                "Error during GET /clients/{{id}}/forward_auth/callback: {:?}",
-                err
-            );
+            debug!("Error: {:?}", err);
             Err(err)
         }
     }

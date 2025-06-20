@@ -16,7 +16,6 @@ use std::net::IpAddr;
 use std::str::FromStr;
 use tracing::{debug, error};
 
-#[tracing::instrument(level = "debug", skip(req))]
 pub async fn get_forward_auth_client(
     client_id: String,
     req: HttpRequest,
@@ -43,13 +42,14 @@ pub async fn get_forward_auth_client(
 
     let client = get_client_validated(client_id, &origin).await?;
     client.validate_enabled()?;
+
     let session = match ForwardAuthSession::from_cookie(&req, params.danger_cookie_insecure).await {
         None => {
             debug!("No session found");
             None
         }
         Some(s) => {
-            debug!("Session during forward auth: {:?}", s);
+            debug!("{:?}", s);
             let ip = Some(real_ip_from_req(&req)?);
             if s.validate(ip).is_ok() {
                 if check_csrf {
@@ -73,6 +73,7 @@ pub async fn get_forward_auth_client(
         let redirect_uris = client.get_redirect_uris();
         let redirect_uri = match redirect_uris.first() {
             None => {
+                debug!("The first configured `redirect_uri` must be absolute for `forward_auth`");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "The first configured `redirect_uri` must be absolute for `forward_auth`",
@@ -80,12 +81,18 @@ pub async fn get_forward_auth_client(
             }
             Some(uri) => {
                 if !uri.starts_with(&origin) {
+                    debug!(
+                        "The first configured `redirect_uri` must start with the `X-Forwarded-Host`"
+                    );
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
                         "The first configured `redirect_uri` must start with the `X-Forwarded-Host`",
                     ));
                 }
                 if uri.ends_with("*") {
+                    debug!(
+                        "The first configured `redirect_uri` must be absolute for `forward_auth`"
+                    );
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
                         "The first configured `redirect_uri` must be absolute for `forward_auth`",
@@ -117,7 +124,16 @@ pub async fn get_forward_auth_client(
             .insert_header((LOCATION, location))
             .finish());
     };
-    let session = session.unwrap().inner;
+    let mut session = session.unwrap().inner;
+
+    // we don't have the middleware auto-updater for last_seen at this point
+    let now = Utc::now().timestamp();
+    if session.last_seen < now - 10 {
+        session.last_seen = now;
+        session.upsert().await?;
+    }
+
+    debug!("Checking user and client validity");
 
     let Some(user_id) = session.user_id.clone() else {
         return Err(ErrorResponse::new(
@@ -155,7 +171,6 @@ pub async fn get_forward_auth_client(
     }
 }
 
-#[tracing::instrument(level = "debug", skip(req))]
 pub async fn get_forward_auth_client_callback(
     client_id: String,
     req: HttpRequest,
@@ -243,17 +258,17 @@ pub async fn get_forward_auth_client_callback(
     if session.state != SessionState::Auth {
         // A Session is only set to `SessionState::Auth` AFTER a successful and complete
         // auth code flow. Because of this, it is possible to get here with an `init` session.
-        session.last_seen = Utc::now().timestamp();
         session.state = SessionState::Auth;
         session.validate_user_expiry(&user)?;
         session.user_id = Some(user.id.clone());
         session.roles = Some(user.roles);
         session.groups = user.groups;
-        session.upsert().await?;
     }
+    session.last_seen = Utc::now().timestamp();
+    session.upsert().await?;
 
-    let session = ForwardAuthSession { inner: session };
-    let (cookie_session, cookie_csrf) = session.build_cookies(state.danger_cookie_insecure);
+    let fwd_session = ForwardAuthSession { inner: session };
+    let (cookie_session, cookie_csrf) = fwd_session.build_cookies(state.danger_cookie_insecure);
 
     Ok(HttpResponse::build(StatusCode::from_u16(302).unwrap())
         .insert_header((LOCATION, state.forwarded_uri))
@@ -297,10 +312,13 @@ async fn get_client_validated(client_id: String, origin: &str) -> Result<Client,
 #[inline]
 fn get_header<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, ErrorResponse> {
     match req.headers().get(key) {
-        None => Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("Missing header {key}"),
-        )),
+        None => {
+            debug!("Missing header {}", key);
+            Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!("Missing header {key}"),
+            ))
+        }
         Some(v) => Ok(v.to_str().unwrap_or_default()),
     }
 }
@@ -315,10 +333,16 @@ fn get_header_alt<'a>(
         Ok(v) => Ok(v),
         Err(_) => match get_header(key_second, req) {
             Ok(v) => Ok(v),
-            Err(_) => Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!("Missing at least one of headers {key_first} / {key_second}"),
-            )),
+            Err(_) => {
+                debug!(
+                    "Missing at least one of headers {} / {}",
+                    key_first, key_second
+                );
+                Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("Missing at least one of headers {key_first} / {key_second}"),
+                ))
+            }
         },
     }
 }
@@ -329,6 +353,7 @@ fn validate_proxy(req: &HttpRequest) -> Result<(), ErrorResponse> {
 
     let proxy_ip = match req.connection_info().peer_addr() {
         None => {
+            debug!("Cannot extract peer IP from HTTP request");
             return Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
                 "Cannot extract peer IP from HTTP request",
@@ -337,7 +362,7 @@ fn validate_proxy(req: &HttpRequest) -> Result<(), ErrorResponse> {
         Some(s) => match IpAddr::from_str(s) {
             Ok(ip) => ip,
             Err(err) => {
-                error!("{:?}", err);
+                debug!("Cannot parse peer IP from HTTP request: {:?}", err);
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "Cannot parse peer IP from HTTP request",
@@ -356,6 +381,7 @@ fn validate_proxy(req: &HttpRequest) -> Result<(), ErrorResponse> {
     if is_match {
         Ok(())
     } else {
+        debug!("Invalid proxy peer IP");
         Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "Invalid proxy peer IP",
