@@ -4,7 +4,7 @@
 
 ### Changes
 
-#### OIDC-backed Forward Auth
+#### OIDC-backed Forward-Auth
 
 In addition to the already existing, very simple `/forward_auth` endpoint, which has limited compatibility, Rauthy now
 provides a very much advanced version of it. This new version is not a replacement of the old approach, but an addition.
@@ -33,6 +33,13 @@ you prevent unwanted, invalid reverse proxy config, which can happen very quickl
 > resort, and you should always prefer a native OIDC client implementation, if it exists! If you screw up the reverse
 > proxy config, or if an attacker can find a way around your reverse proxy and skip it, all your security will be gone
 > immediately.
+
+To help during Forward-Auth setup and making sure you got it right in your environment, the `/auth/v1/whoami` endpoint
+has received an update as well. You can now set `access.whoami_headers = true` or use `WHOAMI_HEADERS`. This will make
+the `/whoami` endpoint not only return the extracted "real IP", but it will also return all request headers it received.
+This will help you make sure your setup is working correctly, if you use `auth_headers`. By default, this is set to
+`false`. Depending on your internal network setup, this could expose sensitive headers, if you inject any. It will not
+return values for `Cookie` and Rauthy's own CSRF token headers, but all others return will show their raw values.
 
 [#1053](https://github.com/sebadob/rauthy/pull/1053)
 
