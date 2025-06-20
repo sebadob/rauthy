@@ -6,11 +6,10 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-rauthy-error = { path = "../error" }
-
 arc-swap = { workspace = true }
 notify = { workspace = true }
 rustls = { workspace = true }
 rustls-pemfile = { workspace = true }
+thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }

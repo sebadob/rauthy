@@ -4213,9 +4213,9 @@ version = "0.30.3-20250619-fwd-auth-1"
 dependencies = [
  "arc-swap",
  "notify",
- "rauthy-error",
  "rustls",
  "rustls-pemfile",
+ "thiserror 2.0.12",
  "tokio",
  "tracing",
 ]
