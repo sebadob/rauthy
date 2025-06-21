@@ -6,7 +6,7 @@
 
 #### TLS Hot-Reload
 
-Rauthy can not hot-reload TLS Key + Certificates. If started with `server.scheme` set to any `https` value and TLS
+Rauthy can now hot-reload TLS Key + Certificates. If started with `server.scheme` set to any `https` value and TLS
 certificates are used, Rauthy will watch for file changes on `tls.cert_path` + `tls.key_path` and will do a hot-reload
 of the TLS configuration if anything changes. This is a real hot-reload, meaning there is no restarting the server, and
 it does it without any interruption in service.
