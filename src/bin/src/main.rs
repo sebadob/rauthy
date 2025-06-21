@@ -58,7 +58,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             else if vault {
                 println!("####### VAULT #########");
-                //write vault_soruce_env_vars to file config.vault or just do a check later and use RauthyConfig::build_from_vault 
                 ("config.vault", false)
             }
             else {
@@ -79,6 +78,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "config.vault" =>
         { 
             println!("####### config.vault #########");
+            
+            //fixme: if file config.vault exists, load from file first and overwrite with env vars, validate
 
             let vault_addr = env::var("VAULT_ADDR").unwrap();
             let vault_token = env::var("VAULT_TOKEN").unwrap();

@@ -613,8 +613,6 @@ impl Default for Vars {
             tls: VarsTls {
                 cert_path: None,
                 key_path: None,
-                cert_path_vault: None,
-                key_path_vault: None,
             },
             user_pictures: VarsUserPictures {
                 storage_type: "db".into(),
@@ -2103,13 +2101,7 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut table, "tls", "key_path", "TLS_KEY") {
             self.tls.key_path = Some(v);
-        }
-        if let Some(v) = t_str(&mut table, "tls", "cert_path_vault", "cert.pem") {
-            self.tls.cert_path_vault = Some(v);
-        }
-        if let Some(v) = t_str(&mut table, "tls", "key_path_vault", "cert.key") {
-            self.tls.key_path_vault = Some(v);
-        }        
+        }   
     }
 
     fn parse_user_pictures(&mut self, table: &mut toml::Table) {
@@ -2578,8 +2570,6 @@ pub struct VarsTemplate {
 pub struct VarsTls {
     pub cert_path: Option<String>,
     pub key_path: Option<String>,
-    pub cert_path_vault: Option<String>,
-    pub key_path_vault: Option<String>,
 }
 
 #[derive(Debug)]
