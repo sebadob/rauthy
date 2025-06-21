@@ -8,6 +8,7 @@ pub mod clients;
 mod cust_validation;
 pub mod events;
 pub mod fed_cm;
+pub mod forward_auth;
 pub mod generic;
 pub mod groups;
 pub mod oidc;

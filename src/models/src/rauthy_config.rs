@@ -298,6 +298,7 @@ impl Default for Vars {
                 cookie_mode: CookieMode::Host,
                 cookie_set_path: true,
                 token_len_limit: 4096,
+                whoami_headers: false,
             },
             auth_headers: VarsAuthHeaders {
                 enable: false,
@@ -797,6 +798,9 @@ impl Vars {
         }
         if let Some(v) = t_u32(&mut table, "access", "token_len_limit", "TOKEN_LEN_LIMIT") {
             self.access.token_len_limit = v;
+        }
+        if let Some(v) = t_bool(&mut table, "access", "whoami_headers", "WHOAMI_HEADERS") {
+            self.access.whoami_headers = v;
         }
     }
 
@@ -2291,6 +2295,7 @@ pub struct VarsAccess {
     pub cookie_mode: CookieMode,
     pub cookie_set_path: bool,
     pub token_len_limit: u32,
+    pub whoami_headers: bool,
 }
 
 #[derive(Debug)]

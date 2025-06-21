@@ -156,6 +156,21 @@ postgres-stop:
 postgres-rm:
     {{ docker }} rm {{ container_postgres }} || echo ">>> Postgres does not exists - nothing to do"
 
+# Starts nginx for `/forward_auth` testing
+nginx-start:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    rm assets/nginx/access.log
+    touch assets/nginx/access.log
+
+    docker run -it --rm \
+            -v ./assets/nginx/conf.d:/etc/nginx/conf.d:ro \
+            -v ./assets/nginx/access.log:/var/log/nginx/access.log \
+            --network host \
+            --name nginx-rauthy-test \
+            nginx
+
 # Just uses `cargo fmt --all`
 fmt:
     cargo fmt --all
