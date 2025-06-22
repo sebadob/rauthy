@@ -44,6 +44,24 @@ impl VaultConfig {
         }
 
          Ok(Self::load_from_env(vault_conf).await)
+    }
+
+    pub fn init_static(self) {
+        CONFIG.set(self).unwrap();
+    }
+
+    #[inline(always)]
+    pub fn get() -> &'static Self {
+        CONFIG.get().unwrap()
+    }
+
+    async fn load(path_config: &str) -> Self {
+        let Ok(config) = fs::read_to_string(path_config).await else {
+            panic!("Cannot read config file from {}", path_config);
+        };
+
+        Self::load_from_string(&config).await
+    }
 
     async fn load_from_env(mut existing_config: VaultConfig) -> Self {
         if let Ok(v) = env::var("VAULT_ADDR") {
@@ -67,7 +85,7 @@ impl VaultConfig {
                 _ => existing_config.vault_source.kv_version = KvVersion::V2,
             }
         }
-        
+
         existing_config
     }    
 
@@ -113,10 +131,7 @@ impl VaultConfig {
         if let Some(v) = t_kv_version(&mut table, "vault", "kv_version", "KV_VERSION") {
             self.vault_source.kv_version = v;
         }
-       
     }
-
-
 }
 
 impl Default for VaultConfig {
@@ -228,7 +243,9 @@ impl VaultSource {
     /// * `vault_addr` - Complete URL of the Vault server (e.g. "http://127.0.0.1:8200")
     /// * `vault_token` - Authentication token for Vault
     /// * `vault_mount` - Name of the KV engine mount (e.g. "secret")
-    /// * `vault_path` - Path to the secret within the mount (e.g. "dev")
+    /// * `vault_path` - Path to the secret within the mount (e.g. "rauthy_config")
+    /// * `vault_path_cert` - Path to the secret containg certificates within the mount (e.g. "rauthy_certs")
+    /// * `kv_version` - KV Version
     ///
     /// # Example
     ///
@@ -239,8 +256,8 @@ impl VaultSource {
     ///     "http://127.0.0.1:8200".to_string(),
     ///     "hvs.EXAMPLE_TOKEN".to_string(),
     ///     "secret".to_string(),
-    ///     "dev".to_string(),
-    ///     "dev_certs".to_string(),
+    ///     "rauthy_config".to_string(),
+    ///     "rauthy_certs".to_string(),
     ///     KvVersion::V2,
     /// );
     /// ```
@@ -316,8 +333,6 @@ impl VaultSource {
             .header("X-Vault-Token", remove_quotes(&self.vault_token))
             .send().await?;
 
-        println!("response: {:?}",response);
-
         if response.status().is_success() {
 
             let raw_text = &response.text().await.unwrap();        
@@ -340,5 +355,4 @@ impl VaultSource {
         
         Err(Box::from(format!("Failed to fetch secret from Vault (wrong kv version?): {}", response.status())))
     }
-   
 }
