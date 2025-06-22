@@ -1,5 +1,9 @@
 use std::sync::OnceLock;
 use std::collections::HashMap;
+use std::env;
+use std::error::Error;
+use tokio::fs;
+use toml::Value;
 
 use reqwest::Client;
 //use url::Url;
@@ -8,24 +12,121 @@ static CONFIG: OnceLock<VaultConfig> = OnceLock::new();
 
 #[derive(Debug)]
 pub struct VaultConfig {
-    pub vault_rauthy: VaultSource,
+    pub vault_source: VaultSource,
 }
 
 impl VaultConfig {
 
-    pub fn new(vault_rauthy: VaultSource) -> Self {
-        Self { vault_rauthy }
+    pub fn new(vault_source: VaultSource) -> Self {
+        Self { vault_source }
     }
 
-    pub fn init_static(self) {
-        CONFIG.set(self).unwrap();
+    pub async fn build(
+        config_file: &str,
+    ) -> Result<Self, Box<dyn Error>> {
+
+        let mut vault_conf = VaultConfig::default();
+        println!("####### vault_conf intialized with defaults");
+
+        match tokio::fs::try_exists(config_file).await {
+            Ok(exists) => {
+                if exists  {
+                println!("####### {config_file} found, try to build VaultConfig using config file ...");
+                vault_conf = Self::load(config_file).await;
+                }
+                else {
+                    println!("{} not found.", config_file);
+                }
+            },
+            Err(e) => {
+                println!("Reading {} failed: {}", config_file, e);
+            }
+        }
+
+         Ok(Self::load_from_env(vault_conf).await)
+
+    async fn load_from_env(mut existing_config: VaultConfig) -> Self {
+        if let Ok(v) = env::var("VAULT_ADDR") {
+            existing_config.vault_source.vault_addr = v;
+        }
+        if let Ok(v) = env::var("VAULT_TOKEN") {
+            existing_config.vault_source.vault_token = v;
+        }
+        if let Ok(v) = env::var("VAULT_MOUNT") {
+            existing_config.vault_source.vault_mount = v;
+        }
+        if let Ok(v) = env::var("VAULT_PATH") {
+            existing_config.vault_source.vault_path = v;
+        }
+        if let Ok(v) = env::var("VAULT_PATH_CERTS") {
+            existing_config.vault_source.vault_path_certs = v;
+        }
+        if let Ok(v) = env::var("VAULT_KV_VERSION") {
+            match v.as_str() {
+                "1" => existing_config.vault_source.kv_version = KvVersion::V1,
+                _ => existing_config.vault_source.kv_version = KvVersion::V2,
+            }
+        }
+        
+        existing_config
+    }    
+
+    async fn load_from_string(config: &String) -> Self {
+        let vault_source = VaultSource::default();
+        let mut slf = Self::new(vault_source);
+
+        // Note: these inner parsers are very verbose, but they allow the upfront memory allocation
+        // and memory fragmentation, after the quite big toml has been freed and the config stays
+        // in static memory.
+        // It will also be easier in the future to maybe add other config sources into the mix
+        // and use something else as default very easily, like e.g. a config fetched from a Vault.
+
+        let mut table = config
+            .parse::<toml::Table>()
+            .expect("Cannot parse TOML file");
+
+        slf.parse_vault(&mut table);
+
+        slf
     }
 
-    #[inline(always)]
-    pub fn get() -> &'static Self {
-        CONFIG.get().unwrap()
+    fn parse_vault(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "vault") else {
+            return;
+        };
+
+        if let Some(v) = t_str(&mut table, "vault", "vault_addr", "VAULT_ADDR") {
+            self.vault_source.vault_addr = v;
+        }
+        if let Some(v) = t_str(&mut table, "vault", "vault_token", "VAULT_TOKEN") {
+            self.vault_source.vault_token = v;
+        }
+        if let Some(v) = t_str(&mut table, "vault", "vault_mount", "VAULT_MOUNT") {
+            self.vault_source.vault_mount = v;
+        }
+        if let Some(v) = t_str(&mut table, "vault", "vault_path", "VAULT_PATH") {
+            self.vault_source.vault_path = v;
+        }
+        if let Some(v) = t_str(&mut table, "vault", "vault_path_certs", "VAULT_PATH_CERTS") {
+            self.vault_source.vault_path_certs = v;
+        }
+        if let Some(v) = t_kv_version(&mut table, "vault", "kv_version", "KV_VERSION") {
+            self.vault_source.kv_version = v;
+        }
+       
+    }
+
+
+}
+
+impl Default for VaultConfig {
+    fn default() -> Self {
+         VaultConfig{
+            vault_source: VaultSource::default()
+        }
     }
 }
+
 
 #[derive(Debug, Clone)]
 pub struct VaultSource {
@@ -36,6 +137,20 @@ pub struct VaultSource {
     vault_path_certs: String,
     kv_version: KvVersion,
 }
+
+impl Default for VaultSource {
+    fn default() -> Self {
+         VaultSource{
+            vault_addr: "".to_string(),
+            vault_token: "".to_string(),
+            vault_mount: "".to_string(),
+            vault_path: "".to_string(),
+            vault_path_certs: "".to_string(),
+            kv_version: KvVersion::V2,
+        }
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum KvVersion {
@@ -51,6 +166,54 @@ impl KvVersion {
          }
     }
 }
+
+fn t_kv_version(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<KvVersion> {
+    if !env_var.is_empty() {
+        if let Ok(v) = env::var(env_var) {
+            if v == "1" {
+                return Some(KvVersion::V1);
+            }
+            else {
+                return Some(KvVersion::V2);
+            }
+        }
+    }
+    let Value::String(s) = map.remove(key)? else {
+        panic!("{}", err_t(key, parent, "String"));
+    };
+    if s == "1" {
+        return Some(KvVersion::V1);
+    }
+    else {
+        return Some(KvVersion::V2);
+    }
+}
+
+fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<String> {
+    if !env_var.is_empty() {
+        if let Ok(v) = env::var(env_var) {
+            return Some(v);
+        }
+    }
+    let Value::String(s) = map.remove(key)? else {
+        panic!("{}", err_t(key, parent, "String"));
+    };
+    Some(s)
+}
+
+fn t_table(map: &mut toml::Table, key: &str) -> Option<toml::Table> {
+    let Value::Table(t) = map.remove(key)? else {
+        panic!("Expected type `Table` for {}", key)
+    };
+    Some(t)
+}
+
+#[inline]
+fn err_t(key: &str, parent: &str, typ: &str) -> String {
+    let sep = if parent.is_empty() { "" } else { "." };
+    format!("Expected type `{}` for {}{}{}", typ, parent, sep, key)
+}
+
 
 // remove only the outer quotes
 fn remove_quotes(s: &str) -> String {
@@ -78,6 +241,7 @@ impl VaultSource {
     ///     "secret".to_string(),
     ///     "dev".to_string(),
     ///     "dev_certs".to_string(),
+    ///     KvVersion::V2,
     /// );
     /// ```
     pub fn new(
@@ -86,6 +250,7 @@ impl VaultSource {
         vault_mount: String,
         vault_path: String,
         vault_path_certs: String,
+        kv_version: KvVersion
     ) -> Self {
         Self {
             vault_addr,
@@ -93,50 +258,11 @@ impl VaultSource {
             vault_mount,
             vault_path,
             vault_path_certs,
-            kv_version: KvVersion::V2,
+            kv_version,
         }        
     }
 
-    /// Creates a new instance of `VaultSource` with kv_version V1
-    ///
-    /// # Parameters
-    ///
-    /// * `vault_addr` - Complete URL of the Vault server (e.g. "http://127.0.0.1:8200")
-    /// * `vault_token` - Authentication token for Vault
-    /// * `vault_mount` - Name of the KV engine mount (e.g. "secret")
-    /// * `vault_path` - Path to the secret within the mount (e.g. "dev")
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use config_vault::VaultSource;
-    ///
-    /// let source = VaultSource::new_v1(
-    ///     "http://127.0.0.1:8200".to_string(),
-    ///     "hvs.EXAMPLE_TOKEN".to_string(),
-    ///     "secret".to_string(),
-    ///     "dev".to_string(),
-    ///     "dev_certs".to_string(),
-    /// );
-    /// ```
-    pub fn new_v1( 
-        vault_addr: String,
-        vault_token: String,
-        vault_mount: String,
-        vault_path: String,
-        vault_path_certs: String,
-    ) -> Self {
-         Self {
-             vault_addr,
-             vault_token,
-             vault_mount,
-             vault_path,
-             vault_path_certs,
-             kv_version: KvVersion::V1,
-        }        
-    }
-
-    
+   
     /// Changes the KvVersion
     ///
     /// This function takes the target KvVersion and replaces the existing one.
@@ -167,20 +293,7 @@ impl VaultSource {
     //fn build_kv_read_url(&self) -> Result<Url, Box<dyn std::error::Error>> {
     fn build_kv_read_url(&self, path: &str) -> Result<String, Box<dyn std::error::Error>> {
         let api_path = self.kv_version.get_api_path(&self.vault_mount,path);
-
-        /*
-        let mut url = Url::parse(&self.vault_addr).unwrap();
-            //.map_err(|e| Err(Box::from(format!("Invalid Vault address URL: {}", e))));
-
-        url.path_segments_mut()
-            //.map_err(|_| Err(Box::from("Vault address URL cannot be a base".into())))
-            .unwrap()
-            .pop_if_empty() // Remove trailing slash if any
-            .extend(api_path.split('/')); // Add the API path segments
-        */
-
         let url = format!("{}{}",remove_quotes(&self.vault_addr),api_path);
-
         Ok(url)
     }
 
@@ -196,35 +309,20 @@ impl VaultSource {
     }
 
     pub async fn get_secrets(&self, path: &str) -> Result<HashMap<String, serde_json::Value>, Box<dyn std::error::Error>>  {
-        println!("####### [VaultSource] get_secrets &self: {:?}", &self);
         let url = self.build_kv_read_url(path)?;
-
-
         let client = Client::new();
         let response = client
             .get(url)
             .header("X-Vault-Token", remove_quotes(&self.vault_token))
-            //.send().await.unwrap();
             .send().await?;
-            //.map_err(|e| Err(Box::new(e))).await.unwrap();
 
         println!("response: {:?}",response);
 
         if response.status().is_success() {
 
             let raw_text = &response.text().await.unwrap();        
-            println!("raw_text: {:?}",&raw_text); 
 
-            //let raw = &response
-            //let raw: serde_json::Value = serde_json::from_str(&raw_text).unwrap();
             let raw: serde_json::Value = serde_json::from_str(&raw_text)?;
-            //.map_err(|e| Err(Box::new(e))).await.unwrap();
-            //.map_err(|e| Err(Box::new(e))).unwrap();
-            println!("raw: {:?}",&raw);
-
-
-            //let raw_text = &response.text().await.unwrap();        
-            //println!("raw_text: {:?}",&raw_text);    
 
             let json_obj = raw
             .get("data")
@@ -232,23 +330,10 @@ impl VaultSource {
             .and_then(|x| x.as_object())
             .unwrap();
 
-            println!("json_obj: {:?}",&json_obj);
-
             let mut secret = HashMap::new();
             for (k, v) in json_obj {
-                println!("k: {:?}",&k);
-                println!("v: {:?}",&v);
                 secret.insert(k.clone(), serde_json::Value::from(v.as_str().unwrap()));
             }
-            
-            /*
-            let vault_secret_key = "config";
-
-            let config_value = secret[vault_secret_key].clone();
-            println!("config_value: {:?}",&config_value);
-
-            //return Ok(config_value.as_str().unwrap().to_string());
-            */
 
             return Ok(secret)
         }
