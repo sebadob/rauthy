@@ -1,5 +1,107 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### TLS Hot-Reload
+
+Rauthy can now hot-reload TLS Key + Certificates. If started with `server.scheme` set to any `https` value and TLS
+certificates are used, Rauthy will watch for file changes on `tls.cert_path` + `tls.key_path` and will do a hot-reload
+of the TLS configuration if anything changes. This is a real hot-reload, meaning there is no restarting the server, and
+it does it without any interruption in service.
+
+[#1056](https://github.com/sebadob/rauthy/pull/1056)
+
+#### OIDC-backed Forward-Auth
+
+In addition to the already existing, very simple `/forward_auth` endpoint, which has limited compatibility, Rauthy now
+provides a very much advanced version of it. This new version is not a replacement of the old approach, but an addition.
+
+The already existing endpoint is very simple: It expects a valid JWT token to be present in the `Authorization` header,
+parses and validates it, and if it's valid, it returns an HTTP 200 and a 401 otherwise. Depending on
+`auth_headers.enable`, it will also append the Forward-Auth headers to the request, which the reverse proxy could inject
+into the request sent to the downstream client.
+
+The new version is much improved. It does not work with stateless JWT tokens, but it binds to the Rauthy session. This
+makes it possible to revoke access as any time. It can also do proper CSRF checks, validates the client and user
+configuration, and it can make everything work without any modification to the client. On auth success, it behaves in
+the same way as the already existing endpoint. On invalid though, it will redirect to Rauthys Login, which then again
+will do another redirect to a Callback UI and therefore trigger a complete OIDC flow. On the callback page, Rauthy can
+now set fully-secured session cookies and do others things like check the `Sec-Fetch-Site` header. This is the most
+secure it can get, without modifications to the client. The callback page is exposed by Rauthy itself, and can be
+"injected" into the client app at your reverse proxy level, which makes all of this as secure as possible.
+
+You can do this new Forward-Auth for any client, as long as it's configured properly. Rauthy is quite a bit more strict
+about the correct client config upfront. This makes it possible to have a few additional safety hooks which will help
+you prevent unwanted, invalid reverse proxy config, which can happen very quickly for complex setups.
+
+!!! TODO update the book and provide a link. !!!!
+
+> CAUTION: Even though this is probably the most secure you can get with Forward-Auth, it should still only be the last
+> resort, and you should always prefer a native OIDC client implementation, if it exists! If you screw up the reverse
+> proxy config, or if an attacker can find a way around your reverse proxy and skip it, all your security will be gone
+> immediately.
+
+To help during Forward-Auth setup and making sure you got it right in your environment, the `/auth/v1/whoami` endpoint
+has received an update as well. You can now set `access.whoami_headers = true` or use `WHOAMI_HEADERS`. This will make
+the `/whoami` endpoint not only return the extracted "real IP", but it will also return all request headers it received.
+This will help you make sure your setup is working correctly, if you use `auth_headers`. By default, this is set to
+`false`. Depending on your internal network setup, this could expose sensitive headers, if you inject any. It will not
+return values for `Cookie` and Rauthy's own CSRF token headers, but all others return will show their raw values.
+
+[#1053](https://github.com/sebadob/rauthy/pull/1053)
+
+## v0.30.2
+
+### Changes
+
+#### Hiqlite upgrade
+
+Internally, `hiqlite` was updated to the latest stable version. This brings 2 advantages:
+
+1. `cluster.wal_ignore_lock` has been removed completely. It is not necessary anymore, because `hiqlite` now can do
+   proper cross-platform file locking and therefore can resolve all possible situations on its own. It can detect, if
+   another `hiqlite` process is currently using an existing WAL directory and also do a proper cleanup / deep integrity
+   check after a restart as well.
+2. You have 2 additional config variables to configure the listen address for Hiqlites API and Raft server. This solves
+   an issue in IPv6-only environments, because it used a hardcoded `0.0.0.0` before. You can now also restrict to a
+   specific interface as well, which is beneficial for single instance deployments, or when you have lots of NICs.
+
+```toml
+[cluster]
+# You can set the listen addresses for both the API and Raft servers.
+# These need to somewaht match the definition for the `nodes` above,
+# with the difference, that a `node` address can be resolved via DNS,
+# while the listen addresses must be IP addresses.
+#
+# The default for both of these is "0.0.0.0" which makes them listen
+# on all interfaces.
+# overwritten by: HQL_LISTEN_ADDR_API
+listen_addr_api = "0.0.0.0"
+# overwritten by: HQL_LISTEN_ADDR_RAFT
+listen_addr_raft = "0.0.0.0"
+```
+
+#### DB shutdown on unavailable SMTP
+
+If the retries to connect to a configured SMTP server were exceeded, Rauthy panics, which is on purpose. However, the
+behavior has been updated slightly and it will now trigger a graceful DB shutdown before it executes the panic, which
+is just cleaner overall.
+
+[#1045](https://github.com/sebadob/rauthy/pull/1045)
+
+### Bugfix
+
+- A trigger for Backchannel Logout was missing for `DELETE /sessions/{user_id}`
+  [#1031](https://github.com/sebadob/rauthy/pull/1031)
+- `state` deserialization validation during `GET /authorize` was too strict in some cases.
+  [#1032](https://github.com/sebadob/rauthy/pull/1032)
+- The pre-shutdown delay should only be added in HA deployments, not for single instances.
+  [#1038](https://github.com/sebadob/rauthy/pull/1038)
+- The error messages in case of `webauthn` misconfiguration were not always very helpful.
+  [#1040](https://github.com/sebadob/rauthy/pull/1040)
+
 ## v0.30.1
 
 ### Bugfix

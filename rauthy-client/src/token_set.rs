@@ -151,6 +151,7 @@ pub struct JwtIdClaims {
     pub address: Option<AddressClaim>,
     pub birthdate: Option<String>,
     pub locale: Option<String>,
+    pub picture: Option<String>,
     pub phone: Option<String>,
     pub roles: Vec<String>,
     pub groups: Option<Vec<String>>,

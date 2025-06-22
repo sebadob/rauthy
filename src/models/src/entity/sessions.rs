@@ -399,7 +399,7 @@ OFFSET $3"#;
         Ok(sids)
     }
 
-    pub async fn save(&self) -> Result<(), ErrorResponse> {
+    pub async fn upsert(&self) -> Result<(), ErrorResponse> {
         let state_str = self.state.as_str();
 
         let sql = r#"
@@ -750,7 +750,7 @@ impl Session {
     #[inline]
     pub async fn set_mfa(&mut self, value: bool) -> Result<(), ErrorResponse> {
         self.is_mfa = value;
-        self.save().await
+        self.upsert().await
     }
 
     #[inline(always)]

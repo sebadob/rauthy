@@ -84,14 +84,17 @@ pub fn base64_url_no_pad_encode_buf(input: &[u8], buf: &mut String) {
 pub fn base64_url_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
     B64_URL_SAFE
         .decode(b64)
-        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 URL decoding error"))
 }
 
 #[inline(always)]
 pub fn base64_url_no_pad_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
-    B64_URL_SAFE_NO_PAD
-        .decode(b64)
-        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
+    B64_URL_SAFE_NO_PAD.decode(b64).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "B64 URL NO PAD decoding error",
+        )
+    })
 }
 
 #[inline(always)]

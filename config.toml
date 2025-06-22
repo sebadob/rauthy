@@ -191,6 +191,15 @@ cookie_set_path = true
 # overwritten by: TOKEN_LEN_LIMIT
 token_len_limit = 4096
 
+# If set to `true`, the `/auth/v1/whoami` endpoint will return all
+# request headers. Only the `Cookie` and Rauthys internal CSRF headers
+# will be hidden. Since this has the potential to leak sensitive
+# information, depending on you networking, this is disabled by default.
+#
+# default: false
+# overwritten by: WHOAMI_HEADERS
+whoami_headers = true
+
 [atproto]
 # Set to `true` to enable the ATProto provider. If the public URL is
 # 'localhost' it should be changed to '127.0.0.1', if `dev_mode = true`
@@ -638,32 +647,6 @@ password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZF
 # default: false
 # overwritten by: HQL_INSECURE_COOKIE
 insecure_cookie = true
-
-# Can be set to true to start the WAL handler even if the
-# `lock.hql` file exists. This may be necessary after a
-# crash, when the lock file could not be removed during a
-# graceful shutdown.
-#
-# IMPORTANT: Even though the Database can "heal" itself by
-# simply rebuilding from the existing Raft log files without
-# even needing to think about it, you may want to only
-# set `HQL_WAL_IGNORE_LOCK` when necessary to have more
-# control. Depending on the type of crash (whole OS, maybe
-# immediate power loss, force killed, ...), it may be the
-# case that the WAL files + metadata could not be synced
-# to disk properly and that quite a bit of data is lost.
-#
-# In such a case, it is usually a better idea to delete
-# the whole volume and let the broken node rebuild from
-# other healthy cluster members, just to be sure.
-#
-# However, you can decide to ignore the lock file and start
-# anyway. But you must be 100% sure, that no orphaned
-# process is still running and accessing the WAL files!
-#
-# default: false
-# overwritten by: HQL_WAL_IGNORE_LOCK
-wal_ignore_lock = true
 
 # You can reset the Raft Logs + Metadata when set to
 # `true`. This can be helpful, if you e.g. run a single
@@ -1549,7 +1532,7 @@ jwk_autorotate_cron = '0 30 3 1 * * *'
 #
 # default: 'info'
 # overwritten by: LOG_LEVEL
-level = 'info'
+level = 'debug'
 
 # The log level for the `Hiqlite` persistence layer.
 # At the time of writing, only the cache will use `hiqlite`
@@ -1716,7 +1699,7 @@ proxy_mode = false
 #
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
-#trusted_proxies = ['192.168.14.0/24']
+trusted_proxies = ['127.0.0.1/32']
 
 # To bring support for applications using deep-linking, you
 # can set custom URL schemes to be accepted when present in
@@ -1795,7 +1778,7 @@ swagger_ui_enable = true
 #
 # default: 1440
 # overwritten by: SUSPICIOUS_REQUESTS_BLACKLIST
-blacklist = 1440
+blacklist = 5
 
 # Will emit a log with level of warning if a request to `/` has
 # been made that has not been caught by any of the usual routes

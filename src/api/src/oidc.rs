@@ -197,7 +197,7 @@ pub async fn get_authorize(
         )
     };
 
-    if let Err(err) = session.save().await {
+    if let Err(err) = session.upsert().await {
         let status = err.status_code();
         let body = Error1Html::build(&lang, theme_ts, status, err.message);
         return Ok(ErrorHtml::response(body, status));
@@ -767,7 +767,7 @@ pub async fn post_session(req: HttpRequest) -> Result<HttpResponse, ErrorRespons
         RauthyConfig::get().vars.lifetimes.session_lifetime,
         real_ip_from_req(&req).ok(),
     );
-    session.save().await?;
+    session.upsert().await?;
     let cookie = session.client_cookie();
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)

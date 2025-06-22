@@ -18,6 +18,7 @@ rauthy-middlewares = { path = "../middlewares" }
 rauthy-models = { path = "../models" }
 rauthy-schedulers = { path = "../schedulers" }
 rauthy-service = { path = "../service" }
+rauthy-tls = { path = "../tls" }
 
 actix-web = { workspace = true }
 actix-web-prom = { workspace = true }
@@ -38,7 +39,6 @@ spow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
-utoipa-swagger-ui = { workspace = true }
 
 # jemalloc does not work properly on msvc targets
 [target.'cfg(not(target_env = "msvc"))'.dependencies]

@@ -11,10 +11,11 @@ use rauthy_api_types::generic::{
     PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
-    APP_START, APPLICATION_JSON, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME, RAUTHY_VERSION,
+    APP_START, APPLICATION_JSON, CSRF_HEADER, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME,
+    PWD_CSRF_HEADER, RAUTHY_VERSION,
 };
 use rauthy_common::utils::real_ip_from_req;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::app_version::LatestAppVersion;
@@ -29,6 +30,7 @@ use rauthy_models::language::Language;
 use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
+use std::fmt::Write;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -450,7 +452,7 @@ pub async fn get_ready() -> impl Responder {
 /// Catch all - redirects from root to the "real root" /auth/v1/
 /// If `BLACKLIST_SUSPICIOUS_REQUESTS` is set, it will also compare the
 /// request path against common bot / hacker scan targets and blacklist preemptively.
-#[get("/")]
+#[get("/{_:.*}")]
 pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     let path = req.path();
     let ip = real_ip_from_req(&req)?.to_string();
@@ -477,6 +479,10 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
                 err
             );
         }
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotFound,
+            "You have been blocked because of API scanning. This incident has been reported.",
+        ));
     }
 
     Ok(HttpResponse::MovedPermanently()
@@ -533,6 +539,11 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
 }
 
 /// Returns the remote IP that Rauthy has extracted for this client
+///
+/// During development, with `debug_assertions` enabled, this endpoint returns the full set of HTTP
+/// headers the request comes in with. A release build though will only return the extracted
+/// "real IP". This is useful for checking any reverse proxy configuration and making sure the
+/// setup is correct.
 #[utoipa::path(
     get,
     path = "/whoami",
@@ -543,8 +554,28 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
 )]
 #[get("/whoami")]
 pub async fn get_whoami(req: HttpRequest) -> String {
-    match real_ip_from_req(&req) {
-        Ok(ip) => ip.to_string(),
-        Err(_) => "UNKNOWN".to_string(),
+    if RauthyConfig::get().vars.access.whoami_headers {
+        let mut s = String::with_capacity(32);
+
+        let ip = real_ip_from_req(&req)
+            .map(|ip| ip.to_string())
+            .unwrap_or_default();
+        let _ = writeln!(s, "{}\n", ip);
+
+        for (k, v) in req.headers() {
+            let key = k.as_str();
+            let value = if key == "cookie" || key == CSRF_HEADER || key == PWD_CSRF_HEADER {
+                "<hidden>"
+            } else {
+                v.to_str().unwrap_or_default()
+            };
+            let _ = writeln!(s, "{}: {}, ", key, value);
+        }
+
+        s
+    } else {
+        real_ip_from_req(&req)
+            .map(|ip| ip.to_string())
+            .unwrap_or_default()
     }
 }

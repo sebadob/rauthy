@@ -177,6 +177,15 @@ one secret (my preferred approach).
 # overwritten by: TOKEN_LEN_LIMIT
 #token_len_limit = 4096
 
+# If set to `true`, the `/auth/v1/whoami` endpoint will return all
+# request headers. Only the `Cookie` and Rauthys internal CSRF headers
+# will be hidden. Since this has the potential to leak sensitive
+# information, depending on you networking, this is disabled by default.
+#
+# default: false
+# overwritten by: WHOAMI_HEADERS
+#whoami_headers = false
+
 [auth_headers]
 # You can enable authn/authz headers which would be added to the
 # response of the `/auth/v1/oidc/forward_auth` endpoint. When set to
@@ -373,6 +382,18 @@ node_id = 1
 # default: ["1 localhost:8100 localhost:8200"]
 # overwritten by: HQL_NODES
 nodes = ["1 localhost:8100 localhost:8200"]
+
+# You can set the listen addresses for both the API and Raft servers.
+# These need to somewaht match the definition for the `nodes` above,
+# with the difference, that a `node` address can be resolved via DNS,
+# while the listen addresses must be IP addresses.
+#
+# The default for both of these is "0.0.0.0" which makes them listen
+# on all interfaces.
+# overwritten by: HQL_LISTEN_ADDR_API
+#listen_addr_api = "0.0.0.0"
+# overwritten by: HQL_LISTEN_ADDR_RAFT
+#listen_addr_raft = "0.0.0.0"
 
 # The data dir hiqlite will store raft logs and state machine data in.
 #
@@ -611,32 +632,6 @@ secret_api = "SuperSecureSecret1337"
 # default: false
 # overwritten by: HQL_INSECURE_COOKIE
 #insecure_cookie = false
-
-# Can be set to true to start the WAL handler even if the
-# `lock.hql` file exists. This may be necessary after a
-# crash, when the lock file could not be removed during a
-# graceful shutdown.
-#
-# IMPORTANT: Even though the Database can "heal" itself by
-# simply rebuilding from the existing Raft log files without
-# even needing to think about it, you may want to only
-# set `HQL_WAL_IGNORE_LOCK` when necessary to have more
-# control. Depending on the type of crash (whole OS, maybe
-# immediate power loss, force killed, ...), it may be the
-# case that the WAL files + metadata could not be synced
-# to disk properly and that quite a bit of data is lost.
-#
-# In such a case, it is usually a better idea to delete
-# the whole volume and let the broken node rebuild from
-# other healthy cluster members, just to be sure.
-#
-# However, you can decide to ignore the lock file and start
-# anyway. But you must be 100% sure, that no orphaned
-# process is still running and accessing the WAL files!
-#
-# default: false
-# overwritten by: HQL_WAL_IGNORE_LOCK
-#wal_ignore_lock = false
 
 # You can reset the Raft Logs + Metadata when set to
 # `true`. This can be helpful, if you e.g. run a single
