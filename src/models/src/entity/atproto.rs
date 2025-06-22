@@ -27,9 +27,8 @@ use hickory_resolver::{
 use rauthy_api_types::auth_providers::ProviderRequest;
 use rauthy_common::constants::{CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION};
 use rauthy_error::ErrorResponse;
-use serde::Serialize;
-use utoipa::{PartialSchema, ToSchema};
 use tracing::info;
+use utoipa::{PartialSchema, ToSchema};
 
 use crate::{
     database::{Cache, DB},
@@ -226,20 +225,17 @@ impl Store<String, InternalStateData> for DB {
     type Error = hiqlite::Error;
 
     async fn get(&self, key: &String) -> Result<Option<InternalStateData>, Self::Error> {
-        let Some(value) = Self::hql().get_bytes(Cache::Atproto, key).await? else {
-            return Ok(None);
-        };
-
-        let state = serde_json::from_slice(&value)?;
-
-        Ok(Some(state))
+        Self::hql().get(Cache::Atproto, key).await
     }
 
     async fn set(&self, key: String, value: InternalStateData) -> Result<(), Self::Error> {
-        let value = serde_json::to_vec(&value)?;
-
         Self::hql()
-            .put_bytes(Cache::Atproto, key, value, CACHE_TTL_AUTH_PROVIDER_CALLBACK)
+            .put(
+                Cache::Atproto,
+                key,
+                &value,
+                CACHE_TTL_AUTH_PROVIDER_CALLBACK,
+            )
             .await
     }
 
@@ -258,20 +254,12 @@ impl Store<Did, store::session::Session> for DB {
     type Error = hiqlite::Error;
 
     async fn get(&self, key: &Did) -> Result<Option<store::session::Session>, Self::Error> {
-        let Some(value) = Self::hql().get_bytes(Cache::Atproto, key.as_str()).await? else {
-            return Ok(None);
-        };
-
-        let session = serde_json::from_slice(&value)?;
-
-        Ok(Some(session))
+        Self::hql().get(Cache::Atproto, key.as_str()).await
     }
 
     async fn set(&self, key: Did, value: store::session::Session) -> Result<(), Self::Error> {
-        let value = serde_json::to_vec(&value)?;
-
         Self::hql()
-            .put_bytes(Cache::Atproto, key.to_string(), value, CACHE_TTL_SESSION)
+            .put(Cache::Atproto, key.to_string(), &value, CACHE_TTL_SESSION)
             .await
     }
 

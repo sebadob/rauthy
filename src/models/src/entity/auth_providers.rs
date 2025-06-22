@@ -817,7 +817,10 @@ impl AuthProviderCallback {
             location = atproto
                 .authorize(input, options)
                 .await
-                .expect("Atproto authorization failed");
+                .map_err(|error| {
+                    error!(%error, "failed to start authorization for ATProto");
+                })
+                .unwrap();
         }
 
         let cookie = ApiCookie::build(
@@ -827,9 +830,6 @@ impl AuthProviderCallback {
         );
 
         slf.save().await?;
-
-dbg!(&location);
-
 
         Ok((
             cookie,
@@ -853,7 +853,7 @@ dbg!(&location);
         })?;
 
         // validate state
-        if callback_id != payload.state {
+        if payload.iss_atproto.is_none() && callback_id != payload.state {
             Self::delete(callback_id).await?;
 
             error!("`state` does not match");
@@ -910,28 +910,32 @@ dbg!(&location);
             };
             // return early if we got any error
             let (session_manager, app_state) = atproto.callback(params).await.map_err(|error| {
-                error!(%error, "failed to complete authorization callback for atproto");
+                error!(%error, "failed to complete authorization callback for ATProto");
 
                 ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "failed to complete authorization callback for atproto",
+                    ErrorResponseType::Internal,
+                    "failed to complete authorization callback for ATProto",
                 )
             })?;
 
-            if app_state.map_or(false, |app_state| slf.callback_id != app_state) {
+            let Some(app_state) = app_state else {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
-                    "app_state does not match callback_id",
+                    "missing callback state for ATProto",
+                ));
+            };
+
+            if app_state != slf.callback_id {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "callback state mismatch for ATProto",
                 ));
             }
 
             let agent = Agent::new(session_manager);
 
             let Some(did) = agent.did().await else {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "failed to complete authorization callback for atproto",
-                ));
+                panic!("missing DID for ATProto session");
             };
 
             let Some(session) = DB.get(&did).await.map_err(|error| {
