@@ -192,6 +192,7 @@ one secret (my preferred approach).
 # this also applies for the `provider_callback_url`.
 #
 # default: false
+# overwritten by: ATPROTO_ENABLE
 #enable = false
 
 [auth_headers]

@@ -25,7 +25,9 @@ use hickory_resolver::{
     proto::rr::rdata::TXT,
 };
 use rauthy_api_types::auth_providers::ProviderRequest;
-use rauthy_common::constants::{CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION};
+use rauthy_common::constants::{
+    CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION, PROVIDER_ID_ATPROTO,
+};
 use rauthy_error::ErrorResponse;
 use std::{
     ops::Deref,
@@ -139,7 +141,7 @@ impl Client {
             name: "ATProto".to_owned(),
             typ: AuthProviderType::Custom.into(),
             enabled: true,
-            issuer: "atproto".to_owned(),
+            issuer: PROVIDER_ID_ATPROTO.to_string(),
             authorization_endpoint: String::new(),
             token_endpoint: String::new(),
             userinfo_endpoint: String::new(),
@@ -156,7 +158,7 @@ impl Client {
             mfa_claim_value: None,
         };
 
-        match AuthProvider::find_by_iss("atproto".to_owned()).await {
+        match AuthProvider::find_by_iss(payload.issuer.clone()).await {
             Ok(provider) if !config.vars.atproto.enable => {
                 AuthProvider::delete(&provider.id).await?;
             }

@@ -206,7 +206,8 @@ whoami_headers = true
 # this also applies for the `provider_callback_url`.
 #
 # default: false
-#enable = false
+# overwritten by: ATPROTO_ENABLE
+#enable = true
 
 [auth_headers]
 # You can enable authn/authz headers which would be added to the

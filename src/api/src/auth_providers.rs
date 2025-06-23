@@ -10,7 +10,7 @@ use rauthy_api_types::auth_providers::{
 use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse};
 use rauthy_api_types::generic::LogoParams;
 use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
-use rauthy_common::constants::HEADER_JSON;
+use rauthy_common::constants::{HEADER_JSON, PROVIDER_ID_ATPROTO};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, AuthProviderTemplate,
@@ -73,7 +73,7 @@ pub async fn post_provider(
     principal.validate_admin_session()?;
     payload.validate()?;
 
-    if payload.issuer == "atproto" {
+    if payload.issuer == PROVIDER_ID_ATPROTO {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Must not contain a reserved name",

@@ -594,21 +594,12 @@
                             </div>
                         </div>
                         {#each providers as provider (provider.id)}
-                            {#if isProviderAtProto(provider.id)}
-                                <ButtonAuthProvider
-                                        ariaLabel={`Login: ${provider.name}`}
-                                        {provider}
-                                        onclick={toggleAtproto}
-                                        isLoading={false}
-                                />
-                            {:else}
-                                <ButtonAuthProvider
-                                        ariaLabel={`Login: ${provider.name}`}
-                                        {provider}
-                                        onclick={providerLogin}
-                                        {isLoading}
-                                />
-                            {/if}
+                            <ButtonAuthProvider
+                                    ariaLabel={`Login: ${provider.name}`}
+                                    {provider}
+                                    onclick={isProviderAtProto(provider.id) ? toggleAtproto : providerLogin}
+                                    {isLoading}
+                            />
                         {/each}
                     </div>
                 {/if}
