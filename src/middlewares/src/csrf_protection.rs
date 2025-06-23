@@ -138,12 +138,14 @@ fn is_path_csrf_exception(path: &str) -> bool {
                 || path == "/users/register"
                 || path == "/pow"
                 // make it possible to fetch public keys from browsers / SPAs
-                || path == "/oidc/certs"
+                || path.starts_with("/oidc/certs")
                 || path == "/atproto/client_metadata"
                 // FedCM has its own validation mechanisms
                 || path.starts_with("/fed_cm/")
+                // Client Logos
                 || path.ends_with("/logo")
                 || path.starts_with("/.well-known/")
+                // Webauthn has additional validation via Origin internally
                 || path.contains("/webauthn/auth/")
         }
     }
