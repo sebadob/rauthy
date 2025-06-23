@@ -47,6 +47,9 @@ export interface ProviderCallbackRequest {
     xsrf_token: string,
     /// Validation: PATTERN_URI
     pkce_verifier: string,
+
+    /// Validation: PATTERN_ALNUM
+    iss_atproto?: string,
 }
 
 export interface ProviderLoginRequest {
@@ -74,6 +77,9 @@ export interface ProviderLoginRequest {
     pkce_challenge: string,
     
     pow: string,
+
+    /// Validation: PATTERN_ATPROTO_ID
+    handle?: string,
 }
 
 export interface ProviderLookupRequest {
