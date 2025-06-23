@@ -406,8 +406,8 @@ node_id = 1
 # overwritten by: HQL_NODES
 nodes = [
     "1 localhost:8100 localhost:8200",
-    "2 localhost:8101 localhost:8201",
-    "3 localhost:8102 localhost:8202",
+    #    "2 localhost:8101 localhost:8201",
+    #    "3 localhost:8102 localhost:8202",
 ]
 
 # The data dir hiqlite will store raft logs and state machine data in.
