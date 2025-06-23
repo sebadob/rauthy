@@ -9,6 +9,7 @@ use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::WebauthnLoginReq;
 use crate::entity::{atproto, auth_provider_cust_impl};
 use crate::language::Language;
+use crate::rauthy_config::RauthyConfig;
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use actix_web::HttpRequest;
 use actix_web::cookie::Cookie;
@@ -33,7 +34,7 @@ use rauthy_api_types::auth_providers::{
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
-    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_LINK_COOKIE,
+    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_ATPROTO, PROVIDER_LINK_COOKIE,
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_common::utils::{
@@ -50,8 +51,6 @@ use serde_json_path::JsonPath;
 use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
-
-use crate::rauthy_config::RauthyConfig;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
@@ -371,11 +370,15 @@ VALUES
         }
 
         let sql = "SELECT * FROM auth_providers";
-        let res = if is_hiqlite() {
+        let mut res: Vec<Self> = if is_hiqlite() {
             client.query_map(sql, params!()).await?
         } else {
             DB::pg_query(sql, &[], 0).await?
         };
+
+        if !RauthyConfig::get().vars.atproto.enable {
+            res.retain(|p| p.issuer != PROVIDER_ATPROTO);
+        }
 
         // needed for rendering each single login page -> always cache this
         client
@@ -493,7 +496,7 @@ WHERE id = $19"#;
 
 impl AuthProvider {
     #[inline(always)]
-    fn cache_idx(id: &str) -> String {
+    pub fn cache_idx(id: &str) -> String {
         format!("{}_{}", IDX_AUTH_PROVIDER, id)
     }
 
@@ -757,6 +760,14 @@ impl AuthProviderCallback {
         payload: ProviderLoginRequest,
     ) -> Result<(Cookie<'a>, String, HeaderValue), ErrorResponse> {
         let provider = AuthProvider::find(&payload.provider_id).await?;
+
+        if !RauthyConfig::get().vars.atproto.enable && provider.issuer == PROVIDER_ATPROTO {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "atproto is disabled",
+            ));
+        }
+
         let client = Client::find(payload.client_id).await?;
 
         let slf = Self {
@@ -800,7 +811,10 @@ impl AuthProviderCallback {
             .expect("write to always succeed");
         }
 
-        if let Some(input) = payload.handle.filter(|_| provider.issuer == "atproto") {
+        if let Some(input) = payload
+            .handle
+            .filter(|_| provider.issuer == PROVIDER_ATPROTO)
+        {
             let atproto = atproto::Client::get();
 
             let options = AuthorizeOptions {
@@ -900,7 +914,7 @@ impl AuthProviderCallback {
             .and_then(|value| AuthProviderLinkCookie::try_from(value.as_str()).ok());
 
         // deserialize payload and validate the information
-        let (user, provider_mfa_login) = if provider.issuer == "atproto" {
+        let (user, provider_mfa_login) = if provider.issuer == PROVIDER_ATPROTO {
             let atproto = atproto::Client::get();
 
             let params = CallbackParams {
