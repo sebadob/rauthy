@@ -476,12 +476,10 @@
                         <div class:emailMinHeight={!showPasswordInput}>
                             {#if isAtproto}
                                 <Input
-                                        typ="text"
                                         name="handle"
                                         bind:value={atprotoHandle}
                                         label="Handle / DID"
                                         placeholder="Handle / DID"
-                                        errMsg="Provide a valid handle / DID"
                                         pattern={PATTERN_ATPROTO_ID}
                                         disabled={tooManyRequests}
                                         width={inputWidth}
