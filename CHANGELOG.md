@@ -63,10 +63,11 @@ This version supports Bluesky's at-proto. This is probably not used my most peop
 # this also applies for the `provider_callback_url`.
 #
 # default: false
-#enable = false
+enable = false
 ```
 
 [#644](https://github.com/sebadob/rauthy/pull/644)
+[#1064](https://github.com/sebadob/rauthy/pull/1064)
 
 ## v0.30.2
 
