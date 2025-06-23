@@ -26,7 +26,7 @@ use hickory_resolver::{
 };
 use rauthy_api_types::auth_providers::ProviderRequest;
 use rauthy_common::constants::{
-    CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION, PROVIDER_ID_ATPROTO,
+    CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION, PROVIDER_ATPROTO,
 };
 use rauthy_error::ErrorResponse;
 use std::{
@@ -141,7 +141,7 @@ impl Client {
             name: "ATProto".to_owned(),
             typ: AuthProviderType::Custom.into(),
             enabled: true,
-            issuer: PROVIDER_ID_ATPROTO.to_string(),
+            issuer: PROVIDER_ATPROTO.to_string(),
             authorization_endpoint: String::new(),
             token_endpoint: String::new(),
             userinfo_endpoint: String::new(),

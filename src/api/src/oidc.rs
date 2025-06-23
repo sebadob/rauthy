@@ -19,7 +19,7 @@ use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
 use rauthy_common::compression::{compress_br_dyn, compress_gzip};
 use rauthy_common::constants::{
     APPLICATION_JSON, COOKIE_MFA, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
-    PROVIDER_ID_ATPROTO,
+    PROVIDER_ATPROTO,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -165,7 +165,7 @@ pub async fn get_authorize(
         RauthyConfig::get().vars.user_registration.enable,
     ));
     if RauthyConfig::get().vars.atproto.enable {
-        let provider_atproto = AuthProvider::find_by_iss(PROVIDER_ID_ATPROTO.to_string()).await?;
+        let provider_atproto = AuthProvider::find_by_iss(PROVIDER_ATPROTO.to_string()).await?;
         templates.push(HtmlTemplate::AtprotoId(provider_atproto.id));
     }
 

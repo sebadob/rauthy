@@ -34,7 +34,7 @@ use rauthy_api_types::auth_providers::{
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
-    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_ID_ATPROTO, PROVIDER_LINK_COOKIE,
+    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_ATPROTO, PROVIDER_LINK_COOKIE,
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_common::utils::{
@@ -377,7 +377,7 @@ VALUES
         };
 
         if !RauthyConfig::get().vars.atproto.enable {
-            res.retain(|p| p.issuer != PROVIDER_ID_ATPROTO);
+            res.retain(|p| p.issuer != PROVIDER_ATPROTO);
         }
 
         // needed for rendering each single login page -> always cache this
@@ -760,6 +760,14 @@ impl AuthProviderCallback {
         payload: ProviderLoginRequest,
     ) -> Result<(Cookie<'a>, String, HeaderValue), ErrorResponse> {
         let provider = AuthProvider::find(&payload.provider_id).await?;
+
+        if !RauthyConfig::get().vars.atproto.enable && provider.issuer == PROVIDER_ATPROTO {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "atproto is disabled",
+            ));
+        }
+
         let client = Client::find(payload.client_id).await?;
 
         let slf = Self {
@@ -805,7 +813,7 @@ impl AuthProviderCallback {
 
         if let Some(input) = payload
             .handle
-            .filter(|_| provider.issuer == PROVIDER_ID_ATPROTO)
+            .filter(|_| provider.issuer == PROVIDER_ATPROTO)
         {
             let atproto = atproto::Client::get();
 
@@ -906,7 +914,7 @@ impl AuthProviderCallback {
             .and_then(|value| AuthProviderLinkCookie::try_from(value.as_str()).ok());
 
         // deserialize payload and validate the information
-        let (user, provider_mfa_login) = if provider.issuer == PROVIDER_ID_ATPROTO {
+        let (user, provider_mfa_login) = if provider.issuer == PROVIDER_ATPROTO {
             let atproto = atproto::Client::get();
 
             let params = CallbackParams {

@@ -12,7 +12,7 @@ use actix_web::{HttpResponse, HttpResponseBuilder};
 use askama::Template;
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
-use rauthy_common::constants::{HEADER_HTML, PROVIDER_ID_ATPROTO, PWD_RESET_COOKIE};
+use rauthy_common::constants::{HEADER_HTML, PROVIDER_ATPROTO, PWD_RESET_COOKIE};
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Serialize;
@@ -89,8 +89,7 @@ impl HtmlTemplate {
         match s {
             "tpl_atproto_id" => {
                 if RauthyConfig::get().vars.atproto.enable {
-                    let provider =
-                        AuthProvider::find_by_iss(PROVIDER_ID_ATPROTO.to_string()).await?;
+                    let provider = AuthProvider::find_by_iss(PROVIDER_ATPROTO.to_string()).await?;
                     Ok((Self::AtprotoId(provider.id), None))
                 } else {
                     Err(ErrorResponse::new(
