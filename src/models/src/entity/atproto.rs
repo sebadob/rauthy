@@ -1,8 +1,8 @@
-use std::{
-    ops::Deref,
-    sync::{Arc, OnceLock},
+use crate::{
+    database::{Cache, DB},
+    entity::auth_providers::{AuthProvider, AuthProviderType},
+    rauthy_config::RauthyConfig,
 };
-
 use atrium_api::types::string::Did;
 use atrium_common::store::Store;
 use atrium_identity::{
@@ -27,19 +27,17 @@ use hickory_resolver::{
 use rauthy_api_types::auth_providers::ProviderRequest;
 use rauthy_common::constants::{CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION};
 use rauthy_error::ErrorResponse;
-use tracing::info;
-use serde::Serialize;
-use utoipa::{PartialSchema, ToSchema};
-
-use crate::{
-    database::{Cache, DB},
-    entity::auth_providers::{AuthProvider, AuthProviderType},
-    rauthy_config::RauthyConfig,
+use std::{
+    ops::Deref,
+    sync::{Arc, OnceLock},
 };
+use tracing::info;
+use utoipa::{PartialSchema, ToSchema};
 
 pub static ATPROTO_CLIENT: OnceLock<Client> = OnceLock::new();
 
 #[derive(Clone)]
+#[allow(clippy::type_complexity)]
 pub struct Client(
     Arc<
         OAuthClient<
@@ -82,7 +80,7 @@ impl Client {
 
             for redirect_uri in &redirect_uris {
                 url.query_pairs_mut()
-                    .append_pair("redirect_uri", &redirect_uri);
+                    .append_pair("redirect_uri", redirect_uri);
             }
 
             if !scopes.is_empty() {
