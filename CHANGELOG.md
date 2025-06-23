@@ -52,6 +52,22 @@ return values for `Cookie` and Rauthy's own CSRF token headers, but all others r
 
 [#1053](https://github.com/sebadob/rauthy/pull/1053)
 
+#### Bluesky / AT Protocol
+
+This version supports Bluesky's at-proto. This is probably not used my most people and it's opt-in:
+
+```toml
+[atproto]
+# Set to `true` to enable the ATProto provider. If the public URL is
+# 'localhost' it should be changed to '127.0.0.1', if `dev_mode = true`
+# this also applies for the `provider_callback_url`.
+#
+# default: false
+#enable = false
+```
+
+[#644](https://github.com/sebadob/rauthy/pull/644)
+
 ## v0.30.2
 
 ### Changes
