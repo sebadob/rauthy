@@ -186,6 +186,14 @@ one secret (my preferred approach).
 # overwritten by: WHOAMI_HEADERS
 #whoami_headers = false
 
+[atproto]
+# Set to `true` to enable the ATProto provider. If the public URL is
+# 'localhost' it should be changed to '127.0.0.1', if `dev_mode = true`
+# this also applies for the `provider_callback_url`.
+#
+# default: false
+#enable = false
+
 [auth_headers]
 # You can enable authn/authz headers which would be added to the
 # response of the `/auth/v1/oidc/forward_auth` endpoint. When set to

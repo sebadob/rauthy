@@ -42,12 +42,14 @@
             error = "'code' is missing in URL"
             return;
         }
+        let iss = useParam('iss').get();
 
         let payload: ProviderCallbackRequest = {
             state,
             code,
             pkce_verifier: getVerifierUpstreamFromStorage(),
             xsrf_token: getProviderToken(),
+            iss_atproto: iss,
         };
 
         let url = '/auth/v1/providers/callback';

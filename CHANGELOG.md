@@ -6,7 +6,7 @@
 
 #### TLS Hot-Reload
 
-Rauthy can not hot-reload TLS Key + Certificates. If started with `server.scheme` set to any `https` value and TLS
+Rauthy can now hot-reload TLS Key + Certificates. If started with `server.scheme` set to any `https` value and TLS
 certificates are used, Rauthy will watch for file changes on `tls.cert_path` + `tls.key_path` and will do a hot-reload
 of the TLS configuration if anything changes. This is a real hot-reload, meaning there is no restarting the server, and
 it does it without any interruption in service.
@@ -51,6 +51,22 @@ This will help you make sure your setup is working correctly, if you use `auth_h
 return values for `Cookie` and Rauthy's own CSRF token headers, but all others return will show their raw values.
 
 [#1053](https://github.com/sebadob/rauthy/pull/1053)
+
+#### Bluesky / AT Protocol
+
+This version supports Bluesky's at-proto. This is probably not used my most people and it's opt-in:
+
+```toml
+[atproto]
+# Set to `true` to enable the ATProto provider. If the public URL is
+# 'localhost' it should be changed to '127.0.0.1', if `dev_mode = true`
+# this also applies for the `provider_callback_url`.
+#
+# default: false
+#enable = false
+```
+
+[#644](https://github.com/sebadob/rauthy/pull/644)
 
 ## v0.30.2
 
