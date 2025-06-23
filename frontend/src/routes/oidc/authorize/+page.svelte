@@ -312,6 +312,10 @@
         }
     }
 
+    function isProviderAtProto(providerId: string): boolean {
+        return providerId === atprotoId;
+    }
+
     function onEmailInput() {
         if (isAtproto) {
             return;
@@ -592,18 +596,21 @@
                             </div>
                         </div>
                         {#each providers as provider (provider.id)}
-                            <ButtonAuthProvider
-                                    ariaLabel={`Login: ${provider.name}`}
-                                    {provider}
-                                    {...provider.id !== atprotoId ? {
-                                        onclick: providerLogin,
-                                        isLoading,
-                                    } : {
-                                        onclick: toggleAtproto,
-                                        isLoading: false,
-                                    }
-                                            }
-                            />
+                            {#if isProviderAtProto(provider.id)}
+                                <ButtonAuthProvider
+                                        ariaLabel={`Login: ${provider.name}`}
+                                        {provider}
+                                        onclick={toggleAtproto}
+                                        isLoading={false}
+                                />
+                            {:else}
+                                <ButtonAuthProvider
+                                        ariaLabel={`Login: ${provider.name}`}
+                                        {provider}
+                                        onclick={providerLogin}
+                                        {isLoading}
+                                />
+                            {/if}
                         {/each}
                     </div>
                 {/if}
