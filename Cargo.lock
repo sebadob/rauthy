@@ -4496,7 +4496,6 @@ dependencies = [
  "rauthy-models",
  "rauthy-schedulers",
  "rauthy-service",
- "rauthy-tls",
  "regex",
  "reqwest",
  "ring",
@@ -4506,6 +4505,7 @@ dependencies = [
  "serde_json",
  "spow",
  "tikv-jemallocator",
+ "tls-hot-reload",
  "tokio",
  "tokio-test",
  "tracing",
@@ -4794,19 +4794,6 @@ dependencies = [
  "tokio",
  "tracing",
  "utoipa",
-]
-
-[[package]]
-name = "rauthy-tls"
-version = "0.30.3-20250619-fwd-auth-1"
-dependencies = [
- "arc-swap",
- "notify",
- "rustls",
- "rustls-pemfile",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -6128,6 +6115,21 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
+
+[[package]]
+name = "tls-hot-reload"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82563639ed857de11a5eb59fba1bd99ba238b578edc4741569ea6ec55c2e29ec"
+dependencies = [
+ "arc-swap",
+ "notify",
+ "rustls",
+ "rustls-pemfile",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+]
 
 [[package]]
 name = "tls_codec"

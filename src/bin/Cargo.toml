@@ -18,7 +18,6 @@ rauthy-middlewares = { path = "../middlewares" }
 rauthy-models = { path = "../models" }
 rauthy-schedulers = { path = "../schedulers" }
 rauthy-service = { path = "../service" }
-rauthy-tls = { path = "../tls" }
 
 actix-web = { workspace = true }
 actix-web-prom = { workspace = true }
@@ -36,6 +35,7 @@ rustls-pki-types = { workspace = true }
 rustls-pemfile = { workspace = true }
 serde_json = { workspace = true }
 spow = { workspace = true }
+tls-hot-reload = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
