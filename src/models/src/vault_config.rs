@@ -4,9 +4,7 @@ use std::env;
 use std::error::Error;
 use tokio::fs;
 use toml::Value;
-
 use reqwest::Client;
-//use url::Url;
 
 static CONFIG: OnceLock<VaultConfig> = OnceLock::new();
 
@@ -24,15 +22,12 @@ impl VaultConfig {
     pub async fn build(
         config_file: &str,
     ) -> Result<Self, Box<dyn Error>> {
-
         let mut vault_conf = VaultConfig::default();
-        println!("####### vault_conf intialized with defaults");
 
         match tokio::fs::try_exists(config_file).await {
             Ok(exists) => {
                 if exists  {
-                println!("####### {config_file} found, try to build VaultConfig using config file ...");
-                vault_conf = Self::load(config_file).await;
+                    vault_conf = Self::load(config_file).await;
                 }
                 else {
                     println!("{} not found.", config_file);
@@ -43,7 +38,7 @@ impl VaultConfig {
             }
         }
 
-         Ok(Self::load_from_env(vault_conf).await)
+        Ok(Self::load_from_env(vault_conf).await)
     }
 
     pub fn init_static(self) {
@@ -142,7 +137,6 @@ impl Default for VaultConfig {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct VaultSource {
     vault_addr: String,
@@ -165,7 +159,6 @@ impl Default for VaultSource {
         }
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum KvVersion {
@@ -279,7 +272,6 @@ impl VaultSource {
         }        
     }
 
-   
     /// Changes the KvVersion
     ///
     /// This function takes the target KvVersion and replaces the existing one.
@@ -297,7 +289,6 @@ impl VaultSource {
     {
         self.vault_path_certs = path;
     }    
-
 
     /// Builds the URL for Vault's KV1/KV2 engine read API.
     ///
