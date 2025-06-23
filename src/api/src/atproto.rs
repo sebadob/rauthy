@@ -8,7 +8,6 @@ use rauthy_models::{
     rauthy_config::RauthyConfig,
 };
 
-
 /// ATProto public client metadata
 ///
 /// Returns the public client metadata to securely facilitate the authorization process.
