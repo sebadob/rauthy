@@ -189,7 +189,7 @@
 
     async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
         if (isAtproto) {
-          return providerLogin(atprotoId);
+            return providerLogin(atprotoId);
         }
 
         err = '';
@@ -314,7 +314,7 @@
 
     function onEmailInput() {
         if (isAtproto) {
-          return;
+            return;
         }
 
         // this will basically remove the password input again if the user was asked to provide
@@ -399,7 +399,7 @@
     async function requestReset() {
         isLoading = true;
         let pow = await fetchSolvePow() || '';
-        
+
         let payload: RequestResetRequest = {email, pow};
         if (clientUri) {
             payload.redirect_uri = encodeURI(clientUri);
@@ -470,35 +470,35 @@
                 {#if !clientMfaForce}
                     <Form action={authorizeUrl} {onSubmit}>
                         <div class:emailMinHeight={!showPasswordInput}>
-                          {#if isAtproto}
-                            <Input
-                                    typ="text"
-                                    name="handle"
-                                    bind:value={atprotoHandle}
-                                    label="Handle / DID"
-                                    placeholder="Handle / DID"
-                                    errMsg="Provide a valid handle / DID"
-                                    pattern={PATTERN_ATPROTO_ID}
-                                    disabled={tooManyRequests}
-                                    width={inputWidth}
-                                    required
-                            />
-                          {:else}
-                            <Input
-                                    bind:ref={refEmail}
-                                    typ="email"
-                                    name="email"
-                                    bind:value={email}
-                                    autocomplete="email"
-                                    label={t.common.email}
-                                    placeholder={t.common.email}
-                                    errMsg={t.authorize.validEmail}
-                                    disabled={tooManyRequests || clientMfaForce}
-                                    onInput={onEmailInput}
-                                    width={inputWidth}
-                                    required
-                            />
-                          {/if}
+                            {#if isAtproto}
+                                <Input
+                                        typ="text"
+                                        name="handle"
+                                        bind:value={atprotoHandle}
+                                        label="Handle / DID"
+                                        placeholder="Handle / DID"
+                                        errMsg="Provide a valid handle / DID"
+                                        pattern={PATTERN_ATPROTO_ID}
+                                        disabled={tooManyRequests}
+                                        width={inputWidth}
+                                        required
+                                />
+                            {:else}
+                                <Input
+                                        bind:ref={refEmail}
+                                        typ="email"
+                                        name="email"
+                                        bind:value={email}
+                                        autocomplete="email"
+                                        label={t.common.email}
+                                        placeholder={t.common.email}
+                                        errMsg={t.authorize.validEmail}
+                                        disabled={tooManyRequests || clientMfaForce}
+                                        onInput={onEmailInput}
+                                        width={inputWidth}
+                                        required
+                                />
+                            {/if}
                         </div>
 
                         {#if showPasswordInput}
@@ -538,11 +538,11 @@
                                     </Button>
                                 </div>
                                 {#if isAtproto}
-                                <div class="btn flex-col">
-                                    <Button level={2} onclick={toggleAtproto}>
-                                        {t.common.cancel}
-                                    </Button>
-                                </div>
+                                    <div class="btn flex-col">
+                                        <Button level={2} onclick={toggleAtproto}>
+                                            {t.common.cancel}
+                                        </Button>
+                                    </div>
                                 {/if}
                             {/if}
                         {/if}
@@ -592,18 +592,18 @@
                             </div>
                         </div>
                         {#each providers as provider (provider.id)}
-                          <ButtonAuthProvider
-                            ariaLabel={`Login: ${provider.name}`}
-                            {provider}
-                            {...provider.id !== atprotoId ? {
-                                onclick: providerLogin,
-                                isLoading,
-                              } : {
-                                onclick: toggleAtproto,
-                                isLoading: false,
-                              }
-                            }
-                          />
+                            <ButtonAuthProvider
+                                    ariaLabel={`Login: ${provider.name}`}
+                                    {provider}
+                                    {...provider.id !== atprotoId ? {
+                                        onclick: providerLogin,
+                                        isLoading,
+                                    } : {
+                                        onclick: toggleAtproto,
+                                        isLoading: false,
+                                    }
+                                            }
+                            />
                         {/each}
                     </div>
                 {/if}
