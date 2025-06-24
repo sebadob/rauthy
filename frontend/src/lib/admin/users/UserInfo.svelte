@@ -26,6 +26,8 @@
     import UserPicture from "$lib/UserPicture.svelte";
     import type {PatchOp} from "$api/types/generic";
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider";
+    import {useSession} from "$state/session.svelte";
+    import Tooltip from "$lib/Tooltip.svelte";
 
     let {
         user = $bindable(),
@@ -43,11 +45,13 @@
 
     let t = useI18n();
     let ta = useI18nAdmin();
+    let session = useSession('admin');
 
     let err = $state('');
     let success = $state(false);
 
     let userOrig: undefined | UserResponse;
+    let isSelf = $derived(session.get()?.user_id === user.id);
 
     let email = $state('');
     let givenName = $state('');
@@ -190,6 +194,7 @@
                 payload.del.push('language');
             }
         }
+
         let roles = rolesItems.filter(i => i.selected).map(i => i.name);
         if (roles.join(',') !== userOrig?.roles?.join(',')) {
             if (roles.length > 0) {
@@ -198,6 +203,12 @@
                 payload.del.push('roles');
             }
         }
+        // anti-lockout check for self
+        if (isSelf && !roles.includes('rauthy_admin')) {
+            err = `${ta.users.antiLockout.rule}: ${ta.users.antiLockout.rauthyAdmin}`;
+            return;
+        }
+
         let groups = groupsItems.filter(i => i.selected).map(i => i.name);
         if (groups.join(',') !== userOrig?.groups?.join(',')) {
             if (groups.length > 0) {
@@ -206,6 +217,7 @@
                 payload.del.push('groups');
             }
         }
+
         if (enabled !== userOrig?.enabled) {
             payload.put.push({key: 'enabled', value: enabled});
         }
@@ -307,16 +319,42 @@
         </div>
 
         <div class="values">
-            <div>
-                <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
-                    {ta.common.enabled}
-                </InputCheckbox>
-            </div>
-            <div>
-                <InputCheckbox ariaLabel={t.account.emailVerified} bind:checked={emailVerified}>
-                    {t.account.emailVerified}
-                </InputCheckbox>
-            </div>
+            {#if isSelf}
+                <div>
+                    <Tooltip text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}>
+                        <InputCheckbox
+                                ariaLabel={ta.common.enabled}
+                                bind:checked={enabled}
+                                disabled
+                        >
+                            {ta.common.enabled}
+                        </InputCheckbox>
+                    </Tooltip>
+                </div>
+                <div>
+                    <Tooltip text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}>
+                        <InputCheckbox
+                                ariaLabel={t.account.emailVerified}
+                                bind:checked={emailVerified}
+                                disabled
+                        >
+                            {t.account.emailVerified}
+                        </InputCheckbox>
+                    </Tooltip>
+                </div>
+            {:else}
+                <div>
+                    <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
+                        {ta.common.enabled}
+                    </InputCheckbox>
+                </div>
+                <div>
+                    <InputCheckbox ariaLabel={t.account.emailVerified} bind:checked={emailVerified}>
+                        {t.account.emailVerified}
+                    </InputCheckbox>
+                </div>
+            {/if}
+
         </div>
 
         <div class="values">
@@ -416,9 +454,17 @@
 
         <div class="values">
             <div style:margin-top=".5rem">
-                <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
-                    {t.account.accessExp}
-                </InputCheckbox>
+                {#if !expires && isSelf}
+                    <Tooltip text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}>
+                        <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires} disabled>
+                            {t.account.accessExp}
+                        </InputCheckbox>
+                    </Tooltip>
+                {:else}
+                    <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
+                        {t.account.accessExp}
+                    </InputCheckbox>
+                {/if}
             </div>
             {#if expires}
                 <div transition:slide={{duration: 150}}>

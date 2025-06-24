@@ -349,6 +349,12 @@ export let I18nAdminDe: I18nAdmin = {
         delete: "Löschen",
     },
     users: {
+        antiLockout: {
+            rule: 'Anti-Lockout Regel',
+            delete: 'kann nicht gelöscht werden',
+            disable: 'kann nicht deaktiviert werden',
+            rauthyAdmin: 'rauthy_admin Rolle kann nicht entfernt werden',
+        },
         attributes: "Attribute",
         deleteUser: "Soll dieser Benutzer wirklich gelöscht werden?",
         descAttr: `Setze individuelle Benutzer Attribute. Alle Key / Value Paare 
