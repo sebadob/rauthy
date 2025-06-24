@@ -336,6 +336,12 @@ export let I18nAdminEn: I18nAdmin = {
         delete: "Delete",
     },
     users: {
+        antiLockout: {
+            rule: 'Anti-Lockout Rule',
+            delete: 'cannot be deleted',
+            disable: 'cannot be disabled',
+            rauthyAdmin: 'rauthy_admin rule cannot be removed',
+        },
         attributes: "Attributes",
         deleteUser: "Are you sure you want to delete this user?",
         descAttr: `Set custom user attributes. All key / value pairs will be handles as String / JSON Value.`,
