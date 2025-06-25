@@ -10,7 +10,7 @@
     import {PATTERN_USER_NAME} from "$utils/patterns";
     import {webauthnReg} from "$webauthn/registration";
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
-    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
+    import type {MfaPurpose, WebauthnAdditionalData, WebauthnServiceReq} from "$webauthn/types.ts";
     import UserPasskey from "$lib5/UserPasskey.svelte";
     import type {MfaModTokenResponse, UserMfaTokenRequest} from "$api/types/mfa_mod_token";
     import Modal from "$lib/Modal.svelte";
@@ -36,6 +36,7 @@
     let mfaPurpose: undefined | MfaPurpose = $state();
     let passkeyName = $state('');
     let isInputError = $state(false);
+    let isLoading = $state(false);
 
     let showModal = $state(false);
     let closeModal: undefined | (() => void) = $state();
@@ -66,30 +67,21 @@
         refInput?.focus();
     });
 
-    $effect(() => {
+    function calcModSecs() {
+        let modSecs = 0;
         if (mfaModToken) {
-            if (interval) {
-                clearInterval(interval);
-                interval = undefined;
-            }
-
-            interval = setInterval(() => {
-                let modSecs = 0;
-                if (mfaModToken) {
-                    let ts = new Date().getTime() / 1000;
-                    modSecs = Math.floor(mfaModToken.exp - ts);
-                }
-                if (modSecs > 0) {
-                    mfaModSecs = modSecs;
-                } else {
-                    mfaModSecs = undefined;
-                    mfaModToken = undefined;
-                    clearInterval(interval);
-                    interval = undefined;
-                }
-            }, 1000);
+            let ts = new Date().getTime() / 1000;
+            modSecs = Math.floor(mfaModToken.exp - ts);
         }
-    });
+        if (modSecs > 0) {
+            mfaModSecs = modSecs;
+        } else {
+            mfaModSecs = undefined;
+            mfaModToken = undefined;
+            clearInterval(interval);
+            interval = undefined;
+        }
+    }
 
     function resetMsgErr() {
         err = false;
@@ -119,7 +111,21 @@
             return;
         }
 
-        let res = await webauthnReg(userId, passkeyName, t.authorize.invalidKeyUsed, t.authorize.requestExpired);
+        let tokenId = mfaModToken?.id;
+        if (!tokenId) {
+            showModal = true;
+            return;
+        }
+
+        let res = await webauthnReg(
+            userId,
+            passkeyName,
+            t.authorize.invalidKeyUsed,
+            t.authorize.requestExpired,
+            undefined,
+            undefined,
+            tokenId,
+        );
         if (res.error) {
             err = true;
             msg = `${t.mfa.errorReg} - ${res.error}`;
@@ -147,19 +153,39 @@
         }
     }
 
-    async function onMfaTokenSubmit(form: HTMLFormElement, params: URLSearchParams) {
+    async function onMfaTokenSubmit(_form: HTMLFormElement, params: URLSearchParams) {
         pwdErr = '';
+        isLoading = true;
 
         let payload: UserMfaTokenRequest = {
             password: params.get("password") || '',
         }
-        let res = await fetchPost<MfaModTokenResponse>(form.action, payload);
+        await fetchMfaToken(payload);
+        isLoading = false;
+    }
+
+    async function fetchMfaToken(payload: UserMfaTokenRequest) {
+        let res = await fetchPost<MfaModTokenResponse>(`/auth/v1/users/${user.id}/mfa_token`, payload);
         if (res.body) {
             mfaModToken = res.body;
             closeModal?.();
+
+            if (interval) {
+                clearInterval(interval);
+            }
+
+            calcModSecs();
+            interval = setInterval(() => {
+                calcModSecs()
+            }, 1000);
         } else {
             pwdErr = t.mfa.passwordInvalid;
         }
+    }
+
+    async function onMfaTokenWebauthnSubmit() {
+        closeModal?.();
+        mfaPurpose = 'MfaModToken';
     }
 
     function onWebauthnError(error: string) {
@@ -173,11 +199,24 @@
     }
 
     function onWebauthnSuccess(data?: WebauthnAdditionalData) {
+        if (mfaPurpose === 'MfaModToken') {
+            if (!data) {
+                console.error('did not receive WebauthnData after SvcReq');
+                return;
+            }
+            let svc = data as WebauthnServiceReq;
+            let payload: UserMfaTokenRequest = {
+                mfa_code: svc.code,
+            }
+            fetchMfaToken(payload);
+        } else {
+            msg = t.mfa.testSuccess;
+            setTimeout(() => {
+                msg = '';
+            }, 3000);
+        }
+
         mfaPurpose = undefined;
-        msg = t.mfa.testSuccess;
-        setTimeout(() => {
-            msg = '';
-        }, 3000);
     }
 </script>
 
@@ -239,26 +278,42 @@
                     {t.mfa.registerNew}
                 </Button>
                 <Modal bind:showModal bind:closeModal>
-                    <p style:max-width="20rem">
-                        {t.mfa.reAuthenticatePwd}
-                    </p>
+                    {#if user.webauthn_user_id}
+                        <p style:max-width="20rem">
+                            {t.mfa.reAuthenticatePasskey}
+                        </p>
+                        <ul>
+                            {#each passkeys as pk}
+                                <li>{pk.name}</li>
+                            {/each}
+                        </ul>
 
-                    <Form action={`/auth/v1/users/${user.id}/mfa_token`} onSubmit={onMfaTokenSubmit}>
-                        <InputPassword
-                                name="password"
-                                autocomplete="current-password"
-                                label={t.account.passwordCurr}
-                                placeholder={t.account.passwordCurr}
-                                required
-                        />
-                        <Button type="submit">SEND</Button>
-                        {#if pwdErr}
-                            <div class="pwdInvalid">
-                                {pwdErr}
-                            </div>
-                        {/if}
+                        <div style:margin-top="1rem">
+                            <Button onclick={onMfaTokenWebauthnSubmit}>
+                                {t.common.authenticate}
+                            </Button>
+                        </div>
+                    {:else}
+                        <p style:max-width="20rem">
+                            {t.mfa.reAuthenticatePwd}
+                        </p>
 
-                    </Form>
+                        <Form action="" onSubmit={onMfaTokenSubmit}>
+                            <InputPassword
+                                    name="password"
+                                    autocomplete="current-password"
+                                    label={t.account.passwordCurr}
+                                    placeholder={t.account.passwordCurr}
+                                    required
+                            />
+                            <Button type="submit" {isLoading}>{t.common.authenticate}</Button>
+                            {#if pwdErr}
+                                <div class="pwdInvalid">
+                                    {pwdErr}
+                                </div>
+                            {/if}
+                        </Form>
+                    {/if}
                 </Modal>
             </div>
         {/if}

@@ -3,6 +3,7 @@ import {type I18n} from "./interface";
 export const I18nEn: I18n = {
     lang: "en",
     common: {
+        authenticate: "Authenticate",
         cancel: "Cancel",
         changeTheme: "Change Theme",
         close: "Close",
@@ -184,6 +185,7 @@ export const I18nEn: I18n = {
         errorReg: "Error starting the Registration process",
         lastUsed: "Last used",
         noKey: "No Security key registered on this slot",
+        reAuthenticatePasskey: "Before you can modify Passkeys, you need to authenticate with an already registered one:",
         reAuthenticatePwd: "Before you can modify Passkeys, you need to re-authenticate with your password.",
         register: "Register",
         registerNew: "Register New Key",

@@ -3,6 +3,7 @@ import {type I18n} from "./interface";
 export const I18nKo: I18n = {
     lang: "ko",
     common: {
+        authenticate: "Authenticate",
         cancel: "취소",
         changeTheme: "테마 변경",
         close: "닫기",
@@ -184,6 +185,7 @@ export const I18nKo: I18n = {
         errorReg: "가입 절차 시작 중 오류 발생",
         lastUsed: "마지막 사용일",
         noKey: "이 슬롯에 등록된 보안 키가 없습니다.",
+        reAuthenticatePasskey: "Before you can modify Passkeys, you need to authenticate with an already registered one:",
         reAuthenticatePwd: "Before you can modify Passkeys, you need to re-authenticate with your password.",
         register: "등록",
         registerNew: "새 키 등록",

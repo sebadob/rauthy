@@ -5,6 +5,7 @@
 export interface I18n {
     lang: string,
     common: {
+        authenticate: string,
         cancel: string,
         changeTheme: string,
         close: string,
@@ -163,6 +164,7 @@ export interface I18n {
         errorReg: string,
         lastUsed: string,
         noKey: string,
+        reAuthenticatePasskey: string,
         reAuthenticatePwd: string,
         register: string,
         registerNew: string,

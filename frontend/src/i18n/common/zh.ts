@@ -3,6 +3,7 @@ import {type I18n} from "./interface";
 export const I18nZh: I18n = {
     lang: "zh",
     common: {
+        authenticate: "Authenticate",
         cancel: "取消",
         changeTheme: "更换主题",
         close: "关闭",
@@ -184,6 +185,7 @@ export const I18nZh: I18n = {
         errorReg: "开始注册过程时出现错误。",
         lastUsed: "最后使用",
         noKey: "此槽位没有已注册的安全密钥",
+        reAuthenticatePasskey: "Before you can modify Passkeys, you need to authenticate with an already registered one:",
         reAuthenticatePwd: "Before you can modify Passkeys, you need to re-authenticate with your password.",
         register: "注册",
         registerNew: "注册新的密钥",

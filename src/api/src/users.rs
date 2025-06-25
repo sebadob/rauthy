@@ -41,7 +41,7 @@ use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webauthn;
-use rauthy_models::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData};
+use rauthy_models::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData, WebauthnServiceReq};
 use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::html::HtmlCached;
@@ -53,6 +53,7 @@ use rauthy_service::oidc::logout;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::collections::HashMap;
+use std::os::unix::raw::mode_t;
 use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
@@ -678,11 +679,40 @@ pub async fn post_user_mfa_token(
     }
 
     let user = User::find(user_id.to_string()).await?;
-    if user.validate_password(payload.password).await.is_err() {
-        // we don't want to return 401 on purpose to not trigger a redirect to login
+
+    if let Some(password) = payload.password {
+        if user.has_webauthn_enabled() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "must provide `mfa_code` instead of `password`",
+            ));
+        }
+        if user.validate_password(password).await.is_err() {
+            // we don't want to return 401 on purpose to not trigger a redirect to login
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid password",
+            ));
+        }
+    } else if let Some(code) = payload.mfa_code {
+        if !user.has_webauthn_enabled() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "must provide `password`",
+            ));
+        }
+        let svc_req = WebauthnServiceReq::find(code).await?;
+        if svc_req.user_id != user.id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "mismatch in UserID",
+            ));
+        }
+        svc_req.delete().await?;
+    } else {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Invalid password",
+            "empty payload",
         ));
     }
 
@@ -1309,6 +1339,7 @@ pub async fn delete_webauthn(
     // validate that Principal matches the user or is an admin
     if !is_admin {
         principal.is_user(&id)?;
+        // TODO request and validate MfaModToken here?
         warn!("Passkey delete for user {} for key {}", id, name);
     } else {
         warn!("Passkey delete from admin for user {} for key {}", id, name);
@@ -1357,6 +1388,16 @@ pub async fn post_webauthn_reg_start(
         principal.validate_session_auth()?;
         // this endpoint is a CSRF check exception inside the Principal Middleware -> check here!
         principal.validate_session_csrf_exception(&req)?;
+
+        if payload.mfa_mod_token_id.is_none() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "missing `mfa_mod_token_id`",
+            ));
+        }
+        let mod_token = MfaModToken::find(&payload.mfa_mod_token_id.as_ref().unwrap()).await?;
+        let ip = real_ip_from_req(&req)?;
+        mod_token.validate(principal.user_id()?, ip)?;
 
         // validate that Principal matches the user
         let id = id.into_inner();

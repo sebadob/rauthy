@@ -13,10 +13,12 @@ export async function webauthnReg(
     errorI18nTimeout: string,
     magicLinkId?: string,
     pwdCsrfToken?: string,
+    mfaModTokenId?: string,
 ): Promise<WebauthnRegResult> {
     let payloadStart: WebauthnRegStartRequest = {
         passkey_name: passkeyName,
         magic_link_id: magicLinkId,
+        mfa_mod_token_id: mfaModTokenId,
     };
     let headers: HeadersInit = {
         'Content-Type': 'application/json',

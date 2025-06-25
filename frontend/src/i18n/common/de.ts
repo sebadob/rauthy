@@ -3,6 +3,7 @@ import {type I18n} from "./interface";
 export const I18nDe: I18n = {
     lang: "de",
     common: {
+        authenticate: "Authentifizieren",
         cancel: "Abbrechen",
         changeTheme: "Farbschema wechseln",
         close: "Schließen",
@@ -184,6 +185,7 @@ export const I18nDe: I18n = {
         errorReg: "Fehler beim Starten der Registrierung",
         lastUsed: "Zuletzt genutzt",
         noKey: "Es wurde in diesem Speicher noch kein Sicherheitsschlüssel registriert",
+        reAuthenticatePasskey: "Bevor Passkeys bearbeitet werden können, muss zuerst einer der bestehenden überprüft werden:",
         reAuthenticatePwd: "Bevor Passkeys bearbeitet werden können, ist eine erneute Bestätigung des Passworts notwendig.",
         register: "Registrieren",
         registerNew: "Neuen Key Registrieren",

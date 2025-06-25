@@ -36,7 +36,7 @@ impl MfaModToken {
                 Cache::Webauthn,
                 Self::cache_idx(&slf.id),
                 &slf,
-                Some(exp_secs),
+                Some(exp_secs + 1),
             )
             .await?;
 
@@ -52,13 +52,6 @@ impl MfaModToken {
                 "Invalid MfaModToken id",
             ))
         }
-    }
-
-    pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::Webauthn, Self::cache_idx(&self.id))
-            .await?;
-        Ok(())
     }
 }
 
