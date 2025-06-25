@@ -1,4 +1,4 @@
-export type MfaPurpose = { Login: string } | 'PasswordNew' | 'PasswordReset' | 'Test';
+export type MfaPurpose = { Login: string } | 'MfaModToken' | 'PasswordNew' | 'PasswordReset' | 'Test';
 export type WebauthnAdditionalData = undefined | WebauthnLoginFinishResponse | WebauthnServiceReq;
 
 export interface WebauthnAuthStartRequest {
@@ -31,6 +31,8 @@ export interface WebauthnRegStartRequest {
     passkey_name: string,
     /// Validation: PATTERN_ALNUM_64
     magic_link_id?: string,
+    /// Validation: length === 32
+    mfa_mod_token_id?: string,
 }
 
 export interface WebauthnRegFinishRequest {

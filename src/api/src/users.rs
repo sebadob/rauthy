@@ -8,14 +8,14 @@ use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
 use rauthy_api_types::oidc::PasswordResetResponse;
 use rauthy_api_types::users::{
-    DeviceRequest, DeviceResponse, MfaPurpose, NewUserRegistrationRequest, NewUserRequest,
-    PasskeyResponse, PasswordResetRequest, RequestResetRequest, UpdateUserRequest,
-    UpdateUserSelfRequest, UserAttrConfigRequest, UserAttrConfigResponse,
-    UserAttrConfigValueResponse, UserAttrValueResponse, UserAttrValuesResponse,
-    UserAttrValuesUpdateRequest, UserEditableAttrResponse, UserEditableAttrsResponse,
-    UserPictureConfig, UserResponse, UserResponseSimple, WebIdRequest, WebIdResponse,
-    WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
-    WebauthnRegFinishRequest, WebauthnRegStartRequest,
+    DeviceRequest, DeviceResponse, MfaModTokenRequest, MfaModTokenResponse, MfaPurpose,
+    NewUserRegistrationRequest, NewUserRequest, PasskeyResponse, PasswordResetRequest,
+    RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAttrConfigRequest,
+    UserAttrConfigResponse, UserAttrConfigValueResponse, UserAttrValueResponse,
+    UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserEditableAttrResponse,
+    UserEditableAttrsResponse, UserPictureConfig, UserResponse, UserResponseSimple, WebIdRequest,
+    WebIdResponse, WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
+    WebauthnDeleteRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
     COOKIE_MFA, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, PWD_CSRF_HEADER,
@@ -32,6 +32,7 @@ use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::groups::Group;
+use rauthy_models::entity::mfa_mod_token::MfaModToken;
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPicture};
 use rauthy_models::entity::pow::PowEntity;
@@ -40,7 +41,7 @@ use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webauthn;
-use rauthy_models::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData};
+use rauthy_models::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData, WebauthnServiceReq};
 use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::html::HtmlCached;
@@ -643,6 +644,83 @@ pub async fn put_user_attr(
     Ok(HttpResponse::Ok().json(UserAttrValuesResponse { values }))
 }
 
+/// Retrieve an `MfaModToken` to be able to modify MFA keys
+///
+/// This endpoint is for password-only. If the user already has registered Passkeys, the token can
+/// be retrieved via a Webauthn-Flow.
+#[utoipa::path(
+    post,
+    path = "/users/{id}/mfa_token",
+    tag = "users",
+    request_body = MfaModTokenRequest,
+    responses(
+        (status = 200, description = "Ok", body = MfaModTokenResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[post("/users/{id}/mfa_token")]
+pub async fn post_user_mfa_token(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    req: HttpRequest,
+    Json(payload): Json<MfaModTokenRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+    payload.validate()?;
+
+    let user_id = principal.user_id()?;
+    if path.into_inner() != user_id {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "mismatch between path and Principal `id`",
+        ));
+    }
+
+    let user = User::find(user_id.to_string()).await?;
+
+    if let Some(password) = payload.password {
+        if user.has_webauthn_enabled() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "must provide `mfa_code` instead of `password`",
+            ));
+        }
+        if user.validate_password(password).await.is_err() {
+            // we don't want to return 401 on purpose to not trigger a redirect to login
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid password",
+            ));
+        }
+    } else if let Some(code) = payload.mfa_code {
+        if !user.has_webauthn_enabled() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "must provide `password`",
+            ));
+        }
+        let svc_req = WebauthnServiceReq::find(code).await?;
+        if svc_req.user_id != user.id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "mismatch in UserID",
+            ));
+        }
+        svc_req.delete().await?;
+    } else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "empty payload",
+        ));
+    }
+
+    let ip = real_ip_from_req(&req)?;
+    let token = MfaModToken::new(user_id.to_string(), ip).await?;
+
+    Ok(HttpResponse::Ok().json(MfaModTokenResponse::from(token)))
+}
+
 /// Upload a user picture
 ///
 /// Returns the new `picture_id` as the text body.
@@ -1235,6 +1313,7 @@ pub async fn post_webauthn_auth_finish(
     delete,
     path = "/users/{id}/webauthn/delete/{name}",
     tag = "mfa",
+    request_body = WebauthnDeleteRequest,
     responses(
         (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
@@ -1245,7 +1324,11 @@ pub async fn post_webauthn_auth_finish(
 pub async fn delete_webauthn(
     path: web::Path<(String, String)>,
     principal: ReqPrincipal,
+    req: HttpRequest,
+    Json(payload): Json<WebauthnDeleteRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
     // Note: Currently, this is not allowed with an ApiKey on purpose
     let is_admin = match principal.validate_admin_session() {
         Ok(()) => true,
@@ -1260,6 +1343,17 @@ pub async fn delete_webauthn(
     // validate that Principal matches the user or is an admin
     if !is_admin {
         principal.is_user(&id)?;
+
+        let Some(token_id) = payload.mfa_mod_token_id else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "missing `mfa_mod_token_id`",
+            ));
+        };
+        let token = MfaModToken::find(&token_id).await?;
+        let ip = real_ip_from_req(&req)?;
+        token.validate(principal.user_id()?, ip)?;
+
         warn!("Passkey delete for user {} for key {}", id, name);
     } else {
         warn!("Passkey delete from admin for user {} for key {}", id, name);
@@ -1308,6 +1402,16 @@ pub async fn post_webauthn_reg_start(
         principal.validate_session_auth()?;
         // this endpoint is a CSRF check exception inside the Principal Middleware -> check here!
         principal.validate_session_csrf_exception(&req)?;
+
+        if payload.mfa_mod_token_id.is_none() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "missing `mfa_mod_token_id`",
+            ));
+        }
+        let mod_token = MfaModToken::find(payload.mfa_mod_token_id.as_ref().unwrap()).await?;
+        let ip = real_ip_from_req(&req)?;
+        mod_token.validate(principal.user_id()?, ip)?;
 
         // validate that Principal matches the user
         let id = id.into_inner();

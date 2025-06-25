@@ -40,6 +40,7 @@ pub struct MfaAwaitRequest {
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub enum MfaPurpose {
     Login(String),
+    MfaModToken,
     PasswordNew,
     PasswordReset,
     Test,
@@ -268,6 +269,15 @@ pub struct UserAttrValuesUpdateRequest {
 
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct MfaModTokenRequest {
+    #[validate(length(max = 256))]
+    pub password: Option<String>,
+    #[validate(length(min = 48, max = 48))]
+    pub mfa_code: Option<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnAuthStartRequest {
     pub purpose: MfaPurpose,
 }
@@ -284,6 +294,12 @@ pub struct WebauthnAuthFinishRequest {
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
+pub struct WebauthnDeleteRequest {
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: Option<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnRegStartRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
@@ -292,6 +308,8 @@ pub struct WebauthnRegStartRequest {
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "*RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: Option<String>,
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -330,6 +348,15 @@ pub struct DeviceResponse {
     pub refresh_exp: Option<i64>,
     pub peer_ip: String,
     pub name: String,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct MfaModTokenResponse {
+    pub id: String,
+    pub user_id: String,
+    pub exp: i64,
+    pub ip: String,
 }
 
 #[derive(Serialize, ToSchema)]

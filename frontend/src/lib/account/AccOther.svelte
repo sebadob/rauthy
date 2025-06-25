@@ -94,23 +94,25 @@
         {/each}
     </div>
 
-    <div class="bottom">
-        <div>
-            <Button onclick={onSubmit}>
-                {t.common.save}
-            </Button>
-        </div>
+    {#if attrs.length > 0}
+        <div class="bottom">
+            <div>
+                <Button onclick={onSubmit}>
+                    {t.common.save}
+                </Button>
+            </div>
 
-        {#if success}
-            <div class="success" transition:fade>
-                <IconCheck/>
+            {#if success}
+                <div class="success" transition:fade>
+                    <IconCheck/>
+                </div>
+            {/if}
+        </div>
+        {#if err}
+            <div class="err" transition:fade>
+                {err}
             </div>
         {/if}
-    </div>
-    {#if err}
-        <div class="err" transition:fade>
-            {err}
-        </div>
     {/if}
 </div>
 
