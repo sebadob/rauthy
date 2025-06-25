@@ -15,7 +15,7 @@ use rauthy_api_types::users::{
     UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserEditableAttrResponse,
     UserEditableAttrsResponse, UserPictureConfig, UserResponse, UserResponseSimple, WebIdRequest,
     WebIdResponse, WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
-    WebauthnRegFinishRequest, WebauthnRegStartRequest,
+    WebauthnDeleteRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
     COOKIE_MFA, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, PWD_CSRF_HEADER,
@@ -53,7 +53,6 @@ use rauthy_service::oidc::logout;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::collections::HashMap;
-use std::os::unix::raw::mode_t;
 use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
@@ -1314,6 +1313,7 @@ pub async fn post_webauthn_auth_finish(
     delete,
     path = "/users/{id}/webauthn/delete/{name}",
     tag = "mfa",
+    request_body = WebauthnDeleteRequest,
     responses(
         (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
@@ -1324,7 +1324,11 @@ pub async fn post_webauthn_auth_finish(
 pub async fn delete_webauthn(
     path: web::Path<(String, String)>,
     principal: ReqPrincipal,
+    req: HttpRequest,
+    Json(payload): Json<WebauthnDeleteRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
     // Note: Currently, this is not allowed with an ApiKey on purpose
     let is_admin = match principal.validate_admin_session() {
         Ok(()) => true,
@@ -1339,7 +1343,17 @@ pub async fn delete_webauthn(
     // validate that Principal matches the user or is an admin
     if !is_admin {
         principal.is_user(&id)?;
-        // TODO request and validate MfaModToken here?
+
+        let Some(token_id) = payload.mfa_mod_token_id else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "missing `mfa_mod_token_id`",
+            ));
+        };
+        let token = MfaModToken::find(&token_id).await?;
+        let ip = real_ip_from_req(&req)?;
+        token.validate(principal.user_id()?, ip)?;
+
         warn!("Passkey delete for user {} for key {}", id, name);
     } else {
         warn!("Passkey delete from admin for user {} for key {}", id, name);
@@ -1395,7 +1409,7 @@ pub async fn post_webauthn_reg_start(
                 "missing `mfa_mod_token_id`",
             ));
         }
-        let mod_token = MfaModToken::find(&payload.mfa_mod_token_id.as_ref().unwrap()).await?;
+        let mod_token = MfaModToken::find(payload.mfa_mod_token_id.as_ref().unwrap()).await?;
         let ip = real_ip_from_req(&req)?;
         mod_token.validate(principal.user_id()?, ip)?;
 

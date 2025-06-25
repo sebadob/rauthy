@@ -256,6 +256,7 @@ use utoipa::{OpenApi, openapi};
             WebauthnRegFinishRequest,
             WebauthnAuthStartRequest,
             WebauthnAuthFinishRequest,
+            WebauthnDeleteRequest,
             WebIdRequest,
 
             ApiKeyResponse,

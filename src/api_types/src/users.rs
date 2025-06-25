@@ -294,6 +294,12 @@ pub struct WebauthnAuthFinishRequest {
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
+pub struct WebauthnDeleteRequest {
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: Option<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnRegStartRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`

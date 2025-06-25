@@ -5,7 +5,7 @@
     import {useI18n} from "$state/i18n.svelte.js";
     import {useSession} from "$state/session.svelte.js";
     import {fetchDelete, fetchGet, fetchPost} from "$api/fetch";
-    import type {PasskeyResponse} from "$api/types/webauthn.ts";
+    import type {PasskeyResponse, WebauthnDeleteRequest} from "$api/types/webauthn.ts";
     import type {UserResponse} from "$api/types/user.ts";
     import {PATTERN_USER_NAME} from "$utils/patterns";
     import {webauthnReg} from "$webauthn/registration";
@@ -137,7 +137,15 @@
     }
 
     async function handleDelete(name: string) {
-        let res = await fetchDelete(`/auth/v1/users/${user.id}/webauthn/delete/${name}`);
+        if (!mfaModToken) {
+            showModal = true;
+            return;
+        }
+
+        let payload: WebauthnDeleteRequest = {
+            mfa_mod_token_id: mfaModToken.id,
+        };
+        let res = await fetchDelete(`/auth/v1/users/${user.id}/webauthn/delete/${name}`, payload);
         if (res.status === 200) {
             await fetchPasskeys();
         } else {
@@ -189,7 +197,6 @@
     }
 
     async function onMfaTokenWebauthnSubmit() {
-        console.log('submit');
         closeModal?.();
         mfaPurpose = 'MfaModToken';
     }
@@ -313,6 +320,7 @@
 
                         <Form action="" onSubmit={onMfaTokenSubmit}>
                             <InputPassword
+                                    bind:ref={refInput}
                                     name="password"
                                     autocomplete="current-password"
                                     label={t.account.passwordCurr}
