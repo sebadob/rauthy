@@ -42,7 +42,7 @@ pub struct RauthyConfig {
 }
 
 impl RauthyConfig {
-     pub async fn build(
+    pub async fn build(
         config_file: &str,
         tx_email: mpsc::Sender<EMail>,
         tx_events: flume::Sender<Event>,
@@ -2096,7 +2096,7 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut table, "tls", "key_path", "TLS_KEY") {
             self.tls.key_path = Some(v);
-        }   
+        }
     }
 
     fn parse_user_pictures(&mut self, table: &mut toml::Table) {
