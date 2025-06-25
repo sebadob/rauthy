@@ -1,21 +1,18 @@
 // Copyright 2025 Sebastian Dobe <sebastiandobe@mailbox.org>
 
 use crate::logging::setup_logging;
-use rauthy_common::constants::{BUILD_TIME, IDX_AUTH_PROVIDER_TEMPLATE, RAUTHY_VERSION};
+use rauthy_common::constants::{BUILD_TIME, RAUTHY_VERSION};
 use rauthy_common::password_hasher;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::swagger_ui::{OPENAPI_CONFIG, OPENAPI_JSON};
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::email;
 use rauthy_models::email::EMail;
-use rauthy_models::entity::atproto;
-use rauthy_models::entity::auth_providers::AuthProvider;
 use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::rauthy_config::RauthyConfig;
-use rauthy_models::vault_config::{KvVersion, VaultConfig};
 use std::env;
 use std::error::Error;
 use std::time::Duration;
@@ -43,12 +40,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         } else {
             dotenvy::dotenv().ok();
 
-            let use_vault = match env::var("VAULT_CONFIG")
-            {
-                 Ok(_value) => true,
-                _ => false,
-            };
-
             let local_test = env::var("LOCAL_TEST")
                 .unwrap_or_else(|_| "false".to_string())
                 .parse::<bool>()
@@ -57,10 +48,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if local_test {
                 eprintln!("!!! Using insecure config for testing - DO NOT USE IN PRODUCTION !!!");
                 ("config-local-test.toml", false)
-            }
-            else if use_vault {
-                println!("####### VAULT #########");
-                ("config.vault", false)
             }
             else {
                 ("config.toml", false)
@@ -76,35 +63,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //  and all constants
     info!("Initializing AppConfig");
 
- let (rauthy_config, node_config) = match config_file {
-        "config.vault" =>
-        { 
-            let vault_conf = VaultConfig::build(config_file).await?;
-            vault_conf.init_static();
-  
-            RauthyConfig::build_from_vault(
-                &VaultConfig::get().vault_source,
-                tx_email.clone(),
-                tx_events.clone(),
-                tx_events_router.clone(),
-            )
-            .await?
-        
-        },
-        _ =>
-        {
-            RauthyConfig::build(
-                        config_file,
-                        tx_email.clone(),
-                        tx_events.clone(),
-                        tx_events_router.clone(),
-                    )
-                    .await?
-                
-        },
-    };
-
-   
+    let (rauthy_config, node_config) = RauthyConfig::build(
+            config_file,
+            tx_email.clone(),
+            tx_events.clone(),
+            tx_events_router.clone(),
+        )
+    .await?;     
     rauthy_config.init_static();
     init_static_vars::trigger();
 
@@ -170,16 +135,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     UserPicture::test_config().await.unwrap();
 
-    // We need to clear some caches
+    // We need to clear the HTML cache to make sure the correct static
+    // assets are referenced after an app upgrade with a newly built UI.
     DB::hql().clear_cache(Cache::Html).await.unwrap();
-    DB::hql()
-        .delete(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE)
-        .await
-        .unwrap();
-    DB::hql()
-        .delete(Cache::App, AuthProvider::cache_idx("all"))
-        .await
-        .unwrap();
 
     {
         let cfg = &RauthyConfig::get().vars.server;
@@ -187,15 +145,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             OPENAPI_JSON.set(ApiDoc::build().to_json()?)?;
             let _ = *OPENAPI_CONFIG;
         }
-    }
-
-    if RauthyConfig::get().vars.atproto.enable {
-        atproto::Client::init_provider()
-            .await
-            .map_err(|error| {
-                error!(%error, "failed to initialize atproto provider");
-            })
-            .unwrap();
     }
 
     if RauthyConfig::get().vars.server.metrics_enable {

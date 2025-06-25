@@ -2,7 +2,7 @@ use crate::ListenScheme;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
-use crate::vault_config::VaultSource;
+use crate::vault_config::VaultConfig;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
@@ -49,26 +49,6 @@ impl RauthyConfig {
         tx_events_router: flume::Sender<EventRouterMsg>,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
         let (vars, node_config) = Vars::load(config_file).await;
-        Self::build_from_vars(vars,node_config,tx_email,tx_events,tx_events_router).await
-    }
-
-    pub async fn build_from_vault(
-        vault_source: &VaultSource,
-        tx_email: mpsc::Sender<EMail>,
-        tx_events: flume::Sender<Event>,
-        tx_events_router: flume::Sender<EventRouterMsg>,
-    ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
-        let (vars, node_config) = Vars::load_from_vault(vault_source).await;
-        Self::build_from_vars(vars,node_config,tx_email,tx_events,tx_events_router).await
-    }
-
-    pub async fn build_from_vars(
-        vars: Vars,
-        node_config: NodeConfig,
-        tx_email: mpsc::Sender<EMail>,
-        tx_events: flume::Sender<Event>,
-        tx_events_router: flume::Sender<EventRouterMsg>,
-    ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
         vars.validate();
         if let Err(err) = node_config.is_valid() {
             panic!("Invalid `[cluster]` config: {}", err);
@@ -649,26 +629,28 @@ impl Default for Vars {
 }
 
 impl Vars {
-     async fn load(path_config: &str) -> (Self, hiqlite::NodeConfig) {
-        let Ok(config) = fs::read_to_string(path_config).await else {
-            panic!("Cannot read config file from {}", path_config);
+    async fn load(path_config: &str) -> (Self, hiqlite::NodeConfig) {
+       let (slf, config) = match env::var("VAULT_CONFIG") {
+            Ok(_value) => {
+                let Ok(config) = VaultConfig::load_vars().await else {
+                    panic!("Cannot read config from Vault");
+                };
+                let slf = Self::default();
+                (slf,config)
+            },
+            _ => {
+                let slf = Self::default();
+                let Ok(config) = fs::read_to_string(path_config).await else {
+                    panic!("Cannot read config file from {}", path_config);
+                };
+                (slf,config)
+            } 
         };
 
-        Self::load_from_string(&config).await
+        Self::parse(slf,config).await
     }
-
-    async fn load_from_vault(vault_source: &VaultSource,) -> (Self, hiqlite::NodeConfig) {
-
-        let config_from_vault = vault_source.get_config().await.unwrap();
-
-        println!("\nconfig_from_vault:");
-        println!("{:?}",config_from_vault);
-
-        Self::load_from_string(&config_from_vault["config"].as_str().unwrap().to_string()).await
-    }
-
-    async fn load_from_string(config: &String) -> (Self, hiqlite::NodeConfig) {
-        let mut slf = Self::default();
+    
+    async fn parse(mut slf: Vars, config: String) -> (Self, hiqlite::NodeConfig) {
 
         // Note: these inner parsers are very verbose, but they allow the upfront memory allocation
         // and memory fragmentation, after the quite big toml has been freed and the config stays
@@ -2697,7 +2679,7 @@ fn t_u8(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> 
     }
 }
 
-fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<String> {
+pub fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<String> {
     if !env_var.is_empty() {
         if let Ok(v) = env::var(env_var) {
             return Some(v);
@@ -2740,7 +2722,7 @@ fn t_str_vec(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> O
     Some(res)
 }
 
-fn t_table(map: &mut toml::Table, key: &str) -> Option<toml::Table> {
+pub fn t_table(map: &mut toml::Table, key: &str) -> Option<toml::Table> {
     let Value::Table(t) = map.remove(key)? else {
         panic!("Expected type `Table` for {}", key)
     };
@@ -2753,7 +2735,7 @@ fn err_env(var_name: &str, typ: &str) -> String {
 }
 
 #[inline]
-fn err_t(key: &str, parent: &str, typ: &str) -> String {
+pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
     let sep = if parent.is_empty() { "" } else { "." };
     format!("Expected type `{}` for {}{}{}", typ, parent, sep, key)
 }
