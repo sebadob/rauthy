@@ -8,13 +8,13 @@ use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
 use rauthy_api_types::oidc::PasswordResetResponse;
 use rauthy_api_types::users::{
-    DeviceRequest, DeviceResponse, MfaPurpose, NewUserRegistrationRequest, NewUserRequest,
-    PasskeyResponse, PasswordResetRequest, RequestResetRequest, UpdateUserRequest,
-    UpdateUserSelfRequest, UserAttrConfigRequest, UserAttrConfigResponse,
-    UserAttrConfigValueResponse, UserAttrValueResponse, UserAttrValuesResponse,
-    UserAttrValuesUpdateRequest, UserEditableAttrResponse, UserEditableAttrsResponse,
-    UserPictureConfig, UserResponse, UserResponseSimple, WebIdRequest, WebIdResponse,
-    WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
+    DeviceRequest, DeviceResponse, MfaModTokenRequest, MfaModTokenResponse, MfaPurpose,
+    NewUserRegistrationRequest, NewUserRequest, PasskeyResponse, PasswordResetRequest,
+    RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAttrConfigRequest,
+    UserAttrConfigResponse, UserAttrConfigValueResponse, UserAttrValueResponse,
+    UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserEditableAttrResponse,
+    UserEditableAttrsResponse, UserPictureConfig, UserResponse, UserResponseSimple, WebIdRequest,
+    WebIdResponse, WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
     WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
@@ -32,6 +32,7 @@ use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::groups::Group;
+use rauthy_models::entity::mfa_mod_token::MfaModToken;
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPicture};
 use rauthy_models::entity::pow::PowEntity;
@@ -641,6 +642,54 @@ pub async fn put_user_attr(
     });
 
     Ok(HttpResponse::Ok().json(UserAttrValuesResponse { values }))
+}
+
+/// Retrieve an `MfaModToken` to be able to modify MFA keys
+///
+/// This endpoint is for password-only. If the user already has registered Passkeys, the token can
+/// be retrieved via a Webauthn-Flow.
+#[utoipa::path(
+    post,
+    path = "/users/{id}/mfa_token",
+    tag = "users",
+    request_body = MfaModTokenRequest,
+    responses(
+        (status = 200, description = "Ok", body = MfaModTokenResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[post("/users/{id}/mfa_token")]
+pub async fn post_user_mfa_token(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    req: HttpRequest,
+    Json(payload): Json<MfaModTokenRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+    payload.validate()?;
+
+    let user_id = principal.user_id()?;
+    if path.into_inner() != user_id {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "mismatch between path and Principal `id`",
+        ));
+    }
+
+    let user = User::find(user_id.to_string()).await?;
+    if user.validate_password(payload.password).await.is_err() {
+        // we don't want to return 401 on purpose to not trigger a redirect to login
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Invalid password",
+        ));
+    }
+
+    let ip = real_ip_from_req(&req)?;
+    let token = MfaModToken::new(user_id.to_string(), ip).await?;
+
+    Ok(HttpResponse::Ok().json(MfaModTokenResponse::from(token)))
 }
 
 /// Upload a user picture

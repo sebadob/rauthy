@@ -7,6 +7,7 @@ use rauthy_common::regex::{
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::net::IpAddr;
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -268,6 +269,13 @@ pub struct UserAttrValuesUpdateRequest {
 
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct MfaModTokenRequest {
+    #[validate(length(max = 256))]
+    pub password: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnAuthStartRequest {
     pub purpose: MfaPurpose,
 }
@@ -330,6 +338,15 @@ pub struct DeviceResponse {
     pub refresh_exp: Option<i64>,
     pub peer_ip: String,
     pub name: String,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct MfaModTokenResponse {
+    pub id: String,
+    pub user_id: String,
+    pub exp: i64,
+    pub ip: String,
 }
 
 #[derive(Serialize, ToSchema)]

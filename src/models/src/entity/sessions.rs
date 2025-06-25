@@ -659,11 +659,6 @@ impl Session {
             }
         };
 
-        debug!(
-            "Validating session: {:?}\nwith remote_ip: {:?}\non path: {:?}",
-            self, remote_ip, req_path
-        );
-
         if remote_ip.is_none() {
             return true;
         }

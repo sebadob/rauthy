@@ -4,7 +4,7 @@
     import Input from "$lib5/form/Input.svelte";
     import {useI18n} from "$state/i18n.svelte.js";
     import {useSession} from "$state/session.svelte.js";
-    import {fetchDelete, fetchGet} from "$api/fetch";
+    import {fetchDelete, fetchGet, fetchPost} from "$api/fetch";
     import type {PasskeyResponse} from "$api/types/webauthn.ts";
     import type {UserResponse} from "$api/types/user.ts";
     import {PATTERN_USER_NAME} from "$utils/patterns";
@@ -12,6 +12,10 @@
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
     import UserPasskey from "$lib5/UserPasskey.svelte";
+    import type {MfaModTokenResponse, UserMfaTokenRequest} from "$api/types/mfa_mod_token";
+    import Modal from "$lib/Modal.svelte";
+    import InputPassword from "$lib/form/InputPassword.svelte";
+    import Form from "$lib/form/Form.svelte";
 
     let {user}: { user: UserResponse } = $props();
 
@@ -24,6 +28,7 @@
     let refInput: undefined | HTMLInputElement = $state();
 
     let err = $state(false);
+    let pwdErr = $state('');
     let msg = $state('');
     let showRegInput = $state(false);
     let showDelete = $state(user.account_type === "password");
@@ -32,7 +37,20 @@
     let passkeyName = $state('');
     let isInputError = $state(false);
 
+    let showModal = $state(false);
+    let closeModal: undefined | (() => void) = $state();
+
     let passkeys: PasskeyResponse[] = $state([]);
+    let mfaModToken: undefined | MfaModTokenResponse = $state();
+    // let mfaModToken: undefined | MfaModTokenResponse = $state({
+    //     id: "UZcXWBZtFdBDMvzBonqGmrMuGPjzypLf",
+    //     user_id: "za9UxpH7XVxqrtpEbThoqvn2",
+    //     exp: new Date().getTime() / 1000 + 120,
+    //     ip: "127.0.0.1"
+    // });
+    let mfaModSecs: undefined | number = $state();
+    let interval: undefined | number;
+    $inspect('mfaModToken', mfaModToken);
 
     onMount(() => {
         fetchPasskeys();
@@ -48,17 +66,44 @@
         refInput?.focus();
     });
 
+    $effect(() => {
+        if (mfaModToken) {
+            if (interval) {
+                clearInterval(interval);
+                interval = undefined;
+            }
+
+            interval = setInterval(() => {
+                let modSecs = 0;
+                if (mfaModToken) {
+                    let ts = new Date().getTime() / 1000;
+                    modSecs = Math.floor(mfaModToken.exp - ts);
+                }
+                if (modSecs > 0) {
+                    mfaModSecs = modSecs;
+                } else {
+                    mfaModSecs = undefined;
+                    mfaModToken = undefined;
+                    clearInterval(interval);
+                    interval = undefined;
+                }
+            }, 1000);
+        }
+    });
+
     function resetMsgErr() {
         err = false;
         msg = '';
     }
 
     async function fetchPasskeys() {
+        err = false;
+
         let res = await fetchGet<PasskeyResponse[]>(`/auth/v1/users/${session.get()?.user_id}/webauthn`);
         if (res.body) {
             passkeys = res.body;
         } else {
-            console.error(res.error);
+            err = true;
         }
     }
 
@@ -91,6 +136,29 @@
             await fetchPasskeys();
         } else {
             msg = res.error?.message || 'Error';
+        }
+    }
+
+    function onRegisterClick() {
+        if (mfaModToken) {
+            showRegInput = true;
+        } else {
+            showModal = true;
+        }
+    }
+
+    async function onMfaTokenSubmit(form: HTMLFormElement, params: URLSearchParams) {
+        pwdErr = '';
+
+        let payload: UserMfaTokenRequest = {
+            password: params.get("password") || '',
+        }
+        let res = await fetchPost<MfaModTokenResponse>(form.action, payload);
+        if (res.body) {
+            mfaModToken = res.body;
+            closeModal?.();
+        } else {
+            pwdErr = t.mfa.passwordInvalid;
         }
     }
 
@@ -136,6 +204,16 @@
             {t.mfa.p2}
         </p>
 
+        {#if mfaModSecs && mfaModSecs > 0}
+            <p>
+                Passkeys can be modified for:
+                <span class="timeLeft">
+                    {mfaModSecs}
+                    {t.common.seconds}
+                </span>
+            </p>
+        {/if}
+
         {#if showRegInput}
             <Input
                     bind:ref={refInput}
@@ -156,10 +234,32 @@
             <div class="regNewBtn">
                 <Button
                         level={passkeys.length === 0 ? 1 : 2}
-                        onclick={() => showRegInput = true}
+                        onclick={onRegisterClick}
                 >
                     {t.mfa.registerNew}
                 </Button>
+                <Modal bind:showModal bind:closeModal>
+                    <p style:max-width="20rem">
+                        {t.mfa.reAuthenticatePwd}
+                    </p>
+
+                    <Form action={`/auth/v1/users/${user.id}/mfa_token`} onSubmit={onMfaTokenSubmit}>
+                        <InputPassword
+                                name="password"
+                                autocomplete="current-password"
+                                label={t.account.passwordCurr}
+                                placeholder={t.account.passwordCurr}
+                                required
+                        />
+                        <Button type="submit">SEND</Button>
+                        {#if pwdErr}
+                            <div class="pwdInvalid">
+                                {pwdErr}
+                            </div>
+                        {/if}
+
+                    </Form>
+                </Modal>
             </div>
         {/if}
 
@@ -212,6 +312,11 @@
         font-weight: bold;
     }
 
+    .pwdInvalid {
+        color: hsl(var(--error));
+        margin: .5rem 0;
+    }
+
     .success, .err {
         margin: .5rem -.3rem;
         text-align: left;
@@ -219,6 +324,10 @@
 
     .success {
         margin-left: .2rem;
+        color: hsl(var(--action));
+    }
+
+    .timeLeft {
         color: hsl(var(--action));
     }
 
