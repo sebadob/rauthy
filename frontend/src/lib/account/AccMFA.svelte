@@ -16,6 +16,8 @@
     import Modal from "$lib/Modal.svelte";
     import InputPassword from "$lib/form/InputPassword.svelte";
     import Form from "$lib/form/Form.svelte";
+    import IconBarsArrowDown from "$icons/IconBarsArrowDown.svelte";
+    import IconArrowPathSquare from "$icons/IconArrowPathSquare.svelte";
 
     let {user}: { user: UserResponse } = $props();
 
@@ -26,6 +28,7 @@
     let userId = $derived(session.get()?.user_id);
 
     let refInput: undefined | HTMLInputElement = $state();
+    let refPkAuthBtn: undefined | HTMLButtonElement = $state();
 
     let err = $state(false);
     let pwdErr = $state('');
@@ -43,15 +46,8 @@
 
     let passkeys: PasskeyResponse[] = $state([]);
     let mfaModToken: undefined | MfaModTokenResponse = $state();
-    // let mfaModToken: undefined | MfaModTokenResponse = $state({
-    //     id: "UZcXWBZtFdBDMvzBonqGmrMuGPjzypLf",
-    //     user_id: "za9UxpH7XVxqrtpEbThoqvn2",
-    //     exp: new Date().getTime() / 1000 + 120,
-    //     ip: "127.0.0.1"
-    // });
     let mfaModSecs: undefined | number = $state();
     let interval: undefined | number;
-    $inspect('mfaModToken', mfaModToken);
 
     onMount(() => {
         fetchPasskeys();
@@ -65,6 +61,10 @@
 
     $effect(() => {
         refInput?.focus();
+    });
+
+    $effect(() => {
+        refPkAuthBtn?.focus();
     });
 
     function calcModSecs() {
@@ -183,7 +183,13 @@
         }
     }
 
+    function mfaTokenRefresh() {
+        mfaModToken = undefined;
+        showModal = true;
+    }
+
     async function onMfaTokenWebauthnSubmit() {
+        console.log('submit');
         closeModal?.();
         mfaPurpose = 'MfaModToken';
     }
@@ -244,13 +250,20 @@
         </p>
 
         {#if mfaModSecs && mfaModSecs > 0}
-            <p>
-                Passkeys can be modified for:
-                <span class="timeLeft">
+            <div class="modToken">
+                <div>
+                    Passkeys can be modified for:
+                    <span class="timeLeft">
                     {mfaModSecs}
-                    {t.common.seconds}
+                        {t.common.seconds}
                 </span>
-            </p>
+                </div>
+                <Button ariaLabel="Refresh" invisible onclick={mfaTokenRefresh}>
+                    <div class="btnRefresh">
+                        <IconArrowPathSquare/>
+                    </div>
+                </Button>
+            </div>
         {/if}
 
         {#if showRegInput}
@@ -289,7 +302,7 @@
                         </ul>
 
                         <div style:margin-top="1rem">
-                            <Button onclick={onMfaTokenWebauthnSubmit}>
+                            <Button bind:ref={refPkAuthBtn} onclick={onMfaTokenWebauthnSubmit}>
                                 {t.common.authenticate}
                             </Button>
                         </div>
@@ -346,6 +359,10 @@
         margin: .5rem 0;
     }
 
+    .btnRefresh {
+        color: hsla(var(--text) / .5);
+    }
+
     .container {
         display: flex;
         flex-direction: column;
@@ -365,6 +382,11 @@
     .keysHeader {
         margin-top: .5rem;
         font-weight: bold;
+    }
+
+    .modToken {
+        display: flex;
+        gap: .5rem;
     }
 
     .pwdInvalid {
