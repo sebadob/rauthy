@@ -1,7 +1,7 @@
 // Copyright 2025 Sebastian Dobe <sebastiandobe@mailbox.org>
 
 use crate::logging::setup_logging;
-use rauthy_common::constants::{BUILD_TIME, RAUTHY_VERSION};
+use rauthy_common::constants::{BUILD_TIME, IDX_AUTH_PROVIDER_TEMPLATE, RAUTHY_VERSION};
 use rauthy_common::password_hasher;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::swagger_ui::{OPENAPI_CONFIG, OPENAPI_JSON};
@@ -9,6 +9,7 @@ use rauthy_models::database::{Cache, DB};
 use rauthy_models::email;
 use rauthy_models::email::EMail;
 use rauthy_models::entity::atproto;
+use rauthy_models::entity::auth_providers::AuthProvider;
 use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
@@ -169,9 +170,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     UserPicture::test_config().await.unwrap();
 
-    // We need to clear the HTML cache to make sure the correct static
-    // assets are referenced after an app upgrade with a newly built UI.
+    // We need to clear some caches
     DB::hql().clear_cache(Cache::Html).await.unwrap();
+    DB::hql()
+        .delete(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE)
+        .await
+        .unwrap();
+    DB::hql()
+        .delete(Cache::App, AuthProvider::cache_idx("all"))
+        .await
+        .unwrap();
 
     {
         let cfg = &RauthyConfig::get().vars.server;
@@ -182,9 +190,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     if RauthyConfig::get().vars.atproto.enable {
-        atproto::Client::init_provider().await.map_err(|error| {
-            error!(%error, "failed to initialize atproto provider");
-        }).unwrap();
+        atproto::Client::init_provider()
+            .await
+            .map_err(|error| {
+                error!(%error, "failed to initialize atproto provider");
+            })
+            .unwrap();
     }
 
     if RauthyConfig::get().vars.server.metrics_enable {

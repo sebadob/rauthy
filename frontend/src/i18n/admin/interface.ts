@@ -291,6 +291,12 @@ export interface I18nAdmin {
         delete: string,
     },
     users: {
+        antiLockout: {
+            rule: string,
+            delete: string,
+            disable: string,
+            rauthyAdmin: string,
+        },
         attributes: string,
         deleteUser: string,
         descAttr: string,

@@ -19,12 +19,13 @@ use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
 use rauthy_common::compression::{compress_br_dyn, compress_gzip};
 use rauthy_common::constants::{
     APPLICATION_JSON, COOKIE_MFA, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
+    PROVIDER_ATPROTO,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_models::entity::auth_providers::{AuthProviderTemplate, AuthProvider};
+use rauthy_models::entity::auth_providers::{AuthProvider, AuthProviderTemplate};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::devices::DeviceAuthCode;
 use rauthy_models::entity::fed_cm::FedCMLoginStatus;
@@ -151,27 +152,31 @@ pub async fn get_authorize(
     }
 
     let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
-    let provider = AuthProvider::find_by_iss("atproto".to_owned()).await?;
     let logo_updated = Logo::find_updated(&client.id, &LogoType::Client).await?;
+
+    let mut templates = Vec::with_capacity(8);
+    templates.push(HtmlTemplate::AuthProviders(auth_providers_json));
+    templates.push(HtmlTemplate::ClientName(client.name.unwrap_or_default()));
+    templates.push(HtmlTemplate::ClientUrl(
+        client.client_uri.unwrap_or_default(),
+    ));
+    templates.push(HtmlTemplate::ClientLogoUpdated(logo_updated));
+    templates.push(HtmlTemplate::IsRegOpen(
+        RauthyConfig::get().vars.user_registration.enable,
+    ));
+    if RauthyConfig::get().vars.atproto.enable {
+        let provider_atproto = AuthProvider::find_by_iss(PROVIDER_ATPROTO.to_string()).await?;
+        templates.push(HtmlTemplate::AtprotoId(provider_atproto.id));
+    }
 
     // if the user is still authenticated and everything is valid -> immediate refresh
     if !force_new_session && principal.validate_session_auth().is_ok() {
         let csrf = principal.get_session_csrf_token()?;
-        let body = AuthorizeHtml::build(
-            &lang,
-            &client.id,
-            theme_ts,
-            &[
-                HtmlTemplate::AuthProviders(auth_providers_json),
-                HtmlTemplate::AtprotoId(provider.id),
-                HtmlTemplate::ClientName(client.name.unwrap_or_default()),
-                HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
-                HtmlTemplate::ClientLogoUpdated(logo_updated),
-                HtmlTemplate::CsrfToken(csrf.to_string()),
-                HtmlTemplate::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
-                HtmlTemplate::LoginAction(FrontendAction::Refresh),
-            ],
-        );
+
+        templates.push(HtmlTemplate::CsrfToken(csrf.to_string()));
+        templates.push(HtmlTemplate::LoginAction(FrontendAction::Refresh));
+
+        let body = AuthorizeHtml::build(&lang, &client.id, theme_ts, &templates);
 
         if let Some(o) = origin_header {
             return Ok(HttpResponse::Ok()
@@ -203,21 +208,10 @@ pub async fn get_authorize(
         return Ok(ErrorHtml::response(body, status));
     }
 
-    let body = AuthorizeHtml::build(
-        &lang,
-        &client.id,
-        theme_ts,
-        &[
-            HtmlTemplate::AuthProviders(auth_providers_json),
-            HtmlTemplate::AtprotoId(provider.id),
-            HtmlTemplate::ClientName(client.name.unwrap_or_default()),
-            HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
-            HtmlTemplate::ClientLogoUpdated(logo_updated),
-            HtmlTemplate::CsrfToken(session.csrf_token.clone()),
-            HtmlTemplate::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
-            HtmlTemplate::LoginAction(action),
-        ],
-    );
+    templates.push(HtmlTemplate::CsrfToken(session.csrf_token.clone()));
+    templates.push(HtmlTemplate::LoginAction(action));
+
+    let body = AuthorizeHtml::build(&lang, &client.id, theme_ts, &templates);
     let (body_bytes, encoding) = if accept_encoding.contains(&"br".parse().unwrap()) {
         (compress_br_dyn(body.as_bytes())?, "br")
     } else if accept_encoding.contains(&"gzip".parse().unwrap()) {

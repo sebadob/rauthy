@@ -1,6 +1,7 @@
 use crate::cust_validation::validate_vec_scopes;
 use rauthy_common::regex::{
-    RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_ATPROTO_HANDLE, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_SCOPE_SPACE, RE_URI,
+    RE_ALNUM, RE_ATPROTO_HANDLE, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
+    RE_SCOPE_SPACE, RE_URI,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -138,7 +139,10 @@ pub struct ProviderLoginRequest {
 
     /// Validation:
     /// `^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$`
-    #[validate(regex(path = "*RE_ATPROTO_HANDLE", code = "^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$"))]
+    #[validate(regex(
+        path = "*RE_ATPROTO_HANDLE",
+        code = "^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$"
+    ))]
     pub handle: Option<String>,
 }
 

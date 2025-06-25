@@ -15,5 +15,5 @@ pub async fn load_tls() -> rustls::ServerConfig {
         .unwrap_or("tls/tls.crt")
         .to_string();
 
-    rauthy_tls::load_server_config(key_path, cert_path).await
+    tls_hot_reload::load_server_config(key_path, cert_path).await
 }

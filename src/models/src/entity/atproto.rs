@@ -1,8 +1,8 @@
-use std::{
-    ops::Deref,
-    sync::{Arc, OnceLock},
+use crate::{
+    database::{Cache, DB},
+    entity::auth_providers::{AuthProvider, AuthProviderType},
+    rauthy_config::RauthyConfig,
 };
-
 use atrium_api::types::string::Did;
 use atrium_common::store::Store;
 use atrium_identity::{
@@ -25,21 +25,21 @@ use hickory_resolver::{
     proto::rr::rdata::TXT,
 };
 use rauthy_api_types::auth_providers::ProviderRequest;
-use rauthy_common::constants::{CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION};
-use rauthy_error::ErrorResponse;
-use tracing::info;
-use serde::Serialize;
-use utoipa::{PartialSchema, ToSchema};
-
-use crate::{
-    database::{Cache, DB},
-    entity::auth_providers::{AuthProvider, AuthProviderType},
-    rauthy_config::RauthyConfig,
+use rauthy_common::constants::{
+    CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION, PROVIDER_ATPROTO,
 };
+use rauthy_error::ErrorResponse;
+use std::{
+    ops::Deref,
+    sync::{Arc, OnceLock},
+};
+use tracing::info;
+use utoipa::{PartialSchema, ToSchema};
 
 pub static ATPROTO_CLIENT: OnceLock<Client> = OnceLock::new();
 
 #[derive(Clone)]
+#[allow(clippy::type_complexity)]
 pub struct Client(
     Arc<
         OAuthClient<
@@ -82,7 +82,7 @@ impl Client {
 
             for redirect_uri in &redirect_uris {
                 url.query_pairs_mut()
-                    .append_pair("redirect_uri", &redirect_uri);
+                    .append_pair("redirect_uri", redirect_uri);
             }
 
             if !scopes.is_empty() {
@@ -141,7 +141,7 @@ impl Client {
             name: "ATProto".to_owned(),
             typ: AuthProviderType::Custom.into(),
             enabled: true,
-            issuer: "atproto".to_owned(),
+            issuer: PROVIDER_ATPROTO.to_string(),
             authorization_endpoint: String::new(),
             token_endpoint: String::new(),
             userinfo_endpoint: String::new(),
@@ -158,7 +158,7 @@ impl Client {
             mfa_claim_value: None,
         };
 
-        match AuthProvider::find_by_iss("atproto".to_owned()).await {
+        match AuthProvider::find_by_iss(payload.issuer.clone()).await {
             Ok(provider) if !config.vars.atproto.enable => {
                 AuthProvider::delete(&provider.id).await?;
             }
