@@ -42,7 +42,7 @@ pub struct RauthyConfig {
 }
 
 impl RauthyConfig {
-     pub async fn build(
+    pub async fn build(
         config_file: &str,
         tx_email: mpsc::Sender<EMail>,
         tx_events: flume::Sender<Event>,
