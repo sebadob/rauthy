@@ -19,7 +19,6 @@ use toml::Value;
 use tracing::{debug, info, warn};
 use webauthn_rs::Webauthn;
 
-
 static CONFIG: OnceLock<RauthyConfig> = OnceLock::new();
 
 #[derive(Debug)]
@@ -630,28 +629,31 @@ impl Default for Vars {
 
 impl Vars {
     async fn load(path_config: &str) -> (Self, hiqlite::NodeConfig) {
-       let (slf, config) = match env::var("VAULT_CONFIG") {
-            Ok(_value) => {
-                let Ok(config) = VaultConfig::load_vars().await else {
-                    panic!("Cannot read config from Vault");
-                };
-                let slf = Self::default();
-                (slf,config)
+        let use_vault_config = env::var("USE_VAULT_CONFIG")
+            .unwrap_or_else(|_| "false".to_string())
+            .parse::<bool>()
+            .expect("Cannot parse USE_VAULT_CONFIG as bool");
+        let slf = Self::default();
+
+        let config = match use_vault_config {
+            true => match VaultConfig::load_vars().await {
+                Ok(config) => config,
+                Err(e) => {
+                    panic!("Cannot read config from Vault. {}", e);
+                }
             },
             _ => {
-                let slf = Self::default();
                 let Ok(config) = fs::read_to_string(path_config).await else {
                     panic!("Cannot read config file from {}", path_config);
                 };
-                (slf,config)
-            } 
+                config
+            }
         };
 
-        Self::parse(slf,config).await
+        Self::parse(slf, config).await
     }
-    
-    async fn parse(mut slf: Vars, config: String) -> (Self, hiqlite::NodeConfig) {
 
+    async fn parse(mut slf: Vars, config: String) -> (Self, hiqlite::NodeConfig) {
         // Note: these inner parsers are very verbose, but they allow the upfront memory allocation
         // and memory fragmentation, after the quite big toml has been freed and the config stays
         // in static memory.
