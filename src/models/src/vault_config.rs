@@ -221,7 +221,8 @@ impl VaultSource {
             return Ok(secret);
         }
 
-        let status = response.error_for_status_ref().unwrap().status();
+
+        let status = format!("{:?}", response.error_for_status_ref());
         let mut body = "".to_string();
         if let Ok(text) = &response.text().await {
             body = text.clone();
