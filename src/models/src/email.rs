@@ -480,7 +480,7 @@ pub async fn send_pwd_reset_info(user: &User) {
     let exp = email_ts_prettify(user.password_expires.unwrap());
     let link = format!(
         "{}/auth/v1/account",
-        RauthyConfig::get().vars.server.pub_url
+        RauthyConfig::get().pub_url_with_scheme
     );
 
     let i18n = I18nEmailResetInfo::build(&user.language);
@@ -544,7 +544,7 @@ pub async fn send_login_location(
     location: Option<String>,
     revoke_code: String,
 ) {
-    let pub_url = &RauthyConfig::get().vars.server.pub_url;
+    let pub_url = &RauthyConfig::get().pub_url_with_scheme;
     let link_revoke = format!(
         "{}/auth/v1/users/{}/revoke/{}",
         pub_url, user.id, revoke_code

@@ -25,44 +25,44 @@ impl I18nEmailLoginLocation<'_> {
     fn build_en() -> Self {
         Self {
             subject: "Security Warning",
-            unknown_location: "Login from unknown location:",
+            unknown_location: "Login from unknown location",
             if_invalid: "If this is an invalid login, you should revoke it immediately and update \
                 your credentials!",
-            revoke_link: "Revoke access:",
-            account_link: "Account Dashboard:",
+            revoke_link: "Revoke Access",
+            account_link: "Account Dashboard",
         }
     }
 
     fn build_de() -> Self {
         Self {
             subject: "Sicherheitswarnung",
-            unknown_location: "Login von unbekannter Adresse:",
+            unknown_location: "Login von unbekannter Adresse",
             if_invalid: "Sollte es sicher hierbei um einen ungültigen Login handeln, sollte dieser\
                 sofort widerrufen werden und Login-Daten erneuert werden!",
-            revoke_link: "Zugriff entziehen:",
-            account_link: "Account Dashboard:",
+            revoke_link: "Zugriff Entziehen",
+            account_link: "Account Dashboard",
         }
     }
 
     fn build_zh_hans() -> Self {
         Self {
             subject: "Security Warning",
-            unknown_location: "Login from unknown location:",
+            unknown_location: "Login from unknown location",
             if_invalid: "If this is an invalid login, you should revoke it immediately and update \
                 your credentials!",
-            revoke_link: "Revoke access:",
-            account_link: "Account Dashboard:",
+            revoke_link: "Revoke Access",
+            account_link: "Account Dashboard",
         }
     }
 
     fn build_ko() -> Self {
         Self {
             subject: "Security Warning",
-            unknown_location: "Login from unknown location:",
+            unknown_location: "Login from unknown location",
             if_invalid: "If this is an invalid login, you should revoke it immediately and update \
                 your credentials!",
-            revoke_link: "Revoke access:",
-            account_link: "Account Dashboard:",
+            revoke_link: "Revoke Access",
+            account_link: "Account Dashboard",
         }
     }
 }

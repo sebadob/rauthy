@@ -3,16 +3,17 @@
 {% block title %}E-Mail Reset{% endblock %}
 
 {% block content %}
-<h1>{{ email_sub_prefix }} {{ unknown_location }}</h1>
-<ul>
-    <li>{{ ip }}</li>
-    <li>{{ user_agent }}</li>
+<h1>{{ unknown_location }}</h1>
+<p>
+    IP: <b>{{ ip }}</b><br>
+    {{ user_agent }}<br>
     {% if !location.is_empty() -%}
-    <li>{{ location }}</li>
+    {{ location }}
     {%- endif %}
-</ul>
+</p>
 <p>{{ if_invalid }}</p>
 <a href="{{ link_revoke }}">{{ revoke_link }}</a>
 <br>
-<a href="{{ link_account }}">{{ account_link }}</a>
+<br>
+<a href="{{ link_account }}" data-faded="true">{{ account_link }}</a>
 {% endblock %}

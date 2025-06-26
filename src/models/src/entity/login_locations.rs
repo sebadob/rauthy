@@ -2,13 +2,16 @@ use crate::database::DB;
 use crate::email;
 use crate::entity::user_revoke::UserRevoke;
 use crate::entity::users::User;
+use actix_web::HttpRequest;
+use actix_web::http::header::USER_AGENT;
 use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
-use rauthy_error::ErrorResponse;
+use rauthy_common::utils::real_ip_from_req;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::net::IpAddr;
 use tokio::task;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 #[derive(Debug)]
 pub struct LoginLocation {
@@ -91,36 +94,55 @@ VALUES ($1, $2, $3, $4, $5)"#;
 }
 
 impl LoginLocation {
-    pub fn spawn_background_check(
-        user_id: String,
-        ip: IpAddr,
-        user_agent: String,
-        location: Option<String>,
-    ) {
+    pub fn spawn_background_check(user: User, req: &HttpRequest) -> Result<(), ErrorResponse> {
+        let ip = real_ip_from_req(req)?;
+
+        let user_agent = match req.headers().get(USER_AGENT) {
+            None => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Empty User-Agent not allowed",
+                ));
+            }
+            Some(v) => v.to_str().unwrap_or_default().to_string(),
+        };
+        if user_agent.is_empty() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid User-Agent",
+            ));
+        }
+
+        // TODO extract location from configurable header value or query local DB?
+        let location = None;
+
         task::spawn(async move {
-            if let Err(err) = Self::background_check(user_id, ip, user_agent, location).await {
+            if let Err(err) = Self::background_check(user, ip, user_agent, location).await {
                 error!(
                     "Error during LoginLocation::background_check(): {:?}",
                     err.message
                 );
             }
         });
+
+        Ok(())
     }
 
     async fn background_check(
-        user_id: String,
+        user: User,
         ip: IpAddr,
         user_agent: String,
         location: Option<String>,
     ) -> Result<(), ErrorResponse> {
-        if Self::find(user_id.clone(), ip.clone()).await?.is_some() {
-            debug!("Login from IP {} for user {} is known", ip, user_id);
+        if Self::find(user.id.clone(), ip.clone()).await?.is_some() {
+            debug!("Login from IP {} for user {} is known", ip, user.id);
             return Ok(());
         }
 
-        let slf = Self::insert(user_id, ip, user_agent, location).await?;
-        let revoke = UserRevoke::find_or_upsert(slf.user_id.clone()).await?;
-        let user = User::find(slf.user_id).await?;
+        // TODO create Event
+
+        let slf = Self::insert(user.id.clone(), ip, user_agent, location).await?;
+        let revoke = UserRevoke::find_or_upsert(user.id.clone()).await?;
         email::send_login_location(&user, slf.ip, slf.user_agent, slf.location, revoke.code).await;
 
         Ok(())
