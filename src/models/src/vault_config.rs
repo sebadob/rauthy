@@ -1,14 +1,12 @@
-use crate::rauthy_config::{err_t, t_str, t_table};
+use crate::rauthy_config::{err_t, t_table};
 use reqwest::Client;
 use std::collections::HashMap;
 use std::env;
 use std::error::Error;
-use std::sync::OnceLock;
 use tokio::fs;
 use toml::Value;
 //use url::Url;
 
-static CONFIG: OnceLock<VaultConfig> = OnceLock::new();
 #[derive(Debug)]
 pub struct VaultConfig {
     pub vault_source: VaultSource,
@@ -42,7 +40,8 @@ impl VaultConfig {
 
     async fn load(path_vault_config: &str) -> Result<Self, Box<dyn Error>> {
         let config = fs::read_to_string(path_vault_config).await?;
-        Ok(Self::load_from_string(&config).await)
+        let vault_config = Self::load_from_string(&config).await?;
+        Ok(vault_config)
     }
 
     async fn load_from_env(mut existing_config: VaultConfig) -> Self {
@@ -72,7 +71,7 @@ impl VaultConfig {
         existing_config
     }
 
-    async fn load_from_string(config: &String) -> Self {
+    async fn load_from_string(config: &String) -> Result<Self, Box<dyn Error>> {
         let vault_source = VaultSource::default();
         let mut slf = Self::new(vault_source);
 
@@ -82,7 +81,7 @@ impl VaultConfig {
 
         slf.parse_vault(&mut table);
 
-        slf
+        Ok(slf)
     }
 
     fn parse_vault(&mut self, table: &mut toml::Table) {
@@ -90,21 +89,11 @@ impl VaultConfig {
             return;
         };
 
-        if let Some(v) = t_str(&mut table, "vault", "vault_addr", "VAULT_ADDR") {
-            self.vault_source.addr = remove_quotes(&v);
-        }
-        if let Some(v) = t_str(&mut table, "vault", "vault_token", "VAULT_TOKEN") {
-            self.vault_source.token = remove_quotes(&v);
-        }
-        if let Some(v) = t_str(&mut table, "vault", "vault_mount", "VAULT_MOUNT") {
-            self.vault_source.mount = remove_quotes(&v);
-        }
-        if let Some(v) = t_str(&mut table, "vault", "vault_path", "VAULT_PATH") {
-            self.vault_source.path = remove_quotes(&v);
-        }
-        if let Some(v) = t_str(&mut table, "vault", "vault_path_certs", "VAULT_PATH_CERTS") {
-            self.vault_source.path_certs = remove_quotes(&v);
-        }
+        self.vault_source.addr = table.remove("addr").expect("missing in vault.toml: addr").to_string();
+        self.vault_source.token = table.remove("token").expect("missing in vault.toml: token").to_string();
+        self.vault_source.mount = table.remove("mount").expect("missing in vault.toml: mount").to_string();
+        self.vault_source.path = table.remove("path").expect("missing in vault.toml: path").to_string();
+        self.vault_source.path_certs = table.remove("path_certs").expect("missing in vault.toml: path_certs").to_string();
 
         if let Ok(v) = env::var("KV_VERSION") {
             if v == "1" {
