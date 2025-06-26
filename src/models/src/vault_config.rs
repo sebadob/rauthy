@@ -1,22 +1,21 @@
-use crate::rauthy_config::{err_t, t_table};
-use reqwest::Client;
+use crate::rauthy_config::{VarsHttpClient, err_t, t_str, t_table};
+use rauthy_common::constants::RAUTHY_VERSION;
+use reqwest::{Client, tls};
 use std::collections::HashMap;
 use std::env;
 use std::error::Error;
+use std::time::Duration;
 use tokio::fs;
 use toml::Value;
+use tracing::{debug, warn};
 //use url::Url;
 
 #[derive(Debug)]
 pub struct VaultConfig {
-    pub vault_source: VaultSource,
+    vault_source: VaultSource,
 }
 
 impl VaultConfig {
-    pub fn new(vault_source: VaultSource) -> Self {
-        Self { vault_source }
-    }
-
     pub async fn load_vars() -> Result<String, Box<dyn Error>> {
         let vault_config_file = "vault.toml";
         let config_key = "config"; // maybe make configurable by env vars
@@ -67,13 +66,16 @@ impl VaultConfig {
                 _ => panic!("Invalid value for VAULT_KV_VERSION: {}", v),
             }
         }
+        if let Ok(v) = env::var("HTTP_CUST_ROOT_CA_BUNDLE") {
+            existing_config.vault_source.root_ca_bundle = Some(v);
+        }
 
         existing_config
     }
 
     async fn load_from_string(config: &String) -> Result<Self, Box<dyn Error>> {
         let vault_source = VaultSource::default();
-        let mut slf = Self::new(vault_source);
+        let mut slf = Self { vault_source };
 
         let mut table = config
             .parse::<toml::Table>()
@@ -89,11 +91,26 @@ impl VaultConfig {
             return;
         };
 
-        self.vault_source.addr = table.remove("addr").expect("missing in vault.toml: addr").to_string();
-        self.vault_source.token = table.remove("token").expect("missing in vault.toml: token").to_string();
-        self.vault_source.mount = table.remove("mount").expect("missing in vault.toml: mount").to_string();
-        self.vault_source.path = table.remove("path").expect("missing in vault.toml: path").to_string();
-        self.vault_source.path_certs = table.remove("path_certs").expect("missing in vault.toml: path_certs").to_string();
+        self.vault_source.addr = table
+            .remove("addr")
+            .expect("missing in vault.toml: addr")
+            .to_string();
+        self.vault_source.token = table
+            .remove("token")
+            .expect("missing in vault.toml: token")
+            .to_string();
+        self.vault_source.mount = table
+            .remove("mount")
+            .expect("missing in vault.toml: mount")
+            .to_string();
+        self.vault_source.path = table
+            .remove("path")
+            .expect("missing in vault.toml: path")
+            .to_string();
+        self.vault_source.path_certs = table
+            .remove("path_certs")
+            .expect("missing in vault.toml: path_certs")
+            .to_string();
 
         if let Ok(v) = env::var("VAULT_KV_VERSION") {
             if v == "1" {
@@ -110,6 +127,15 @@ impl VaultConfig {
             } else {
                 self.vault_source.kv_version = KvVersion::V2;
             }
+        }
+
+        if let Some(v) = t_str(
+            &mut table,
+            "vault",
+            "root_ca_bundle",
+            "HTTP_CUST_ROOT_CA_BUNDLE",
+        ) {
+            self.vault_source.root_ca_bundle = Some(v);
         }
     }
 }
@@ -129,6 +155,7 @@ struct VaultSource {
     path: String,
     path_certs: String,
     kv_version: KvVersion,
+    root_ca_bundle: Option<String>,
 }
 
 impl Default for VaultSource {
@@ -140,6 +167,7 @@ impl Default for VaultSource {
             path: "".to_string(),
             path_certs: "".to_string(),
             kv_version: KvVersion::V2,
+            root_ca_bundle: None,
         }
     }
 }
@@ -190,7 +218,7 @@ impl VaultSource {
         path: &str,
     ) -> Result<HashMap<String, serde_json::Value>, Box<dyn std::error::Error>> {
         let url = self.build_kv_read_url(path)?;
-        let client = Client::new();
+        let client = Self::http_client();
         let response = client
             .get(url)
             .header("X-Vault-Token", &self.token)
@@ -221,7 +249,6 @@ impl VaultSource {
             return Ok(secret);
         }
 
-
         let status = format!("{:?}", response.error_for_status_ref());
         let mut body = "".to_string();
         if let Ok(text) = &response.text().await {
@@ -231,5 +258,75 @@ impl VaultSource {
             "Failed to fetch secret from Vault (wrong kv version?). Status: {} Body: {}",
             status, body
         )))
+    }
+
+    fn http_client() -> Client {
+        let dev_mode = false;
+
+        //if Vars::default() would be public we could use something like:
+        //let http_client_default = RauthyConfig::Vars::default().http_client;
+
+        let http_client_vars = VarsHttpClient {
+            connect_timeout: 10,
+            request_timeout: 10,
+            min_tls: "1.3".into(),
+            idle_timeout: 900,
+            danger_unencrypted: false,
+            danger_insecure: false,
+            root_ca_bundle: None,
+        };
+
+        let http_client = {
+            let tls_version = match http_client_vars.min_tls.as_ref() {
+                "1.3" => tls::Version::TLS_1_3,
+                "1.2" => tls::Version::TLS_1_2,
+                "1.1" => {
+                    warn!(
+                        r#"
+    You are allowing TLS 1.1 for the global HTTP client.
+    Only do this, if you know what you are doing!
+    "#
+                    );
+                    tls::Version::TLS_1_1
+                }
+                "1.0" => {
+                    warn!(
+                        r#"
+    You are allowing TLS 1.0 for the global HTTP client.
+    Only do this, if you know what you are doing!
+    "#
+                    );
+                    tls::Version::TLS_1_0
+                }
+                _ => panic!("Invalid value for HTTP_MIN_TLS, allowed: '1.3', '1.2', '1.1', '1.0'"),
+            };
+
+            let mut builder = reqwest::Client::builder()
+                .connect_timeout(Duration::from_secs(http_client_vars.connect_timeout as u64))
+                .timeout(Duration::from_secs(http_client_vars.request_timeout as u64))
+                .pool_idle_timeout(Duration::from_secs(http_client_vars.idle_timeout as u64))
+                .min_tls_version(tls_version)
+                .user_agent(format!("Rauthy Client v{}", RAUTHY_VERSION))
+                .https_only(!http_client_vars.danger_unencrypted || !dev_mode)
+                .danger_accept_invalid_certs(http_client_vars.danger_insecure || dev_mode)
+                .use_rustls_tls();
+
+            if let Some(bundle) = http_client_vars.root_ca_bundle.as_ref() {
+                let certs = reqwest::Certificate::from_pem_bundle(bundle.trim().as_bytes())
+                    .expect("Cannot parse given HTTP_CUST_ROOT_CA_BUNDLE");
+                debug!(
+                    "Adding {} custom Root CA certificates to HTTP Client",
+                    certs.len()
+                );
+
+                for cert in certs {
+                    builder = builder.add_root_certificate(cert);
+                }
+            }
+
+            builder.build().unwrap()
+        };
+
+        http_client
     }
 }
