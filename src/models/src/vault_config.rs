@@ -95,7 +95,7 @@ impl VaultConfig {
         self.vault_source.path = table.remove("path").expect("missing in vault.toml: path").to_string();
         self.vault_source.path_certs = table.remove("path_certs").expect("missing in vault.toml: path_certs").to_string();
 
-        if let Ok(v) = env::var("KV_VERSION") {
+        if let Ok(v) = env::var("VAULT_KV_VERSION") {
             if v == "1" {
                 self.vault_source.kv_version = KvVersion::V1;
             } else {
