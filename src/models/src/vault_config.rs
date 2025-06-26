@@ -40,8 +40,8 @@ impl VaultConfig {
         Ok(Self::load_from_env(vault_conf).await)
     }
 
-    async fn load(path_config: &str) -> Result<Self, Box<dyn Error>> {
-        let config = fs::read_to_string(path_config).await?;
+    async fn load(path_vault_config: &str) -> Result<Self, Box<dyn Error>> {
+        let config = fs::read_to_string(path_vault_config).await?;
         Ok(Self::load_from_string(&config).await)
     }
 
@@ -64,7 +64,8 @@ impl VaultConfig {
         if let Ok(v) = env::var("VAULT_KV_VERSION") {
             match v.as_str() {
                 "1" => existing_config.vault_source.kv_version = KvVersion::V1,
-                _ => existing_config.vault_source.kv_version = KvVersion::V2,
+                "2" => existing_config.vault_source.kv_version = KvVersion::V2,
+                _ => panic!("Invalid value for VAULT_KV_VERSION: {}", v),
             }
         }
 
@@ -74,12 +75,6 @@ impl VaultConfig {
     async fn load_from_string(config: &String) -> Self {
         let vault_source = VaultSource::default();
         let mut slf = Self::new(vault_source);
-
-        // Note: these inner parsers are very verbose, but they allow the upfront memory allocation
-        // and memory fragmentation, after the quite big toml has been freed and the config stays
-        // in static memory.
-        // It will also be easier in the future to maybe add other config sources into the mix
-        // and use something else as default very easily, like e.g. a config fetched from a Vault.
 
         let mut table = config
             .parse::<toml::Table>()
