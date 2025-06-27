@@ -3,6 +3,7 @@ import {type I18n} from "./interface";
 export const I18nZh: I18n = {
     lang: "zh",
     common: {
+        authenticate: "Authenticate",
         cancel: "取消",
         changeTheme: "更换主题",
         close: "关闭",
@@ -38,6 +39,7 @@ export const I18nZh: I18n = {
         password: "密码",
         required: "必填",
         save: "保存",
+        seconds: "seconds",
         selectI18n: "选择语言",
         show: "显示",
         summary: "概要",
@@ -183,12 +185,15 @@ export const I18nZh: I18n = {
         errorReg: "开始注册过程时出现错误。",
         lastUsed: "最后使用",
         noKey: "此槽位没有已注册的安全密钥",
+        reAuthenticatePasskey: "Before you can modify Passkeys, you need to authenticate with an already registered one:",
+        reAuthenticatePwd: "Before you can modify Passkeys, you need to re-authenticate with your password.",
         register: "注册",
         registerNew: "注册新的密钥",
         registerd: "注册时间",
         registerdKeys: "已注册的密钥",
         passkeyName: "密钥名称",
         passkeyNameErr: "需要名称需要有2-32个非特殊字符",
+        passwordInvalid: "Password Invalid",
         test: "测试",
         testError: "开始测试时出现错误",
         testSuccess: "测试成功！"

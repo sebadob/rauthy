@@ -35,7 +35,7 @@
     async function onDelete(name: string) {
         let isLastKey = passkeys.length === 1;
 
-        let res = await fetchDelete(`/auth/v1/users/${user.id}/webauthn/delete/${name}`);
+        let res = await fetchDelete(`/auth/v1/users/${user.id}/webauthn/delete/${name}`, {});
         if (res.status === 200) {
             await fetchPasskeys();
 
