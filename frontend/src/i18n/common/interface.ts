@@ -230,4 +230,9 @@ export interface I18n {
         success: string,
         userReg: string,
     },
+    userRevoke: {
+        title: string,
+        desc1: string,
+        desc2: string,
+    }
 }

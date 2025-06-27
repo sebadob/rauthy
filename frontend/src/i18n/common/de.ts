@@ -250,5 +250,10 @@ export const I18nDe: I18n = {
         register: "Registrieren",
         success: "Registrierung erfolgreich",
         userReg: "Benutzer Registrierung"
+    },
+    userRevoke: {
+        title: "Logins widerrufen",
+        desc1: "Sämtliche Logins und Sessions für diesen Benutzer wurden soweit wie möglich widerrufen.",
+        desc2: "Passwörter sollten auf der Stelle erneuert werden!",
     }
 };

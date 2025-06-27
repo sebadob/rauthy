@@ -250,5 +250,10 @@ export const I18nKo: I18n = {
         register: "가입",
         success: "성공적으로 가입되었습니다.",
         userReg: "사용자 가입"
+    },
+    userRevoke: {
+        title: "Revoke Logins",
+        desc1: "All Logins and Sessions have been revoked for this user as much as possible.",
+        desc2: "You should immediately renew all your passwords!",
     }
 };

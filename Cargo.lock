@@ -3038,6 +3038,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "469fb0b9cefa57e3ef31275ee7cacb78f2fdca44e4765491884a2b119d4eb130"
 
 [[package]]
+name = "ipnetwork"
+version = "0.21.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf370abdafd54d13e54a620e8c3e1145f28e46cc9d704bc6d94414559df41763"
+
+[[package]]
 name = "iri-string"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3476,6 +3482,19 @@ name = "matchit"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
+
+[[package]]
+name = "maxminddb"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a197e44322788858682406c74b0b59bf8d9b4954fe1f224d9a25147f1880bba"
+dependencies = [
+ "ipnetwork",
+ "log",
+ "memchr",
+ "serde",
+ "thiserror 2.0.12",
+]
 
 [[package]]
 name = "md-5"
@@ -4473,7 +4492,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4514,7 +4533,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 dependencies = [
  "actix-web",
  "openssl",
@@ -4532,7 +4551,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4559,7 +4578,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4597,7 +4616,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4630,7 +4649,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 dependencies = [
  "chrono",
  "openssl",
@@ -4647,7 +4666,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4663,12 +4682,13 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 dependencies = [
  "accept-language",
  "actix-multipart",
  "actix-web",
  "actix-web-lab",
+ "arc-swap",
  "argon2",
  "askama",
  "async-trait",
@@ -4682,7 +4702,9 @@ dependencies = [
  "deadpool-postgres",
  "dotenvy",
  "ed25519-compact",
+ "flate2",
  "flume",
+ "futures",
  "futures-util",
  "hex",
  "hickory-resolver",
@@ -4693,6 +4715,7 @@ dependencies = [
  "image",
  "itertools 0.14.0",
  "lettre",
+ "maxminddb",
  "mime",
  "num_cpus",
  "openssl",
@@ -4723,6 +4746,7 @@ dependencies = [
  "spow",
  "strum",
  "svg-hush",
+ "tar",
  "time",
  "tokio",
  "tokio-postgres",
@@ -4739,7 +4763,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 dependencies = [
  "async-trait",
  "openssl",
@@ -4755,7 +4779,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4775,7 +4799,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5975,6 +5999,17 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
+
+[[package]]
+name = "tar"
+version = "0.4.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d863878d212c87a19c1a610eb53bb01fe12951c0501cf5a0d65f724914a667a"
+dependencies = [
+ "filetime",
+ "libc",
+ "xattr",
+]
 
 [[package]]
 name = "tempfile"
@@ -7397,6 +7432,16 @@ dependencies = [
  "rusticata-macros",
  "thiserror 1.0.69",
  "time",
+]
+
+[[package]]
+name = "xattr"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af3a19837351dc82ba89f8a125e22a3c475f05aba604acc023d62b2739ae2909"
+dependencies = [
+ "libc",
+ "rustix 1.0.7",
 ]
 
 [[package]]

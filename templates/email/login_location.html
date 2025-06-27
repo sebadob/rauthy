@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}E-Mail Reset{% endblock %}
+
+{% block content %}
+<h1>{{ unknown_location }}</h1>
+<p>
+    IP: <b>{{ ip }}</b>
+    {% if !location.is_empty() -%}
+    ({{ location }})
+    {%- endif %}
+    <br>
+    {{ user_agent }}<br>
+</p>
+<p>{{ if_invalid }}</p>
+<a href="{{ link_revoke }}">{{ revoke_link }}</a>
+<br>
+<br>
+<a href="{{ link_account }}" data-faded="true">{{ account_link }}</a>
+{% endblock %}

@@ -1048,6 +1048,28 @@ impl UserRegisterHtml<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "html/users/{id}/revoke/revoke.html")]
+pub struct UserRevokeHtml<'a> {
+    lang: &'a str,
+    client_id: &'a str,
+    theme_ts: i64,
+    templates: &'a [HtmlTemplate],
+}
+
+impl UserRevokeHtml<'_> {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
+        UserRevokeHtml {
+            lang: lang.as_str(),
+            client_id: "rauthy",
+            theme_ts,
+            templates: &[],
+        }
+        .render()
+        .expect("rendering revoke.html")
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "html/users/password_reset.html")]
 pub struct UserPasswordResetHtml<'a> {
     lang: &'a str,

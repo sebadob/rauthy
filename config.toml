@@ -1303,6 +1303,33 @@ disable_app_version_check = false
 # overwritten by: SESSION_TIMEOUT_FED_CM
 #session_timeout = 259200
 
+[geolocation]
+# If you have a WAF or CDN which injects a geoloaction header
+# with the country code, provide the name here. For instance,
+# in case of Cloudflare, this would be 'CF-IPCountry'.
+#
+# default: not set
+# overwritten by: GEO_COUNTRY_HEADER
+#country_header = 'CF-IPCountry'
+
+# If you don't have a header with a country code, you can
+# also provide a Maxmind account. Rauthy will then download
+# the 'GeoLite2 Country' database regularly and use it for
+# geolocating IPs.
+#
+# default: not set
+# overwritten by: GEO_MAXMIND_ACC_ID
+#maxmind_account_id = ''
+# overwritten by: GEO_MAXMIND_LICENSE
+#maxmind_license_key = ''
+
+# If `maxmind_account_id` and `maxmind_license_key`, this
+# will be the directory being used for DB download and storage.
+#
+# default: 'data'
+# overwritten by: GEO_MAXMIND_DIR
+#maxmind_db_dir = 'data'
+
 [hashing]
 # Argon2ID hashing parameters. Take a look at the documentation
 # for more information:

@@ -250,5 +250,10 @@ export const I18nZh: I18n = {
         register: "注册",
         success: "注册成功",
         userReg: "用户注册"
+    },
+    userRevoke: {
+        title: "Revoke Logins",
+        desc1: "All Logins and Sessions have been revoked for this user as much as possible.",
+        desc2: "You should immediately renew all your passwords!",
     }
 };
