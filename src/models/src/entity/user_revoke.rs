@@ -55,9 +55,7 @@ impl UserRevoke {
     pub async fn delete(user_id: String) -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM user_revoke WHERE user_id = $1";
         if is_hiqlite() {
-            DB::hql()
-                .execute_returning_one(sql, params!(user_id))
-                .await?;
+            DB::hql().execute(sql, params!(user_id)).await?;
         } else {
             DB::pg_execute(sql, &[&user_id]).await?;
         }

@@ -165,9 +165,8 @@ pub async fn delete_sessions_for_user(
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let uid = path.into_inner();
-    for sid in Session::invalidate_for_user(&uid).await? {
-        RefreshToken::delete_by_sid(sid).await?;
-    }
+    Session::invalidate_for_user(&uid).await?;
+    RefreshToken::invalidate_for_user(&uid).await?;
     logout::execute_backchannel_logout(None, Some(uid)).await?;
 
     Ok(HttpResponse::Ok().finish())

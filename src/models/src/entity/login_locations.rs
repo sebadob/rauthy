@@ -10,7 +10,7 @@ use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use std::net::{IpAddr, Ipv4Addr};
+use std::net::IpAddr;
 use tokio::task;
 use tracing::{debug, error, info};
 
@@ -78,6 +78,16 @@ VALUES ($1, $2, $3, $4, $5)"#;
         })
     }
 
+    pub async fn delete_for_user(user_id: String) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM login_locations WHERE user_id = $1";
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(user_id)).await?;
+        } else {
+            DB::pg_execute(sql, &[&user_id]).await?;
+        }
+        Ok(())
+    }
+
     pub async fn find(user_id: String, ip: IpAddr) -> Result<Option<Self>, ErrorResponse> {
         let ip = ip.to_string();
         let sql = "SELECT * FROM login_locations WHERE user_id = $1 AND ip = $2";
@@ -98,9 +108,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
         let sql = "UPDATE login_locations SET last_seen = $1 WHERE user_id = $2";
 
         if is_hiqlite() {
-            DB::hql()
-                .execute_returning_one(sql, params!(now, user_id))
-                .await?;
+            DB::hql().execute(sql, params!(now, user_id)).await?;
         } else {
             DB::pg_execute(sql, &[&now, &user_id]).await?;
         }
