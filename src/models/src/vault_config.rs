@@ -1,4 +1,4 @@
-use crate::rauthy_config::{VarsHttpClient, err_t, t_str, t_table};
+use crate::rauthy_config::{err_t, t_str, t_table};
 use rauthy_common::constants::RAUTHY_VERSION;
 use reqwest::{Client, tls};
 use std::collections::HashMap;
@@ -7,10 +7,7 @@ use std::error::Error;
 use std::time::Duration;
 use tokio::fs;
 use toml::Value;
-use tracing::{debug, warn};
-//use url::Url;
-
-#[derive(Debug)]
+use tracing::{debug};
 pub struct VaultConfig {
     vault_source: VaultSource,
 }
@@ -149,7 +146,6 @@ impl Default for VaultConfig {
         }
     }
 }
-#[derive(Debug, Clone)]
 struct VaultSource {
     addr: String,
     token: String,
@@ -174,7 +170,7 @@ impl Default for VaultSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(PartialEq)]
 enum KvVersion {
     V1 = 1,
     V2,
@@ -187,11 +183,6 @@ impl KvVersion {
             _ => format!("/v1/{}/data/{}", &mount, &path),
         }
     }
-}
-
-// remove only the outer quotes
-fn remove_quotes(s: &str) -> String {
-    s.trim_matches(|c| c == '\"' || c == '\'').to_string()
 }
 
 impl VaultSource {
@@ -207,12 +198,6 @@ impl VaultSource {
         &self,
     ) -> Result<HashMap<String, serde_json::Value>, Box<dyn std::error::Error>> {
         self.get_secrets(&self.path).await
-    }
-
-    async fn get_certs(
-        &self,
-    ) -> Result<HashMap<String, serde_json::Value>, Box<dyn std::error::Error>> {
-        self.get_secrets(&self.path_certs).await
     }
 
     async fn get_secrets(
@@ -270,55 +255,19 @@ impl VaultSource {
             };
         }
 
-        //if Vars::default() would be public we could use something like:
-        //let http_client_default = RauthyConfig::Vars::default().http_client;
-
-        let http_client_vars = VarsHttpClient {
-            connect_timeout: 10,
-            request_timeout: 10,
-            min_tls: "1.2".into(),
-            idle_timeout: 900,
-            danger_unencrypted: false,
-            danger_insecure: false,
-            root_ca_bundle: self.root_ca_bundle.clone(),
-        };
-
         let http_client = {
-            let tls_version = match http_client_vars.min_tls.as_ref() {
-                "1.3" => tls::Version::TLS_1_3,
-                "1.2" => tls::Version::TLS_1_2,
-                "1.1" => {
-                    warn!(
-                        r#"
-    You are allowing TLS 1.1 for the global HTTP client.
-    Only do this, if you know what you are doing!
-    "#
-                    );
-                    tls::Version::TLS_1_1
-                }
-                "1.0" => {
-                    warn!(
-                        r#"
-    You are allowing TLS 1.0 for the global HTTP client.
-    Only do this, if you know what you are doing!
-    "#
-                    );
-                    tls::Version::TLS_1_0
-                }
-                _ => panic!("Invalid value for HTTP_MIN_TLS, allowed: '1.3', '1.2', '1.1', '1.0'"),
-            };
+            let tls_version = tls::Version::TLS_1_2;
 
             let mut builder = reqwest::Client::builder()
-                .connect_timeout(Duration::from_secs(http_client_vars.connect_timeout as u64))
-                .timeout(Duration::from_secs(http_client_vars.request_timeout as u64))
-                .pool_idle_timeout(Duration::from_secs(http_client_vars.idle_timeout as u64))
+                .connect_timeout(Duration::from_secs(10))
+                .timeout(Duration::from_secs(10))
                 .min_tls_version(tls_version)
                 .user_agent(format!("Rauthy Client v{}", RAUTHY_VERSION))
-                .https_only(!http_client_vars.danger_unencrypted || !dev_mode)
-                .danger_accept_invalid_certs(http_client_vars.danger_insecure || dev_mode)
+                .https_only(!dev_mode)
+                .danger_accept_invalid_certs(dev_mode)
                 .use_rustls_tls();
 
-            if let Some(bundle) = http_client_vars.root_ca_bundle.as_ref() {
+            if let Some(bundle) = self.root_ca_bundle.clone() {
                 let certs = reqwest::Certificate::from_pem_bundle(bundle.trim().as_bytes())
                     .expect("Cannot parse given HTTP_CUST_ROOT_CA_BUNDLE");
                 debug!(
