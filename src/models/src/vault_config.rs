@@ -22,7 +22,9 @@ impl VaultConfig {
 
         let vault_conf = VaultConfig::build(vault_config_file).await?;
         let config_from_vault = vault_conf.vault_source.get_config().await?;
-        let config = config_from_vault[config_key].as_str().unwrap();
+        let config = config_from_vault[config_key]
+            .as_str()
+            .expect("Failed to extract config from secrets.");
 
         Ok(config.to_string())
     }
@@ -218,7 +220,7 @@ impl VaultSource {
         path: &str,
     ) -> Result<HashMap<String, serde_json::Value>, Box<dyn std::error::Error>> {
         let url = self.build_kv_read_url(path)?;
-        let client = Self::http_client();
+        let client = Self::http_client()?;
         let response = client
             .get(url)
             .header("X-Vault-Token", &self.token)
@@ -260,8 +262,13 @@ impl VaultSource {
         )))
     }
 
-    fn http_client() -> Client {
-        let dev_mode = false;
+    fn http_client() -> Result<Client, Box<dyn std::error::Error>> {
+        let mut dev_mode = false;
+        if let Ok(v) = env::var("DEV_MODE") {
+            if (v == "true") {
+                dev_mode = true;
+            };
+        }
 
         //if Vars::default() would be public we could use something like:
         //let http_client_default = RauthyConfig::Vars::default().http_client;
@@ -269,7 +276,7 @@ impl VaultSource {
         let http_client_vars = VarsHttpClient {
             connect_timeout: 10,
             request_timeout: 10,
-            min_tls: "1.3".into(),
+            min_tls: "1.2".into(),
             idle_timeout: 900,
             danger_unencrypted: false,
             danger_insecure: false,
@@ -324,9 +331,9 @@ impl VaultSource {
                 }
             }
 
-            builder.build().unwrap()
+            builder.build()?
         };
 
-        http_client
+        Ok(http_client)
     }
 }
