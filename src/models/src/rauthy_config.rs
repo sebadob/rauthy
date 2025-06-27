@@ -636,7 +636,7 @@ impl Vars {
         let slf = Self::default();
 
         let config = match use_vault_config {
-            true => match VaultConfig::load_vars().await {
+            true => match VaultConfig::load_config().await {
                 Ok(config) => config,
                 Err(e) => {
                     panic!("Cannot read config from Vault. {}", e);
@@ -2241,12 +2241,6 @@ impl Vars {
 
         if self.server.pub_url.is_empty() {
             panic!("Empty `server.pub_url`");
-        }
-        if self.server.pub_url.contains("://") {
-            panic!(
-                "The `server.pub_url` must not contain the Scheme. Rauthy builds it automatically \
-                depending on a few other values."
-            );
         }
 
         if self.server.proxy_mode && self.server.trusted_proxies.is_empty() {

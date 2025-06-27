@@ -13,7 +13,7 @@ pub struct VaultConfig {
 }
 
 impl VaultConfig {
-    pub async fn load_vars() -> Result<String, Box<dyn Error>> {
+    pub async fn load_config() -> Result<String, Box<dyn Error>> {
         let vault_config_file = "vault.toml";
         let config_key = "config"; // maybe make configurable by env vars
 
@@ -80,12 +80,12 @@ impl VaultConfig {
             .parse::<toml::Table>()
             .expect("Cannot parse TOML file");
 
-        slf.parse_vault(&mut table);
+        slf.parse_toml(&mut table);
 
         Ok(slf)
     }
 
-    fn parse_vault(&mut self, table: &mut toml::Table) {
+    fn parse_toml(&mut self, table: &mut toml::Table) {
         let Some(mut table) = t_table(table, "vault") else {
             return;
         };
