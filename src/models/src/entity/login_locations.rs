@@ -11,7 +11,7 @@ use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::net::IpAddr;
 use tokio::task;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info};
 
 #[derive(Debug)]
 pub struct LoginLocation {
@@ -91,6 +91,21 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
         Ok(slf)
     }
+
+    pub async fn update_last_seen(user_id: String) -> Result<(), ErrorResponse> {
+        let now = Utc::now().timestamp();
+        let sql = "UPDATE login_locations SET last_seen = $1 WHERE user_id = $2";
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute_returning_one(sql, params!(now, user_id))
+                .await?;
+        } else {
+            DB::pg_execute(sql, &[&now, &user_id]).await?;
+        }
+
+        Ok(())
+    }
 }
 
 impl LoginLocation {
@@ -134,12 +149,16 @@ impl LoginLocation {
         user_agent: String,
         location: Option<String>,
     ) -> Result<(), ErrorResponse> {
-        if Self::find(user.id.clone(), ip.clone()).await?.is_some() {
+        if Self::find(user.id.clone(), ip).await?.is_some() {
             debug!("Login from IP {} for user {} is known", ip, user.id);
+            Self::update_last_seen(user.id).await?;
             return Ok(());
         }
 
-        // TODO create Event
+        info!(
+            "Login from new IP {} for user {} / {} / {:?}",
+            ip, user.email, user_agent, location
+        );
 
         let slf = Self::insert(user.id.clone(), ip, user_agent, location).await?;
         let revoke = UserRevoke::find_or_upsert(user.id.clone()).await?;

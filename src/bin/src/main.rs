@@ -100,6 +100,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         warn!("Application started in Integration Test Mode");
     }
 
+    // init BEFORE Hiqlite to avoid issues in case of mis-config
+    rauthy_ipgeo::init().await;
+
     DB::init(node_config)
         .await
         .expect("Error starting the database / cache layer");

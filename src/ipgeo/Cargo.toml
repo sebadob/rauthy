@@ -1,0 +1,22 @@
+[package]
+name = "rauthy-ipgeo"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+rauthy-common = { path = "../common" }
+rauthy-error = { path = "../error" }
+rauthy-models = { path = "../models" }
+
+actix-web = { workspace = true }
+arc-swap = { workspace = true }
+flate2 = { workspace = true }
+futures = { workspace = true }
+maxminddb = { workspace = true }
+openssl = { workspace = true }
+openssl-sys = { workspace = true }
+tar = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
