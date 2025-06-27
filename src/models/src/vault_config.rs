@@ -220,7 +220,7 @@ impl VaultSource {
         path: &str,
     ) -> Result<HashMap<String, serde_json::Value>, Box<dyn std::error::Error>> {
         let url = self.build_kv_read_url(path)?;
-        let client = Self::http_client()?;
+        let client = Self::http_client(&self)?;
         let response = client
             .get(url)
             .header("X-Vault-Token", &self.token)
@@ -262,10 +262,10 @@ impl VaultSource {
         )))
     }
 
-    fn http_client() -> Result<Client, Box<dyn std::error::Error>> {
+    fn http_client(&self) -> Result<Client, Box<dyn std::error::Error>> {
         let mut dev_mode = false;
         if let Ok(v) = env::var("DEV_MODE") {
-            if (v == "true") {
+            if v == "true" {
                 dev_mode = true;
             };
         }
@@ -280,7 +280,7 @@ impl VaultSource {
             idle_timeout: 900,
             danger_unencrypted: false,
             danger_insecure: false,
-            root_ca_bundle: None,
+            root_ca_bundle: self.root_ca_bundle.clone(),
         };
 
         let http_client = {
