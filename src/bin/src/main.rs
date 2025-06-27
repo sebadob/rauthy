@@ -101,7 +101,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // init BEFORE Hiqlite to avoid issues in case of mis-config
-    rauthy_ipgeo::init().await;
+    rauthy_models::ipgeo::init_geo().await;
 
     DB::init(node_config)
         .await

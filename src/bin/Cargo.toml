@@ -13,7 +13,6 @@ jemalloc = ["dep:tikv-jemallocator"]
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 rauthy-handlers = { path = "../api" }
-rauthy-ipgeo = { path = "../ipgeo" }
 rauthy-jwt = { path = "../jwt" }
 rauthy-middlewares = { path = "../middlewares" }
 rauthy-models = { path = "../models" }

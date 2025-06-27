@@ -4510,7 +4510,6 @@ dependencies = [
  "rauthy-common",
  "rauthy-error",
  "rauthy-handlers",
- "rauthy-ipgeo",
  "rauthy-jwt",
  "rauthy-middlewares",
  "rauthy-models",
@@ -4649,25 +4648,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rauthy-ipgeo"
-version = "0.31.0-20250626"
-dependencies = [
- "actix-web",
- "arc-swap",
- "flate2",
- "futures",
- "maxminddb",
- "openssl",
- "openssl-sys",
- "rauthy-common",
- "rauthy-error",
- "rauthy-models",
- "tar",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "rauthy-jwt"
 version = "0.31.0-20250626"
 dependencies = [
@@ -4708,6 +4688,7 @@ dependencies = [
  "actix-multipart",
  "actix-web",
  "actix-web-lab",
+ "arc-swap",
  "argon2",
  "askama",
  "async-trait",
@@ -4721,7 +4702,9 @@ dependencies = [
  "deadpool-postgres",
  "dotenvy",
  "ed25519-compact",
+ "flate2",
  "flume",
+ "futures",
  "futures-util",
  "hex",
  "hickory-resolver",
@@ -4732,6 +4715,7 @@ dependencies = [
  "image",
  "itertools 0.14.0",
  "lettre",
+ "maxminddb",
  "mime",
  "num_cpus",
  "openssl",
@@ -4762,6 +4746,7 @@ dependencies = [
  "spow",
  "strum",
  "svg-hush",
+ "tar",
  "time",
  "tokio",
  "tokio-postgres",

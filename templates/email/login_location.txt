@@ -1,10 +1,7 @@
 {{ unknown_location }}
 
-IP: {{ ip }}
+IP: {{ ip }} {% if !location.is_empty() %}({{ location }}){% endif %}
 {{ user_agent }}
-{%- if !location.is_empty() -%}
-{{ location }}
-{%- endif %}
 
 {{ if_invalid }}
 

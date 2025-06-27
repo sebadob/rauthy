@@ -2,6 +2,7 @@ use crate::database::DB;
 use crate::email;
 use crate::entity::user_revoke::UserRevoke;
 use crate::entity::users::User;
+use crate::ipgeo::get_location;
 use actix_web::HttpRequest;
 use actix_web::http::header::USER_AGENT;
 use chrono::Utc;
@@ -9,7 +10,7 @@ use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr};
 use tokio::task;
 use tracing::{debug, error, info};
 
@@ -128,8 +129,7 @@ impl LoginLocation {
             ));
         }
 
-        // TODO extract location from configurable header value or query local DB?
-        let location = None;
+        let location = get_location(req, ip)?;
 
         task::spawn(async move {
             if let Err(err) = Self::background_check(user, ip, user_agent, location).await {
@@ -156,8 +156,8 @@ impl LoginLocation {
         }
 
         info!(
-            "Login from new IP {} for user {} / {} / {:?}",
-            ip, user.email, user_agent, location
+            "Login from new IP {} ({:?} / {}) for user {}",
+            ip, location, user_agent, user.email
         );
 
         let slf = Self::insert(user.id.clone(), ip, user_agent, location).await?;

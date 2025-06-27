@@ -11,6 +11,7 @@ pub mod entity;
 pub mod events;
 pub mod html;
 pub mod i18n_email;
+pub mod ipgeo;
 pub mod language;
 pub mod migration;
 pub mod rauthy_config;

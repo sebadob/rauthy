@@ -1,4 +1,4 @@
-use crate::LookupResponse;
+use crate::ipgeo::LookupResponse;
 use arc_swap::ArcSwap;
 use flate2::bufread;
 use futures::stream::StreamExt;
@@ -143,7 +143,7 @@ pub async fn update_db() -> Result<(), ErrorResponse> {
     Ok(())
 }
 
-pub async fn init(
+pub(super) async fn init(
     data_dir: &str,
     account_id: String,
     license_key: String,
@@ -211,11 +211,11 @@ fn decompress(input_file: &str, output_dir: &str, db_file: &str) -> Result<(), E
 }
 
 #[inline]
-pub fn is_configured() -> bool {
+pub(super) fn is_configured() -> bool {
     GEO_DB.get().is_some()
 }
 
-pub fn get_location(ip: IpAddr) -> Result<Option<LookupResponse>, ErrorResponse> {
+pub(super) fn get_location(ip: IpAddr) -> Result<Option<LookupResponse>, ErrorResponse> {
     let Some(rdr) = GEO_DB.get() else {
         return Ok(None);
     };

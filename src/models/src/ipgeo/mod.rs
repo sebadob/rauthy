@@ -1,14 +1,10 @@
-// Copyright 2025 Sebastian Dobe <sebastiandobe@mailbox.org>
-
-#![forbid(unsafe_code)]
-
+use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
-use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::ErrorResponse;
-use rauthy_models::rauthy_config::RauthyConfig;
 use std::fmt::{Display, Formatter};
+use std::net::IpAddr;
 
-mod maxmind;
+pub mod maxmind;
 
 #[derive(Debug)]
 pub struct LookupResponse {
@@ -29,7 +25,7 @@ impl Display for LookupResponse {
     }
 }
 
-pub async fn init() {
+pub async fn init_geo() {
     let geo = &RauthyConfig::get().vars.geo;
     if geo.maxmind_account_id.is_some() && geo.maxmind_license_key.is_some() {
         let acc = geo.maxmind_account_id.clone().unwrap();
@@ -42,7 +38,9 @@ pub async fn init() {
 }
 
 #[inline]
-pub fn get_location(req: &HttpRequest) -> Result<Option<String>, ErrorResponse> {
+pub fn get_location(req: &HttpRequest, ip: IpAddr) -> Result<Option<String>, ErrorResponse> {
+    // TODO maybe check upfront if it's a private IP and skip the lookup?
+
     if let Some(val) = &RauthyConfig::get().vars.geo.country_header
         && let Some(value) = req.headers().get(val)
     {
@@ -53,7 +51,6 @@ pub fn get_location(req: &HttpRequest) -> Result<Option<String>, ErrorResponse> 
     }
 
     if maxmind::is_configured() {
-        let ip = real_ip_from_req(req)?;
         let data = maxmind::get_location(ip)?;
         return Ok(data.map(|d| d.to_string()));
     }

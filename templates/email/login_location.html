@@ -5,11 +5,12 @@
 {% block content %}
 <h1>{{ unknown_location }}</h1>
 <p>
-    IP: <b>{{ ip }}</b><br>
-    {{ user_agent }}<br>
+    IP: <b>{{ ip }}</b>
     {% if !location.is_empty() -%}
-    {{ location }}
+    ({{ location }})
     {%- endif %}
+    <br>
+    {{ user_agent }}<br>
 </p>
 <p>{{ if_invalid }}</p>
 <a href="{{ link_revoke }}">{{ revoke_link }}</a>
