@@ -7,7 +7,7 @@ use std::error::Error;
 use std::time::Duration;
 use tokio::fs;
 use toml::Value;
-use tracing::{debug};
+use tracing::debug;
 pub struct VaultConfig {
     vault_source: VaultSource,
 }
