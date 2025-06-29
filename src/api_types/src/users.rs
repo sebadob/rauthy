@@ -207,6 +207,7 @@ pub struct UserValuesRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
 pub enum UserAttrConfigTyp {
     Email,
 }
