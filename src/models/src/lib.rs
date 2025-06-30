@@ -11,11 +11,11 @@ pub mod entity;
 pub mod events;
 pub mod html;
 pub mod i18n_email;
+pub mod ipgeo;
 pub mod language;
 pub mod migration;
 pub mod rauthy_config;
 pub mod vault_config;
-pub mod temp_migrate_federation_idp;
 
 pub enum AuthStep {
     LoggedIn(AuthStepLoggedIn),

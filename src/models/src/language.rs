@@ -75,7 +75,7 @@ impl TryFrom<&HttpRequest> for Language {
         // Do not use ApiCookie::from_req here since this cookie is non-sensitive and
         // set via the UI and JS
         if let Some(cookie) = value.cookie(COOKIE_LOCALE) {
-            debug!("locale cookie {:?}", cookie);
+            debug!(?cookie);
             return Ok(Language::from(cookie.value()));
         }
 
@@ -83,7 +83,7 @@ impl TryFrom<&HttpRequest> for Language {
             let accept_as_str = accept_lang.to_str().unwrap_or_default();
             let common_languages =
                 accept_language::intersection(accept_as_str, &Language::all_available());
-            debug!("common_languages: {:?}", common_languages);
+            debug!(?common_languages);
             if !common_languages.is_empty() {
                 return Ok(Language::from(common_languages.first().unwrap().as_str()));
             }

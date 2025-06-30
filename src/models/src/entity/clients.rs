@@ -146,7 +146,7 @@ impl From<tokio_postgres::Row> for Client {
 impl Client {
     #[inline]
     pub fn cache_idx(id: &str) -> String {
-        format!("client_{}", id)
+        format!("client_{id}")
     }
 
     // have less cloning
@@ -800,7 +800,7 @@ WHERE id = $4"#;
     ) -> Result<(), ErrorResponse> {
         match DB::hql().get_bytes(Cache::ClientSecret, secret).await? {
             None => {
-                debug!("No cached secret found for client {}", client_id);
+                debug!("No cached secret found for client {client_id}");
                 Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
                     "client_secret does not exist or is invalid",
@@ -808,10 +808,10 @@ WHERE id = $4"#;
             }
             Some(bytes) => {
                 if bytes == client_id.as_bytes() {
-                    debug!("Matching cached client_secret for {}", client_id);
+                    debug!("Matching cached client_secret for {client_id}");
                     Ok(())
                 } else {
-                    debug!("Found cached client_secret, but for a different client.",);
+                    debug!("Found cached client_secret, but for a different client.");
                     Err(ErrorResponse::new(
                         ErrorResponseType::Unauthorized,
                         "client_secret does not exist or is invalid",
@@ -838,14 +838,14 @@ impl Client {
             if i == 0 {
                 // the scope is the first entry
                 if self.scopes.len() > scope.len() {
-                    let s = format!("{},", scope);
+                    let s = format!("{scope},");
                     self.scopes = self.scopes.replace(&s, "");
                 } else {
                     self.scopes = String::default();
                 }
             } else {
                 // the scope is at the end or in the middle
-                let s = format!(",{}", scope);
+                let s = format!(",{scope}");
                 self.scopes = self.scopes.replace(&s, "");
             }
         }
@@ -855,14 +855,14 @@ impl Client {
             if i == 0 {
                 // the scope is the first entry
                 if self.default_scopes.len() > scope.len() {
-                    let s = format!("{},", scope);
+                    let s = format!("{scope},");
                     self.default_scopes = self.default_scopes.replace(&s, "");
                 } else {
                     self.default_scopes = String::default();
                 }
             } else {
                 // the scope is at the end or in the middle
-                let s = format!(",{}", scope);
+                let s = format!(",{scope}");
                 self.default_scopes = self.default_scopes.replace(&s, "");
             }
         }
@@ -1037,7 +1037,7 @@ impl Client {
         if res.is_empty() {
             res = "openid".to_string();
         } else if !res.contains("openid") {
-            res = format!("openid,{}", res);
+            res = format!("openid,{res}");
         }
         Ok(res)
     }
@@ -1153,10 +1153,7 @@ impl Client {
             debug!("Client request from invalid origin: {}", origin);
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!(
-                    "Coming from an external Origin '{}' which is not allowed",
-                    origin
-                ),
+                format!("Coming from an external Origin '{origin}' which is not allowed"),
             ))
         };
 
@@ -1179,8 +1176,8 @@ impl Client {
         }
 
         debug!(
-            "No match found for allowed origin - external origin: {} / allowed: {:?}",
-            origin, self.allowed_origins
+            "No match found for allowed origin - external origin: {origin} / allowed: {:?}",
+            self.allowed_origins
         );
         err_msg()
     }
@@ -1196,8 +1193,8 @@ impl Client {
             Ok(())
         } else {
             debug!(
-                "Invalid `redirect_uri`: {} / expected on of: {}",
-                redirect_uri, self.redirect_uris
+                "Invalid `redirect_uri`: {redirect_uri} / expected on of: {}",
+                self.redirect_uris
             );
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -1260,7 +1257,7 @@ impl Client {
                 trace!("given code_challenge_method is not allowed");
                 Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    format!("code_challenge_method '{}' is not allowed", method),
+                    format!("code_challenge_method '{method}' is not allowed"),
                 ))
             } else {
                 Ok(())
@@ -1296,10 +1293,7 @@ impl Client {
         {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!(
-                    "code_challenge_method '{}' is not allowed",
-                    code_challenge_method
-                ),
+                format!("code_challenge_method '{code_challenge_method}' is not allowed"),
             ));
         }
         Ok(())
@@ -1310,7 +1304,7 @@ impl Client {
         if flow.is_empty() || !self.flows_enabled.contains(flow) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!("'{}' flow is not allowed for this client", flow),
+                format!("'{flow}' flow is not allowed for this client"),
             ));
         }
         Ok(())
@@ -1386,26 +1380,21 @@ impl Client {
             .map_err(|err| {
                 ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    format!(
-                        "Cannot fetch ephemeral client data from {}: {:?}",
-                        value, err
-                    ),
+                    format!("Cannot fetch ephemeral client data from {value}: {err:?}"),
                 )
             })?;
 
         if !res.status().is_success() {
-            let msg = format!("Cannot fetch ephemeral client information from {}", value);
-            error!("{}", msg);
+            let msg = format!("Cannot fetch ephemeral client information from {value}");
+            error!("{msg}");
             return Err(ErrorResponse::new(ErrorResponseType::Connection, msg));
         }
 
         let body = match res.json::<EphemeralClientRequest>().await {
             Ok(b) => b,
             Err(err) => {
-                let msg = format!(
-                    "Cannot deserialize into EphemeralClientRequest from {}: {:?}",
-                    value, err,
-                );
+                let msg =
+                    format!("Cannot deserialize into EphemeralClientRequest from {value}: {err:?}");
                 error!("{}", msg);
                 return Err(ErrorResponse::new(ErrorResponseType::BadRequest, msg));
             }
@@ -1417,8 +1406,8 @@ impl Client {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!(
-                    "Client id from remote document {} does not match the given URL {}",
-                    slf.id, value,
+                    "Client id from remote document {} does not match the given URL {value}",
+                    slf.id,
                 ),
             ));
         }
@@ -1568,7 +1557,7 @@ impl TryFrom<NewClientRequest> for Client {
         for uri in client.redirect_uris {
             let trimmed = uri.trim();
             if !trimmed.is_empty() {
-                write!(redirect_uris, "{},", trimmed)?;
+                write!(redirect_uris, "{trimmed},")?;
             }
         }
         redirect_uris.pop();
@@ -1579,7 +1568,7 @@ impl TryFrom<NewClientRequest> for Client {
                 for uri in post_logout_redirect_uris {
                     let trimmed = uri.trim();
                     if !trimmed.is_empty() {
-                        write!(uris, "{},", trimmed)?;
+                        write!(uris, "{trimmed},")?;
                     }
                 }
                 uris.pop();
@@ -1707,7 +1696,7 @@ fn extract_external_origin<'a>(
         return Ok(None);
     }
     let origin = opt.unwrap().to_str().unwrap_or("");
-    debug!(origin, "Origin header found:");
+    debug!(origin, "Origin header found");
 
     // `Origin` will be present for same-origin requests other than `GET` / `HEAD`
     if origin == pub_url_with_scheme {
@@ -1727,7 +1716,7 @@ fn extract_external_origin<'a>(
         }
     }
 
-    debug!("External origin: {}", origin);
+    debug!(origin, "External origin");
     Ok(Some(origin))
 }
 

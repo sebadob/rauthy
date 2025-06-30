@@ -34,7 +34,7 @@ pub async fn get_forward_auth_client(
     }
 
     let host = get_header("X-Forwarded-Host", &req)?;
-    let origin = format!("{}://{}", proto, host);
+    let origin = format!("{proto}://{host}");
 
     let forwarded_uri = get_header_alt("X-Forwarded-URI", "X-Original-URL", &req)?;
     let method = get_header("X-Forwarded-Method", &req)?;
@@ -49,14 +49,14 @@ pub async fn get_forward_auth_client(
             None
         }
         Some(s) => {
-            debug!("{:?}", s);
+            debug!(fwd_auth_session = ?s);
             let ip = Some(real_ip_from_req(&req)?);
             if s.validate(ip).is_ok() {
                 if check_csrf {
                     match s.validate_csrf(&req, params.danger_cookie_insecure) {
                         Ok(_) => Some(s),
                         Err(err) => {
-                            error!("Error during CSRF token check: {:?}", err);
+                            error!(?err, "CSRF token check");
                             None
                         }
                     }
@@ -119,7 +119,7 @@ pub async fn get_forward_auth_client(
         let status =
             StatusCode::from_u16(params.redirect_state).unwrap_or(StatusCode::UNAUTHORIZED);
 
-        debug!("HTTP {} redirect to: {}", status, location);
+        debug!("HTTP {status} redirect to: {location}");
         return Ok(HttpResponse::build(status)
             .insert_header((LOCATION, location))
             .finish());
@@ -181,11 +181,11 @@ pub async fn get_forward_auth_client_callback(
     let ip = real_ip_from_req(&req)?;
     let proto = get_header("X-Forwarded-Proto", &req)?;
     let host = get_header("X-Forwarded-Host", &req)?;
-    let origin = format!("{}://{}", proto, host);
-    debug!("origin: {}", origin);
+    let origin = format!("{proto}://{host}");
+    debug!(origin);
 
     let state = ForwardAuthCallbackState::try_from(params.state.as_str())?;
-    debug!("{:?}", state);
+    debug!(?state);
 
     if !state.danger_cookie_insecure && proto.eq_ignore_ascii_case("http")
         || proto.eq_ignore_ascii_case("ws")
@@ -293,7 +293,10 @@ async fn get_client_validated(client_id: String, origin: &str) -> Result<Client,
             if !origins.iter().any(|o| o == origin) {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    format!("The origin '{origin}' is not an `allowed_origin` for this client"),
+                    format!(
+                        "The origin '{origin}' is not an `allowed_origin` for this \
+                        client"
+                    ),
                 ));
             }
         }
@@ -313,7 +316,7 @@ async fn get_client_validated(client_id: String, origin: &str) -> Result<Client,
 fn get_header<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, ErrorResponse> {
     match req.headers().get(key) {
         None => {
-            debug!("Missing header {}", key);
+            debug!("Missing header {key}");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!("Missing header {key}"),
@@ -334,10 +337,7 @@ fn get_header_alt<'a>(
         Err(_) => match get_header(key_second, req) {
             Ok(v) => Ok(v),
             Err(_) => {
-                debug!(
-                    "Missing at least one of headers {} / {}",
-                    key_first, key_second
-                );
+                debug!("Missing at least one of headers {key_first} / {key_second}");
                 Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     format!("Missing at least one of headers {key_first} / {key_second}"),
@@ -362,7 +362,7 @@ fn validate_proxy(req: &HttpRequest) -> Result<(), ErrorResponse> {
         Some(s) => match IpAddr::from_str(s) {
             Ok(ip) => ip,
             Err(err) => {
-                debug!("Cannot parse peer IP from HTTP request: {:?}", err);
+                debug!(?err, "Cannot parse peer IP from HTTP request");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "Cannot parse peer IP from HTTP request",

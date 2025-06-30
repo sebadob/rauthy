@@ -61,7 +61,7 @@ impl ApiKeyEntity {
         let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
 
         let enc_key_active = &EncKeys::get_static().enc_key_active;
-        let secret_fmt = format!("{}${}", name, secret_plain);
+        let secret_fmt = format!("{name}${secret_plain}");
 
         let sql = r#"
 INSERT INTO
@@ -169,7 +169,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
         Self::cache_invalidate(name).await?;
 
-        let secret_fmt = format!("{}${}", name, secret_plain);
+        let secret_fmt = format!("{name}${secret_plain}");
         Ok(secret_fmt)
     }
 
@@ -264,7 +264,7 @@ WHERE name = $5"#;
 impl ApiKeyEntity {
     #[inline]
     fn cache_idx(name: &str) -> String {
-        format!("api_key_{}", name)
+        format!("api_key_{name}")
     }
 
     #[inline]

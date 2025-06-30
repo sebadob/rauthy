@@ -73,10 +73,7 @@ pub async fn jwks_cleanup() {
         let jwks_all = match res {
             Ok(jwks) => jwks,
             Err(err) => {
-                error!(
-                    "Error while running the jwks_cleanup - cannot access the DATABASE_URL: {}",
-                    err
-                );
+                error!(?err, "running the jwks_cleanup");
                 continue;
             }
         };
@@ -106,20 +103,20 @@ pub async fn jwks_cleanup() {
         for kid in to_delete {
             if is_hiqlite() {
                 if let Err(err) = DB::hql().execute(sql, params!()).await {
-                    error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
+                    error!(?err, "cannot clean up JWK {kid} in jwks_cleanup");
                     continue;
                 }
             } else if let Err(err) = DB::pg_execute(sql, &[]).await {
-                error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
+                error!(?err, "cannot clean up JWK {kid} in jwks_cleanup");
                 continue;
             }
 
-            let idx = format!("{}{}", IDX_JWK_KID, kid);
+            let idx = format!("{IDX_JWK_KID}{kid}");
             if let Err(err) = DB::hql().delete(Cache::App, idx).await {
-                error!("Error deleting JWK from cache: {}", err);
+                error!(?err, "deleting JWK from cache");
             }
         }
-        info!("Cleaned up old JWKs: {}", count);
+        info!("Cleaned up old JWKs: {count}");
 
         // For some reason, the interval could `.tick()` multiple times,
         // if it finished too quickly.

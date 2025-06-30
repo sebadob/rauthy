@@ -21,7 +21,7 @@ impl Debug for RefreshTokenDevice {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "id: {}(...), device_id: {}, nbf: {}, exp: {}, scope: {:?}",
+            "RefreshTokenDevice {{ id: {}(...), device_id: {}, nbf: {}, exp: {}, scope: {:?} }}",
             &self.id[..5],
             self.device_id,
             self.nbf,

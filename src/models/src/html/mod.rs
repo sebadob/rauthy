@@ -83,7 +83,7 @@ impl HtmlCached {
 
     #[inline]
     fn cache_key(&self, lang: &Language, encoding: &str) -> String {
-        format!("{}_{}_{}", self.as_str(), lang.as_str(), encoding)
+        format!("{}_{}_{encoding}", self.as_str(), lang.as_str())
     }
 
     /// Handles the request and builds a full `HttpResponse` with compression and caching.
@@ -106,10 +106,10 @@ impl HtmlCached {
         } else {
             "none"
         };
-        debug!("encoding: {}", encoding);
+        debug!(encoding);
 
         let lang = Language::try_from(&req).unwrap_or_default();
-        debug!("lang: {}", lang);
+        debug!(language = ?lang);
         let cache_key = if with_cache {
             if let Some(bytes) = DB::hql()
                 .get_bytes(Cache::Html, self.cache_key(&lang, encoding))

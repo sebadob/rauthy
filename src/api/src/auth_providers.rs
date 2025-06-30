@@ -214,7 +214,7 @@ pub async fn post_provider_callback_handle(
     resp.add_cookie(&cookie).map_err(|err| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
-            format!("Error adding cookie after map_auth_step: {}", err),
+            format!("Error adding cookie after map_auth_step: {err}"),
         )
     })?;
     Ok(resp)

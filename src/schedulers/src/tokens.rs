@@ -26,10 +26,10 @@ pub async fn refresh_tokens_cleanup() {
 
         if is_hiqlite() {
             if let Err(err) = DB::hql().execute(sql, params!(now)).await {
-                error!("Refresh Token Cleanup Error: {:?}", err)
+                error!(?err, "Refresh Token Cleanup")
             }
         } else if let Err(err) = DB::pg_execute(sql, &[&now]).await {
-            error!("Refresh Token Cleanup Error: {:?}", err)
+            error!(?err, "Refresh Token Cleanup")
         }
 
         // For some reason, the interval could `.tick()` multiple times,

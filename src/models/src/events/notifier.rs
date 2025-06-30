@@ -21,9 +21,9 @@ impl EventNotifier {
     /// Sends an `Event` to configured notifiers like for instance E-Mail or Matrix.
     pub async fn send(event: &Event) -> Result<(), ErrorResponse> {
         match event.level {
-            EventLevel::Info | EventLevel::Notice => info!("{}", event),
-            EventLevel::Warning => warn!("{}", event),
-            EventLevel::Critical => warn!("{}", event),
+            EventLevel::Info | EventLevel::Notice => info!("{event}"),
+            EventLevel::Warning => warn!("{event}"),
+            EventLevel::Critical => warn!("{event}"),
         }
 
         let notification = Notification::from(event);
@@ -34,7 +34,7 @@ impl EventNotifier {
         if let Some((level, notifier)) = NOTIFIER_EMAIL.get() {
             if event.typ == EventType::Test || &event.level.value() >= level {
                 if let Err(err) = notifier.notify(&notification).await {
-                    error!("sending Event via E-Mail Notifier: {:?}", err);
+                    error!(?err, "sending Event via E-Mail Notifier");
                     // TODO implement some retry mechanism
                 }
             }
@@ -43,7 +43,7 @@ impl EventNotifier {
         if let Some((level, notifier)) = NOTIFIER_MATRIX.get() {
             if event.typ == EventType::Test || &event.level.value() >= level {
                 if let Err(err) = notifier.notify(&notification).await {
-                    error!("sending Event via Matrix Notifier: {:?}", err);
+                    error!(?err, "sending Event via Matrix Notifier");
                     // TODO implement some retry mechanism
                 }
             }
@@ -52,7 +52,7 @@ impl EventNotifier {
         if let Some((level, notifier)) = NOTIFIER_SLACK.get() {
             if event.typ == EventType::Test || &event.level.value() >= level {
                 if let Err(err) = notifier.notify(&notification).await {
-                    error!("sending Event via Slack Notifier: {:?}", err);
+                    error!(?err, "sending Event via Slack Notifier");
                     // TODO implement some retry mechanism
                 }
             }
@@ -67,10 +67,7 @@ impl EventNotifier {
         // E-Mail
         if let Some(email) = vars.email.clone() {
             let level = vars.notify_level_email.clone();
-            info!(
-                "E-Mail Event Notification's will be sent to {} with level: {:?}",
-                email, level
-            );
+            info!("E-Mail Event Notification's will be sent to {email} with level: {level:?}");
 
             let notifier = NotifierEmail {
                 notification_recipient_name: "Rauthy Admin".to_string(),
@@ -85,10 +82,7 @@ impl EventNotifier {
         // Slack
         if let Some(url) = vars.slack_webhook.clone() {
             let level = vars.notify_level_slack.clone();
-            info!(
-                "Event Notification's will be sent to Slack with level: {:?}",
-                level
-            );
+            info!("Event Notification's will be sent to Slack with level: {level:?}");
 
             let notifier = NotifierSlack::new(url);
             NOTIFIER_SLACK
@@ -134,7 +128,7 @@ impl EventNotifier {
                 Err(err) => {
                     let msg = format!("Error creating the Matrix Notifier: {:?}", err.message);
                     if vars.matrix_error_no_panic {
-                        error!("{msg}");
+                        error!(error = msg);
                     } else {
                         panic!("{msg}");
                     }

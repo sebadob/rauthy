@@ -341,7 +341,7 @@ impl Display for JwkKeyPairAlg {
             JwkKeyPairAlg::RS512 => "RS512",
             JwkKeyPairAlg::EdDSA => "EdDSA",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

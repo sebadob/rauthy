@@ -38,7 +38,7 @@ impl HashPassword {
             .expect("Send PasswordHashMessage::Hash");
         rx.recv_async()
             .await
-            .map_err(|err| ErrorResponse::new(ErrorResponseType::Internal, format!("{}", err)))
+            .map_err(|err| ErrorResponse::new(ErrorResponseType::Internal, err.to_string()))
     }
 }
 
@@ -68,7 +68,7 @@ impl ComparePasswords {
             .expect("Send PasswordHashMessage::Compare");
         rx.recv_async()
             .await
-            .map_err(|err| ErrorResponse::new(ErrorResponseType::Internal, format!("{}", err)))
+            .map_err(|err| ErrorResponse::new(ErrorResponseType::Internal, err.to_string()))
     }
 }
 
@@ -149,7 +149,7 @@ fn compare_passwords(msg: ComparePasswords) {
             }
         }
         Err(err) => {
-            error!("Error parsing the original password hash: {}", err);
+            error!("Error parsing the original password hash: {err}");
         }
     }
 

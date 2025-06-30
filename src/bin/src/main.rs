@@ -94,11 +94,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let log_level = setup_logging();
-    info!("Starting Rauthy v{} ({})", RAUTHY_VERSION, *BUILD_TIME);
-    info!("Log Level set to '{}'", log_level);
+    info!("Starting Rauthy v{RAUTHY_VERSION} ({})", *BUILD_TIME);
+    info!("Log Level set to '{log_level}'");
     if test_mode {
         warn!("Application started in Integration Test Mode");
     }
+
+    // init BEFORE Hiqlite to avoid issues in case of mis-config
+    rauthy_models::ipgeo::init_geo().await;
 
     DB::init(node_config)
         .await
@@ -129,7 +132,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Loop, because you could get into a race condition when recovery a HA Leader after lost volume
     while let Err(err) = version_migration::manual_version_migrations().await {
-        error!("Error during version migration: {:?}", err);
+        error!("Error during version migration: {err:?}");
         time::sleep(Duration::from_secs(1)).await;
     }
 

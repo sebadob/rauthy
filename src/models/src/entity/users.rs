@@ -165,10 +165,10 @@ impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
-        let idx = format!("{}_{}", IDX_USERS, &user_id);
+        let idx = format!("{IDX_USERS}_{user_id}");
         client.delete(Cache::User, idx).await?;
 
-        let idx = format!("{}_{}", IDX_USERS, &email);
+        let idx = format!("{IDX_USERS}_{email}");
         client.delete(Cache::User, idx).await?;
 
         Ok(())
@@ -285,7 +285,7 @@ impl User {
     }
 
     pub async fn exists(id: String) -> Result<(), ErrorResponse> {
-        let idx = format!("{}_{}", IDX_USERS, id);
+        let idx = format!("{IDX_USERS}_{id}");
 
         let opt: Option<Self> = DB::hql().get(Cache::User, idx).await?;
         if opt.is_some() {
@@ -310,7 +310,7 @@ impl User {
     }
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let idx = format!("{}_{}", IDX_USERS, id);
+        let idx = format!("{IDX_USERS}_{id}");
         let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
@@ -331,7 +331,7 @@ impl User {
     pub async fn find_by_email(email: String) -> Result<User, ErrorResponse> {
         let email = email.to_lowercase();
 
-        let idx = format!("{}_{}", IDX_USERS, email);
+        let idx = format!("{IDX_USERS}_{email}");
         let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
@@ -444,7 +444,7 @@ ORDER BY created_at ASC"#;
     pub async fn find_for_fed_cm_validated(user_id: String) -> Result<Self, ErrorResponse> {
         // We will stick to the WWW-Authenticate header for now and use duplicated code from
         // some OAuth2 api for now until the spec has settled on an error behavior.
-        debug!("Looking up FedCM user_id {}", user_id);
+        debug!("Looking up FedCM user_id {user_id}");
         let slf = Self::find(user_id).await.map_err(|_| {
             debug!("FedCM user not found");
             ErrorResponse::new(
@@ -714,7 +714,8 @@ LIMIT $2"#;
         if slf.password.is_none() && !slf.has_webauthn_enabled() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "You must have at least a password or passkey set up before you can remove a provider link",
+                "You must have at least a password or passkey set up before you can \
+                remove a provider link",
             ));
         }
 
@@ -872,14 +873,14 @@ LIMIT $2"#;
         }
 
         if let Some(email) = old_email {
-            let idx = format!("{}_{}", IDX_USERS, email);
+            let idx = format!("{IDX_USERS}_{email}");
             client.delete(Cache::User, idx).await?;
         }
 
-        let idx = format!("{}_{}", IDX_USERS, &self.id);
+        let idx = format!("{IDX_USERS}_{}", self.id);
         client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
 
-        let idx = format!("{}_{}", IDX_USERS, &self.email);
+        let idx = format!("{IDX_USERS}_{}", self.email);
         client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
 
         Ok(())
@@ -891,7 +892,7 @@ LIMIT $2"#;
         q: &str,
         limit: i64,
     ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
-        let q = format!("%{}%", q);
+        let q = format!("%{q}%");
         let size_hint = max(limit, 1) as usize;
 
         let res = match idx {
@@ -1163,7 +1164,7 @@ LIMIT $2"#;
             send_email_confirm_change(&user, &user.email, &user.email, true).await;
             send_email_confirm_change(&user, old_email, &user.email, true).await;
 
-            let event_text = format!("Change by admin: {} -> {}", old_email, user.email);
+            let event_text = format!("Change by admin: {old_email} -> {}", user.email);
             RauthyConfig::get()
                 .tx_events
                 .send_async(Event::user_email_change(event_text, None))
@@ -1369,8 +1370,7 @@ impl User {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!(
-                    "New password does not include the minimum lower character count: {}",
-                    lower_req
+                    "New password does not include the minimum lower character count: {lower_req}"
                 ),
             ));
         }
@@ -1380,8 +1380,7 @@ impl User {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!(
-                    "New password does not include the minimum upper character count: {}",
-                    upper_req
+                    "New password does not include the minimum upper character count: {upper_req}"
                 ),
             ));
         }
@@ -1390,10 +1389,7 @@ impl User {
         if digit_req > count_digit {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!(
-                    "New password does not include the minimum digit count: {}",
-                    digit_req
-                ),
+                format!("New password does not include the minimum digit count: {digit_req}"),
             ));
         }
 
@@ -1402,8 +1398,7 @@ impl User {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!(
-                    "New password does not include the minimum special character count: {}",
-                    special_req
+                    "New password does not include the minimum special character count: {special_req}"
                 ),
             ));
         }
@@ -1422,8 +1417,8 @@ impl User {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
                                 format!(
-                                    "The new password must not be one of the last {} used passwords",
-                                    recent_req,
+                                    "The new password must not be one of the last {recent_req} used \
+                                    passwords"
                                 ),
                             ));
                         }
@@ -1437,7 +1432,7 @@ impl User {
                         }
                     }
 
-                    most_recent.passwords = format!("{}\n{}", new_hash, new_recent.join("\n"));
+                    most_recent.passwords = format!("{new_hash}\n{}", new_recent.join("\n"));
                     most_recent.save().await?;
                 }
 
@@ -1524,7 +1519,7 @@ impl User {
         send_email_confirm_change(&user, &user.email, &user.email, false).await;
         send_email_confirm_change(&user, &old_email, &user.email, false).await;
 
-        let event_text = format!("{} -> {}", old_email, user.email);
+        let event_text = format!("{old_email} -> {}", user.email);
         let ip = real_ip_from_req(&req).ok();
         RauthyConfig::get()
             .tx_events
@@ -1561,14 +1556,14 @@ impl User {
         if i == 0 {
             // the group is the first entry
             if old_groups.len() > group.len() {
-                let g = format!("{},", group);
+                let g = format!("{group},");
                 self.groups = Some(old_groups.replace(&g, ""));
             } else {
                 self.groups = None;
             }
         } else {
             // the role is at the end or in the middle
-            let g = format!(",{}", group);
+            let g = format!(",{group}");
             self.groups = Some(old_groups.replace(&g, ""));
         }
     }
@@ -1588,21 +1583,21 @@ impl User {
         if i == 0 {
             // the role is the first entry
             if self.roles.len() > role.len() {
-                let r = format!("{},", role);
+                let r = format!("{role},");
                 self.roles = self.roles.replace(&r, "");
             } else {
                 self.roles = String::from("");
             }
         } else {
             // the role is at the end or in the middle
-            let r = format!(",{}", role);
+            let r = format!(",{role}");
             self.roles = self.roles.replace(&r, "");
         }
     }
 
     pub fn email_recipient_name(&self) -> String {
         if let Some(n) = &self.family_name {
-            format!("{} {}", self.given_name, n)
+            format!("{} {n}", self.given_name)
         } else {
             self.given_name.to_string()
         }
@@ -1705,12 +1700,12 @@ impl User {
     pub fn is_argon2_uptodate(&self, params: &argon2::Params) -> Result<bool, ErrorResponse> {
         if self.password.is_none() {
             error!(
-                "Trying to validate argon2 params with not set password for user '{:?}'",
-                self.id
+                user_id = self.id,
+                "Trying to validate argon2 params with not set password"
             );
             return Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
-                String::from("Cannot validate argon2 param - password is not set"),
+                "Cannot validate argon2 param - password is not set",
             ));
         }
         let hash = PasswordHash::new(self.password.as_ref().unwrap())
@@ -1736,7 +1731,7 @@ impl User {
         match User::find_by_email(email).await {
             Ok(_) => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "E-Mail is already in use".to_string(),
+                "E-Mail is already in use",
             )),
             Err(_) => Ok(()),
         }
@@ -1748,7 +1743,7 @@ impl User {
         if self.password.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("The password to validate is not set yet"),
+                "The password to validate is not set yet",
             ));
         }
         let hash = self.password.as_ref().unwrap().to_owned();
@@ -1758,10 +1753,9 @@ impl User {
     pub fn picture_uri(&self) -> Option<String> {
         self.picture_id.as_ref().map(|pic_id| {
             format!(
-                "{}/auth/v1/users/{}/picture/{}",
+                "{}/auth/v1/users/{}/picture/{pic_id}",
                 RauthyConfig::get().pub_url_with_scheme,
                 self.id,
-                pic_id
             )
         })
     }
@@ -1769,7 +1763,7 @@ impl User {
     pub fn push_group(&mut self, group: &str) {
         if self.groups.is_some() {
             let g = self.groups.as_ref().unwrap();
-            self.groups = Some(format!("{},{}", g, group));
+            self.groups = Some(format!("{g},{group}"));
         } else {
             self.groups = Some(group.to_owned());
         }
@@ -1777,7 +1771,7 @@ impl User {
 
     pub fn push_role(&mut self, role: &str) {
         if !self.roles.is_empty() {
-            self.roles = format!("{},{}", self.roles, role);
+            self.roles = format!("{},{role}", self.roles);
         } else {
             role.clone_into(&mut self.roles);
         }
@@ -1822,7 +1816,6 @@ impl User {
 
         if let Some(exp) = self.password_expires {
             if exp < OffsetDateTime::now_utc().unix_timestamp() {
-                // TODO introduce some "is allowed to refresh" variable
                 if !self.enabled {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::PasswordExpired,

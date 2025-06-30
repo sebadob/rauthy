@@ -66,7 +66,7 @@ impl From<tokio_postgres::Row> for UserAttrConfigEntity {
 impl UserAttrConfigEntity {
     #[inline(always)]
     fn cache_idx(name: &str) -> String {
-        format!("{}_{}", IDX_USER_ATTR_CONFIG, name)
+        format!("{IDX_USER_ATTR_CONFIG}_{name}")
     }
 
     pub async fn clear_cache_all() -> Result<(), ErrorResponse> {
@@ -151,7 +151,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
             let attr_include_access = if let Some(access) = s.attr_include_access {
                 if access.contains(&name) {
                     needs_update = true;
-                    let a = access.replace(&format!("{},", name), "").replace(&name, "");
+                    let a = access.replace(&format!("{name},"), "").replace(&name, "");
                     if a.is_empty() { None } else { Some(a) }
                 } else {
                     Some(access)
@@ -163,7 +163,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
             let attr_include_id = if let Some(id) = s.attr_include_id {
                 if id.contains(&name) {
                     needs_update = true;
-                    let i = id.replace(&format!("{},", name), "").replace(&name, "");
+                    let i = id.replace(&format!("{name},"), "").replace(&name, "");
                     if i.is_empty() { None } else { Some(i) }
                 } else {
                     Some(id)
@@ -242,15 +242,11 @@ VALUES ($1, $2, $3, $4, $5)"#,
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM user_attr_config WHERE name = $1";
         let slf: Self = if is_hiqlite() {
-            client
-                .query_as_one(
-                    "SELECT * FROM user_attr_config WHERE name = $1",
-                    params!(name),
-                )
-                .await?
+            client.query_as_one(sql, params!(name)).await?
         } else {
-            DB::pg_query_one("SELECT * FROM user_attr_config WHERE name = $1", &[&name]).await?
+            DB::pg_query_one(sql, &[&name]).await?
         };
 
         client
@@ -266,12 +262,11 @@ VALUES ($1, $2, $3, $4, $5)"#,
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM user_attr_config";
         let res = if is_hiqlite() {
-            client
-                .query_as("SELECT * FROM user_attr_config", params!())
-                .await?
+            client.query_as(sql, params!()).await?
         } else {
-            DB::pg_query("SELECT * FROM user_attr_config", &[], 0).await?
+            DB::pg_query(sql, &[], 0).await?
         };
 
         client
@@ -567,20 +562,11 @@ impl UserAttrValueEntity {
             return Ok(slf);
         }
 
+        let sql = "SELECT * FROM user_attr_values WHERE user_id = $1";
         let res = if is_hiqlite() {
-            client
-                .query_as(
-                    "SELECT * FROM user_attr_values WHERE user_id = $1",
-                    params!(user_id),
-                )
-                .await?
+            client.query_as(sql, params!(user_id)).await?
         } else {
-            DB::pg_query(
-                "SELECT * FROM user_attr_values WHERE user_id = $1",
-                &[&user_id],
-                0,
-            )
-            .await?
+            DB::pg_query(sql, &[&user_id], 0).await?
         };
 
         client.put(Cache::User, idx, &res, CACHE_TTL_USER).await?;
@@ -752,7 +738,7 @@ ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
 impl UserAttrValueEntity {
     #[inline]
     fn cache_idx(user_id: &str) -> String {
-        format!("{}{}", IDX_USER_ATTR_CONFIG, user_id)
+        format!("{IDX_USER_ATTR_CONFIG}{user_id}")
     }
 }
 

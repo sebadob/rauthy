@@ -15,6 +15,7 @@ use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::dpop_proof::DPoPProof;
+use rauthy_models::entity::login_locations::LoginLocation;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::user_login_states::UserLoginState;
 use rauthy_models::entity::users::User;
@@ -52,7 +53,7 @@ pub async fn grant_type_authorization_code(
         .map_err(|_| {
             ErrorResponse::new(
                 ErrorResponseType::NotFound,
-                format!("Client '{}' not found", client_id),
+                format!("Client '{client_id}' not found"),
             )
         })?;
     client.validate_enabled()?;
@@ -110,7 +111,7 @@ pub async fn grant_type_authorization_code(
     };
     // validate the oidc code
     if code.client_id != client_id {
-        let err = format!("Wrong 'code' for client_id '{}'", client_id);
+        let err = format!("Wrong 'code' for client_id '{client_id}'");
         warn!(err);
         return Err(ErrorResponse::new(ErrorResponseType::Unauthorized, err));
     }
@@ -178,8 +179,8 @@ pub async fn grant_type_authorization_code(
             return Err(err);
         }
         session.user_id = Some(user.id.clone());
-        session.roles = Some(user.roles);
-        session.groups = user.groups;
+        session.roles = Some(user.roles.clone());
+        session.groups = user.groups.clone();
         session.upsert().await?;
     }
     code.delete().await?;
@@ -190,8 +191,10 @@ pub async fn grant_type_authorization_code(
 
     // backchannel logout and login state tracking is not supported for ephemeral clients
     if !client.is_ephemeral() {
-        UserLoginState::insert(user.id, client.id, code.session_id).await?;
+        UserLoginState::insert(user.id.clone(), client.id, code.session_id).await?;
     }
+
+    LoginLocation::spawn_background_check(user, &req)?;
 
     Ok((token_set, headers))
 }

@@ -67,17 +67,17 @@ impl Display for MagicLinkUsage {
         // For types with a value, `$` was chosen as the separating characters since it is URL safe.
         // It also makes splitting of the value quite easy.
         match self {
-            MagicLinkUsage::EmailChange(email) => write!(f, "email_change${}", email),
+            MagicLinkUsage::EmailChange(email) => write!(f, "email_change${email}"),
             MagicLinkUsage::NewUser(redirect_uri) => {
                 if let Some(uri) = redirect_uri {
-                    write!(f, "new_user${}", uri)
+                    write!(f, "new_user${uri}")
                 } else {
                     write!(f, "new_user")
                 }
             }
             MagicLinkUsage::PasswordReset(redirect_uri) => {
                 if let Some(uri) = redirect_uri {
-                    write!(f, "password_reset${}", uri)
+                    write!(f, "password_reset${uri}")
                 } else {
                     write!(f, "password_reset")
                 }
@@ -101,7 +101,8 @@ impl Debug for MagicLink {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "id: {}(...), user_id: {}, csrf_token: {}(...), cookie: {:?}, exp: {}, used: {}, usage: {}",
+            "MagicLink {{ id: {}(...), user_id: {}, csrf_token: {}(...), cookie: {:?}, exp: {}, \
+            used: {}, usage: {} }}",
             &self.id[..5],
             self.user_id,
             &self.csrf_token[..5],
@@ -274,8 +275,9 @@ impl MagicLink {
                     } else {
                         let ip = real_ip_from_req(req)?;
                         warn!(
-                            "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie from {}",
-                            ip
+                            ?ip,
+                            "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding \
+                            cookie",
                         );
                     }
                 }
@@ -284,8 +286,8 @@ impl MagicLink {
             } else {
                 let ip = real_ip_from_req(req)?;
                 warn!(
-                    "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie from {}",
-                    ip
+                    ?ip,
+                    "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie",
                 );
             }
         }

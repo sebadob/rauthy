@@ -47,11 +47,11 @@ impl From<&str> for ScimAction {
 impl Display for ScimAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ScimAction::UserCreateUpdate(uid) => write!(f, "uc_{}", uid),
-            ScimAction::UserDelete(uid) => write!(f, "ud_{}", uid),
-            ScimAction::UsersSync(created_ts) => write!(f, "us_{}", created_ts),
-            ScimAction::GroupCreateUpdate(gid) => write!(f, "gc_{}", gid),
-            ScimAction::GroupDelete(gid) => write!(f, "gd_{}", gid),
+            ScimAction::UserCreateUpdate(uid) => write!(f, "uc_{uid}"),
+            ScimAction::UserDelete(uid) => write!(f, "ud_{uid}"),
+            ScimAction::UsersSync(created_ts) => write!(f, "us_{created_ts}"),
+            ScimAction::GroupCreateUpdate(gid) => write!(f, "gc_{gid}"),
+            ScimAction::GroupDelete(gid) => write!(f, "gd_{gid}"),
             ScimAction::GroupsSync => write!(f, "gs_"),
             ScimAction::Unknown => write!(f, "unknown"),
         }

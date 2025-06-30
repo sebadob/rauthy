@@ -18,7 +18,7 @@ impl From<&str> for CookieMode {
             "secure" => Self::Secure,
             "danger-insecure" => Self::DangerInsecure,
             v => {
-                panic!("Cannot parse {} as CookieMode", v);
+                panic!("Cannot parse {v} as CookieMode");
             }
         }
     }

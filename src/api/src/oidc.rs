@@ -485,8 +485,7 @@ pub async fn post_device_auth(
                                 .json(OAuth2ErrorResponse {
                                     error: OAuth2ErrorTypeResponse::InvalidRequest,
                                     error_description: Some(Cow::from(format!(
-                                        "no further requests allowed before: {}",
-                                        dt
+                                        "no further requests allowed before: {dt}",
                                     ))),
                                 });
                         }
@@ -502,10 +501,7 @@ pub async fn post_device_auth(
                 }
 
                 if let Err(err) = DeviceIpRateLimit::insert(ip.to_string()).await {
-                    error!(
-                        "Error inserting IP into the cache for rate-limiting: {:?}",
-                        err
-                    );
+                    error!(?err, "inserting IP into the cache for rate-limiting",);
                 }
             }
         };

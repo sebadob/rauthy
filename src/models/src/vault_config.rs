@@ -15,11 +15,11 @@ pub struct VaultConfig {
 impl VaultConfig {
     pub async fn load_config() -> Result<String, Box<dyn Error>> {
         let vault_config_file = "vault.toml";
-        let config_key = "config"; // maybe make configurable by env vars
-
         let vault_conf = VaultConfig::build(vault_config_file).await?;
+        println!("{:?}", vault_conf.vault_source);
+
         let config_from_vault = vault_conf.vault_source.get_config().await?;
-        let config = config_from_vault[config_key]
+        let config = config_from_vault[&vault_conf.vault_source.config_key]
             .as_str()
             .expect("Failed to extract config from secrets.");
 
@@ -31,6 +31,7 @@ impl VaultConfig {
 
         if let Ok(cfg) = Self::load(config_file).await {
             vault_conf = cfg;
+            println!("{:?}", vault_conf.vault_source);
         }
 
         Ok(Self::load_from_env(vault_conf).await)
@@ -55,9 +56,9 @@ impl VaultConfig {
         if let Ok(v) = env::var("VAULT_PATH") {
             existing_config.vault_source.path = v;
         }
-        if let Ok(v) = env::var("VAULT_PATH_CERTS") {
-            existing_config.vault_source.path_certs = v;
-        }
+        if let Ok(v) = env::var("VAULT_CONFIG_KEY") {
+            existing_config.vault_source.config_key = v;
+        }        
         if let Ok(v) = env::var("VAULT_KV_VERSION") {
             match v.as_str() {
                 "1" => existing_config.vault_source.kv_version = KvVersion::V1,
@@ -106,10 +107,10 @@ impl VaultConfig {
             .remove("path")
             .expect("missing in vault.toml: path")
             .to_string();
-        self.vault_source.path_certs = table
-            .remove("path_certs")
-            .expect("missing in vault.toml: path_certs")
-            .to_string();
+        self.vault_source.config_key = table
+            .remove("config_key")
+            .expect("missing in vault.toml: config_key")
+            .to_string();        
 
         if let Ok(v) = env::var("VAULT_KV_VERSION") {
             if v == "1" {
@@ -146,12 +147,13 @@ impl Default for VaultConfig {
         }
     }
 }
+#[derive(Debug)]
 struct VaultSource {
     addr: String,
     token: String,
     mount: String,
     path: String,
-    path_certs: String,
+    config_key: String,
     kv_version: KvVersion,
     root_ca_bundle: Option<String>,
 }
@@ -163,14 +165,14 @@ impl Default for VaultSource {
             token: "".to_string(),
             mount: "".to_string(),
             path: "".to_string(),
-            path_certs: "".to_string(),
+            config_key: "".to_string(),
             kv_version: KvVersion::V2,
             root_ca_bundle: None,
         }
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 enum KvVersion {
     V1 = 1,
     V2,
