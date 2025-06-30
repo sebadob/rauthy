@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.30.3-20250623-atproto"
+version = "0.31.0-20250626"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -38,6 +38,7 @@ actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-lab = "0.24"
 actix-web-prom = "0.10"
 askama = "0.14"
+arc-swap = "1.7"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
 async-trait = "0.1.74"
 base64 = "0.22.0"
@@ -53,6 +54,7 @@ deadpool = { version = "0.12", features = ["rt_tokio_1", "serde"] }
 deadpool-postgres = "0.14"
 dotenvy = "0.15"
 ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
+flate2 = "1.1"
 flume = "0.11"
 futures = "0.3"
 futures-util = "0.3"
@@ -72,6 +74,7 @@ lettre = { version = "0.11", default-features = false, features = [
     "builder", "smtp-transport", "tokio1-rustls-tls", "tracing"
 ] }
 libflate = "2.1.0"
+maxminddb = "0.26"
 mime = "0.3.17"
 mime_guess = "2"
 num_cpus = "1"
@@ -107,6 +110,7 @@ serde_urlencoded = "0.7.1"
 spow = { version = "0.6", features = ["server"] }
 strum = { version = "0.27", features = ["derive"] }
 svg-hush = "0.9.4"
+tar = "0.4.44"
 tikv-jemallocator = { version = "0.6", features = ["unprefixed_malloc_on_supported_platforms"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tls-hot-reload = "0.1"

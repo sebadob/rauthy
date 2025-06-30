@@ -12,6 +12,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::dpop_proof::DPoPProof;
+use rauthy_models::entity::login_locations::LoginLocation;
 use rauthy_models::entity::user_login_states::UserLoginState;
 use rauthy_models::entity::users::User;
 use rauthy_models::rauthy_config::RauthyConfig;
@@ -117,7 +118,9 @@ pub async fn grant_type_password(
             )
             .await?;
 
-            UserLoginState::insert(user.id, client.id, None).await?;
+            UserLoginState::insert(user.id.clone(), client.id, None).await?;
+
+            LoginLocation::spawn_background_check(user, &req)?;
 
             Ok((ts, headers))
         }

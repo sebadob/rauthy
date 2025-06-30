@@ -239,6 +239,7 @@ pub struct Vars {
     pub ephemeral_clients: VarsEphemeralClients,
     pub events: VarsEvents,
     pub fedcm: ConfigVarsFedCM,
+    pub geo: ConfigVarsGeo,
     pub hashing: VarsHashing,
     pub http_client: VarsHttpClient,
     pub i18n: VarsI18n,
@@ -411,6 +412,12 @@ impl Default for Vars {
                 experimental_enable: false,
                 session_lifetime: 2592000,
                 session_timeout: 259200,
+            },
+            geo: ConfigVarsGeo {
+                country_header: None,
+                maxmind_account_id: None,
+                maxmind_license_key: None,
+                maxmind_db_dir: "data".into(),
             },
             hashing: VarsHashing {
                 argon2_m_cost: 131072,
@@ -659,6 +666,7 @@ impl Vars {
         slf.parse_ephemeral_clients(&mut table);
         slf.parse_events(&mut table);
         slf.parse_fedcm(&mut table);
+        slf.parse_geo(&mut table);
         slf.parse_hashing(&mut table);
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
@@ -1574,6 +1582,40 @@ impl Vars {
         }
     }
 
+    fn parse_geo(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "geolocation") else {
+            return;
+        };
+
+        self.geo.country_header = t_str(
+            &mut table,
+            "geolocation",
+            "country_header",
+            "GEO_COUNTRY_HEADER",
+        );
+
+        self.geo.maxmind_account_id = t_str(
+            &mut table,
+            "geolocation",
+            "maxmind_account_id",
+            "GEO_MAXMIND_ACC_ID",
+        );
+        self.geo.maxmind_license_key = t_str(
+            &mut table,
+            "geolocation",
+            "maxmind_license_key",
+            "GEO_MAXMIND_LICENSE",
+        );
+        if let Some(v) = t_str(
+            &mut table,
+            "geolocation",
+            "maxmind_db_dir",
+            "GEO_MAXMIND_DIR",
+        ) {
+            self.geo.maxmind_db_dir = v.into();
+        }
+    }
+
     fn parse_hashing(&mut self, table: &mut toml::Table) {
         let Some(mut table) = t_table(table, "hashing") else {
             return;
@@ -2063,8 +2105,6 @@ impl Vars {
                     panic!("Invalid value for `templates.lang`, allowed are: en de ko zh_hans")
                 }
             }
-
-            println!("template: {:?}", table);
         }
     }
 
@@ -2431,6 +2471,14 @@ pub struct ConfigVarsFedCM {
     pub experimental_enable: bool,
     pub session_lifetime: u32,
     pub session_timeout: u32,
+}
+
+#[derive(Debug)]
+pub struct ConfigVarsGeo {
+    pub country_header: Option<String>,
+    pub maxmind_account_id: Option<String>,
+    pub maxmind_license_key: Option<String>,
+    pub maxmind_db_dir: Cow<'static, str>,
 }
 
 #[derive(Debug)]

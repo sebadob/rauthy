@@ -10,6 +10,5 @@ pub async fn manual_version_migrations() -> Result<(), ErrorResponse> {
         return Ok(());
     }
 
-    rauthy_models::temp_migrate_federation_idp::migrate_fed_ids().await?;
     Ok(())
 }

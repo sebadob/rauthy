@@ -176,6 +176,7 @@
                 {orderOptions}
                 {onChangeOrder}
                 searchWidth="min(25rem, calc(100dvw - 1rem))"
+                firstDirReverse
         />
         <div class="btn">
             <Button level={-1} onclick={invalidateSessions}>

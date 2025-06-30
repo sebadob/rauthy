@@ -1,6 +1,7 @@
 use crate::{ReqPrincipal, content_len_limit};
 use actix_web::http::StatusCode;
 use actix_web::http::header::{ACCEPT, HeaderName, HeaderValue, LOCATION};
+use actix_web::mime::TEXT_HTML;
 use actix_web::web::{Json, Query};
 use actix_web::{HttpRequest, HttpResponse, ResponseError, delete, get, patch, post, put, web};
 use chrono::Utc;
@@ -32,12 +33,16 @@ use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::groups::Group;
+use rauthy_models::entity::login_locations::LoginLocation;
 use rauthy_models::entity::mfa_mod_token::MfaModToken;
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPicture};
 use rauthy_models::entity::pow::PowEntity;
+use rauthy_models::entity::refresh_tokens::RefreshToken;
+use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use rauthy_models::entity::user_revoke::UserRevoke;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webauthn;
@@ -45,7 +50,7 @@ use rauthy_models::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData, Web
 use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::html::HtmlCached;
-use rauthy_models::html::templates::{Error3Html, ErrorHtml};
+use rauthy_models::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
 use rauthy_models::language::Language;
 use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::helpers::get_bearer_token_from_header;
@@ -1154,6 +1159,59 @@ pub async fn put_user_password_reset(
                     .finish()
             }
         })
+}
+
+/// Revoke a "Login from unknown location"
+#[utoipa::path(
+    get,
+    path = "/users/{id}/revoke/{code}",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{id}/revoke/{code}")]
+pub async fn get_user_revoke(path: web::Path<(String, String)>, req: HttpRequest) -> HttpResponse {
+    let (user_id, code) = path.into_inner();
+
+    let lang = Language::try_from(&req).unwrap_or_default();
+    let theme_ts = ThemeCssFull::find_theme_ts_rauthy()
+        .await
+        .unwrap_or_default();
+
+    let html = match user_revoke_handle(user_id, code).await {
+        Ok(_) => UserRevokeHtml::build(&lang, theme_ts),
+        Err(err) => {
+            debug!("Error during user revoke: {err}");
+            Error3Html::build(&lang, theme_ts, err.status_code(), "Code not found")
+        }
+    };
+
+    HttpResponse::Ok().content_type(TEXT_HTML).body(html)
+}
+
+#[inline]
+async fn user_revoke_handle(user_id: String, code: String) -> Result<(), ErrorResponse> {
+    let revoke = UserRevoke::find(user_id).await?;
+    if revoke.code != code {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "invalid revoke code",
+        ));
+    }
+
+    Session::invalidate_for_user(&revoke.user_id).await?;
+    RefreshToken::invalidate_for_user(&revoke.user_id).await?;
+    LoginLocation::delete_for_user(revoke.user_id.clone()).await?;
+    logout::execute_backchannel_logout(None, Some(revoke.user_id.clone())).await?;
+
+    UserRevoke::delete(revoke.user_id).await?;
+
+    // TODO create new Event Type and trigger it
+
+    Ok(())
 }
 
 /// Get all registered Webauthn Passkeys for a user

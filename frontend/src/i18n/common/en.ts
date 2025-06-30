@@ -250,5 +250,10 @@ export const I18nEn: I18n = {
         register: "Register",
         success: "Registration successful",
         userReg: "User Registration"
+    },
+    userRevoke: {
+        title: "Revoke Logins",
+        desc1: "All Logins and Sessions have been revoked for this user as much as possible.",
+        desc2: "You should immediately renew all your passwords!",
     }
 };
