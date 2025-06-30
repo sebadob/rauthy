@@ -46,7 +46,7 @@ impl UserRevoke {
         match Self::find(user_id.clone()).await {
             Ok(slf) => Ok(slf),
             Err(err) => {
-                debug!("UserRevoke::find(): {:?}", err);
+                debug!("UserRevoke::find(): {err:?}");
                 Self::upsert(user_id).await
             }
         }

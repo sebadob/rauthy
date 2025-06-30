@@ -70,7 +70,7 @@ impl AddressClaim<'_> {
         };
 
         if let Some(street) = &values.street {
-            writeln!(slf.formatted, "{}", street).expect("AddressClaim to build");
+            writeln!(slf.formatted, "{street}").expect("AddressClaim to build");
             slf.street_address = Some(street);
         }
 
@@ -78,15 +78,15 @@ impl AddressClaim<'_> {
             slf.postal_code = Some(zip);
 
             if let Some(city) = &values.city {
-                writeln!(slf.formatted, "{}, {}", zip, city).expect("AddressClaim to build");
+                writeln!(slf.formatted, "{zip}, {city}").expect("AddressClaim to build");
                 slf.locality = Some(city);
             } else {
-                writeln!(slf.formatted, "{}", zip).expect("AddressClaim to build");
+                writeln!(slf.formatted, "{zip}").expect("AddressClaim to build");
             }
         }
 
         if let Some(country) = &values.country {
-            writeln!(slf.formatted, "{}", country).expect("AddressClaim to build");
+            writeln!(slf.formatted, "{country}").expect("AddressClaim to build");
             slf.country = Some(country);
         }
 

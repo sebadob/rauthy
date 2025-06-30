@@ -85,7 +85,7 @@ impl ClientDyn {
 impl ClientDyn {
     #[inline]
     pub fn get_cache_entry(id: &str) -> String {
-        format!("client_dyn_{}", id)
+        format!("client_dyn_{id}")
     }
 
     /// Returns an Err(_) if the IP is currently existing inside the cache.
@@ -98,7 +98,7 @@ impl ClientDyn {
             Some(ts) => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::TooManyRequests(ts),
-                    format!("You hit a rate limit. You may try again at: {}", ts),
+                    format!("You hit a rate limit. You may try again at: {ts}"),
                 ));
             }
             None => {

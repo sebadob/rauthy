@@ -32,17 +32,17 @@ pub async fn events_cleanup() {
             let res = DB::hql().execute(sql, params!(threshold)).await;
             match res {
                 Ok(rows_affected) => {
-                    debug!("Cleaned up {} expired events", rows_affected);
+                    debug!("Cleaned up {rows_affected} expired events");
                 }
-                Err(err) => error!("Events cleanup error: {:?}", err),
+                Err(err) => error!(?err, "Events cleanup"),
             }
         } else {
             let res = DB::pg_execute(sql, &[&threshold]).await;
             match res {
                 Ok(rows_affected) => {
-                    debug!("Cleaned up {} expired events", rows_affected);
+                    debug!("Cleaned up {rows_affected} expired events");
                 }
-                Err(err) => error!("Events cleanup error: {:?}", err),
+                Err(err) => error!(?err, "Events cleanup"),
             }
         };
 

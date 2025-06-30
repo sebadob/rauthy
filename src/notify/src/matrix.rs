@@ -38,17 +38,17 @@ impl NotifierMatrix {
         let user_id = OwnedUserId::from_str(user_id).map_err(|err| {
             ErrorResponse::new(
                 ErrorResponseType::Internal,
-                format!("Cannot parse the EVENT_MATRIX_USER_ID: {:?}", err),
+                format!("Cannot parse the EVENT_MATRIX_USER_ID: {err:?}"),
             )
         })?;
         let room_id = OwnedRoomId::from_str(room_id).map_err(|err| {
             ErrorResponse::new(
                 ErrorResponseType::Internal,
-                format!("Cannot parse the EVENT_MATRIX_ROOM_ID: {:?}", err),
+                format!("Cannot parse the EVENT_MATRIX_ROOM_ID: {err:?}"),
             )
         })?;
 
-        let rauthy_notifier = format!("Rauthy v{} Notifier", RAUTHY_VERSION);
+        let rauthy_notifier = format!("Rauthy v{RAUTHY_VERSION} Notifier");
         let device_id = OwnedDeviceId::from(rauthy_notifier.as_str());
 
         let http_client = Notification::build_client(disable_tls_validation, root_ca_path).await;
@@ -82,7 +82,7 @@ impl NotifierMatrix {
                 Ok(_) => break,
                 Err(err) => {
                     if retry < limit {
-                        warn!("{:?} - retry in 5 seconds", err);
+                        warn!("{err:?} - retry in 5 seconds");
                         retry += 1;
                         time::sleep(Duration::from_secs(5)).await;
                     } else {
@@ -158,7 +158,7 @@ impl NotifierMatrix {
 
         Err(ErrorResponse::new(
             ErrorResponseType::Connection,
-            "Unable to Login to Matrix".to_string(),
+            "Unable to Login to Matrix",
         ))
     }
 
@@ -170,14 +170,14 @@ impl NotifierMatrix {
             .map_err(|err| {
                 ErrorResponse::new(
                     ErrorResponseType::Connection,
-                    format!("Matrix Notifications Client is not logged in: {:?}", err),
+                    format!("Matrix Notifications Client is not logged in: {err:?}"),
                 )
             })?;
 
         if resp.user_id != self.user_id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
-                "Matrix Notifications Client is not logged in".to_string(),
+                "Matrix Notifications Client is not logged in",
             ));
         };
 
@@ -224,10 +224,7 @@ impl Notify for NotifierMatrix {
 
         let send_msg = || {
             let msg = if let Some(row_2) = &notification.row_2 {
-                format!(
-                    "**{}**\n{}\n{}",
-                    notification.head, notification.row_1, row_2
-                )
+                format!("**{}**\n{}\n{row_2}", notification.head, notification.row_1)
             } else {
                 format!("**{}**\n{}", notification.head, notification.row_1)
             };
@@ -248,7 +245,7 @@ impl Notify for NotifierMatrix {
                 Ok(())
             }
             Err(err) => {
-                error!("Error pushing matrix event: {:?}", err);
+                error!("Error pushing matrix event: {err:?}");
 
                 let retries = 3;
                 for i in 1..=3 {
@@ -261,13 +258,12 @@ impl Notify for NotifierMatrix {
                             if i == retries {
                                 return Err(ErrorResponse::new(
                                     ErrorResponseType::Connection,
-                                    format!("Unable to log in to Matrix after {} retries", retries),
+                                    format!("Unable to log in to Matrix after {retries} retries"),
                                 ));
                             }
 
                             error!(
-                                "Error logging in to Matrix on {}. attempt: {:?}\nRetrying in 3 seconds",
-                                i, err
+                                "Error logging in to Matrix on {i}. attempt: {err:?}\nRetrying in 3 seconds"
                             );
                             time::sleep(Duration::from_secs(3)).await;
                             continue;
@@ -279,7 +275,7 @@ impl Notify for NotifierMatrix {
                     Ok(_) => Ok(()),
                     Err(err) => Err(ErrorResponse::new(
                         ErrorResponseType::Connection,
-                        format!("Unable to post message to matrix after re-login: {}", err),
+                        format!("Unable to post message to matrix after re-login: {err}"),
                     )),
                 }
             }

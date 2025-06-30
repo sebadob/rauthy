@@ -32,7 +32,7 @@ impl Display for FrontendAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             FrontendAction::Refresh => write!(f, "Refresh"),
-            FrontendAction::MfaLogin(s) => write!(f, "MfaLogin {}", s),
+            FrontendAction::MfaLogin(s) => write!(f, "MfaLogin {s}"),
             FrontendAction::None => write!(f, "None"),
         }
     }
@@ -167,10 +167,16 @@ impl HtmlTemplate {
                 );
 
                 let user_id = session
-                    .expect("To make the tpl_password_reset work automatically in local dev, you need to be logged in")
+                    .expect(
+                        "To make the tpl_password_reset work automatically in local dev, \
+                    you need to be logged in",
+                    )
                     .user_id
                     .clone()
-                    .expect("To make the tpl_password_reset work automatically in local dev, you need to be logged in");
+                    .expect(
+                        "To make the tpl_password_reset work automatically in local dev, \
+                    you need to be logged in",
+                    );
                 let user = User::find(user_id).await?;
 
                 MagicLink::delete_all_pwd_reset_for_user(user.id.clone()).await?;

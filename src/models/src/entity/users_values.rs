@@ -34,7 +34,7 @@ impl From<tokio_postgres::Row> for UserValues {
 impl UserValues {
     #[inline(always)]
     fn cache_idx(user_id: &str) -> String {
-        format!("{}_{}", IDX_USERS_VALUES, user_id)
+        format!("{IDX_USERS_VALUES}_{user_id}")
     }
 
     pub async fn find(user_id: &str) -> Result<Option<Self>, ErrorResponse> {

@@ -43,10 +43,10 @@ pub async fn sessions_cleanup() {
 
         if is_hiqlite() {
             if let Err(err) = DB::hql().execute(sql, params!(exp, timeout)).await {
-                error!("Session Cleanup Error: {:?}", err)
+                error!(?err, "Session Cleanup")
             }
         } else if let Err(err) = DB::pg_execute(sql, &[&exp, &timeout]).await {
-            error!("Session Cleanup Error: {:?}", err)
+            error!(?err, "Session Cleanup")
         }
 
         // For some reason, the interval could `.tick()` multiple times,

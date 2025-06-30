@@ -188,8 +188,8 @@ impl ClientScim {
 
     fn url_groups(&self, start_index: usize, count: usize) -> String {
         format!(
-            "{}/Groups?startIndex={}&count={}",
-            self.base_uri, start_index, count
+            "{}/Groups?startIndex={start_index}&count={count}",
+            self.base_uri
         )
     }
 
@@ -222,8 +222,9 @@ impl ClientScim {
                 true
             } else {
                 debug!(
-                    "user '{}' has no matching group sync prefix '{}' for SCIM client '{}'",
-                    user.email, prefix, self.client_id
+                    user.email,
+                    self.client_id,
+                    "user has no matching group sync prefix '{prefix}' for SCIM client",
                 );
                 false
             }
@@ -250,7 +251,7 @@ impl ClientScim {
         task::spawn(async move {
             let mut groups_remote = HashMap::with_capacity(groups.len());
             if let Err(err) = self.sync_users(None, &groups, &mut groups_remote).await {
-                error!("{}", err);
+                error!(?err);
             }
         });
 
@@ -264,8 +265,8 @@ impl ClientScim {
         match self.sync_groups_exec().await {
             Ok(_) => Ok(()),
             Err(err) => {
-                let err = format!("Error during sync groups: {}", err);
-                error!("{}", err);
+                let err = format!("Error during sync groups: {err:?}");
+                error!(err);
 
                 FailedScimTask::upsert(&ScimAction::GroupsSync, &self.client_id).await?;
 
@@ -291,7 +292,7 @@ impl ClientScim {
                 let err = res.json::<ScimError>().await?;
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Scim,
-                    format!("SCIM GET /Groups error: {:?}", err),
+                    format!("SCIM GET /Groups error: {err:?}"),
                 ));
             }
 
@@ -353,8 +354,9 @@ impl ClientScim {
                     self.update_group(local, remote, false).await?;
                 } else if RauthyConfig::get().vars.scim.sync_delete_groups {
                     info!(
-                        "Deleting group {:?} on SCIM client {}",
-                        remote, self.client_id
+                        remote_group = ?remote,
+                        scim_client = self.client_id,
+                        "Deleting group on SCIM client",
                     );
                     self.delete_group(local, Some(remote)).await?;
                 } else {
@@ -445,12 +447,12 @@ impl ClientScim {
             }
         } else {
             let err = res.json::<ScimError>().await?;
-            error!("{:?}", err);
+            error!(?err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
-                    "Error getting group from SCIM client {}: {:?}",
-                    self.client_id, err
+                    "Error getting group from SCIM client {}: {err:?}",
+                    self.client_id
                 ),
             ))
         }
@@ -471,8 +473,9 @@ impl ClientScim {
             if is_prefix_match {
                 if let Err(err) = self.update_group(group, remote, !is_prefix_match).await {
                     error!(
-                        "Error during create group for SCIM client {}: {:?}",
-                        self.client_id, err
+                        self.client_id,
+                        ?err,
+                        "Error during create group for SCIM client",
                     );
                     FailedScimTask::upsert(&ScimAction::GroupCreateUpdate(gid), &self.client_id)
                         .await?;
@@ -482,8 +485,9 @@ impl ClientScim {
             }
         } else if let Err(err) = self.create_group(group).await {
             error!(
-                "Error during update group for SCIM client {}: {:?}",
-                self.client_id, err
+                self.client_id,
+                ?err,
+                "Error during update group for SCIM client",
             );
             FailedScimTask::upsert(&ScimAction::GroupCreateUpdate(gid), &self.client_id).await?;
         };
@@ -502,7 +506,7 @@ impl ClientScim {
             display_name: group.name,
             ..Default::default()
         };
-        debug!("Creating SCIM group on remote with payload: {:?}", payload);
+        debug!(?payload, "Creating SCIM group on remote");
         let json = serde_json::to_string(&payload)?;
         let url = format!("{}/Groups", self.base_uri);
         let res = http_client()
@@ -532,8 +536,8 @@ impl ClientScim {
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
-                    "SCIM client {} group creation failed: {:?}",
-                    self.client_id, err
+                    "SCIM client {} group creation failed: {err:?}",
+                    self.client_id
                 ),
             ))
         }
@@ -557,7 +561,7 @@ impl ClientScim {
                 "Remote SCIM group without an ID",
             ));
         };
-        let url = format!("{}/Groups/{}", self.base_uri, remote_id);
+        let url = format!("{}/Groups/{remote_id}", self.base_uri);
 
         // let mut value_replace = HashMap::with_capacity(2);
         // if remove_ext_id_link {
@@ -620,8 +624,8 @@ impl ClientScim {
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
-                    "SCIM client {} group update failed: {:?}",
-                    self.client_id, err
+                    "SCIM client {} group update failed: {err:?}",
+                    self.client_id
                 ),
             ))
         }
@@ -635,8 +639,9 @@ impl ClientScim {
         let gid = group.id.clone();
         if let Err(err) = self.delete_group_exec(group, remote_group).await {
             error!(
-                "Error during delete group for SCIM client {}: {:?}",
-                self.client_id, err
+                scim_client = self.client_id,
+                ?err,
+                "Error during delete group for SCIM client",
             );
             FailedScimTask::upsert(&ScimAction::GroupDelete(gid), &self.client_id).await?;
         }
@@ -669,7 +674,7 @@ impl ClientScim {
                 "Remote SCIM group without an ID",
             ));
         };
-        let url = format!("{}/Groups/{}", self.base_uri, remote_id);
+        let url = format!("{}/Groups/{remote_id}", self.base_uri);
 
         let res = http_client()
             .delete(url)
@@ -683,8 +688,8 @@ impl ClientScim {
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
-                    "Error deleting group on SCIM client {}: {:?}",
-                    self.client_id, err
+                    "Error deleting group on SCIM client {}: {err:?}",
+                    self.client_id
                 ),
             ))
         }
@@ -700,15 +705,15 @@ impl ClientScim {
         old_email: Option<&str>,
     ) -> Result<Option<ScimUser>, ErrorResponse> {
         let url = format!(
-            "{}/Users?filter=externalId%20eq%20%22{}%22",
-            self.base_uri, user_id
+            "{}/Users?filter=externalId%20eq%20%22{user_id}%22",
+            self.base_uri
         );
         match self.get_user_with(user_id, user_email, url).await? {
             None => {
                 let email = old_email.unwrap_or(user_email);
                 let url = format!(
-                    "{}/Users?filter=userName%20eq%20%22{}%22",
-                    self.base_uri, email
+                    "{}/Users?filter=userName%20eq%20%22{email}%22",
+                    self.base_uri
                 );
                 self.get_user_with(user_id, user_email, url).await
             }
@@ -739,8 +744,9 @@ impl ClientScim {
                         if let Some(ext_id) = &remote.external_id {
                             if ext_id != user_id {
                                 let err = format!(
-                                    "Error for SCIM client {} with user {}: User has an external ID which does not match ours",
-                                    self.client_id, user_email
+                                    "Error for SCIM client {} with user {user_email}: User has an \
+                                    external ID which does not match ours",
+                                    self.client_id
                                 );
                                 error!("{}", err);
                                 return Err(ErrorResponse::new(ErrorResponseType::Scim, err));
@@ -763,8 +769,8 @@ impl ClientScim {
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
-                    "Error getting user from SCIM client {}: {:?}",
-                    self.client_id, err
+                    "Error getting user from SCIM client {}: {err:?}",
+                    self.client_id
                 ),
             ))
         }
@@ -785,8 +791,8 @@ impl ClientScim {
         {
             Ok(_) => Ok(()),
             Err(err) => {
-                let err = format!("Error during sync users: {}", err);
-                error!("{}", err);
+                let err = format!("Error during sync users: {err}");
+                error!(err);
 
                 FailedScimTask::upsert(&ScimAction::UsersSync(last_created_ts), &self.client_id)
                     .await?;
@@ -809,7 +815,7 @@ impl ClientScim {
         let mut users;
         loop {
             users = User::find_for_scim_sync(*last_created_ts, limit).await?;
-            debug!("Users count for SCIM update: {:?}", users.len());
+            debug!(users_count = users.len(), "Users count for SCIM update");
             if users.is_empty() {
                 break;
             }
@@ -844,8 +850,8 @@ impl ClientScim {
                     }
                     Err(err) => {
                         error!(
-                            "Error during sync users for SCIM client {}: {:?}",
-                            self.client_id, err.message
+                            self.client_id,
+                            ?err.message, "Error during sync users for SCIM client",
                         );
                         return Err(err);
                     }
@@ -898,8 +904,10 @@ impl ClientScim {
                     .await
                 {
                     error!(
-                        "Error during update user {} for SCIM client {}: {:?}",
-                        user.id, client_scim.client_id, err
+                        user.id,
+                        client_scim.client_id,
+                        ?err,
+                        "Error during update SCIM user",
                     );
                     FailedScimTask::upsert(
                         &ScimAction::UserCreateUpdate(user.id.clone()),
@@ -998,8 +1006,8 @@ impl ClientScim {
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
-                    "Error creating user with SCIM client {}: {:?}",
-                    self.client_id, err
+                    "Error creating user with SCIM client {}: {err:?}",
+                    self.client_id
                 ),
             ))
         }
@@ -1054,8 +1062,8 @@ impl ClientScim {
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
-                    "Error updating user with SCIM client {}: {:?}",
-                    self.client_id, err
+                    "Error updating user with SCIM client {}: {err:?}",
+                    self.client_id
                 ),
             ))
         }
@@ -1065,8 +1073,10 @@ impl ClientScim {
         let user_id = user.id.clone();
         if let Err(err) = self.delete_user_exec(user).await {
             error!(
-                "Error during delete user {} for SCIM client {}: {:?}",
-                user_id, self.client_id, err
+                user_id,
+                scim_client = self.client_id,
+                ?err,
+                "Error during delete SCIM user",
             );
             FailedScimTask::upsert(&ScimAction::UserDelete(user_id), &self.client_id).await?;
         }
@@ -1088,7 +1098,7 @@ impl ClientScim {
                 "Remote SCIM user without an ID",
             ));
         };
-        let url = format!("{}/Users/{}", self.base_uri, remote_id);
+        let url = format!("{}/Users/{remote_id}", self.base_uri);
 
         let res = http_client()
             .delete(url)
@@ -1102,8 +1112,8 @@ impl ClientScim {
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
-                    "Error deleting user on SCIM client {}: {:?}",
-                    self.client_id, err
+                    "Error deleting user on SCIM client {}: {err:?}",
+                    self.client_id
                 ),
             ))
         }
@@ -1128,28 +1138,26 @@ impl ClientScim {
             None => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Scim,
-                    format!("empty remote user id for SCIM user {:?}", user_remote),
+                    format!("empty remote user id for SCIM user {user_remote:?}"),
                 ));
             }
             Some(id) => id,
         };
         let mut user_groups_remote = user_remote.groups.unwrap_or_default();
-        debug!("user_groups_local: {:?}", user_groups_local);
-        debug!("user_groups_remote: {:?}", user_groups_remote);
+        debug!(?user_groups_local);
+        debug!(?user_groups_remote);
 
         if !unlink_all_groups {
             while let Some(expected_name) = user_groups_local.pop() {
                 debug!(
-                    "Checking for local group '{}' in remote groups: {:?}",
-                    expected_name, user_groups_remote
+                    "Checking for local group '{expected_name}' in remote groups: {user_groups_remote:?}"
                 );
                 let pos = user_groups_remote
                     .iter()
                     .position(|g| g.display.as_deref() == Some(expected_name.as_str()));
                 if let Some(pos) = pos {
                     debug!(
-                        "Found matching local - remote group: {} - nothing left to do",
-                        expected_name
+                        "Found matching local - remote group: {expected_name} - nothing left to do"
                     );
                     user_groups_remote.swap_remove(pos);
                     continue;
@@ -1158,8 +1166,8 @@ impl ClientScim {
                 let group_remote = match groups_remote.get(&expected_name) {
                     None => {
                         debug!(
-                            "Remote group {} does not exist yet or has no `externalId` mapping",
-                            expected_name
+                            "Remote group {expected_name} does not exist yet or has no `externalId` \
+                            mapping"
                         );
                         // Will happen, if the ScimGroup is needed for the first time, since the map
                         // will be empty at first. We need to fetch or create it and make sure it exists
@@ -1167,8 +1175,8 @@ impl ClientScim {
                         let group_local = groups_local.iter().find(|g| g.name == expected_name);
                         if group_local.is_none() {
                             error!(
-                                "Group {} does not exist in local database but is mapped to a user - this should never happen",
-                                expected_name
+                                "Group {expected_name} does not exist in local database but is \
+                                mapped to a user - this should never happen"
                             );
                             // do not return, try to execute as many mappings as possible
                             continue;
@@ -1180,8 +1188,8 @@ impl ClientScim {
                         }
                         if remote.is_none() {
                             error!(
-                                "SCIM group {} does not exist on Service Provider even after creation - this should never happen",
-                                expected_name
+                                "SCIM group {expected_name} does not exist on Service Provider even \
+                                 after creation - this should never happen"
                             );
                             // do not return, try to execute as many mappings as possible
                             continue;
@@ -1202,7 +1210,7 @@ impl ClientScim {
                     );
                     continue;
                 }
-                let url = format!("{}/Groups/{}", self.base_uri, remote_group_id);
+                let url = format!("{}/Groups/{remote_group_id}", self.base_uri);
 
                 // Same situation as for group patching. This "ugly" way of json creation is a pretty
                 // big efficiency gain, and we avoid many unnecessary allocations, since we have a
@@ -1210,8 +1218,8 @@ impl ClientScim {
                 let json_1 = "{\"schemas\":[\"urn:ietf:params:scim:api:messages:2.0:PatchOp\"],\"Operations\":[{\"op\":\"add\",\"path\":\"members\",\"value\":[{\"value\":\"";
                 let json_2 = "\",\"display\":\"";
                 let json_3 = "\"}]}]}";
-                let json = format!("{json_1}{}{json_2}{}{json_3}", user_id_remote, user_email);
-                debug!("Sending PatchOp for Group {}:\n{}", url, json);
+                let json = format!("{json_1}{user_id_remote}{json_2}{user_email}{json_3}");
+                debug!("Sending PatchOp for Group {url}:\n{json}");
 
                 let res = http_client()
                     .patch(url)
@@ -1222,11 +1230,12 @@ impl ClientScim {
                     .send()
                     .await?;
                 if !res.status().is_success() {
-                    debug!("SCIM PatchOp Error Response: {:?}", res);
+                    debug!(?res, "SCIM PatchOp Error");
                     let err = res.json::<ScimError>().await?;
                     error!(
-                        "Error adding Group assignment for SCIM client {}: {:?}",
-                        self.client_id, err
+                        self.client_id,
+                        ?err,
+                        "Error adding Group assignment for SCIM client",
                     );
                 }
             }
@@ -1239,7 +1248,7 @@ impl ClientScim {
         for group_remote in user_groups_remote {
             let json_1 = "{\"schemas\":[\"urn:ietf:params:scim:api:messages:2.0:PatchOp\"],\"Operations\":[{\"op\":\"remove\",\"path\":\"members\",\"value\":[{\"value\":\"";
             let json_2 = "\"}]}]}";
-            let json = format!("{json_1}{}{json_2}", user_id_remote);
+            let json = format!("{json_1}{user_id_remote}{json_2}");
 
             let url = format!("{}/Groups/{}", self.base_uri, group_remote.value);
             let res = http_client()
@@ -1252,10 +1261,7 @@ impl ClientScim {
                 .await?;
             if !res.status().is_success() {
                 let err = res.json::<ScimError>().await?;
-                error!(
-                    "Error removing Group assignment for SCIM client {}: {:?}",
-                    self.client_id, err
-                );
+                error!(self.client_id, ?err, "Error removing SCIM Group assignment",);
             }
         }
 

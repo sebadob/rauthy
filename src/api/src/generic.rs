@@ -42,7 +42,7 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
         .iter()
         .map(|v| {
                 if !["en", "de", "zhhans", "ko"].contains(&v.as_ref()) {
-                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de zhhans ko\nfound: {}", v);
+                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de zhhans ko\nfound: {v}");
                 }
                 Language::from(v.as_ref()).into()
         })
@@ -56,8 +56,7 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
         .map(|v| {
             if !["en", "de", "zhhans", "ko"].contains(&v.as_ref()) {
                 panic!(
-                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de zhhans ko\nfound: {}",
-                    v
+                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de zhhans ko\nfound: {v}",
                 );
             }
             Language::from(v.as_ref()).into()
@@ -560,7 +559,7 @@ pub async fn get_whoami(req: HttpRequest) -> String {
         let ip = real_ip_from_req(&req)
             .map(|ip| ip.to_string())
             .unwrap_or_default();
-        let _ = writeln!(s, "{}\n", ip);
+        let _ = writeln!(s, "{ip}\n");
 
         for (k, v) in req.headers() {
             let key = k.as_str();
@@ -569,7 +568,7 @@ pub async fn get_whoami(req: HttpRequest) -> String {
             } else {
                 v.to_str().unwrap_or_default()
             };
-            let _ = writeln!(s, "{}: {}, ", key, value);
+            let _ = writeln!(s, "{key}: {value}, ");
         }
 
         s

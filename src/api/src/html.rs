@@ -19,9 +19,9 @@ pub async fn get_static_assets(
         if path.ends_with(".png") || path.ends_with(".webp") || path.ends_with(".jpg") {
             (Cow::from(path), "none")
         } else if accept_encoding.contains(&"br".parse().unwrap()) {
-            (Cow::from(format!("{}.br", path)), "br")
+            (Cow::from(format!("{path}.br")), "br")
         } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
-            (Cow::from(format!("{}.gz", path)), "gzip")
+            (Cow::from(format!("{path}.gz")), "gzip")
         } else {
             (Cow::from(path), "none")
         };

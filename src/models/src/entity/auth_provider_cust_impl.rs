@@ -34,18 +34,18 @@ pub async fn get_github_private_email(
 
     let res = http_client()
         .get("https://api.github.com/user/emails")
-        .header(AUTHORIZATION, format!("Bearer {}", access_token))
+        .header(AUTHORIZATION, format!("Bearer {access_token}"))
         .header(ACCEPT, APPLICATION_JSON)
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await?;
 
     let status = res.status().as_u16();
-    debug!("GET /user/emails status: {}\n{:?}", status, res);
+    debug!("GET /user/emails status: {status}\n{res:?}");
 
     if status < 300 {
         let mut emails = res.json::<Vec<GithubEmailPrivateResponse>>().await?;
-        debug!("GET /user/emails status: {}", status);
+        debug!("GET /user/emails status: {status}");
 
         if emails.len() == 1 {
             let email = emails.swap_remove(0);
@@ -72,7 +72,7 @@ pub async fn get_github_private_email(
         let text = res.text().await?;
         Err(ErrorResponse::new(
             ErrorResponseType::Connection,
-            format!("Error during User E-Mails lookup: {}", text),
+            format!("Error during User E-Mails lookup: {text}"),
         ))
     }
 }

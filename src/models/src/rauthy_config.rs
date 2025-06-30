@@ -49,7 +49,7 @@ impl RauthyConfig {
         let (vars, node_config) = Vars::load(config_file).await;
         vars.validate();
         if let Err(err) = node_config.is_valid() {
-            panic!("Invalid `[cluster]` config: {}", err);
+            panic!("Invalid `[cluster]` config: {err}");
         }
 
         let listen_scheme = match vars.server.scheme.as_ref() {
@@ -70,8 +70,8 @@ impl RauthyConfig {
             "http_https" => {
                 let port = format!("{{{}|{}}}", vars.server.port_http, vars.server.port_https);
                 info!(
-                    "Listen URL: {{http|https}}://{}:{}",
-                    vars.server.listen_address, port
+                    "Listen URL: {{http|https}}://{}:{port}",
+                    vars.server.listen_address
                 );
                 ListenScheme::HttpHttps
             }
@@ -99,7 +99,7 @@ impl RauthyConfig {
             None,
         )
         .expect("Unable to build Argon2id params, check the values in the [hashing] section");
-        debug!("Argon2id Params: {:?}", argon2_params);
+        debug!("Argon2id Params: {argon2_params:?}");
 
         #[cfg(target_os = "windows")]
         let is_https = matches!(listen_scheme, ListenScheme::HttpHttps | ListenScheme::Https)
@@ -110,8 +110,8 @@ impl RauthyConfig {
             ListenScheme::HttpHttps | ListenScheme::Https | ListenScheme::UnixHttps
         ) || vars.server.proxy_mode;
         let issuer_scheme = if is_https { "https" } else { "http" };
-        let issuer = format!("{}://{}/auth/v1", issuer_scheme, vars.server.pub_url);
-        debug!("Issuer: {}", issuer);
+        let issuer = format!("{issuer_scheme}://{}/auth/v1", vars.server.pub_url);
+        debug!("Issuer: {issuer}");
 
         let Ok(log_level_access) = LogLevelAccess::from_str(&vars.logging.level_access) else {
             panic!(
@@ -143,7 +143,7 @@ impl RauthyConfig {
             } else {
                 pub_url
             };
-            format!("{}://{}/auth/v1/providers/callback", scheme, pub_url)
+            format!("{scheme}://{pub_url}/auth/v1/providers/callback")
         };
         let provider_callback_uri_encoded = provider_callback_uri
             .replace(':', "%3A")
@@ -168,7 +168,7 @@ impl RauthyConfig {
             } else {
                 "https"
             };
-            format!("{}://{}", scheme, pub_url)
+            format!("{scheme}://{pub_url}")
         };
 
         let rp_origin = webauthn_rs::prelude::Url::parse(&vars.webauthn.rp_origin)
@@ -638,7 +638,7 @@ impl Vars {
         let mut slf = Self::default();
 
         let Ok(config) = fs::read_to_string(path_config).await else {
-            panic!("Cannot read config file from {}", path_config);
+            panic!("Cannot read config file from {path_config}");
         };
 
         // Note: these inner parsers are very verbose, but they allow the upfront memory allocation
@@ -1667,7 +1667,7 @@ impl Vars {
         match NodeConfig::from_toml_table(table, "cluster", Some(enc_keys)).await {
             Ok(config) => config,
             Err(err) => {
-                panic!("Error parsing `[cluster]` section: {:?}", err);
+                panic!("Error parsing `[cluster]` section: {err:?}");
             }
         }
     }
@@ -2760,20 +2760,20 @@ fn t_str_vec(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> O
 
 fn t_table(map: &mut toml::Table, key: &str) -> Option<toml::Table> {
     let Value::Table(t) = map.remove(key)? else {
-        panic!("Expected type `Table` for {}", key)
+        panic!("Expected type `Table` for {key}")
     };
     Some(t)
 }
 
 #[inline]
 fn err_env(var_name: &str, typ: &str) -> String {
-    format!("Cannot parse {} as `{}`", var_name, typ)
+    format!("Cannot parse {var_name} as `{typ}`")
 }
 
 #[inline]
 fn err_t(key: &str, parent: &str, typ: &str) -> String {
     let sep = if parent.is_empty() { "" } else { "." };
-    format!("Expected type `{}` for {}{}{}", typ, parent, sep, key)
+    format!("Expected type `{typ}` for {parent}{sep}{key}")
 }
 
 // #[cfg(test)]

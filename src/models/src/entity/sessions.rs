@@ -460,7 +460,7 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
         q: &str,
         limit: i64,
     ) -> Result<Vec<Self>, ErrorResponse> {
-        let q = format!("%{}%", q);
+        let q = format!("%{q}%");
 
         let size_hint = max(limit as usize, 1);
 
@@ -703,8 +703,10 @@ impl Session {
             }
         } else {
             warn!(
-                "Invalid access for session {} / {:?} with different IP: {:?}",
-                self.id, session_ip, remote_ip,
+                session_id = self.id,
+                ?session_ip,
+                ?remote_ip,
+                "Invalid access for session",
             );
             return false;
         }
@@ -789,7 +791,7 @@ pub fn get_header_value<'a>(
     let res = req.headers().get(val).ok_or_else(|| {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            format!("Missing header value '{}'", val),
+            format!("Missing header value '{val}'"),
         )
     })?;
     Ok(res)

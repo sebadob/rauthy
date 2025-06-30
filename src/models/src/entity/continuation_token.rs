@@ -31,7 +31,7 @@ impl TryFrom<&str> for ContinuationToken {
         let ts = i64::from_str(ts).map_err(|err| {
             ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!("timestamp str cannot be parsed into i64: {:?}", err),
+                format!("timestamp str cannot be parsed into i64: {err:?}"),
             )
         })?;
 

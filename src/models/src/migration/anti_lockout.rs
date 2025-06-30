@@ -19,15 +19,15 @@ pub async fn anti_lockout() -> Result<(), ErrorResponse> {
             .split_once(':')
             .expect("PUB_URL must have a port");
         let origin = if ip != "localhost" {
-            format!("https://{}:5173", ip)
+            format!("https://{ip}:5173")
         } else {
             "http://localhost:5173".to_string()
         };
 
         (
             format!(
-                "{issuer}/oidc/callback,http://localhost:5173/auth/v1/oidc/callback,https://{}:5173/auth/v1/oidc/callback",
-                ip
+                "{issuer}/oidc/callback,http://localhost:5173/auth/v1/oidc/callback,\
+                https://{ip}:5173/auth/v1/oidc/callback"
             ),
             Some(origin),
         )
@@ -60,7 +60,7 @@ pub async fn anti_lockout() -> Result<(), ErrorResponse> {
         backchannel_logout_uri: None,
         restrict_group_prefix: None,
     };
-    debug!("Rauthy client anti-lockout: {:?}", rauthy);
+    debug!(client = ?rauthy, "Rauthy client anti-lockout");
 
     // we are using a txn h ere to be able to re-use the already written update queries for the client
     if is_hiqlite() {

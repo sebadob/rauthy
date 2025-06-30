@@ -43,24 +43,21 @@ async fn check_app_version(last_version_notification: &mut Option<Version>) {
     match LatestAppVersion::lookup().await {
         Ok((latest_version, url)) => {
             if let Err(err) = LatestAppVersion::upsert(latest_version.clone(), url.clone()).await {
-                error!("Inserting LatestAppVersion into database: {:?}", err);
+                error!(?err, "Inserting LatestAppVersion into database");
             }
 
             let this_version = Version::parse(RAUTHY_VERSION).unwrap();
 
             if latest_version > this_version && latest_version.pre.is_empty() {
                 if last_version_notification.as_ref() == Some(&latest_version) {
-                    debug!(
-                        "Notified about version {} already - skipping it",
-                        latest_version
-                    );
+                    debug!("Notified about version {latest_version} already - skipping it");
                 } else {
-                    info!("A new Rauthy App Version is available: {}", latest_version);
+                    info!("A new Rauthy App Version is available: {latest_version}");
 
                     if let Err(err) =
                         LatestAppVersion::upsert(latest_version.clone(), url.clone()).await
                     {
-                        error!("Saving LatestAppVersion into DB: {:?}", err);
+                        error!(?err, "Error saving LatestAppVersion into DB");
                     }
 
                     RauthyConfig::get()
@@ -77,7 +74,7 @@ async fn check_app_version(last_version_notification: &mut Option<Version>) {
         }
 
         Err(err) => {
-            error!("LatestAppVersion::lookup(): {:?}", err);
+            error!(?err, "LatestAppVersion::lookup()");
         }
     };
 }

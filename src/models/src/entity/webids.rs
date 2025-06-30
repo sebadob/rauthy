@@ -33,15 +33,14 @@ impl WebId {
     #[inline]
     pub fn resolve_webid_uri(user_id: &str) -> String {
         format!(
-            "{}/auth/{}/profile#me",
-            RauthyConfig::get().pub_url_with_scheme,
-            user_id
+            "{}/auth/{user_id}/profile#me",
+            RauthyConfig::get().pub_url_with_scheme
         )
     }
 
     #[inline]
     pub fn resolve_webid_card_uri(user_id: &str, pub_url: &str) -> String {
-        format!("{}/auth/{}/profile", pub_url, user_id)
+        format!("{pub_url}/auth/{user_id}/profile")
     }
 
     /// Returns the WebId from the database, if it exists, and a default otherwise.
@@ -119,7 +118,7 @@ SET custom_triples = $2, expose_email = $3"#;
 impl WebId {
     #[inline]
     fn cache_idx(user_id: &str) -> String {
-        format!("web_id_{}", user_id)
+        format!("web_id_{user_id}")
     }
 
     pub fn try_new(

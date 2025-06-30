@@ -74,15 +74,12 @@ async fn execute(cleanup_after_secs: Option<u64>) -> Result<(), ErrorResponse> {
             let expired_since_secs = (exp_ts - now).unsigned_abs();
             if expired_since_secs > secs {
                 info!(
-                    "Auto cleanup for user {} after being expired for {} minutes",
                     user.id,
-                    expired_since_secs / 60
+                    "Auto cleanup for user after being expired for {} minutes",
+                    expired_since_secs / 60,
                 );
                 if let Err(err) = user.delete().await {
-                    error!(
-                        "Error during auto cleanup - deleting user {}: {:?}",
-                        user.id, err
-                    );
+                    error!(user.id, ?err, "auto cleanup - deleting user",);
                 }
             }
         }

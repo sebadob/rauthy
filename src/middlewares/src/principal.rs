@@ -75,15 +75,6 @@ where
                 principal.session = Some(s);
             }
 
-            // TODO this would work and reject docs requests with __Host- cookies,
-            // but not with secure + path -> session would not exist
-            // if req.path().starts_with("/docs/") && !principal.is_admin() {
-            //     return Err(Error::from(ErrorResponse::new(
-            //         ErrorResponseType::Unauthorized,
-            //         "Only Admins are allowed to see the API documentation",
-            //     )));
-            // }
-
             req.extensions_mut().insert(principal);
 
             service.call(req).await
@@ -104,7 +95,7 @@ async fn get_api_key_from_headers(req: &ServiceRequest) -> Result<Option<ApiKey>
     } else {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Malformed 'Authorization' header".to_string(),
+            "Malformed 'Authorization' header",
         ));
     };
     let api_key_value = if k.ne(TOKEN_API_KEY) || k.is_empty() {
@@ -166,10 +157,7 @@ async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>
             }
         }
         Err(err) => {
-            debug!(
-                "ERROR: Could not lookup the session from the cookie: {:?}",
-                err
-            );
+            debug!(?err, "ERROR: Could not lookup the session from the cookie",);
             Ok(None)
         }
     }

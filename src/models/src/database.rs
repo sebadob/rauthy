@@ -165,15 +165,6 @@ impl DB {
             .create_timeout(Some(Duration::from_secs(10)))
             .recycle_timeout(Some(Duration::from_secs(3600)))
             .runtime(deadpool::Runtime::Tokio1)
-            // .post_create(Hook::async_fn(move |client, _| {
-            //     Box::pin(async move {
-            //         on_connect(client).await.unwrap();
-            //         // pg_pool::Test::prepare_find_all(client).await.unwrap();
-            //         // pg_pool::Test::prepare_find(client).await.unwrap();
-            //         // pg_pool::Test::prepare_insert(client).await.unwrap();
-            //         Ok(())
-            //     })
-            // }))
             .build()?;
 
         // check that we have a stable connection
@@ -217,7 +208,7 @@ impl DB {
                 .run_async(client.deref_mut().deref_mut())
                 .await
                 .expect("Error applying Postgres database migrations");
-            debug!("Database Migration Report: {:?}", report);
+            debug!(?report, "Database Migration Report");
         }
 
         // migrate dynamic DB data
@@ -253,11 +244,11 @@ impl DB {
 
                 if from.starts_with("sqlite:") {
                     if let Err(err) = db_migrate::migrate_from_sqlite(&from).await {
-                        panic!("Error during db migration: {:?}", err);
+                        panic!("Error during db migration: {err:?}");
                     }
                 } else if from.starts_with("postgres") {
                     if let Err(err) = db_migrate::migrate_from_postgres().await {
-                        panic!("Error during db migration: {:?}", err);
+                        panic!("Error during db migration: {err:?}");
                     }
                 } else {
                     panic!(
@@ -270,7 +261,7 @@ impl DB {
         }
 
         if let Err(err) = anti_lockout::anti_lockout().await {
-            error!("Error when applying anti-lockout check: {:?}", err);
+            error!(?err, "applying anti-lockout check");
         }
 
         // update the DbVersion after successful pool creation and migrations

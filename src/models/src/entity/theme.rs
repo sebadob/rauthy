@@ -36,10 +36,7 @@ impl From<hiqlite::Row<'_>> for ThemeCssFull {
             let dark = ThemeCss::from(row.get::<Vec<u8>>("dark").as_slice());
             (light, dark)
         } else {
-            error!(
-                "Invalid CSS version {} returned from database, using defaults",
-                version
-            );
+            error!("Invalid CSS version {version} returned from database, using defaults");
             (ThemeCss::default_light(), ThemeCss::default_dark())
         };
 
@@ -65,10 +62,7 @@ impl From<tokio_postgres::Row> for ThemeCssFull {
 
             (light, dark)
         } else {
-            error!(
-                "Invalid CSS version {} returned from database, using defaults",
-                version
-            );
+            error!("Invalid CSS version {version} returned from database, using defaults");
             (ThemeCss::default_light(), ThemeCss::default_dark())
         };
 
@@ -263,12 +257,12 @@ SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
 impl ThemeCssFull {
     #[inline]
     fn cache_key_br(client_id: &str) -> String {
-        format!("{}_theme_br", client_id)
+        format!("{client_id}_theme_br")
     }
 
     #[inline]
     fn cache_key_gzip(client_id: &str) -> String {
-        format!("{}_theme_gzip", client_id)
+        format!("{client_id}_theme_gzip")
     }
 
     pub async fn plain(client_id: String) -> Result<String, ErrorResponse> {

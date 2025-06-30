@@ -13,12 +13,12 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
     EncKeys::get_static_key(new_kid)?;
 
     let start = tokio::time::Instant::now();
-    info!("Starting secrets migration to key id: {}", new_kid);
+    info!("Starting secrets migration to key id: {new_kid}");
 
     let mut modified = 0;
 
     // migrate clients
-    info!("Starting client secrets migration to key id: {}", new_kid);
+    info!("Starting client secrets migration to key id: {new_kid}");
     let clients = Client::find_all()
         .await?
         .into_iter()
@@ -40,13 +40,13 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
         client.save().await?;
         modified += 1;
     }
-    info!("Finished clients secrets migration to key id: {}", new_kid);
+    info!("Finished clients secrets migration to key id: {new_kid}");
 
     // JWKS will just be rotated, which is better for security anyway
     JWKS::rotate().await?;
 
     // migrate ApiKey's
-    info!("Starting ApiKeys migration to key id: {}", new_kid);
+    info!("Starting ApiKeys migration to key id: {new_kid}");
     let api_keys = ApiKeyEntity::find_all()
         .await?
         .into_iter()
@@ -71,7 +71,7 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
         api_key.save().await?;
         modified += 1;
     }
-    info!("Finished ApiKeys migration to key id: {}", new_kid);
+    info!("Finished ApiKeys migration to key id: {new_kid}");
 
     // migrate auth providers
     let providers = AuthProvider::find_all().await?;
@@ -91,8 +91,8 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
             }
             Err(err) => {
                 error!(
-                    "Error decryption AuthProvider secret, this should never happen!\n{:?}",
-                    err
+                    ?err,
+                    "decrypting AuthProvider secret, this should never happen!",
                 );
             }
         }
@@ -103,10 +103,9 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
     );
 
     info!(
-        "Finished secrets migration to key id: {} after {} ms. Modified {} encryption's",
-        new_kid,
+        "Finished secrets migration to key id: {new_kid} after {} ms. Modified {modified} \
+        encryption's",
         start.elapsed().as_millis(),
-        modified,
     );
 
     Ok(())

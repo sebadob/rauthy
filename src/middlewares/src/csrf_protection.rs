@@ -80,7 +80,7 @@ where
                         .map(|h| h.to_str().unwrap_or_default())
                         .unwrap_or_default();
 
-                    debug!("sec-fetch-dest: {}, sec-fetch-mode: {}", dest, mode);
+                    debug!("sec-fetch-dest: {dest}, sec-fetch-mode: {mode}");
 
                     // allow images fetches like favicon
                     if dest == "image" && mode == "no-cors" {
@@ -100,8 +100,7 @@ where
 
                 let ip = real_ip_from_svc_req(&req)?;
                 warn!(
-                    "CSRF / Sec-Header violation from {} on path {}",
-                    ip,
+                    "CSRF / Sec-Header violation from {ip} on path {}",
                     req.path()
                 );
                 if RauthyConfig::get().vars.access.sec_header_block {

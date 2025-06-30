@@ -130,7 +130,7 @@ pub async fn post_authorize(
 
     let mut loc = format!("{}?code={}", req_data.redirect_uri, code.id);
     if let Some(state) = req_data.state {
-        write!(loc, "&state={}", state)?;
+        write!(loc, "&state={state}")?;
     };
 
     // check if we need to validate the 2nd factor
@@ -211,7 +211,7 @@ pub async fn post_authorize_refresh(
 
     // build location header
     let header_loc = if let Some(s) = req_data.state {
-        format!("{}?code={}&state={}", req_data.redirect_uri, code.id, s)
+        format!("{}?code={}&state={s}", req_data.redirect_uri, code.id)
     } else {
         format!("{}?code={}", req_data.redirect_uri, code.id)
     };

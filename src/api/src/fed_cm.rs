@@ -86,7 +86,7 @@ pub async fn get_fed_cm_client_meta(
     if &params.client_id == "rauthy" {
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("client-forbidden".to_string()),
-            "The 'rauthy' client is forbidden to be used with FedCM".to_string(),
+            "The 'rauthy' client is forbidden to be used with FedCM",
         ));
     }
 
@@ -94,7 +94,7 @@ pub async fn get_fed_cm_client_meta(
     if !client.enabled {
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
-            "This client has been disabled".to_string(),
+            "This client has been disabled",
         ));
     }
     let origin_header = client_origin_header(&req, &client)?;
@@ -161,7 +161,7 @@ pub async fn get_fed_cm_config(req: HttpRequest) -> Result<HttpResponse, ErrorRe
 pub async fn get_fed_client_config() -> HttpResponse {
     let pub_url_scheme = &RauthyConfig::get().pub_url_with_scheme;
     let config = EphemeralClientRequest {
-        client_id: format!("{}/auth/v1/fed_cm/client_config", pub_url_scheme),
+        client_id: format!("{pub_url_scheme}/auth/v1/fed_cm/client_config"),
         client_name: Some("Rauthy".to_string()),
         client_uri: Some(pub_url_scheme.clone()),
         contacts: RauthyConfig::get()
@@ -170,8 +170,8 @@ pub async fn get_fed_client_config() -> HttpResponse {
             .rauthy_admin_email
             .clone()
             .map(|e| vec![e]),
-        redirect_uris: vec![format!("{}/auth/v1/*", pub_url_scheme)],
-        post_logout_redirect_uris: Some(vec![format!("{}/auth/v1/*", pub_url_scheme)]),
+        redirect_uris: vec![format!("{pub_url_scheme}/auth/v1/*")],
+        post_logout_redirect_uris: Some(vec![format!("{pub_url_scheme}/auth/v1/*")]),
         grant_types: Some(vec![
             "authorization_code".to_string(),
             "refresh_token".to_string(),
@@ -254,7 +254,7 @@ pub async fn post_fed_cm_token(
     let client = match Client::find_maybe_ephemeral(payload.client_id).await {
         Ok(c) => c,
         Err(err) => {
-            error!("Error looking up maybe ephemeral client: {:?}", err);
+            error!(?err, "looking up maybe ephemeral client");
             return Err(err);
         }
     };
@@ -262,7 +262,7 @@ pub async fn post_fed_cm_token(
         debug!("client {} is disabled", client.id);
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
-            "This client has been disabled".to_string(),
+            "This client has been disabled",
         ));
     }
 
@@ -281,7 +281,7 @@ pub async fn post_fed_cm_token(
         );
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("invalid-user".to_string()),
-            "The `account_id` does not match the `user_id` from the active session".to_string(),
+            "The `account_id` does not match the `user_id` from the active session",
         ));
     }
 
@@ -339,7 +339,7 @@ fn is_fed_cm_enabled() -> Result<(), ErrorResponse> {
         error!("EXPERIMENTAL_FED_CM_ENABLE is not set");
         Err(ErrorResponse::new(
             ErrorResponseType::Internal,
-            "The FedCM API is disabled on this instance".to_string(),
+            "The FedCM API is disabled on this instance",
         ))
     }
 }
@@ -359,7 +359,7 @@ fn is_web_identity_fetch(req: &HttpRequest) -> Result<(), ErrorResponse> {
         warn!("`Sec-Fetch-Dest: webidentity` not set`");
         Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Expected header `Sec-Fetch-Dest: webidentity`".to_string(),
+            "Expected header `Sec-Fetch-Dest: webidentity`",
         ))
     }
 }
@@ -374,33 +374,27 @@ fn client_origin_header(
         .map(|v| v.to_str().unwrap_or_default())
         .ok_or_else(|| {
             debug!("Origin header is missing");
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Origin header is missing".to_string(),
-            )
+            ErrorResponse::new(ErrorResponseType::BadRequest, "Origin header is missing")
         })?;
     debug!("Origin header from request: {}", origin);
     let header = (
         header::ACCESS_CONTROL_ALLOW_ORIGIN,
-        HeaderValue::from_str(origin).unwrap(),
+        HeaderValue::from_str(origin)?,
     );
 
     if client.is_ephemeral() && client.id.starts_with(origin) {
-        debug!("The client is ephemeral and its ID matches the origin",);
+        debug!("The client is ephemeral and its ID matches the origin");
         return Ok(header);
     }
 
     if let Some(allowed_origins) = &client.allowed_origins {
         for ao in allowed_origins.split(',') {
-            debug!("Comparing Allowed Origin '{}' to origin '{}'", ao, origin);
+            debug!("Comparing Allowed Origin '{ao}' to origin '{origin}'");
             if (RauthyConfig::get().listen_scheme == ListenScheme::HttpHttps
                 && ao.ends_with(origin))
                 || ao.eq(origin)
             {
-                debug!(
-                    "Found matching allowed_origin '{}' for origin: '{}'",
-                    ao, origin
-                );
+                debug!("Found matching allowed_origin '{ao}' for origin: '{origin}'");
                 return Ok(header);
             }
         }
@@ -410,10 +404,7 @@ fn client_origin_header(
     // `redirect_uri`s
     for uri in client.redirect_uris.split(',') {
         if uri.starts_with(origin) {
-            debug!(
-                "Found matching redirect_uri '{}' for origin: '{}'",
-                uri, origin
-            );
+            debug!("Found matching redirect_uri '{uri}' for origin: '{origin}'");
             return Ok(header);
         }
     }
@@ -421,7 +412,7 @@ fn client_origin_header(
     debug!("No match found for allowed origin");
     Err(ErrorResponse::new(
         ErrorResponseType::Forbidden,
-        "The origin is not allowed for this client".to_string(),
+        "The origin is not allowed for this client",
     ))
 }
 

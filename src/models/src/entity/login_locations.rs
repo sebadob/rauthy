@@ -142,8 +142,8 @@ impl LoginLocation {
         task::spawn(async move {
             if let Err(err) = Self::background_check(user, ip, user_agent, location).await {
                 error!(
-                    "Error during LoginLocation::background_check(): {:?}",
-                    err.message
+                    ?err.message,
+                    "Error during LoginLocation::background_check()",
                 );
             }
         });
@@ -158,14 +158,14 @@ impl LoginLocation {
         location: Option<String>,
     ) -> Result<(), ErrorResponse> {
         if Self::find(user.id.clone(), ip).await?.is_some() {
-            debug!("Login from IP {} for user {} is known", ip, user.id);
+            debug!("Login from IP {ip} for user {} is known", user.id);
             Self::update_last_seen(user.id).await?;
             return Ok(());
         }
 
         info!(
-            "Login from new IP {} ({:?} / {}) for user {}",
-            ip, location, user_agent, user.email
+            "Login from new IP {ip} ({location:?} / {user_agent}) for user {}",
+            user.email
         );
 
         let slf = Self::insert(user.id.clone(), ip, user_agent, location).await?;

@@ -127,7 +127,7 @@ impl ForwardAuthSession {
             return if site == "none" || site == "same-origin" {
                 Ok(())
             } else {
-                debug!("sec-fetch-site forbidden: {}", site);
+                debug!(site, "sec-fetch-site forbidden");
                 Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "CORS requests forbidden",

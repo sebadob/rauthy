@@ -336,7 +336,7 @@ impl ApiDoc {
     pub fn build() -> openapi::OpenApi {
         let mut doc = Self::openapi();
 
-        doc.info = openapi::Info::new("Rauthy Single Sign-on", &format!("v{}", RAUTHY_VERSION));
+        doc.info = openapi::Info::new("Rauthy Single Sign-on", &format!("v{RAUTHY_VERSION}"));
 
         doc.external_docs = Some(ExternalDocs::new("https://sebadob.github.io/rauthy/"));
 
@@ -368,7 +368,7 @@ impl ApiDoc {
         };
 
         let pub_url = &RauthyConfig::get().vars.server.pub_url;
-        let url = format!("{}{}/auth/v1", scheme, pub_url);
+        let url = format!("{scheme}{pub_url}/auth/v1");
         doc.servers = Some(vec![Server::new(url)]);
 
         doc

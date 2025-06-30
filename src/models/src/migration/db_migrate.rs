@@ -49,7 +49,7 @@ where
         .map(|r| match r {
             Ok(t) => t,
             Err(err) => {
-                panic!("Error deserializing row from query\n{}\n{:?}", query, err);
+                panic!("Error deserializing row from query\n{query}\n{err:?}");
             }
         })
         .collect::<Vec<_>>())
