@@ -16,7 +16,6 @@ impl VaultConfig {
     pub async fn load_config() -> Result<String, Box<dyn Error>> {
         let vault_config_file = "vault.toml";
         let vault_conf = VaultConfig::build(vault_config_file).await?;
-        println!("{:?}", vault_conf.vault_source);
 
         let config_from_vault = vault_conf.vault_source.get_config().await?;
         let config = config_from_vault[&vault_conf.vault_source.config_key]
@@ -31,7 +30,6 @@ impl VaultConfig {
 
         if let Ok(cfg) = Self::load(config_file).await {
             vault_conf = cfg;
-            println!("{:?}", vault_conf.vault_source);
         }
 
         Ok(Self::load_from_env(vault_conf).await)
@@ -94,23 +92,23 @@ impl VaultConfig {
         self.vault_source.addr = table
             .remove("addr")
             .expect("missing in vault.toml: addr")
-            .to_string();
+            .as_str().unwrap().to_owned();
         self.vault_source.token = table
             .remove("token")
             .expect("missing in vault.toml: token")
-            .to_string();
+            .as_str().unwrap().to_owned();
         self.vault_source.mount = table
             .remove("mount")
             .expect("missing in vault.toml: mount")
-            .to_string();
+            .as_str().unwrap().to_owned();
         self.vault_source.path = table
             .remove("path")
             .expect("missing in vault.toml: path")
-            .to_string();
+            .as_str().unwrap().to_owned();
         self.vault_source.config_key = table
             .remove("config_key")
             .expect("missing in vault.toml: config_key")
-            .to_string();        
+            .as_str().unwrap().to_owned();        
 
         if let Ok(v) = env::var("VAULT_KV_VERSION") {
             if v == "1" {
@@ -147,7 +145,6 @@ impl Default for VaultConfig {
         }
     }
 }
-#[derive(Debug)]
 struct VaultSource {
     addr: String,
     token: String,
@@ -172,7 +169,7 @@ impl Default for VaultSource {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq)]
 enum KvVersion {
     V1 = 1,
     V2,
