@@ -21,7 +21,6 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::str::FromStr;
-use tracing::debug;
 use utoipa::ToSchema;
 
 pub enum AtHashAlg {
@@ -504,9 +503,7 @@ impl TokenSet {
 
             // if there was any custom mapping, we need the additional user attributes
             attrs = if !customs_access.is_empty() || !customs_id.is_empty() {
-                debug!("1");
                 let attrs = UserAttrValueEntity::find_for_user_with_defaults(&user.id).await?;
-                debug!("2");
                 let mut res = HashMap::with_capacity(attrs.len());
                 attrs.iter().for_each(|a| {
                     res.insert(a.key.clone(), a.value.clone());

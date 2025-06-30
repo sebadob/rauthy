@@ -58,7 +58,7 @@ impl MfaModToken {
 impl MfaModToken {
     #[inline]
     pub fn cache_idx(id: &str) -> String {
-        format!("{}{}", IDX_MFA_MOD, id)
+        format!("{IDX_MFA_MOD}{id}")
     }
 
     pub fn validate(&self, user_id: &str, ip: IpAddr) -> Result<(), ErrorResponse> {

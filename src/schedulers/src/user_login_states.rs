@@ -31,10 +31,10 @@ pub async fn user_login_states_cleanup() {
 
         if is_hiqlite() {
             if let Err(err) = DB::hql().execute(sql, params!(threshold)).await {
-                error!("User Login State Cleanup Error: {:?}", err)
+                error!(?err, "User Login State Cleanup")
             }
         } else if let Err(err) = DB::pg_execute(sql, &[&threshold]).await {
-            error!("User Login State Cleanup Error: {:?}", err)
+            error!(?err, "User Login State Cleanup")
         }
 
         // For some reason, the interval could `.tick()` multiple times,

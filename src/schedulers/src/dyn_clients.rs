@@ -51,7 +51,7 @@ pub async fn dyn_client_cleanup() {
         let clients: Vec<ClientDyn> = match clients_res {
             Ok(c) => c,
             Err(err) => {
-                error!("{}", err);
+                error!(error = err);
                 continue;
             }
         };
@@ -65,7 +65,7 @@ pub async fn dyn_client_cleanup() {
                 match Client::find(client.id).await {
                     Ok(c) => {
                         if let Err(err) = c.delete().await {
-                            error!("Error deleting unused client: {:?}", err);
+                            error!(?err, "deleting unused client");
                             continue;
                         }
 
@@ -74,8 +74,7 @@ pub async fn dyn_client_cleanup() {
                     Err(err) => {
                         error!(
                             "Client does not exist for ClientDyn when it should. This should never happen.\
-                        Please report this issue: {:?}",
-                            err
+                        Please report this issue: {err:?}"
                         );
                         continue;
                     }
@@ -84,7 +83,7 @@ pub async fn dyn_client_cleanup() {
         }
 
         if cleaned_up > 0 {
-            info!("Cleaned up {} unused dynamic clients", cleaned_up);
+            info!("Cleaned up {cleaned_up} unused dynamic clients");
         }
 
         // For some reason, the interval could `.tick()` multiple times,

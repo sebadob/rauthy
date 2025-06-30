@@ -88,8 +88,8 @@ impl Principal {
                 Err(_) => Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
                     format!(
-                        "Bad permissions for given ApiKey. Needed: {:?} / {:?}",
-                        access_group, access_rights,
+                        "Bad permissions for given ApiKey. Needed: {access_group:?} / \
+                        {access_rights:?}"
                     ),
                 )),
             }

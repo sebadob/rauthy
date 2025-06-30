@@ -72,7 +72,7 @@ impl Display for EventLevel {
             EventLevel::Warning => "WARNING ",
             EventLevel::Critical => "CRITICAL",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -396,7 +396,7 @@ impl From<&Event> for Notification {
             EventLevel::Critical => "🆘",
         };
         let prefix = RauthyConfig::get().vars.email.sub_prefix.as_ref();
-        let head = format!("{} {} - {}", icon, prefix, value.level.as_str());
+        let head = format!("{icon} {prefix} - {}", value.level.as_str());
 
         let d = DateTime::from_timestamp(value.timestamp / 1000, 0).unwrap_or_default();
         let row_1 = format!("{} {}", d.format("%Y/%m/%d %H:%M:%S"), value.typ);
@@ -635,7 +635,7 @@ impl Event {
             EventType::BackchannelLogoutFailed,
             None,
             Some(retries),
-            Some(format!("{} / {}", client_id, user_id)),
+            Some(format!("{client_id} / {user_id}")),
         )
     }
 
@@ -769,7 +769,7 @@ impl Event {
             EventType::BackchannelLogoutFailed,
             None,
             Some(retries),
-            Some(format!("{} / {:?}", client_id, action)),
+            Some(format!("{client_id} / {action:?}")),
         )
     }
 
@@ -887,10 +887,10 @@ impl Event {
         match RauthyConfig::get().tx_events.send_async(self).await {
             Ok(_) => Ok(()),
             Err(err) => {
-                error!("Event::send: {:?}", err);
+                error!(?err, "Event::send()");
                 Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
-                    format!("Error sending event internally: {:?}", err),
+                    format!("Error sending event internally: {err:?}"),
                 ))
             }
         }

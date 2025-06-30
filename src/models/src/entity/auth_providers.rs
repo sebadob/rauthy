@@ -497,7 +497,7 @@ WHERE id = $19"#;
 impl AuthProvider {
     #[inline(always)]
     pub fn cache_idx(id: &str) -> String {
-        format!("{}_{}", IDX_AUTH_PROVIDER, id)
+        format!("{IDX_AUTH_PROVIDER}_{id}")
     }
 
     fn cleanup_scope(scope: &str) -> String {
@@ -556,9 +556,9 @@ impl AuthProvider {
             Cow::from(url)
         } else if let Some(iss) = &payload.issuer {
             let url = if iss.ends_with('/') {
-                format!("{}.well-known/openid-configuration", iss)
+                format!("{iss}.well-known/openid-configuration")
             } else {
-                format!("{}/.well-known/openid-configuration", iss)
+                format!("{iss}/.well-known/openid-configuration")
             };
             Cow::from(url)
         } else {
@@ -571,7 +571,7 @@ impl AuthProvider {
             url
         } else {
             // we always assume https connections, if the scheme is not given
-            Cow::from(format!("https://{}", url))
+            Cow::from(format!("https://{url}"))
         };
 
         debug!("AuthProvider lookup to {}", config_url);
@@ -581,10 +581,7 @@ impl AuthProvider {
             let body = res.text().await?;
             return Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
-                format!(
-                    "HTTP {} when trying provider config lookup to {}: {}",
-                    config_url, status, body
-                ),
+                format!("HTTP {config_url} when trying provider config lookup to {status}: {body}"),
             ));
         }
 
@@ -593,10 +590,7 @@ impl AuthProvider {
                 // TODO we could make this more UX friendly in the future and return a link to the
                 // docs, when they exist
                 ErrorResponseType::BadRequest,
-                format!(
-                    "The provider does not support the mandatory openid-configuration: {}",
-                    err
-                ),
+                format!("The provider does not support the mandatory openid-configuration: {err}"),
             )
         })?;
 
@@ -1020,18 +1014,18 @@ impl AuthProviderCallback {
             .await?;
 
             let status = res.status().as_u16();
-            debug!("POST /token auth provider status: {}", status);
+            debug!("POST /token auth provider status: {status}");
 
             // return early if we got any error
             if !res.status().is_success() {
                 let err = match res.text().await {
                     Ok(body) => format!(
-                        "HTTP {} during POST {} for upstream auth provider '{}'\n{}",
-                        status, provider.token_endpoint, provider.client_id, body
+                        "HTTP {status} during POST {} for upstream auth provider '{}'\n{body}",
+                        provider.token_endpoint, provider.client_id
                     ),
                     Err(_) => format!(
-                        "HTTP {} during POST {} for upstream auth provider '{}' without any body",
-                        status, provider.token_endpoint, provider.client_id
+                        "HTTP {status} during POST {} for upstream auth provider '{}' without any body",
+                        provider.token_endpoint, provider.client_id
                     ),
                 };
                 error!("{}", err);
@@ -1042,21 +1036,20 @@ impl AuthProviderCallback {
                 Ok(ts) => ts,
                 Err(err) => {
                     let err = format!(
-                        "Deserializing /token response from auth provider {}: {}",
-                        provider.client_id, err
+                        "Deserializing /token response from auth provider {}: {err}",
+                        provider.client_id
                     );
-                    error!("{}", err);
+                    error!("{err}");
                     return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
                 }
             };
 
             if let Some(err) = ts.error {
                 let msg = format!(
-                    "/token request error: {}: {}",
-                    err,
+                    "/token request error: {err}: {}",
                     ts.error_description.unwrap_or_default()
                 );
-                error!("{}", msg);
+                error!("{msg}");
                 return Err(ErrorResponse::new(ErrorResponseType::Internal, msg));
             }
 
@@ -1072,13 +1065,13 @@ impl AuthProviderCallback {
                 // userinfo endpoint
                 let res = http_client()
                     .get(&provider.userinfo_endpoint)
-                    .header(AUTHORIZATION, format!("Bearer {}", access_token))
+                    .header(AUTHORIZATION, format!("Bearer {access_token}"))
                     .header(ACCEPT, APPLICATION_JSON)
                     .send()
                     .await?;
 
                 let status = res.status().as_u16();
-                debug!("GET /userinfo auth provider status: {}", status);
+                debug!("GET /userinfo auth provider status: {status}");
 
                 let res_bytes = res.bytes().await?;
                 let mut claims = AuthProviderIdClaims::try_from(res_bytes.as_bytes())?;
@@ -1091,7 +1084,7 @@ impl AuthProviderCallback {
                 claims.validate_update_user(&provider, &link_cookie).await?
             } else {
                 let err = "Neither `access_token` nor `id_token` existed";
-                error!("{}", err);
+                error!("{err}");
                 return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
             }
         };
@@ -1151,7 +1144,7 @@ impl AuthProviderCallback {
         // location header
         let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
         if let Some(state) = slf.req_state {
-            write!(loc, "&state={}", state)?;
+            write!(loc, "&state={state}")?;
         };
 
         let auth_step = if user.has_webauthn_enabled() {
@@ -1332,16 +1325,13 @@ impl AuthProviderIdClaims<'_> {
         let _header = parts.next().ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "incorrect ID did not contain claims".to_string(),
+                "incorrect ID did not contain claims",
             )
         })?;
         let claims = parts.next().ok_or_else(|| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "ID token was unsigned".to_string(),
-            )
+            ErrorResponse::new(ErrorResponseType::BadRequest, "ID token was unsigned")
         })?;
-        debug!("upstream ID token claims:\n{}", claims);
+        debug!("upstream ID token claims: {claims}");
         let json_bytes = base64_url_no_pad_decode(claims)?;
         Ok(json_bytes)
     }
@@ -1353,11 +1343,8 @@ impl AuthProviderIdClaims<'_> {
     ) -> Result<(User, ProviderMfaLogin), ErrorResponse> {
         if self.email.is_none() {
             let err = "No `email` in ID token claims. This is a mandatory claim";
-            error!("{}", err);
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                err.to_string(),
-            ));
+            error!("{err}");
+            return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
         }
 
         let claims_user_id_json = if let Some(sub) = &self.sub {
@@ -1390,10 +1377,7 @@ impl AuthProviderIdClaims<'_> {
 
         let user_opt = match User::find_by_federation(&provider.id, &claims_user_id).await {
             Ok(user) => {
-                debug!(
-                    "found already existing user by federation lookup: {:?}",
-                    user
-                );
+                debug!("found already existing user by federation lookup: {user:?}");
                 Some(user)
             }
             Err(_) => {
@@ -1413,7 +1397,7 @@ impl AuthProviderIdClaims<'_> {
                         if link.provider_id != provider.id {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "bad provider_id in link cookie".to_string(),
+                                "bad provider_id in link cookie",
                             ));
                         }
 
@@ -1423,7 +1407,7 @@ impl AuthProviderIdClaims<'_> {
                             // multiple accounts.
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "bad user_id in link cookie".to_string(),
+                                "bad user_id in link cookie",
                             ));
                         }
 
@@ -1431,7 +1415,7 @@ impl AuthProviderIdClaims<'_> {
                         if link.user_email != user.email {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "Invalid E-Mail".to_string(),
+                                "Invalid E-Mail",
                             ));
                         }
 
@@ -1463,7 +1447,7 @@ impl AuthProviderIdClaims<'_> {
             if provider.admin_claim_value.is_none() {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
-                    "Misconfigured Auth Provider - admin claim path without value".to_string(),
+                    "Misconfigured Auth Provider - admin claim path without value",
                 ));
             }
 
@@ -1482,7 +1466,7 @@ impl AuthProviderIdClaims<'_> {
                         // This way, we can accept not only string, but we would for instance
                         // also interpret a given bool as string.
                         let value = if !value.is_string() {
-                            format!("\"{}\"", value)
+                            format!("\"{value}\"")
                         } else {
                             value.to_string()
                         };
@@ -1493,7 +1477,7 @@ impl AuthProviderIdClaims<'_> {
                     }
                 }
                 Err(err) => {
-                    error!("Error parsing JsonPath from: '{}\nError: {}", path, err);
+                    error!("Error parsing JsonPath from: '{path}', Error: {err}");
                 }
             }
         }
@@ -1504,7 +1488,7 @@ impl AuthProviderIdClaims<'_> {
             if provider.mfa_claim_value.is_none() {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
-                    "Misconfigured Auth Provider - mfa claim path without value".to_string(),
+                    "Misconfigured Auth Provider - mfa claim path without value",
                 ));
             }
 
@@ -1523,7 +1507,7 @@ impl AuthProviderIdClaims<'_> {
                         // This way, we can accept not only string, but we would for instance
                         // also interpret a given bool as string.
                         let value = if !value.is_string() {
-                            format!("\"{}\"", value)
+                            format!("\"{value}\"")
                         } else {
                             value.to_string()
                         };
@@ -1534,7 +1518,7 @@ impl AuthProviderIdClaims<'_> {
                     }
                 }
                 Err(err) => {
-                    error!("Error parsing JsonPath from: '{}\nError: {}", path, err);
+                    error!("Error parsing JsonPath from: '{path}', Error: {err}");
                 }
             }
         }

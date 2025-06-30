@@ -71,7 +71,7 @@ impl From<&str> for PictureStorage {
             "s3" => Self::S3,
             "disabled" => Self::Disabled,
             x => {
-                error!("Invalid picture storage: {} - upload disabled", x);
+                error!("Invalid picture storage: {x} - upload disabled");
                 Self::Disabled
             }
         }
@@ -160,16 +160,15 @@ impl UserPicture {
     #[inline]
     fn local_file_path(picture_id: &str, content_type: &str) -> String {
         format!(
-            "{}/{}.{}",
+            "{}/{picture_id}.{}",
             RauthyConfig::get().vars.user_pictures.path,
-            picture_id,
             Self::file_ending(content_type)
         )
     }
 
     #[inline]
     fn file_name(picture_id: &str, content_type: &str) -> String {
-        format!("{}.{}", picture_id, Self::file_ending(content_type))
+        format!("{picture_id}.{}", Self::file_ending(content_type))
     }
 
     #[inline]
@@ -200,7 +199,7 @@ impl UserPicture {
 
             match field.content_type() {
                 Some(mime) => {
-                    debug!("content_type: {:?}", mime);
+                    debug!(content_type = ?mime);
                     let s = mime.as_ref();
                     match s {
                         "image/svg+xml" => {
@@ -311,7 +310,7 @@ impl UserPicture {
                 PictureStorage::File => {
                     let path = Self::local_file_path(&slf.id, &slf.content_type);
                     if let Err(err) = fs::remove_file(&path).await {
-                        error!("Error cleaning up local picture {}: {}", path, err)
+                        error!(path, ?err, "Error cleaning up local picture")
                     }
                 }
                 PictureStorage::S3 => {
@@ -319,7 +318,7 @@ impl UserPicture {
                         .delete(&Self::file_name(&slf.id, &slf.content_type))
                         .await
                     {
-                        error!("Error cleaning up s3 picture {}: {}", slf.id, err)
+                        error!(object_id = slf.id, ?err, "Error cleaning up s3 picture")
                     }
                 }
                 PictureStorage::Disabled => unreachable!(),
@@ -352,7 +351,7 @@ impl UserPicture {
                 if let Some(data) = slf.data {
                     Ok(resp.body(data))
                 } else {
-                    error!("PictureStorage::DB but `data` is NULL: {:?}", slf);
+                    error!("PictureStorage::DB but `data` is NULL: {slf:?}");
                     Err(ErrorResponse::new(
                         ErrorResponseType::Internal,
                         "invalid storage type",
@@ -391,8 +390,8 @@ impl UserPicture {
                 let cfg = &RauthyConfig::get().vars.user_pictures;
                 fs::create_dir_all(cfg.path.as_ref()).await?;
                 info!(
-                    "Using local filesystem as User Picture Storage: {}",
-                    cfg.path.as_ref()
+                    path = cfg.path.as_ref(),
+                    "Using local filesystem as User Picture Storage"
                 );
             }
             PictureStorage::S3 => {
@@ -402,8 +401,8 @@ impl UserPicture {
                     .await
                     .expect("Cannot list User Picture S3 Bucket");
                 info!(
-                    "Using S3 bucket {} as User Picture Storage - connection test successful",
-                    PICTURE_S3_BUCKET.name
+                    bucket = PICTURE_S3_BUCKET.name,
+                    "Using S3 bucket as User Picture Storage - connection test successful",
                 );
             }
             PictureStorage::Disabled => {

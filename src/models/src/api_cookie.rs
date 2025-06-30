@@ -33,8 +33,8 @@ impl ApiCookie {
         let access = &RauthyConfig::get().vars.access;
         let path = if access.cookie_set_path { "/auth" } else { "/" };
         let (name, secure, path) = match access.cookie_mode {
-            CookieMode::Host => (format!("__Host-{}", name), true, "/"),
-            CookieMode::Secure => (format!("__Secure-{}", name), true, path),
+            CookieMode::Host => (format!("__Host-{name}"), true, "/"),
+            CookieMode::Secure => (format!("__Secure-{name}"), true, path),
             CookieMode::DangerInsecure => {
                 warn!("Building INSECURE cookie - you MUST NEVER use this in production");
                 (name.to_string(), false, path)
@@ -65,8 +65,8 @@ impl ApiCookie {
         N: Into<Cow<'c, str>> + Display,
     {
         let name = match RauthyConfig::get().vars.access.cookie_mode {
-            CookieMode::Host => format!("__Host-{}", cookie_name),
-            CookieMode::Secure => format!("__Secure-{}", cookie_name),
+            CookieMode::Host => format!("__Host-{cookie_name}"),
+            CookieMode::Secure => format!("__Secure-{cookie_name}"),
             CookieMode::DangerInsecure => cookie_name.to_string(),
         };
         // req.cookie(&name)
@@ -78,8 +78,8 @@ impl ApiCookie {
         N: Into<Cow<'c, str>> + Display,
     {
         let name = match RauthyConfig::get().vars.access.cookie_mode {
-            CookieMode::Host => format!("__Host-{}", cookie_name),
-            CookieMode::Secure => format!("__Secure-{}", cookie_name),
+            CookieMode::Host => format!("__Host-{cookie_name}"),
+            CookieMode::Secure => format!("__Secure-{cookie_name}"),
             CookieMode::DangerInsecure => cookie_name.to_string(),
         };
         Self::cookie_into_value(req.cookie(&name))

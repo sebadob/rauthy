@@ -29,7 +29,7 @@ pub fn trigger() {
         let pattern = if additional_schemes.is_empty() {
             r"^(http|https)://[a-z0-9.:-]+$".to_string()
         } else {
-            format!("^(http|https|{})://[a-z0-9.:-]+$", additional_schemes)
+            format!("^(http|https|{additional_schemes})://[a-z0-9.:-]+$")
         };
         RE_ORIGIN.set(Regex::new(&pattern).unwrap()).unwrap()
     }
@@ -40,7 +40,7 @@ pub fn trigger() {
         } else {
             "https"
         };
-        let uri = format!("{}://{}/auth/v1/oidc/token", scheme, vars.server.pub_url);
+        let uri = format!("{scheme}://{}/auth/v1/oidc/token", vars.server.pub_url);
         DPOP_TOKEN_ENDPOINT.set(uri).unwrap()
     }
 
@@ -103,7 +103,7 @@ pub fn trigger() {
             .timeout(Duration::from_secs(vars.http_client.request_timeout as u64))
             .pool_idle_timeout(Duration::from_secs(vars.http_client.idle_timeout as u64))
             .min_tls_version(tls_version)
-            .user_agent(format!("Rauthy Client v{}", RAUTHY_VERSION))
+            .user_agent(format!("Rauthy Client v{RAUTHY_VERSION}"))
             .https_only(!vars.http_client.danger_unencrypted || !vars.dev.dev_mode)
             .danger_accept_invalid_certs(vars.http_client.danger_insecure || vars.dev.dev_mode)
             .use_rustls_tls();

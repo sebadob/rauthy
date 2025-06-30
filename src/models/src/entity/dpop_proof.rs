@@ -22,7 +22,7 @@ pub struct DPoPNonce {
 
 impl Debug for DPoPNonce {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "exp: {}, value: <hidden>", self.exp)
+        write!(f, "DPoPNonce {{ exp: {}, value: <hidden> }}", self.exp)
     }
 }
 
@@ -324,14 +324,14 @@ impl DPoPProof {
         if let Some(nonce) = &self.claims.nonce {
             if !DPoPNonce::is_valid(nonce.clone()).await {
                 let latest = DPoPNonce::get_latest().await.unwrap_or_else(|err| {
-                    error!("Cache lookup error during DPoP nonce generation: {:?}", err);
+                    error!(?err, "Cache lookup error during DPoP nonce generation");
                     err.message.to_string()
                 });
                 return Err(latest);
             }
         } else if RauthyConfig::get().vars.dpop.force_nonce {
             let latest = DPoPNonce::get_latest().await.unwrap_or_else(|err| {
-                error!("Cache lookup error during DPoP nonce generation: {:?}", err);
+                error!(?err, "Cache lookup error during DPoP nonce generation");
                 err.message.to_string()
             });
             return Err(latest);
@@ -390,12 +390,12 @@ mod tests {
         let header_b64 = base64_url_no_pad_encode(header_json.as_bytes());
         let claims_json = serde_json::to_string(&claims).unwrap();
         let claims_b64 = base64_url_no_pad_encode(claims_json.as_bytes());
-        let mut token_raw = format!("{}.{}", header_b64, claims_b64);
+        let mut token_raw = format!("{header_b64}.{claims_b64}");
 
         let sig = kp.sk.sign(&token_raw, Some(Noise::generate()));
         let sig_b64 = base64_url_no_pad_encode(sig.as_ref());
-        write!(token_raw, ".{}", sig_b64).unwrap();
-        println!("test signed token:\n{}", token_raw);
+        write!(token_raw, ".{sig_b64}").unwrap();
+        println!("test signed token:\n{token_raw}");
 
         // now we have our token like it should come in with the DPoP header -> try to verify it
         let dpop = DPoPProof::try_from_str(None, token_raw.as_str()).unwrap();

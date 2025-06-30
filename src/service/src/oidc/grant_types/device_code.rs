@@ -79,7 +79,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             error_description = Cow::from("poll interval has not been respected");
             if let Err(err) = code.delete().await {
                 // this should never happen
-                error!("Error deleting DeviceAuthCode from the cache: {:}", err);
+                error!(?err, "deleting DeviceAuthCode from the cache");
             }
         } else {
             error = OAuth2ErrorTypeResponse::SlowDown;
@@ -128,7 +128,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
 
         if let Err(err) = code.delete().await {
             // should really never happen - in cache only
-            error!("Error deleting DeviceAuthCode: {:?}", err);
+            error!(?err, "deleting DeviceAuthCode");
         }
 
         let id = new_store_id();
@@ -152,7 +152,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
                 error_description: Some(Cow::from(err.to_string())),
             });
         }
-        debug!("New Device with ID {} has been created", id);
+        debug!("New Device with ID {id} has been created");
 
         let ts = match TokenSet::from_user(
             &user,
@@ -169,7 +169,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         {
             Ok(ts) => ts,
             Err(err) => {
-                error!("Building Device TokenSet: {:?}", err);
+                error!(?err, "Building Device TokenSet");
                 return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
                     error: OAuth2ErrorTypeResponse::InvalidRequest,
                     error_description: Some(Cow::from(err.to_string())),
@@ -183,7 +183,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
     code.last_poll = now;
     if let Err(err) = code.save().await {
         // this should never happen
-        error!("Error saving the DeviceAuthCode: {:?}", err);
+        error!(?err, "Error saving the DeviceAuthCode");
     }
 
     HttpResponse::BadRequest().json(OAuth2ErrorResponse {

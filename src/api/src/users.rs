@@ -411,10 +411,7 @@ pub async fn post_users_register_handle(
         if !payload.email.ends_with(restriction) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!(
-                    "Domain for the open registration are restricted to '@{}'",
-                    restriction
-                ),
+                format!("Domain for the open registration are restricted to '@{restriction}'"),
             ));
         }
     } else if !reg.domain_blacklist.is_empty() {
@@ -1638,7 +1635,7 @@ pub async fn put_user_webid_data(
     .map_err(|e| {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            format!("Invalid custom data. {}", e),
+            format!("Invalid custom data. {e}"),
         )
     })?;
 

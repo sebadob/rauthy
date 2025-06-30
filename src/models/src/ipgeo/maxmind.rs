@@ -45,7 +45,7 @@ pub async fn update_db() -> Result<(), ErrorResponse> {
             .basic_auth(username, Some(password))
             .send()
             .await?;
-        debug!("GeoLite version check res: {:?}", res);
+        debug!("GeoLite version check res: {res:?}");
         if res.status().is_success() {
             let etag_header = res
                 .headers()
@@ -62,7 +62,7 @@ pub async fn update_db() -> Result<(), ErrorResponse> {
                             return Ok(());
                         }
                         Err(err) => {
-                            error!("Error opening Maxmind DB: {}\nStarting new download", err);
+                            error!(?err, "Error opening Maxmind DB - starting new download");
                         }
                     }
                 } else {
@@ -90,7 +90,7 @@ pub async fn update_db() -> Result<(), ErrorResponse> {
         let body = res.text().await?;
         return Err(ErrorResponse::new(
             ErrorResponseType::Connection,
-            format!("Error download Maxmind DB: {}", body),
+            format!("Error download Maxmind DB: {body}"),
         ));
     }
 
@@ -112,6 +112,7 @@ pub async fn update_db() -> Result<(), ErrorResponse> {
     let mut file = OpenOptions::new()
         .write(true)
         .create(true)
+        .truncate(true)
         .open(&path_archive)
         .await?;
 
@@ -153,7 +154,7 @@ pub(super) async fn init(
     ACCOUNT_ID.set(account_id).unwrap();
     LICENSE_KEY.set(license_key).unwrap();
 
-    let base_dir = format!("{}/ipgeo", data_dir);
+    let base_dir = format!("{data_dir}/ipgeo");
     fs::create_dir_all(&base_dir).await?;
     BASE_DIR.set(base_dir).unwrap();
 

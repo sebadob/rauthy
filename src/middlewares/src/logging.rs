@@ -72,14 +72,12 @@ async fn log_access(req: &ServiceRequest) -> Result<(), ErrorResponse> {
         }
         LogLevelAccess::Verbose => {
             info!(
-                "{} {:?} {} {} {:?}",
-                ip,
+                "{ip} {:?} {} {path} {:?}",
                 req.version(),
                 req.method(),
-                path,
                 req.headers()
                     .get(actix_web::http::header::USER_AGENT)
-                    .unwrap_or(&HeaderValue::from_bytes(b"").unwrap())
+                    .unwrap_or(&HeaderValue::from_static(""))
             );
         }
         LogLevelAccess::Basic => {
@@ -91,14 +89,12 @@ async fn log_access(req: &ServiceRequest) -> Result<(), ErrorResponse> {
                 return Ok(());
             }
             info!(
-                "{} {:?} {} {} {:?}",
-                ip,
+                "{ip} {:?} {} {path} {:?}",
                 req.version(),
                 req.method(),
-                path,
                 req.headers()
                     .get(actix_web::http::header::USER_AGENT)
-                    .unwrap_or(&HeaderValue::from_bytes(b"").unwrap())
+                    .unwrap_or(&HeaderValue::from_static(""))
             );
         }
         LogLevelAccess::Modifying => {
@@ -109,14 +105,12 @@ async fn log_access(req: &ServiceRequest) -> Result<(), ErrorResponse> {
                 return Ok(());
             }
             info!(
-                "{} {:?} {} {} {:?}",
-                ip,
+                "{ip} {:?} {} {path} {:?}",
                 req.version(),
                 req.method(),
-                path,
                 req.headers()
                     .get(actix_web::http::header::USER_AGENT)
-                    .unwrap_or(&HeaderValue::from_bytes(b"").unwrap())
+                    .unwrap_or(&HeaderValue::from_static(""))
             );
         }
         LogLevelAccess::Off => return Ok(()),

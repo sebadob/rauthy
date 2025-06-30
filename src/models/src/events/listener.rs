@@ -48,7 +48,7 @@ impl EventListener {
         // insert into DB
         if event.level.value() >= RauthyConfig::get().vars.events.persist_level.value() {
             while let Err(err) = event.insert().await {
-                error!("Inserting Event into Database: {:?}", err);
+                error!(?err, "Inserting Event into Database");
                 time::sleep(Duration::from_secs(1)).await;
             }
         }
@@ -56,7 +56,7 @@ impl EventListener {
         // notify raft members
         let mut fails = 0;
         while let Err(err) = DB::hql().notify(&event).await {
-            error!("Publishing Event on Postgres channel: {:?}", err);
+            error!(?err, "Hiqlite::notify()");
 
             if fails > 10 {
                 break;
@@ -68,7 +68,7 @@ impl EventListener {
 
         // send notification
         while let Err(err) = EventNotifier::send(&event).await {
-            error!("Sending Event Notification: {:?}", err);
+            error!(?err, "Sending Event Notification");
             time::sleep(Duration::from_secs(1)).await;
         }
     }
@@ -78,13 +78,13 @@ impl EventListener {
         debug!("EventListener::router_ha has been started");
 
         while let Ok(event) = DB::hql().listen::<Event>().await {
-            debug!("{:?}", event);
+            debug!(?event);
 
             // forward to event router -> payload is already an Event in JSON format
             if let Err(err) = tx.send_async(EventRouterMsg::Event(event)).await {
                 error!(
-                    "Error sending Event {:?} internally - this should never happen!",
-                    err
+                    ?err,
+                    "Error sending Event internally - this should never happen!",
                 );
             }
         }
@@ -128,7 +128,7 @@ impl EventListener {
         while let Ok(msg) = rx.recv_async().await {
             match msg {
                 EventRouterMsg::Event(event) => {
-                    debug!("received new event in EventListener::router: {:?}", event);
+                    debug!(?event, "received new event in EventListener::router");
 
                     if event_ids.contains(&event.id) {
                         debug!("Duplicate event ID in router: {}", event.id);
@@ -154,16 +154,18 @@ impl EventListener {
                             Ok(tx_res) => {
                                 if let Err(err) = tx_res {
                                     error!(
-                                        "sending event to client {} from event listener - removing client\n{:?}",
-                                        ip, err
+                                        ?ip,
+                                        ?err,
+                                        "sending event to client from event listener - removing \
+                                        client",
                                     );
                                     ips_to_remove.push(ip.clone());
                                 }
                             }
                             Err(_) => {
                                 error!(
-                                    "Timeout reached sending event to client {} - removing client",
-                                    ip
+                                    ?ip,
+                                    "Timeout reached sending event to client - removing client",
                                 );
                                 ips_to_remove.push(ip.clone());
                             }
@@ -190,7 +192,7 @@ impl EventListener {
                     latest,
                     level,
                 } => {
-                    info!("New client {} registered for the event listener", ip);
+                    info!(?ip, "New client registered for the event listener");
                     let client_level_val = level.value();
 
                     let mut is_err = false;
@@ -213,8 +215,10 @@ impl EventListener {
                                 Ok(tx_res) => {
                                     if let Err(err) = tx_res {
                                         error!(
-                                            "sending latest event to client {} after ClientReg - removing client\n{:?}",
-                                            ip, err
+                                            ?ip,
+                                            ?err,
+                                            "sending latest event to client after ClientReg - \
+                                            removing client",
                                         );
                                         is_err = true;
                                         break;
@@ -222,8 +226,9 @@ impl EventListener {
                                 }
                                 Err(_) => {
                                     error!(
-                                        "Timeout reached sending latest events to client {} - removing client",
-                                        ip
+                                        ?ip,
+                                        "Timeout reached sending latest events to client - removing \
+                                        client",
                                     );
                                     is_err = true;
                                     break;

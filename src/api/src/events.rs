@@ -89,7 +89,7 @@ pub async fn sse_events(
     {
         Err(ErrorResponse::new(
             ErrorResponseType::Internal,
-            format!("Cannot register SSE client: {:?}", err),
+            format!("Cannot register SSE client: {err:?}"),
         ))
     } else {
         Ok(sse::Sse::from_infallible_receiver(rx)
@@ -160,8 +160,8 @@ pub async fn post_event_test(
 
         let old_email = "old@mail";
         let new_mail = "new@mail";
-        let text = format!("{} -> {}", old_email, new_mail);
-        let text_admin = format!("Change by admin: {} -> {}", old_email, new_mail);
+        let text = format!("{old_email} -> {new_mail}");
+        let text_admin = format!("Change by admin: {old_email} -> {new_mail}");
         Event::user_email_change(text, Some(ip)).send().await?;
         Event::user_email_change(text_admin, Some(ip))
             .send()

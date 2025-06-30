@@ -42,7 +42,7 @@ async fn execute(
 
     for failure in failures {
         if failure.retry_count >= RauthyConfig::get().vars.scim.retry_count as i64 {
-            warn!("Retry count exceeded for scim task {:?}", failure);
+            warn!("Retry count exceeded for scim task {failure:?}");
 
             Event::scim_task_failed(&failure.client_id, &failure.action, failure.retry_count)
                 .send()
@@ -104,10 +104,7 @@ async fn execute(
                 failure.delete().await?;
             }
             Err(err) => {
-                error!(
-                    "Error executing scim task for client {}: {}",
-                    failure.client_id, err
-                );
+                error!(failure.client_id, ?err, "Error executing scim task",);
             }
         }
     }

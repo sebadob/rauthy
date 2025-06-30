@@ -21,7 +21,8 @@ impl Debug for RefreshToken {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "id: {}(...), user_id: {}, nbf: {}, exp: {}, scope: {:?}, is_mfa: {}, session_id: {:?}",
+            "RefreshToken {{ id: {}(...), user_id: {}, nbf: {}, exp: {}, scope: {:?}, is_mfa: {}, \
+            session_id: {:?} }}",
             &self.id[..5],
             self.user_id,
             self.nbf,

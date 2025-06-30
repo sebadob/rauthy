@@ -45,7 +45,7 @@ async fn execute_logout_retries(
 
     for failure in failures {
         if failure.retry_count >= retry_count as i32 {
-            warn!("Retry count exceeded for backchannel logout {:?}", failure);
+            warn!("Retry count exceeded for backchannel logout {failure:?}");
 
             Event::backchannel_logout_failed(
                 &failure.client_id,
@@ -80,7 +80,8 @@ async fn execute_logout_retries(
         };
         if client.backchannel_logout_uri.is_none() {
             info!(
-                "Backchannel Logout URI for failed logout has been removed in the meantime - deleting the failure"
+                "Backchannel Logout URI for failed logout has been removed in the meantime - \
+                deleting the failure"
             );
             failure.delete().await?;
             continue;
@@ -112,7 +113,7 @@ async fn execute_logout_retries(
                 failure.delete().await?;
             }
             Err(err) => {
-                error!("Error executing Backchannel Logout: {}", err);
+                error!(?err, "executing Backchannel Logout");
             }
         }
     }

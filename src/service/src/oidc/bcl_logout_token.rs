@@ -114,8 +114,8 @@ impl LogoutToken<'_> {
             .await
             .map_err(|err| {
                 error!(
-                    "Error looking up AuthProvider by issuer during backchannel logout: {:?}",
-                    err
+                    ?err,
+                    "looking up AuthProvider by issuer during backchannel logout"
                 );
                 ErrorResponse::new(
                     ErrorResponseType::Forbidden,

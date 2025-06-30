@@ -167,7 +167,7 @@ fn parse_peer_addr(peer_addr: Option<&str>, use_dummy_addr: bool) -> Result<IpAd
             Ok(ip) => Ok(ip),
             Err(err) => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!("Cannot parse peer IP address: {}", err),
+                format!("Cannot parse peer IP address: {err}"),
             )),
         },
     }
@@ -200,7 +200,7 @@ pub fn build_trusted_proxies(proxies: &[String]) -> Vec<cidr::IpCidr> {
         .map(|range| match cidr::IpCidr::from_str(range.trim()) {
             Ok(cidr) => cidr,
             Err(err) => {
-                panic!("Cannot parse trusted proxy entry {range} to CIDR: {}", err);
+                panic!("Cannot parse trusted proxy entry {range} to CIDR: {err}");
             }
         })
         .collect::<Vec<_>>();
@@ -221,11 +221,11 @@ fn ip_from_cust_header(headers: &HeaderMap) -> Option<IpAddr> {
                     return Some(ip);
                 }
                 Err(err) => {
-                    error!("Cannot parse IP from PEER_IP_HEADER_NAME: {}", err);
+                    error!("Cannot parse IP from PEER_IP_HEADER_NAME: {err}");
                 }
             }
         }
-        trace!("no PEER IP from PEER_IP_HEADER_NAME: '{}'", header_name);
+        trace!("no PEER IP from PEER_IP_HEADER_NAME: '{header_name}'");
     }
 
     None
@@ -239,7 +239,7 @@ where
     bincode::serde::encode_to_vec(value, bincode::config::legacy()).map_err(|err| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
-            format!("Cannot serialize value: {:?}", err),
+            format!("Cannot serialize value: {err:?}"),
         )
     })
 }
@@ -253,7 +253,7 @@ where
         bincode::serde::decode_from_slice(value, bincode::config::legacy()).map_err(|err| {
             ErrorResponse::new(
                 ErrorResponseType::Internal,
-                format!("Cannot deserialize value: {:?}", err),
+                format!("Cannot deserialize value: {err:?}"),
             )
         })?;
     Ok(bytes)

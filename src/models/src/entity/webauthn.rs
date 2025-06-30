@@ -64,8 +64,8 @@ impl Debug for PasskeyEntity {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "user_id: {}, name: {}, passkey_user_id: {}, passkey: <hidden>, \
-        credential_id: <hidden>, registered: {}, last_used: {}, user_verified: {:?}",
+            "PasskeyEntity {{ user_id: {}, name: {}, passkey_user_id: {}, passkey: <hidden>, \
+        credential_id: <hidden>, registered: {}, last_used: {}, user_verified: {:?} }}",
             self.user_id,
             self.name,
             self.passkey_user_id,
@@ -454,25 +454,25 @@ impl PasskeyEntity {
     /// Index for a single passkey for a user
     #[inline]
     fn cache_idx_single(user_id: &str, name: &str) -> String {
-        format!("{}{}{}", IDX_WEBAUTHN, user_id, name)
+        format!("{IDX_WEBAUTHN}{user_id}{name}")
     }
 
     /// Index for all passkeys a user has
     #[inline]
     fn cache_idx_user(user_id: &str) -> String {
-        format!("{}{}", IDX_WEBAUTHN, user_id)
+        format!("{IDX_WEBAUTHN}{user_id}")
     }
 
     /// Index for all passkeys a user has
     #[inline]
     fn cache_idx_user_with_uv(user_id: &str) -> String {
-        format!("{}_UV_{}", IDX_WEBAUTHN, user_id)
+        format!("{IDX_WEBAUTHN}_UV_{user_id}",)
     }
 
     /// Index for credentials for a user
     #[inline]
     fn cache_idx_creds(user_id: &str) -> String {
-        format!("{}{}_creds", IDX_WEBAUTHN, user_id)
+        format!("{IDX_WEBAUTHN}{user_id}_creds")
     }
 }
 
@@ -764,7 +764,7 @@ pub async fn auth_start(
         }
 
         Err(err) => {
-            error!("Webauthn challenge authentication: {:?}", err);
+            error!(?err, "Webauthn challenge authentication");
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
                 "Internal error with Webauthn Challenge Authentication",
@@ -793,8 +793,8 @@ pub async fn auth_finish(
         Ok(auth_result) => {
             if force_uv && !auth_result.user_verified() {
                 warn!(
-                    "Webauthn Authentication Ceremony without User Verification for user {:?}",
-                    user.id
+                    user.id,
+                    "Webauthn Authentication Ceremony without User Verification",
                 );
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -838,12 +838,12 @@ pub async fn auth_finish(
                 }
             }
 
-            info!("Webauthn Authentication successful for user {}", uid);
+            info!(user.id = uid, "Webauthn Authentication successful");
 
             Ok(auth_data.data)
         }
         Err(err) => {
-            error!("Webauthn Auth Finish: {:?}", err);
+            error!(?err, "Webauthn Auth Finish");
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 format!("{err}"),
@@ -915,7 +915,7 @@ pub async fn reg_start(
         }
 
         Err(err) => {
-            error!("Webauthn challenge register: {:?}", err);
+            error!(?err, "Webauthn challenge register");
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
                 "Internal error with Webauthn Challenge Registration",
@@ -953,8 +953,8 @@ pub async fn reg_finish(id: String, req: WebauthnRegFinishRequest) -> Result<(),
             if (user.account_type() != AccountType::Password || cfg.force_uv) && !cred.user_verified
             {
                 warn!(
-                    "Webauthn Registration Ceremony without User Verification for user {:?}",
-                    user.id
+                    user.id,
+                    "Webauthn Registration Ceremony without User Verification",
                 );
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -983,10 +983,10 @@ pub async fn reg_finish(id: String, req: WebauthnRegFinishRequest) -> Result<(),
             )
             .await?;
 
-            info!("New PasskeyEntity saved successfully for user {}", user_id);
+            info!(user_id, "New PasskeyEntity saved successfully");
         }
         Err(err) => {
-            error!("Webauthn Reg Finish: {:?}", err);
+            error!(?err, "Webauthn Reg Finish");
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!("{err}"),

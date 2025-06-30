@@ -167,9 +167,9 @@ pub async fn post_logout_handle(
             .unwrap_or(&RauthyConfig::get().issuer);
         let state = params
             .state
-            .map(|st| format!("?state={}", st))
+            .map(|st| format!("?state={st}"))
             .unwrap_or_default();
-        let loc = format!("{}{}", uri, state);
+        let loc = format!("{uri}{state}");
 
         let mut resp = HttpResponse::build(StatusCode::from_u16(302).unwrap())
             .append_header((header::LOCATION, loc))
@@ -210,7 +210,7 @@ async fn find_session_with_user_fallback(
         match Session::find(sid).await {
             Ok(s) => Ok((Some(s), None)),
             Err(err) => {
-                debug!("Could not find `sid` from LogoutToken: {}", err);
+                debug!("Could not find `sid` from LogoutToken: {err}");
                 if let Some(uid) = uid {
                     Ok((None, Some(User::find(uid).await?)))
                 } else {
@@ -248,15 +248,15 @@ pub async fn execute_backchannel_logout(
 
     let (states, sid) = if let Some(sid) = sid {
         let states = UserLoginState::find_by_session(sid.clone()).await?;
-        debug!("Login States for sid {}: {:?}", sid, states);
+        debug!("Login States for sid {sid}: {states:?}");
         // As a fallback, we will log out the whole user if we cannot find the session, just to
         // be sure we never miss any logout. Better logging out some unindented ones than missing
         // an important one.
         if states.is_empty() {
-            debug!("No Login States for sid {}", sid);
+            debug!("No Login States for sid {sid}");
 
             if let Some(uid) = uid {
-                debug!("Searching Login States by user_id {:?}", uid);
+                debug!("Searching Login States by user_id {uid:?}");
                 (UserLoginState::find_by_user(uid).await?, None)
             } else {
                 debug!("No Login States found for both sid and uid - nothing to do");
@@ -271,7 +271,7 @@ pub async fn execute_backchannel_logout(
         debug!("Both sid and uid are None - nothing to od");
         return Ok(());
     };
-    debug!("sid: {:?} / Login States: {:?}", sid, states);
+    debug!(sid, login_states = ?states);
     if states.is_empty() {
         debug!("no login states found");
         return Ok(());
@@ -283,7 +283,7 @@ pub async fn execute_backchannel_logout(
         .map(|st| st.client_id.as_str())
         .collect::<Vec<_>>();
     let clients = Client::find_all_bcl(&client_ids).await?;
-    debug!("Backchannel Logout Clients: {:?}", clients);
+    debug!(backchannel_logout_clients = ?clients);
 
     if !clients.is_empty() {
         let mut kps: Vec<JwkKeyPair> = Vec::with_capacity(1);
@@ -296,7 +296,7 @@ pub async fn execute_backchannel_logout(
                 None
             };
             let sid = sid.clone();
-            debug!("sub: {:?}, sid: {:?} for LogoutToken", sub, sid);
+            debug!(sub, sid);
 
             let mut kp = kps.iter().find(|kp| kp.typ.as_str() == client.id_token_alg);
             if kp.is_none() {
@@ -365,8 +365,8 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
     let uri = client.backchannel_logout_uri.as_ref().unwrap();
 
     info!(
-        "Executing full backchannel logout for client '{}' via '{}'",
-        client.id, uri
+        "Executing full backchannel logout for client '{}' via '{uri}'",
+        client.id
     );
 
     // We don't care about specific sessions here. Everything for this client should be logged out.
@@ -389,7 +389,7 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
         )
         .await
         {
-            error!("Error executing Backchannel Logout: {}", err);
+            error!(?err, "executing Backchannel Logout");
         }
     }
 
@@ -397,7 +397,7 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
         if let Err(err) =
             res.map_err(|err| ErrorResponse::new(ErrorResponseType::Internal, err.to_string()))?
         {
-            error!("{err}");
+            error!(?err);
         }
     }
 
@@ -426,10 +426,7 @@ pub async fn send_backchannel_logout(
     .into_token_with_kp(kp)?;
 
     tasks.spawn(async move {
-        debug!(
-            "Sending backchannel logout to {}: {}",
-            client_id, backchannel_logout_uri
-        );
+        debug!("Sending backchannel logout to {client_id}: {backchannel_logout_uri}");
         let res = http_client()
             .post(backchannel_logout_uri)
             .form(&BackchannelLogoutRequest { logout_token })
@@ -444,17 +441,12 @@ pub async fn send_backchannel_logout(
                 }
                 let text = resp.text().await.unwrap_or_default();
                 format!(
-                    "Error during Backchannel Logout for client '{}': HTTP {} - {}",
-                    client_id,
-                    status.as_u16(),
-                    text
+                    "Error during Backchannel Logout for client '{client_id}': HTTP {} - {text}",
+                    status.as_u16()
                 )
             }
             Err(err) => {
-                format!(
-                    "Error during Backchannel Logout for client '{}': {}",
-                    client_id, err
-                )
+                format!("Error during Backchannel Logout for client '{client_id}': {err}")
             }
         };
 

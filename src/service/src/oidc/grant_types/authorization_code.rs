@@ -53,7 +53,7 @@ pub async fn grant_type_authorization_code(
         .map_err(|_| {
             ErrorResponse::new(
                 ErrorResponseType::NotFound,
-                format!("Client '{}' not found", client_id),
+                format!("Client '{client_id}' not found"),
             )
         })?;
     client.validate_enabled()?;
@@ -111,7 +111,7 @@ pub async fn grant_type_authorization_code(
     };
     // validate the oidc code
     if code.client_id != client_id {
-        let err = format!("Wrong 'code' for client_id '{}'", client_id);
+        let err = format!("Wrong 'code' for client_id '{client_id}'");
         warn!(err);
         return Err(ErrorResponse::new(ErrorResponseType::Unauthorized, err));
     }

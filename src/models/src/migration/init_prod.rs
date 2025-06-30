@@ -133,7 +133,7 @@ WHERE email = 'admin@localhost'"#;
             req.validate()
                 .expect("Invalid API Key in BOOTSTRAP_API_KEY");
 
-            debug!("Bootstrapping API Key:\n{:?}", req);
+            debug!("Bootstrapping API Key:\n{req:?}");
             let key_name = req.name.clone();
             let _ = ApiKeyEntity::create(
                 req.name,

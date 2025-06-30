@@ -43,7 +43,7 @@ impl Debug for Jwk {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "kid: {}, created_at: {}, signature: {:?}, enc_key_id: {}, jwk: <hidden>",
+            "Jwk {{ kid: {}, created_at: {}, signature: {:?}, enc_key_id: {}, jwk: <hidden> }}",
             self.kid, self.created_at, self.signature, self.enc_key_id,
         )
     }
@@ -257,25 +257,25 @@ impl JWKS {
         client
             .delete(
                 Cache::App,
-                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS256.as_str()),
+                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS256.as_str()),
             )
             .await?;
         client
             .delete(
                 Cache::App,
-                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS384.as_str()),
+                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS384.as_str()),
             )
             .await?;
         client
             .delete(
                 Cache::App,
-                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS512.as_str()),
+                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS512.as_str()),
             )
             .await?;
         client
             .delete(
                 Cache::App,
-                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::EdDSA.as_str()),
+                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::EdDSA.as_str()),
             )
             .await?;
 
@@ -453,7 +453,7 @@ impl JWKSPublicKey {
                 } else {
                     Err(ErrorResponse::new(
                         ErrorResponseType::Connection,
-                        format!("Error connecting to {}", jwks_uri),
+                        format!("Error connecting to {jwks_uri}"),
                     ))
                 }
             }
@@ -461,7 +461,7 @@ impl JWKSPublicKey {
                 error!("{}", err);
                 Err(ErrorResponse::new(
                     ErrorResponseType::Connection,
-                    format!("Error connecting to {}", jwks_uri),
+                    format!("Error connecting to {jwks_uri}"),
                 ))
             }
         };
@@ -481,7 +481,7 @@ impl JWKSPublicKey {
                 if self.e.is_none() || self.n.is_none() {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Internal,
-                        "Incorrect format for RSA JWK: e / n missing".to_string(),
+                        "Incorrect format for RSA JWK: e / n missing",
                     ));
                 }
 
@@ -489,10 +489,8 @@ impl JWKSPublicKey {
                 let e = self.e.as_deref().unwrap();
                 let n = self.n.as_deref().unwrap();
                 format!(
-                    "{{\"e\":\"{}\",\"kty\":\"{}\",\"n\":\"{}\"}}",
-                    e,
+                    "{{\"e\":\"{e}\",\"kty\":\"{}\",\"n\":\"{n}\"}}",
                     self.kty.as_str(),
-                    n
                 )
             }
 
@@ -500,7 +498,7 @@ impl JWKSPublicKey {
                 if self.crv.is_none() || self.x.is_none() {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Internal,
-                        "Incorrect format for OKP JWK: crv / x missing".to_string(),
+                        "Incorrect format for OKP JWK: crv / x missing",
                     ));
                 }
 
@@ -508,10 +506,8 @@ impl JWKSPublicKey {
                 let crv = self.crv.as_deref().unwrap();
                 let x = self.x.as_deref().unwrap();
                 format!(
-                    "{{\"crv\":\"{}\",\"kty\":\"{}\",\"x\":\"{}\"}}",
-                    crv,
+                    "{{\"crv\":\"{crv}\",\"kty\":\"{}\",\"x\":\"{x}\"}}",
                     self.kty.as_str(),
-                    x
                 )
             }
         };
@@ -632,7 +628,11 @@ pub struct JwkKeyPair {
 
 impl Debug for JwkKeyPair {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "kid: {}, typ: {}, bytes: <hidden>", self.kid, self.typ)
+        write!(
+            f,
+            "JwkKeyPair {{ kid: {}, typ: {}, bytes: <hidden> }}",
+            self.kid, self.typ
+        )
     }
 }
 
@@ -672,7 +672,7 @@ impl JwkKeyPair {
 
     // Returns a JWK by a given Key Identifier (kid)
     pub async fn find(kid: String) -> Result<Self, ErrorResponse> {
-        let idx = format!("{}{}", IDX_JWK_KID, kid);
+        let idx = format!("{IDX_JWK_KID}{kid}");
         let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::App, &idx).await? {

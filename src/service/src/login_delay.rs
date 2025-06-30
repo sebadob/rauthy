@@ -45,7 +45,7 @@ pub async fn handle_login_delay(
                 client
                     .put(Cache::App, IDX_LOGIN_TIME, &new_time, Some(i64::MAX))
                     .await?;
-                debug!("New login_success_time: {}", new_time);
+                debug!("New login_success_time: {new_time}");
             }
 
             Ok(resp)
@@ -53,7 +53,7 @@ pub async fn handle_login_delay(
         Err(err) => {
             let failed_logins = FailedLoginCounter::increase(peer_ip.to_string()).await?;
             let failed_logins = min(failed_logins, u32::MAX as i64) as u32;
-            warn!("Failed Logins from {}: {}", peer_ip, failed_logins);
+            warn!("Failed Logins from {peer_ip}: {failed_logins}");
 
             RauthyConfig::get()
                 .tx_events
@@ -97,7 +97,7 @@ pub async fn handle_login_delay(
                 _ => sleep_time_median,
             };
 
-            debug!("Failed login - sleeping for {} ms now", sleep_time);
+            debug!("Failed login - sleeping for {sleep_time} ms now");
             tokio::time::sleep(Duration::from_millis(sleep_time)).await;
 
             Err(err)

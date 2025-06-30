@@ -44,7 +44,7 @@ impl Notify for NotifierSlack {
                 Ok(())
             }
             Err(err) => {
-                let e = format!("Unable to send message to Slack: {:?}", err);
+                let e = format!("Unable to send message to Slack: {err:?}");
                 error!("{e}");
                 Err(ErrorResponse::new(ErrorResponseType::Connection, e))
             }

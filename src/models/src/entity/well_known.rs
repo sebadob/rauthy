@@ -80,18 +80,18 @@ impl WellKnown {
     pub fn new(scopes_supported: Vec<String>) -> Self {
         let issuer = &RauthyConfig::get().issuer;
 
-        let authorization_endpoint = format!("{}/oidc/authorize", issuer);
-        let device_authorization_endpoint = format!("{}/oidc/device", issuer);
-        let token_endpoint = format!("{}/oidc/token", issuer);
-        let introspection_endpoint = format!("{}/oidc/introspect", issuer);
-        let userinfo_endpoint = format!("{}/oidc/userinfo", issuer);
+        let authorization_endpoint = format!("{issuer}/oidc/authorize");
+        let device_authorization_endpoint = format!("{issuer}/oidc/device");
+        let token_endpoint = format!("{issuer}/oidc/token");
+        let introspection_endpoint = format!("{issuer}/oidc/introspect");
+        let userinfo_endpoint = format!("{issuer}/oidc/userinfo");
         let registration_endpoint = RauthyConfig::get()
             .vars
             .dynamic_clients
             .enable
-            .then_some(format!("{}/clients_dyn", issuer));
-        let end_session_endpoint = format!("{}/oidc/logout", issuer);
-        let jwks_uri = format!("{}/oidc/certs", issuer);
+            .then_some(format!("{issuer}/clients_dyn"));
+        let end_session_endpoint = format!("{issuer}/oidc/logout");
+        let jwks_uri = format!("{issuer}/oidc/certs");
         let grant_types_supported = vec![
             "authorization_code".to_string(),
             "client_credentials".to_string(),

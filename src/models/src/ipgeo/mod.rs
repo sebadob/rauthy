@@ -18,7 +18,7 @@ impl Display for LookupResponse {
         write!(f, "{}, {}", self.alpha_2_code, self.country)?;
 
         if let Some(city) = self.city.as_ref() {
-            write!(f, ", {}", city)?;
+            write!(f, ", {city}")?;
         }
 
         Ok(())

@@ -45,13 +45,13 @@ pub async fn server_with_metrics() -> std::io::Result<()> {
     thread::spawn(move || {
         let vars = &RauthyConfig::get().vars.server;
         if let Err(err) = Ipv4Addr::from_str(&vars.metrics_addr) {
-            let msg = format!("Error parsing METRICS_ADDR: {}", err);
+            let msg = format!("Error parsing METRICS_ADDR: {err}");
             error!(msg);
             panic!("{}", msg);
         }
         let addr_full = format!("{}:{}", vars.metrics_addr, vars.metrics_port);
 
-        info!("Metrics available on: http://{}/metrics", addr_full);
+        info!("Metrics available on: http://{addr_full}/metrics");
         // TODO create single threaded runtime specifically -> probably use tokio
         System::new()
             .block_on(
@@ -113,8 +113,7 @@ pub async fn server_with_metrics() -> std::io::Result<()> {
         ListenScheme::Http => {
             server
                 .bind(format!(
-                    "{}:{}",
-                    &listen_addr,
+                    "{listen_addr}:{}",
                     RauthyConfig::get().vars.server.port_http
                 ))?
                 .run()
@@ -125,8 +124,7 @@ pub async fn server_with_metrics() -> std::io::Result<()> {
             server
                 .bind_rustls_0_23(
                     format!(
-                        "{}:{}",
-                        &listen_addr,
+                        "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
                     tls::load_tls().await,
@@ -138,14 +136,12 @@ pub async fn server_with_metrics() -> std::io::Result<()> {
         ListenScheme::HttpHttps => {
             server
                 .bind(format!(
-                    "{}:{}",
-                    &listen_addr,
+                    "{listen_addr}:{}",
                     RauthyConfig::get().vars.server.port_http
                 ))?
                 .bind_rustls_0_23(
                     format!(
-                        "{}:{}",
-                        &listen_addr,
+                        "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
                     tls::load_tls().await,
@@ -197,8 +193,7 @@ pub async fn server_without_metrics() -> std::io::Result<()> {
         ListenScheme::Http => {
             server
                 .bind(format!(
-                    "{}:{}",
-                    &listen_addr,
+                    "{listen_addr}:{}",
                     RauthyConfig::get().vars.server.port_http
                 ))?
                 .run()
@@ -209,8 +204,7 @@ pub async fn server_without_metrics() -> std::io::Result<()> {
             server
                 .bind_rustls_0_23(
                     format!(
-                        "{}:{}",
-                        &listen_addr,
+                        "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
                     tls::load_tls().await,
@@ -222,14 +216,12 @@ pub async fn server_without_metrics() -> std::io::Result<()> {
         ListenScheme::HttpHttps => {
             server
                 .bind(format!(
-                    "{}:{}",
-                    &listen_addr,
+                    "{listen_addr}:{}",
                     RauthyConfig::get().vars.server.port_http
                 ))?
                 .bind_rustls_0_23(
                     format!(
-                        "{}:{}",
-                        &listen_addr,
+                        "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
                     tls::load_tls().await,
