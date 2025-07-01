@@ -4,6 +4,118 @@
 
 ### Changes
 
+#### Remembered Login Locations
+
+Rauthy will now remember Login locations / IPs for each user and send out an E-Mail notification, if a login from a new
+IP / location was done. This E-Mail will also contain a link to revoke all Sessions and Refresh tokens for this user,
+which will also trigger a backchannel logout to all configured clients, in case an invalid login was done for a user.
+Users should be able to handle these situations without the need of an Admin in this case.
+
+[#1072](https://github.com/sebadob/rauthy/pull/1072)
+
+#### IP-Geoblocking
+
+Rauthy can now block requests depending on the origin country of the peer IP address. You can either provide a custom
+header value, which is inserted for instance by a WAF or CDN, like in case of Cloudflare the `CF-IPCountry` header,
+or you can opt-in and provide a Maxmind AccountID + License for either the free GeoLite databases, or a paid version of
+it. These GeoLite databases are published under the Creative Commons License, you only need to create a free account
+to generate a License. Rauthy will download the configured DB and update it regularly.
+
+This IpGeo information will also be used for the *Remembered Login Locations* feature above. The country and depending
+on the chosen DB type also the city will be added to the E-Mail notice.
+
+```toml
+[geolocation]
+# If you have a configured and working Geolocation setup, you can
+# define if un-resolvable IP addresses should be blocked. By default,
+# if a Country cannot be found for a certain IP address, it will be
+# allowed anyway. This is necessary to allow private network connections
+# for instance. Only if you run a public Rauthy instance, and you will
+# guaranteed always connect with a public Peer IP, you might want to
+# set this to `true`.
+#
+# default: false
+# overwritten by: GEO_BLOCK_UNKONW
+block_unknown = false
+
+# If you have a WAF or CDN which injects a geoloaction header
+# with the country code, provide the name here. For instance,
+# in case of Cloudflare, this would be 'CF-IPCountry'.
+#
+# This header will only be accepted, if Rauthy runs in proxy_mode,
+# and the source IP is a trusted proxy, to prevent spoofing.
+#
+# default: not set
+# overwritten by: GEO_COUNTRY_HEADER
+country_header = 'CF-IPCountry'
+
+# You can black- or whitelist countries, if you have a configured
+# and working Geolocation, either via `country_header` or a
+# Maxmind database.
+#
+# The `country_list_type` can be either `whitelist` or `blacklist`,
+# and it will specify the behavior of the `country_list`.
+# For instance, if you have `country_list_type = 'whitelist'` and
+# `country_list = ['DE', 'FR']`, only access from Germany and France
+# will be allowed.
+#
+# The `whitelist` type is a `default-deny`, while `blacklist` is
+# `default-allow`.
+#
+# If `country_list_type` is not set at all, Geoblocking will be
+# disabled.
+#
+# default: not set
+country_list_type = 'whitelist'
+# default: not set
+country_list = []
+
+# If you don't have a header with a country code, you can
+# also provide a Maxmind account. Rauthy will then download
+# the 'GeoLite2 Country' database regularly and use it for
+# geolocating IPs.
+#
+# The GeoLite databases from Maxmind are free and published
+# under the Creative Commons License. You can also provide
+# an Enterprise database, which will have more accurate data.
+# Check the `maxind_db_type` below.
+#
+# default: not set
+# overwritten by: GEO_MAXMIND_ACC_ID
+maxmind_account_id = ''
+# overwritten by: GEO_MAXMIND_LICENSE
+maxmind_license_key = ''
+
+# If `maxmind_account_id` and `maxmind_license_key`, this
+# will be the directory being used for DB download and storage.
+#
+# default: 'data'
+# overwritten by: GEO_MAXMIND_DIR
+maxmind_db_dir = 'data'
+
+# By default, the `GeoLite2-Country` database from Maxmind is
+# being used. The IP Geolocation databases are loaded fully into
+# memory at startup to speedup lookups. The size therefore makes
+# a big difference, not only for lookup speed, but also in terms
+# of memory usage. The Country DB adds ~10MB of memory overhead,
+# while the City DB is around 65MB.
+#
+# Possible Values (case-sensitive):
+# - GeoLite2-Country
+# - GeoLite2-City
+#
+# If you have access to paid Maxmind databases, you can add the
+# db_type in a way that it resolves to a valid download link.
+# The link will be created with the following template:
+# `https://download.maxmind.com/geoip/databases/{maxind_db_type}/download?suffix=tar.gz`
+#
+# default: 'GeoLite2-Country'
+# overwritten by: GEO_MAXMIND_DB_TYPE
+maxind_db_type = 'GeoLite2-Country'
+```
+
+[#1077](https://github.com/sebadob/rauthy/pull/1077)
+
 #### TLS Hot-Reload
 
 Rauthy can now hot-reload TLS Key + Certificates. If started with `server.scheme` set to any `https` value and TLS
@@ -48,9 +160,25 @@ has received an update as well. You can now set `access.whoami_headers = true` o
 the `/whoami` endpoint not only return the extracted "real IP", but it will also return all request headers it received.
 This will help you make sure your setup is working correctly, if you use `auth_headers`. By default, this is set to
 `false`. Depending on your internal network setup, this could expose sensitive headers, if you inject any. It will not
-return values for `Cookie` and Rauthy's own CSRF token headers, but all others return will show their raw values.
+return values for `Cookie` and Rauthys own CSRF token headers, but all others return will show their raw values.
 
 [#1053](https://github.com/sebadob/rauthy/pull/1053)
+
+#### Re-Authenticate for MFA keys modifications
+
+To be able to modify MFA / Passkeys in any way, a user now needs to re-authenticate. This re-authentication will open
+a 2-minute window that allows modifications for MFA keys, like adding new ones and deleting existing ones.
+
+[#1068](https://github.com/sebadob/rauthy/pull/1068)
+
+#### Load config from Vault
+
+The ability to load the config file from a Vault source has been added. To do this, you need to provide the ENV var
+`USE_VAULT_CONFIG=true` and a `vault.toml` file, that contains the necessary information on how to connect.
+
+TODO - add example file here
+
+[#1051](https://github.com/sebadob/rauthy/pull/1051)
 
 #### Bluesky / AT Protocol
 
@@ -68,6 +196,17 @@ enable = false
 
 [#644](https://github.com/sebadob/rauthy/pull/644)
 [#1064](https://github.com/sebadob/rauthy/pull/1064)
+
+#### Anti-Lockout hooks in Admin UI
+
+The Admin UI already had anti-lockout hooks for some important things like the `rauthy` client or the `rauthy_admin`
+role. This release adds some of these hooks to user edit and delete pages, if the currently looked at user matches the
+currently logged-in admin from the session. These hooks prevent, disabling, expiring, and deleting this user, and also
+removing the `rauthy_admin` role from itself. This means a Rauthy admin cannot degrade itself to a non-admin or delete
+itself by accident. Only other admins can do this. This makes sure, that at least always at least one `rauthy_admin`
+exists and you can never fully lock yourself out of Rauthy.
+
+[#1066](https://github.com/sebadob/rauthy/pull/1066)
 
 ## v0.30.2
 
