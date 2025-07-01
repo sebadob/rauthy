@@ -8,6 +8,7 @@ pub mod error_impls;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum ErrorResponseType {
     BadRequest,
+    Blocked,
     Connection,
     CSRFTokenError,
     Database,
