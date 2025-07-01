@@ -2,6 +2,7 @@ use crate::ListenScheme;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
+use crate::vault_config::VaultConfig;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
@@ -635,12 +636,31 @@ impl Default for Vars {
 
 impl Vars {
     async fn load(path_config: &str) -> (Self, hiqlite::NodeConfig) {
-        let mut slf = Self::default();
+        let use_vault_config = env::var("USE_VAULT_CONFIG")
+            .unwrap_or_else(|_| "false".to_string())
+            .parse::<bool>()
+            .expect("Cannot parse USE_VAULT_CONFIG as bool");
+        let slf = Self::default();
 
-        let Ok(config) = fs::read_to_string(path_config).await else {
-            panic!("Cannot read config file from {path_config}");
+        let config = match use_vault_config {
+            true => match VaultConfig::load_config().await {
+                Ok(config) => config,
+                Err(e) => {
+                    panic!("Cannot read config from Vault. {}", e);
+                }
+            },
+            _ => {
+                let Ok(config) = fs::read_to_string(path_config).await else {
+                    panic!("Cannot read config file from {}", path_config);
+                };
+                config
+            }
         };
 
+        Self::parse(slf, config).await
+    }
+
+    async fn parse(mut slf: Vars, config: String) -> (Self, hiqlite::NodeConfig) {
         // Note: these inner parsers are very verbose, but they allow the upfront memory allocation
         // and memory fragmentation, after the quite big toml has been freed and the config stays
         // in static memory.
@@ -2715,7 +2735,7 @@ fn t_u8(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> 
     }
 }
 
-fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<String> {
+pub fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<String> {
     if !env_var.is_empty() {
         if let Ok(v) = env::var(env_var) {
             return Some(v);
@@ -2758,7 +2778,7 @@ fn t_str_vec(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> O
     Some(res)
 }
 
-fn t_table(map: &mut toml::Table, key: &str) -> Option<toml::Table> {
+pub fn t_table(map: &mut toml::Table, key: &str) -> Option<toml::Table> {
     let Value::Table(t) = map.remove(key)? else {
         panic!("Expected type `Table` for {key}")
     };
@@ -2771,7 +2791,7 @@ fn err_env(var_name: &str, typ: &str) -> String {
 }
 
 #[inline]
-fn err_t(key: &str, parent: &str, typ: &str) -> String {
+pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
     let sep = if parent.is_empty() { "" } else { "." };
     format!("Expected type `{typ}` for {parent}{sep}{key}")
 }
