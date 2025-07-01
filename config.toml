@@ -1304,13 +1304,49 @@ disable_app_version_check = false
 #session_timeout = 259200
 
 [geolocation]
+# If you have a configured and working Geolocation setup, you can
+# define if un-resolvable IP addresses should be blocked. By default,
+# if a Country cannot be found for a certain IP address, it will be
+# allowed anyway. This is necessary to allow private network connections
+# for instance. Only if you run a public Rauthy instance, and you will
+# guaranteed always connect with a public Peer IP, you might want to
+# set this to `true`.
+#
+# default: false
+# overwritten by: GEO_BLOCK_UNKONW
+block_unknown = false
+
 # If you have a WAF or CDN which injects a geoloaction header
 # with the country code, provide the name here. For instance,
 # in case of Cloudflare, this would be 'CF-IPCountry'.
 #
+# This header will only be accepted, if Rauthy runs in proxy_mode,
+# and the source IP is a trusted proxy, to prevent spoofing.
+#
 # default: not set
 # overwritten by: GEO_COUNTRY_HEADER
-#country_header = 'CF-IPCountry'
+country_header = 'CF-IPCountry'
+
+# You can black- or whitelist countries, if you have a configured
+# and working Geolocation, either via `country_header` or a
+# Maxmind database.
+#
+# The `country_list_type` can be either `whitelist` or `blacklist`,
+# and it will specify the behavior of the `country_list`.
+# For instance, if you have `country_list_type = 'whitelist'` and
+# `country_list = ['DE', 'FR']`, only access from Germany and France
+# will be allowed.
+#
+# The `whitelist` type is a `default-deny`, while `blacklist` is
+# `default-allow`.
+#
+# If `country_list_type` is not set at all, Geoblocking will be
+# disabled.
+#
+# default: not set
+country_list_type = 'whitelist'
+# default: not set
+country_list = ['DE']
 
 # If you don't have a header with a country code, you can
 # also provide a Maxmind account. Rauthy will then download

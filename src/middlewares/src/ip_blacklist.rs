@@ -7,9 +7,12 @@ use futures::future::LocalBoxFuture;
 use rauthy_common::utils::real_ip_from_svc_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::ip_blacklist::IpBlacklist;
-use rauthy_models::html::templates::TooManyRequestsHtml;
+use rauthy_models::html::templates::{BlockedHtml, TooManyRequestsHtml};
+use rauthy_models::ipgeo;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::future::{Ready, ready};
 use std::rc::Rc;
+use tracing::info;
 
 pub struct RauthyIpBlacklistMiddleware;
 
@@ -54,7 +57,29 @@ where
         let service = Rc::clone(&self.service);
 
         Box::pin(async move {
+            let config = &RauthyConfig::get().vars.geo;
             let ip = real_ip_from_svc_req(&req)?;
+
+            // If the `block_is_whitelist` is `None`, Geoblocking is not configured at all
+            if let Some(is_whitelist) = config.block_is_whitelist {
+                // TODO does it make sense to also blacklist such an IP for faster lookups in case
+                //  of following, concurrent requests?
+                //  - measure time taken for the lookup vs memory overhead
+                //  - maybe caching a looked up IP is the better approach with less overhead
+                if let Some(iso_code) = ipgeo::get_location_alpha2(req.headers(), ip)? {
+                    if is_whitelist && !config.country_list.contains(&iso_code) {
+                        info!("Denying access from non-whitelisted country '{iso_code}'");
+                        blocked_err()?;
+                    } else if !is_whitelist && config.country_list.contains(&iso_code) {
+                        info!("Denying access from blacklisted country '{iso_code}'");
+                        blocked_err()?;
+                    }
+                } else if config.block_unknown {
+                    info!("Denying access from unknown country");
+                    blocked_err()?;
+                }
+            }
+
             if let Some(blacklisted) = IpBlacklist::get(ip.to_string()).await? {
                 debug_assert_eq!(blacklisted.ip, ip.to_string());
                 debug_assert!(blacklisted.exp >= Utc::now());
@@ -69,4 +94,12 @@ where
             service.call(req).await
         })
     }
+}
+
+#[inline]
+fn blocked_err() -> Result<(), Error> {
+    Err(Error::from(ErrorResponse::new(
+        ErrorResponseType::Blocked,
+        BlockedHtml::build(),
+    )))
 }

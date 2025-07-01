@@ -414,7 +414,10 @@ impl Default for Vars {
                 session_timeout: 259200,
             },
             geo: ConfigVarsGeo {
+                block_is_whitelist: None,
+                block_unknown: false,
                 country_header: None,
+                country_list: Vec::default(),
                 maxmind_account_id: None,
                 maxmind_license_key: None,
                 maxmind_db_dir: "data".into(),
@@ -1587,12 +1590,34 @@ impl Vars {
             return;
         };
 
+        if let Some(v) = t_bool(
+            &mut table,
+            "geolocation",
+            "block_unknown",
+            "GEO_BLOCK_UNKONW",
+        ) {
+            self.geo.block_unknown = v;
+        }
         self.geo.country_header = t_str(
             &mut table,
             "geolocation",
             "country_header",
             "GEO_COUNTRY_HEADER",
         );
+
+        if let Some(v) = t_str(&mut table, "geolocation", "country_list_type", "") {
+            match v.as_str() {
+                "whitelist" => self.geo.block_is_whitelist = Some(true),
+                "blacklist" => self.geo.block_is_whitelist = Some(false),
+                _ => {
+                    panic!("`geolocation.country_list_type` can only be `whitelist` or `blacklist`")
+                }
+            }
+
+            if let Some(v) = t_str_vec(&mut table, "geolocation", "country_list", "") {
+                self.geo.country_list = v;
+            }
+        }
 
         self.geo.maxmind_account_id = t_str(
             &mut table,
@@ -2259,6 +2284,14 @@ impl Vars {
             panic!("Missing `encryption.keys` / `encryption.key_active`");
         }
 
+        if self.geo.block_is_whitelist.unwrap_or(false) && self.geo.country_list.is_empty() {
+            panic!(
+                "`geolocation.country_list_type` is set to `whitelist` but \
+                `geolocation.country_list` is empty, this will not work, because it would block \
+                all requests."
+            );
+        }
+
         if self.server.pub_url.is_empty() {
             panic!("Empty `server.pub_url`");
         }
@@ -2475,7 +2508,10 @@ pub struct ConfigVarsFedCM {
 
 #[derive(Debug)]
 pub struct ConfigVarsGeo {
+    pub block_is_whitelist: Option<bool>,
+    pub block_unknown: bool,
     pub country_header: Option<String>,
+    pub country_list: Vec<String>,
     pub maxmind_account_id: Option<String>,
     pub maxmind_license_key: Option<String>,
     pub maxmind_db_dir: Cow<'static, str>,

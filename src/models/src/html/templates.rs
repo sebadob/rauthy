@@ -990,6 +990,16 @@ impl PwdResetHtml<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "error/blocked.html")]
+pub struct BlockedHtml;
+
+impl BlockedHtml {
+    pub fn build() -> String {
+        BlockedHtml.render().unwrap()
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "error/429.html")]
 pub struct TooManyRequestsHtml {
     pub ip: String,

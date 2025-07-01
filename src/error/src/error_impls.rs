@@ -56,7 +56,7 @@ impl ResponseError for ErrorResponse {
             ErrorResponseType::BadRequest | ErrorResponseType::UseDpopNonce(_) => {
                 StatusCode::BAD_REQUEST
             }
-            ErrorResponseType::Forbidden => StatusCode::FORBIDDEN,
+            ErrorResponseType::Blocked | ErrorResponseType::Forbidden => StatusCode::FORBIDDEN,
             ErrorResponseType::MfaRequired => StatusCode::NOT_ACCEPTABLE,
             ErrorResponseType::NotFound => StatusCode::NOT_FOUND,
             ErrorResponseType::Disabled
@@ -78,12 +78,14 @@ impl ResponseError for ErrorResponse {
     fn error_response(&self) -> HttpResponse {
         let status = self.status_code();
         match &self.error {
+            ErrorResponseType::Blocked => HttpResponseBuilder::new(status)
+                .insert_header(HEADER_HTML)
+                .body(self.message.clone()),
+
             ErrorResponseType::TooManyRequests(not_before_timestamp) => {
                 HttpResponseBuilder::new(status)
                     .insert_header((HEADER_RETRY_NOT_BEFORE, *not_before_timestamp))
                     .insert_header(HEADER_HTML)
-                    // TODO we could possibly do a small `unsafe` call here to just take
-                    // the content without cloning it -> more efficient, especially for blocked IPs
                     .body(self.message.clone())
             }
 
