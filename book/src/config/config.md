@@ -1296,6 +1296,94 @@ level_failed_login = 'info'
 # overwritten by: SESSION_TIMEOUT_FED_CM
 #session_timeout = 259200
 
+[geolocation]
+# If you have a configured and working Geolocation setup, you can
+# define if un-resolvable IP addresses should be blocked. By default,
+# if a Country cannot be found for a certain IP address, it will be
+# allowed anyway. This is necessary to allow private network connections
+# for instance. Only if you run a public Rauthy instance, and you will
+# guaranteed always connect with a public Peer IP, you might want to
+# set this to `true`.
+#
+# default: false
+# overwritten by: GEO_BLOCK_UNKONW
+#block_unknown = false
+
+# If you have a WAF or CDN which injects a geoloaction header
+# with the country code, provide the name here. For instance,
+# in case of Cloudflare, this would be 'CF-IPCountry'.
+#
+# This header will only be accepted, if Rauthy runs in proxy_mode,
+# and the source IP is a trusted proxy, to prevent spoofing.
+#
+# default: not set
+# overwritten by: GEO_COUNTRY_HEADER
+#country_header = 'CF-IPCountry'
+
+# You can black- or whitelist countries, if you have a configured
+# and working Geolocation, either via `country_header` or a
+# Maxmind database.
+#
+# The `country_list_type` can be either `whitelist` or `blacklist`,
+# and it will specify the behavior of the `country_list`.
+# For instance, if you have `country_list_type = 'whitelist'` and
+# `country_list = ['DE', 'FR']`, only access from Germany and France
+# will be allowed.
+#
+# The `whitelist` type is a `default-deny`, while `blacklist` is
+# `default-allow`.
+#
+# If `country_list_type` is not set at all, Geoblocking will be
+# disabled.
+#
+# default: not set
+#country_list_type = 'whitelist'
+# default: not set
+#country_list = []
+
+# If you don't have a header with a country code, you can
+# also provide a Maxmind account. Rauthy will then download
+# the 'GeoLite2 Country' database regularly and use it for
+# geolocating IPs.
+#
+# The GeoLite databases from Maxmind are free and published
+# under the Creative Commons License. You can also provide
+# an Enterprise database, which will have more accurate data.
+# Check the `maxind_db_type` below.
+#
+# default: not set
+# overwritten by: GEO_MAXMIND_ACC_ID
+#maxmind_account_id = ''
+# overwritten by: GEO_MAXMIND_LICENSE
+#maxmind_license_key = ''
+
+# If `maxmind_account_id` and `maxmind_license_key`, this
+# will be the directory being used for DB download and storage.
+#
+# default: 'data'
+# overwritten by: GEO_MAXMIND_DIR
+#maxmind_db_dir = 'data'
+
+# By default, the `GeoLite2-Country` database from Maxmind is
+# being used. The IP Geolocation databases are loaded fully into
+# memory at startup to speedup lookups. The size therefore makes
+# a big difference, not only for lookup speed, but also in terms
+# of memory usage. The Country DB adds ~10MB of memory overhead,
+# while the City DB is around 65MB.
+#
+# Possible Values (case-sensitive):
+# - GeoLite2-Country
+# - GeoLite2-City
+#
+# If you have access to paid Maxmind databases, you can add the
+# db_type in a way that it resolves to a valid download link.
+# The link will be created with the following template:
+# `https://download.maxmind.com/geoip/databases/{maxind_db_type}/download?suffix=tar.gz`
+#
+# default: 'GeoLite2-Country'
+# overwritten by: GEO_MAXMIND_DB_TYPE
+#maxind_db_type = 'GeoLite2-Country'
+
 [hashing]
 # Argon2ID hashing parameters. Take a look at the documentation
 # for more information:
