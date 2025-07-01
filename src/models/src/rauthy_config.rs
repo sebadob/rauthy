@@ -421,6 +421,7 @@ impl Default for Vars {
                 maxmind_account_id: None,
                 maxmind_license_key: None,
                 maxmind_db_dir: "data".into(),
+                maxmind_db_type: "GeoLite2-Country".into(),
             },
             hashing: VarsHashing {
                 argon2_m_cost: 131072,
@@ -1639,6 +1640,14 @@ impl Vars {
         ) {
             self.geo.maxmind_db_dir = v.into();
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "geolocation",
+            "maxind_db_type",
+            "GEO_MAXMIND_DB_TYPE",
+        ) {
+            self.geo.maxmind_db_type = v.into();
+        }
     }
 
     fn parse_hashing(&mut self, table: &mut toml::Table) {
@@ -2515,6 +2524,7 @@ pub struct ConfigVarsGeo {
     pub maxmind_account_id: Option<String>,
     pub maxmind_license_key: Option<String>,
     pub maxmind_db_dir: Cow<'static, str>,
+    pub maxmind_db_type: Cow<'static, str>,
 }
 
 #[derive(Debug)]

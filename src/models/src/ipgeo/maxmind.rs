@@ -1,4 +1,5 @@
 use crate::ipgeo::LookupResponse;
+use crate::rauthy_config::RauthyConfig;
 use arc_swap::ArcSwap;
 use flate2::bufread;
 use futures::stream::StreamExt;
@@ -12,11 +13,10 @@ use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 use tokio::{fs, pin, task};
 use tracing::{debug, error, info};
-
 // static LINK_CITY: &str =
 //     "https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz";
-static LINK_COUNTRY: &str =
-    "https://download.maxmind.com/geoip/databases/GeoLite2-Country/download?suffix=tar.gz";
+// static LINK_COUNTRY: &str =
+//     "https://download.maxmind.com/geoip/databases/GeoLite2-Country/download?suffix=tar.gz";
 
 static BASE_DIR: OnceLock<String> = OnceLock::new();
 static ACCOUNT_ID: OnceLock<String> = OnceLock::new();
@@ -32,6 +32,10 @@ pub async fn update_db() -> Result<(), ErrorResponse> {
     let username = ACCOUNT_ID.get().unwrap();
     let password = LICENSE_KEY.get().unwrap();
 
+    let db_type = RauthyConfig::get().vars.geo.maxmind_db_type.as_ref();
+    let link =
+        format!("https://download.maxmind.com/geoip/databases/{db_type}/download?suffix=tar.gz");
+
     // before downloading, check the version
     if fs::try_exists(&db_file).await? {
         debug!("GeoLite DB already exists");
@@ -41,7 +45,7 @@ pub async fn update_db() -> Result<(), ErrorResponse> {
         // TODO should be allow skipping this step if there is a general network issue?
         //  maybe also save the timestamp for the etag to be able to log warnings for too old DB?
         let res = http_client()
-            .head(LINK_COUNTRY)
+            .head(&link)
             .basic_auth(username, Some(password))
             .send()
             .await?;
@@ -81,7 +85,7 @@ pub async fn update_db() -> Result<(), ErrorResponse> {
 
     // either no DB exists or version is outdated -> download new
     let res = http_client()
-        .get(LINK_COUNTRY)
+        .get(link)
         .basic_auth(username, Some(password))
         .send()
         .await?;
