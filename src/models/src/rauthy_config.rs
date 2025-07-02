@@ -649,13 +649,13 @@ impl Vars {
         let config = match use_vault_config {
             true => match VaultConfig::load_config().await {
                 Ok(config) => config,
-                Err(e) => {
-                    panic!("Cannot read config from Vault. {}", e);
+                Err(err) => {
+                    panic!("Cannot read config from Vault. {err}");
                 }
             },
             _ => {
                 let Ok(config) = fs::read_to_string(path_config).await else {
-                    panic!("Cannot read config file from {}", path_config);
+                    panic!("Cannot read config file from {path_config}");
                 };
                 config
             }
