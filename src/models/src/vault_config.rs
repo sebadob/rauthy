@@ -8,6 +8,8 @@ use std::time::Duration;
 use tokio::fs;
 use toml::Value;
 use tracing::debug;
+
+#[derive(Default)]
 pub struct VaultConfig {
     vault_source: VaultSource,
 }
@@ -56,12 +58,12 @@ impl VaultConfig {
         }
         if let Ok(v) = env::var("VAULT_CONFIG_KEY") {
             existing_config.vault_source.config_key = v;
-        }        
+        }
         if let Ok(v) = env::var("VAULT_KV_VERSION") {
             match v.as_str() {
                 "1" => existing_config.vault_source.kv_version = KvVersion::V1,
                 "2" => existing_config.vault_source.kv_version = KvVersion::V2,
-                _ => panic!("Invalid value for VAULT_KV_VERSION: {}", v),
+                _ => panic!("Invalid value for VAULT_KV_VERSION: {v}"),
             }
         }
         if let Ok(v) = env::var("HTTP_CUST_ROOT_CA_BUNDLE") {
@@ -71,7 +73,7 @@ impl VaultConfig {
         existing_config
     }
 
-    async fn load_from_string(config: &String) -> Result<Self, Box<dyn Error>> {
+    async fn load_from_string(config: &str) -> Result<Self, Box<dyn Error>> {
         let vault_source = VaultSource::default();
         let mut slf = Self { vault_source };
 
@@ -92,23 +94,33 @@ impl VaultConfig {
         self.vault_source.addr = table
             .remove("addr")
             .expect("missing in vault.toml: addr")
-            .as_str().unwrap().to_owned();
+            .as_str()
+            .unwrap()
+            .to_owned();
         self.vault_source.token = table
             .remove("token")
             .expect("missing in vault.toml: token")
-            .as_str().unwrap().to_owned();
+            .as_str()
+            .unwrap()
+            .to_owned();
         self.vault_source.mount = table
             .remove("mount")
             .expect("missing in vault.toml: mount")
-            .as_str().unwrap().to_owned();
+            .as_str()
+            .unwrap()
+            .to_owned();
         self.vault_source.path = table
             .remove("path")
             .expect("missing in vault.toml: path")
-            .as_str().unwrap().to_owned();
+            .as_str()
+            .unwrap()
+            .to_owned();
         self.vault_source.config_key = table
             .remove("config_key")
             .expect("missing in vault.toml: config_key")
-            .as_str().unwrap().to_owned();        
+            .as_str()
+            .unwrap()
+            .to_owned();
 
         if let Ok(v) = env::var("VAULT_KV_VERSION") {
             if v == "1" {
@@ -117,7 +129,7 @@ impl VaultConfig {
                 self.vault_source.kv_version = KvVersion::V2;
             }
         } else {
-            let Value::String(s) = table.remove("kv_version").unwrap() else {
+            let Value::String(s) = table.remove("kv_version").expect("Missing kv_version") else {
                 panic!("{}", err_t("kv_version", "vault", "String"));
             };
             if s == "1" {
@@ -138,13 +150,6 @@ impl VaultConfig {
     }
 }
 
-impl Default for VaultConfig {
-    fn default() -> Self {
-        VaultConfig {
-            vault_source: VaultSource::default(),
-        }
-    }
-}
 struct VaultSource {
     addr: String,
     token: String,
@@ -158,11 +163,11 @@ struct VaultSource {
 impl Default for VaultSource {
     fn default() -> Self {
         VaultSource {
-            addr: "".to_string(),
-            token: "".to_string(),
-            mount: "".to_string(),
-            path: "".to_string(),
-            config_key: "".to_string(),
+            addr: String::default(),
+            token: String::default(),
+            mount: String::default(),
+            path: String::default(),
+            config_key: String::default(),
             kv_version: KvVersion::V2,
             root_ca_bundle: None,
         }
@@ -178,8 +183,8 @@ enum KvVersion {
 impl KvVersion {
     fn get_api_path(&self, mount: &str, path: &str) -> String {
         match self {
-            KvVersion::V1 => format!("/v1/{}/{}", &mount, &path),
-            _ => format!("/v1/{}/data/{}", &mount, &path),
+            KvVersion::V1 => format!("/v1/{mount}/{path}"),
+            _ => format!("/v1/{mount}/data/{path}"),
         }
     }
 }
@@ -204,7 +209,7 @@ impl VaultSource {
         path: &str,
     ) -> Result<HashMap<String, serde_json::Value>, Box<dyn std::error::Error>> {
         let url = self.build_kv_read_url(path)?;
-        let client = Self::http_client(&self)?;
+        let client = Self::http_client(self)?;
         let response = client
             .get(url)
             .header("X-Vault-Token", &self.token)
@@ -212,10 +217,8 @@ impl VaultSource {
             .await?;
 
         if response.status().is_success() {
-            let raw_text = &response.text().await.unwrap();
-            let raw: serde_json::Value = serde_json::from_str(&raw_text)?;
-
-            let json_obj = raw
+            let json = response.json::<serde_json::Value>().await?;
+            let json_obj = json
                 .get("data")
                 .and_then(|x| {
                     if self.kv_version == KvVersion::V2 {
@@ -235,14 +238,10 @@ impl VaultSource {
             return Ok(secret);
         }
 
-        let status = format!("{:?}", response.error_for_status_ref());
-        let mut body = "".to_string();
-        if let Ok(text) = &response.text().await {
-            body = text.clone();
-        }
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
         Err(Box::from(format!(
-            "Failed to fetch secret from Vault (wrong kv version?). Status: {} Body: {}",
-            status, body
+            "Failed to fetch secret from Vault (wrong kv version?). Status: {status} Body: {body}"
         )))
     }
 
@@ -261,7 +260,7 @@ impl VaultSource {
                 .connect_timeout(Duration::from_secs(10))
                 .timeout(Duration::from_secs(10))
                 .min_tls_version(tls_version)
-                .user_agent(format!("Rauthy Client v{}", RAUTHY_VERSION))
+                .user_agent(format!("Rauthy Client v{RAUTHY_VERSION}"))
                 .https_only(!dev_mode)
                 .danger_accept_invalid_certs(dev_mode)
                 .use_rustls_tls();
