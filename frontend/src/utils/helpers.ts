@@ -293,6 +293,18 @@ export function getCookie(cname: string): string {
     return "";
 }
 
+export function prettyFileSize(size: number) {
+    if (size > 1024 * 1024 * 1024) {
+        return `${(size / 1024 / 1024 / 1024).toFixed(2)} GiB`
+    } else if (size > 1024 * 1024) {
+        return `${(size / 1024 / 1024).toFixed(2)} MiB`
+    } else if (size > 1024) {
+        return `${(size / 1024).toFixed(2)} KiB`
+    } else {
+        return `${size} B`
+    }
+}
+
 /** races a promise against a given timeout and throws an exception if exceeded */
 export function promiseTimeout<T>(prom: Promise<T>, time: number): Promise<T | undefined> {
     let timer: any;

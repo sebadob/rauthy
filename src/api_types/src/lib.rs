@@ -3,6 +3,7 @@ use utoipa::ToSchema;
 
 pub mod api_keys;
 pub mod auth_providers;
+pub mod backup;
 pub mod blacklist;
 pub mod clients;
 mod cust_validation;

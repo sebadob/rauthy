@@ -29,6 +29,14 @@ export let I18nAdminDe: I18nAdmin = {
         name: "Attribut Name",
         userEditable: "Durch Benutzer Editierbar",
     },
+    backup: {
+        createBackup: "Backup Erstellen",
+        disabledDesc: "Diese Funktionen stehen nur zur Verfügung, wenn Hiqlite als Datenbank konfiguriert ist.",
+        lastModified: "Zuletzt Modifiziert",
+        local: "Lokal",
+        name: "Name",
+        size: "Größe",
+    },
     clients: {
         backchannelLogout: "Sollte dieser client {{ OIDC_BCL }} unterstützen, kann die URI hier angegeben werden.",
         branding: {

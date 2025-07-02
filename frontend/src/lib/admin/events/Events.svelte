@@ -86,7 +86,10 @@
         };
 
         es.onerror = () => {
-            console.error('SSE Events Stream closed');
+            // make sure to re-open after any error
+            setTimeout(() => {
+                stream();
+            }, 3000);
         };
 
         es.onmessage = ev => {

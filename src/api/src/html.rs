@@ -96,6 +96,15 @@ pub async fn get_admin_config_argon2_html(req: HttpRequest) -> Result<HttpRespon
         .await
 }
 
+#[get("/admin/config/backups")]
+pub async fn get_admin_config_backups_html(
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::ConfigBackups
+        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
+        .await
+}
+
 #[get("/admin/config/encryption")]
 pub async fn get_admin_config_encryption_html(
     req: HttpRequest,

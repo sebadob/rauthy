@@ -22,6 +22,7 @@ use tracing::error;
 pub mod api_keys;
 pub mod atproto;
 pub mod auth_providers;
+pub mod backup;
 pub mod blacklist;
 pub mod clients;
 pub mod dev_only;

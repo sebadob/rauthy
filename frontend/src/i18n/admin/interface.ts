@@ -30,6 +30,14 @@ export interface I18nAdmin {
         name: string,
         userEditable: string,
     },
+    backup: {
+        createBackup: string,
+        disabledDesc: string,
+        lastModified: string,
+        local: string,
+        name: string,
+        size: string,
+    },
     clients: {
         backchannelLogout: string,
         branding: {

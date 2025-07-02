@@ -631,6 +631,28 @@ impl AdminConfigArgon2Html<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "html/admin/config/backups.html")]
+pub struct AdminConfigBackupsHtml<'a> {
+    lang: &'a str,
+    client_id: &'a str,
+    theme_ts: i64,
+    templates: &'a [HtmlTemplate],
+}
+
+impl AdminConfigBackupsHtml<'_> {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
+        let res = AdminConfigBackupsHtml {
+            lang: lang.as_str(),
+            client_id: "rauthy",
+            theme_ts,
+            ..Default::default()
+        };
+
+        res.render().unwrap()
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "html/admin/config/encryption.html")]
 pub struct AdminConfigEncryptionHtml<'a> {
     lang: &'a str,

@@ -6,8 +6,8 @@ use prometheus::Registry;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_handlers::{
-    api_keys, atproto, auth_providers, blacklist, clients, dev_only, events, fed_cm, generic,
-    groups, html, oidc, roles, scopes, sessions, swagger_ui, themes, users,
+    api_keys, atproto, auth_providers, backup, blacklist, clients, dev_only, events, fed_cm,
+    generic, groups, html, oidc, roles, scopes, sessions, swagger_ui, themes, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -281,6 +281,10 @@ fn api_services() -> actix_web::Scope {
                 .service(auth_providers::get_provider_img)
                 .service(auth_providers::put_provider_img)
                 .service(auth_providers::post_provider_link)
+                .service(backup::get_backups)
+                .service(backup::post_backup)
+                .service(backup::get_backup_local)
+                .service(backup::get_backup_s3)
                 .service(blacklist::get_blacklist)
                 .service(blacklist::post_blacklist)
                 .service(blacklist::delete_blacklist)
@@ -297,6 +301,7 @@ fn api_services() -> actix_web::Scope {
                 .service(html::get_admin_blacklist_html)
                 .service(html::get_admin_clients_html)
                 .service(html::get_admin_config_argon2_html)
+                .service(html::get_admin_config_backups_html)
                 .service(html::get_admin_config_encryption_html)
                 .service(html::get_admin_config_jwks_html)
                 .service(html::get_admin_config_policy_html)
