@@ -174,9 +174,46 @@ a 2-minute window that allows modifications for MFA keys, like adding new ones a
 #### Load config from Vault
 
 The ability to load the config file from a Vault source has been added. To do this, you need to provide the ENV var
-`USE_VAULT_CONFIG=true` and a `vault.toml` file, that contains the necessary information on how to connect.
+`USE_VAULT_CONFIG=true` and a `vault.toml` file, that contains the necessary information on how to connect and/or override the settings with ENV vars.
+If testing with unsecure connections (i.e. http://) one has to set this ENV var: `DEV_MODE=true`.
 
-TODO - add example file here
+Example vault.toml file:
+
+```toml
+[vault]
+addr='http://127.0.0.1:8200'
+token='hvs....'
+mount='secret'
+path='rauthy_config'
+config_key='config.toml'
+kv_version='2'
+
+# You can provide a root certificate bundle, if you
+# are running servers / clients Rauthy needs to connect
+# to with self-signed certificates.
+# The certificates need to be in PEM format.
+#
+# overwritten by: HTTP_CUST_ROOT_CA_BUNDLE
+#root_ca_bundle = """
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#-----BEGIN CERTIFICATE-----
+#....
+#-----END CERTIFICATE-----
+#"""
+```
+
+Example ENV vars for Docker:
+
+```
+-e VAULT_ADDR=https://myvault.example.com:8200 \
+-e VAULT_TOKEN=hvs.... \
+-e VAULT_MOUNT=secret \
+-e VAULT_PATH=rauthy_config \
+-e VAULT_CONFIG_KEY=config.toml \
+-e VAULT_KV_VERSION=2 \
+```
 
 [#1051](https://github.com/sebadob/rauthy/pull/1051)
 
