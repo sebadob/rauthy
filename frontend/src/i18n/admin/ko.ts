@@ -26,6 +26,14 @@ export let I18nAdminKo: I18nAdmin = {
         name: "속성 이름",
         userEditable: "User Editable",
     },
+    backup: {
+        createBackup: "Create Backup",
+        disabledDesc: "This functionality only exists, if Hiqlite is configured as the database.",
+        lastModified: "Last Modified",
+        local: "Local",
+        name: "Name",
+        size: "Size",
+    },
     clients: {
         backchannelLogout: "If this client supports {{ OIDC_BCL }}, you can provide the URI here.",
         branding: {

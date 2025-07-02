@@ -3,10 +3,11 @@ use crate::entity::auth_providers::AuthProviderTemplate;
 use crate::entity::logos::{Logo, LogoType};
 use crate::html::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
-    AdminConfigArgon2Html, AdminConfigEncryptionHtml, AdminConfigJwksHtml, AdminConfigPolicyHtml,
-    AdminEventsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
-    AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml, HtmlTemplate, IndexHtml, LogoutHtml,
-    ProviderCallbackHtml, ProvidersHtml, UserPasswordResetHtml, UserRegisterHtml,
+    AdminConfigArgon2Html, AdminConfigBackupsHtml, AdminConfigEncryptionHtml, AdminConfigJwksHtml,
+    AdminConfigPolicyHtml, AdminEventsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml,
+    AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml, HtmlTemplate,
+    IndexHtml, LogoutHtml, ProviderCallbackHtml, ProvidersHtml, UserPasswordResetHtml,
+    UserRegisterHtml,
 };
 use crate::language::Language;
 use actix_web::http::header::ACCEPT_ENCODING;
@@ -37,6 +38,7 @@ pub enum HtmlCached {
     AdminUsers,
     AuthProviderCallback,
     ConfigArgon2,
+    ConfigBackups,
     ConfigEncryption,
     ConfigJwks,
     ConfigPolicy,
@@ -68,6 +70,7 @@ impl HtmlCached {
             Self::AdminUsers => "admin_users",
             Self::AuthProviderCallback => "auth_provider_cb",
             Self::ConfigArgon2 => "cfg_argon2",
+            Self::ConfigBackups => "cfg_backup",
             Self::ConfigEncryption => "cfg_encryption",
             Self::ConfigJwks => "cfg_jwks",
             Self::ConfigPolicy => "cfg_policy",
@@ -144,6 +147,7 @@ impl HtmlCached {
             Self::AdminUsers => AdminUsersHtml::build(&lang, theme_ts),
             Self::AuthProviderCallback => ProviderCallbackHtml::build(&lang, theme_ts),
             Self::ConfigArgon2 => AdminConfigArgon2Html::build(&lang, theme_ts),
+            Self::ConfigBackups => AdminConfigBackupsHtml::build(&lang, theme_ts),
             Self::ConfigEncryption => AdminConfigEncryptionHtml::build(&lang, theme_ts),
             Self::ConfigJwks => AdminConfigJwksHtml::build(&lang, theme_ts),
             Self::ConfigPolicy => AdminConfigPolicyHtml::build(&lang, theme_ts),

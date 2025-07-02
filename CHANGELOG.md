@@ -164,6 +164,15 @@ return values for `Cookie` and Rauthys own CSRF token headers, but all others re
 
 [#1053](https://github.com/sebadob/rauthy/pull/1053)
 
+#### Backups via Admin UI
+
+If Rauthy is running with Hiqlite as the database, you can now view and download existing backups via the
+`Admin UI -> Config -> Backups` section. It shows local backup files and the ones on S3 storage, if it's configured.
+You also get the option to trigger manual backups with a new button, which gets rid of the issue of updating the cron
+task to "a few minutes in the future" to trigger a backup on demand.
+
+[#1079](https://github.com/sebadob/rauthy/pull/1079)
+
 #### Re-Authenticate for MFA keys modifications
 
 To be able to modify MFA / Passkeys in any way, a user now needs to re-authenticate. This re-authentication will open

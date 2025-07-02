@@ -1,10 +1,10 @@
 use crate::{
-    api_keys, atproto, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc,
-    roles, scopes, sessions, themes, users,
+    api_keys, atproto, auth_providers, backup, blacklist, clients, events, fed_cm, generic, groups,
+    oidc, roles, scopes, sessions, themes, users,
 };
 use rauthy_api_types::*;
 use rauthy_api_types::{
-    api_keys::*, auth_providers::*, blacklist::*, clients::*, events::*, fed_cm::*,
+    api_keys::*, auth_providers::*, backup::*, blacklist::*, clients::*, events::*, fed_cm::*,
     forward_auth::*, generic::*, groups::*, oidc::*, roles::*, scopes::*, sessions::*, themes::*,
     users::*,
 };
@@ -43,6 +43,11 @@ use utoipa::{OpenApi, openapi};
         auth_providers::get_provider_delete_safe,
         auth_providers::get_provider_img,
         auth_providers::put_provider_img,
+
+        backup::get_backups,
+        backup::post_backup,
+        backup::get_backup_local,
+        backup::get_backup_s3,
 
         blacklist::get_blacklist,
         blacklist::post_blacklist,
@@ -188,6 +193,8 @@ use utoipa::{OpenApi, openapi};
             ApiKeyAccess,
             AuthProviderType,
             AuthProviderTemplate,
+            BackupListing,
+            BackupListings,
             EventLevel,
             EventResponse,
             EventType,
@@ -323,6 +330,7 @@ use utoipa::{OpenApi, openapi};
         (name = "health", description = "Ping, Health, Ready Check"),
         (name = "blacklist", description = "IP Blacklist endpoints"),
         (name = "api_keys", description = "API Keys endpoints"),
+        (name = "backup", description = "Backup endpoints"),
         (name = "generic", description = "Generic endpoints"),
         (name = "webid", description = "WebID endpoints"),
         (name = "fed_cm", description = "Experimental FedCM endpoints"),
