@@ -177,7 +177,7 @@ The ability to load the config file from a Vault source has been added. To do th
 `USE_VAULT_CONFIG=true` and a `vault.toml` file, that contains the necessary information on how to connect and/or override the settings with ENV vars.
 If testing with unsecure connections (i.e. http://) one has to set this ENV var: `DEV_MODE=true`.
 
-Example vault.toml file:
+Example `vault.toml` file:
 
 ```toml
 [vault]
