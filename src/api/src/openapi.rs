@@ -46,6 +46,8 @@ use utoipa::{OpenApi, openapi};
 
         backup::get_backups,
         backup::post_backup,
+        backup::get_backup_local,
+        backup::get_backup_s3,
 
         blacklist::get_blacklist,
         blacklist::post_blacklist,
