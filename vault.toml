@@ -2,31 +2,31 @@
 
 # The full address to your vault including scheme and port
 # overwritten by: VAULT_ADDR
-# default: ''
+# default: String::default
 # example: addr='https://myvault:8202'
 addr=''
 
 # The token that rauthy uses to access the secret
 # overwritten by: VAULT_TOKEN
-# default: ''
+# default: String::default
 # example: token='hvs...'
 token=''
 
 # Secret engine mount point
 # overwritten by: VAULT_MOUNT
-# default: ''
+# default: String::default
 # example: mount='secret'
 mount=''
 
 # Path within the mount point containing the secret
 # overwritten by: VAULT_PATH
-# default: ''
+# default: String::default
 # example: path='rauthy_config'
 path=''
 
 # The key (name) of the secret
 # overwritten by: VAULT_CONFIG_KEY
-# default: ''
+# default: String::default
 # example: config_key='config.toml'
 config_key=''
 
