@@ -1,23 +1,27 @@
-FROM rust:1.86-bookworm
+FROM rust:1.88-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
 
+# not set via config for better compatibility and less questions
+ENV RUSTFLAGS="-C linker=clang -C link-arg=-fuse-ld=/usr/bin/mold"
+
 RUN <<EOF
 #!/bin/bash
 set -e
 
+apt-get update
+apt-get install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu mold npm
+apt-get clean
+
 rustup target add aarch64-unknown-linux-gnu
 rustup target add x86_64-unknown-linux-gnu
+rustup component add clippy
 rustup component add rustfmt
 
-apt update
-apt install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
-apt-get clean
-rm -rf /var/lib/apt/lists/*
+cargo install just
 
 EOF
 

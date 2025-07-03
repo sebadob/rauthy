@@ -430,7 +430,7 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-ui
         -e {{ jemalloc_conf }} \
         {{ map_docker_user }} \
         {{ builder_image }}:{{ builder_tag_date }} \
-        cargo build --release --features jemalloc --target x86_64-unknown-linux-gnu
+        cargo build --release --target x86_64-unknown-linux-gnu
     cp target/x86_64-unknown-linux-gnu/release/rauthy out/rauthy_amd64
 
     # TODO here is potential to unify both images into a `dockerx` build which could
@@ -444,7 +444,7 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-ui
         -e {{ jemalloc_conf }} \
         {{ map_docker_user }} \
         {{ builder_image }}:{{ builder_tag_date }} \
-        cargo build --release --features jemalloc --target aarch64-unknown-linux-gnu
+        cargo build --release --target aarch64-unknown-linux-gnu
     cp target/aarch64-unknown-linux-gnu/release/rauthy out/rauthy_arm64
 
     if [[ {{ push }} == "push" ]]; then
