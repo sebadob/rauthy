@@ -254,12 +254,10 @@ impl VaultSource {
         }
 
         let http_client = {
-            let tls_version = tls::Version::TLS_1_2;
-
             let mut builder = reqwest::Client::builder()
                 .connect_timeout(Duration::from_secs(10))
                 .timeout(Duration::from_secs(10))
-                .min_tls_version(tls_version)
+                .min_tls_version(tls::Version::TLS_1_2)
                 .user_agent(format!("Rauthy Client v{RAUTHY_VERSION}"))
                 .https_only(!dev_mode)
                 .danger_accept_invalid_certs(dev_mode)
