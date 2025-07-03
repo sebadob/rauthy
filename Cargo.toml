@@ -26,10 +26,9 @@ lto = false
 strip = false
 
 [patch.crates-io]
-#cryptr = { path = "../cryptr" }
-cryptr = { git = "https://github.com/sebadob/cryptr.git" }
+#cryptr = { git = "https://github.com/sebadob/cryptr.git" }
 #hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
-hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
 #hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
 
 [workspace.dependencies]
@@ -51,7 +50,7 @@ chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 cidr = "0.3.0"
 cron = "0.15"
-cryptr = { version = "0.7.0-20250702", features = ["s3", "streaming"] }
+cryptr = { version = "0.7", features = ["s3", "streaming"] }
 css-color = "0.2"
 deadpool = { version = "0.12", features = ["rt_tokio_1", "serde"] }
 deadpool-postgres = "0.14"
@@ -63,10 +62,10 @@ futures = "0.3"
 futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
-hiqlite = { version = "0.8", features = [
+hiqlite = { version = "0.9", features = [
     "cache", "counters", "dashboard", "listen_notify_local"
 ] }
-hiqlite-macros = { version = "0.8" }
+hiqlite-macros = { version = "0.9" }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
