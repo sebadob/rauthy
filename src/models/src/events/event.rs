@@ -161,6 +161,7 @@ pub enum EventType {
     ScimTaskFailed,
     ForcedLogout,
     UserLoginRevoke,
+    SuspiciousApiScan,
 }
 
 impl Default for EventType {
@@ -192,6 +193,7 @@ impl Display for EventType {
             Self::ScimTaskFailed => write!(f, "SCIM task failed"),
             Self::ForcedLogout => write!(f, "Forced user logout"),
             Self::UserLoginRevoke => write!(f, "User revoked illegal login"),
+            Self::SuspiciousApiScan => write!(f, "Suspicous API scan"),
         }
     }
 }
@@ -220,6 +222,7 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             rauthy_api_types::events::EventType::ScimTaskFailed => Self::ScimTaskFailed,
             rauthy_api_types::events::EventType::ForcedLogout => Self::ForcedLogout,
             rauthy_api_types::events::EventType::UserLoginRevoke => Self::UserLoginRevoke,
+            rauthy_api_types::events::EventType::SuspiciousApiScan => Self::SuspiciousApiScan,
         }
     }
 }
@@ -246,6 +249,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::ScimTaskFailed => Self::ScimTaskFailed,
             EventType::ForcedLogout => Self::ForcedLogout,
             EventType::UserLoginRevoke => Self::UserLoginRevoke,
+            EventType::SuspiciousApiScan => Self::SuspiciousApiScan,
         }
     }
 }
@@ -272,6 +276,7 @@ impl EventType {
             Self::ScimTaskFailed => "ScimTaskFailed",
             Self::ForcedLogout => "ForcedLogout",
             Self::UserLoginRevoke => "UserLoginRevoke",
+            Self::SuspiciousApiScan => "SuspiciousApiScan",
         }
     }
 
@@ -299,6 +304,7 @@ impl EventType {
             EventType::ScimTaskFailed => 16,
             EventType::ForcedLogout => 17,
             EventType::UserLoginRevoke => 18,
+            EventType::SuspiciousApiScan => 19,
         }
     }
 }
@@ -325,6 +331,7 @@ impl From<String> for EventType {
             "ScimTaskFailed" => Self::ScimTaskFailed,
             "ForcedLogout" => Self::ForcedLogout,
             "UserLoginRevoke" => Self::UserLoginRevoke,
+            "SuspiciousApiScan" => Self::SuspiciousApiScan,
             // just return test to never panic
             s => {
                 error!("EventType::from() for invalid String: {s}");
@@ -362,6 +369,7 @@ impl From<i64> for EventType {
             16 => EventType::ScimTaskFailed,
             17 => EventType::ForcedLogout,
             18 => EventType::UserLoginRevoke,
+            19 => EventType::SuspiciousApiScan,
             _ => EventType::Test,
         }
     }
@@ -477,6 +485,7 @@ impl From<&Event> for Notification {
                 value.text.as_deref().unwrap_or_default()
             )),
             EventType::UserLoginRevoke => value.text.clone(),
+            EventType::SuspiciousApiScan => value.text.clone(),
         };
 
         Self {
@@ -838,6 +847,19 @@ impl Event {
         )
     }
 
+    pub fn suspicious_request(path: &str, ip: IpAddr, location: Option<String>) -> Self {
+        let loc = location.as_deref().unwrap_or("Unknown Location");
+        let text = format!("Suspicious request to '{path}' from {ip} ({loc})");
+
+        Self::new(
+            EventLevel::Notice,
+            EventType::SuspiciousApiScan,
+            Some(ip.to_string()),
+            None,
+            Some(text),
+        )
+    }
+
     pub fn test(ip: IpAddr) -> Self {
         Self::new(
             EventLevel::Info,
@@ -937,6 +959,7 @@ impl Event {
                 )
             }
             EventType::UserLoginRevoke => self.text.clone().unwrap_or_default(),
+            EventType::SuspiciousApiScan => self.text.clone().unwrap_or_default(),
         }
     }
 

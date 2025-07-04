@@ -166,6 +166,13 @@ pub async fn post_event_test(
             .send()
             .await?;
         Event::secrets_migrated(ip).send().await?;
+        Event::suspicious_request(
+            "/.git/config",
+            "123.123.123.123".parse().unwrap(),
+            Some("Gotham City".to_string()),
+        )
+        .send()
+        .await?;
         Event::test(ip).send().await?;
 
         let old_email = "old@mail";

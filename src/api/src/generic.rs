@@ -26,6 +26,7 @@ use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
+use rauthy_models::ipgeo;
 use rauthy_models::language::Language;
 use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::{encryption, suspicious_request_block};
@@ -454,7 +455,7 @@ pub async fn get_ready() -> impl Responder {
 #[get("/{_:.*}")]
 pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     let path = req.path();
-    let ip = real_ip_from_req(&req)?.to_string();
+    let ip = real_ip_from_req(&req)?;
 
     let vars = &RauthyConfig::get().vars.suspicious_requests;
     if vars.log && path.len() > 1 {
@@ -478,6 +479,10 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
                 err
             );
         }
+
+        let location = ipgeo::get_location_from_db(ip)?;
+        Event::suspicious_request(path, ip, location).send().await?;
+
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
             "You have been blocked because of API scanning. This incident has been reported.",

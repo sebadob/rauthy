@@ -32,6 +32,7 @@ pub enum EventType {
     ScimTaskFailed,
     ForcedLogout,
     UserLoginRevoke,
+    SuspiciousApiScan,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]
