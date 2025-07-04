@@ -401,6 +401,11 @@ impl Default for Vars {
                 level_rauthy_healthy: EventLevel::Notice,
                 level_rauthy_unhealthy: EventLevel::Critical,
                 level_ip_blacklisted: EventLevel::Warning,
+                level_backchannel_logout_failed: EventLevel::Critical,
+                level_force_logout: EventLevel::Notice,
+                level_user_login_revoke: EventLevel::Warning,
+                level_scim_task_failed: EventLevel::Critical,
+                level_suspicious_request: EventLevel::Notice,
                 level_failed_logins_25: EventLevel::Critical,
                 level_failed_logins_20: EventLevel::Critical,
                 level_failed_logins_15: EventLevel::Warning,
@@ -1513,6 +1518,52 @@ impl Vars {
         if let Some(v) = t_str(
             &mut table,
             "events",
+            "level_backchannel_logout_failed",
+            "EVENT_LEVEL_BACKCHANNEL_LOGOUT_FAILED",
+        ) {
+            self.events.level_backchannel_logout_failed = EventLevel::from_str(&v)
+                .expect("Cannot parse EventLevel for backchannel_logout_failed");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_force_logout",
+            "EVENT_LEVEL_FORCE_LOGOUT",
+        ) {
+            self.events.level_force_logout =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for force_logout");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_user_login_revoke",
+            "EVENT_LEVEL_USER_LOGIN_REVOKE",
+        ) {
+            self.events.level_user_login_revoke =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for user_login_revoke");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_scim_task_failed",
+            "EVENT_LEVEL_SCIM_TASK_FAILED",
+        ) {
+            self.events.level_scim_task_failed =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for scim_task_failed");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_suspicious_request",
+            "EVENT_LEVEL_SUSPICIOUS_REQUEST",
+        ) {
+            self.events.level_suspicious_request =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for suspicious_request");
+        }
+
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
             "level_failed_logins_25",
             "EVENT_LEVEL_FAILED_LOGINS_25",
         ) {
@@ -2518,6 +2569,12 @@ pub struct VarsEvents {
     pub level_rauthy_healthy: EventLevel,
     pub level_rauthy_unhealthy: EventLevel,
     pub level_ip_blacklisted: EventLevel,
+    pub level_backchannel_logout_failed: EventLevel,
+    pub level_force_logout: EventLevel,
+    pub level_user_login_revoke: EventLevel,
+    pub level_scim_task_failed: EventLevel,
+    pub level_suspicious_request: EventLevel,
+
     pub level_failed_logins_25: EventLevel,
     pub level_failed_logins_20: EventLevel,
     pub level_failed_logins_15: EventLevel,

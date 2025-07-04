@@ -664,7 +664,11 @@ impl Event {
 
     pub fn backchannel_logout_failed(client_id: &str, user_id: &str, retries: i64) -> Self {
         Self::new(
-            EventLevel::Critical,
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_backchannel_logout_failed
+                .clone(),
             EventType::BackchannelLogoutFailed,
             None,
             Some(retries),
@@ -684,7 +688,7 @@ impl Event {
 
     pub fn force_logout(user_email: String) -> Self {
         Self::new(
-            EventLevel::Notice,
+            RauthyConfig::get().vars.events.level_force_logout.clone(),
             EventType::ForcedLogout,
             None,
             None,
@@ -761,7 +765,11 @@ impl Event {
         let text = format!("User `{user_email}` revoked illegal login from {bad_ip} ({loc})");
 
         Self::new(
-            EventLevel::Warning,
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_user_login_revoke
+                .clone(),
             EventType::UserLoginRevoke,
             Some(bad_ip.to_string()),
             None,
@@ -825,7 +833,11 @@ impl Event {
 
     pub fn scim_task_failed(client_id: &str, action: &ScimAction, retries: i64) -> Self {
         Self::new(
-            EventLevel::Critical,
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_scim_task_failed
+                .clone(),
             EventType::BackchannelLogoutFailed,
             None,
             Some(retries),
@@ -852,7 +864,11 @@ impl Event {
         let text = format!("Suspicious request to '{path}' from {ip} ({loc})");
 
         Self::new(
-            EventLevel::Notice,
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_suspicious_request
+                .clone(),
             EventType::SuspiciousApiScan,
             Some(ip.to_string()),
             None,
