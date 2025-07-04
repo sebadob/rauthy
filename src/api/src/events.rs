@@ -134,6 +134,9 @@ pub async fn post_event_test(
             .await?;
         Event::invalid_login(1, ip.to_string()).send().await?;
         Event::brute_force(ip.to_string()).send().await?;
+        Event::force_logout("dummy@example.com".to_string())
+            .send()
+            .await?;
         Event::ip_blacklisted(Utc::now(), ip.to_string())
             .send()
             .await?;

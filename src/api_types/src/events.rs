@@ -30,6 +30,7 @@ pub enum EventType {
     Test,
     BackchannelLogoutFailed,
     ScimTaskFailed,
+    ForcedLogout,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]

@@ -145,12 +145,9 @@ pub async fn map_auth_step(
             Ok(resp)
         }
 
-        AuthStep::ProviderLink => {
-            // TODO generate a new event type in this case?
-            Ok(HttpResponse::NoContent()
-                .insert_header(fed_cm_header)
-                .finish())
-        }
+        AuthStep::ProviderLink => Ok(HttpResponse::NoContent()
+            .insert_header(fed_cm_header)
+            .finish()),
     }
 }
 

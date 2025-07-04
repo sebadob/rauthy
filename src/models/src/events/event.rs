@@ -159,6 +159,7 @@ pub enum EventType {
     Test,
     BackchannelLogoutFailed,
     ScimTaskFailed,
+    ForcedLogout,
 }
 
 impl Default for EventType {
@@ -176,7 +177,7 @@ impl Display for EventType {
             Self::IpBlacklistRemoved => write!(f, "IP blacklist removed"),
             Self::JwksRotated => write!(f, "JWKS has been rotated"),
             Self::NewUserRegistered => write!(f, "New user registered"),
-            Self::NewRauthyAdmin => write!(f, "New rauthy_admin member"),
+            Self::NewRauthyAdmin => write!(f, "New Rauthy_admin member"),
             Self::NewRauthyVersion => write!(f, "New Rauthy App Version available"),
             Self::PossibleBruteForce => write!(f, "Possible brute force"),
             Self::RauthyStarted => write!(f, "Rauthy has been restarted"),
@@ -188,6 +189,7 @@ impl Display for EventType {
             Self::Test => write!(f, "TEST"),
             Self::BackchannelLogoutFailed => write!(f, "Backchannel logout failed"),
             Self::ScimTaskFailed => write!(f, "SCIM task failed"),
+            Self::ForcedLogout => write!(f, "Forced user logout"),
         }
     }
 }
@@ -214,6 +216,7 @@ impl From<rauthy_api_types::events::EventType> for EventType {
                 Self::BackchannelLogoutFailed
             }
             rauthy_api_types::events::EventType::ScimTaskFailed => Self::ScimTaskFailed,
+            rauthy_api_types::events::EventType::ForcedLogout => Self::ForcedLogout,
         }
     }
 }
@@ -238,6 +241,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::Test => Self::Test,
             EventType::BackchannelLogoutFailed => Self::BackchannelLogoutFailed,
             EventType::ScimTaskFailed => Self::ScimTaskFailed,
+            EventType::ForcedLogout => Self::ForcedLogout,
         }
     }
 }
@@ -262,6 +266,7 @@ impl EventType {
             Self::Test => "TEST",
             Self::BackchannelLogoutFailed => "BackchannelLogoutFailed",
             Self::ScimTaskFailed => "ScimTaskFailed",
+            Self::ForcedLogout => "ForcedLogout",
         }
     }
 
@@ -287,6 +292,7 @@ impl EventType {
             EventType::Test => 14,
             EventType::BackchannelLogoutFailed => 15,
             EventType::ScimTaskFailed => 16,
+            EventType::ForcedLogout => 17,
         }
     }
 }
@@ -311,8 +317,12 @@ impl From<String> for EventType {
             "TEST" => Self::Test,
             "BackchannelLogoutFailed" => Self::BackchannelLogoutFailed,
             "ScimTaskFailed" => Self::ScimTaskFailed,
+            "ForcedLogout" => Self::ForcedLogout,
             // just return test to never panic
-            _ => Self::Test,
+            s => {
+                error!("EventType::from() for invalid String: {s}");
+                Self::Test
+            }
         }
     }
 }
@@ -342,7 +352,7 @@ impl From<i64> for EventType {
             13 => EventType::UserPasswordReset,
             14 => EventType::Test,
             15 => EventType::BackchannelLogoutFailed,
-            16 => EventType::ScimTaskFailed,
+            16 => EventType::ForcedLogout,
             _ => EventType::Test,
         }
     }
@@ -451,6 +461,10 @@ impl From<&Event> for Notification {
             EventType::ScimTaskFailed => Some(format!(
                 "SCIM task retries ({}) exceeded for: {}",
                 value.data.unwrap_or_default(),
+                value.text.as_deref().unwrap_or_default()
+            )),
+            EventType::ForcedLogout => Some(format!(
+                "User `{}` was force-logged-out",
                 value.text.as_deref().unwrap_or_default()
             )),
         };
@@ -646,6 +660,16 @@ impl Event {
             Some(ip),
             None,
             None,
+        )
+    }
+
+    pub fn force_logout(user_email: String) -> Self {
+        Self::new(
+            EventLevel::Notice,
+            EventType::ForcedLogout,
+            None,
+            None,
+            Some(user_email),
         )
     }
 
@@ -876,6 +900,12 @@ impl Event {
                 format!(
                     "SCIM task retries ({}) exceeded for: {}",
                     self.data.unwrap_or_default(),
+                    self.text.as_deref().unwrap_or_default()
+                )
+            }
+            EventType::ForcedLogout => {
+                format!(
+                    "User `{}` was force-logged-out",
                     self.text.as_deref().unwrap_or_default()
                 )
             }
