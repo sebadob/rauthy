@@ -2,6 +2,14 @@
 
 ## UNRELEASED
 
+### Breaking
+
+#### Empty `User-Agent`s rejected
+
+While implementing Geoblocking (see below), a check for the `User-Agent` has been added. If this is empty, requests will
+be rejected. If you are doing something via API-Keys, make sure your clients send a proper `User-Agent` header. This
+rejection does not provide any security at all, it just catches a few bots out of the box.
+
 ### Changes
 
 #### Remembered Login Locations

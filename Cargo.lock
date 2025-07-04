@@ -3627,12 +3627,11 @@ dependencies = [
 
 [[package]]
 name = "notify"
-version = "8.0.0"
+version = "8.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fee8403b3d66ac7b26aee6e40a897d85dc5ce26f44da36b8b73e987cc52e943"
+checksum = "3163f59cd3fa0e9ef8c32f242966a7b9994fd7378366099593e0e73077cd8c97"
 dependencies = [
  "bitflags 2.9.1",
- "filetime",
  "fsevent-sys",
  "inotify",
  "kqueue",
@@ -3641,7 +3640,7 @@ dependencies = [
  "mio",
  "notify-types",
  "walkdir",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4457,7 +4456,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4498,7 +4497,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "openssl",
@@ -4516,7 +4515,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4543,7 +4542,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4581,7 +4580,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4615,7 +4614,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "chrono",
  "openssl",
@@ -4632,7 +4631,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4648,7 +4647,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -4729,7 +4728,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "async-trait",
  "openssl",
@@ -4745,7 +4744,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4765,7 +4764,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "chrono",
@@ -7113,6 +7112,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
 dependencies = [
  "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows-sys"
+version = "0.60.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2f500e4d28234f72040990ec9d39e3a6b950f9f22d3dba18416c35882612bcb"
+dependencies = [
+ "windows-targets 0.53.2",
 ]
 
 [[package]]

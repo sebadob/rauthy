@@ -182,7 +182,7 @@ testing and taking a first look. By setting `LOCAL_TEST=true`, a demo config is 
 docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.30.2
 ```
 
-> This command start an HTTPS server with self-signed certificates.
+> This command starts an HTTPS server with self-signed certificates.  
 > Make sure to append the `https://` scheme if you open the URL manually.
 
 ## Support
