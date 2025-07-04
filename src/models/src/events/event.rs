@@ -160,6 +160,7 @@ pub enum EventType {
     BackchannelLogoutFailed,
     ScimTaskFailed,
     ForcedLogout,
+    UserLoginRevoke,
 }
 
 impl Default for EventType {
@@ -190,6 +191,7 @@ impl Display for EventType {
             Self::BackchannelLogoutFailed => write!(f, "Backchannel logout failed"),
             Self::ScimTaskFailed => write!(f, "SCIM task failed"),
             Self::ForcedLogout => write!(f, "Forced user logout"),
+            Self::UserLoginRevoke => write!(f, "User revoked illegal login"),
         }
     }
 }
@@ -217,6 +219,7 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             }
             rauthy_api_types::events::EventType::ScimTaskFailed => Self::ScimTaskFailed,
             rauthy_api_types::events::EventType::ForcedLogout => Self::ForcedLogout,
+            rauthy_api_types::events::EventType::UserLoginRevoke => Self::UserLoginRevoke,
         }
     }
 }
@@ -242,6 +245,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::BackchannelLogoutFailed => Self::BackchannelLogoutFailed,
             EventType::ScimTaskFailed => Self::ScimTaskFailed,
             EventType::ForcedLogout => Self::ForcedLogout,
+            EventType::UserLoginRevoke => Self::UserLoginRevoke,
         }
     }
 }
@@ -267,6 +271,7 @@ impl EventType {
             Self::BackchannelLogoutFailed => "BackchannelLogoutFailed",
             Self::ScimTaskFailed => "ScimTaskFailed",
             Self::ForcedLogout => "ForcedLogout",
+            Self::UserLoginRevoke => "UserLoginRevoke",
         }
     }
 
@@ -293,6 +298,7 @@ impl EventType {
             EventType::BackchannelLogoutFailed => 15,
             EventType::ScimTaskFailed => 16,
             EventType::ForcedLogout => 17,
+            EventType::UserLoginRevoke => 18,
         }
     }
 }
@@ -318,6 +324,7 @@ impl From<String> for EventType {
             "BackchannelLogoutFailed" => Self::BackchannelLogoutFailed,
             "ScimTaskFailed" => Self::ScimTaskFailed,
             "ForcedLogout" => Self::ForcedLogout,
+            "UserLoginRevoke" => Self::UserLoginRevoke,
             // just return test to never panic
             s => {
                 error!("EventType::from() for invalid String: {s}");
@@ -352,7 +359,9 @@ impl From<i64> for EventType {
             13 => EventType::UserPasswordReset,
             14 => EventType::Test,
             15 => EventType::BackchannelLogoutFailed,
-            16 => EventType::ForcedLogout,
+            16 => EventType::ScimTaskFailed,
+            17 => EventType::ForcedLogout,
+            18 => EventType::UserLoginRevoke,
             _ => EventType::Test,
         }
     }
@@ -467,6 +476,7 @@ impl From<&Event> for Notification {
                 "User `{}` was force-logged-out",
                 value.text.as_deref().unwrap_or_default()
             )),
+            EventType::UserLoginRevoke => value.text.clone(),
         };
 
         Self {
@@ -733,6 +743,23 @@ impl Event {
         )
     }
 
+    pub fn user_login_revoke(
+        user_email: &str,
+        bad_ip: IpAddr,
+        bad_location: Option<String>,
+    ) -> Self {
+        let loc = bad_location.as_deref().unwrap_or("Unknown Location");
+        let text = format!("User `{user_email}` revoked illegal login from {bad_ip} ({loc})");
+
+        Self::new(
+            EventLevel::Warning,
+            EventType::UserLoginRevoke,
+            Some(bad_ip.to_string()),
+            None,
+            Some(text),
+        )
+    }
+
     pub fn rauthy_started() -> Self {
         let text = format!("Rauthy has been started on host {}", get_local_hostname());
         Self::new(
@@ -871,7 +898,7 @@ impl Event {
                     self.text.as_deref().unwrap_or_default()
                 )
             }
-            // PossibleBruteForce is not yet implemented / recognized
+            // PossibleBruteForce is currently not in use
             EventType::PossibleBruteForce => String::default(),
             EventType::RauthyStarted => self.text.clone().unwrap(),
             EventType::RauthyHealthy => self.text.clone().unwrap(),
@@ -909,6 +936,7 @@ impl Event {
                     self.text.as_deref().unwrap_or_default()
                 )
             }
+            EventType::UserLoginRevoke => self.text.clone().unwrap_or_default(),
         }
     }
 

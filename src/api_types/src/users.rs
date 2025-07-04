@@ -7,6 +7,7 @@ use rauthy_common::regex::{
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::net::IpAddr;
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -265,6 +266,13 @@ pub struct UserAttrValueRequest {
 pub struct UserAttrValuesUpdateRequest {
     #[validate(nested)]
     pub values: Vec<UserAttrValueRequest>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+pub struct UserRevokeParams {
+    /// Validation: IpAddr
+    #[schema(value_type = str)]
+    pub ip: IpAddr,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

@@ -151,6 +151,13 @@ pub async fn post_event_test(
             .send()
             .await?;
         Event::jwks_rotated().send().await?;
+        Event::user_login_revoke(
+            "alfred@batcave.io",
+            "123.123.123.123".parse().unwrap(),
+            Some("Gotham City".to_string()),
+        )
+        .send()
+        .await?;
         Event::rauthy_started().send().await?;
         Event::rauthy_healthy().send().await?;
         Event::rauthy_unhealthy_cache().send().await?;
