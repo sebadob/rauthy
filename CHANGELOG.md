@@ -156,12 +156,12 @@ You can do this new Forward-Auth for any client, as long as it's configured prop
 about the correct client config upfront. This makes it possible to have a few additional safety hooks which will help
 you prevent unwanted, invalid reverse proxy config, which can happen very quickly for complex setups.
 
-!!! TODO update the book and provide a link. !!!!
-
 > CAUTION: Even though this is probably the most secure you can get with Forward-Auth, it should still only be the last
 > resort, and you should always prefer a native OIDC client implementation, if it exists! If you screw up the reverse
 > proxy config, or if an attacker can find a way around your reverse proxy and skip it, all your security will be gone
 > immediately.
+>
+> The Rauthy book will be updated in the upcoming days and provide a bit more documentation about the setup.
 
 To help during Forward-Auth setup and making sure you got it right in your environment, the `/auth/v1/whoami` endpoint
 has received an update as well. You can now set `access.whoami_headers = true` or use `WHOAMI_HEADERS`. This will make
@@ -237,6 +237,12 @@ itself by accident. Only other admins can do this. This makes sure, that at leas
 exists and you can never fully lock yourself out of Rauthy.
 
 [#1066](https://github.com/sebadob/rauthy/pull/1066)
+
+#### IPv6 Support for IP Blacklisting
+
+You can now also blacklist IPv6 address via the Admin UI -> Blacklist.
+
+[#1087](https://github.com/sebadob/rauthy/pull/1087)
 
 ## v0.30.2
 
