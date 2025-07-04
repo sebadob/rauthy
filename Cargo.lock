@@ -1159,16 +1159,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bzip2-sys"
-version = "0.1.13+1.0.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "225bff33b2141874fe80d71e07d6eec4f85c5c216453dd96388240f96e1acc14"
-dependencies = [
- "cc",
- "pkg-config",
-]
-
-[[package]]
 name = "cc"
 version = "1.2.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1536,9 +1526,9 @@ dependencies = [
 
 [[package]]
 name = "cryptr"
-version = "0.6.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b92bb8b79b95217d0a0c732f00b151f4afca69176a200746f752eacd4c547293"
+checksum = "9841e0d681d07fc1f285260eb5723255e0229783b0bac9336df426a5d5849c7b"
 dependencies = [
  "argon2",
  "async-stream",
@@ -2526,9 +2516,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7004301270b7022930c2857cd1827e7cc43a9125f8e71f00f11ccb5e2ac0a1ab"
+checksum = "2d6851ef46f316573f058e672fe6842ac307b4f31298d532944608f8233e910a"
 dependencies = [
  "argon2",
  "axum",
@@ -2557,7 +2547,6 @@ dependencies = [
  "mime_guess",
  "openraft",
  "reqwest",
- "rocksdb",
  "rusqlite",
  "rust-embed",
  "rust_decimal",
@@ -2582,9 +2571,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite-macros"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54e30654c1bd9962fcf4e01538b1835d2aff66ce774b515b000bc1d6baec1e93"
+checksum = "5ae637aa0945612951dcac70a68e516261b952864ee79c9e40dc6f4bfd25d2c7"
 dependencies = [
  "hiqlite",
  "rust-embed",
@@ -2592,9 +2581,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite-wal"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ef565a1f79862fb139007e75bd2bae92229c8be4826e00f0492015c57f331fa"
+checksum = "f422d13c223c4804f76c7f4a051a3f0a5db3d12fc87bd2de5de0c661530e08ac"
 dependencies = [
  "bincode",
  "byteorder",
@@ -3330,19 +3319,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "librocksdb-sys"
-version = "0.17.1+9.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b7869a512ae9982f4d46ba482c2a304f1efd80c6412a3d4bf57bb79a619679f"
-dependencies = [
- "bindgen",
- "bzip2-sys",
- "cc",
- "libc",
- "libz-sys",
-]
-
-[[package]]
 name = "libsqlite3-sys"
 version = "0.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3360,17 +3336,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "172a788537a2221661b480fee8dc5f96c580eb34fa88764d3205dc356c7e4221"
 dependencies = [
  "zlib-rs",
-]
-
-[[package]]
-name = "libz-sys"
-version = "1.1.22"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b70e7a7df205e92a1a4cd9aaae7898dac0aa555503cc0a649494d0d60e7651d"
-dependencies = [
- "cc",
- "pkg-config",
- "vcpkg",
 ]
 
 [[package]]
@@ -3662,12 +3627,11 @@ dependencies = [
 
 [[package]]
 name = "notify"
-version = "8.0.0"
+version = "8.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fee8403b3d66ac7b26aee6e40a897d85dc5ce26f44da36b8b73e987cc52e943"
+checksum = "3163f59cd3fa0e9ef8c32f242966a7b9994fd7378366099593e0e73077cd8c97"
 dependencies = [
  "bitflags 2.9.1",
- "filetime",
  "fsevent-sys",
  "inotify",
  "kqueue",
@@ -3676,7 +3640,7 @@ dependencies = [
  "mio",
  "notify-types",
  "walkdir",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4492,7 +4456,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4533,7 +4497,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "openssl",
@@ -4551,7 +4515,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4578,7 +4542,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4616,11 +4580,12 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-multipart",
  "actix-web",
  "actix-web-lab",
+ "bytes",
  "chrono",
  "cryptr",
  "futures",
@@ -4649,7 +4614,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "chrono",
  "openssl",
@@ -4666,7 +4631,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4682,7 +4647,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -4763,7 +4728,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "async-trait",
  "openssl",
@@ -4779,7 +4744,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4799,7 +4764,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5067,16 +5032,6 @@ name = "rle-decode-fast"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3582f63211428f83597b51b2ddb88e2a91a9d52d12831f9d08f5e624e8977422"
-
-[[package]]
-name = "rocksdb"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26ec73b20525cb235bad420f911473b69f9fe27cc856c5461bccd7e4af037f43"
-dependencies = [
- "libc",
- "librocksdb-sys",
-]
 
 [[package]]
 name = "rsa"
@@ -7157,6 +7112,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
 dependencies = [
  "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows-sys"
+version = "0.60.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2f500e4d28234f72040990ec9d39e3a6b950f9f22d3dba18416c35882612bcb"
+dependencies = [
+ "windows-targets 0.53.2",
 ]
 
 [[package]]

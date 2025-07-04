@@ -62,8 +62,6 @@ pub async fn get_github_private_email(
             }
         }
 
-        // TODO is it possible that Github returns multiple E-Mails for a user without
-        // any of them being flagged as primary?
         Err(ErrorResponse::new(
             ErrorResponseType::Internal,
             "Could not find a the primary user E-Mail in Github response",

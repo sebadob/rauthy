@@ -2,6 +2,14 @@
 
 ## UNRELEASED
 
+### Breaking
+
+#### Empty `User-Agent`s rejected
+
+While implementing Geoblocking (see below), a check for the `User-Agent` has been added. If this is empty, requests will
+be rejected. If you are doing something via API-Keys, make sure your clients send a proper `User-Agent` header. This
+rejection does not provide any security at all, it just catches a few bots out of the box.
+
 ### Changes
 
 #### Remembered Login Locations
@@ -148,12 +156,12 @@ You can do this new Forward-Auth for any client, as long as it's configured prop
 about the correct client config upfront. This makes it possible to have a few additional safety hooks which will help
 you prevent unwanted, invalid reverse proxy config, which can happen very quickly for complex setups.
 
-!!! TODO update the book and provide a link. !!!!
-
 > CAUTION: Even though this is probably the most secure you can get with Forward-Auth, it should still only be the last
 > resort, and you should always prefer a native OIDC client implementation, if it exists! If you screw up the reverse
 > proxy config, or if an attacker can find a way around your reverse proxy and skip it, all your security will be gone
 > immediately.
+>
+> The Rauthy book will be updated in the upcoming days and provide a bit more documentation about the setup.
 
 To help during Forward-Auth setup and making sure you got it right in your environment, the `/auth/v1/whoami` endpoint
 has received an update as well. You can now set `access.whoami_headers = true` or use `WHOAMI_HEADERS`. This will make
@@ -163,6 +171,15 @@ This will help you make sure your setup is working correctly, if you use `auth_h
 return values for `Cookie` and Rauthys own CSRF token headers, but all others return will show their raw values.
 
 [#1053](https://github.com/sebadob/rauthy/pull/1053)
+
+#### Backups via Admin UI
+
+If Rauthy is running with Hiqlite as the database, you can now view and download existing backups via the
+`Admin UI -> Config -> Backups` section. It shows local backup files and the ones on S3 storage, if it's configured.
+You also get the option to trigger manual backups with a new button, which gets rid of the issue of updating the cron
+task to "a few minutes in the future" to trigger a backup on demand.
+
+[#1079](https://github.com/sebadob/rauthy/pull/1079)
 
 #### Re-Authenticate for MFA keys modifications
 
@@ -424,6 +441,19 @@ enable = false
 [#644](https://github.com/sebadob/rauthy/pull/644)
 [#1064](https://github.com/sebadob/rauthy/pull/1064)
 
+#### Additional Event Types
+
+Some new Rauthy Event types have been added. These are now configurable in their notification level as all the other
+ones. The new Events are the following:
+
+- An `Event::ForceLogout` will be created during `DELETE /sessions/{user_id}`. This will happen when and Admin clicks
+  "Force Logout" for a user in the Admin UI.
+- An `Event::UserLoginRevoke` will be created after a user clicked the login revoke link in the (new) notification
+  E-Mail that is sent out after a login from an unknown location.
+- An `Event::SispiciousApiScan` will be created when Rauthy detects a suspicious, very much likely malicious API scan.
+
+[#1085](https://github.com/sebadob/rauthy/pull/1085)
+
 #### Anti-Lockout hooks in Admin UI
 
 The Admin UI already had anti-lockout hooks for some important things like the `rauthy` client or the `rauthy_admin`
@@ -434,6 +464,12 @@ itself by accident. Only other admins can do this. This makes sure, that at leas
 exists and you can never fully lock yourself out of Rauthy.
 
 [#1066](https://github.com/sebadob/rauthy/pull/1066)
+
+#### IPv6 Support for IP Blacklisting
+
+You can now also blacklist IPv6 address via the Admin UI -> Blacklist.
+
+[#1087](https://github.com/sebadob/rauthy/pull/1087)
 
 ## v0.30.2
 

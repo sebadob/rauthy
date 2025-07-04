@@ -260,7 +260,6 @@
             err = '';
             let body = res.body;
             if (body && 'user_id' in body && 'code' in body) {
-                // TODO is there a nicer way of making TS happy with type checking?
                 userId = body.user_id as string;
                 mfaPurpose = {Login: body.code as string};
             } else {

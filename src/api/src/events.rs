@@ -134,6 +134,9 @@ pub async fn post_event_test(
             .await?;
         Event::invalid_login(1, ip.to_string()).send().await?;
         Event::brute_force(ip.to_string()).send().await?;
+        Event::force_logout("dummy@example.com".to_string())
+            .send()
+            .await?;
         Event::ip_blacklisted(Utc::now(), ip.to_string())
             .send()
             .await?;
@@ -148,6 +151,13 @@ pub async fn post_event_test(
             .send()
             .await?;
         Event::jwks_rotated().send().await?;
+        Event::user_login_revoke(
+            "alfred@batcave.io",
+            "123.123.123.123".parse().unwrap(),
+            Some("Gotham City".to_string()),
+        )
+        .send()
+        .await?;
         Event::rauthy_started().send().await?;
         Event::rauthy_healthy().send().await?;
         Event::rauthy_unhealthy_cache().send().await?;
@@ -156,6 +166,13 @@ pub async fn post_event_test(
             .send()
             .await?;
         Event::secrets_migrated(ip).send().await?;
+        Event::suspicious_request(
+            "/.git/config",
+            "123.123.123.123".parse().unwrap(),
+            Some("Gotham City".to_string()),
+        )
+        .send()
+        .await?;
         Event::test(ip).send().await?;
 
         let old_email = "old@mail";

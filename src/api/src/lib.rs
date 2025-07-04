@@ -22,6 +22,7 @@ use tracing::error;
 pub mod api_keys;
 pub mod atproto;
 pub mod auth_providers;
+pub mod backup;
 pub mod blacklist;
 pub mod clients;
 pub mod dev_only;
@@ -144,12 +145,9 @@ pub async fn map_auth_step(
             Ok(resp)
         }
 
-        AuthStep::ProviderLink => {
-            // TODO generate a new event type in this case?
-            Ok(HttpResponse::NoContent()
-                .insert_header(fed_cm_header)
-                .finish())
-        }
+        AuthStep::ProviderLink => Ok(HttpResponse::NoContent()
+            .insert_header(fed_cm_header)
+            .finish()),
     }
 }
 

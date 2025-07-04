@@ -280,7 +280,7 @@ pub struct DynamicClientResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_secret: Option<String>,
     // TODO can we "trust" in a client doing a PUT on Self before en expiry to
-    // implement proper forced secret rotation from time to time? -> not mentioned in RFC
+    //  implement proper forced secret rotation from time to time? -> not mentioned in RFC
     /// Unix timestamp in seconds
     pub client_secret_expires_at: i64,
 
@@ -289,7 +289,6 @@ pub struct DynamicClientResponse {
     pub post_logout_redirect_uri: Option<String>,
 
     // only Some(_) after new token has been issued
-    // TODO rotate on PUT?
     #[serde(skip_serializing_if = "Option::is_none")]
     pub registration_access_token: Option<String>,
     // This is the uri for PUT requests from Self -> only provide if `registration_access_token`

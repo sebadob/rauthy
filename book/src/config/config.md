@@ -1169,6 +1169,30 @@ notify_level_slack = 'notice'
 # overwritten by: EVENT_CLEANUP_DAYS
 #cleanup_days = 30
 
+# The level for the generated Event after a backchannel
+# logout has failed after exceeding all retries.
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_BACKCHANNEL_LOGOUT_FAILED
+level_backchannel_logout_failed = 'critical'
+# The level for the generated Event after a user was
+# force-logged-out by an admin.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_FORCE_LOGOUT
+level_force_logout = 'notice'
+# The level for the generated Event after an IP has
+# been blacklisted
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_IP_BLACKLISTED
+level_ip_blacklisted = 'warning'
+# The level for the generated Event after the JWKS has
+# been rotated
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_JWKS_ROTATE
+level_jwks_rotate = 'notice'
 # The level for the generated Event after a new user has
 # been registered.
 #
@@ -1193,30 +1217,6 @@ level_user_password_reset = 'notice'
 # default: notice
 # overwritten by: EVENT_LEVEL_RAUTHY_ADMIN
 level_rauthy_admin = 'notice'
-# The level for the generated Event after a new App
-# version has been found
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_RAUTHY_VERSION
-level_rauthy_version = 'notice'
-# The level for the generated Event after the JWKS has
-# been rotated
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_JWKS_ROTATE
-level_jwks_rotate = 'notice'
-# The level for the generated Event after DB secrets
-# have been migrated to a new key
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_SECRETS_MIGRATED
-level_secrets_migrated = 'notice'
-# The level for the generated Event after a Rauthy
-# instance has been started
-#
-# default: info
-# overwritten by: EVENT_LEVEL_RAUTHY_START
-level_rauthy_start = 'info'
 # The level for the generated Event after a Rauthy
 # entered a healthy state (again)
 #
@@ -1224,17 +1224,50 @@ level_rauthy_start = 'info'
 # overwritten by: EVENT_LEVEL_RAUTHY_HEALTHY
 level_rauthy_healthy = 'notice'
 # The level for the generated Event after a Rauthy
+# instance has been started
+#
+# default: info
+# overwritten by: EVENT_LEVEL_RAUTHY_START
+level_rauthy_start = 'info'
+# The level for the generated Event after a Rauthy
 # entered an unhealthy state
 #
 # default: critical
 # overwritten by: EVENT_LEVEL_RAUTHY_UNHEALTHY
 level_rauthy_unhealthy = 'critical'
-# The level for the generated Event after an IP has
-# been blacklisted
+# The level for the generated Event after a new App
+# version has been found
 #
-# default: warning+
-# overwritten by: EVENT_LEVEL_IP_BLACKLISTED
-level_ip_blacklisted = 'warning'
+# default: notice
+# overwritten by: EVENT_LEVEL_RAUTHY_VERSION
+level_rauthy_version = 'notice'
+# The level for the generated Event after DB secrets
+# have been migrated to a new key
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_SECRETS_MIGRATED
+level_secrets_migrated = 'notice'
+# The level for the generated Event after a user revoked
+# an illegal login with the link from the notification
+# E-Mail for "login from unknown location"
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
+level_user_login_revoke = 'warning'
+# The level for the generated Event after a SCIM
+# update task ultimately failed after exceeding
+# all retries.
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_SCIM_TASK_FAILED
+level_scim_task_failed = 'critical'
+# The level for the generated Event after Rauthy
+# detected a suspicious API scanning request.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_SUSPICIOUS_REQUEST
+level_suspicious_request = 'notice'
+
 # The level for the generated Event after certain
 # amounts of false logins from an IP
 #

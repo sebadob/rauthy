@@ -36,7 +36,7 @@ use tokio::time;
 mod common;
 
 // This is a very long running test - run it manually as a single test
-// TODO maybe moving it into its own module would work, so it does not block the others
+// maybe moving it into its own module would work, so it does not block the others
 #[tokio::test]
 #[ignore]
 async fn test_certs() -> Result<(), Box<dyn Error>> {

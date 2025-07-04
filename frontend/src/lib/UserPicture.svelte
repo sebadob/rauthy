@@ -169,8 +169,7 @@
             } else {
                 let error: ErrorResponse = await res.json();
                 if (res.status === 406) {
-                    // TODO
-                    alert('max size' + error.message);
+                    err = 'File too big: ' + error.message;
                 } else {
                     err = error.message || 'Upload Error';
                 }

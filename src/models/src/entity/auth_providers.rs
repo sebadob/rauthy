@@ -587,8 +587,6 @@ impl AuthProvider {
 
         let well_known = res.json::<WellKnownLookup>().await.map_err(|err| {
             ErrorResponse::new(
-                // TODO we could make this more UX friendly in the future and return a link to the
-                // docs, when they exist
                 ErrorResponseType::BadRequest,
                 format!("The provider does not support the mandatory openid-configuration: {err}"),
             )

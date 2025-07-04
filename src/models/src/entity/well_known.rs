@@ -137,8 +137,8 @@ impl WellKnown {
             "distributed".to_string(),
         ];
         // TODO to not confuse users when static clients will not be able to use the scope,
-        // `webid` should be added manually in the UI to make it fully work for ephemeral as
-        // well as for static clients.
+        //  `webid` should be added manually in the UI to make it fully work for ephemeral as
+        //  well as for static clients.
         // if *ENABLE_WEB_ID {
         //     claims_supported.push("webid".to_string());
         // }

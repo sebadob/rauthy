@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.31.0-20250626"
+version = "0.31.0-20250703"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -26,6 +26,7 @@ lto = false
 strip = false
 
 [patch.crates-io]
+#cryptr = { git = "https://github.com/sebadob/cryptr.git" }
 #hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
 #hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
 #hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
@@ -37,18 +38,23 @@ actix-multipart = "0.7.2"
 actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-lab = "0.24"
 actix-web-prom = "0.10"
-askama = "0.14"
 arc-swap = "1.7"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
+askama = "0.14"
 async-trait = "0.1.74"
+atrium-api = "0.25.3"
+atrium-common = "0.1.2"
+atrium-identity = "0.1.4"
+atrium-oauth = "0.1.2"
 base64 = "0.22.0"
 bincode = { version = "2", features = ["serde"] }
 brotli = "8"
+bytes = "1.10"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 cidr = "0.3.0"
 cron = "0.15"
-cryptr = { version = "0.6.0", features = ["s3", "streaming"] }
+cryptr = { version = "0.7", features = ["s3", "streaming"] }
 css-color = "0.2"
 deadpool = { version = "0.12", features = ["rt_tokio_1", "serde"] }
 deadpool-postgres = "0.14"
@@ -60,10 +66,11 @@ futures = "0.3"
 futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
-hiqlite = { version = "0.8", features = [
-    "cache", "counters", "dashboard", "listen_notify_local", "migrate-rocksdb"
+hickory-resolver = "0.25.2"
+hiqlite = { version = "0.9", features = [
+    "cache", "counters", "dashboard", "listen_notify_local"
 ] }
-hiqlite-macros = { version = "0.8" }
+hiqlite-macros = { version = "0.9" }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
@@ -128,10 +135,3 @@ webauthn-rs = { version = "0.5", features = [
 ] }
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"
-
-atrium-api = "0.25.3"
-atrium-common = "0.1.2"
-atrium-identity = "0.1.4"
-atrium-oauth = "0.1.2"
-
-hickory-resolver = "0.25.2"

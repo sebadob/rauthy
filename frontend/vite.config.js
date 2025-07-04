@@ -25,6 +25,7 @@ const config = {
             '/auth/v1/book/': backend,
             '/auth/v1/api_keys': backend,
             '/auth/v1/auth_check_admin': backend,
+            '/auth/v1/backup': backend,
             '/auth/v1/blacklist': backend,
             '/auth/v1/docs': backend,
             '/auth/v1/events': backend,

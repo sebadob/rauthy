@@ -13,7 +13,6 @@
     import ContentAdmin from "$lib5/ContentAdmin.svelte";
     import type {BlacklistedIp, BlacklistResponse, IpBlacklistRequest} from "$api/types/blacklist.ts";
     import ButtonAddModal from "$lib5/button/ButtonAddModal.svelte";
-    import {PATTERN_IPV4} from "$utils/patterns";
     import Form from "$lib5/form/Form.svelte";
     import Tooltip from "$lib5/Tooltip.svelte";
     import Pagination from "$lib5/pagination/Pagination.svelte";
@@ -78,14 +77,22 @@
             ip,
             exp,
         };
-        let res = await fetchPost(form.action, payload);
-        if (res.error) {
-            errSave = res.error.message;
-        } else {
-            ip = '';
-            closeModal?.();
-            await fetchBlacklist();
+
+        // This is the only place we wrap the fetch in try, because we don't do validation
+        // on the client side. A regex matching IPv4 + IPv6 is insanely huge.
+        try {
+            let res = await fetchPost(form.action, payload);
+            if (res.error) {
+                errSave = res.error.message;
+            } else {
+                ip = '';
+                closeModal?.();
+                await fetchBlacklist();
+            }
+        } catch (err) {
+            errSave = 'Invalid IP Address';
         }
+
     }
 
     async function deleteIp(ip: string) {
@@ -125,10 +132,8 @@
                             autocomplete="off"
                             label="IP"
                             placeholder="IPv4"
-                            errMsg="IPv4"
                             required
-                            maxLength={15}
-                            pattern={PATTERN_IPV4}
+                            maxLength={40}
                     />
                     <InputDateTimeCombo
                             label="Expiry"
@@ -213,10 +218,10 @@
 
     .blacklisted {
         padding-left: .5rem;
-        max-width: 22.5rem;
+        max-width: 32.5rem;
         margin: .25rem 0;
         display: grid;
-        grid-template-columns: 10rem 10rem 1.5rem;
+        grid-template-columns: 20.5rem 10rem 1.5rem;
         border-radius: var(--border-radius);
     }
 
@@ -243,6 +248,7 @@
     }
 
     .ip {
+        margin-bottom: -.15rem;
         text-align: left;
         cursor: copy;
     }

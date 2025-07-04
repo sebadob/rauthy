@@ -148,7 +148,6 @@ pub async fn handle_put_user_password_reset<'a>(
     if user.has_webauthn_enabled() {
         match req_data.mfa_code {
             None => {
-                // TODO delete the whole ML too?
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "MFA code is missing",
@@ -157,7 +156,6 @@ pub async fn handle_put_user_password_reset<'a>(
             Some(code) => {
                 let svc_req = WebauthnServiceReq::find(code).await?;
                 if svc_req.user_id != user.id {
-                    // TODO delete the whole ML too?
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Forbidden,
                         "User ID does not match",

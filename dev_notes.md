@@ -9,8 +9,6 @@
 ## Stage 2 - features - do before v1.0.0
 
 - check if `REFRESH_TOKEN_GRACE_TIME` can be dropped with Hiqlite
-- "known host cookie" with connection between accounts and IPs to send out warnings in case
-  of a login on a new device
 
 ## Stage 3 - Possible nice to haves
 

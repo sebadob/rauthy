@@ -78,8 +78,6 @@ pub async fn jwks_cleanup() {
             }
         };
 
-        // TODO after rdbms migration has been done, a nice query can do this more easily
-
         // At this point, the latest / current one will always be the first for each key type.
         // Skip it and check the created timestamps for all following to be older than the max time
         // they could be needed (offline tokens) and delete them.

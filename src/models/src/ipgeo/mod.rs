@@ -76,6 +76,16 @@ pub fn get_location_alpha2(
 }
 
 #[inline]
+pub fn get_location_from_db(ip: IpAddr) -> Result<Option<String>, ErrorResponse> {
+    if maxmind::is_configured() {
+        let data = maxmind::get_location(ip)?;
+        return Ok(data.map(|d| d.to_string()));
+    }
+
+    Ok(None)
+}
+
+#[inline]
 fn location_from_header(headers: &HeaderMap) -> Option<String> {
     let vars = &RauthyConfig::get().vars;
 

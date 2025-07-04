@@ -60,7 +60,6 @@ type AttestationFormat = 'packed' | 'Packed'
     | 'apple' | 'AppleAnonymous'
     | 'none' | 'None';
 type Base64UrlSafeData = string;
-// TODO it could be the case that serde serialized as bytes -> double check
 type CredentialProtectionPolicy = 'UserVerificationOptional'
     | 'UserVerificationOptionalWithCredentialIDList'
     | 'UserVerificationRequired';

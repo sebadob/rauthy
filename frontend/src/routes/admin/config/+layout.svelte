@@ -26,6 +26,9 @@
     <NavLinkSub href="/auth/v1/admin/config/encryption">
         {ta.docs.encryption}
     </NavLinkSub>
+    <NavLinkSub href="/auth/v1/admin/config/backups">
+        Backups
+    </NavLinkSub>
 </NavSub>
 
 <ContentAdmin>

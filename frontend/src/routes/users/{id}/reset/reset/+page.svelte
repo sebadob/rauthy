@@ -158,9 +158,6 @@
             method: 'PUT',
             headers: {
                 'content-type': 'application/json',
-                // TODO prefix with X-
-                // The same should be true for the session token
-                // -> mention breaking change in changelog when doing that!
                 'x-pwd-csrf-token': tplData?.csrf_token,
             },
             body: JSON.stringify(payload),

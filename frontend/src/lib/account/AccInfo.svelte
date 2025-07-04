@@ -82,7 +82,6 @@
                 window.location.href = loc;
             }
         } else {
-            // TODO catch error even necessary? should be handled in `/callback` already...
             console.error(res.error);
         }
     }

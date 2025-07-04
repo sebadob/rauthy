@@ -545,7 +545,10 @@ pub async fn send_login_location(
     revoke_code: String,
 ) {
     let pub_url = &RauthyConfig::get().pub_url_with_scheme;
-    let link_revoke = format!("{pub_url}/auth/v1/users/{}/revoke/{revoke_code}", user.id);
+    let link_revoke = format!(
+        "{pub_url}/auth/v1/users/{}/revoke/{revoke_code}?ip={ip}",
+        user.id
+    );
     let link_account = format!("{pub_url}/auth/v1/account");
     let location = location.as_deref().unwrap_or_default();
 

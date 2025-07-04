@@ -239,7 +239,7 @@ impl HtmlTemplate {
     }
 
     // TODO find a way to borrow values dynamically, no matter the type
-    // -> does rinja accept generic traits like `Display`?
+    //  -> does askama accept generic traits like `Display`?
     pub fn inner(&self) -> String {
         match self {
             Self::AtprotoId(i) => i.to_string(),
@@ -620,6 +620,28 @@ pub struct AdminConfigArgon2Html<'a> {
 impl AdminConfigArgon2Html<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigArgon2Html {
+            lang: lang.as_str(),
+            client_id: "rauthy",
+            theme_ts,
+            ..Default::default()
+        };
+
+        res.render().unwrap()
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/admin/config/backups.html")]
+pub struct AdminConfigBackupsHtml<'a> {
+    lang: &'a str,
+    client_id: &'a str,
+    theme_ts: i64,
+    templates: &'a [HtmlTemplate],
+}
+
+impl AdminConfigBackupsHtml<'_> {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
+        let res = AdminConfigBackupsHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,

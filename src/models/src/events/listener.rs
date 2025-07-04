@@ -102,14 +102,7 @@ impl EventListener {
         let mut clients: BTreeMap<String, (i16, mpsc::Sender<sse::Event>)> = BTreeMap::new();
         let mut ips_to_remove = Vec::with_capacity(1);
 
-        // TODO in HA deployments (currently only seen with Postgres), we may have duplicate
-        // event ids after startup, as soon as the first ever client subscribes to the events stream.
-        // The HashSet makes sure we don't send out duplicate data, when we receive a duplicate
-        // via `EventRouterMsg::Event(event)`.
-        // -> investigate the reason to ultimately get rid of the additional HashSet checks.
-        // -> does it maybe make sense to utilize the hiqlite cache here for unified data?
         let mut event_ids: BTreeSet<String> = BTreeSet::new();
-        // Event::find_latest returns the latest events ordered by timestamp desc
         let mut events = Event::find_latest(EVENTS_LATEST_LIMIT as i64)
             .await
             .unwrap_or_default()
