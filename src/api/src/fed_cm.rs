@@ -267,7 +267,7 @@ pub async fn post_fed_cm_token(
     }
 
     // TODO what about confidential clients? Should we maybe return an auth_code?
-    // TODO impl a new `FedCM` flow for client's and reject if not true?
+    //  impl a new `FedCM` flow for client's and reject if not true?
 
     let origin_header = client_origin_header(&req, &client)?;
     debug!("built origin header for client: {:?}", origin_header.1);
@@ -292,7 +292,6 @@ pub async fn post_fed_cm_token(
         AuthTime::given(user.last_login.unwrap_or_else(|| Utc::now().timestamp())),
         None,
         payload.nonce.map(TokenNonce),
-        // TODO add something like `fedcm` to the scopes? Maybe depending on new allowed flow?
         None,
         None,
         AuthCodeFlow::No,

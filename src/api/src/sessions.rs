@@ -10,6 +10,7 @@ use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use rauthy_models::events::event::Event;
 use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::logout;
 use tokio::task;
@@ -17,8 +18,6 @@ use tracing::error;
 use validator::Validate;
 
 /// Returns all existing sessions
-///
-/// TODO update pagination usage description
 ///
 /// **Permissions**
 /// - rauthy_admin
@@ -129,8 +128,8 @@ pub async fn delete_sessions(principal: ReqPrincipal) -> Result<HttpResponse, Er
     // This task should run async in the background, as it could take quite a long time to finish.
     task::spawn(async move {
         if let Err(err) = logout::execute_backchannel_logout_for_everything().await {
-            // TODO we should throw an error or critical event in this case maybe, because
-            // invalidations for everything usually come with a good reason.
+            // TODO we should throw an error or new event in this case maybe, because
+            //  invalidations for everything usually come with a good reason.
             error!(
                 "Error during backchannel logout for the whole application: {:?}",
                 err
@@ -165,9 +164,12 @@ pub async fn delete_sessions_for_user(
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let uid = path.into_inner();
-    Session::invalidate_for_user(&uid).await?;
-    RefreshToken::invalidate_for_user(&uid).await?;
-    logout::execute_backchannel_logout(None, Some(uid)).await?;
+    let user = User::find(uid).await?;
+    Session::invalidate_for_user(&user.id).await?;
+    RefreshToken::invalidate_for_user(&user.id).await?;
+    logout::execute_backchannel_logout(None, Some(user.id)).await?;
+
+    Event::force_logout(user.email).send().await?;
 
     Ok(HttpResponse::Ok().finish())
 }

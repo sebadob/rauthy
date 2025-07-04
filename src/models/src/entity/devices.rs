@@ -286,7 +286,6 @@ impl DeviceAuthCode {
     }
 
     pub fn verification_uri(&self) -> String {
-        // TODO config var if we should host at / as well for better UX ?
         format!("{}/auth/v1/device", RauthyConfig::get().pub_url_with_scheme)
     }
 

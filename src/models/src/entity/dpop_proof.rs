@@ -281,7 +281,7 @@ impl DPoPProof {
             .map_err(|err| err.message)?;
 
         // 7. The jwk JOSE Header Parameter does not contain a private key.
-        // TODO ?
+        // Not really our responsibility to check this, or should we?
 
         // 8. The htm claim matches the HTTP method of the current request.
         if self.claims.htm.as_str() != http::Method::POST.as_str() {

@@ -214,6 +214,19 @@ enable = false
 [#644](https://github.com/sebadob/rauthy/pull/644)
 [#1064](https://github.com/sebadob/rauthy/pull/1064)
 
+#### Additional Event Types
+
+Some new Rauthy Event types have been added. These are now configurable in their notification level as all the other
+ones. The new Events are the following:
+
+- An `Event::ForceLogout` will be created during `DELETE /sessions/{user_id}`. This will happen when and Admin clicks
+  "Force Logout" for a user in the Admin UI.
+- An `Event::UserLoginRevoke` will be created after a user clicked the login revoke link in the (new) notification
+  E-Mail that is sent out after a login from an unknown location.
+- An `Event::SispiciousApiScan` will be created when Rauthy detects a suspicious, very much likely malicious API scan.
+
+[#1085](https://github.com/sebadob/rauthy/pull/1085)
+
 #### Anti-Lockout hooks in Admin UI
 
 The Admin UI already had anti-lockout hooks for some important things like the `rauthy` client or the `rauthy_admin`

@@ -1781,7 +1781,6 @@ impl User {
         &self,
         redirect_uri: Option<String>,
     ) -> Result<(), ErrorResponse> {
-        // TODO implement something with a Backup Code for passkey only accounts?
         // deny for passkey only accounts
         if self.account_type() == AccountType::Passkey {
             return Ok(());

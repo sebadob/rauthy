@@ -239,7 +239,7 @@ impl HtmlTemplate {
     }
 
     // TODO find a way to borrow values dynamically, no matter the type
-    // -> does rinja accept generic traits like `Display`?
+    //  -> does askama accept generic traits like `Display`?
     pub fn inner(&self) -> String {
         match self {
             Self::AtprotoId(i) => i.to_string(),

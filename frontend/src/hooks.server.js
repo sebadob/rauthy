@@ -21,8 +21,7 @@ export async function handle({event, resolve}) {
     }
 
     if (path === '/auth/v1/i18n_email/%7B%7Blang%7D%7D') {
-        // TODO insert EN template here if the whole setup works
-        // This, for now, only fixes UI compilation.
+        // fixes static UI compilation.
         return new Response('{}');
     }
 

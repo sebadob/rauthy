@@ -113,7 +113,6 @@ impl JwtAccessClaims {
             validate_jwt!(Self, pubkey, token, config.verification_options.clone())?;
 
         let mut slf = claims.custom;
-        // TODO should we even include DPoP here or leave it out?
         if slf.typ != JwtTokenType::Bearer {
             return Err(RauthyError::Token(Cow::from("Must provide a Bearer token")));
         }

@@ -151,8 +151,6 @@ impl OidcProvider {
         Ok(())
     }
 
-    // TODO add setup_from_env fn
-
     pub fn init_client(
         root_certificate: Option<reqwest::Certificate>,
         https_only: RauthyHttpsOnly,

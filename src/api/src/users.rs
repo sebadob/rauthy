@@ -14,9 +14,10 @@ use rauthy_api_types::users::{
     RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAttrConfigRequest,
     UserAttrConfigResponse, UserAttrConfigValueResponse, UserAttrValueResponse,
     UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserEditableAttrResponse,
-    UserEditableAttrsResponse, UserPictureConfig, UserResponse, UserResponseSimple, WebIdRequest,
-    WebIdResponse, WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
-    WebauthnDeleteRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
+    UserEditableAttrsResponse, UserPictureConfig, UserResponse, UserResponseSimple,
+    UserRevokeParams, WebIdRequest, WebIdResponse, WebauthnAuthFinishRequest,
+    WebauthnAuthStartRequest, WebauthnAuthStartResponse, WebauthnDeleteRequest,
+    WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
     COOKIE_MFA, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, PWD_CSRF_HEADER,
@@ -51,6 +52,7 @@ use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::html::HtmlCached;
 use rauthy_models::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
+use rauthy_models::ipgeo;
 use rauthy_models::language::Language;
 use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::helpers::get_bearer_token_from_header;
@@ -58,6 +60,7 @@ use rauthy_service::oidc::logout;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::collections::HashMap;
+use std::net::IpAddr;
 use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
@@ -1170,7 +1173,11 @@ pub async fn put_user_password_reset(
     ),
 )]
 #[get("/users/{id}/revoke/{code}")]
-pub async fn get_user_revoke(path: web::Path<(String, String)>, req: HttpRequest) -> HttpResponse {
+pub async fn get_user_revoke(
+    path: web::Path<(String, String)>,
+    req: HttpRequest,
+    Query(params): Query<UserRevokeParams>,
+) -> HttpResponse {
     let (user_id, code) = path.into_inner();
 
     let lang = Language::try_from(&req).unwrap_or_default();
@@ -1178,7 +1185,7 @@ pub async fn get_user_revoke(path: web::Path<(String, String)>, req: HttpRequest
         .await
         .unwrap_or_default();
 
-    let html = match user_revoke_handle(user_id, code).await {
+    let html = match user_revoke_handle(user_id, code, params.ip).await {
         Ok(_) => UserRevokeHtml::build(&lang, theme_ts),
         Err(err) => {
             debug!("Error during user revoke: {err}");
@@ -1190,7 +1197,11 @@ pub async fn get_user_revoke(path: web::Path<(String, String)>, req: HttpRequest
 }
 
 #[inline]
-async fn user_revoke_handle(user_id: String, code: String) -> Result<(), ErrorResponse> {
+async fn user_revoke_handle(
+    user_id: String,
+    code: String,
+    bad_ip: IpAddr,
+) -> Result<(), ErrorResponse> {
     let revoke = UserRevoke::find(user_id).await?;
     if revoke.code != code {
         return Err(ErrorResponse::new(
@@ -1204,9 +1215,13 @@ async fn user_revoke_handle(user_id: String, code: String) -> Result<(), ErrorRe
     LoginLocation::delete_for_user(revoke.user_id.clone()).await?;
     logout::execute_backchannel_logout(None, Some(revoke.user_id.clone())).await?;
 
-    UserRevoke::delete(revoke.user_id).await?;
+    let user = User::find(revoke.user_id).await?;
+    UserRevoke::delete(user.id).await?;
 
-    // TODO create new Event Type and trigger it
+    let location = ipgeo::get_location_from_db(bad_ip)?;
+    Event::user_login_revoke(&user.email, bad_ip, location)
+        .send()
+        .await?;
 
     Ok(())
 }

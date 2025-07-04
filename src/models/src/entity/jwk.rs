@@ -467,7 +467,6 @@ impl JWKSPublicKey {
         };
 
         DB::hql()
-            // TODO make cache lifetime configurable as well
             .put(Cache::JwksRemote, kid, &res, Some(3600))
             .await?;
 

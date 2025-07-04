@@ -389,9 +389,6 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 );
             }
 
-            // TODO double check after hiqlite migration if we really don't
-            // need another user_attr_values update here
-
             txn.push((
                 r#"
 UPDATE user_attr_config
@@ -415,8 +412,6 @@ WHERE name = $6"#,
             for (id, attr_include_access, attr_include_id) in scope_updates {
                 Scope::update_mapping_only(&id, attr_include_access, attr_include_id, &txn).await?;
             }
-
-            // TODO double check if we really don't need another user_attr_values update here
 
             DB::pg_txn_append(
                 &txn,

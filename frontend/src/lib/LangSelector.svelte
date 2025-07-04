@@ -29,8 +29,6 @@
     let offsetTop = $derived(openTop ? `-${(languages?.length || 0) * 2 + 2}rem` : undefined);
     let offsetLeft = $derived(openTop ? '.2rem' : undefined);
 
-    // TODO make it possible in the backend to show only configured languages
-
     $effect(() => {
         let cookie = getCookie('locale');
         let current = untrack(() => selected);

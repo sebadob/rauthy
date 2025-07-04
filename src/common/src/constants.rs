@@ -83,13 +83,6 @@ pub const CACHE_TTL_APP: Option<i64> = Some(43200);
 pub const CACHE_TTL_AUTH_PROVIDER_CALLBACK: Option<i64> =
     Some(UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64);
 pub const CACHE_TTL_SESSION: Option<i64> = Some(14400);
-// TODO maybe add a size limit to hiqlite to fix users cache, or simply always append?
-// No size limit means the cache could grow infinitely in theory, at least until every user from
-// the DB is inside the cache. However, this will not exceed a too high value even for 1_000_000
-// users.
-//
-// CAUTION: With WebID enabled there can actually exist 4 entries per user with different indexes
-// in the current layout!
 pub const CACHE_TTL_USER: Option<i64> = Some(600);
 
 pub const IDX_APP_VERSION: &str = "rauthy_app_version";

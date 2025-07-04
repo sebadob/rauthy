@@ -44,9 +44,9 @@ impl FedCMAccount {
             // Rauthy does not store user pictures
             picture: None,
             // TODO how should we decide which clients to return here? How to make this dynamic?
-            // simply all of them? Or introduce a new flow to allow fedCm and filter?
+            //  simply all of them? Or introduce a new flow to allow fedCm and filter?
             // approved_clients: clients,
-            // TODO not sure if it produces errors and problems if we populate this value at all
+            //  not sure if it produces errors and problems if we populate this value at all
             approved_clients: Vec::default(),
             login_hints: vec![login_hint, "state=fedcm".to_string()],
             domain_hints: vec![RauthyConfig::get().vars.server.pub_url.clone()],
