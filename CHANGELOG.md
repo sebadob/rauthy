@@ -283,7 +283,7 @@ services:
       #- TLS_KEY=tls/key.pem
       - USE_VAULT_CONFIG=true
       - VAULT_ADDR=http://${DOCKER_MACHINE_IP}:8202
-      #- VAULT_TOKEN=unsafe
+      - VAULT_TOKEN=unsafe
       - VAULT_MOUNT=secret
       - VAULT_PATH=rauthy_config
       - VAULT_CONFIG_KEY=config.toml
@@ -379,7 +379,7 @@ services:
       #- TLS_KEY=tls/key.pem
       - USE_VAULT_CONFIG=true
       - VAULT_ADDR=http://${DOCKER_MACHINE_IP}:8202
-      - VAULT_TOKEN=unsafe
+      #- VAULT_TOKEN=unsafe
       - VAULT_MOUNT=secret
       - VAULT_PATH=rauthy_config
       - VAULT_CONFIG_KEY=config.toml
