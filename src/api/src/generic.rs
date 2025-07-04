@@ -330,7 +330,7 @@ pub async fn ping() -> impl Responder {
 )]
 #[post("/pow")]
 pub async fn post_pow() -> Result<HttpResponse, ErrorResponse> {
-    // TODO can we limit the creation of new pows in a way thae makes sense?
+    // TODO can we limit the creation of new pows in a way that makes sense?
     //  By IP could be problematic if lots of users have the same public IP.
     let pow = PowEntity::create().await?;
     Ok(HttpResponse::Ok()

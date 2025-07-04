@@ -215,7 +215,6 @@ pub async fn get_authorize(
     let (body_bytes, encoding) = if accept_encoding.contains(&"br".parse().unwrap()) {
         (compress_br_dyn(body.as_bytes())?, "br")
     } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
-        // TODO create a dyn version for gzip with lower strength
         (compress_gzip(body.as_bytes())?, "gzip")
     } else {
         (body.as_bytes().to_vec(), "none")

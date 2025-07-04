@@ -149,7 +149,7 @@ pub enum EventType {
     NewUserRegistered,
     NewRauthyAdmin,
     NewRauthyVersion,
-    PossibleBruteForce, // TODO
+    PossibleBruteForce, // currently unused - kind of covered by IpBlacklisted
     RauthyStarted,
     RauthyHealthy,
     RauthyUnhealthy,

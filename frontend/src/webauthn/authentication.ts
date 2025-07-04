@@ -61,8 +61,6 @@ export async function webauthnAuth(
     const expTime = new Date().getTime() + exp;
     let credential: Credential;
     try {
-        // TODO currently, we don't have a way to remote-close / cancel the browser popup for PIN input,
-        // if the request expires. Tests done in Firefox so far.
         const cred = await promiseTimeout(navigator.credentials.get(challenge), exp);
         if (cred) {
             credential = cred;

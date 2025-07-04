@@ -19,7 +19,6 @@ pub async fn get_template(
 #[cfg(not(debug_assertions))]
 #[get("/template/{id}")]
 pub async fn get_template() -> Result<HttpResponse, ErrorResponse> {
-    // TODO maybe auto-block IP as suspicious if used in prod?
     Ok(HttpResponse::NotFound().finish())
 }
 
@@ -44,6 +43,5 @@ pub async fn post_dev_only_endpoints(
 #[cfg(not(debug_assertions))]
 #[post("/dev/{typ}")]
 pub async fn post_dev_only_endpoints() -> Result<HttpResponse, ErrorResponse> {
-    // TODO maybe auto-block IP as suspicious if used in prod?
     Ok(HttpResponse::NotFound().finish())
 }

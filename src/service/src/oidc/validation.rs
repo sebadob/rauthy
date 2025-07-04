@@ -162,7 +162,6 @@ pub async fn validate_refresh_token(
         dpop_fingerprint,
         None,
         rt_scope.map(TokenScopes),
-        // TODO think about if we maybe want to have an optional refresh token session binding
         None,
         AuthCodeFlow::No,
         DeviceCodeFlow::No,

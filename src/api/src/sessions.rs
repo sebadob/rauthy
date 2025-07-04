@@ -18,8 +18,6 @@ use validator::Validate;
 
 /// Returns all existing sessions
 ///
-/// TODO update pagination usage description
-///
 /// **Permissions**
 /// - rauthy_admin
 #[utoipa::path(
@@ -129,8 +127,8 @@ pub async fn delete_sessions(principal: ReqPrincipal) -> Result<HttpResponse, Er
     // This task should run async in the background, as it could take quite a long time to finish.
     task::spawn(async move {
         if let Err(err) = logout::execute_backchannel_logout_for_everything().await {
-            // TODO we should throw an error or critical event in this case maybe, because
-            // invalidations for everything usually come with a good reason.
+            // TODO we should throw an error or new event in this case maybe, because
+            //  invalidations for everything usually come with a good reason.
             error!(
                 "Error during backchannel logout for the whole application: {:?}",
                 err

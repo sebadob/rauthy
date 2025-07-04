@@ -168,7 +168,6 @@ impl TokenSet {
                     .as_ref()
                     .map(|jkt| JktClaim { jkt: &jkt.0 }),
             },
-            // TODO does this value make sense or should we remove it?
             allowed_origins: None,
             email,
             roles,
