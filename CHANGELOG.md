@@ -227,8 +227,6 @@ ones. The new Events are the following:
 
 [#1085](https://github.com/sebadob/rauthy/pull/1085)
 
-[#1086](https://github.com/sebadob/rauthy/pull/1086)
-
 #### Anti-Lockout hooks in Admin UI
 
 The Admin UI already had anti-lockout hooks for some important things like the `rauthy` client or the `rauthy_admin`
@@ -243,6 +241,8 @@ exists and you can never fully lock yourself out of Rauthy.
 #### IPv6 Support for IP Blacklisting
 
 You can now also blacklist IPv6 address via the Admin UI -> Blacklist.
+
+[#1087](https://github.com/sebadob/rauthy/pull/1087)
 
 ## v0.30.2
 
