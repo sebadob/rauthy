@@ -178,7 +178,6 @@ export async function handleResponse<T>(res: Response, redirect: 'handle401' | '
         headers: res.headers,
     };
 
-    console.log(res);
     if (res.ok) {
         let contentType = res.headers.get('content-type');
         if (contentType === 'application/json') {
