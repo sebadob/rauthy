@@ -307,6 +307,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
 
         slf.name.clone_from(&req_data.name);
         slf.desc.clone_from(&req_data.desc);
+        slf.typ = req_data.typ;
         slf.user_editable = req_data.user_editable.unwrap_or(false);
         slf.default_value = if let Some(v) = &req_data.default_value {
             Some(serde_json::to_vec(v)?)

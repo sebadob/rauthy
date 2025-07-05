@@ -26,7 +26,10 @@ export let I18nAdminDe: I18nAdmin = {
             oder Authorisierung genutzt werden!`,
         makeEditableP3: `Ein Attribut kann deshalb niemals von editierbar zu nicht-editierbar gewandelt werden, weil
             für eine gewisse Zeit, unabhängig von der Dauer, unvalidierte Eingaben erlaubt waren.`,
+        addType: "Typ hinzufügen",
+        removeType: "Typ entfernen",
         name: "Attribut Name",
+        typ: "Typ",
         userEditable: "Durch Benutzer Editierbar",
     },
     backup: {

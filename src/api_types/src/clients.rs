@@ -1,7 +1,7 @@
 use crate::cust_validation::*;
 use crate::oidc::JwkKeyPairAlg;
 use rauthy_common::regex::{
-    RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_GROUPS, RE_LOWERCASE, RE_SCOPE_SPACE,
+    RE_ATTR, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_GROUPS, RE_LOWERCASE, RE_SCOPE_SPACE,
     RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
 };
 use serde::{Deserialize, Serialize};
@@ -194,6 +194,8 @@ pub struct UpdateClientRequest {
     /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
     #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub restrict_group_prefix: Option<String>,
+    #[validate(regex(path = "*RE_ATTR", code = "^[a-z0-9-_/]{2,32}$"))]
+    pub cust_email_mapping: Option<String>,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
 }
@@ -254,6 +256,8 @@ pub struct ClientResponse {
     pub restrict_group_prefix: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scim: Option<ScimClientRequestResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cust_email_mapping: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]

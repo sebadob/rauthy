@@ -25,7 +25,10 @@ export let I18nAdminEn: I18nAdmin = {
             untrusted data and MUST NEVER be used for any form of authentication or authorization!`,
         makeEditableP3: `An attribute cannot be changed from editable to non-editable, because it allowed untrusted
             inputs in the past, no matter for how long this was the case.`,
+        addType: "Add Type",
+        removeType: "Remove Type",
         name: "Attribute Name",
+        typ: "Type",
         userEditable: "User Editable",
     },
     backup: {

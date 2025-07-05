@@ -27,7 +27,10 @@ export interface I18nAdmin {
         // inserted as html
         makeEditableP2: string,
         makeEditableP3: string,
+        addType: string,
+        removeType: string,
         name: string,
+        typ: string,
         userEditable: string,
     },
     backup: {
