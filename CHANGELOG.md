@@ -269,6 +269,7 @@ kv_version = ''
 ```
 
 [#1051](https://github.com/sebadob/rauthy/pull/1051)
+[#1090](https://github.com/sebadob/rauthy/pull/1090)
 
 #### Bluesky / AT Protocol
 
