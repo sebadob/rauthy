@@ -2908,15 +2908,3 @@ pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
     let sep = if parent.is_empty() { "" } else { "." };
     format!("Expected type `{typ}` for {parent}{sep}{key}")
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//
-//     #[tokio::test]
-//     async fn test_config_vars_build() {
-//         let vars = Vars::load("../../config.toml").await;
-//         // println!("size of vars: {}", std::mem::size_of::<Vars>());
-//         let dev_mode = assert_eq!(1, 2);
-//     }
-// }

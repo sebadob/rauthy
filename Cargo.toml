@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.31.0-20250703"
+version = "0.31.0-20250707-2"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -67,7 +67,7 @@ futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 hickory-resolver = "0.25.2"
-hiqlite = { version = "0.9", features = [
+hiqlite = { version = "0.9.1", features = [
     "cache", "counters", "dashboard", "listen_notify_local"
 ] }
 hiqlite-macros = { version = "0.9" }
