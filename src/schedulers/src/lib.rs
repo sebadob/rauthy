@@ -7,6 +7,7 @@ mod backchannel_logout;
 mod devices;
 mod dyn_clients;
 mod events;
+mod ip_geo_db;
 mod jwks;
 mod magic_links;
 mod passwords;
@@ -24,6 +25,7 @@ pub async fn spawn() {
     tokio::spawn(scim_tasks::scim_task_retry());
     tokio::spawn(dyn_clients::dyn_client_cleanup());
     tokio::spawn(events::events_cleanup());
+    tokio::spawn(ip_geo_db::update_ip_geo_db());
     tokio::spawn(devices::devices_cleanup());
     tokio::spawn(magic_links::magic_link_cleanup());
     tokio::spawn(tokens::refresh_tokens_cleanup());

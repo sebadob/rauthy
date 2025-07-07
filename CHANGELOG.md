@@ -120,6 +120,18 @@ maxmind_db_dir = 'data'
 # default: 'GeoLite2-Country'
 # overwritten by: GEO_MAXMIND_DB_TYPE
 maxind_db_type = 'GeoLite2-Country'
+
+# If you configured a `maxmind_account_id` + `maxmind_license_key`,
+# you can change the time when the DB update job runs. By default,
+# it runs every night at 05:00. It will check if y new version of
+# the MaxMind DB is available and if so, download it.
+#
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 0 5 * * * *"
+# overwritten by: GEO_MAXMIND_UPDATE_CRON
+maxmind_update_cron = "0 0 5 * * * *"
 ```
 
 [#1077](https://github.com/sebadob/rauthy/pull/1077)
@@ -191,19 +203,20 @@ a 2-minute window that allows modifications for MFA keys, like adding new ones a
 #### Load config from Vault
 
 The ability to load the config file from a Vault source has been added. To do this, you need to provide the ENV var
-`USE_VAULT_CONFIG=true` and a `vault.toml` file, that contains the necessary information on how to connect and/or override the settings with ENV vars.
+`USE_VAULT_CONFIG=true` and a `vault.toml` file, that contains the necessary information on how to connect and/or
+override the settings with ENV vars.
 If testing with unsecure connections (i.e. http://) one has to set this ENV var: `DEV_MODE=true`.
 
 `vault.toml` file:
 
 ```toml
 [vault]
-addr='http://127.0.0.1:8200'
-token='hvs....'
-mount='secret'
-path='rauthy_config'
-config_key='config.toml'
-kv_version='2'
+addr = 'http://127.0.0.1:8200'
+token = 'hvs....'
+mount = 'secret'
+path = 'rauthy_config'
+config_key = 'config.toml'
+kv_version = '2'
 
 # You can provide a root certificate bundle, if you
 # are running servers / clients Rauthy needs to connect
