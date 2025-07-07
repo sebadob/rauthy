@@ -1683,9 +1683,9 @@ admin_force_mfa = true
 # This is currently only used for the user registration via UI.
 # The value must be between 10 and 99.
 #
-# default: 20
+# default: 19
 # overwritten by: POW_DIFFICULTY
-#difficulty = 20
+#difficulty = 19
 
 # The expiration duration in seconds for a PoW
 #

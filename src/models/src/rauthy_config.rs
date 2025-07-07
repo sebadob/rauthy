@@ -469,7 +469,7 @@ impl Default for Vars {
                 admin_force_mfa: true,
             },
             pow: VarsPow {
-                difficulty: 20,
+                difficulty: 19,
                 exp: 30,
             },
             scim: VarsScim {
