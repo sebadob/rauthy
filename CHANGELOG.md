@@ -205,18 +205,46 @@ a 2-minute window that allows modifications for MFA keys, like adding new ones a
 The ability to load the config file from a Vault source has been added. To do this, you need to provide the ENV var
 `USE_VAULT_CONFIG=true` and a `vault.toml` file, that contains the necessary information on how to connect and/or
 override the settings with ENV vars.
-If testing with unsecure connections (i.e. http://) one has to set this ENV var: `DEV_MODE=true`.
-
-`vault.toml` file:
 
 ```toml
 [vault]
-addr = 'http://127.0.0.1:8200'
-token = 'hvs....'
-mount = 'secret'
-path = 'rauthy_config'
-config_key = 'config.toml'
-kv_version = '2'
+
+# The full address to your vault including scheme and port
+#
+# default: <empty>
+# overwritten by: VAULT_ADDR
+addr = ''
+
+# The token that rauthy uses to access the secret
+#
+# default: <empty>
+# overwritten by: VAULT_TOKEN
+token = ''
+
+# Secret engine mount point
+#
+# default: <empty>
+# overwritten by: VAULT_MOUNT
+mount = ''
+
+# Path within the mount point containing the secret
+#
+# default: <empty>
+# overwritten by: VAULT_PATH
+path = ''
+
+# The key (name) of the secret
+#
+# default: <empty>
+# overwritten by: VAULT_CONFIG_KEY
+config_key = ''
+
+# KV Version that the secret engine uses.
+# Valid values are '1' or '2'.
+#
+# default: '2'
+# overwritten by: VAULT_KV_VERSION
+kv_version = ''
 
 # You can provide a root certificate bundle, if you
 # are running servers / clients Rauthy needs to connect
@@ -228,13 +256,20 @@ kv_version = '2'
 #-----BEGIN CERTIFICATE-----
 #...
 #-----END CERTIFICATE-----
-#-----BEGIN CERTIFICATE-----
-#....
-#-----END CERTIFICATE-----
 #"""
+
+# If you are testing locally with insecure connections,
+# you can set the following var to make it work.
+#
+# Note: This must be an ENV var and cannot be
+# given as a normal TOML value. It only exists here
+# for completeness / documentation.
+#
+#DANGER_VAULT_INSECURE=true
 ```
 
 [#1051](https://github.com/sebadob/rauthy/pull/1051)
+[#1090](https://github.com/sebadob/rauthy/pull/1090)
 
 #### Bluesky / AT Protocol
 

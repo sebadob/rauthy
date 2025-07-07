@@ -246,12 +246,7 @@ impl VaultSource {
     }
 
     fn http_client(&self) -> Result<Client, Box<dyn std::error::Error>> {
-        let mut dev_mode = false;
-        if let Ok(v) = env::var("DEV_MODE") {
-            if v == "true" {
-                dev_mode = true;
-            };
-        }
+        let insecure = env::var("DANGER_VAULT_INSECURE").as_deref() == Ok("true");
 
         let http_client = {
             let mut builder = reqwest::Client::builder()
@@ -259,8 +254,8 @@ impl VaultSource {
                 .timeout(Duration::from_secs(10))
                 .min_tls_version(tls::Version::TLS_1_2)
                 .user_agent(format!("Rauthy Client v{RAUTHY_VERSION}"))
-                .https_only(!dev_mode)
-                .danger_accept_invalid_certs(dev_mode)
+                .https_only(!insecure)
+                .danger_accept_invalid_certs(insecure)
                 .use_rustls_tls();
 
             if let Some(bundle) = self.root_ca_bundle.clone() {

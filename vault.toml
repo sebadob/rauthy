@@ -2,40 +2,39 @@
 
 # The full address to your vault including scheme and port
 #
+# default: <empty>
 # overwritten by: VAULT_ADDR
-# default: String::default
 addr = ''
 
 # The token that rauthy uses to access the secret
 #
+# default: <empty>
 # overwritten by: VAULT_TOKEN
-# default: String::default
 token = ''
 
 # Secret engine mount point
 #
+# default: <empty>
 # overwritten by: VAULT_MOUNT
-# default: String::default
 mount = ''
 
 # Path within the mount point containing the secret
 #
+# default: <empty>
 # overwritten by: VAULT_PATH
-# default: String::default
 path = ''
 
 # The key (name) of the secret
 #
+# default: <empty>
 # overwritten by: VAULT_CONFIG_KEY
-# default: String::default
 config_key = ''
 
 # KV Version that the secret engine uses.
 # Valid values are '1' or '2'.
 #
-# overwritten by: VAULT_KV_VERSION
 # default: '2'
-# example: kv_version='2'
+# overwritten by: VAULT_KV_VERSION
 kv_version = ''
 
 # You can provide a root certificate bundle, if you
@@ -48,7 +47,13 @@ kv_version = ''
 #-----BEGIN CERTIFICATE-----
 #...
 #-----END CERTIFICATE-----
-#-----BEGIN CERTIFICATE-----
-#....
-#-----END CERTIFICATE-----
 #"""
+
+# If you are testing locally with insecure connections,
+# you can set the following var to make it work.
+#
+# Note: This must be an ENV var and cannot be
+# given as a normal TOML value. It only exists here
+# for completeness / documentation.
+#
+#DANGER_VAULT_INSECURE=true
