@@ -2499,8 +2499,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite"
-version = "0.9.1-20250707"
-source = "git+https://github.com/sebadob/hiqlite.git#d3c1cecef1e0762317b183d9f4c8ffc7740f881b"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da2e923b79143c2e444d375b80014a62bfa14cb575e20f88f6bbea60b9f2dfc8"
 dependencies = [
  "argon2",
  "axum",
@@ -2554,7 +2555,8 @@ dependencies = [
 [[package]]
 name = "hiqlite-macros"
 version = "0.9.0"
-source = "git+https://github.com/sebadob/hiqlite.git#d3c1cecef1e0762317b183d9f4c8ffc7740f881b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ae637aa0945612951dcac70a68e516261b952864ee79c9e40dc6f4bfd25d2c7"
 dependencies = [
  "hiqlite",
  "rust-embed",
@@ -2563,7 +2565,8 @@ dependencies = [
 [[package]]
 name = "hiqlite-wal"
 version = "0.9.0"
-source = "git+https://github.com/sebadob/hiqlite.git#d3c1cecef1e0762317b183d9f4c8ffc7740f881b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f422d13c223c4804f76c7f4a051a3f0a5db3d12fc87bd2de5de0c661530e08ac"
 dependencies = [
  "bincode",
  "byteorder",
@@ -4447,7 +4450,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.31.0-20250707-1"
+version = "0.31.0-20250707-2"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4488,7 +4491,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.31.0-20250707-1"
+version = "0.31.0-20250707-2"
 dependencies = [
  "actix-web",
  "openssl",
@@ -4506,7 +4509,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.31.0-20250707-1"
+version = "0.31.0-20250707-2"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4533,7 +4536,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.31.0-20250707-1"
+version = "0.31.0-20250707-2"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4571,7 +4574,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.31.0-20250707-1"
+version = "0.31.0-20250707-2"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4605,7 +4608,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.31.0-20250707-1"
+version = "0.31.0-20250707-2"
 dependencies = [
  "chrono",
  "openssl",
@@ -4622,7 +4625,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.31.0-20250707-1"
+version = "0.31.0-20250707-2"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4638,7 +4641,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.31.0-20250707-1"
+version = "0.31.0-20250707-2"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -4719,7 +4722,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.31.0-20250707-1"
+version = "0.31.0-20250707-2"
 dependencies = [
  "async-trait",
  "openssl",
@@ -4735,7 +4738,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.31.0-20250707-1"
+version = "0.31.0-20250707-2"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4755,7 +4758,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.31.0-20250707-1"
+version = "0.31.0-20250707-2"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5077,9 +5080,9 @@ dependencies = [
 
 [[package]]
 name = "ruma"
-version = "0.12.3"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d910a9b75cbf0e88f74295997c1a41c3ab7a117879a029c72db815192c167a0d"
+checksum = "1d60b9267fed6352f294e6d5baec3a9a16f14bcce07af7079b26e26220aa500f"
 dependencies = [
  "assign",
  "js_int",
@@ -5112,9 +5115,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-client-api"
-version = "0.20.3"
+version = "0.20.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09cc4ff88a70a3d1e7a2c5b51cca7499cb889b42687608ab664b9a216c49314d"
+checksum = "3a9e9c613cfda4923b851c5d8bc442305905bee4f0c2b924564b00e71636c8d4"
 dependencies = [
  "as_variant",
  "assign",
@@ -5136,9 +5139,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-common"
-version = "0.15.2"
+version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b75da013b362664c3e161662902e5da3f77e990525681b59c6035bac27e87b4"
+checksum = "52e4969d85f1915b666dfe7939141b874aacd4191f8ad86689d16bfbfa08a770"
 dependencies = [
  "as_variant",
  "base64 0.22.1",
@@ -5168,9 +5171,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-events"
-version = "0.30.3"
+version = "0.30.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41ab3d1b54c32a65194ecc44bc7f7575df50ef4255b139547d7dcc1753dc883d"
+checksum = "3cdc7abec9bc2a9ca0b4831cc26ce97a6a8c39a0bde44a19281a719e861b4293"
 dependencies = [
  "as_variant",
  "indexmap",
@@ -5203,9 +5206,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-macros"
-version = "0.15.1"
+version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1182e83ee5cd10121974f163337b16af68a93eedfc7cdbdbd52307ac7e1d743"
+checksum = "5ff13fbd6045a7278533390826de316d6116d8582ed828352661337b0c422e1c"
 dependencies = [
  "cfg-if",
  "proc-macro-crate",
