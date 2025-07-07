@@ -259,13 +259,13 @@
         {#if mfaModSecs && mfaModSecs > 0}
             <div class="modToken">
                 <div>
-                    Passkeys can be modified for:
+                    {t.account.canModifyFor}
                     <span class="timeLeft">
-                    {mfaModSecs}
+                        {mfaModSecs}
                         {t.common.seconds}
-                </span>
+                    </span>
                 </div>
-                <Button ariaLabel="Refresh" invisible onclick={mfaTokenRefresh}>
+                <Button ariaLabel={t.common.refresh} invisible onclick={mfaTokenRefresh}>
                     <div class="btnRefresh">
                         <IconArrowPathSquare/>
                     </div>
