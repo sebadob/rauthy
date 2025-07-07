@@ -191,6 +191,11 @@ If Rauthy is running with Hiqlite as the database, you can now view and download
 You also get the option to trigger manual backups with a new button, which gets rid of the issue of updating the cron
 task to "a few minutes in the future" to trigger a backup on demand.
 
+> If you run a HA cluster and want to download local backups via the Admin UI, you will most probably run into errors
+> when downloading older ones, that have been created before this version, if running behind a load balancer. The
+> timestamp part of the filename was dynamically set by each node independently before and only new backups from this
+> version on will have the exact same filename on all nodes.
+
 [#1079](https://github.com/sebadob/rauthy/pull/1079)
 
 #### Re-Authenticate for MFA keys modifications
@@ -317,6 +322,14 @@ exists and you can never fully lock yourself out of Rauthy.
 You can now also blacklist IPv6 address via the Admin UI -> Blacklist.
 
 [#1087](https://github.com/sebadob/rauthy/pull/1087)
+
+#### Default difficulty for PoWs reduced
+
+Since PoWs have been added to the Login UI, and a user needs to calculate 2 PoWs if it's a password-account, the default
+difficulty of `20` was a bit too high for not that powerful devices. Therefore, the default value has been reduced from
+`20` to `19` to compensate for that.
+
+[#1088](https://github.com/sebadob/rauthy/pull/1088)
 
 ## v0.30.2
 
