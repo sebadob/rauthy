@@ -149,12 +149,18 @@ postgres-start:
             docker.io/library/postgres:17.2-alpine || echo ">>> Postgres is already running - nothing to do"
     fi
 
+    while ! curl localhost:5432 2>&1 | grep 'Empty reply from server' ; do
+        echo 'Waiting until Postgres is up and running'
+        sleep 1
+    done
+    echo 'Postgres is ready'
+
 # Stops mailcrab
 postgres-stop:
     {{ docker }} stop {{ container_postgres }} || echo ">>> Postgres is not running - nothing to do"
 
 postgres-rm:
-    {{ docker }} rm {{ container_postgres }} || echo ">>> Postgres does not exists - nothing to do"
+    {{ docker }} rm {{ container_postgres }} || echo ">>> Postgres does not exist - nothing to do"
 
 # Starts nginx for `/forward_auth` testing
 nginx-start:
@@ -306,8 +312,6 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
 test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlite postgres-start
     #!/usr/bin/env bash
     clear
-
-    sleep 2
 
     cargo build
     # the Hiqlite tests are disk-backed, lets check postgres in-memory to cover this as well
