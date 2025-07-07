@@ -93,7 +93,7 @@ fn validate_hiqlite() -> Result<(), ErrorResponse> {
         Ok(())
     } else {
         Err(ErrorResponse::new(
-            ErrorResponseType::Disabled,
+            ErrorResponseType::NotFound,
             "Backups can only be triggered for Hiqlite",
         ))
     }
