@@ -331,6 +331,12 @@ difficulty of `20` was a bit too high for not that powerful devices. Therefore, 
 
 [#1088](https://github.com/sebadob/rauthy/pull/1088)
 
+### Bugfix
+
+- The `cluster.backup_keep_days_local` setting was not always read properly and might not have been working like
+  expected. Additionally, the default value in docs was wrong. It's not `3` days by default, but `30`. This was fixed in
+  `hiqlite` directly and the version has been bumped.
+
 ## v0.30.2
 
 ### Changes

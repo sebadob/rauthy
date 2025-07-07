@@ -595,9 +595,9 @@ secret_api = "SuperSecureSecret1337"
 # Backups older than the configured days will be cleaned up locally
 # after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
 #
-# default: 3
+# default: 30
 # overwritten by: HQL_BACKUP_KEEP_DAYS_LOCAL
-#backup_keep_days_local = 3
+#backup_keep_days_local = 30
 
 # If you ever need to restore from a backup, the process is simple.
 # 1. Have the cluster shut down. This is probably the case anyway, if
