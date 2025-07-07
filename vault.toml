@@ -1,0 +1,54 @@
+[vault]
+
+# The full address to your vault including scheme and port
+#
+# overwritten by: VAULT_ADDR
+# default: String::default
+addr = ''
+
+# The token that rauthy uses to access the secret
+#
+# overwritten by: VAULT_TOKEN
+# default: String::default
+token = ''
+
+# Secret engine mount point
+#
+# overwritten by: VAULT_MOUNT
+# default: String::default
+mount = ''
+
+# Path within the mount point containing the secret
+#
+# overwritten by: VAULT_PATH
+# default: String::default
+path = ''
+
+# The key (name) of the secret
+#
+# overwritten by: VAULT_CONFIG_KEY
+# default: String::default
+config_key = ''
+
+# KV Version that the secret engine uses.
+# Valid values are '1' or '2'.
+#
+# overwritten by: VAULT_KV_VERSION
+# default: '2'
+# example: kv_version='2'
+kv_version = ''
+
+# You can provide a root certificate bundle, if you
+# are running servers / clients Rauthy needs to connect
+# to with self-signed certificates.
+# The certificates need to be in PEM format.
+#
+# overwritten by: HTTP_CUST_ROOT_CA_BUNDLE
+#root_ca_bundle = """
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#-----BEGIN CERTIFICATE-----
+#....
+#-----END CERTIFICATE-----
+#"""
