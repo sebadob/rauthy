@@ -15,7 +15,6 @@ use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::dpop_proof::DPoPProof;
-use rauthy_models::entity::login_locations::LoginLocation;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::user_login_states::UserLoginState;
 use rauthy_models::entity::users::User;
