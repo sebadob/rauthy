@@ -172,7 +172,7 @@
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on your localhost.
 The image contains a basic default config which is sufficient for local testing (don't use it in production, it
 contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.30.2
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.31.0
 </code></pre>
 <p>To proceed, go to <strong><a href="first_start.html">First Start</a></strong>, or do the production setup below to have persistence.</p>
 <h2 id="testing--evaluation-with-e-mail"><a class="header" href="#testing--evaluation-with-e-mail">Testing / Evaluation with E-Mail</a></h2>
@@ -195,7 +195,7 @@ services:
       
   rauthy:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.30.2
+    image: ghcr.io/sebadob/rauthy:0.31.0
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -290,7 +290,7 @@ section.</p>
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.30.2
+    ghcr.io/sebadob/rauthy:0.31.0
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>

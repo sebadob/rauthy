@@ -404,7 +404,7 @@ additionally. A dedicated <em>Going into production</em> guide will be written i
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on your localhost.
 The image contains a basic default config which is sufficient for local testing (don't use it in production, it
 contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.30.2
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.31.0
 </code></pre>
 <p>To proceed, go to <strong><a href="getting_started/first_start.html">First Start</a></strong>, or do the production setup below to have persistence.</p>
 <h2 id="testing--evaluation-with-e-mail"><a class="header" href="#testing--evaluation-with-e-mail">Testing / Evaluation with E-Mail</a></h2>
@@ -427,7 +427,7 @@ services:
       
   rauthy:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.30.2
+    image: ghcr.io/sebadob/rauthy:0.31.0
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -522,7 +522,7 @@ section.</p>
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.30.2
+    ghcr.io/sebadob/rauthy:0.31.0
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
@@ -713,7 +713,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.30.2
+          image: ghcr.io/sebadob/rauthy:0.31.0
           securityContext:
             # User ID 10001 is actually built into the container 
             # at the creation for better security
@@ -4405,6 +4405,24 @@ one secret (my preferred approach).</p>
 # overwritten by: TOKEN_LEN_LIMIT
 #token_len_limit = 4096
 
+# If set to `true`, the `/auth/v1/whoami` endpoint will return all
+# request headers. Only the `Cookie` and Rauthys internal CSRF headers
+# will be hidden. Since this has the potential to leak sensitive
+# information, depending on you networking, this is disabled by default.
+#
+# default: false
+# overwritten by: WHOAMI_HEADERS
+#whoami_headers = false
+
+[atproto]
+# Set to `true` to enable the ATProto provider. If the public URL is
+# 'localhost' it should be changed to '127.0.0.1', if `dev_mode = true`
+# this also applies for the `provider_callback_url`.
+#
+# default: false
+# overwritten by: ATPROTO_ENABLE
+#enable = false
+
 [auth_headers]
 # You can enable authn/authz headers which would be added to the
 # response of the `/auth/v1/oidc/forward_auth` endpoint. When set to
@@ -5379,6 +5397,30 @@ notify_level_slack = 'notice'
 # overwritten by: EVENT_CLEANUP_DAYS
 #cleanup_days = 30
 
+# The level for the generated Event after a backchannel
+# logout has failed after exceeding all retries.
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_BACKCHANNEL_LOGOUT_FAILED
+level_backchannel_logout_failed = 'critical'
+# The level for the generated Event after a user was
+# force-logged-out by an admin.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_FORCE_LOGOUT
+level_force_logout = 'notice'
+# The level for the generated Event after an IP has
+# been blacklisted
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_IP_BLACKLISTED
+level_ip_blacklisted = 'warning'
+# The level for the generated Event after the JWKS has
+# been rotated
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_JWKS_ROTATE
+level_jwks_rotate = 'notice'
 # The level for the generated Event after a new user has
 # been registered.
 #
@@ -5403,30 +5445,6 @@ level_user_password_reset = 'notice'
 # default: notice
 # overwritten by: EVENT_LEVEL_RAUTHY_ADMIN
 level_rauthy_admin = 'notice'
-# The level for the generated Event after a new App
-# version has been found
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_RAUTHY_VERSION
-level_rauthy_version = 'notice'
-# The level for the generated Event after the JWKS has
-# been rotated
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_JWKS_ROTATE
-level_jwks_rotate = 'notice'
-# The level for the generated Event after DB secrets
-# have been migrated to a new key
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_SECRETS_MIGRATED
-level_secrets_migrated = 'notice'
-# The level for the generated Event after a Rauthy
-# instance has been started
-#
-# default: info
-# overwritten by: EVENT_LEVEL_RAUTHY_START
-level_rauthy_start = 'info'
 # The level for the generated Event after a Rauthy
 # entered a healthy state (again)
 #
@@ -5434,17 +5452,50 @@ level_rauthy_start = 'info'
 # overwritten by: EVENT_LEVEL_RAUTHY_HEALTHY
 level_rauthy_healthy = 'notice'
 # The level for the generated Event after a Rauthy
+# instance has been started
+#
+# default: info
+# overwritten by: EVENT_LEVEL_RAUTHY_START
+level_rauthy_start = 'info'
+# The level for the generated Event after a Rauthy
 # entered an unhealthy state
 #
 # default: critical
 # overwritten by: EVENT_LEVEL_RAUTHY_UNHEALTHY
 level_rauthy_unhealthy = 'critical'
-# The level for the generated Event after an IP has
-# been blacklisted
+# The level for the generated Event after a new App
+# version has been found
 #
-# default: warning+
-# overwritten by: EVENT_LEVEL_IP_BLACKLISTED
-level_ip_blacklisted = 'warning'
+# default: notice
+# overwritten by: EVENT_LEVEL_RAUTHY_VERSION
+level_rauthy_version = 'notice'
+# The level for the generated Event after DB secrets
+# have been migrated to a new key
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_SECRETS_MIGRATED
+level_secrets_migrated = 'notice'
+# The level for the generated Event after a user revoked
+# an illegal login with the link from the notification
+# E-Mail for "login from unknown location"
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
+level_user_login_revoke = 'warning'
+# The level for the generated Event after a SCIM
+# update task ultimately failed after exceeding
+# all retries.
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_SCIM_TASK_FAILED
+level_scim_task_failed = 'critical'
+# The level for the generated Event after Rauthy
+# detected a suspicious API scanning request.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_SUSPICIOUS_REQUEST
+level_suspicious_request = 'notice'
+
 # The level for the generated Event after certain
 # amounts of false logins from an IP
 #
@@ -5505,6 +5556,106 @@ level_failed_login = 'info'
 # default: 259200
 # overwritten by: SESSION_TIMEOUT_FED_CM
 #session_timeout = 259200
+
+[geolocation]
+# If you have a configured and working Geolocation setup, you can
+# define if un-resolvable IP addresses should be blocked. By default,
+# if a Country cannot be found for a certain IP address, it will be
+# allowed anyway. This is necessary to allow private network connections
+# for instance. Only if you run a public Rauthy instance, and you will
+# guaranteed always connect with a public Peer IP, you might want to
+# set this to `true`.
+#
+# default: false
+# overwritten by: GEO_BLOCK_UNKONW
+#block_unknown = false
+
+# If you have a WAF or CDN which injects a geoloaction header
+# with the country code, provide the name here. For instance,
+# in case of Cloudflare, this would be 'CF-IPCountry'.
+#
+# This header will only be accepted, if Rauthy runs in proxy_mode,
+# and the source IP is a trusted proxy, to prevent spoofing.
+#
+# default: not set
+# overwritten by: GEO_COUNTRY_HEADER
+#country_header = 'CF-IPCountry'
+
+# You can black- or whitelist countries, if you have a configured
+# and working Geolocation, either via `country_header` or a
+# Maxmind database.
+#
+# The `country_list_type` can be either `whitelist` or `blacklist`,
+# and it will specify the behavior of the `country_list`.
+# For instance, if you have `country_list_type = 'whitelist'` and
+# `country_list = ['DE', 'FR']`, only access from Germany and France
+# will be allowed.
+#
+# The `whitelist` type is a `default-deny`, while `blacklist` is
+# `default-allow`.
+#
+# If `country_list_type` is not set at all, Geoblocking will be
+# disabled.
+#
+# default: not set
+#country_list_type = 'whitelist'
+# default: not set
+#country_list = []
+
+# If you don't have a header with a country code, you can
+# also provide a Maxmind account. Rauthy will then download
+# the 'GeoLite2 Country' database regularly and use it for
+# geolocating IPs.
+#
+# The GeoLite databases from Maxmind are free and published
+# under the Creative Commons License. You can also provide
+# an Enterprise database, which will have more accurate data.
+# Check the `maxmind_db_type` below.
+#
+# default: not set
+# overwritten by: GEO_MAXMIND_ACC_ID
+#maxmind_account_id = ''
+# overwritten by: GEO_MAXMIND_LICENSE
+#maxmind_license_key = ''
+
+# If `maxmind_account_id` and `maxmind_license_key`, this
+# will be the directory being used for DB download and storage.
+#
+# default: 'data'
+# overwritten by: GEO_MAXMIND_DIR
+#maxmind_db_dir = 'data'
+
+# By default, the `GeoLite2-Country` database from Maxmind is
+# being used. The IP Geolocation databases are loaded fully into
+# memory at startup to speedup lookups. The size therefore makes
+# a big difference, not only for lookup speed, but also in terms
+# of memory usage. The Country DB adds ~10MB of memory overhead,
+# while the City DB is around 65MB.
+#
+# Possible Values (case-sensitive):
+# - GeoLite2-Country
+# - GeoLite2-City
+#
+# If you have access to paid Maxmind databases, you can add the
+# db_type in a way that it resolves to a valid download link.
+# The link will be created with the following template:
+# `https://download.maxmind.com/geoip/databases/{maxmind_db_type}/download?suffix=tar.gz`
+#
+# default: 'GeoLite2-Country'
+# overwritten by: GEO_MAXMIND_DB_TYPE
+#maxmind_db_type = 'GeoLite2-Country'
+
+# If you configured a `maxmind_account_id` + `maxmind_license_key`,
+# you can change the time when the DB update job runs. By default,
+# it runs every night at 05:00. It will check if y new version of
+# the MaxMind DB is available and if so, download it.
+#
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 0 5 * * * *"
+# overwritten by: GEO_MAXMIND_UPDATE_CRON
+#maxmind_update_cron = "0 0 5 * * * *"
 
 [hashing]
 # Argon2ID hashing parameters. Take a look at the documentation
@@ -5772,9 +5923,9 @@ admin_force_mfa = true
 # This is currently only used for the user registration via UI.
 # The value must be between 10 and 99.
 #
-# default: 20
+# default: 19
 # overwritten by: POW_DIFFICULTY
-#difficulty = 20
+#difficulty = 19
 
 # The expiration duration in seconds for a PoW
 #
