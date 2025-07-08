@@ -179,7 +179,7 @@ the application yourself with docker on your localhost. Rauthy comes with a sett
 testing and taking a first look. By setting `LOCAL_TEST=true`, a demo config is being loaded at startup.
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.30.2
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.31.0
 ```
 
 > This command starts an HTTPS server with self-signed certificates.  
