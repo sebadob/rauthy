@@ -15,7 +15,6 @@ use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::dpop_proof::DPoPProof;
-use rauthy_models::entity::login_locations::LoginLocation;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::user_login_states::UserLoginState;
 use rauthy_models::entity::users::User;
@@ -194,7 +193,7 @@ pub async fn grant_type_authorization_code(
         UserLoginState::insert(user.id.clone(), client.id, code.session_id).await?;
     }
 
-    LoginLocation::spawn_background_check(user, &req)?;
+    // No location check here, this is done in `POST /authorize` already
 
     Ok((token_set, headers))
 }
