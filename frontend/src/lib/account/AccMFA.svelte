@@ -16,7 +16,6 @@
     import Modal from "$lib/Modal.svelte";
     import InputPassword from "$lib/form/InputPassword.svelte";
     import Form from "$lib/form/Form.svelte";
-    import IconBarsArrowDown from "$icons/IconBarsArrowDown.svelte";
     import IconArrowPathSquare from "$icons/IconArrowPathSquare.svelte";
 
     let {user}: { user: UserResponse } = $props();
