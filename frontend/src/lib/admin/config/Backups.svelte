@@ -48,7 +48,7 @@
             local = res.body.local;
             s3 = res.body.s3;
         } else if (res.error) {
-            if (res.error.error === 'Disabled') {
+            if (res.error.error === 'NotFound') {
                 isDisabled = true;
             } else {
                 console.error(res);

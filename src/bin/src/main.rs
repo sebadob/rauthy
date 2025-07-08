@@ -104,9 +104,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await
         .expect("Error starting the database / cache layer");
 
-    // TODO check all init code from here on - we don't want any possible panics because of
-    //  mis-config after DB init to avoid WAL corruption.
-
     debug!("Starting E-Mail handler");
     tokio::spawn(email::sender(rx_email, test_mode));
 
@@ -172,7 +169,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if RauthyConfig::get().is_ha_cluster {
         // this short sleep smoothes out K8s rolling releases and makes sure there is enough
         // time for in-memory cache replication before the next node is shutting down
-        time::sleep(Duration::from_secs(5)).await;
+        time::sleep(Duration::from_secs(7)).await;
     }
     DB::hql().shutdown().await.unwrap();
 

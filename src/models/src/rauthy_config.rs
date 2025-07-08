@@ -1715,7 +1715,7 @@ impl Vars {
         if let Some(v) = t_str(
             &mut table,
             "geolocation",
-            "maxind_db_type",
+            "maxmind_db_type",
             "GEO_MAXMIND_DB_TYPE",
         ) {
             self.geo.maxmind_db_type = v.into();

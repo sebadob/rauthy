@@ -22,6 +22,7 @@ export const EVENT_LEVELS = [
 ]
 export const EVENT_TYPES = [
     '-',
+    'ForcedLogout',
     'InvalidLogins',
     'IpBlacklisted',
     'IpBlacklistRemoved',
@@ -34,7 +35,9 @@ export const EVENT_TYPES = [
     'RauthyHealthy',
     'RauthyUnhealthy',
     'SecretsMigrated',
+    'SuspiciousApiScan',
     'UserEmailChange',
+    'UserLoginRevoke',
     'UserPasswordReset',
     'Test',
 ]
