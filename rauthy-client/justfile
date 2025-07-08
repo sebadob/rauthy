@@ -54,8 +54,8 @@ test test="":
 build:
     #!/usr/bin/env bash
     set -euxo pipefail
-    # build as musl to make sure this works
-    cross build --target x86_64-unknown-linux-musl
+    # make sure building works
+    cargo build
 
 # verifies the MSRV - Note: Currently, you cannot specify features for this -> add features to default beforehand
 msrv-verify:

@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.10.0
 
 - A new `ScimToken` has been added which can be used in SCIM endpoints to have an easy validation of the token without
   any manual work. It comes with an `axum` extractor and the usage is shown in the `axum` example. It is necessary
