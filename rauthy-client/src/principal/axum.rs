@@ -8,6 +8,7 @@ use axum_extra::{
 };
 
 impl PrincipalOidc {
+    #[allow(clippy::result_large_err)]
     pub fn is_admin(&self) -> Result<(), Response> {
         if self.is_admin {
             Ok(())
@@ -20,6 +21,7 @@ impl PrincipalOidc {
         }
     }
 
+    #[allow(clippy::result_large_err)]
     pub fn is_user(&self) -> Result<(), Response> {
         if self.is_user {
             Ok(())
@@ -32,6 +34,7 @@ impl PrincipalOidc {
         }
     }
 
+    #[allow(clippy::result_large_err)]
     pub fn has_any_group(&self, group: Vec<&str>) -> Result<(), Response> {
         for g in &self.groups {
             if group.contains(&g.as_str()) {
@@ -45,6 +48,7 @@ impl PrincipalOidc {
             .into_response())
     }
 
+    #[allow(clippy::result_large_err)]
     pub fn has_any_role(&self, roles: Vec<&str>) -> Result<(), Response> {
         for r in &self.roles {
             if roles.contains(&r.as_str()) {

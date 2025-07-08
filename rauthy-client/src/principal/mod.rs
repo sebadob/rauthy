@@ -145,7 +145,7 @@ impl PrincipalOidc {
 
         let res = client
             .get(url)
-            .header("Authorization", format!("Bearer {}", token))
+            .header("Authorization", format!("Bearer {token}"))
             .send()
             .await?;
         let status = res.status();
@@ -154,7 +154,7 @@ impl PrincipalOidc {
             Ok(info)
         } else {
             let body = res.text().await?;
-            let err = format!("{} {}", status, body);
+            let err = format!("{status} {body}");
             Err(RauthyError::Token(Cow::from(err)))
         }
     }

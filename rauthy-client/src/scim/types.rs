@@ -215,11 +215,11 @@ impl Default for ScimListQuery {
 }
 
 impl ScimListQuery {
-    pub fn filter_by(&self) -> ScimFilterBy {
+    pub fn filter_by(&self) -> ScimFilterBy<'_> {
         if self.filter.is_none() {
             ScimFilterBy::None
         } else {
-            let filter = self.filter.as_ref().map(|f| f.as_str()).unwrap_or_default();
+            let filter = self.filter.as_deref().unwrap_or_default();
 
             if let Some(v) = filter.strip_prefix("externalId eq \"") {
                 ScimFilterBy::ExternalId(&v[..v.len() - 1])
@@ -230,7 +230,7 @@ impl ScimListQuery {
                 let stripped = &v[..v.len() - 1];
                 ScimFilterBy::DisplayName(stripped)
             } else {
-                panic!("invalid filter type: {}", filter);
+                panic!("invalid filter type: {filter}");
             }
         }
     }
@@ -320,7 +320,7 @@ pub struct ScimPatchOperations {
 }
 
 impl ScimPatchOperations {
-    pub fn try_as_add_member(&self) -> Result<Vec<ScimOpAddMember>, ScimError> {
+    pub fn try_as_add_member(&self) -> Result<Vec<ScimOpAddMember<'_>>, ScimError> {
         if self.op != ScimOp::Add || self.path.as_deref() != Some("members") {
             return Err(ScimError::new(
                 400,
@@ -357,7 +357,7 @@ impl ScimPatchOperations {
         ))
     }
 
-    pub fn try_as_replace_name(&self) -> Result<ScimOpReplaceName, ScimError> {
+    pub fn try_as_replace_name(&self) -> Result<ScimOpReplaceName<'_>, ScimError> {
         if self.op != ScimOp::Replace {
             return Err(ScimError::new(
                 400,
@@ -390,7 +390,7 @@ impl ScimPatchOperations {
         ))
     }
 
-    pub fn try_as_remove_member(&self) -> Result<Vec<ScimOpRemoveMember>, ScimError> {
+    pub fn try_as_remove_member(&self) -> Result<Vec<ScimOpRemoveMember<'_>>, ScimError> {
         if self.op != ScimOp::Remove || self.path.as_deref() != Some("members") {
             return Err(ScimError::new(
                 400,

@@ -282,7 +282,7 @@ kv_version = ''
 
 #### Bluesky / AT Protocol
 
-This version supports Bluesky's at-proto. This is probably not used my most people and it's opt-in:
+This version supports Bluesky's at-proto. This is probably not used by most people and it's opt-in:
 
 ```toml
 [atproto]

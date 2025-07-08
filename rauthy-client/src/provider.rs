@@ -45,7 +45,7 @@ impl OidcProviderConfig {
         } else {
             "/.well-known/openid-configuration"
         };
-        let oidc_config_url = format!("{}{}", iss, append);
+        let oidc_config_url = format!("{iss}{append}");
         let provider = OidcProvider::fetch(&oidc_config_url).await?;
         // update JWKS handler
         JwksMsg::NewJwksUri(provider.jwks_uri.clone()).send()?;
@@ -161,7 +161,7 @@ impl OidcProvider {
             .connect_timeout(Duration::from_secs(10))
             .https_only(https_only.bool())
             .danger_accept_invalid_certs(danger_accept_invalid_certs.bool())
-            .user_agent(format!("Rauthy OIDC Client v{}", VERSION))
+            .user_agent(format!("Rauthy OIDC Client v{VERSION}"))
             .brotli(true);
 
         if let Some(root) = root_certificate {

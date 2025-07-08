@@ -33,6 +33,7 @@ check: clippy-examples
     cargo +nightly clippy --features axum -- -D warnings
     cargo +nightly clippy --features device-code -- -D warnings
     cargo +nightly clippy --features userinfo -- -D warnings
+    cargo +nightly clippy --features scim -- -D warnings
 
     cargo minimal-versions check
     cargo minimal-versions check --features actix-web
