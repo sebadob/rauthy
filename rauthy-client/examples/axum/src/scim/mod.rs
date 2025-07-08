@@ -11,12 +11,12 @@ pub mod users;
 pub async fn get_data() -> Response<String> {
     let mut user_data = String::with_capacity(64);
     for user in USERS.read().await.iter() {
-        writeln!(user_data, "<p>{:?}</p>", user).unwrap();
+        writeln!(user_data, "<p>{user:?}</p>").unwrap();
     }
 
     let mut group_data = String::with_capacity(64);
     for group in GROUPS.read().await.iter() {
-        writeln!(group_data, "<p>{:?}</p>", group).unwrap();
+        writeln!(group_data, "<p>{group:?}</p>").unwrap();
     }
 
     Response::builder()

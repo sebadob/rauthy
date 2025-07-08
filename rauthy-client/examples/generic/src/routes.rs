@@ -89,7 +89,7 @@ pub async fn get_callback(
     let (cookie_str, token_set, _id_claims) = match callback_res {
         Ok(res) => res,
         Err(err) => {
-            return HttpResponse::BadRequest().body(format!("Invalid OIDC Callback: {}", err))
+            return HttpResponse::BadRequest().body(format!("Invalid OIDC Callback: {err}"))
         }
     };
 
@@ -118,8 +118,5 @@ pub async fn get_callback(
 pub async fn get_protected(req: HttpRequest) -> Result<HttpResponse, actix_web::Error> {
     let principal = extractors::principal_from_req(&req).await?;
 
-    Ok(HttpResponse::Ok().body(format!(
-        "Hello from Protected Resource:<br/>{:?}",
-        principal
-    )))
+    Ok(HttpResponse::Ok().body(format!("Hello from Protected Resource:<br/>{principal:?}")))
 }

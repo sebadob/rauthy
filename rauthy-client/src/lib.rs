@@ -100,16 +100,10 @@ pub(crate) fn base64_url_no_pad_decode(b64: &str) -> Result<Vec<u8>, RauthyError
 #[allow(dead_code)]
 fn build_lax_cookie_300(name: &str, value: &str, insecure: OidcCookieInsecure) -> String {
     if insecure != OidcCookieInsecure::Yes {
-        format!(
-            "{}={}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=300",
-            name, value
-        )
+        format!("{name}={value}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=300")
     } else {
         warn!("Building an INSECURE cookie - DO NOT USE IN PRODUCTION");
-        format!(
-            "{}={}; Path=/; HttpOnly; SameSite=Lax; Max-Age=300",
-            name, value
-        )
+        format!("{name}={value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=300")
     }
 }
 
@@ -131,10 +125,7 @@ where
     let b64 = match B64_URL_SAFE_NO_PAD.decode(body) {
         Ok(values) => values,
         Err(err) => {
-            error!(
-                "Error decoding JWT token body '{}' from base64: {}",
-                body, err
-            );
+            error!("Error decoding JWT token body '{body}' from base64: {err}");
             return Err(RauthyError::InvalidJwt("Invalid JWT Token body"));
         }
     };
@@ -142,7 +133,7 @@ where
     let claims = match serde_json::from_str::<T>(s.as_ref()) {
         Ok(claims) => claims,
         Err(err) => {
-            error!("Error deserializing JWT Token claims: {}", err);
+            error!("Error deserializing JWT Token claims: {err}");
             return Err(RauthyError::InvalidJwt("Invalid JWT Token claims"));
         }
     };

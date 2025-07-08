@@ -2,9 +2,8 @@
 
 ## UNRELEASED
 
-- A new `struct ScimToken` has been added which can be used in SCIM endpoints to have an easy validation of the token
-  without any manual work. It comes with an `axum` extractor and the usage is shown in the `axum` example. It is
-  necessary
+- A new `ScimToken` has been added which can be used in SCIM endpoints to have an easy validation of the token without
+  any manual work. It comes with an `axum` extractor and the usage is shown in the `axum` example. It is necessary
   on endpoints without any `Scim*` extractors like `GET /users/{id}` for instance.
 - Some SCIM types also had changed values and some `Option<_>` values have been changed into non-optional, even if they
   are optional by the SCIM RFC. The reason they are made mandatory is, because Rauthy will reject request when some

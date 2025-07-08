@@ -64,7 +64,7 @@ pub async fn get_callback(
     let (cookie_str, token_set, _id_claims) = match callback_res {
         Ok(res) => res,
         Err(err) => {
-            return HttpResponse::BadRequest().body(format!("Invalid OIDC Callback: {}", err))
+            return HttpResponse::BadRequest().body(format!("Invalid OIDC Callback: {err}"))
         }
     };
 
@@ -101,8 +101,5 @@ pub async fn get_protected(principal: PrincipalOidc) -> Result<HttpResponse, act
     // principal.has_any_group(vec!["group123", "group456"])?;
     // principal.has_any_role(vec!["admin", "root"])?;
 
-    Ok(HttpResponse::Ok().body(format!(
-        "Hello from Protected Resource:<br/>{:?}",
-        principal
-    )))
+    Ok(HttpResponse::Ok().body(format!("Hello from Protected Resource:<br/>{principal:?}")))
 }

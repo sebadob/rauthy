@@ -75,7 +75,7 @@ pub async fn get_callback(
         Err(err) => {
             return Response::builder()
                 .status(400)
-                .body(Body::from(format!("Invalid OIDC Callback: {}", err)))
+                .body(Body::from(format!("Invalid OIDC Callback: {err}")))
                 .unwrap()
         }
     };
@@ -172,8 +172,7 @@ pub async fn get_protected(principal: PrincipalOidc) -> Response {
     // let userinfo = principal.fetch_userinfo().await?;
 
     Response::new(format!(
-        "Hello from Token-Protected Resource:<br/>{:?}",
-        principal
+        "Hello from Token-Protected Resource:<br/>{principal:?}"
     ))
     .into_response()
 }
@@ -211,8 +210,7 @@ pub async fn get_session(config: ConfigExt, jar: CookieJar) -> Response {
     };
 
     Response::new(format!(
-        "Hello from Session-Protected Resource:<br/>Session ID: {}",
-        sid
+        "Hello from Session-Protected Resource:<br/>Session ID: {sid}"
     ))
     .into_response()
 }
