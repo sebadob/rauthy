@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.31.1
+
+### Bugfix
+
+- The Login Location check during the `code` flow has been done on `POST /token` instead of `/authorize` and it
+  therefore caught the OIDC client app instead of the user browser.
+  [#1097](https://github.com/sebadob/rauthy/pull/1097)
+
 ## v0.31.0
 
 ### Breaking
