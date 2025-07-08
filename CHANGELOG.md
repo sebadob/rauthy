@@ -86,7 +86,7 @@ country_list = []
 # The GeoLite databases from Maxmind are free and published
 # under the Creative Commons License. You can also provide
 # an Enterprise database, which will have more accurate data.
-# Check the `maxind_db_type` below.
+# Check the `maxmind_db_type` below.
 #
 # default: not set
 # overwritten by: GEO_MAXMIND_ACC_ID
@@ -115,11 +115,11 @@ maxmind_db_dir = 'data'
 # If you have access to paid Maxmind databases, you can add the
 # db_type in a way that it resolves to a valid download link.
 # The link will be created with the following template:
-# `https://download.maxmind.com/geoip/databases/{maxind_db_type}/download?suffix=tar.gz`
+# `https://download.maxmind.com/geoip/databases/{maxmind_db_type}/download?suffix=tar.gz`
 #
 # default: 'GeoLite2-Country'
 # overwritten by: GEO_MAXMIND_DB_TYPE
-maxind_db_type = 'GeoLite2-Country'
+maxmind_db_type = 'GeoLite2-Country'
 
 # If you configured a `maxmind_account_id` + `maxmind_license_key`,
 # you can change the time when the DB update job runs. By default,
