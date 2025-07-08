@@ -134,6 +134,10 @@ maxind_db_type = 'GeoLite2-Country'
 maxmind_update_cron = "0 0 5 * * * *"
 ```
 
+> While IP Geo data is very helpful and can boost your security, it is fully optional. Everything will work if you don't
+> provide any of the options. You just won't have Geo data in the "Login from new location" notifications and other
+> places, and you will of course not be able to block requests depending on the origin country.
+
 [#1077](https://github.com/sebadob/rauthy/pull/1077)
 
 #### TLS Hot-Reload
