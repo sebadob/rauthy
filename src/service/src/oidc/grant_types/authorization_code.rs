@@ -194,7 +194,7 @@ pub async fn grant_type_authorization_code(
         UserLoginState::insert(user.id.clone(), client.id, code.session_id).await?;
     }
 
-    LoginLocation::spawn_background_check(user, &req)?;
+    // No location check here, this is done in `POST /authorize` already
 
     Ok((token_set, headers))
 }

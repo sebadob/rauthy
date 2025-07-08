@@ -9,6 +9,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::login_locations::LoginLocation;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::{AccountType, User};
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
@@ -128,28 +129,34 @@ pub async fn post_authorize(
     );
     code.save().await?;
 
+    let user_id = user.id.clone();
+    let email = user.email.clone();
+    let has_webauthn_enabled = user.has_webauthn_enabled();
+
+    LoginLocation::spawn_background_check(user, req)?;
+
     let mut loc = format!("{}?code={}", req_data.redirect_uri, code.id);
     if let Some(state) = req_data.state {
         write!(loc, "&state={state}")?;
     };
 
     // check if we need to validate the 2nd factor
-    if user.has_webauthn_enabled() {
+    if has_webauthn_enabled {
         session.set_mfa(true).await?;
 
         let step = AuthStepAwaitWebauthn {
             code: get_rand(48),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
-            user_id: user.id.clone(),
-            email: user.email,
+            user_id: user_id.clone(),
+            email,
             exp: webauthn_req_exp as u64,
             session,
         };
 
         WebauthnLoginReq {
             code: step.code.clone(),
-            user_id: user.id,
+            user_id,
             header_loc: loc,
             header_origin: step
                 .header_origin
@@ -162,8 +169,8 @@ pub async fn post_authorize(
         Ok(AuthStep::AwaitWebauthn(step))
     } else {
         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
-            user_id: user.id,
-            email: user.email,
+            user_id,
+            email,
             header_loc: (header::LOCATION, HeaderValue::from_str(&loc)?),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
@@ -208,6 +215,9 @@ pub async fn post_authorize_refresh(
         code_lifetime,
     );
     code.save().await?;
+
+    // We don't need another location check - we can only get here with an already authenticated
+    // session and no auth-check is being performed.
 
     // build location header
     let header_loc = if let Some(s) = req_data.state {
