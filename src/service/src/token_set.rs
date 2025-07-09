@@ -1,17 +1,11 @@
-use actix_web::web;
 use chrono::Utc;
 use rauthy_api_types::oidc::JktClaim;
-use rauthy_common::constants::{
-    DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, DISABLE_REFRESH_TOKEN_NBF, ENABLE_SOLID_AUD,
-    ENABLE_WEB_ID, REFRESH_TOKEN_LIFETIME,
-};
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{
     JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
 };
 use rauthy_jwt::token::JwtToken;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::entity::refresh_tokens::RefreshToken;
@@ -21,12 +15,12 @@ use rauthy_models::entity::user_attr::UserAttrValueEntity;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webids::WebId;
+use rauthy_models::rauthy_config::RauthyConfig;
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::str::FromStr;
-use tracing::debug;
 use utoipa::ToSchema;
 
 pub enum AtHashAlg {
@@ -128,7 +122,6 @@ impl TokenSet {
     #[allow(clippy::too_many_arguments, clippy::type_complexity)]
     pub async fn build_access_token(
         user: Option<&User>,
-        data: &web::Data<AppState>,
         client: &Client,
         dpop_fingerprint: Option<DpopFingerprint>,
         lifetime: i64,
@@ -149,9 +142,9 @@ impl TokenSet {
         } else {
             None
         };
-        let roles = user.map(|u| u.get_roles());
+        let roles = user.map(|u| u.roles_iter().collect());
         let groups = if scope.contains("groups") {
-            user.as_ref().map(|u| u.get_groups())
+            user.map(|u| u.groups_iter().collect())
         } else {
             None
         };
@@ -162,7 +155,7 @@ impl TokenSet {
                 iat: now,
                 nbf: now,
                 exp: now + lifetime,
-                iss: &data.issuer,
+                iss: &RauthyConfig::get().issuer,
                 jti: None,
                 aud: Cow::Borrowed(client.id.as_str()),
                 sub: user.map(|u| u.id.as_str()),
@@ -175,7 +168,6 @@ impl TokenSet {
                     .as_ref()
                     .map(|jkt| JktClaim { jkt: &jkt.0 }),
             },
-            // TODO does this value make sense or should we remove it?
             allowed_origins: None,
             email,
             roles,
@@ -212,7 +204,6 @@ impl TokenSet {
     #[allow(clippy::too_many_arguments, clippy::type_complexity)]
     pub async fn build_id_token(
         user: &User,
-        data: &web::Data<AppState>,
         client: &Client,
         auth_time: AuthTime,
         dpop_fingerprint: Option<DpopFingerprint>,
@@ -229,14 +220,17 @@ impl TokenSet {
         } else {
             JwtAmrValue::Pwd.as_str()
         };
-        let aud = if client.is_ephemeral() && *ENABLE_SOLID_AUD {
+        let aud = if client.is_ephemeral()
+            && RauthyConfig::get().vars.ephemeral_clients.enable_solid_aud
+        {
             Cow::from(format!("[\"{}\",\"solid\"]", client.id))
         } else {
             Cow::Borrowed(client.id.as_str())
         };
 
-        let webid = (*ENABLE_WEB_ID && scope.contains("webid"))
-            .then(|| Cow::from(WebId::resolve_webid_uri(&user.id)));
+        let webid = (RauthyConfig::get().vars.ephemeral_clients.enable_web_id
+            && scope.contains("webid"))
+        .then(|| Cow::from(WebId::resolve_webid_uri(&user.id)));
 
         let now = Utc::now().timestamp();
         let mut claims = JwtIdClaims {
@@ -244,7 +238,7 @@ impl TokenSet {
                 iat: now,
                 nbf: now,
                 exp: now + lifetime,
-                iss: &data.issuer,
+                iss: &RauthyConfig::get().issuer,
                 jti: None,
                 aud,
                 sub: Some(user.id.as_str()),
@@ -349,7 +343,6 @@ impl TokenSet {
     #[allow(clippy::too_many_arguments)]
     pub async fn build_refresh_token(
         user: &User,
-        data: &web::Data<AppState>,
         dpop_fingerprint: Option<DpopFingerprint>,
         client: &Client,
         auth_time: AuthTime,
@@ -366,16 +359,16 @@ impl TokenSet {
         };
 
         let now = Utc::now().timestamp();
-        let nbf = if *DISABLE_REFRESH_TOKEN_NBF {
+        let nbf = if RauthyConfig::get().vars.access.disable_refresh_token_nbf {
             now
         } else {
             // allow 60 second early usage
             now + access_token_lifetime - 60
         };
         let exp = if did.is_some() {
-            nbf + 3600 * *DEVICE_GRANT_REFRESH_TOKEN_LIFETIME as i64
+            nbf + 3600 * RauthyConfig::get().vars.device_grant.refresh_token_lifetime as i64
         } else {
-            nbf + 3600 * *REFRESH_TOKEN_LIFETIME as i64
+            nbf + 3600 * RauthyConfig::get().vars.lifetimes.refresh_token_lifetime as i64
         };
 
         let token = {
@@ -384,7 +377,7 @@ impl TokenSet {
                     iat: now,
                     nbf,
                     exp,
-                    iss: &data.issuer,
+                    iss: &RauthyConfig::get().issuer,
                     jti: None,
                     aud: Cow::Borrowed(client.id.as_str()),
                     sub: None,
@@ -437,7 +430,6 @@ impl TokenSet {
     }
 
     pub async fn for_client_credentials(
-        data: &web::Data<AppState>,
         client: &Client,
         dpop_fingerprint: Option<DpopFingerprint>,
     ) -> Result<Self, ErrorResponse> {
@@ -448,7 +440,6 @@ impl TokenSet {
         };
         let access_token = Self::build_access_token(
             None,
-            data,
             client,
             dpop_fingerprint,
             client.access_token_lifetime as i64,
@@ -471,7 +462,6 @@ impl TokenSet {
     #[allow(clippy::too_many_arguments)]
     pub async fn from_user(
         user: &User,
-        data: &web::Data<AppState>,
         client: &Client,
         auth_time: AuthTime,
         dpop_fingerprint: Option<DpopFingerprint>,
@@ -512,9 +502,7 @@ impl TokenSet {
 
             // if there was any custom mapping, we need the additional user attributes
             attrs = if !customs_access.is_empty() || !customs_id.is_empty() {
-                debug!("1");
                 let attrs = UserAttrValueEntity::find_for_user_with_defaults(&user.id).await?;
-                debug!("2");
                 let mut res = HashMap::with_capacity(attrs.len());
                 attrs.iter().for_each(|a| {
                     res.insert(a.key.clone(), a.value.clone());
@@ -565,7 +553,6 @@ impl TokenSet {
         };
         let access_token = Self::build_access_token(
             Some(user),
-            data,
             client,
             dpop_fingerprint.clone(),
             lifetime,
@@ -581,7 +568,6 @@ impl TokenSet {
         );
         let id_token = Self::build_id_token(
             user,
-            data,
             client,
             auth_time.clone(),
             dpop_fingerprint.clone(),
@@ -598,7 +584,6 @@ impl TokenSet {
             Some(
                 Self::build_refresh_token(
                     user,
-                    data,
                     dpop_fingerprint,
                     client,
                     auth_time,

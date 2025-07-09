@@ -308,6 +308,7 @@
                 autocomplete="off"
                 label={ta.clients.groupLoginPrefix}
                 placeholder={ta.clients.groupLoginPrefix}
+                width={inputWidth}
                 pattern={PATTERN_GROUP}
         />
 

@@ -1,17 +1,18 @@
-use actix_web::{HttpResponse, web};
+use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_common::constants::IDX_LOGIN_TIME;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
+use rauthy_models::entity::failed_login_counter::FailedLoginCounter;
+use rauthy_models::entity::ip_blacklist::IpBlacklist;
 use rauthy_models::events::event::Event;
-use rauthy_models::events::ip_blacklist_handler::{IpBlacklistReq, IpFailedLoginCheck};
 use rauthy_models::html::templates::TooManyRequestsHtml;
+use rauthy_models::rauthy_config::RauthyConfig;
+use std::cmp::min;
 use std::net::IpAddr;
 use std::ops::{Add, Sub};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tokio::sync::oneshot;
-use tracing::{debug, error};
+use tracing::{debug, warn};
 
 /**
 Handles the login delay.
@@ -21,7 +22,6 @@ long it took for a successful login. If a login failed though, the answer will b
 current average for a successful login, to prevent things like username enumeration.
  */
 pub async fn handle_login_delay(
-    data: &web::Data<AppState>,
     peer_ip: IpAddr,
     start: Duration,
     res: Result<HttpResponse, ErrorResponse>,
@@ -38,55 +38,25 @@ pub async fn handle_login_delay(
 
     match res {
         Ok(resp) => {
-            // cleanup possibly blacklisted IP
-            data.tx_ip_blacklist
-                .send_async(IpBlacklistReq::LoginFailedDelete(peer_ip.to_string()))
-                .await
-                .expect("ip blacklist recv not to be closed");
+            FailedLoginCounter::reset(peer_ip.to_string()).await?;
 
-            // only calculate the new median login time base on the full duration incl password hash
             if has_password_been_hashed {
                 let new_time = (success_time + delta.as_millis() as i64) / 2;
-
                 client
                     .put(Cache::App, IDX_LOGIN_TIME, &new_time, Some(i64::MAX))
                     .await?;
-
-                debug!("New login_success_time: {}", new_time);
+                debug!("New login_success_time: {new_time}");
             }
 
             Ok(resp)
         }
         Err(err) => {
-            let mut failed_logins = 1;
+            let failed_logins = FailedLoginCounter::increase(peer_ip.to_string()).await?;
+            let failed_logins = min(failed_logins, u32::MAX as i64) as u32;
+            warn!("Failed Logins from {peer_ip}: {failed_logins}");
 
-            // check possibly blacklisted IP
-            let (tx, rx) = oneshot::channel();
-            data.tx_ip_blacklist
-                .send_async(IpBlacklistReq::LoginCheck(IpFailedLoginCheck {
-                    ip: peer_ip.to_string(),
-                    increase_counter: true,
-                    tx,
-                }))
-                .await
-                .expect("ip blacklist recv not to be closed");
-
-            match rx.await {
-                Ok(res) => {
-                    if let Some(counter) = res {
-                        failed_logins = counter;
-                    }
-                }
-                Err(err) => {
-                    error!(
-                        "oneshot recv error in login delay handler - this should never happen: {:?}",
-                        err
-                    );
-                }
-            }
-
-            // event for failed login
-            data.tx_events
+            RauthyConfig::get()
+                .tx_events
                 .send_async(Event::invalid_login(failed_logins, peer_ip.to_string()))
                 .await
                 .unwrap();
@@ -104,108 +74,54 @@ pub async fn handle_login_delay(
             let sleep_time = match failed_logins as u64 {
                 // n-th blacklist -> blocks for 24h with each invalid request
                 t if t >= 25 => {
-                    let not_before = Utc::now().add(chrono::Duration::seconds(86400));
-                    let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
-
-                    data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
-                        .await
-                        .unwrap();
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::TooManyRequests(ts),
-                        html,
-                    ));
+                    return build_send_event(&peer_ip, 86400).await;
                 }
-
                 t if t > 20 => sleep_time_median + t * 20_000,
-
-                // 4th blacklist
                 20 => {
-                    let not_before = Utc::now().add(chrono::Duration::seconds(3600));
-                    let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
-
-                    data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
-                        .await
-                        .unwrap();
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::TooManyRequests(ts),
-                        html,
-                    ));
+                    return build_send_event(&peer_ip, 3600).await;
                 }
-
                 t if t > 15 => sleep_time_median + t * 15_000,
-
-                // 3rd blacklist
                 15 => {
-                    let not_before = Utc::now().add(chrono::Duration::seconds(900));
-                    let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
-
-                    data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
-                        .await
-                        .unwrap();
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::TooManyRequests(ts),
-                        html,
-                    ));
+                    return build_send_event(&peer_ip, 900).await;
                 }
-
                 t if t > 10 => sleep_time_median + t * 10_000,
-
-                // 2nd blacklist
                 10 => {
-                    let not_before = Utc::now().add(chrono::Duration::seconds(600));
-                    let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
-
-                    data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
-                        .await
-                        .unwrap();
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::TooManyRequests(ts),
-                        html,
-                    ));
+                    return build_send_event(&peer_ip, 600).await;
                 }
-
                 t if t > 7 => sleep_time_median + t * 5_000,
-
-                // 1st blacklist
                 7 => {
-                    let not_before = Utc::now().add(chrono::Duration::seconds(60));
-                    let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
-
-                    data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
-                        .await
-                        .unwrap();
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::TooManyRequests(ts),
-                        html,
-                    ));
+                    return build_send_event(&peer_ip, 60).await;
                 }
-
                 t if t >= 5 => sleep_time_median + t * 3_000,
-
                 t if t >= 3 => sleep_time_median + t * 2_000,
-
                 _ => sleep_time_median,
             };
 
-            debug!("Failed login - sleeping for {}ms now", sleep_time);
+            debug!("Failed login - sleeping for {sleep_time} ms now");
             tokio::time::sleep(Duration::from_millis(sleep_time)).await;
 
             Err(err)
         }
     }
+}
+
+async fn build_send_event(
+    peer_ip: &IpAddr,
+    nbf_seconds: u32,
+) -> Result<HttpResponse, ErrorResponse> {
+    let not_before = Utc::now().add(chrono::Duration::seconds(nbf_seconds as i64));
+    let ts = not_before.timestamp();
+    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
+
+    RauthyConfig::get()
+        .tx_events
+        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
+        .await
+        .unwrap();
+    IpBlacklist::put(peer_ip.to_string(), nbf_seconds as i64).await?;
+
+    Err(ErrorResponse::new(
+        ErrorResponseType::TooManyRequests(ts),
+        html,
+    ))
 }

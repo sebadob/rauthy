@@ -4,6 +4,8 @@ use rauthy_models::{entity::users::User, language::Language};
 use std::time::Duration;
 use tracing::info;
 
+// TODO keep around until internal benchmarking is finished
+#[allow(dead_code)]
 pub async fn insert_dummy_data(amount: u32) -> Result<(), ErrorResponse> {
     tokio::time::sleep(Duration::from_secs(1)).await;
     info!(
@@ -28,10 +30,10 @@ Will go on in 10 seconds...
 
     for i in 0..amount {
         let user = User {
-            email: format!("dummy_{}_{}@rauthy.local", rnd, i),
+            email: format!("dummy_{rnd}_{i}@rauthy.local"),
             email_verified: false,
-            given_name: format!("given {}", i),
-            family_name: Some(format!("family {}", i)),
+            given_name: format!("given {i}"),
+            family_name: Some(format!("family {i}")),
             language: Language::En,
             groups: None,
             roles: String::default(),

@@ -1,4 +1,4 @@
-FROM rust:1.86-bookworm
+FROM rust:1.88-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -9,15 +9,16 @@ RUN <<EOF
 #!/bin/bash
 set -e
 
+apt-get update
+apt-get install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu npm
+apt-get clean
+
 rustup target add aarch64-unknown-linux-gnu
 rustup target add x86_64-unknown-linux-gnu
+rustup component add clippy
 rustup component add rustfmt
 
-apt update
-apt install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
-apt-get clean
-rm -rf /var/lib/apt/lists/*
+cargo install just
 
 EOF
 

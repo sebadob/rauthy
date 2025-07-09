@@ -1,8 +1,925 @@
 # Changelog
 
-## UNRELEASED
+## v0.31.1
+
+### Bugfix
+
+- The Login Location check during the `code` flow has been done on `POST /token` instead of `/authorize` and it
+  therefore caught the OIDC client app instead of the user browser.
+  [#1097](https://github.com/sebadob/rauthy/pull/1097)
+
+## v0.31.0
+
+### Breaking
+
+#### Empty `User-Agent`s rejected
+
+While implementing Geoblocking (see below), a check for the `User-Agent` has been added. If this is empty, requests will
+be rejected. If you are doing something via API-Keys, make sure your clients send a proper `User-Agent` header. This
+rejection does not provide any security at all, it just catches a few bots out of the box.
 
 ### Changes
+
+#### Remembered Login Locations
+
+Rauthy will now remember Login locations / IPs for each user and send out an E-Mail notification, if a login from a new
+IP / location was done. This E-Mail will also contain a link to revoke all Sessions and Refresh tokens for this user,
+which will also trigger a backchannel logout to all configured clients, in case an invalid login was done for a user.
+Users should be able to handle these situations without the need of an Admin in this case.
+
+[#1072](https://github.com/sebadob/rauthy/pull/1072)
+
+#### IP-Geoblocking
+
+Rauthy can now block requests depending on the origin country of the peer IP address. You can either provide a custom
+header value, which is inserted for instance by a WAF or CDN, like in case of Cloudflare the `CF-IPCountry` header,
+or you can opt-in and provide a Maxmind AccountID + License for either the free GeoLite databases, or a paid version of
+it. These GeoLite databases are published under the Creative Commons License, you only need to create a free account
+to generate a License. Rauthy will download the configured DB and update it regularly.
+
+This IpGeo information will also be used for the *Remembered Login Locations* feature above. The country and depending
+on the chosen DB type also the city will be added to the E-Mail notice.
+
+```toml
+[geolocation]
+# If you have a configured and working Geolocation setup, you can
+# define if un-resolvable IP addresses should be blocked. By default,
+# if a Country cannot be found for a certain IP address, it will be
+# allowed anyway. This is necessary to allow private network connections
+# for instance. Only if you run a public Rauthy instance, and you will
+# guaranteed always connect with a public Peer IP, you might want to
+# set this to `true`.
+#
+# default: false
+# overwritten by: GEO_BLOCK_UNKONW
+block_unknown = false
+
+# If you have a WAF or CDN which injects a geoloaction header
+# with the country code, provide the name here. For instance,
+# in case of Cloudflare, this would be 'CF-IPCountry'.
+#
+# This header will only be accepted, if Rauthy runs in proxy_mode,
+# and the source IP is a trusted proxy, to prevent spoofing.
+#
+# default: not set
+# overwritten by: GEO_COUNTRY_HEADER
+country_header = 'CF-IPCountry'
+
+# You can black- or whitelist countries, if you have a configured
+# and working Geolocation, either via `country_header` or a
+# Maxmind database.
+#
+# The `country_list_type` can be either `whitelist` or `blacklist`,
+# and it will specify the behavior of the `country_list`.
+# For instance, if you have `country_list_type = 'whitelist'` and
+# `country_list = ['DE', 'FR']`, only access from Germany and France
+# will be allowed.
+#
+# The `whitelist` type is a `default-deny`, while `blacklist` is
+# `default-allow`.
+#
+# If `country_list_type` is not set at all, Geoblocking will be
+# disabled.
+#
+# default: not set
+country_list_type = 'whitelist'
+# default: not set
+country_list = []
+
+# If you don't have a header with a country code, you can
+# also provide a Maxmind account. Rauthy will then download
+# the 'GeoLite2 Country' database regularly and use it for
+# geolocating IPs.
+#
+# The GeoLite databases from Maxmind are free and published
+# under the Creative Commons License. You can also provide
+# an Enterprise database, which will have more accurate data.
+# Check the `maxmind_db_type` below.
+#
+# default: not set
+# overwritten by: GEO_MAXMIND_ACC_ID
+maxmind_account_id = ''
+# overwritten by: GEO_MAXMIND_LICENSE
+maxmind_license_key = ''
+
+# If `maxmind_account_id` and `maxmind_license_key`, this
+# will be the directory being used for DB download and storage.
+#
+# default: 'data'
+# overwritten by: GEO_MAXMIND_DIR
+maxmind_db_dir = 'data'
+
+# By default, the `GeoLite2-Country` database from Maxmind is
+# being used. The IP Geolocation databases are loaded fully into
+# memory at startup to speedup lookups. The size therefore makes
+# a big difference, not only for lookup speed, but also in terms
+# of memory usage. The Country DB adds ~10MB of memory overhead,
+# while the City DB is around 65MB.
+#
+# Possible Values (case-sensitive):
+# - GeoLite2-Country
+# - GeoLite2-City
+#
+# If you have access to paid Maxmind databases, you can add the
+# db_type in a way that it resolves to a valid download link.
+# The link will be created with the following template:
+# `https://download.maxmind.com/geoip/databases/{maxmind_db_type}/download?suffix=tar.gz`
+#
+# default: 'GeoLite2-Country'
+# overwritten by: GEO_MAXMIND_DB_TYPE
+maxmind_db_type = 'GeoLite2-Country'
+
+# If you configured a `maxmind_account_id` + `maxmind_license_key`,
+# you can change the time when the DB update job runs. By default,
+# it runs every night at 05:00. It will check if y new version of
+# the MaxMind DB is available and if so, download it.
+#
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 0 5 * * * *"
+# overwritten by: GEO_MAXMIND_UPDATE_CRON
+maxmind_update_cron = "0 0 5 * * * *"
+```
+
+> While IP Geo data is very helpful and can boost your security, it is fully optional. Everything will work if you don't
+> provide any of the options. You just won't have Geo data in the "Login from new location" notifications and other
+> places, and you will of course not be able to block requests depending on the origin country.
+
+[#1077](https://github.com/sebadob/rauthy/pull/1077)
+
+#### TLS Hot-Reload
+
+Rauthy can now hot-reload TLS Key + Certificates. If started with `server.scheme` set to any `https` value and TLS
+certificates are used, Rauthy will watch for file changes on `tls.cert_path` + `tls.key_path` and will do a hot-reload
+of the TLS configuration if anything changes. This is a real hot-reload, meaning there is no restarting the server, and
+it does it without any interruption in service.
+
+[#1056](https://github.com/sebadob/rauthy/pull/1056)
+
+#### OIDC-backed Forward-Auth
+
+In addition to the already existing, very simple `/forward_auth` endpoint, which has limited compatibility, Rauthy now
+provides a very much advanced version of it. This new version is not a replacement of the old approach, but an addition.
+
+The already existing endpoint is very simple: It expects a valid JWT token to be present in the `Authorization` header,
+parses and validates it, and if it's valid, it returns an HTTP 200 and a 401 otherwise. Depending on
+`auth_headers.enable`, it will also append the Forward-Auth headers to the request, which the reverse proxy could inject
+into the request sent to the downstream client.
+
+The new version is much improved. It does not work with stateless JWT tokens, but it binds to the Rauthy session. This
+makes it possible to revoke access as any time. It can also do proper CSRF checks, validates the client and user
+configuration, and it can make everything work without any modification to the client. On auth success, it behaves in
+the same way as the already existing endpoint. On invalid though, it will redirect to Rauthys Login, which then again
+will do another redirect to a Callback UI and therefore trigger a complete OIDC flow. On the callback page, Rauthy can
+now set fully-secured session cookies and do others things like check the `Sec-Fetch-Site` header. This is the most
+secure it can get, without modifications to the client. The callback page is exposed by Rauthy itself, and can be
+"injected" into the client app at your reverse proxy level, which makes all of this as secure as possible.
+
+You can do this new Forward-Auth for any client, as long as it's configured properly. Rauthy is quite a bit more strict
+about the correct client config upfront. This makes it possible to have a few additional safety hooks which will help
+you prevent unwanted, invalid reverse proxy config, which can happen very quickly for complex setups.
+
+> CAUTION: Even though this is probably the most secure you can get with Forward-Auth, it should still only be the last
+> resort, and you should always prefer a native OIDC client implementation, if it exists! If you screw up the reverse
+> proxy config, or if an attacker can find a way around your reverse proxy and skip it, all your security will be gone
+> immediately.
+>
+> The Rauthy book will be updated in the upcoming days and provide a bit more documentation about the setup.
+
+To help during Forward-Auth setup and making sure you got it right in your environment, the `/auth/v1/whoami` endpoint
+has received an update as well. You can now set `access.whoami_headers = true` or use `WHOAMI_HEADERS`. This will make
+the `/whoami` endpoint not only return the extracted "real IP", but it will also return all request headers it received.
+This will help you make sure your setup is working correctly, if you use `auth_headers`. By default, this is set to
+`false`. Depending on your internal network setup, this could expose sensitive headers, if you inject any. It will not
+return values for `Cookie` and Rauthys own CSRF token headers, but all others return will show their raw values.
+
+[#1053](https://github.com/sebadob/rauthy/pull/1053)
+
+#### Backups via Admin UI
+
+If Rauthy is running with Hiqlite as the database, you can now view and download existing backups via the
+`Admin UI -> Config -> Backups` section. It shows local backup files and the ones on S3 storage, if it's configured.
+You also get the option to trigger manual backups with a new button, which gets rid of the issue of updating the cron
+task to "a few minutes in the future" to trigger a backup on demand.
+
+> If you run a HA cluster and want to download local backups via the Admin UI, you will most probably run into errors
+> when downloading older ones, that have been created before this version, if running behind a load balancer. The
+> timestamp part of the filename was dynamically set by each node independently before and only new backups from this
+> version on will have the exact same filename on all nodes.
+
+[#1079](https://github.com/sebadob/rauthy/pull/1079)
+
+#### Re-Authenticate for MFA keys modifications
+
+To be able to modify MFA / Passkeys in any way, a user now needs to re-authenticate. This re-authentication will open
+a 2-minute window that allows modifications for MFA keys, like adding new ones and deleting existing ones.
+
+[#1068](https://github.com/sebadob/rauthy/pull/1068)
+
+#### Load config from Vault
+
+The ability to load the config file from a Vault source has been added. To do this, you need to provide the ENV var
+`USE_VAULT_CONFIG=true` and a `vault.toml` file, that contains the necessary information on how to connect and/or
+override the settings with ENV vars.
+
+```toml
+[vault]
+
+# The full address to your vault including scheme and port
+#
+# default: <empty>
+# overwritten by: VAULT_ADDR
+addr = ''
+
+# The token that rauthy uses to access the secret
+#
+# default: <empty>
+# overwritten by: VAULT_TOKEN
+token = ''
+
+# Secret engine mount point
+#
+# default: <empty>
+# overwritten by: VAULT_MOUNT
+mount = ''
+
+# Path within the mount point containing the secret
+#
+# default: <empty>
+# overwritten by: VAULT_PATH
+path = ''
+
+# The key (name) of the secret
+#
+# default: <empty>
+# overwritten by: VAULT_CONFIG_KEY
+config_key = ''
+
+# KV Version that the secret engine uses.
+# Valid values are '1' or '2'.
+#
+# default: '2'
+# overwritten by: VAULT_KV_VERSION
+kv_version = ''
+
+# You can provide a root certificate bundle, if you
+# are running servers / clients Rauthy needs to connect
+# to with self-signed certificates.
+# The certificates need to be in PEM format.
+#
+# overwritten by: HTTP_CUST_ROOT_CA_BUNDLE
+#root_ca_bundle = """
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#"""
+
+# If you are testing locally with insecure connections,
+# you can set the following var to make it work.
+#
+# Note: This must be an ENV var and cannot be
+# given as a normal TOML value. It only exists here
+# for completeness / documentation.
+#
+#DANGER_VAULT_INSECURE=true
+```
+
+[#1051](https://github.com/sebadob/rauthy/pull/1051)
+[#1090](https://github.com/sebadob/rauthy/pull/1090)
+
+#### Bluesky / AT Protocol
+
+This version supports Bluesky's at-proto. This is probably not used by most people and it's opt-in:
+
+```toml
+[atproto]
+# Set to `true` to enable the ATProto provider. If the public URL is
+# 'localhost' it should be changed to '127.0.0.1', if `dev_mode = true`
+# this also applies for the `provider_callback_url`.
+#
+# default: false
+enable = false
+```
+
+[#644](https://github.com/sebadob/rauthy/pull/644)
+[#1064](https://github.com/sebadob/rauthy/pull/1064)
+
+#### Additional Event Types
+
+Some new Rauthy Event types have been added. These are now configurable in their notification level as all the other
+ones. The new Events are the following:
+
+- An `Event::ForceLogout` will be created during `DELETE /sessions/{user_id}`. This will happen when and Admin clicks
+  "Force Logout" for a user in the Admin UI.
+- An `Event::UserLoginRevoke` will be created after a user clicked the login revoke link in the (new) notification
+  E-Mail that is sent out after a login from an unknown location.
+- An `Event::SispiciousApiScan` will be created when Rauthy detects a suspicious, very much likely malicious API scan.
+
+[#1085](https://github.com/sebadob/rauthy/pull/1085)
+
+#### Anti-Lockout hooks in Admin UI
+
+The Admin UI already had anti-lockout hooks for some important things like the `rauthy` client or the `rauthy_admin`
+role. This release adds some of these hooks to user edit and delete pages, if the currently looked at user matches the
+currently logged-in admin from the session. These hooks prevent, disabling, expiring, and deleting this user, and also
+removing the `rauthy_admin` role from itself. This means a Rauthy admin cannot degrade itself to a non-admin or delete
+itself by accident. Only other admins can do this. This makes sure, that at least always at least one `rauthy_admin`
+exists and you can never fully lock yourself out of Rauthy.
+
+[#1066](https://github.com/sebadob/rauthy/pull/1066)
+
+#### IPv6 Support for IP Blacklisting
+
+You can now also blacklist IPv6 address via the Admin UI -> Blacklist.
+
+[#1087](https://github.com/sebadob/rauthy/pull/1087)
+
+#### Default difficulty for PoWs reduced
+
+Since PoWs have been added to the Login UI, and a user needs to calculate 2 PoWs if it's a password-account, the default
+difficulty of `20` was a bit too high for not that powerful devices. Therefore, the default value has been reduced from
+`20` to `19` to compensate for that.
+
+[#1088](https://github.com/sebadob/rauthy/pull/1088)
+
+### Bugfix
+
+- The `cluster.backup_keep_days_local` setting was not always read properly and might not have been working like
+  expected. This lead to local backup cleanup not working properly. Additionally, the default value in docs was wrong.
+  It's not `3` days by default, but `30`. This was fixed in `hiqlite` directly and the version has been bumped.
+
+## v0.30.2
+
+### Changes
+
+#### Hiqlite upgrade
+
+Internally, `hiqlite` was updated to the latest stable version. This brings 2 advantages:
+
+1. `cluster.wal_ignore_lock` has been removed completely. It is not necessary anymore, because `hiqlite` now can do
+   proper cross-platform file locking and therefore can resolve all possible situations on its own. It can detect, if
+   another `hiqlite` process is currently using an existing WAL directory and also do a proper cleanup / deep integrity
+   check after a restart as well.
+2. You have 2 additional config variables to configure the listen address for Hiqlites API and Raft server. This solves
+   an issue in IPv6-only environments, because it used a hardcoded `0.0.0.0` before. You can now also restrict to a
+   specific interface as well, which is beneficial for single instance deployments, or when you have lots of NICs.
+
+```toml
+[cluster]
+# You can set the listen addresses for both the API and Raft servers.
+# These need to somewaht match the definition for the `nodes` above,
+# with the difference, that a `node` address can be resolved via DNS,
+# while the listen addresses must be IP addresses.
+#
+# The default for both of these is "0.0.0.0" which makes them listen
+# on all interfaces.
+# overwritten by: HQL_LISTEN_ADDR_API
+listen_addr_api = "0.0.0.0"
+# overwritten by: HQL_LISTEN_ADDR_RAFT
+listen_addr_raft = "0.0.0.0"
+```
+
+#### DB shutdown on unavailable SMTP
+
+If the retries to connect to a configured SMTP server were exceeded, Rauthy panics, which is on purpose. However, the
+behavior has been updated slightly and it will now trigger a graceful DB shutdown before it executes the panic, which
+is just cleaner overall.
+
+[#1045](https://github.com/sebadob/rauthy/pull/1045)
+
+### Bugfix
+
+- A trigger for Backchannel Logout was missing for `DELETE /sessions/{user_id}`
+  [#1031](https://github.com/sebadob/rauthy/pull/1031)
+- `state` deserialization validation during `GET /authorize` was too strict in some cases.
+  [#1032](https://github.com/sebadob/rauthy/pull/1032)
+- The pre-shutdown delay should only be added in HA deployments, not for single instances.
+  [#1038](https://github.com/sebadob/rauthy/pull/1038)
+- The error messages in case of `webauthn` misconfiguration were not always very helpful.
+  [#1040](https://github.com/sebadob/rauthy/pull/1040)
+
+## v0.30.1
+
+### Bugfix
+
+- Fixed the encoding for `EdDSA` public keys. They have changed to b64 encoded DER format during the big JWt rework,
+  when it should have been just raw bytes.
+  [#1018](https://github.com/sebadob/rauthy/pull/1018)
+- Added a short 3-second pre-shutdown delay to smooth out rolling releases inside K8s and also have a bit more headroom
+  for bigger in-memory cache's replication
+  [#1019](https://github.com/sebadob/rauthy/pull/1019)
+- Small CSS fix to match the input width for group prefix login restriction for clients
+  [#1020](https://github.com/sebadob/rauthy/pull/1020)
+- In HA deployments, when the Leader was killed with an appended but not yet fully commited WAL log, there was a bug
+  that made it possible that the log truncate would fail after restart and that the start-, instead of the end-offset
+  would be adjusted. This has been fixed in `hiqlite-wal` in combination with a bump in patch version for `openraft`.
+  If you run a **HA cluster, you should upgrade immediately**!.
+
+## v0.30.0
+
+### Breaking
+
+#### Configuration Rework
+
+You will need to migrate your whole configuration with this release.
+
+Over the last months, Rauthy got so many new features and config options, that the old approach got a bit messy and
+hard to follow. Variable names needed to become longer over time to avoid overlap, and so on. Also, because of the way
+the application grew over the last years, configs, single static variables and some snippets existed in many places.
+
+This needed to change.
+
+You can still have a config file and overwrite (most) values via ENV vars, if you like, but at least the bare minimum
+must exist as a config file now. Even though ENV var are mostly now a security issue, they are by default not protected
+depending on the situation. The whole config file has been converted into a `TOML` file. This makes it possible to have
+different dedicated sections, shorter variable names again, and it's easier to organize and comes with an already
+existing, basic type-system and we can have arrays and typed primitives out of the box now.
+
+The file has been renamed from `rauthy.cfg` to `config.toml`, and it must follow the `toml` syntax. I created a lookup
+table so everyone can easily convert their existing config with not too much work. The new config also is more verbose
+in terms of documentation and for each value (when it exists), the overwriting ENV var is mentioned directly above.
+
+In some cases, you cannot overwrite with an ENV var, and in others, you can only do something with an ENV var. The
+situations when you can only do something via ENV are the ones, that will require you do remove the var immediately
+afterward anyway, like e.g. triggering a `DB_MIGRATE_FROM`, or do a new `HQL_WAL_IGNORE_LOCK`, and so on. But I guess
+it will become clear when you take a look at the lookup table. I also tried to make it more clear, which values are
+absolutely mandatory to set.
+
+On the long run, this change, even though it was a huge PR with almost 12k lines changed, will make everything easier
+to maintain and the code a lot more approachable for newcomers. A nice side effect is, that I also optimized it a bit
+so that it requires a little bit less memory.
+
+> If anyone has issues with the config with this update, please open an issue and let me know. I did a lot of testing
+> and I think, everything is fine, but that many changed lines make it hard to keep track of everything, even though
+> this was necessary.
+
+> This is a tiny one, but the value for `logging.log_level_access` has been changed to all lowercase to match the other
+> log level values.
+
+##### Lookup Table ENV var -> TOML value
+
+Here you have the lookup table. When there is a `-` somewhere, it means that either no TOML or ENV var exists in that
+situation. The `TOML path` colum contains the parent table and the value name itself. For instance, when it says
+
+```
+access.userinfo_strict
+access.sec_header_block    
+```
+
+It will look like this in the `config.toml`:
+
+```
+[access]
+userinfo_strict = true
+sec_header_block = true
+```
+
+For a complete documentation for each value, please take a look at the reference config from the book.
+
+| ENV VAR                                    | TOML path                                   | type       | required |
+|--------------------------------------------|---------------------------------------------|------------|----------|
+| USERINFO_STRICT                            | access.userinfo_strict                      | bool       |          |
+| DANGER_DISABLE_INTROSPECT_AUTH             | access.danger_disable_introspect_auth       | bool       |          |
+| DISABLE_REFRESH_TOKEN_NBF                  | access.disable_refresh_token_nbf            | bool       |          |
+| SEC_HEADER_BLOCK                           | access.sec_header_block                     | bool       |          |
+| SESSION_VALIDATE_IP                        | access.session_validate_ip                  | bool       |          |
+| PASSWORD_RESET_COOKIE_BINDING              | access.password_reset_cookie_binding        | bool       |          |
+| PEER_IP_HEADER_NAME                        | access.peer_ip_header_name                  | String     |          |
+| COOKIE_MODE                                | access.cookie_mode                          | String     |          |
+| COOKIE_SET_PATH                            | access.cookie_set_path                      | bool       |          |
+| TOKEN_LEN_LIMIT                            | access.token_len_limit                      | u32        |          |
+| AUTH_HEADERS_ENABLE                        | auth_headers.enable                         | bool       |          |
+| AUTH_HEADER_USER                           | auth_headers.user                           | String     |          |
+| AUTH_HEADER_ROLES                          | auth_headers.roles                          | String     |          |
+| AUTH_HEADER_GROUPS                         | auth_headers.groups                         | String     |          |
+| AUTH_HEADER_EMAIL                          | auth_headers.email                          | String     |          |
+| AUTH_HEADER_EMAIL_VERIFIED                 | auth_headers.email_verified                 | String     |          |
+| AUTH_HEADER_FAMILY_NAME                    | auth_headers.family_name                    | String     |          |
+| AUTH_HEADER_GIVEN_NAME                     | auth_headers.given_name                     | String     |          |
+| AUTH_HEADER_MFA                            | auth_headers.mfa                            | String     |          |
+| BACKCHANNEL_LOGOUT_RETRY_COUNT             | backchannel_logout.retry_count              | u16        |          |
+| BACKCHANNEL_DANGER_ALLOW_HTTP              | REMOVED -> global http_client used now      |            |          |
+| BACKCHANNEL_DANGER_ALLOW_INSECURE          | REMOVED -> global http_client used now      |            |          |
+| LOGOUT_TOKEN_LIFETIME                      | backchannel_logout.token_lifetime           | u32        |          |
+| LOGOUT_TOKEN_ALLOW_CLOCK_SKEW              | backchannel_logout.allow_clock_skew         | u32        |          |
+| LOGOUT_TOKEN_ALLOWED_LIFETIME              | backchannel_logout.allowed_token_lifetime   | u32        |          |
+| BOOTSTRAP_ADMIN_EMAIL                      | bootstrap.admin_email                       | String     |          |
+| BOOTSTRAP_ADMIN_PASSWORD_PLAIN             | bootstrap.password_plain                    | String     |          |
+| BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID          | bootstrap.pasword_argon2id                  | String     |          |
+| BOOTSTRAP_API_KEY                          | bootstrap.api_key                           | String     |          |
+| BOOTSTRAP_API_KEY_SECRET                   | bootstrap.api_key_secret                    | String     |          |
+| HQL_NODE_ID_FROM                           | cluster.node_id_from                        | "k8s"      | x *1     |
+| HQL_NODE_ID                                | cluster.node_id                             | u64        | x *1     |
+| HQL_NODES                                  | cluster.nodes                               | \[String\] | x        |
+| HQL_DATA_DIR                               | cluster.data_dir                            | String     |          |
+| HQL_FILENAME_DB                            | cluster.filename_db                         | String     |          |
+| HQL_LOG_STATEMENTS                         | cluster.log_statements                      | bool       |          |
+| -                                          | cluster.prepared_statement_cache_capacity   | u16        |          |
+| HQL_READ_POOL_SIZE                         | cluster.read_pool_size                      | u16        |          |
+| HQL_LOG_SYNC                               | cluster.log_sync                            | String     |          |
+| HQL_WAL_SIZE                               | cluster.wal_size                            | u32        |          |
+| HQL_CACHE_STORAGE_DISK                     | cluster.cache_storage_disk                  | bool       |          |
+| HQL_LOGS_UNTIL_SNAPSHOT                    | cluster.logs_until_snapshot                 | u64        |          |
+| HQL_SHUTDOWN_DELAY_MILLS                   | cluster.shutdown_delay_millis               | u32        |          |
+| HQL_TLS_RAFT_KEY                           | cluster.tls_raft_key                        | String     |          |
+| HQL_TLS_RAFT_CERT                          | cluster.tls_raft_cert                       | String     |          |
+| -                                          | cluster.tls_raft_danger_tls_no_verify       | bool       |          |
+| HQL_TLS_API_KEY                            | cluster.tls_api_key                         | String     |          |
+| HQL_TLS_RAFT_KEY                           | cluster.tls_api_cert                        | String     |          |
+| -                                          | cluster.tls_api_danger_tls_no_verify        | bool       |          |
+| HQL_SECRET_RAFT                            | cluster.secret_raft                         | String     | x        |
+| HQL_SECRET_API                             | cluster.secret_api                          | String     | x        |
+| -                                          | cluster.health_check_delay_secs             | u32        |          |
+| HQL_BACKUP_CRON                            | cluster.backup_cron                         | String     |          |
+| HQL_BACKUP_KEEP_DAYS                       | cluster.backup_keep_days                    | u16        |          |
+| HQL_BACKUP_KEEP_DAYS_LOCAL                 | s3_url.backup_keep_days_local               | u16        |          |
+| HQL_BACKUP_RESTORE                         | -                                           | String     |          |
+| HQL_BACKUP_SKIP_VALIDATION                 | -                                           | bool       |          |
+| HQL_S3_URL                                 | cluster.s3_url                              | String     | *2       |
+| HQL_S3_BUCKET                              | cluster.s3_bucket                           | String     | *2       |
+| HQL_S3_REGION                              | cluster.s3_bucket                           | String     | *2       |
+| HQL_S3_PATH_STYLE                          | cluster.s3_path_style                       | bool       |          |
+| HQL_S3_KEY                                 | cluster.s3_key                              | String     | *2       |
+| HQL_S3_SECRET                              | cluster.s3_secret                           | String     | *2       |
+| HQL_PASSWORD_DASHBOARD                     | cluster.password_dashboard                  | String     |          |
+| HQL_INSECURE_COOKIE                        | cluster.insecure_cookie                     | bool       |          |
+| HQL_WAL_IGNORE_LOCK                        | cluster.wal_ignore_lock                     | bool       |          |
+| HQL_DANGER_RAFT_STATE_RESET                | -                                           | bool       |          |
+| HIQLITE                                    | database.hiqlite                            | bool       |          |
+| HEALTH_CHECK_DELAY_SECS                    | database.health_check_delay_secs            | u32        |          |
+| PG_HOST                                    | database.pg_host                            | String     | *3       |
+| PG_PORT                                    | database.pg_port                            | u16        |          |
+| PG_USER                                    | database.pg_user                            | String     | *3       |
+| PG_PASSWORD                                | database.pg_password                        | String     | *3       |
+| PG_DB_NAME                                 | database.pg_db_name                         | String     |          |
+| PG_TLS_NO_VERIFY                           | database.pg_tls_no_verify                   | bool       |          |
+| PG_MAX_CONN                                | database.pg_max_conn                        | u16        |          |
+| MIGRATE_DB_FROM                            | -                                           | String     |          |
+| MIGRATE_PG_HOST                            | database.migrate_pg_host                    | String     | *4       |
+| MIGRATE_PG_PORT                            | database.migrate_pg_port                    | u16        |          |
+| MIGRATE_PG_USER                            | database.migrate_pg_user                    | String     | *4       |
+| MIGRATE_PG_PASSWORD                        | database.migrate_pg_password                | String     | *4       |
+| MIGRATE_PG_DB_NAME                         | database.migrate_pg_db_name                 | String     |          |
+| SCHED_USER_EXP_MINS                        | database.sched_user_exp_mins                | u32        |          |
+| SCHED_USER_EXP_DELETE_MINS                 | database.sched_user_exp_delete_mins         | u32        |          |
+| DEVICE_GRANT_CODE_LIFETIME                 | device_grant.code_lifetime                  | u32        |          |
+| DEVICE_GRANT_USER_CODE_LENGTH              | device_grant.user_code_length               | u32        |          |
+| DEVICE_GRANT_RATE_LIMIT                    | device_grant.rate_limit                     | u32        |          |
+| DEVICE_GRANT_POLL_INTERVAL                 | device_grant.poll_interval                  | u32        |          |
+| DEVICE_GRANT_REFRESH_TOKEN_LIFETIME        | device_grant.refresh_token_lifetime         | u32        |          |
+| DPOP_FORCE_NONCE                           | dpop.force_nonce                            | bool       |          |
+| DPOP_NONCE_EXP                             | dpop.nonce_exp                              | u32        |          |
+| ENABLE_DYN_CLIENT_REG                      | dynamic_clients.enable                      | bool       |          |
+| DYN_CLIENT_REG_TOKEN                       | dynamic_clients.reg_token                   | String     | *5       |
+| DYN_CLIENT_DEFAULT_TOKEN_LIFETIME          | dynamic_clients.default_token_lifetime      | u32        |          |
+| DYN_CLIENT_SECRET_AUTO_ROTATE              | dynamic_clients.secret_auto_rotate          | bool       |          |
+| DYN_CLIENT_CLEANUP_INTERVAL                | dynamic_clients.cleanup_interval            | u32        |          |
+| DYN_CLIENT_CLEANUP_MINUTES                 | dynamic_clients.cleanup_minutes             | u32        |          |
+| DYN_CLIENT_RATE_LIMIT_SEC                  | dynamic_clients.rate_limit_sec              | u32        |          |
+| RAUTHY_ADMIN_EMAIL                         | email.rauthy_admin_email                    | String     |          |
+| EMAIL_SUB_PREFIX                           | email.sub_prefix                            | String     |          |
+| SMTP_URL                                   | email.smtp_url                              | String     | *6       |
+| SMTP_PORT                                  | email.smtp_port                             | u16        |          |
+| SMTP_USERNAME                              | email.smtp_username                         | String     |          |
+| SMTP_PASSWORD                              | email.smtp_password                         | String     |          |
+| SMTP_FROM                                  | email.smtp_from                             | String     |          |
+| SMTP_CONNECT_RETRIES                       | email.connect_retries                       | u16        |          |
+| SMTP_DANGER_INSECURE                       | email.danger_insecure                       | bool       |          |
+| ENC_KEYS                                   | encryption.keys                             | \[String\] | x        |
+| ENC_KEY_ACTIVE                             | encryption.key_active                       | String     | x        |
+| ENABLE_EPHEMERAL_CLIENTS                   | ephemeral_clients.enable                    | bool       |          |
+| ENABLE_WEB_ID                              | ephemeral_clients.enable_web_id             | bool       |          |
+| ENABLE_SOLID_AUD                           | ephemeral_clients.enable_solid_aud          | bool       |          |
+| EPHEMERAL_CLIENTS_FORCE_MFA                | ephemeral_clients.force_mfa                 | bool       |          |
+| EPHEMERAL_CLIENTS_ALLOWED_FLOWS            | ephemeral_clients.allowed_flows             | \[String\] |          |
+| EPHEMERAL_CLIENTS_ALLOWED_SCOPES           | ephemeral_clients.allowed_scopes            | \[String\] |          |
+| EPHEMERAL_CLIENTS_CACHE_LIFETIME           | ephemeral_clients.cache_lifetime            | u32        |          |
+| EVENT_EMAIL                                | events.email                                | String     |          |
+| EVENT_MATRIX_USER_ID                       | events.matrix_user_id                       | String     |          |
+| EVENT_MATRIX_ROOM_ID                       | events.matrix_room_id                       | String     |          |
+| EVENT_MATRIX_ACCESS_TOKEN                  | events.matrix_access_token                  | String     |          |
+| EVENT_MATRIX_USER_PASSWORD                 | events.matrix_user_password                 | String     |          |
+| EVENT_MATRIX_SERVER_URL                    | events.matrix_server_url                    | String     |          |
+| EVENT_MATRIX_ROOT_CA_PATH                  | events.matrix_root_ca_path                  | String     |          |
+| EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION | events.matrix_danger_disable_tls_validation | bool       |          |
+| EVENT_MATRIX_ERROR_NO_PANIC                | events.matrix_error_no_panic                | bool       |          |
+| EVENT_SLACK_WEBHOOK                        | events.slack_webhook                        | String     |          |
+| EVENT_NOTIFY_LEVEL_EMAIL                   | events.notify_level_email                   | Level      |          |
+| EVENT_NOTIFY_LEVEL_MATRIX                  | events.notify_level_matrix                  | Level      |          |
+| EVENT_NOTIFY_LEVEL_SLACK                   | events.notify_level_slack                   | Level      |          |
+| EVENT_PERSIST_LEVEL                        | events.persist_level                        | Level      |          |
+| EVENT_CLEANUP_DAYS                         | events.cleanup_days                         | u32        |          |
+| EVENT_LEVEL_NEW_USER                       | events.level_new_user                       | Level      |          |
+| EVENT_LEVEL_USER_EMAIL_CHANGE              | events.level_user_email_change              | Level      |          |
+| EVENT_LEVEL_USER_PASSWORD_RESET            | events.level_user_password_reset            | Level      |          |
+| EVENT_LEVEL_RAUTHY_ADMIN                   | events.level_rauthy_admin                   | Level      |          |
+| EVENT_LEVEL_RAUTHY_VERSION                 | events.level_rauthy_version                 | Level      |          |
+| EVENT_LEVEL_JWKS_ROTATE                    | events.level_jwks_rotate                    | Level      |          |
+| EVENT_LEVEL_SECRETS_MIGRATED               | events.level_secrets_migrated               | Level      |          |
+| EVENT_LEVEL_RAUTHY_START                   | events.level_rauthy_start                   | Level      |          |
+| EVENT_LEVEL_RAUTHY_HEALTHY                 | events.level_rauthy_healthy                 | Level      |          |
+| EVENT_LEVEL_RAUTHY_UNHEALTHY               | events.level_rauthy_unhealthy               | Level      |          |
+| EVENT_LEVEL_IP_BLACKLISTED                 | events.level_ip_blacklisted                 | Level      |          |
+| EVENT_LEVEL_FAILED_LOGINS_25               | events.level_failed_logins_25               | Level      |          |
+| EVENT_LEVEL_FAILED_LOGINS_20               | events.level_failed_logins_20               | Level      |          |
+| EVENT_LEVEL_FAILED_LOGINS_15               | events.level_failed_logins_15               | Level      |          |
+| EVENT_LEVEL_FAILED_LOGINS_10               | events.level_failed_logins_10               | Level      |          |
+| EVENT_LEVEL_FAILED_LOGINS_7                | events.level_failed_logins_7                | Level      |          |
+| EVENT_LEVEL_FAILED_LOGIN                   | events.level_failed_login                   | Level      |          |
+| DISABLE_APP_VERSION_CHECK                  | events.disable_app_version_check            | bool       |          |
+| EXPERIMENTAL_FED_CM_ENABLE                 | fedcm.experimental_enable                   | bool       |          |
+| SESSION_LIFETIME_FED_CM                    | fedcm.session_lifetime                      | u32        |          |
+| SESSION_TIMEOUT_FED_CM                     | fedcm.session_timeout                       | u32        |          |
+| ARGON2_M_COST                              | hashing.argon2_m_cost                       | u32        |          |
+| ARGON2_T_COST                              | hashing.argon2_t_cost                       | u32        |          |
+| ARGON2_P_COST                              | hashing.argon2_p_cost                       | u32        |          |
+| MAX_HASH_THREADS                           | hashing.max_hash_threads                    | u32        |          |
+| HASH_AWAIT_WARN_TIME                       | hashing.hash_await_warn_time                | u32        |          |
+| JWK_AUTOROTATE_CRON                        | hashing.jwk_autorotate_cron                 | String     |          |
+| HTTP_CONNECT_TIMEOUT                       | http_client.connect_timeout                 | u32        |          |
+| HTTP_REQUEST_TIMEOUT                       | http_client.request_timeout                 | u32        |          |
+| HTTP_MIN_TLS                               | http_client.min_tls                         | String     |          |
+| HTTP_IDLE_TIMEOUT                          | http_client.idle_timeout                    | u32        |          |
+| HTTP_DANGER_UNENCRYPTED                    | http_client.danger_unencrypted              | bool       |          |
+| HTTP_DANGER_INSECURE                       | http_client.danger_insecure                 | bool       |          |
+| HTTP_CUST_ROOT_CA_BUNDLE                   | http_client.root_ca_bundle                  | String     |          |
+| FILTER_LANG_COMMON                         | i18n.filter_lang_common                     | \[String\] |          |
+| FILTER_LANG_ADMIN                          | i18n.filter_lang_admin                      | \[String\] |          |
+| REFRESH_TOKEN_GRACE_TIME                   | lifetimes.refresh_token_grace_time          | u16        |          |
+| REFRESH_TOKEN_LIFETIME                     | lifetimes.refresh_token_lifetime            | u16        |          |
+| SESSION_LIFETIME                           | lifetimes.session_lifetime                  | u32        |          |
+| SESSION_RENEW_MFA                          | lifetimes.session_renew_mfa                 | bool       |          |
+| SESSION_TIMEOUT                            | lifetimes.session_timeout                   | u32        |          |
+| ML_LT_PWD_RESET                            | lifetimes.magic_link_pwd_reset              | u32        |          |
+| ML_LT_PWD_FIRST                            | lifetimes.magic_link_pwd_first              | u32        |          |
+| LOG_LEVEL                                  | logging.level                               | Level      |          |
+| LOG_LEVEL_DATABASE                         | logging.level_database                      | Level      |          |
+| LOG_LEVEL_ACCESS                           | logging.level_access                        | String     |          |
+| LOG_FMT                                    | logging.log_fmt                             | "json"     |          |
+| ADMIN_FORCE_MFA                            | mfa.admin_force_mfa                         | bool       |          |
+| POW_DIFFICULTY                             | pow.difficulty                              | u16        |          |
+| POW_EXP                                    | pow.exp                                     | u16        |          |
+| SCIM_SYNC_DELETE_GROUPS                    | scim.sync_delete_groups                     | bool       |          |
+| SCIM_SYNC_DELETE_USERS                     | scim.sync_delete_users                      | bool       |          |
+| SCIM_RETRY_COUNT                           | scim.retry_count                            | u16        |          |
+| LISTEN_ADDRESS                             | server.listen_address                       | String     |          |
+| LISTEN_PORT_HTTP                           | server.port_http                            | u16        |          |
+| LISTEN_PORT_HTTPS                          | server.port_https                           | u16        |          |
+| LISTEN_SCHEME                              | server.scheme                               | String     |          |
+| PUB_URL                                    | server.pub_url                              | String     | x        |
+| HTTP_WORKERS                               | server.http_workers                         | u16        |          |
+| PROXY_MODE                                 | server.proxy_mode                           | bool       | *7       |
+| TRUSTED_PROXIES                            | server.trusted_proxies                      | \[String\] | *7       |
+| ADDITIONAL_ALLOWED_ORIGIN_SCHEMES          | server.additional_allowed_origin_schemes    | \[String\] |          |
+| METRICS_ENABLE                             | server.metrics_enable                       | bool       |          |
+| METRICS_ADDR                               | server.metrics_addr                         | String     |          |
+| METRICS_PORT                               | server.metrics_port                         | u16        |          |
+| SWAGGER_UI_ENABLE                          | server.swagger_ui_enable                    | bool       |          |
+| SWAGGER_UI_PUBLIC                          | server.swagger_ui_public                    | bool       |          |
+| SSE_KEEP_ALIVE                             | server.see_keep_alive                       | u16        |          |
+| SSP_THRESHOLD                              | server.ssp_threshold                        | u16        |          |
+| SUSPICIOUS_REQUESTS_BLACKLIST              | suspicious_requests.blacklist               | u16        |          |
+| SUSPICIOUS_REQUESTS_LOG                    | suspicious_requests.log                     | bool       |          |
+| -                                          | \[templates\].lang                          | String     | *8       |
+| -                                          | \[templates\].typ                           | String     | *8       |
+| -                                          | \[templates\].subject                       | String     |          |
+| -                                          | \[templates\].header                        | String     |          |
+| -                                          | \[templates\].text                          | String     |          |
+| -                                          | \[templates\].click_link                    | String     |          |
+| -                                          | \[templates\].validity                      | String     |          |
+| -                                          | \[templates\].expires                       | String     |          |
+| -                                          | \[templates\].footer                        | String     |          |
+| TLS_CERT                                   | tls.cert_path                               | String     |          |
+| TLS_KEY                                    | tls.key_path                                | String     |          |
+| PICTURE_STORAGE_TYPE                       | user_pictures.storage_type                  | String     |          |
+| PICTURE_PATH                               | user_pictures.path                          | String     |          |
+| PIC_S3_URL                                 | user_pictures.s3_url                        | String     | *2       |
+| PIC_S3_BUCKET                              | user_pictures.bucket                        | String     | *2       |
+| PIC_S3_REGION                              | user_pictures.region                        | String     | *2       |
+| PIC_S3_KEY                                 | user_pictures.s3_key                        | String     | *2       |
+| PIC_S3_SECRET                              | user_pictures.s3_secret                     | String     | *2       |
+| PIC_S3_PATH_STYLE                          | user_pictures.s3_path_style                 | bool       |          |
+| PICTURE_UPLOAD_LIMIT_MB                    | user_pictures.upload_limit_mb               | u16        |          |
+| PICTURE_PUBLIC                             | user_pictures.public                        | bool       |          |
+| OPEN_USER_REG                              | user_registration.enable                    | bool       |          |
+| USER_REG_DOMAIN_RESTRICTION                | user_registration.domain_restriction        | String     |          |
+| USER_REG_DOMAIN_BLACKLIST                  | user_registration.domain_blacklist          | \[String\] |          |
+| USER_REG_OPEN_REDIRECT                     | user_registration.allow_open_redirect       | bool       |          |
+| RP_ID                                      | webauthn.rp_id                              | String     | x        |
+| RP_ORIGIN                                  | webauthn.rp_origin                          | String     | x        |
+| RP_NAME                                    | webauthn.rp_name                            | String     |          |
+| WEBAUTHN_REQ_EXP                           | webauthn.req_exp                            | u16        |          |
+| WEBAUTHN_DATA_EXP                          | webauthn.data_exp                           | u16        |          |
+| WEBAUTHN_RENEW_EXP                         | webauthn.renew_exp                          | u16        |          |
+| WEBAUTHN_FORCE_UV                          | webauthn.force_uv                           | bool       |          |
+| WEBAUTHN_NO_PASSWORD_EXPIRY                | webauthn.no_password_exp                    | bool       |          |
+
+1. At least one of `cluster.node_id_from` / `cluster.node_id` is required
+2. When `s3_url` is given, the other `s3_*` values are expected as well
+3. Required when `database.hiqlite = false`
+4. Required when `MIGRATE_DB_FROM=postgres`
+5. Not strictly required but should probably almost be set when `dynamic_clients.enable = true` to not have an open dyn
+   client registration.
+6. When not set, E-Mail cannot be sent and things like user registration and self-service password requests will not
+   work. You can operate Rauthy without this setting, but then an Admin needs to perform all these actions.
+7. Required when running behind a reverse proxy
+8. The `[templates]` block can be given multiple times for different languages / templates, but if so, `lang` + `typ`
+   are required inside.
+
+> NOTE: All `\[String\]` types are Arrays inside the TOML, but a single String value for an ENV VAR, which separates the
+> values by `\n`.
+
+> All `Level` values can be one of: 'info', 'notice', 'warning', 'critical'
+
+> Quite a few of these values, even when they are a `String` type, expect a certain format. Take a look at the reference
+> config for more information on each one.
+
+[#991](https://github.com/sebadob/rauthy/pull/991)
+
+#### SwaggerUI Location Change
+
+The way the SwaggerUI used to work was annoying since the very beginning. Even though it's an open source project, you
+usually don't want to have your whole API documentation publicly available. The issue was, that it was hard to work
+with the SwaggerUI because of some internals that made it impossible to have much manual control. For this reason, up
+until `v0.29`, you had the option to expose it internally only in addition to metrics on the internal HTTP server. This
+was very annoying as well, just in another way.
+
+After memory profiling and optimizations lately, I found out that the SwaggerUI internal config has additional issues.
+It does a deep clone of the complete dataset instead of using pointers for each additional HTTP worker, which led to
+very high memory consumption by default on machines with many cores.
+
+I did a complete rework of the way how it's being served and luckily, in the newer versions you can get manual handles
+to the internal data, which finally made it possible to move it out of its location. Instead of being available under
+`/docs/v1`, it's now under `/auth/v1/docs`, which makes a lot more sense in the first place. Because it's served
+manually, a single instance will be kept in static memory instead of cloning the data into each worker. This improves
+memory usage a lot already. The other improvement this made possible, is that Rauthy can finally check the session and
+(optionally) only serve it when a valid `rauthy_admin` session was found.
+
+This change made it possible to always have it on the same port while still being able to serve all the different
+use cases from before. You can enable or disable it, and you can decide whether it should be public or not. No weird
+"internal only" stuff anymore. The config variables are still in the server section and the non-public version is now
+fully independent of the metrics server.
+
+```toml
+[server]
+# Can be set to `true` to enable the Swagger UI.
+# This will consume ~13mb of additional memory.
+#
+# default: false
+# overwritten by: SWAGGER_UI_ENABLE
+swagger_ui_enable = false
+
+# Can be set to `true` to make the Swagger UI publicly
+# available. By default, you can only access it with a
+# valid `rauthy_admin` session.
+#
+# default: false
+# overwritten by: SWAGGER_UI_PUBLIC
+swagger_ui_public = false
+```
+
+[#981](https://github.com/sebadob/rauthy/pull/981)
+
+#### Type change for `zip` / `postcal_code`
+
+The type for `zip` / `postcal_code` has been changed from an Integer to a String in all locations. This means not only
+the Admin + Account Dashboards, but of course also inside the `address` claim for `id_token`s. This change brings
+compatibility for countries that use non-numeric postal codes.
+
+[#1002](https://github.com/sebadob/rauthy/pull/1002)
+
+### Changes
+
+#### Hiqlite Optimizations
+
+Hiqlite has received lots of optimizations and its version has been integrated in this Rauthy version. The updates were
+mainly about stability, especially during cluster rolling-releases in environments like Kubernetes, where the versions
+before had some issues with the ephemeral, in-memory Cache Raft state, which could get into a deadlock during a race
+condition. This has been fixed completely.
+
+Another thing is that it's now possible to optionally have the Cache Raft state like WAL + Snapshots on disk instead of
+in-memory. The on-disk solution is of course quite a bit slower, because it's limited by your disk speed, but the memory
+usage will be lower as well. If all of that data is kept in-memory, you basically need 3 times the size of a single
+cache value (+1 in WAL logs and +1 in Snapshot, kind of, depending on TTL of course). Writing the state to disk has
+other advantages as well. The cache can be rebuilt and you never lose cached data even if the whole cluster went down.
+On restart, the whole in-memory cache layer can be rebuilt from WAL + Snapshots.
+
+The next improvement is that `hiqlite` received a fully custom WAL implementation and we can drop `rocksdb` as the WAL
+store. `rocksdb` is really good and very fast, but a huge overkill for the job, a very heavyweight dependency and
+brings quite a few issues in regard to compilation targets. This feature version still contains code and dependencies
+to migrate existing `rocksdb` Log Stores to the new `hiqlite-wal` store, but from the next feature version, we can fully
+remove the dependency. Just removing `rocksdb` will reduce the release binary size by ~7MB. On top of that,
+`hiqlite-wal` is quite a bit more efficient with your memory at runtime without any sacrifices in throughput.
+
+The new `hiqlite-wal` now also has some mechanisms to try to repair a WAL file and recover records that might have been
+corrupted because of a bad crash for instance. `rocksdb` could get into a state where it would be almost impossible to
+recover. If you run your Rauthy instance in a container environment, or anywhere where you can guarantee, that no 2nd
+Rauthy process might try to access the same data on disk, you probably want to set `HQL_IGNORE_WAL_LOCK=true` now, which
+will start and try the repair routine, even if it detects a non-graceful shutdown. It is crucial though that it can
+never happen, that another instance is still running accessing the same data. That's what this warning is for in such
+a scenario. If you rather have full control and double check in case of an error, leave this value unset. The default
+is `false`.
+The other new value is `HQL_CACHE_STORAGE_DISK`, which is `true` by default. This will store the WAL + Snapshots for the
+in-memory cache on disk and therefore free up that memory. If you would rather have everything in-memory though, set
+this value to `false`.
+
+```toml
+[cluster]
+# Hiqlite WAL files (when not using the `rocksdb` feature) will
+# always have a fixed size, even when they are still "empty", to
+# reduce disk operations while writing. You can set the WAL size
+# in bytes. The default value is 2 MB, while the minimum size is
+# 8 kB.
+#
+# default: 2097152
+# overwritten by: HQL_WAL_SIZE
+#wal_size = 2097152
+
+# Set to `false` to store Cache WAL files + Snapshots in-memory only.
+# If you run a Cluster, a Node can re-sync cache data after a restart.
+# However, if you restart too quickly or shut down the whole cluster,
+# all your cached data will be gone.
+# In-memory only hugegly increases the throughput though, so it
+# depends on your needs, what you should prefer.
+#
+# default: true
+# overwritten by: HQL_CACHE_STORAGE_DISK
+cache_storage_disk = true
+
+# Can be set to true to start the WAL handler even if the
+# `lock.hql` file exists. This may be necessary after a
+# crash, when the lock file could not be removed during a
+# graceful shutdown.
+#
+# IMPORTANT: Even though the Database can "heal" itself by
+# simply rebuilding from the existing Raft log files without
+# even needing to think about it, you may want to only
+# set `HQL_WAL_IGNORE_LOCK` when necessary to have more
+# control. Depending on the type of crash (whole OS, maybe
+# immediate power loss, force killed, ...), it may be the
+# case that the WAL files + metadata could not be synced
+# to disk properly and that quite a bit of data is lost.
+#
+# In such a case, it is usually a better idea to delete
+# the whole volume and let the broken node rebuild from
+# other healthy cluster members, just to be sure.
+#
+# However, you can decide to ignore the lock file and start
+# anyway. But you must be 100% sure, that no orphaned
+# process is still running and accessing the WAL files!
+#
+# default: false
+# overwritten by: HQL_WAL_IGNORE_LOCK
+wal_ignore_lock = false
+```
+
+And if all of this was not enough yet, I was able to improve the overall throughput of `hiqlite` by ~30%. For more
+information, take at the [Hiqlite Repo](https://github.com/sebadob/hiqlite) directly.
+
+> If you are currently running a HA Cluster with Hiqlite as your database, you should make sure you have a backup before
+> starting this version, just in case, because of the Log Store Migration. It would be even more safe if you can afford
+> to shut down the whole cluster cleanly first and then restart from scratch.
+
+#### Default for `HTTP_WORKERS` changed
+
+The default value for `HTTP_WORKERS` has been changed. Even though you probably almost always want to set this value
+manually in production, especially when running your instance on a huge underlying host, the default has been tuned to
+fit smaller hosts a bit better. Here is the new description in the config:
+
+```toml
+[server]
+# Limits the amount of HTTP worker threads. This value
+# heavily impacts memory usage, even in idle. The default
+# values are:
+# - less than 4 CPU cores -> 1
+# - 4+ cores -> max(2, cores - MAX_HASH_THREADS - reserve)
+#   where `reserve` is 2 when `HIQLITE=true` and 1 otherwise.
+#
+# CAUTION: If you run your instance on a big underlying host,
+# you almost always want to manually set an appropriate
+# value. Rauthy can only see all available cores and not any
+# possibly set container limits. This means if it runs inside
+# a container on something like a 96 core host, Rauthy will
+# by default spawn very many threads.
+#
+# overwritten by: HTTP_WORKERS
+http_workers = 1
+```
+
+[#975](https://github.com/sebadob/rauthy/pull/975)
+
+#### Early `panic` in case of misconfiguration
+
+Most lazy static config variables are now being triggered at the very start of the application. This brings two
+benefits:
+
+1. If you have any issues in your config, it will panic and error early, instead of "some time later" when this value
+   is used for the first time.
+2. It will make the start of the Heap way more compact, because all values will align perfectly, and therefore reduce
+   memory fragmentation a little bit.
+
+[#969](https://github.com/sebadob/rauthy/pull/969)
 
 #### Restrict client login by group prefix
 
@@ -15,10 +932,16 @@ which will only allow users assigned to one of these groups to do the login.
 
 Usually, such decisions are done on the client side, depending on the claims in the tokens, because it's a lot more
 powerful and roles can be assigned properly, and so on. However, not all client apps support claim restrictions. In
-these cases, you can now do it on Rauthy's side, or maybe just in addition to provide a better UX, because the user will
-get the error message during Rauthy's login already and not after the token was exchanged with the client.
+these cases, you can now do it on Rauthys side, or maybe just in addition to provide a better UX, because the user will
+get the error message during Rauthys login already and not after the token was exchanged with the client.
 
 [#952](https://github.com/sebadob/rauthy/pull/952)
+
+#### Less strict group names
+
+Group names can now contain uppercase letters and spaces.
+
+[#1012](https://github.com/sebadob/rauthy/pull/1012)
 
 #### User-Editable custom attributes
 
@@ -61,22 +984,41 @@ characters) is now limited to 4096. This is more than double the amount of an RS
 only the default values, so you should never have any problems reaching the limit. Theoretically, it is of course
 possible, so you get a new config variable to tune this:
 
-```
-# Sets the limit in characters for the maximum JWT token length that 
-# will be accepted when validating it. The default of 4096 is high 
-# enough that you should never worry about this value. A typical 
-# `id_token` with quite a few additional custom attributes and scopes, 
-# signed with RS512, will usually be below 2000 characters. 
-# 
-# Only if you create very big tokens and you get errors on the 
+```toml
+[access]
+# Sets the limit in characters for the maximum JWT token length that
+# will be accepted when validating it. The default of 4096 is high
+# enough that you should never worry about this value. A typical
+# `id_token` with quite a few additional custom attributes and scopes,
+# signed with RS512, will usually be below 2000 characters.
+#
+# Only if you create very big tokens and you get errors on the
 # `/userinfo` for instance, you might want to increase this value.
 # Otherwise, don't worry about it.
 #
-# default: 4096 
-TOKEN_LEN_LIMIT=4096
+# default: 4096
+# overwritten by: TOKEN_LEN_LIMIT
+token_len_limit = 4096
 ```
 
 [#941](https://github.com/sebadob/rauthy/pull/941)
+
+#### IP Blacklisting Rework
+
+The IP blacklisting has been reworked. This was done via listen / notify and an instance-local thread, that manages
+all blacklisted IPs purely in memory. We usually do not want to trigger any DB writes in such a case to keep the work
+as low a possible in case of a DDoS for instance.
+
+However, this old design was from a time when Hiqlite did not even exist yet. The latest version brings distributed
+counters, which made it possible to easily push blacklisted IPs into the Hiqlite caching layer. In combination with
+another new feature in the latest Hiqlite, which is an optionally persistent WAL + Snapshot on disk for the Cache as
+well (enabled by default), you can now have blacklisted IPs in memory for very fast access, while still being able to
+persist them in a way, that the full in-memory cache can be rebuilt after a restart.
+
+Pushing this logic into Hiqlite removes a maintenance burden from the Rauthy code. It exists inside Hiqlite anyway
+already.
+
+[#985](https://github.com/sebadob/rauthy/pull/985)
 
 #### `PATCH` is possible on `/users/{id}`
 
@@ -89,21 +1031,46 @@ that have been modified by the user via the account dashboard in the exact same 
 #### `jemalloc` feature flag
 
 Rauthy can optionally be compiled with the `jemalloc` feature flag, which will exchange the glibc `malloc` for
-`jemalloc`. This will most probably become the default allocator for Rauthy after some tuning. It avoids memory
-fragmentation over time and is a lot more performant. You can also adjust it to match your workloads and the default
-tuning will probably be aimed at being efficient. However, if you run a Rauthy instance with thousands or even millions
-of users, you can custom-compile a version with optimized tuning, which will use more memory, but handle this many
-concurrent allocations better. Documentation about it will follow.
+`jemalloc`. It avoids memory fragmentation over time and is a lot more performant. You can also adjust it to match your
+workloads and the default tuning will probably be aimed at being efficient. However, if you run a Rauthy instance with
+thousands or even millions of users, you can custom-compile a version with optimized tuning, which will use more memory,
+but handle this many concurrent allocations better. Take a look at the book for tuning advise.
+
+The `jemalloc` feature flag will be enabled by default from this version on.
 
 [#949](https://github.com/sebadob/rauthy/pull/949)
+
+#### Rauthy theme as fallback
+
+The custom theme you apply for the `rauthy` client will now be used as a fallback for all other clients, when they don't
+have their own custom values.
+
+[#982](https://github.com/sebadob/rauthy/pull/982)
+
+#### Dedicated Password Reset Request Page
+
+A link to a dedicated password reset request page has been added to password reset E-Mails. This helps users request a
+new magic link quickly when they have an expired one for a password reset in their inbox.
+
+[#1011](https://github.com/sebadob/rauthy/pull/1011)
+
+#### Production Init Hardening
+
+To harden the production initialization of the database for a fresh instance a bit more, the user ID for the very first
+initial admin account is being re-generated randomly. In combination with `bootstrap.admin_email`, this makes it now
+100% impossible to guess any value for a possibly existing default admin for any Rauthy instance.
+
+[#983](https://github.com/sebadob/rauthy/pull/983)
 
 #### Memory optimizations
 
 All `derive` impl's on all API types have been checked and quite a lot of unnecessary `derive`s have been removed (were
 e.g. only necessary during development / testing). This is a small optimization regarding release compile-time and
-binary size.
+binary size. Additionally, lots of other small improvements have been made all over the code to reduce the number of
+overall memory allocations in general.
 
 [#956](https://github.com/sebadob/rauthy/pull/956)
+[#968](https://github.com/sebadob/rauthy/pull/968)
 
 ### Bugfix
 
@@ -117,6 +1084,9 @@ binary size.
   [#962](https://github.com/sebadob/rauthy/pull/962)
 - The default value for the `SMTP_FROM` was changed from `rauthy@localhost.de` to just `rauthy@localhost`.
   [#963](https://github.com/sebadob/rauthy/pull/963)
+- The `state` encoding during `/authorize` was broken in some situations, because the urlencoding was removed in some
+  situations, when this param should be sent back to the client unchanged.
+  [#980](https://github.com/sebadob/rauthy/pull/980)
 
 ## v0.29.4
 

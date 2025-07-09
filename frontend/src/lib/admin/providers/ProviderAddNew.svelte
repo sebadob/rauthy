@@ -164,6 +164,10 @@
     });
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
+        if (config.issuer === "atproto") {
+            err = "Must not contain a reserved name";
+            return;
+        }
         if (formActionLookup) {
             await onSubmitLookup(form.action);
         } else {

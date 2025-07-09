@@ -12,12 +12,13 @@ npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 node_image := "node:22"
 builder_image := "ghcr.io/sebadob/rauthy-builder"
-builder_tag_date := "20250505"
+builder_tag_date := "20250703"
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
-jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:8,tcache_max:2048,dirty_decay_ms:5000,muzzy_decay_ms:5000"
+test_env_vars := "PUB_URL=localhost:8081 RP_ORIGIN=http://localhost:8081"
+jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:8,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000"
 postgres := "HIQLITE=false"
 
 [private]
@@ -148,12 +149,33 @@ postgres-start:
             docker.io/library/postgres:17.2-alpine || echo ">>> Postgres is already running - nothing to do"
     fi
 
+    while ! curl localhost:5432 2>&1 | grep 'Empty reply from server' ; do
+        echo 'Waiting until Postgres is up and running'
+        sleep 1
+    done
+    echo 'Postgres is ready'
+
 # Stops mailcrab
 postgres-stop:
     {{ docker }} stop {{ container_postgres }} || echo ">>> Postgres is not running - nothing to do"
 
 postgres-rm:
-    {{ docker }} rm {{ container_postgres }} || echo ">>> Postgres does not exists - nothing to do"
+    {{ docker }} rm {{ container_postgres }} || echo ">>> Postgres does not exist - nothing to do"
+
+# Starts nginx for `/forward_auth` testing
+nginx-start:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    rm assets/nginx/access.log
+    touch assets/nginx/access.log
+
+    docker run -it --rm \
+            -v ./assets/nginx/conf.d:/etc/nginx/conf.d:ro \
+            -v ./assets/nginx/access.log:/var/log/nginx/access.log \
+            --network host \
+            --name nginx-rauthy-test \
+            nginx
 
 # Just uses `cargo fmt --all`
 fmt:
@@ -172,10 +194,13 @@ delete-hiqlite:
 
     mkdir -p data/
     rm -rf data/logs
+    rm -rf data/logs_cache
     rm -rf data/state_machine
+    rm -rf data/state_machine_cache
+    rm -rf data/node_*
 
 # runs any of: none (hiqlite), postgres, ui
-run ty="hiqlite":
+run ty="hiqlite" node_id="1":
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -187,6 +212,16 @@ run ty="hiqlite":
       {{ npm }} run dev -- --host=0.0.0.0
     elif [[ {{ ty }} == "hiqlite" ]]; then
       cargo run
+    elif [[ {{ ty }} == "node" ]]; then
+      if [[ {{ node_id }} == "1" ]]; then
+        LISTEN_PORT_HTTP=8001 PUB_URL="localhost:8001" HQL_DATA_DIR=data/node_1 HQL_NODE_ID=1 cargo run -- 1
+      elif [[ {{ node_id }} == "2" ]]; then
+        LISTEN_PORT_HTTP=8002 PUB_URL="localhost:8002" HQL_DATA_DIR=data/node_2 HQL_NODE_ID=2 cargo run -- 2
+      elif [[ {{ node_id }} == "3" ]]; then
+        LISTEN_PORT_HTTP=8003 PUB_URL="localhost:8003" HQL_DATA_DIR=data/node_3 HQL_NODE_ID=3 cargo run -- 3
+      else
+        echo "Only node_id from 1 - 3 supported"
+      fi
     fi
 
 # runs (and stops) Postgres, Mailcrab, normal `just run` command
@@ -218,7 +253,7 @@ test-backend: test-backend-stop delete-hiqlite
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    cargo run test
+    {{ test_env_vars }} cargo run test
 
 # starts the test backend with memory profiling - expects `heaptrack` to be available
 test-backend-heaptrack: test-backend-stop delete-hiqlite
@@ -232,7 +267,7 @@ test-backend-heaptrack: test-backend-stop delete-hiqlite
     #echo 'grant temporary access to performance events until reboot'
     #echo '1' | sudo tee /proc/sys/kernel/perf_event_paranoid
     #echo 'if you get an mmap error, try: sudo sysctl kernel.perf_event_mlock_kb=2048'
-    heaptrack ./target/profiling/rauthy test
+    {{ test_env_vars }} heaptrack ./target/profiling/rauthy test
 
 # stops a possibly running test backend that may have spawned in the background for integration tests
 test-backend-stop:
@@ -258,11 +293,11 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
     clear
 
     cargo build
-    ./target/debug/rauthy test &
+    {{ test_env_vars }} ./target/debug/rauthy test &
     echo $! > {{ file_test_pid }}
 
-    # a fresh Hiqlite instance needs ~1 - 1.5 seconds for the raft initialization
-    sleep 3
+    # Wait for the fresh Raft
+    sleep 5
 
     if cargo test {{ test }}; then
       echo "All SQLite tests successful"
@@ -274,17 +309,17 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
     fi
 
 # runs the full set of tests with postgres
-test-postgres test="": test-backend-stop postgres-stop postgres-rm postgres-start
+test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlite postgres-start
     #!/usr/bin/env bash
     clear
 
-    sleep 2
-
     cargo build
-    {{ postgres }} ./target/debug/rauthy test &
+    # the Hiqlite tests are disk-backed, lets check postgres in-memory to cover this as well
+    {{ test_env_vars }} {{ postgres }} HQL_CACHE_STORAGE_DISK=false ./target/debug/rauthy test &
     echo $! > {{ file_test_pid }}
 
-    sleep 1
+    # Wait for the fresh Raft
+    sleep 5
 
     if {{ postgres }} cargo test {{ test }}; then
       echo "All Postgres tests successful"
@@ -320,8 +355,32 @@ build-ui where="local":
         {{ npm }} run build
     fi
 
-#    git add static/v1/*
-#    git add templates/html/*
+# archives static pre-built HTML into `assets/static_html/`
+archive-ui: build-ui
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    # cleanup
+    mkdir -p assets/static_html
+    rm -rf assets/static_html/*
+
+    tar -czf assets/static_html/templates_html.tar.gz templates/html
+    tar -czf assets/static_html/static_v1.tar.gz static/v1
+
+    git add assets/static_html/*
+
+# extracts archived UI files into target folders
+extract-ui-archive:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    mkdir static
+
+    rm -rf static/v1
+    rm -rf templates/html/
+
+    tar -xf assets/static_html/static_v1.tar.gz static/
+    tar -xf assets/static_html/templates_html.tar.gz templates/
 
 # builds the rauthy book
 build-docs:
@@ -372,6 +431,7 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-ui
         -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
         -v {{ invocation_directory() }}/:/work/ \
         -w /work \
+        -e {{ jemalloc_conf }} \
         {{ map_docker_user }} \
         {{ builder_image }}:{{ builder_tag_date }} \
         cargo build --release --target x86_64-unknown-linux-gnu
@@ -385,6 +445,7 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-ui
         -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
         -v {{ invocation_directory() }}/:/work/ \
         -w /work \
+        -e {{ jemalloc_conf }} \
         {{ map_docker_user }} \
         {{ builder_image }}:{{ builder_tag_date }} \
         cargo build --release --target aarch64-unknown-linux-gnu
@@ -442,16 +503,13 @@ release:
     git push origin "v$TAG"
 
 # publishes the application images - full pipeline incl clippy and testing you can provide a custom image name as variable
-publish: build-docs fmt test-hiqlite test-postgres build
-    #!/usr/bin/env bash
-    set -euxo pipefail
+publish: build-docs fmt test-hiqlite test-postgres build archive-ui
 
 # publishes the application images - full pipeline incl clippy and testing
 publish-latest:
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # the `latest` image will always point to the postgres x86 version, which is used the most (probably)
     {{ docker }} pull ghcr.io/sebadob/rauthy:$TAG
     {{ docker }} tag ghcr.io/sebadob/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
     {{ docker }} push ghcr.io/sebadob/rauthy:latest

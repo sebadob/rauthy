@@ -3,6 +3,7 @@ import {type I18n} from "./interface";
 export const I18nDe: I18n = {
     lang: "de",
     common: {
+        authenticate: "Authentifizieren",
         cancel: "Abbrechen",
         changeTheme: "Farbschema wechseln",
         close: "Schließen",
@@ -36,8 +37,10 @@ export const I18nDe: I18n = {
         ],
         never: "Niemals",
         password: "Passwort",
+        refresh: "Erneuern",
         required: "Notwendig",
         save: "Speichern",
+        seconds: "Sekunden",
         selectI18n: "Sprache wählen",
         show: "Anzeigen",
         summary: "Zusammenfassung",
@@ -62,6 +65,7 @@ export const I18nDe: I18n = {
         accessRenew: "Zugang erneuerbar bis",
         accessRenewDelete: "Möglichkeit zur Erneuerung löschen",
         birthdate: "Geburtsdatum",
+        canModifyFor: "Passkeys können modifiziert werden für:",
         city: "Stadt",
         changePassword: "Passwort wechseln",
         convertAccount: "Account Umwandeln",
@@ -134,6 +138,9 @@ export const I18nDe: I18n = {
         passwordForgotten: "Password vergessen?",
         passwordRequest: "Anfordern",
         passwordRequired: "Password ist notwendig",
+        passwordResetDesc: `Bitte E-Mail Adresse angeben, um einen Password Reset Link anzufordern. Sollte die Adresse
+            in der Datenbank existieren, wird and diese ein Link verschickt.`,
+        passwordResetSuccess: "Anfrage erhalten. Dieses Fenster kann nun geschlossen werden.",
         requestExpires: "Anfrage läuft ab",
         requestExpired: "Anfrage ist abgelaufen",
         signUp: "Benutzer Registrierung",
@@ -180,12 +187,15 @@ export const I18nDe: I18n = {
         errorReg: "Fehler beim Starten der Registrierung",
         lastUsed: "Zuletzt genutzt",
         noKey: "Es wurde in diesem Speicher noch kein Sicherheitsschlüssel registriert",
+        reAuthenticatePasskey: "Bevor Passkeys bearbeitet werden können, muss zuerst einer der bestehenden überprüft werden:",
+        reAuthenticatePwd: "Bevor Passkeys bearbeitet werden können, ist eine erneute Bestätigung des Passworts notwendig.",
         register: "Registrieren",
         registerNew: "Neuen Key Registrieren",
         registerd: "Registriert",
         registerdKeys: "Registrierte Keys",
         passkeyName: "Passkey Name",
         passkeyNameErr: "2 - 32 Buchstaben, keine Sonderzeichen",
+        passwordInvalid: "Ungültiges Password",
         test: "Test",
         testError: "Fehler beim Starten des Tests",
         testSuccess: "Test erfolgreich"
@@ -242,5 +252,10 @@ export const I18nDe: I18n = {
         register: "Registrieren",
         success: "Registrierung erfolgreich",
         userReg: "Benutzer Registrierung"
+    },
+    userRevoke: {
+        title: "Logins widerrufen",
+        desc1: "Sämtliche Logins und Sessions für diesen Benutzer wurden soweit wie möglich widerrufen.",
+        desc2: "Passwörter sollten auf der Stelle erneuert werden!",
     }
 };

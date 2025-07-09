@@ -121,7 +121,7 @@ impl DeviceCode {
             .connect_timeout(Duration::from_secs(10))
             .https_only(https_only.bool())
             .danger_accept_invalid_certs(danger_insecure.bool())
-            .user_agent(format!("Rauthy OIDC Client v{}", VERSION));
+            .user_agent(format!("Rauthy OIDC Client v{VERSION}"));
         if let Some(root) = root_certificate {
             Ok(builder.add_root_certificate(root).build()?)
         } else {
@@ -138,10 +138,10 @@ impl DeviceCode {
             let status = res.status().as_u16();
             let err = match res.text().await {
                 Ok(body) => {
-                    format!("Rauthy request error - HTTP {}: {:?}", status, body)
+                    format!("Rauthy request error - HTTP {status}: {body:?}")
                 }
                 Err(_) => {
-                    format!("Rauthy request error  - HTTP {}", status)
+                    format!("Rauthy request error  - HTTP {status}")
                 }
             };
             return Err(RauthyError::Request(Cow::from(err)));
@@ -182,7 +182,7 @@ impl DeviceCode {
         } else {
             "/.well-known/openid-configuration"
         };
-        let oidc_config_url = format!("{}{}", issuer, append);
+        let oidc_config_url = format!("{issuer}{append}");
 
         let client = Self::build_client(root_certificate, https_only, danger_insecure)?;
         let meta = Self::fetch::<MetaResponse>(client.get(oidc_config_url)).await?;
@@ -250,16 +250,16 @@ impl DeviceCode {
                 }
 
                 OAuth2ErrorTypeResponse::AccessDenied => {
-                    return Err(RauthyError::Provider(Cow::from(format!("{:?}", err))));
+                    return Err(RauthyError::Provider(Cow::from(format!("{err:?}"))));
                 }
 
                 OAuth2ErrorTypeResponse::ExpiredToken => {
-                    return Err(RauthyError::Provider(Cow::from(format!("{:?}", err))));
+                    return Err(RauthyError::Provider(Cow::from(format!("{err:?}"))));
                 }
 
                 // the others should not come up, only if the connection dies in between
                 // or something like that
-                _ => return Err(RauthyError::Provider(Cow::from(format!("{:?}", err)))),
+                _ => return Err(RauthyError::Provider(Cow::from(format!("{err:?}")))),
             }
         }
     }

@@ -5,6 +5,7 @@ use rauthy_error::ErrorResponse;
 use rauthy_models::database::DB;
 use std::ops::Sub;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error, info};
 
 /// Cleans up old / expired magic links and deletes users, that have never used their
@@ -32,8 +33,12 @@ pub async fn magic_link_cleanup() {
         // at all. These users should be deleted since they never cared about the (very important)
         // password E-Mail.
         if let Err(err) = cleanup(exp).await {
-            error!("{:?}", err);
+            error!(error = ?err, "magic_link_cleanup");
         }
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }
 
@@ -53,8 +58,7 @@ AND password IS NULL AND webauthn_user_id IS NULL"#;
     };
 
     info!(
-        "Cleaned up {} users which did not use their initial password reset magic link",
-        rows_affected
+        "Cleaned up {rows_affected} users which did not use their initial password reset magic link"
     );
 
     // now we can just delete all expired magic links
@@ -64,7 +68,7 @@ AND password IS NULL AND webauthn_user_id IS NULL"#;
     } else {
         DB::pg_execute(sql, &[&exp]).await?
     };
-    debug!("Cleaned up {} expired and used magic links", rows_affected);
+    debug!("Cleaned up {rows_affected} expired and used magic links");
 
     Ok(())
 }

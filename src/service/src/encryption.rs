@@ -1,6 +1,5 @@
 use cryptr::{EncKeys, EncValue};
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
 use rauthy_models::entity::auth_providers::AuthProvider;
 use rauthy_models::entity::clients::Client;
@@ -9,20 +8,17 @@ use tracing::{error, info};
 
 /// Migrates encrypted data in the backend to a new key.
 /// JWKS's are just rotated and a new set will be created.
-pub async fn migrate_encryption_alg(
-    data: &actix_web::web::Data<AppState>,
-    new_kid: &str,
-) -> Result<(), ErrorResponse> {
+pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> {
     // check that the requested Key ID exists
     EncKeys::get_static_key(new_kid)?;
 
     let start = tokio::time::Instant::now();
-    info!("Starting secrets migration to key id: {}", new_kid);
+    info!("Starting secrets migration to key id: {new_kid}");
 
     let mut modified = 0;
 
     // migrate clients
-    info!("Starting client secrets migration to key id: {}", new_kid);
+    info!("Starting client secrets migration to key id: {new_kid}");
     let clients = Client::find_all()
         .await?
         .into_iter()
@@ -44,13 +40,13 @@ pub async fn migrate_encryption_alg(
         client.save().await?;
         modified += 1;
     }
-    info!("Finished clients secrets migration to key id: {}", new_kid);
+    info!("Finished clients secrets migration to key id: {new_kid}");
 
     // JWKS will just be rotated, which is better for security anyway
-    JWKS::rotate(data).await?;
+    JWKS::rotate().await?;
 
     // migrate ApiKey's
-    info!("Starting ApiKeys migration to key id: {}", new_kid);
+    info!("Starting ApiKeys migration to key id: {new_kid}");
     let api_keys = ApiKeyEntity::find_all()
         .await?
         .into_iter()
@@ -75,7 +71,7 @@ pub async fn migrate_encryption_alg(
         api_key.save().await?;
         modified += 1;
     }
-    info!("Finished ApiKeys migration to key id: {}", new_kid);
+    info!("Finished ApiKeys migration to key id: {new_kid}");
 
     // migrate auth providers
     let providers = AuthProvider::find_all().await?;
@@ -95,8 +91,8 @@ pub async fn migrate_encryption_alg(
             }
             Err(err) => {
                 error!(
-                    "Error decryption AuthProvider secret, this should never happen!\n{:?}",
-                    err
+                    ?err,
+                    "decrypting AuthProvider secret, this should never happen!",
                 );
             }
         }
@@ -107,10 +103,9 @@ pub async fn migrate_encryption_alg(
     );
 
     info!(
-        "Finished secrets migration to key id: {} after {} ms. Modified {} encryption's",
-        new_kid,
+        "Finished secrets migration to key id: {new_kid} after {} ms. Modified {modified} \
+        encryption's",
         start.elapsed().as_millis(),
-        modified,
     );
 
     Ok(())

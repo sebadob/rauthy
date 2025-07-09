@@ -25,7 +25,7 @@ pub struct AddressClaim {
     pub locality: Option<String>,
     // pub region: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub postal_code: Option<i32>,
+    pub postal_code: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<String>,
 }
@@ -48,8 +48,8 @@ pub struct AuthRequest {
     #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
     #[serde(default = "default_scope")]
     pub scope: String,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    /// Validation: max length 2048
+    #[validate(length(max = 2048))]
     pub state: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
@@ -117,8 +117,8 @@ pub struct LoginRequest {
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
     pub scopes: Option<Vec<String>>,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    /// Validation: max length 2048
+    #[validate(length(max = 2048))]
     pub state: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
@@ -145,8 +145,8 @@ pub struct LoginRefreshRequest {
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
     pub scopes: Option<Vec<String>>,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    /// Validation: max length 2048
+    #[validate(length(max = 2048))]
     pub state: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
@@ -171,8 +171,8 @@ pub struct LogoutRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub post_logout_redirect_uri: Option<String>,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    /// Validation: max length 2048
+    #[validate(length(max = 2048))]
     pub state: Option<String>,
     /// Logout Token used for OIDC Backchannel Logout
     /// https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken
@@ -302,9 +302,9 @@ pub struct DeviceCodeResponse<'a> {
     pub verification_uri: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verification_uri_complete: Option<String>,
-    pub expires_in: u16,
+    pub expires_in: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub interval: Option<u8>,
+    pub interval: Option<u32>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -341,7 +341,7 @@ impl Display for JwkKeyPairAlg {
             JwkKeyPairAlg::RS512 => "RS512",
             JwkKeyPairAlg::EdDSA => "EdDSA",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

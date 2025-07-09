@@ -1,7 +1,7 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {useIsDev} from "$state/is_dev.svelte";
     import {fetchGet} from "$api/fetch";
+    import {IS_DEV} from "$utils/constants";
 
     type T = $$Generic;
 
@@ -14,7 +14,7 @@
     } = $props();
 
     onMount(async () => {
-        if (!useIsDev().get()) {
+        if (!IS_DEV) {
             let tpl = document.getElementById(id);
             if (tpl) {
                 assign(tpl.innerHTML);

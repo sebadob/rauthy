@@ -8,8 +8,8 @@ use rand::Rng;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::fmt::Debug;
 use std::net::IpAddr;
+use std::net::Ipv4Addr;
 use std::str::FromStr;
-use std::{env, net::Ipv4Addr};
 use tracing::{error, trace};
 
 const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE;
@@ -84,14 +84,17 @@ pub fn base64_url_no_pad_encode_buf(input: &[u8], buf: &mut String) {
 pub fn base64_url_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
     B64_URL_SAFE
         .decode(b64)
-        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 URL decoding error"))
 }
 
 #[inline(always)]
 pub fn base64_url_no_pad_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
-    B64_URL_SAFE_NO_PAD
-        .decode(b64)
-        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
+    B64_URL_SAFE_NO_PAD.decode(b64).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "B64 URL NO PAD decoding error",
+        )
+    })
 }
 
 #[inline(always)]
@@ -99,20 +102,6 @@ pub fn base64_url_no_pad_decode_buf(b64: &str, buf: &mut Vec<u8>) -> Result<(), 
     B64_URL_SAFE_NO_PAD
         .decode_vec(b64, buf)
         .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
-}
-
-/// Uses the `HQL_NODES` to determine if Rauthy is running in a HA deployment.
-#[inline]
-pub fn is_ha_deployment() -> bool {
-    env::var("HQL_NODES")
-        .unwrap_or_else(|_| "".to_string())
-        .lines()
-        .filter_map(|l| {
-            let trim = l.trim();
-            if trim.is_empty() { None } else { Some(trim) }
-        })
-        .count()
-        > 1
 }
 
 #[inline(always)]
@@ -138,7 +127,7 @@ pub fn real_ip_from_req(req: &HttpRequest) -> Result<IpAddr, ErrorResponse> {
     if let Some(ip) = ip_from_cust_header(req.headers()) {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         Ok(ip)
-    } else if *PROXY_MODE {
+    } else if *PROXY_MODE.get().unwrap() {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         parse_peer_addr(req.connection_info().realip_remote_addr(), false)
     } else {
@@ -153,7 +142,7 @@ pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Result<IpAddr, ErrorRespons
     if let Some(ip) = ip_from_cust_header(req.headers()) {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         Ok(ip)
-    } else if *PROXY_MODE {
+    } else if *PROXY_MODE.get().unwrap() {
         check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         parse_peer_addr(req.connection_info().realip_remote_addr(), false)
     } else {
@@ -178,7 +167,7 @@ fn parse_peer_addr(peer_addr: Option<&str>, use_dummy_addr: bool) -> Result<IpAd
             Ok(ip) => Ok(ip),
             Err(err) => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!("Cannot parse peer IP address: {}", err),
+                format!("Cannot parse peer IP address: {err}"),
             )),
         },
     }
@@ -189,7 +178,7 @@ fn check_trusted_proxy(peer_ip: &IpAddr, use_dummy_addr: bool) -> Result<(), Err
     if use_dummy_addr && *peer_ip == DUMMY_ADDRESS {
         return Ok(());
     }
-    for cidr in &*TRUSTED_PROXIES {
+    for cidr in TRUSTED_PROXIES.get().unwrap() {
         if cidr.contains(peer_ip) {
             return Ok(());
         }
@@ -205,42 +194,38 @@ fn check_trusted_proxy(peer_ip: &IpAddr, use_dummy_addr: bool) -> Result<(), Err
     ))
 }
 
-pub(crate) fn build_trusted_proxies() -> Vec<cidr::IpCidr> {
-    let raw = env::var("TRUSTED_PROXIES").expect("TRUSTED_PROXIES is not net set");
-    let mut proxies = Vec::new();
-
-    for line in raw.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        match cidr::IpCidr::from_str(trimmed) {
-            Ok(cidr) => {
-                proxies.push(cidr);
-            }
+pub fn build_trusted_proxies(proxies: &[String]) -> Vec<cidr::IpCidr> {
+    let mut proxies = proxies
+        .iter()
+        .map(|range| match cidr::IpCidr::from_str(range.trim()) {
+            Ok(cidr) => cidr,
             Err(err) => {
-                error!("Cannot parse trusted proxy entry to CIDR: {}", err);
+                panic!("Cannot parse trusted proxy entry {range} to CIDR: {err}");
             }
-        }
-    }
+        })
+        .collect::<Vec<_>>();
+
+    // will never increase and is static afterward
+    proxies.shrink_to_fit();
+
     proxies
 }
 
 #[inline(always)]
 fn ip_from_cust_header(headers: &HeaderMap) -> Option<IpAddr> {
     // If a custom override has been set, try this first and use the default as fallback
-    if let Some(header_name) = &*PEER_IP_HEADER_NAME {
+    if let Some(header_name) = PEER_IP_HEADER_NAME.get().unwrap() {
         if let Some(Ok(value)) = headers.get(header_name).map(|s| s.to_str()) {
             match IpAddr::from_str(value) {
                 Ok(ip) => {
                     return Some(ip);
                 }
                 Err(err) => {
-                    error!("Cannot parse IP from PEER_IP_HEADER_NAME: {}", err);
+                    error!("Cannot parse IP from PEER_IP_HEADER_NAME: {err}");
                 }
             }
         }
-        trace!("no PEER IP from PEER_IP_HEADER_NAME: '{}'", header_name);
+        trace!("no PEER IP from PEER_IP_HEADER_NAME: '{header_name}'");
     }
 
     None
@@ -254,7 +239,7 @@ where
     bincode::serde::encode_to_vec(value, bincode::config::legacy()).map_err(|err| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
-            format!("Cannot serialize value: {:?}", err),
+            format!("Cannot serialize value: {err:?}"),
         )
     })
 }
@@ -268,7 +253,7 @@ where
         bincode::serde::decode_from_slice(value, bincode::config::legacy()).map_err(|err| {
             ErrorResponse::new(
                 ErrorResponseType::Internal,
-                format!("Cannot deserialize value: {:?}", err),
+                format!("Cannot deserialize value: {err:?}"),
             )
         })?;
     Ok(bytes)
@@ -293,18 +278,15 @@ mod tests {
 
     #[test]
     fn test_trusted_proxy_check() {
-        unsafe {
-            env::set_var(
-                "TRUSTED_PROXIES",
-                r#"
-            192.168.100.0/24
-            192.168.0.96/28
-            172.16.0.1/32
-            10.10.10.10/31"#,
-            )
-        };
-
-        println!("{:?}", build_trusted_proxies());
+        let raw = vec![
+            "192.168.100.0/24".to_string(),
+            "192.168.0.96/28".to_string(),
+            "172.16.0.1/32".to_string(),
+            "10.10.10.10/31".to_string(),
+        ];
+        let proxies = build_trusted_proxies(&raw);
+        let _ = TRUSTED_PROXIES.set(proxies);
+        println!("{:?}", build_trusted_proxies(&raw));
 
         assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.1").unwrap(), false).is_ok());
         assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.255").unwrap(), false).is_ok());

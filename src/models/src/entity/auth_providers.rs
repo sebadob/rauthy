@@ -1,19 +1,24 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::auth_codes::AuthCode;
-use crate::entity::auth_provider_cust_impl;
 use crate::entity::clients::Client;
 use crate::entity::logos::{Logo, LogoType};
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::WebauthnLoginReq;
+use crate::entity::{atproto, auth_provider_cust_impl};
 use crate::language::Language;
+use crate::rauthy_config::RauthyConfig;
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use actix_web::HttpRequest;
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
+use atrium_api::agent::Agent;
+use atrium_common::store::Store;
+use atrium_oauth::{AuthorizeOptions, CallbackParams, KnownScope, Scope};
+use chrono::Utc;
 use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
 use hiqlite::Row;
@@ -29,15 +34,14 @@ use rauthy_api_types::auth_providers::{
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
-    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI,
-    PROVIDER_CALLBACK_URI_ENCODED, PROVIDER_LINK_COOKIE, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
-    WEBAUTHN_REQ_EXP,
+    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_ATPROTO, PROVIDER_LINK_COOKIE,
+    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, deserialize,
     get_rand, new_store_id, serialize,
 };
-use rauthy_common::{HTTP_CLIENT, is_hiqlite};
+use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
 use ring::digest;
@@ -47,8 +51,6 @@ use serde_json_path::JsonPath;
 use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
-use time::OffsetDateTime;
-
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
@@ -368,11 +370,15 @@ VALUES
         }
 
         let sql = "SELECT * FROM auth_providers";
-        let res = if is_hiqlite() {
+        let mut res: Vec<Self> = if is_hiqlite() {
             client.query_map(sql, params!()).await?
         } else {
             DB::pg_query(sql, &[], 0).await?
         };
+
+        if !RauthyConfig::get().vars.atproto.enable {
+            res.retain(|p| p.issuer != PROVIDER_ATPROTO);
+        }
 
         // needed for rendering each single login page -> always cache this
         client
@@ -490,8 +496,8 @@ WHERE id = $19"#;
 
 impl AuthProvider {
     #[inline(always)]
-    fn cache_idx(id: &str) -> String {
-        format!("{}_{}", IDX_AUTH_PROVIDER, id)
+    pub fn cache_idx(id: &str) -> String {
+        format!("{IDX_AUTH_PROVIDER}_{id}")
     }
 
     fn cleanup_scope(scope: &str) -> String {
@@ -550,9 +556,9 @@ impl AuthProvider {
             Cow::from(url)
         } else if let Some(iss) = &payload.issuer {
             let url = if iss.ends_with('/') {
-                format!("{}.well-known/openid-configuration", iss)
+                format!("{iss}.well-known/openid-configuration")
             } else {
-                format!("{}/.well-known/openid-configuration", iss)
+                format!("{iss}/.well-known/openid-configuration")
             };
             Cow::from(url)
         } else {
@@ -565,32 +571,24 @@ impl AuthProvider {
             url
         } else {
             // we always assume https connections, if the scheme is not given
-            Cow::from(format!("https://{}", url))
+            Cow::from(format!("https://{url}"))
         };
 
         debug!("AuthProvider lookup to {}", config_url);
-        let res = HTTP_CLIENT.get(config_url.as_ref()).send().await?;
+        let res = http_client().get(config_url.as_ref()).send().await?;
         let status = res.status();
         if !status.is_success() {
             let body = res.text().await?;
             return Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
-                format!(
-                    "HTTP {} when trying provider config lookup to {}: {}",
-                    config_url, status, body
-                ),
+                format!("HTTP {config_url} when trying provider config lookup to {status}: {body}"),
             ));
         }
 
         let well_known = res.json::<WellKnownLookup>().await.map_err(|err| {
             ErrorResponse::new(
-                // TODO we could make this more UX friendly in the future and return a link to the
-                // docs, when they exist
                 ErrorResponseType::BadRequest,
-                format!(
-                    "The provider does not support the mandatory openid-configuration: {}",
-                    err
-                ),
+                format!("The provider does not support the mandatory openid-configuration: {err}"),
             )
         })?;
 
@@ -754,6 +752,14 @@ impl AuthProviderCallback {
         payload: ProviderLoginRequest,
     ) -> Result<(Cookie<'a>, String, HeaderValue), ErrorResponse> {
         let provider = AuthProvider::find(&payload.provider_id).await?;
+
+        if !RauthyConfig::get().vars.atproto.enable && provider.issuer == PROVIDER_ATPROTO {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "atproto is disabled",
+            ));
+        }
+
         let client = Client::find(payload.client_id).await?;
 
         let slf = Self {
@@ -784,7 +790,7 @@ impl AuthProviderCallback {
                 '?'
             },
             provider.client_id,
-            *PROVIDER_CALLBACK_URI_ENCODED,
+            RauthyConfig::get().provider_callback_uri_encoded,
             provider.scope,
             slf.callback_id
         );
@@ -795,6 +801,32 @@ impl AuthProviderCallback {
                 slf.pkce_challenge
             )
             .expect("write to always succeed");
+        }
+
+        if let Some(input) = payload
+            .handle
+            .filter(|_| provider.issuer == PROVIDER_ATPROTO)
+        {
+            let atproto = atproto::Client::get();
+
+            let options = AuthorizeOptions {
+                state: Some(slf.callback_id.clone()),
+                redirect_uri: Some(RauthyConfig::get().provider_callback_uri.clone()),
+                scopes: vec![
+                    Scope::Unknown("transition:email".to_owned()),
+                    Scope::Known(KnownScope::Atproto),
+                    Scope::Known(KnownScope::TransitionGeneric),
+                ],
+                ..Default::default()
+            };
+
+            location = atproto
+                .authorize(input, options)
+                .await
+                .map_err(|error| {
+                    error!(%error, "failed to start authorization for ATProto");
+                })
+                .unwrap();
         }
 
         let cookie = ApiCookie::build(
@@ -827,7 +859,7 @@ impl AuthProviderCallback {
         })?;
 
         // validate state
-        if callback_id != payload.state {
+        if payload.iss_atproto.is_none() && callback_id != payload.state {
             Self::delete(callback_id).await?;
 
             error!("`state` does not match");
@@ -867,55 +899,6 @@ impl AuthProviderCallback {
 
         // request is valid -> fetch token for the user
         let provider = AuthProvider::find(&slf.provider_id).await?;
-        let mut payload = OidcCodeRequestParams {
-            // a client MAY add the `client_id`, but it MUST add it when it's public
-            client_id: &provider.client_id,
-            client_secret: None,
-            code: &payload.code,
-            code_verifier: provider.use_pkce.then_some(&payload.pkce_verifier),
-            grant_type: "authorization_code",
-            redirect_uri: &PROVIDER_CALLBACK_URI,
-        };
-        if provider.client_secret_post {
-            payload.client_secret = AuthProvider::get_secret_cleartext(&provider.secret)?;
-        }
-
-        let res = {
-            let mut builder = HTTP_CLIENT
-                .post(&provider.token_endpoint)
-                .header(ACCEPT, APPLICATION_JSON);
-
-            if provider.client_secret_basic {
-                builder = builder.basic_auth(
-                    &provider.client_id,
-                    AuthProvider::get_secret_cleartext(&provider.secret)?,
-                )
-            }
-
-            builder
-        }
-        .form(&payload)
-        .send()
-        .await?;
-
-        let status = res.status().as_u16();
-        debug!("POST /token auth provider status: {}", status);
-
-        // return early if we got any error
-        if !res.status().is_success() {
-            let err = match res.text().await {
-                Ok(body) => format!(
-                    "HTTP {} during POST {} for upstream auth provider '{}'\n{}",
-                    status, provider.token_endpoint, provider.client_id, body
-                ),
-                Err(_) => format!(
-                    "HTTP {} during POST {} for upstream auth provider '{}' without any body",
-                    status, provider.token_endpoint, provider.client_id
-                ),
-            };
-            error!("{}", err);
-            return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
-        }
 
         // extract a possibly existing provider link cookie for
         // linking an existing account to a provider
@@ -923,62 +906,184 @@ impl AuthProviderCallback {
             .and_then(|value| AuthProviderLinkCookie::try_from(value.as_str()).ok());
 
         // deserialize payload and validate the information
-        let (user, provider_mfa_login) = match res.json::<AuthProviderTokenSet>().await {
-            Ok(ts) => {
-                if let Some(err) = ts.error {
-                    let msg = format!(
-                        "/token request error: {}: {}",
-                        err,
-                        ts.error_description.unwrap_or_default()
-                    );
-                    error!("{}", msg);
-                    return Err(ErrorResponse::new(ErrorResponseType::Internal, msg));
-                }
+        let (user, provider_mfa_login) = if provider.issuer == PROVIDER_ATPROTO {
+            let atproto = atproto::Client::get();
 
-                // in case of a standard OIDC provider, we only care about the ID token
-                if let Some(id_token) = ts.id_token {
-                    let claims_bytes = AuthProviderIdClaims::self_as_bytes_from_token(&id_token)?;
-                    let claims = AuthProviderIdClaims::try_from(claims_bytes.as_slice())?;
-                    claims.validate_update_user(&provider, &link_cookie).await?
-                } else if let Some(access_token) = ts.access_token {
-                    // the id_token only exists, if we actually have an OIDC provider.
-                    // If we only get an access token, we need to do another request to the
-                    // userinfo endpoint
-                    let res = HTTP_CLIENT
-                        .get(&provider.userinfo_endpoint)
-                        .header(AUTHORIZATION, format!("Bearer {}", access_token))
-                        .header(ACCEPT, APPLICATION_JSON)
-                        .send()
-                        .await?;
+            let params = CallbackParams {
+                code: payload.code.clone(),
+                state: Some(payload.state.clone()),
+                iss: payload.iss_atproto.clone(),
+            };
+            // return early if we got any error
+            let (session_manager, app_state) = atproto.callback(params).await.map_err(|error| {
+                error!(%error, "failed to complete authorization callback for ATProto");
 
-                    let status = res.status().as_u16();
-                    debug!("GET /userinfo auth provider status: {}", status);
+                ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "failed to complete authorization callback for ATProto",
+                )
+            })?;
 
-                    let res_bytes = res.bytes().await?;
-                    let mut claims = AuthProviderIdClaims::try_from(res_bytes.as_bytes())?;
+            let Some(app_state) = app_state else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "missing callback state for ATProto",
+                ));
+            };
 
-                    if claims.email.is_none() && provider.typ == AuthProviderType::Github {
-                        auth_provider_cust_impl::get_github_private_email(
-                            &access_token,
-                            &mut claims,
-                        )
-                        .await?;
-                    }
-
-                    claims.validate_update_user(&provider, &link_cookie).await?
-                } else {
-                    let err = "Neither `access_token` nor `id_token` existed";
-                    error!("{}", err);
-                    return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
-                }
+            if app_state != slf.callback_id {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "callback state mismatch for ATProto",
+                ));
             }
-            Err(err) => {
-                let err = format!(
-                    "Deserializing /token response from auth provider {}: {}",
-                    provider.client_id, err
-                );
+
+            let agent = Agent::new(session_manager);
+
+            let Some(did) = agent.did().await else {
+                panic!("missing DID for ATProto session");
+            };
+
+            let Some(session) = DB.get(&did).await.map_err(|error| {
+                error!(%error, "failed to get session for ATProto callback");
+
+                ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "failed to get session for ATProto callback",
+                )
+            })?
+            else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "failed to complete authorization callback for atproto",
+                ));
+            };
+
+            let data = match agent.api.com.atproto.server.get_session().await {
+                Ok(atrium_api::types::Object { data, .. }) => data,
+                Err(error) => {
+                    error!(%error, "failed to get session for ATProto callback");
+
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Internal,
+                        "failed to get session for ATProto callback",
+                    ));
+                }
+            };
+
+            let claims = AuthProviderIdClaims {
+                sub: Some(Value::String(session.token_set.sub.to_string())),
+                email: data.email.map(Cow::from),
+                email_verified: data.email_confirmed,
+                ..Default::default()
+            };
+
+            claims.validate_update_user(&provider, &link_cookie).await?
+        } else {
+            let mut payload = OidcCodeRequestParams {
+                // a client MAY add the `client_id`, but it MUST add it when it's public
+                client_id: &provider.client_id,
+                client_secret: None,
+                code: &payload.code,
+                code_verifier: provider.use_pkce.then_some(&payload.pkce_verifier),
+                grant_type: "authorization_code",
+                redirect_uri: &RauthyConfig::get().provider_callback_uri,
+            };
+            if provider.client_secret_post {
+                payload.client_secret = AuthProvider::get_secret_cleartext(&provider.secret)?;
+            }
+
+            let res = {
+                let mut builder = http_client()
+                    .post(&provider.token_endpoint)
+                    .header(ACCEPT, APPLICATION_JSON);
+
+                if provider.client_secret_basic {
+                    builder = builder.basic_auth(
+                        &provider.client_id,
+                        AuthProvider::get_secret_cleartext(&provider.secret)?,
+                    )
+                }
+
+                builder
+            }
+            .form(&payload)
+            .send()
+            .await?;
+
+            let status = res.status().as_u16();
+            debug!("POST /token auth provider status: {status}");
+
+            // return early if we got any error
+            if !res.status().is_success() {
+                let err = match res.text().await {
+                    Ok(body) => format!(
+                        "HTTP {status} during POST {} for upstream auth provider '{}'\n{body}",
+                        provider.token_endpoint, provider.client_id
+                    ),
+                    Err(_) => format!(
+                        "HTTP {status} during POST {} for upstream auth provider '{}' without any body",
+                        provider.token_endpoint, provider.client_id
+                    ),
+                };
                 error!("{}", err);
                 return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
+            }
+
+            let ts = match res.json::<AuthProviderTokenSet>().await {
+                Ok(ts) => ts,
+                Err(err) => {
+                    let err = format!(
+                        "Deserializing /token response from auth provider {}: {err}",
+                        provider.client_id
+                    );
+                    error!("{err}");
+                    return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
+                }
+            };
+
+            if let Some(err) = ts.error {
+                let msg = format!(
+                    "/token request error: {err}: {}",
+                    ts.error_description.unwrap_or_default()
+                );
+                error!("{msg}");
+                return Err(ErrorResponse::new(ErrorResponseType::Internal, msg));
+            }
+
+            // in case of a standard OIDC provider, we only care about the ID token
+            if let Some(id_token) = ts.id_token {
+                let claims_bytes = AuthProviderIdClaims::self_as_bytes_from_token(&id_token)?;
+                let claims = AuthProviderIdClaims::try_from(claims_bytes.as_slice())?;
+
+                claims.validate_update_user(&provider, &link_cookie).await?
+            } else if let Some(access_token) = ts.access_token {
+                // the id_token only exists, if we actually have an OIDC provider.
+                // If we only get an access token, we need to do another request to the
+                // userinfo endpoint
+                let res = http_client()
+                    .get(&provider.userinfo_endpoint)
+                    .header(AUTHORIZATION, format!("Bearer {access_token}"))
+                    .header(ACCEPT, APPLICATION_JSON)
+                    .send()
+                    .await?;
+
+                let status = res.status().as_u16();
+                debug!("GET /userinfo auth provider status: {status}");
+
+                let res_bytes = res.bytes().await?;
+                let mut claims = AuthProviderIdClaims::try_from(res_bytes.as_bytes())?;
+
+                if claims.email.is_none() && provider.typ == AuthProviderType::Github {
+                    auth_provider_cust_impl::get_github_private_email(&access_token, &mut claims)
+                        .await?;
+                }
+
+                claims.validate_update_user(&provider, &link_cookie).await?
+            } else {
+                let err = "Neither `access_token` nor `id_token` existed";
+                error!("{err}");
+                return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
             }
         };
 
@@ -1015,8 +1120,9 @@ impl AuthProviderCallback {
         // all good, we can generate an auth code
 
         // authorization code
+        let webauthn_req_exp = RauthyConfig::get().vars.webauthn.req_exp;
         let code_lifetime = if force_mfa && user.has_webauthn_enabled() {
-            client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
+            client.auth_code_lifetime + webauthn_req_exp as i32
         } else {
             client.auth_code_lifetime
         };
@@ -1036,7 +1142,7 @@ impl AuthProviderCallback {
         // location header
         let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
         if let Some(state) = slf.req_state {
-            write!(loc, "&state={}", state)?;
+            write!(loc, "&state={state}")?;
         };
 
         let auth_step = if user.has_webauthn_enabled() {
@@ -1046,7 +1152,7 @@ impl AuthProviderCallback {
                 header_origin,
                 user_id: user.id.clone(),
                 email: user.email,
-                exp: *WEBAUTHN_REQ_EXP as u64,
+                exp: webauthn_req_exp as u64,
                 session,
             };
 
@@ -1137,7 +1243,7 @@ pub struct AuthProviderAddressClaims<'a> {
     pub formatted: Option<&'a str>,
     pub street_address: Option<&'a str>,
     pub locality: Option<&'a str>,
-    pub postal_code: Option<i32>,
+    pub postal_code: Option<&'a str>,
     pub country: Option<&'a str>,
 }
 
@@ -1147,7 +1253,7 @@ enum ProviderMfaLogin {
     No,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct AuthProviderIdClaims<'a> {
     // pub iss: &'a str,
     // json values because some providers provide String, some int
@@ -1217,16 +1323,13 @@ impl AuthProviderIdClaims<'_> {
         let _header = parts.next().ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "incorrect ID did not contain claims".to_string(),
+                "incorrect ID did not contain claims",
             )
         })?;
         let claims = parts.next().ok_or_else(|| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "ID token was unsigned".to_string(),
-            )
+            ErrorResponse::new(ErrorResponseType::BadRequest, "ID token was unsigned")
         })?;
-        debug!("upstream ID token claims:\n{}", claims);
+        debug!("upstream ID token claims: {claims}");
         let json_bytes = base64_url_no_pad_decode(claims)?;
         Ok(json_bytes)
     }
@@ -1238,11 +1341,8 @@ impl AuthProviderIdClaims<'_> {
     ) -> Result<(User, ProviderMfaLogin), ErrorResponse> {
         if self.email.is_none() {
             let err = "No `email` in ID token claims. This is a mandatory claim";
-            error!("{}", err);
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                err.to_string(),
-            ));
+            error!("{err}");
+            return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
         }
 
         let claims_user_id_json = if let Some(sub) = &self.sub {
@@ -1275,10 +1375,7 @@ impl AuthProviderIdClaims<'_> {
 
         let user_opt = match User::find_by_federation(&provider.id, &claims_user_id).await {
             Ok(user) => {
-                debug!(
-                    "found already existing user by federation lookup: {:?}",
-                    user
-                );
+                debug!("found already existing user by federation lookup: {user:?}");
                 Some(user)
             }
             Err(_) => {
@@ -1298,7 +1395,7 @@ impl AuthProviderIdClaims<'_> {
                         if link.provider_id != provider.id {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "bad provider_id in link cookie".to_string(),
+                                "bad provider_id in link cookie",
                             ));
                         }
 
@@ -1308,7 +1405,7 @@ impl AuthProviderIdClaims<'_> {
                             // multiple accounts.
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "bad user_id in link cookie".to_string(),
+                                "bad user_id in link cookie",
                             ));
                         }
 
@@ -1316,7 +1413,7 @@ impl AuthProviderIdClaims<'_> {
                         if link.user_email != user.email {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "Invalid E-Mail".to_string(),
+                                "Invalid E-Mail",
                             ));
                         }
 
@@ -1348,7 +1445,7 @@ impl AuthProviderIdClaims<'_> {
             if provider.admin_claim_value.is_none() {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
-                    "Misconfigured Auth Provider - admin claim path without value".to_string(),
+                    "Misconfigured Auth Provider - admin claim path without value",
                 ));
             }
 
@@ -1367,7 +1464,7 @@ impl AuthProviderIdClaims<'_> {
                         // This way, we can accept not only string, but we would for instance
                         // also interpret a given bool as string.
                         let value = if !value.is_string() {
-                            format!("\"{}\"", value)
+                            format!("\"{value}\"")
                         } else {
                             value.to_string()
                         };
@@ -1378,7 +1475,7 @@ impl AuthProviderIdClaims<'_> {
                     }
                 }
                 Err(err) => {
-                    error!("Error parsing JsonPath from: '{}\nError: {}", path, err);
+                    error!("Error parsing JsonPath from: '{path}', Error: {err}");
                 }
             }
         }
@@ -1389,7 +1486,7 @@ impl AuthProviderIdClaims<'_> {
             if provider.mfa_claim_value.is_none() {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
-                    "Misconfigured Auth Provider - mfa claim path without value".to_string(),
+                    "Misconfigured Auth Provider - mfa claim path without value",
                 ));
             }
 
@@ -1408,7 +1505,7 @@ impl AuthProviderIdClaims<'_> {
                         // This way, we can accept not only string, but we would for instance
                         // also interpret a given bool as string.
                         let value = if !value.is_string() {
-                            format!("\"{}\"", value)
+                            format!("\"{value}\"")
                         } else {
                             value.to_string()
                         };
@@ -1419,12 +1516,12 @@ impl AuthProviderIdClaims<'_> {
                     }
                 }
                 Err(err) => {
-                    error!("Error parsing JsonPath from: '{}\nError: {}", path, err);
+                    error!("Error parsing JsonPath from: '{path}', Error: {err}");
                 }
             }
         }
 
-        let now = OffsetDateTime::now_utc().unix_timestamp();
+        let now = Utc::now().timestamp();
         let user = if let Some(mut user) = user_opt {
             let mut old_email = None;
             let mut forbidden_error = None;
@@ -1472,25 +1569,27 @@ impl AuthProviderIdClaims<'_> {
             }
 
             // should this user be a rauthy admin?
-            let roles = user.get_roles();
-            let roles_str = roles.iter().map(|r| r.as_str()).collect::<Vec<&str>>();
+            let roles = user.roles_iter().collect::<Vec<_>>();
 
             // We will only re-map the rauthy_admin role if the claim mapping is configured.
             // Otherwise, we would remove an admin role from a user it has been manually added for,
             // which would not be the expected outcome.
             if let Some(should_be_admin) = should_be_rauthy_admin {
                 if should_be_admin {
-                    if !roles_str.contains(&"rauthy_admin") {
-                        let mut new_roles = Vec::with_capacity(roles.len() + 1);
-                        new_roles.push("rauthy_admin".to_string());
-                        roles.into_iter().for_each(|r| new_roles.push(r));
-                        user.roles = new_roles.join(",");
+                    if !roles.contains(&"rauthy_admin") {
+                        let is_empty = roles.is_empty();
+                        drop(roles);
+                        if is_empty {
+                            user.roles.push_str("rauthy_admin");
+                        } else {
+                            user.roles.push_str(",rauthy_admin");
+                        }
                     }
-                } else if roles_str.contains(&"rauthy_admin") {
+                } else if roles.contains(&"rauthy_admin") {
                     if roles.len() == 1 {
                         user.roles = "".to_string();
                     } else {
-                        user.roles = roles.into_iter().filter(|r| r != "rauthy_admin").join(",");
+                        user.roles = roles.into_iter().filter(|r| r != &"rauthy_admin").join(",");
                     }
                 }
             }
@@ -1568,7 +1667,7 @@ impl AuthProviderIdClaims<'_> {
                 user_values.country = Some(country.to_string());
             }
             if let Some(zip) = addr.postal_code {
-                user_values.zip = Some(zip);
+                user_values.zip = Some(zip.to_string());
             }
             found_values = true;
         }
@@ -1602,31 +1701,10 @@ struct OidcCodeRequestParams<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cryptr::EncKeys;
 
+    // exists only to understand the query syntax and experiment with it
     #[test]
-    fn test_auth_provider_link_cookie() {
-        dotenvy::from_filename("rauthy-test.cfg").ok();
-        let _ = EncKeys::from_env().unwrap().init();
-
-        let value = AuthProviderLinkCookie {
-            provider_id: "my_id_1337".to_string(),
-            user_id: "batman123".to_string(),
-            user_email: "batman@gotham.io".to_string(),
-        };
-
-        let cookie = value.build_cookie().unwrap();
-
-        let cookie_val = ApiCookie::cookie_into_value(Some(cookie)).unwrap();
-        let res = AuthProviderLinkCookie::try_from(cookie_val.as_str()).unwrap();
-
-        assert_eq!(value.provider_id, res.provider_id);
-        assert_eq!(value.user_id, res.user_id);
-        assert_eq!(value.user_email, res.user_email);
-    }
-
-    // ... just to understand the query syntax
-    #[test]
+    #[ignore]
     fn test_json_path() {
         let value = serde_json::json!({
             "foo": {

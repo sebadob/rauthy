@@ -26,6 +26,14 @@ export let I18nAdminKo: I18nAdmin = {
         name: "속성 이름",
         userEditable: "User Editable",
     },
+    backup: {
+        createBackup: "Create Backup",
+        disabledDesc: "This functionality only exists, if Hiqlite is configured as the database.",
+        lastModified: "Last Modified",
+        local: "Local",
+        name: "Name",
+        size: "Size",
+    },
     clients: {
         backchannelLogout: "If this client supports {{ OIDC_BCL }}, you can provide the URI here.",
         branding: {
@@ -326,6 +334,12 @@ export let I18nAdminKo: I18nAdmin = {
         delete: "삭제",
     },
     users: {
+        antiLockout: {
+            rule: 'Anti-Lockout Rule',
+            delete: 'cannot be deleted',
+            disable: 'cannot be disabled',
+            rauthyAdmin: 'rauthy_admin rule cannot be removed',
+        },
         attributes: "속성",
         deleteUser: "이 사용자를 삭제하시겠습니까?",
         descAttr: `사용자 지정 속성을 설정합니다. 모든 키/값 쌍은 문자열/JSON 값으로 처리됩니다.`,

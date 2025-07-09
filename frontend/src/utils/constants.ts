@@ -1,3 +1,4 @@
+export const IS_DEV = import.meta.env.MODE === 'development';
 export const PKCE_VERIFIER = 'pkce_verifier';
 export const PKCE_VERIFIER_UPSTREAM = 'pkce_verifier_upstream';
 export const CSRF_TOKEN = 'sct';
@@ -21,6 +22,7 @@ export const EVENT_LEVELS = [
 ]
 export const EVENT_TYPES = [
     '-',
+    'ForcedLogout',
     'InvalidLogins',
     'IpBlacklisted',
     'IpBlacklistRemoved',
@@ -33,13 +35,16 @@ export const EVENT_TYPES = [
     'RauthyHealthy',
     'RauthyUnhealthy',
     'SecretsMigrated',
+    'SuspiciousApiScan',
     'UserEmailChange',
+    'UserLoginRevoke',
     'UserPasswordReset',
     'Test',
 ]
 
 // All TPL_* values match a possibly existing `<template>` id
 // -> src/models/src/html/templates.rs -> HtmlTemplate
+export const TPL_ATPROTO_ID = 'tpl_atproto_id';
 export const TPL_AUTH_PROVIDERS = 'tpl_auth_providers';
 export const TPL_CLIENT_NAME = 'tpl_client_name';
 export const TPL_CLIENT_URL = 'tpl_client_url';

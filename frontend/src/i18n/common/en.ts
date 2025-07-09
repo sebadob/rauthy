@@ -3,6 +3,7 @@ import {type I18n} from "./interface";
 export const I18nEn: I18n = {
     lang: "en",
     common: {
+        authenticate: "Authenticate",
         cancel: "Cancel",
         changeTheme: "Change Theme",
         close: "Close",
@@ -36,8 +37,10 @@ export const I18nEn: I18n = {
         ],
         never: "Never",
         password: "Password",
+        refresh: "Refresh",
         required: "Required",
         save: "Save",
+        seconds: "seconds",
         selectI18n: "Select Language",
         show: "Show",
         summary: "Summary",
@@ -62,6 +65,7 @@ export const I18nEn: I18n = {
         accessRenew: "Access renewable until",
         accessRenewDelete: "Delete the possibility to renew",
         birthdate: "Birthdate",
+        canModifyFor: "Passkeys can be modified for:",
         city: "City",
         changePassword: "Change Password",
         convertAccount: "Convert Account",
@@ -114,7 +118,7 @@ export const I18nEn: I18n = {
         webIdDesc: "You can configure the fields that should be exposed with your WebID.\nThis is a feature used by some networks for decentralized logins. If you do not know what it is,\nyou most probably do not need it.",
         webIdDescData: "You can add custom data fields to your WebID in valid FOAF Vocabulary",
         webIdExpertMode: "Enable Expert Mode",
-        zip: "ZIP"
+        zip: "ZIP / Postal Code"
     },
     authorize: {
         clientForceMfa: "This login forces MFA to achieve higher security.\nTo get access, you need to log in to your account and add at least one additional Passkey",
@@ -134,6 +138,9 @@ export const I18nEn: I18n = {
         passwordForgotten: "Password forgotten?",
         passwordRequest: "Request",
         passwordRequired: "Password is required",
+        passwordResetDesc: `Please provide your E-Mail to request a password reset link. If your address exists in out
+            database, you will receive a link via E-Mail.`,
+        passwordResetSuccess: "Request received. You can close this window now.",
         requestExpires: "Request expires",
         requestExpired: "Request has expired",
         signUp: "User Registration",
@@ -180,12 +187,15 @@ export const I18nEn: I18n = {
         errorReg: "Error starting the Registration process",
         lastUsed: "Last used",
         noKey: "No Security key registered on this slot",
+        reAuthenticatePasskey: "Before you can modify Passkeys, you need to authenticate with an already registered one:",
+        reAuthenticatePwd: "Before you can modify Passkeys, you need to re-authenticate with your password.",
         register: "Register",
         registerNew: "Register New Key",
         registerd: "Registered",
         registerdKeys: "Registered Keys",
         passkeyName: "Passkey Name",
         passkeyNameErr: "2 - 32 non-special characters",
+        passwordInvalid: "Password Invalid",
         test: "Test",
         testError: "Error starting the Test",
         testSuccess: "Test successful"
@@ -242,5 +252,10 @@ export const I18nEn: I18n = {
         register: "Register",
         success: "Registration successful",
         userReg: "User Registration"
+    },
+    userRevoke: {
+        title: "Revoke Logins",
+        desc1: "All Logins and Sessions have been revoked for this user as much as possible.",
+        desc2: "You should immediately renew all your passwords!",
     }
 };

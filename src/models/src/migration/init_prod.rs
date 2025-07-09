@@ -1,25 +1,25 @@
 use crate::database::DB;
 use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::jwk::{Jwk, JwkKeyPairAlg};
+use crate::rauthy_config::RauthyConfig;
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
-use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
+use argon2::{Algorithm, Argon2, PasswordHasher, Version};
 use cryptr::{EncKeys, EncValue};
 use hiqlite_macros::params;
 use rauthy_api_types::api_keys::ApiKeyRequest;
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::{base64_decode, get_rand};
+use rauthy_common::utils::{base64_decode, get_rand, new_store_id};
 use rauthy_error::ErrorResponse;
 use ring::digest;
 use rsa::pkcs8::EncodePrivateKey;
-use std::env;
 use time::OffsetDateTime;
 use tracing::{debug, info};
 use validator::Validate;
 
 /// Initializes an empty production database for a new deployment
-pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<(), ErrorResponse> {
+pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
     // check if the database is un-initialized by looking at the jwks table, which should be empty
     let sql = "SELECT * FROM JWKS";
     let jwks: Vec<Jwk> = if is_hiqlite() {
@@ -50,10 +50,11 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
         }
 
         // check if we should use manually provided bootstrap values
-        let email =
-            env::var("BOOTSTRAP_ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
-        let hash = match env::var("BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID") {
-            Ok(hash) => {
+        let issuer = &RauthyConfig::get().issuer;
+        let bootstrap = &RauthyConfig::get().vars.bootstrap;
+        let email = &bootstrap.admin_email;
+        let hash = match bootstrap.pasword_argon2id.clone() {
+            Some(hash) => {
                 info!(
                     r#"
 
@@ -65,9 +66,9 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
                 );
                 hash
             }
-            Err(_) => {
-                let plain = match env::var("BOOTSTRAP_ADMIN_PASSWORD_PLAIN") {
-                    Ok(plain) => {
+            None => {
+                let plain = match bootstrap.password_plain.clone() {
+                    Some(plain) => {
                         info!(
                             r#"
 
@@ -79,7 +80,7 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
                         );
                         plain
                     }
-                    Err(_) => {
+                    None => {
                         let plain = get_rand(24);
                         info!(
                             r#"
@@ -96,7 +97,8 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
                     }
                 };
 
-                let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon2_params);
+                let params = RauthyConfig::get().argon2_params.clone();
+                let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
                 let salt = SaltString::generate(&mut OsRng);
                 argon2
                     .hash_password(plain.as_bytes(), &salt)
@@ -105,26 +107,33 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
             }
         };
 
-        let sql = "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost'";
+        let sql = r#"
+UPDATE users
+SET id = $1, email = $2, password = $3
+WHERE email = 'admin@localhost'"#;
+
+        // We want the same user ID in tests all the time, but generate a new one for a fresh prod
+        // init to reduce the possible attack surface even further. As long as a user provides a
+        // `BOOTSTRAP_ADMIN_EMAIL` (maybe force the existence in the future?), the default admin
+        // for new instances is impossible to guess.
+        let new_id = new_store_id();
         if is_hiqlite() {
-            // TODO we could grab a possibly existing `RAUTHY_ADMIN_EMAIL` and initialize a custom
-            // admin
-            DB::hql().execute(sql, params!(email, hash)).await?;
+            DB::hql().execute(sql, params!(new_id, email, hash)).await?;
         } else {
-            DB::pg_execute(sql, &[&email, &hash]).await?;
+            DB::pg_execute(sql, &[&new_id, &email, &hash]).await?;
         }
 
         // now check if we should bootstrap an API Key
-        if let Ok(api_key_raw) = env::var("BOOTSTRAP_API_KEY") {
+        if let Some(api_key_raw) = RauthyConfig::get().vars.bootstrap.api_key.as_ref() {
             // this is expected to be base64 encoded
-            let bytes = base64_decode(&api_key_raw)?;
+            let bytes = base64_decode(api_key_raw)?;
             // ... and then a JSON string
             let s = String::from_utf8_lossy(&bytes);
             let req = serde_json::from_str::<ApiKeyRequest>(&s)?;
             req.validate()
                 .expect("Invalid API Key in BOOTSTRAP_API_KEY");
 
-            debug!("Bootstrapping API Key:\n{:?}", req);
+            debug!("Bootstrapping API Key:\n{req:?}");
             let key_name = req.name.clone();
             let _ = ApiKeyEntity::create(
                 req.name,
@@ -133,7 +142,7 @@ pub async fn migrate_init_prod(argon2_params: Params, issuer: &str) -> Result<()
             )
             .await?;
 
-            if let Ok(secret_plain) = env::var("BOOTSTRAP_API_KEY_SECRET") {
+            if let Some(secret_plain) = RauthyConfig::get().vars.bootstrap.api_key_secret.as_ref() {
                 assert!(secret_plain.len() >= 64);
                 let secret_hash = digest::digest(&digest::SHA256, secret_plain.as_bytes());
                 let secret_enc = EncValue::encrypt(secret_hash.as_ref())?

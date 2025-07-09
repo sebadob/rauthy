@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use tracing::{debug, warn};
 
-static LOWEST_COMPATIBLE_VERSION: &str = "0.29.0";
+static LOWEST_COMPATIBLE_VERSION: &str = "0.30.0";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DbVersion {
@@ -56,7 +56,7 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
 
     pub async fn check_app_version() -> Result<Option<Version>, ErrorResponse> {
         let app_version = Self::app_version();
-        debug!("Current Rauthy Version: {:?}", app_version);
+        debug!("Current Rauthy Version: {app_version:?}");
 
         // check DB version for compatibility
         // We check the `config` table first instead of db version, because the db version does not
@@ -96,11 +96,11 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
     ) -> Result<(), ErrorResponse> {
         // this check panics on purpose, and it is there to never forget to adjust this
         // version check before doing any major or minor release
-        if app_version.major != 0 || app_version.minor != 30 {
+        if app_version.major != 0 || app_version.minor != 31 {
             panic!(
-                "\nDbVersion::check_app_version needs adjustment for the new RAUTHY_VERSION: {}\\n
-               Also make sure that `LOWEST_COMPATIBLE_VERSION` is still correctly set",
-                RAUTHY_VERSION
+                "\nDbVersion::check_app_version needs adjustment for the new RAUTHY_VERSION: \
+                {RAUTHY_VERSION}\\n Also make sure that `LOWEST_COMPATIBLE_VERSION` is still \
+                correctly set",
             );
         }
 
@@ -119,9 +119,9 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
             if db_version < &lowest_compatible_version {
                 panic!(
                     "Your database is too old for this upgrade.\n\
-                    Rauthy {} needs at least a DB version {}\n\
-                    Please check https://github.com/sebadob/rauthy/releases for additional information.",
-                    app_version, lowest_compatible_version,
+                    Rauthy {app_version} needs at least a DB version {lowest_compatible_version}\n\
+                    Please check https://github.com/sebadob/rauthy/releases for additional \
+                    information.",
                 );
             }
 

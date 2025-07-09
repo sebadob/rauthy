@@ -1,7 +1,7 @@
 <script lang="ts">
     import Button from "$lib5/button/Button.svelte";
     import Input from "$lib5/form/Input.svelte";
-    import {PATTERN_GROUP} from "$utils/patterns";
+    import {PATTERN_ROLE_SCOPE} from "$utils/patterns";
     import Form from "$lib5/form/Form.svelte";
     import type {ScopeRequest, ScopeResponse} from "$api/types/scopes.ts";
     import {fetchPost} from "$api/fetch";
@@ -58,7 +58,7 @@
                 label={ta.scopes.name}
                 placeholder={ta.scopes.name}
                 required
-                pattern={PATTERN_GROUP}
+                pattern={PATTERN_ROLE_SCOPE}
         />
 
         <Button type="submit">

@@ -7,7 +7,6 @@ use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Response, header};
 use ring::digest;
 use spow::pow::Pow;
-use std::env;
 use std::error::Error;
 use std::sync::OnceLock;
 
@@ -48,19 +47,7 @@ pub async fn get_auth_headers() -> Result<HeaderMap, Box<dyn Error>> {
 }
 
 pub fn get_backend_url() -> String {
-    dotenvy::from_filename_override("rauthy-test.cfg").ok();
-    let scheme = match env::var("LISTEN_SCHEME")
-        .unwrap_or_else(|_| String::from("http"))
-        .to_lowercase()
-    {
-        x if x == "https" || x == "http" || x == "http_https" => x,
-        x if x == "unix_http" => "http".to_string(),
-        x if x == "unix_https" => "https".to_string(),
-        _ => panic!("Bad 'LISTEN_SCHEME'"),
-    };
-    let host = env::var("PUB_URL").expect("PUB_URL env var is not set");
-    let public_url = format!("{}://{}", scheme, host);
-    format!("{}/auth/v1", public_url)
+    "http://localhost:8081/auth/v1".to_string()
 }
 
 #[allow(dead_code)]
@@ -132,7 +119,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         password: Some(PASSWORD.to_string()),
         pow: get_solved_pow().await,
         client_id: "rauthy".to_string(),
-        redirect_uri: redirect_uri.to_owned(),
+        redirect_uri: redirect_uri.to_string(),
         scopes: None,
         state: None,
         nonce: Some("MySuperNonce".to_string()),
@@ -153,7 +140,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let req_token = TokenRequest {
         grant_type: "authorization_code".to_string(),
         code: Some(code),
-        redirect_uri: Some(redirect_uri.to_owned()),
+        redirect_uri: Some(redirect_uri.to_string()),
         client_id: Some("rauthy".to_string()),
         client_secret: None,
         code_verifier: Some(challenge_plain.to_string()),
@@ -244,8 +231,7 @@ pub fn code_state_from_headers(res: Response) -> Result<(String, Option<String>)
 }
 
 pub fn init_client_bcl_uri() -> String {
-    let host = env::var("PUB_URL").expect("PUB_URL env var is not set");
-    format!("http://{host}/auth/v1/dev/backchannel_logout")
+    "http://localhost:8081/auth/v1/dev/backchannel_logout".to_string()
 }
 
 pub async fn get_solved_pow() -> String {

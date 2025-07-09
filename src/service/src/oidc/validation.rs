@@ -1,18 +1,18 @@
 use crate::token_set::{
     AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenScopes, TokenSet,
 };
+use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtRefreshClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::dpop_proof::DPoPProof;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_models::entity::users::User;
+use rauthy_models::rauthy_config::RauthyConfig;
 use tracing::debug;
 
 /// Validates request parameters for the authorization and refresh endpoints
@@ -34,6 +34,7 @@ pub async fn validate_auth_req_param(
 
     let header = client.get_validated_origin_header(req)?;
 
+    client.validate_enabled()?;
     client.validate_redirect_uri(redirect_uri)?;
 
     if client.challenge.is_some() {
@@ -62,18 +63,10 @@ pub async fn validate_refresh_token(
     // will be fetched inside this function
     client_opt: Option<Client>,
     refresh_token: &str,
-    data: &web::Data<AppState>,
     req: &HttpRequest,
 ) -> Result<(TokenSet, Option<String>), ErrorResponse> {
     let mut buf = Vec::with_capacity(256);
-    JwtToken::validate_claims_into(
-        refresh_token,
-        &data.issuer,
-        Some(JwtTokenType::Refresh),
-        0,
-        &mut buf,
-    )
-    .await?;
+    JwtToken::validate_claims_into(refresh_token, Some(JwtTokenType::Refresh), 0, &mut buf).await?;
     let claims: JwtRefreshClaims = serde_json::from_slice(&buf)?;
 
     let client = if let Some(c) = client_opt {
@@ -114,7 +107,7 @@ pub async fn validate_refresh_token(
     // validate that it exists in the db and invalidate it afterward
     let (_, validation_str) = refresh_token.split_at(refresh_token.len() - 49);
     let now = Utc::now().timestamp();
-    let exp_at_secs = now + data.refresh_grace_time as i64;
+    let exp_at_secs = now + RauthyConfig::get().vars.lifetimes.refresh_token_grace_time as i64;
     let rt_scope = if let Some(device_id) = &claims.common.did {
         let mut rt = RefreshTokenDevice::find(validation_str).await?;
 
@@ -164,13 +157,11 @@ pub async fn validate_refresh_token(
 
     let ts = TokenSet::from_user(
         &user,
-        data,
         &client,
         auth_time,
         dpop_fingerprint,
         None,
         rt_scope.map(TokenScopes),
-        // TODO think about if we maybe want to have an optional refresh token session binding
         None,
         AuthCodeFlow::No,
         DeviceCodeFlow::No,

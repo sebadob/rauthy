@@ -1,5 +1,5 @@
 // @ts-ignore
-const isDev = process.env.DEV_MODE === 'true';
+import {IS_DEV} from "$utils/constants.js";
 
 const langDefault = 'en';
 const themeDefault = 'body{--text:208 10 40;--text-high:208 20 20;--bg:228 2 98;--bg-high:228 8 84;--action:34 100 59;--accent:246 60 53;--error:15 100 37;--btn-text:white;--theme-sun:hsla(var(--action), .7);--theme-moon:hsla(var(--accent), .85);--border-radius:5px;}.theme-dark{--text:228 2 70;--text-high:228 8 90;--bg:208 90 4;--bg-high:208 30 19;--action:34 100 59;--accent:246 60 53;--error:15 100 37;--btn-text:hsl(var(--bg));--theme-sun:hsla(var(--action), .7);--theme-moon:hsla(var(--accent), .85);}@media (prefers-color-scheme: dark){body{--text:228 2 70;--text-high:228 8 90;--bg:208 90 4;--bg-high:208 30 19;--action:34 100 59;--accent:246 60 53;--error:15 100 37;--btn-text:hsl(var(--bg));--theme-sun:hsla(var(--action), .7);--theme-moon:hsla(var(--accent), .85);}.theme-light{--text:208 10 40;--text-high:208 20 20;--bg:228 2 98;--bg-high:228 8 84;--action:34 100 59;--accent:246 60 53;--error:15 100 37;--btn-text:white;--theme-sun:hsla(var(--action), .7);--theme-moon:hsla(var(--accent), .85);}}';
@@ -21,14 +21,13 @@ export async function handle({event, resolve}) {
     }
 
     if (path === '/auth/v1/i18n_email/%7B%7Blang%7D%7D') {
-        // TODO insert EN template here if the whole setup works
-        // This, for now, only fixes UI compilation.
+        // fixes static UI compilation.
         return new Response('{}');
     }
 
     return resolve(event, {
         transformPageChunk: ({html}) => {
-            if (isDev) {
+            if (IS_DEV) {
                 let locale = event.cookies.get('locale');
                 return html
                     .replace('%lang%', locale || langDefault)

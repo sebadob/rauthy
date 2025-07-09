@@ -4,9 +4,9 @@ use actix_web::{
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
 };
 use futures::future::LocalBoxFuture;
-use rauthy_common::constants::SEC_HEADER_BLOCK;
 use rauthy_common::utils::real_ip_from_svc_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::future::{Ready, ready};
 use std::rc::Rc;
 use tracing::{debug, warn};
@@ -80,7 +80,7 @@ where
                         .map(|h| h.to_str().unwrap_or_default())
                         .unwrap_or_default();
 
-                    debug!("sec-fetch-dest: {}, sec-fetch-mode: {}", dest, mode);
+                    debug!("sec-fetch-dest: {dest}, sec-fetch-mode: {mode}");
 
                     // allow images fetches like favicon
                     if dest == "image" && mode == "no-cors" {
@@ -100,14 +100,13 @@ where
 
                 let ip = real_ip_from_svc_req(&req)?;
                 warn!(
-                    "CSRF / Sec-Header violation from {} on path {}",
-                    ip,
+                    "CSRF / Sec-Header violation from {ip} on path {}",
                     req.path()
                 );
-                if *SEC_HEADER_BLOCK {
+                if RauthyConfig::get().vars.access.sec_header_block {
                     Err(Error::from(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
-                        "cross-origin request forbidden for this resource".to_string(),
+                        "cross-origin request forbidden for this resource",
                     )))
                 } else {
                     warn!(
@@ -139,10 +138,13 @@ fn is_path_csrf_exception(path: &str) -> bool {
                 || path == "/pow"
                 // make it possible to fetch public keys from browsers / SPAs
                 || path.starts_with("/oidc/certs")
+                || path == "/atproto/client_metadata"
                 // FedCM has its own validation mechanisms
                 || path.starts_with("/fed_cm/")
+                // Client Logos
                 || path.ends_with("/logo")
                 || path.starts_with("/.well-known/")
+                // Webauthn has additional validation via Origin internally
                 || path.contains("/webauthn/auth/")
         }
     }

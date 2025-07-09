@@ -42,7 +42,7 @@ impl LatestAppVersion {
                     .put(Cache::App, IDX_APP_VERSION, &slf, CACHE_TTL_APP)
                     .await
                 {
-                    error!("Inserting LatestAppVersion into cache: {:?}", err);
+                    error!("Inserting LatestAppVersion into cache: {err:?}");
                 }
 
                 Some(slf)
@@ -59,7 +59,7 @@ impl LatestAppVersion {
                 )
                 .await
             {
-                error!("Inserting LatestAppVersion into cache: {:?}", err);
+                error!("Inserting LatestAppVersion into cache: {err:?}");
             }
 
             None
@@ -99,7 +99,7 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
         let client = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(10))
             .timeout(Duration::from_secs(10))
-            .user_agent(format!("Rauthy v{} App Version Checker", RAUTHY_VERSION))
+            .user_agent(format!("Rauthy v{RAUTHY_VERSION} App Version Checker"))
             .build()?;
 
         let res = client
@@ -115,14 +115,14 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
                     let text = resp.text().await.unwrap_or_default();
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Internal,
-                        format!("Error fetching latest Rauthy App Version:\n{}", text),
+                        format!("Error fetching latest Rauthy App Version:\n{text}"),
                     ));
                 }
 
                 let json = resp.json::<value::Value>().await.map_err(|err| {
                     ErrorResponse::new(
                         ErrorResponseType::Internal,
-                        format!("decoding Github response JSON: {:?}", err),
+                        format!("decoding Github response JSON: {err:?}"),
                     )
                 })?;
 
@@ -132,7 +132,7 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
                     semver::Version::parse(v).map_err(|err| {
                         ErrorResponse::new(
                             ErrorResponseType::Internal,
-                            format!("parsing remote Rauthy App version. {:?}", err),
+                            format!("parsing remote Rauthy App version. {err:?}"),
                         )
                     })
                 } else {
@@ -146,10 +146,7 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
                     .get("html_url")
                     .map(|v| v.as_str().unwrap_or_default().to_string())
                     .unwrap_or_else(|| {
-                        format!(
-                            "https://github.com/sebadob/rauthy/releases/tag/v{}",
-                            tag_name
-                        )
+                        format!("https://github.com/sebadob/rauthy/releases/tag/v{tag_name}")
                     });
 
                 Ok((tag_name, html_url))
@@ -157,7 +154,7 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
 
             Err(err) => Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
-                format!("Error fetching the latest Rauthy App Version: {:?}", err),
+                format!("Error fetching the latest Rauthy App Version: {err:?}"),
             )),
         }
     }

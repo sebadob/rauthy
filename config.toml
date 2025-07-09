@@ -1,0 +1,2166 @@
+# Values in the `dev` category will not work in release builds.
+[dev]
+# If 'true', the data store will be initialized with DEV values.
+# The default password for 'admin@localhost' is '123SuperSafe'
+# !!! DO NOT USE IN PRODUCTION !!!
+#
+# default: false
+# overwritten by: DEV_MODE
+dev_mode = true
+
+# Can be set to 'true' during local development to allow an HTTP
+# scheme for the DPoP 'htu' claim Will only be applied if
+# `dev_mode = true` as well.
+#
+#!!! DO NOT USE IN PRODUCTION !!!
+#
+# default: false
+# overwritten by: DEV_DPOP_HTTP
+dpop_http = true
+
+# Can be set to `true` during local dev and testing to issue
+# insecure cookies
+#
+# default: false
+# overwritten by: HQL_INSECURE_COOKIE
+insecure_cookie = false
+
+# This will replace the redirect port for the auth provider
+# callback URI to make the login flow work, when the UI is
+# running in dev mode. Without this set, the redirect URI will
+# always be Rauthys PUB_URL, which does only work when the UI
+# is being served with SSR.
+# You only need this value, if you want to work with the auth
+# provider login while running the UI in dev mode. Point it to
+# the full address, where ever your UI is running.
+# This will only be respected when `DEV_MODE == true` as well.
+#
+# overwritten by: DEV_MODE_PROVIDER_CALLBACK_URL
+provider_callback_url = 'localhost:5173'
+
+[access]
+# If set to true, the `/userinfo` endpoint will do additional
+# validations. The non-strict mode will fetch the user by id from
+# the `sub` claim and make sure it still exists and is enabled. The
+# strict validation will do additional database fetches and
+# validates every possible value. Additionally, it will look up a
+# possibly linked user device from the `did` claim and make sure it
+# still exists. It will also extract the `client_id` the token has
+# been originally issued for from the `azp` claim, fetch it and
+# make sure it still exists and is enabled.
+#
+# If you need CORS headers on the /userinfo endpoint, you must
+# enable strict mode, because otherwise the additional data would
+# be missing.
+#
+# If you don't need the extra validations, you can set this to
+# `false` to save some resources, if your clients to a lot of
+# `/userinfo` lookups.
+#
+# default: true
+# overwritten by: USERINFO_STRICT
+userinfo_strict = true
+
+# Can be set to `true` to disable authorization on `/oidc/introspect.
+# This should usually never be done, but since the auth on that
+# endpoint is not really standardized, you may run into issues with
+# your client app. If so, please open an issue about it.
+#
+# default: false
+# overwritten by: DANGER_DISABLE_INTROSPECT_AUTH
+danger_disable_introspect_auth = false
+
+# By default, `refresh_token`s will have an `nbf` claim, making them
+# valid at `access_token_lifetime - 60 seconds`. Any usage before
+# this time will result in invalidation of not only the token itself,
+# but also all other linked sessions and tokens for this user to
+# prevent damage in case a client leaked the token by accident.
+# However, there are bad / lazy client implementations that do not
+# respect either `nbf` in the `refresh_token`, or the `exp` claim in
+# `access_token` and will refresh early while the current
+# access_token is still valid. This does not only waste resources
+# and time, but also makes it possible to have multiple valid
+# `access_token`s at the same time for the same session. You should
+# only disable the `nbf` claim if you have a good reason to do so.
+# If disabled, the `nbf` claim will still exist, but always set to
+# *now*.
+#
+# default: false
+# overwritten by: DISABLE_REFRESH_TOKEN_NBF
+disable_refresh_token_nbf = false
+
+# If set to true, a violation inside the CSRF protection middleware
+# based on Sec-* headers will block invalid requests. Usually you
+# always want this enabled. You may only set it to false during the
+# first testing phase if you experience any issues with an already
+# existing Rauthy deployment. In future releases, it will not be
+# possible to disable these blocks.
+#
+# default: true
+# overwritten by: SEC_HEADER_BLOCK
+sec_header_block = true
+
+# If set to 'true', this will validate the remote peer IP address with
+# each request and compare it with the IP which was used during the
+# initial session creation / login. If the IP is different, the session
+# will be rejected.
+#
+# This is a security hardening and prevents stolen access credentials,
+# for instance if an attacker might have copied the encrypted session
+# cookie and the XSRF token from the local storage from a user.
+# However, this event is really unlikely, since it may only happen if
+# an attacker has direct access to the machine itself.
+#
+# If your users are using mobile networks and get new IP addresses all
+# the time, this means they have to do a new login each time. This is
+# no big deal at all with Webauthn / FIDO keys anyway and should not
+# be a reason to deactivate this feature.
+#
+# CAUTION: If you are running behind a reverse proxy which does not
+# provide the X-FORWARDED-FOR header correctly, or you have the
+# `proxy_mode` in this config disabled, this feature will not work.
+# You can validate the IPs for each session in the Admin UI. If these
+# are correct, your setup is okay.
+#
+# default: true
+# overwritten by: SESSION_VALIDATE_IP
+session_validate_ip = true
+
+# By default, Rauthy will log a warning into the logs, if an active
+# password reset form is being access multiple times from different
+# hosts. You can set this to `true` to actually block any following
+# request after the initial one. This hardens the security of the
+# password reset form a bit more, but will create problems with
+# E-Mail providers like Microsoft, which cans the customers E-Mails
+# and even uses links inside, which make them unusable with this set
+# to `true`.
+#
+# This feature works by setting an encrypted cookie to the host
+# whichever opens the password reset form for the very first time.
+# All subsequent requests either need to provide that cookie or would
+# otherwise be rejected.
+#
+# default: false
+# overwritten by: PASSWORD_RESET_COOKIE_BINDING
+password_reset_cookie_binding = false
+
+# Can be set to extract the remote client peer IP from a custom
+# header name instead of the default mechanisms. This is needed
+# when you are running behind a proxy which does not set the
+# `X-REAL-IP` or `X-FORWARDED-FOR` headers correctly, or for
+# instance when you proxy your requests through a CDN like
+# Cloudflare, which adds custom headers in this case. For instance,
+# if your requests are proxied through cloudflare, your would set
+# `CF-Connecting-IP`.
+#
+# overwritten by: PEER_IP_HEADER_NAME
+peer_ip_header_name = 'CF-Connecting-IP'
+
+# You can set different security levels for Rauthy's cookies. The
+# safest option would be 'host', but may not be desirable when you
+# host an application on the same origin behind a reverse proxy.
+# In this case you might want to restrict to 'secure', which will
+# then take the `cookie_set_path` from below into account. The last
+# option is 'danger-insecure' which really should never be used
+# unless you are just testing on localhost.
+#
+# default: host
+# overwritten by: COOKIE_MODE
+cookie_mode = 'danger-insecure'
+
+# If set to 'true', Rauthy will bind the cookie to the `/auth`
+# path. You may want to change this only for very specific reasons
+# and if you are in such a situation, where you need this, you will
+# know it. Otherwise, don't change this value.
+#
+# default: true
+# overwritten by: COOKIE_SET_PATH
+cookie_set_path = true
+
+# Sets the limit in characters for the maximum JWT token length that
+# will be accepted when validating it. The default of 4096 is high
+# enough that you should never worry about this value. A typical
+# `id_token` with quite a few additional custom attributes and scopes,
+# signed with RS512, will usually be below 2000 characters.
+#
+# Only if you create very big tokens and you get errors on the
+# `/userinfo` for instance, you might want to increase this value.
+# Otherwise, don't worry about it.
+#
+# default: 4096
+# overwritten by: TOKEN_LEN_LIMIT
+token_len_limit = 4096
+
+# If set to `true`, the `/auth/v1/whoami` endpoint will return all
+# request headers. Only the `Cookie` and Rauthys internal CSRF headers
+# will be hidden. Since this has the potential to leak sensitive
+# information, depending on you networking, this is disabled by default.
+#
+# default: false
+# overwritten by: WHOAMI_HEADERS
+whoami_headers = true
+
+[atproto]
+# Set to `true` to enable the ATProto provider. If the public URL is
+# 'localhost' it should be changed to '127.0.0.1', if `dev_mode = true`
+# this also applies for the `provider_callback_url`.
+#
+# default: false
+# overwritten by: ATPROTO_ENABLE
+#enable = true
+
+[auth_headers]
+# You can enable authn/authz headers which would be added to the
+# response of the `/auth/v1/oidc/forward_auth` endpoint. When set to
+# `true`, the headers below will be added to authenticated requests.
+# These could be used on legacy downstream applications, that don't
+# support OIDC on their own.
+#
+# However, be careful when using this, since this kind of authn/authz
+# has a lot of pitfalls out of the scope of Rauthy.
+#
+# default: false
+# overwritten by: AUTH_HEADERS_ENABLE
+enable = true
+
+# Configure the header names being used for the different values. You
+# can change them to your needs, if you cannot easily change your
+# downstream apps.
+#
+# default: x-forwarded-user
+# overwritten by: AUTH_HEADER_USER
+user = 'x-forwarded-user'
+# default: x-forwarded-user-roles
+# overwritten by: AUTH_HEADER_ROLES
+roles = 'x-forwarded-user-roles'
+# default: x-forwarded-user-groups
+# overwritten by: AUTH_HEADER_GROUPS
+groups = 'x-forwarded-user-groups'
+# default: x-forwarded-user-email
+# overwritten by: AUTH_HEADER_EMAIL
+email = 'x-forwarded-user-email'
+# default: x-forwarded-user-email-verified
+# overwritten by: AUTH_HEADER_EMAIL_VERIFIED
+email_verified = 'x-forwarded-user-email-verified'
+# default: x-forwarded-user-family-name
+# overwritten by: AUTH_HEADER_FAMILY_NAME
+family_name = 'x-forwarded-user-family-name'
+# default: x-forwarded-user-given-name
+# overwritten by: AUTH_HEADER_GIVEN_NAME
+given_name = 'x-forwarded-user-given-name'
+# default: x-forwarded-user-mfa
+# overwritten by: AUTH_HEADER_MFA
+mfa = 'x-forwarded-user-mfa'
+
+[backchannel_logout]
+# The maximum amount of retries made for a failed backchannel logout.
+# Failed backchannel logouts will be retried every 60 - 90 seconds
+# from all cluster nodes. The timeout between retries is randomized
+# to avoid overloading clients. It will be executed on each cluster
+# member to increase the chance of a successful logout in case of
+# network segmentations.
+#
+# default: 100
+# overwritten by: BACKCHANNEL_LOGOUT_RETRY_COUNT
+retry_count = 100
+
+# The lifetime / validity for Logout Tokens issued by Rauthy in
+# seconds. These Logout Tokens are being generated during OIDC
+# Backchannel Logout requests to configured clients. The token
+# lifetime should be as short as possible and at most 120 seconds.
+#
+# default: 30
+# overwritten by: LOGOUT_TOKEN_LIFETIME
+token_lifetime = 30
+
+# You can allow a clock skew during the validation of Logout Tokens,
+# when Rauthy is being used as a client for an upstream auth
+# provider that uses backchannel logout.
+#
+# The allowed skew will be in seconds and a value of e.g. 5 would
+# mean, that 5 seconds are added to the `iat` and `exp` claim
+# validations and expand the range.
+#
+# default: 5
+# overwritten by: LOGOUT_TOKEN_ALLOW_CLOCK_SKEW
+allow_clock_skew = 5
+
+# The maximum allowed lifetime for Logout Tokens. This value is
+# a security check for upstream auth providers. If Rauthy
+# receives a Logout Token, it will check and validate, that the
+# difference between `iat` and `exp` is not greater than
+# `allowed_token_lifetime`. This means Rauthy will reject Logout
+# Tokens from clients with a way too long validity and therefore
+# poor implementations. The RFC states that tokens should be
+# valid for at most 120 seconds.
+#
+# default: 120
+# overwritten by: LOGOUT_TOKEN_ALLOWED_LIFETIME
+allowed_token_lifetime = 120
+
+[bootstrap]
+# If set, the email of the default admin will be changed during
+# the initialization of an empty production database.
+#
+# default: 'admin@localhost'
+# overwritten by: BOOTSTRAP_ADMIN_EMAIL
+admin_email = 'admin@localhost'
+
+# If set, this plain text password will be used for the initial
+# admin password instead of generating a random password.
+#
+# default: random -> see logs on first start
+# overwritten by: BOOTSTRAP_ADMIN_PASSWORD_PLAIN
+password_plain = '123SuperSafe'
+
+# If set, this will take the Argon2ID hashed password during the
+# initialization of an empty production database. If both
+# `password_plain` and `pasword_argon2id` are set, the hashed
+# version will always be prioritized.
+#
+# default: random -> see logs on first start
+# overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
+pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+
+# You can provide an API Key during the initial prod database
+# bootstrap. This key must match the format and pass validation.
+# You need to provide it as a base64 encoded JSON in the format:
+#
+# ```
+# struct ApiKeyRequest {
+#     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
+#     name: String,
+#     /// Unix timestamp in seconds in the future (max year 2099)
+#     exp: Option<i64>,
+#     access: Vec<ApiKeyAccess>,
+# }
+#
+# struct ApiKeyAccess {
+#     group: AccessGroup,
+#     access_rights: Vec<AccessRights>,
+# }
+#
+# enum AccessGroup {
+#     Blacklist,
+#     Clients,
+#     Events,
+#     Generic,
+#     Groups,
+#     Roles,
+#     Secrets,
+#     Sessions,
+#     Scopes,
+#     UserAttributes,
+#     Users,
+# }
+#
+# #[serde(rename_all="lowercase")]
+# enum AccessRights {
+#     Read,
+#     Create,
+#     Update,
+#     Delete,
+# }
+# ```
+#
+# You can use the `api_key_example.json` from `/` as
+# an example. Afterward, just
+# `base64 api_key_example.json | tr -d '\n'`
+#
+# overwritten by: BOOTSTRAP_API_KEY
+api_key = 'ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY2VzcyI6IFsKICAgIHsKICAgICAgImdyb3VwIjogIkNsaWVudHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgImdyb3VwIjogIlJvbGVzIiwKICAgICAgImFjY2Vzc19yaWdodHMiOiBbCiAgICAgICAgInJlYWQiLAogICAgICAgICJjcmVhdGUiLAogICAgICAgICJ1cGRhdGUiLAogICAgICAgICJkZWxldGUiCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJncm91cCI6ICJHcm91cHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfQogIF0KfQ=='
+
+# The secret for the above defined bootstrap API Key.
+# This must be at least 64 alphanumeric characters long.
+# You will be able to use that key afterward with setting
+# the `Authorization` header:
+#
+# `Authorization: API-Key <your_key_name_from_above>$<this_secret>`
+#
+# overwritten by: BOOTSTRAP_API_KEY_SECRET
+api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh'
+
+[cluster]
+# Can be set to 'k8s' to try to split off the node id from the hostname
+# when Hiqlite is running as a StatefulSet inside Kubernetes.
+#
+# default: unset
+# overwritten by: HQL_NODE_ID_FROM
+#node_id_from = "k8s"
+
+# The node id must exist in the nodes and there must always be
+# at least a node with ID 1
+# Will be ignored if `node_id_from = k8s`
+#
+# At least `node_id_from` or `node_id` are required.
+#
+# default: 0 (invalid)
+# overwritten by: HQL_NODE_ID
+node_id = 1
+
+# All cluster member nodes. For a single instance deployment,
+# `"1 localhost:8100 localhost:8200"` will work just fine.
+# Each array value must have the following format:
+# `id addr_raft addr_api`
+#
+# default: ["1 localhost:8100 localhost:8200"]
+# overwritten by: HQL_NODES
+nodes = [
+    "1 localhost:8100 localhost:8200",
+    #    "2 localhost:8101 localhost:8201",
+    #    "3 localhost:8102 localhost:8202",
+]
+
+# The data dir hiqlite will store raft logs and state machine data in.
+#
+# default: data
+# overwritten by: HQL_DATA_DIR
+#data_dir = "data"
+
+# The file name of the SQLite database in the state machine folder.
+#
+# default: hiqlite.db
+# overwritten by: HQL_FILENAME_DB
+#filename_db = "hiqlite.db"
+
+# If set to `true`, all SQL statements will be logged for debugging
+# purposes.
+#
+# default: false
+# overwritten by: HQL_LOG_STATEMENTS
+log_statements = false
+
+# The size of the internal cache for prepared statements.
+#
+# default: 1000
+#prepared_statement_cache_capacity = 1000
+
+# The size of the pooled connections for local database reads.
+#
+# Do not confuse this with a pool size for network databases, as it
+# is much more efficient. You can't really translate between them,
+# because it depends on many things, but assuming a factor of 10 is
+# a good start. This means, if you needed a (read) pool size of 40
+# connections for something like a postgres before, you should start
+# at a `read_pool_size` of 4.
+#
+# Keep in mind that this pool is only used for reads and writes will
+# travel through the Raft and have their own dedicated connection.
+#
+# default: 4
+# overwritten by: HQL_READ_POOL_SIZE
+#read_pool_size = 4
+
+# Setting for Raft Log syncing / flushing.
+#
+# This value is probably the most important, depending on your needs.
+# It has a huge impact on both performance and consistency.
+#
+# You can set 3 different levels:
+# - immediate
+# - immediate_async
+# - interval_<time_ms> (e.g. interval_200)
+#
+# If you run a single instance "Cluster", you most probably want
+# `immediate` to have the highest degree of consistency. If set
+# to `immediate`, the Raft will block until data has been flushed
+# to disk. This is especially important for a single instance
+# deployment, because there is no way to recover state from other
+# nodes or re-sync a maybe corrupted WAL file.
+# `immediate` has a very huge negative impact on throughput, and
+# it puts a lot of stress on your disk, which is important to
+# consider for SSDs.
+#
+# `immediate_async` puts the same amount of stress on your SSD
+# and flushed all buffers to disk immediately after a single
+# Raft Log was saved. Unlike `immediate` however, it does not
+# wait for completion and directly returns `success` to the
+# Raft Engine. You have a bit less consistency guarantees in
+# exchange for basically the same throughput as with `interval`
+# syncing.
+#
+# The `interval_<ms>` option will not flush immediately. Flushes
+# will be triggered by an external ticker task top flush buffers
+# every <ms> ms, and then only if buffers are dirty, meaning if
+# any data has been updated since the last sync. This setting
+# has the highest throughput and puts the lowest amount of stress
+# on your SSD.
+# CAUTION: You probably never want to use this setting for a
+# single instance, since it may be the case that if you are
+# unlucky and your app crashes before buffers are synced, that
+# your WAL file might end up being corrupted. Even though very
+# unlikely in real world (can be force-produced though), you
+# would need to re-sync from a healthy cluster member in such
+# a case, if the automactic WAL repair does not succeed.
+#
+# default: immediate_async
+# overwritten by: HQL_LOG_SYNC
+log_sync = "interval_200"
+
+# Hiqlite WAL files (when not using the `rocksdb` feature) will
+# always have a fixed size, even when they are still "empty", to
+# reduce disk operations while writing. You can set the WAL size
+# in bytes. The default value is 2 MB, while the minimum size is
+# 8 kB.
+#
+# default: 2097152
+# overwritten by: HQL_WAL_SIZE
+#wal_size = 2097152
+
+# Set to `false` to store Cache WAL files + Snapshots in-memory only.
+# If you run a Cluster, a Node can re-sync cache data after a restart.
+# However, if you restart too quickly or shut down the whole cluster,
+# all your cached data will be gone.
+# In-memory only hugegly increases the throughput though, so it
+# depends on your needs, what you should prefer.
+#
+# default: true
+# overwritten by: HQL_CACHE_STORAGE_DISK
+cache_storage_disk = true
+
+# Sets the limit when the Raft will trigger the creation of a new
+# state machine snapshot and purge all logs that are included in
+# the snapshot.
+# Higher values can achieve more throughput in very write heavy
+# situations but will end up in more disk usage and longer
+# snapshot creations / log purges.
+#
+# default: 10000
+# overwritten by: HQL_LOGS_UNTIL_SNAPSHOT
+#logs_until_snapshot = 10000
+
+# The artificial shutdown delay to add in multi-node environments.
+# This value is being added before finally shutting down a node
+# to make sure rolling releases can be executed graceful with
+# proper leader switches. You may want to increase this value if
+# you are in an environment with huge in-memory caches and you
+# want to provide a bit more headroom for the snapshot replication
+# after restarts.
+#
+# default: 5000
+# overwritten by: HQL_SHUTDOWN_DELAY_MILLS
+#shutdown_delay_millis = 5000
+
+# If given, these keys / certificates will be used to establish
+# TLS connections between nodes.
+#
+# values are optional, overwritten by: HQL_TLS_{RAFT|API}_{KEY|CERT}
+# overwritten by: HQL_TLS_RAFT_KEY
+#tls_raft_key = "tls/tls.key"
+# overwritten by: HQL_TLS_RAFT_CERT
+#tls_raft_cert = "tls/tls.crt"
+#tls_raft_danger_tls_no_verify = true
+
+# overwritten by: HQL_TLS_API_KEY
+#tls_api_key = "tls/tls.key"
+# overwritten by: HQL_TLS_RAFT_KEY
+#tls_api_cert = "tls/tls.crt"
+#tls_api_danger_tls_no_verify = true
+
+# Secrets for Raft internal authentication as well as for the API.
+# These must be at least 16 characters long and you should provide
+# different ones for both variables.
+#
+# default: not set - required
+# overwritten by: HQL_SECRET_RAFT
+secret_raft = "SuperSecureSecret1337"
+# default: not set - required
+# overwritten by: HQL_SECRET_API
+secret_api = "SuperSecureSecret1337"
+
+# Configures the initial delay in seconds that should be applied
+# to `<API>/health` checks. During the first X seconds after node
+# start, health checks will always return true to solve a chicken-
+# and-egg problem when you want to cold-start a cluster while
+# relying on `readinessProbe` checks.
+#
+# default: 30
+#health_check_delay_secs = 30
+
+# When the auto-backup task should run.
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 30 2 * * * *"
+# overwritten by: HQL_BACKUP_CRON
+#backup_cron = "0 30 2 * * * *"
+
+# Backups older than the configured days will be cleaned up on S3
+# after the backup cron job `backup_cron`.
+#
+# default: 30
+# overwritten by: HQL_BACKUP_KEEP_DAYS
+#backup_keep_days = 30
+
+# Backups older than the configured days will be cleaned up locally
+# after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
+#
+# default: 30
+# overwritten by: HQL_BACKUP_KEEP_DAYS_LOCAL
+#backup_keep_days_local = 30
+
+# If you ever need to restore from a backup, the process is simple.
+# 1. Have the cluster shut down. This is probably the case anyway, if
+#    you need to restore from a backup.
+# 2. Provide a backup file name on S3 storage with the
+#    `HQL_BACKUP_RESTORE` value with prefix `s3:` (encrypted), or a file
+#    on disk (plain sqlite file) with the prefix `file:`.
+# 3. Start up the cluster again.
+# 4. After the restart, make sure to remove the HQL_BACKUP_RESTORE
+#    env value.
+#
+# CAUTION: can only be set via ENV VAR temporarily
+#HQL_BACKUP_RESTORE=
+
+# The Hiqlite backup restore process checks the `_metadata` table
+# in backups as an integrity check. If you however want to "restore"
+# from an already existing default SQLite file, you can disable
+# this validation to make the restore process succeed anyway.
+# To do so, set `HQL_BACKUP_SKIP_VALIDATION=true`.
+#
+# CAUTION: can only be set via ENV VAR temporarily
+#HQL_BACKUP_SKIP_VALIDATION=
+
+# Access values for the S3 bucket where backups will be pushed to.
+# overwritten by: HQL_S3_URL
+#s3_url = "https://s3.example.com"
+# overwritten by: HQL_S3_BUCKET
+#s3_bucket = "my_bucket"
+# overwritten by: HQL_S3_REGION
+#s3_region = "my_region"
+# overwritten by: HQL_S3_PATH_STYLE
+#s3_path_style = true
+# overwritten by: HQL_S3_KEY
+#s3_key = "my_key"
+# overwritten by: HQL_S3_SECRET
+#s3_secret = "my_secret"
+
+# The password for the dashboard as b64 encoded Argon2ID hash.
+# If left empty, the Dashboard will not be exposed.
+#
+# '123SuperMegaSafe' in this example
+# overwritten by: HQL_PASSWORD_DASHBOARD
+password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
+
+# Can be set to `true` during local dev and testing to issue
+# insecure cookies
+#
+# default: false
+# overwritten by: HQL_INSECURE_COOKIE
+insecure_cookie = true
+
+# You can reset the Raft Logs + Metadata when set to
+# `true`. This can be helpful, if you e.g. run a single
+# instance "cluster" and encountered an unrecoverable
+# error at startup, like e.g. a corrupted Raft Logs volume.
+# If you have an HA cluster though, in such a situation,
+# a volume cleanup for the broken node and clean cluster
+# re-join + sync is always preferred and the safer option.
+#
+# Another situation where this option can be used, if you
+# want to trigger a Log ID roll-over and for some reason,
+# you either cannot or do not want to apply a backup to
+# achieve this. This may only be necessary if your Log ID
+# almost reached `18446744073709551615`, which in reality
+# will probably never happen in less than 10 years.
+# Applying a backup at that point is still the safer
+# option, because it is not possible to make a mistake,
+# as long as you wait for it to finish.
+#
+# Be VERY CAREFUL with this option! If used incorrectly,
+# you can destroy a Raft cluster and end up with an
+# inconsistent state, so your only chance last chance
+# is to either re-create the whole cluster, or apply a
+# backup.
+#
+# This option will leave the state machine in place,
+# but delete Raft WAL, Metadata and Snapshots!
+# Local backups will be left in place.
+#
+# This option should be seen as a last resort.
+# USE WITH CARE!
+#
+# !!!
+# This value only exists here for completeness.
+# You can only set it via ENV to be able to remove it
+# immediately again after a start.
+# !!!
+#
+# default: false
+#HQL_DANGER_RAFT_STATE_RESET=true
+
+[database]
+# Hiqlite is the default database for Rauthy.
+# You can opt-out and use Postgres instead by setting this
+# value to `false`. Rauthy will then read the `pg_*` values
+# below to establish a Postgres connection.
+#
+# default: true
+# overwritten by: HIQLITE
+hiqlite = true
+
+# Defines the time in seconds after which the `/health` endpoint
+# includes HA quorum checks. The initial delay solves problems
+# like Kubernetes StatefulSet starts that include the health
+# endpoint in the scheduling routine. In these cases, the scheduler
+# will not start other Pods if the first does not become healthy.
+#
+# This is a chicken-and-egg problem which the delay solves.
+# There is usually no need to adjust this value.
+#
+# default: 30
+# overwritten by: HEALTH_CHECK_DELAY_SECS
+health_check_delay_secs = 30
+
+# If you set `hiqlite = false` and want to use Postgres as your
+# database, you need to set the following variables.
+# These will be ignored as long as `hiqlite = true`.
+#
+# overwritten by: PG_HOST
+pg_host = 'localhost'
+# default: 5432
+# overwritten by: PG_PORT
+pg_port = 5432
+# overwritten by: PG_USER
+pg_user = 'rauthy'
+# overwritten by: PG_PASSWORD
+pg_password = '123SuperSafe'
+# default: rauthy
+# overwritten by: PG_DB_NAME
+pg_db_name = 'rauthy'
+
+# If your database uses a self-signed certificate, which cannot
+# be verified, you might want to set this to `true`.
+#
+# default: false
+# overwritten by: PG_TLS_NO_VERIFY
+pg_tls_no_verify = true
+
+# Max DB connections for the Postgres pool.
+#
+# default: 20
+# overwritten by: PG_MAX_CONN
+pg_max_conn = 20
+
+# If specified, the currently configured Database will be
+# DELETED and OVERWRITTEN with a migration from the given
+# database with this variable. Can be used to migrate between
+# different databases.
+# To migrate from Hiqlite, use the `sqlite:path/to/database.sqlite`
+# format. To migrate from postgres, just set `postgres` and then
+# all the
+# `MIGRATE_PG_*` values below.
+#
+# !!! USE WITH CARE !!!
+#
+# Cannot be set in this config, MUST be an ENV var!
+# Exists here only for completeness.
+#MIGRATE_DB_FROM = sqlite:data/state_machine/db/hiqlite.db
+#MIGRATE_DB_FROM = postgresql
+
+# If `migrate_db_from = postgres`, these values are mandatory to
+# open the database connection to the Postgres database you want
+# to migrate away from.
+# overwritten by: MIGRATE_PG_HOST
+migrate_pg_host = 'localhost'
+# default: 5432
+# overwritten by: MIGRATE_PG_PORT
+migrate_pg_port = 5432
+# overwritten by: MIGRATE_PG_USER
+migrate_pg_user = 'rauthy'
+# overwritten by: MIGRATE_PG_PASSWORD
+migrate_pg_password = '123SuperSafe'
+# default: rauthy
+# overwritten by: MIGRATE_PG_DB_NAME
+migrate_pg_db_name = 'rauthy'
+
+# The interval in minutes in which the scheduler for expired
+# users should run. If this finds expired users, it invalidates
+# all existing sessions and refresh tokens for this user.
+#
+# default: 60
+# overwritten by: SCHED_USER_EXP_MINS
+sched_user_exp_mins = 60
+
+# The threshold in minutes after which time the user expiry
+# scheduler should automatically clean up expired users. If not
+# set at all, expired users will never be cleaned up automatically.
+#
+# default: disabled / not set
+# overwritten by: SCHED_USER_EXP_DELETE_MINS
+sched_user_exp_delete_mins = 7200
+
+[device_grant]
+# The lifetime in secods  of auth codes for the Device Authorization
+# Grant flow. You may increase the default of 300 seconds, if you have
+# "slow users" and they are simply not fast enough with the verification.
+#
+# default: 300
+# overwritten by: DEVICE_GRANT_CODE_LIFETIME
+code_lifetime = 300
+
+# The length of the `user_code` the user has to enter manually for
+# auth request validation. This must be < 64 characters.
+#
+# default: 8
+# overwritten by: DEVICE_GRANT_USER_CODE_LENGTH
+user_code_length = 8
+
+# Specifies the rate-limit in seconds per IP for starting new Device
+# Authorization Grant flows. This is especially important for public
+# clients, because a code request for this flow will actually create
+# cached data. If this happened on an unrestricted, open endpoint,
+# the application could easily be DoS'ed.
+# If you use the `device_code` grant with confidential clients only,
+# you can leave this unset, which will not rate-limit the endpoint.
+#
+# default: not set
+# overwritten by: DEVICE_GRANT_RATE_LIMIT
+rate_limit = 1
+
+# The interval in seconds which devices are told to use when they
+# poll the token endpoint during Device Authorization Grant flow.
+#
+# default: 5
+# overwritten by: DEVICE_GRANT_POLL_INTERVAL
+poll_interval = 5
+
+# You can define a global lifetime in hours for refresh tokens issued
+# from a Device Authorization Grant flow. You might want to have a
+# higher lifetime than normal refresh tokens, because they might be
+# used in IoT devices which may be offline for longer periods of time.
+#
+# default: 72
+# overwritten by: DEVICE_GRANT_REFRESH_TOKEN_LIFETIME
+refresh_token_lifetime = 72
+
+[dpop]
+# May be set to 'false' to disable forcing the usage of DPoP nonce's.
+#
+# default: true
+# overwritten by: DPOP_FORCE_NONCE
+force_nonce = true
+
+# Lifetime in seconds for DPoP nonces. These are used to limit the
+# lifetime of a client's DPoP proof. Do not set lower than 30 seconds
+# to avoid too many failed client token requests.
+#
+# default: 900
+# overwritten by: DPOP_NONCE_EXP
+nonce_exp = 900
+
+[dynamic_clients]
+# If set to `true`, dynamic client registration will be enabled.
+# Only activate this, if you really need it, and you know, what
+# you are doing. The dynamic client registration without further
+# restriction will allow anyone to register new clients, even
+# bots and spammers, and this may create security issues, if not
+# handled properly and your users just login blindly to any client
+# they get redirected to.
+#
+# default: false
+# overwritten by: ENABLE_DYN_CLIENT_REG
+enable = true
+
+# If specified, this secret token will be expected during
+# dynamic client registrations to be given as a
+# `Bearer <DYN_CLIENT_REG_TOKEN>` token. Needs to be communicated
+# in advance.
+#
+# default: <empty>
+# overwritten by: DYN_CLIENT_REG_TOKEN
+reg_token = '123SuperSafeToken'
+
+# The default token lifetime in seconds for a dynamic client,
+# that will be set during the registration.
+# This value can be modified manually after registration via
+# the Admin UI like for any other client.
+#
+# default: 1800
+# overwritten by: DYN_CLIENT_DEFAULT_TOKEN_LIFETIME
+default_token_lifetime = 1800
+
+# If set to 'true', client secret and registration token will be
+# automatically rotated each time a dynamic client updates itself
+# via the PUT endpoint. This is the only way that secret rotation
+# could be automated safely.
+# However, this is not mandatory by RFC and it may lead to errors,
+# if the dynamic clients are not implemented properly to check for
+# and update their secrets after they have done a request.
+# If you get into secret-problems with dynamic clients, you should
+# update the client to check for new secrets, if this is under your
+# control. If you cannot do anything about it, you might set this
+# value to 'false' to disable secret rotation.
+#
+# default: true
+# overwritten by: DYN_CLIENT_SECRET_AUTO_ROTATE
+secret_auto_rotate = true
+
+# This scheduler will be running in the background, if
+# `ENABLE_DYN_CLIENT_REG=true`. It will auto-delete dynamic clients,
+# that have been registered and not been used in the following
+# `DYN_CLIENT_CLEANUP_THRES` hours.
+# Since a dynamic client should be used right away, this should never
+# be a problem with "real" clients, that are not bots or spammers.
+#
+# The interval is specified in minutes.
+# default: 60
+# overwritten by: DYN_CLIENT_CLEANUP_INTERVAL
+cleanup_interval = 60
+
+# The threshold for newly registered dynamic clients cleanup, if
+# not being used within this timeframe. This is a helper to keep
+# the database clean, if you are not using any `DYN_CLIENT_REG_TOKEN`.
+# The threshold should be specified in minutes. Any client, that has
+# not been used within this time after the registration will be
+# automatically deleted.
+#
+# Note: This scheduler will only run, if you have not set any
+# `DYN_CLIENT_REG_TOKEN`.
+#
+# default: 60
+# overwritten by: DYN_CLIENT_CLEANUP_MINUTES
+cleanup_minutes = 60
+
+# The rate-limiter timeout for dynamic client registration.
+# This is the timeout in seconds which will prevent an IP from
+# registering another dynamic client, if no `DYN_CLIENT_REG_TOKEN`
+# is set. With a `DYN_CLIENT_REG_TOKEN`, the rate-limiter will not
+# be applied.
+#
+# default: 60
+# overwritten by: DYN_CLIENT_RATE_LIMIT_SEC
+rate_limit_sec = 60
+
+[email]
+# This contact information will be added to the `rauthy`client
+# within the anti lockout rule with each new restart.
+#
+# overwritten by: RAUTHY_ADMIN_EMAIL
+rauthy_admin_email = 'admin@localhost'
+
+# Will be used as the prefix for the E-Mail subject for each E-Mail
+# that will be sent out to a client.
+# This can be used to further customize your deployment.
+#
+# default: "Rauthy IAM"
+# overwritten by: EMAIL_SUB_PREFIX
+sub_prefix = 'Rauthy IAM'
+
+# Rauthy will force TLS and try a downgrade to STARTTLS, if
+# TLS fails. It will never allow an unencrypted connection.
+# You might want to set `SMTP_DANGER_INSECURE=true` if you
+# need this for local dev.
+#
+# overwritten by: SMTP_URL
+smtp_url = 'localhost'
+# optional, default will be used depending on TLS / STARTTLS
+# overwritten by: SMTP_PORT
+#smtp_port =
+# overwritten by: SMTP_USERNAME
+#smtp_username =
+# overwritten by: SMTP_PASSWORD
+#smtp_password =
+# Format: "Rauthy <rauthy@localhost>"
+# default: "Rauthy <rauthy@localhost>"
+# overwritten by: SMTP_FROM
+#smtp_from = 'Rauthy <rauthy@localhost>'
+
+# The number of retries that should be done for connecting to
+# the given SMTP_URL.
+# When these retries are exceeded without success, Rauthy will
+# panic and exit, so no E-Mail can get lost silently because of
+# a missing SMTP connection.
+#
+# default: 3
+# overwritten by: SMTP_CONNECT_RETRIES
+connect_retries = 3
+
+# You can set this to `true` to allow an unencrypted and
+# unauthenticated SMTP connection to an SMTP relay on your localhost
+# or for development purposes.
+# When set to `true`, `SMTP_USERNAME` and `SMTP_PASSWORD` will be
+# ignored and SMTP_PORT will default to 1025.
+#
+# default: false
+# overwritten by: SMTP_DANGER_INSECURE
+danger_insecure = true
+
+[encryption]
+# You need to define at least one valid encryption key.
+# These keys are used in various places, like for instance
+# encrypting confidential client secrets in the database, or
+# encryption cookies, and so on.
+#
+# The first part until the first `/` is the key ID.
+# The ID must match '[a-zA-Z0-9]{2,20}'
+#
+# The key itself begins after the first `/` has been found.
+# The key must be exactly 32 bytes long, encoded as base64.
+#
+# You can find a more detailed explanation on how to generate
+# keys in the documentation:
+# 1. https://sebadob.github.io/rauthy/getting_started/k8s.html#create-and-apply-secrets
+# 2. https://sebadob.github.io/rauthy/config/encryption.html
+#
+# You can provide multiple keys to make things like key
+# rotation work. Be careful with removing old keys. Make sure
+# that all secrets have been migrated beforehand.
+# You can find a utility in the Admin UI to do this for you.
+#
+# overwritten by: ENC_KEYS - single String, \n separated values
+keys = [
+    'q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=',
+    'bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=',
+]
+
+# This identifies the key ID from the `ENC_KEYS` list, that
+# should actively be used for new encryptions.
+#
+# overwritten by: ENC_KEY_ACTIVE
+key_active = 'bVCyTsGaggVy5yqQ'
+
+[ephemeral_clients]
+# Can be set to 'true' to allow the dynamic client lookup via
+# URLs as 'client_id's during authorization_code flow initiation.
+#
+# default: false
+# overwritten by: ENABLE_EPHEMERAL_CLIENTS
+enable = true
+
+# Can be set to 'true' to enable WebID functionality like needed
+# for things like Solid OIDC.
+#
+# default: false
+# overwritten by: ENABLE_WEB_ID
+enable_web_id = true
+
+# If set to 'true', 'solid' will be added to the 'aud' claim from
+# the ID token for ephemeral clients.
+#
+# default: false
+# overwritten by: ENABLE_SOLID_AUD
+enable_solid_aud = true
+
+# If set to 'true', MFA / Passkeys will be forced for ephemeral
+# clients.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_FORCE_MFA
+force_mfa = false
+
+# The allowed flows for ephemeral clients.
+#
+# default: ['authorization_code', 'refresh_token']
+# overwritten by: EPHEMERAL_CLIENTS_ALLOWED_FLOWS - single String, \n separated values
+allowed_flows = ['authorization_code', 'refresh_token']
+
+# The allowed scopes separated by ' ' for ephemeral clients.
+#
+# default: ['openid', 'profile', 'email', 'webid']
+# overwritten by: EPHEMERAL_CLIENTS_ALLOWED_SCOPES - single String, \n separated values
+allowed_scopes = ['openid', 'profile', 'email', 'webid']
+
+# The lifetime in seconds ephemeral clients will be kept inside
+# the cache.
+#
+# default: 3600
+# overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
+cache_lifetime = 3600
+
+[events]
+# The E-Mail address event notifications should be sent to.
+#
+# overwritten by: EVENT_EMAIL
+email = 'admin@localhost'
+
+# Matrix variables for event notifications.
+# `matrix_user_id` and `matrix_room_id` are mandatory.
+# Depending on your Matrix setup, additionally one of
+# `matrix_access_token` or `matrix_user_password` is needed.
+#
+# If you log in to Matrix with User + Password, you may use
+# `matrix_user_password`. If you log in via OIDC SSO (or just
+# want to use a session token you can revoke), you should
+# provide `matrix_access_token`.
+# If both are given, the `matrix_access_token` will be preferred.
+#
+# If left empty, no messages will not be sent to Matrix.
+# Format: `@<user_id>:<server address>`
+#
+# overwritten by: EVENT_MATRIX_USER_ID
+#matrix_user_id = ''
+# Format: `!<random string>:<server address>`
+# overwritten by: EVENT_MATRIX_ROOM_ID
+#matrix_room_id = ''
+# overwritten by: EVENT_MATRIX_ACCESS_TOKEN
+#matrix_access_token = ''
+# overwritten by: EVENT_MATRIX_USER_PASSWORD
+#matrix_user_password = ''
+# URL of your Matrix server.
+# default: https://matrix.org
+# overwritten by: EVENT_MATRIX_SERVER_URL
+#matrix_server_url = 'https://matrix.org'
+
+# Optional path to a PEM Root CA certificate file for the
+# Matrix client.
+#
+# overwritten by: EVENT_MATRIX_ROOT_CA_PATH
+#matrix_root_ca_path = 'tls/root.cert.pem'
+
+# May be set to disable the TLS validation for the Matrix
+# client.
+#
+# default: false
+# overwritten by: EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION
+#matrix_danger_disable_tls_validation = false
+
+# The default behavior is, that Rauthy will panic at startup
+# if it cannot connect to a configured Matrix server. The
+# reason is that event notifications cannot be dropped silently.
+#
+# However, if you use a self-hosted Matrix server which uses
+# Rauthy as its OIDC provider and both instances went offline,
+# you will have a chicken-and-egg problem:
+# - Rauthy cannot connect to Matrix and will panic
+# - Your Matrix server cannot connect to Rauthy and will panic
+# To solve this issue, you can temporarily set this value to
+# 'true' and revert back, after the system is online again.
+#
+# default: false
+# overwritten by: EVENT_MATRIX_ERROR_NO_PANIC
+matrix_error_no_panic = true
+
+# The Webhook for Slack Notifications.
+# If left empty, no messages will be sent to Slack.
+#
+# overwritten by: EVENT_SLACK_WEBHOOK
+#slack_webhook = ''
+
+# The notification level for events. Works the same way as
+# a logging level. For instance: 'notice' means send out a
+# notifications for all events with the notice level or higher.
+# Possible values:
+# - info
+# - notice
+# - warning
+# - critical
+#
+# default: 'warning'
+# overwritten by: EVENT_NOTIFY_LEVEL_EMAIL
+notify_level_email = 'warning'
+# default: 'notice'
+# overwritten by: EVENT_NOTIFY_LEVEL_MATRIX
+notify_level_matrix = 'notice'
+# default: 'notice'
+# overwritten by: EVENT_NOTIFY_LEVEL_SLACK
+notify_level_slack = 'notice'
+
+# Define the level from which on events should be persisted
+# inside the database. All events with a lower level will be
+# lost, if there is no active event subscriber.
+# Possible values:
+# - info
+# - notice
+# - warning
+# - critical
+#
+# default: 'info'
+# overwritten by: EVENT_PERSIST_LEVEL
+persist_level = 'info'
+
+# Define the number of days when events should be cleaned
+# up from the database.
+#
+# default: 30
+# overwritten by: EVENT_CLEANUP_DAYS
+cleanup_days = 30
+
+# The level for the generated Event after a backchannel
+# logout has failed after exceeding all retries.
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_BACKCHANNEL_LOGOUT_FAILED
+level_backchannel_logout_failed = 'critical'
+# The level for the generated Event after a user was
+# force-logged-out by an admin.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_FORCE_LOGOUT
+level_force_logout = 'notice'
+# The level for the generated Event after an IP has
+# been blacklisted
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_IP_BLACKLISTED
+level_ip_blacklisted = 'warning'
+# The level for the generated Event after the JWKS has
+# been rotated
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_JWKS_ROTATE
+level_jwks_rotate = 'notice'
+# The level for the generated Event after a new user has
+# been registered.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_NEW_USER
+level_new_user = 'info'
+# The level for the generated Event after a user has
+# changed his E-Mail
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_USER_EMAIL_CHANGE
+level_user_email_change = 'notice'
+# The level for the generated Event after a user has
+# reset its password
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_USER_PASSWORD_RESET
+level_user_password_reset = 'notice'
+# The level for the generated Event after a user has
+# been given the 'rauthy_admin' role
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_RAUTHY_ADMIN
+level_rauthy_admin = 'notice'
+# The level for the generated Event after a Rauthy
+# entered a healthy state (again)
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_RAUTHY_HEALTHY
+level_rauthy_healthy = 'notice'
+# The level for the generated Event after a Rauthy
+# instance has been started
+#
+# default: info
+# overwritten by: EVENT_LEVEL_RAUTHY_START
+level_rauthy_start = 'info'
+# The level for the generated Event after a Rauthy
+# entered an unhealthy state
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_RAUTHY_UNHEALTHY
+level_rauthy_unhealthy = 'critical'
+# The level for the generated Event after a new App
+# version has been found
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_RAUTHY_VERSION
+level_rauthy_version = 'notice'
+# The level for the generated Event after DB secrets
+# have been migrated to a new key
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_SECRETS_MIGRATED
+level_secrets_migrated = 'notice'
+# The level for the generated Event after a user revoked
+# an illegal login with the link from the notification
+# E-Mail for "login from unknown location"
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
+level_user_login_revoke = 'warning'
+# The level for the generated Event after a SCIM
+# update task ultimately failed after exceeding
+# all retries.
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_SCIM_TASK_FAILED
+level_scim_task_failed = 'critical'
+# The level for the generated Event after Rauthy
+# detected a suspicious API scanning request.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_SUSPICIOUS_REQUEST
+level_suspicious_request = 'notice'
+
+# The level for the generated Event after certain
+# amounts of false logins from an IP
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_FAILED_LOGINS_25
+level_failed_logins_25 = 'critical'
+# default: critical
+# overwritten by: EVENT_LEVEL_FAILED_LOGINS_20
+level_failed_logins_20 = 'critical'
+# default: warning
+# overwritten by: EVENT_LEVEL_FAILED_LOGINS_15
+level_failed_logins_15 = 'warning'
+# default: warning
+# overwritten by: EVENT_LEVEL_FAILED_LOGINS_10
+level_failed_logins_10 = 'warning'
+# default: notice
+# overwritten by: EVENT_LEVEL_FAILED_LOGINS_7
+level_failed_logins_7 = 'notice'
+# default: info
+# overwritten by: EVENT_LEVEL_FAILED_LOGIN
+level_failed_login = 'info'
+
+# If set to 'true', it will disable the app version
+# checker. This is a scheduled task that looks up the
+# latest version periodically by doing a request to the
+# Github API to check the latest release. This ignores
+# any type of prerelease and will only notify for a new stable.
+#
+# default: false
+# overwritten by: DISABLE_APP_VERSION_CHECK
+disable_app_version_check = false
+
+[fedcm]
+## CAUTION: The FedCM is highly experimental at this point!
+## Do not attempt to use it in production because it is
+## subject to change in the future, or it may be dropped
+## completely, depending on how Googles goes on with it!
+## The spec is currently a draft and under active development.
+
+# Set to `true` to enable the experimental FedCM.
+# default: false
+# overwritten by: EXPERIMENTAL_FED_CM_ENABLE
+#experimental_enable = false
+
+# Session lifetime for FedCM in seconds - the session can not be
+# extended beyond this time and a new login will be forced.
+#
+# default: 2592000
+# overwritten by: SESSION_LIFETIME_FED_CM
+#session_lifetime = 2592000
+
+# Session timeout for FedCM in seconds
+# When a new token / login is requested before this timeout hits
+# the limit, the user will be authenticated without prompting
+# for the credentials again. This is the value which can extend
+# the session, until it hits its maximum lifetime set with _FED_CM.
+#
+# default: 259200
+# overwritten by: SESSION_TIMEOUT_FED_CM
+#session_timeout = 259200
+
+[geolocation]
+# If you have a configured and working Geolocation setup, you can
+# define if un-resolvable IP addresses should be blocked. By default,
+# if a Country cannot be found for a certain IP address, it will be
+# allowed anyway. This is necessary to allow private network connections
+# for instance. Only if you run a public Rauthy instance, and you will
+# guaranteed always connect with a public Peer IP, you might want to
+# set this to `true`.
+#
+# default: false
+# overwritten by: GEO_BLOCK_UNKONW
+block_unknown = false
+
+# If you have a WAF or CDN which injects a geoloaction header
+# with the country code, provide the name here. For instance,
+# in case of Cloudflare, this would be 'CF-IPCountry'.
+#
+# This header will only be accepted, if Rauthy runs in proxy_mode,
+# and the source IP is a trusted proxy, to prevent spoofing.
+#
+# default: not set
+# overwritten by: GEO_COUNTRY_HEADER
+#country_header = 'CF-IPCountry'
+
+# You can black- or whitelist countries, if you have a configured
+# and working Geolocation, either via `country_header` or a
+# Maxmind database.
+#
+# The `country_list_type` can be either `whitelist` or `blacklist`,
+# and it will specify the behavior of the `country_list`.
+# For instance, if you have `country_list_type = 'whitelist'` and
+# `country_list = ['DE', 'FR']`, only access from Germany and France
+# will be allowed.
+#
+# The `whitelist` type is a `default-deny`, while `blacklist` is
+# `default-allow`.
+#
+# If `country_list_type` is not set at all, Geoblocking will be
+# disabled.
+#
+# default: not set
+#country_list_type = 'whitelist'
+# default: not set
+#country_list = []
+
+# If you don't have a header with a country code, you can
+# also provide a Maxmind account. Rauthy will then download
+# the 'GeoLite2 Country' database regularly and use it for
+# geolocating IPs.
+#
+# The GeoLite databases from Maxmind are free and published
+# under the Creative Commons License. You can also provide
+# an Enterprise database, which will have more accurate data.
+# Check the `maxmind_db_type` below.
+#
+# default: not set
+# overwritten by: GEO_MAXMIND_ACC_ID
+#maxmind_account_id = ''
+# overwritten by: GEO_MAXMIND_LICENSE
+#maxmind_license_key = ''
+
+# If `maxmind_account_id` and `maxmind_license_key`, this
+# will be the directory being used for DB download and storage.
+#
+# default: 'data'
+# overwritten by: GEO_MAXMIND_DIR
+#maxmind_db_dir = 'data'
+
+# By default, the `GeoLite2-Country` database from Maxmind is
+# being used. The IP Geolocation databases are loaded fully into
+# memory at startup to speedup lookups. The size therefore makes
+# a big difference, not only for lookup speed, but also in terms
+# of memory usage. The Country DB adds ~10MB of memory overhead,
+# while the City DB is around 65MB.
+#
+# Possible Values (case-sensitive):
+# - GeoLite2-Country
+# - GeoLite2-City
+#
+# If you have access to paid Maxmind databases, you can add the
+# db_type in a way that it resolves to a valid download link.
+# The link will be created with the following template:
+# `https://download.maxmind.com/geoip/databases/{maxmind_db_type}/download?suffix=tar.gz`
+#
+# default: 'GeoLite2-Country'
+# overwritten by: GEO_MAXMIND_DB_TYPE
+#maxmind_db_type = 'GeoLite2-Country'
+
+# If you configured a `maxmind_account_id` + `maxmind_license_key`,
+# you can change the time when the DB update job runs. By default,
+# it runs every night at 05:00. It will check if y new version of
+# the MaxMind DB is available and if so, download it.
+#
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 0 5 * * * *"
+# overwritten by: GEO_MAXMIND_UPDATE_CRON
+maxmind_update_cron = "0 0 5 * * * *"
+
+[hashing]
+# Argon2ID hashing parameters. Take a look at the documentation
+# for more information:
+# https://sebadob.github.io/rauthy/config/argon2.html
+# M_COST must never be below 32768 in production
+# overwritten by: ARGON2_M_COST
+argon2_m_cost = 131072
+# T_COST must never be below 1 in production
+# overwritten by: ARGON2_T_COST
+argon2_t_cost = 4
+# P_COST must never be below 2 in production
+# overwritten by: ARGON2_P_COST
+argon2_p_cost = 8
+
+# Limits the maximum amount of parallel password hashes at the exact same time
+# to never exceed system memory while still allowing a good amount of memory
+# for the Argon2ID algorithm
+#
+# CAUTION: You must make sure, that you have at least
+# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory of your deployment available.
+#
+# default: 2
+# overwritten by: MAX_HASH_THREADS
+max_hash_threads = 2
+
+# The time in ms when to log a warning, if a request waited longer than this time.
+# This is an indicator, that you have more concurrent logins than allowed and may
+# need config adjustments,
+# if this happens more often.
+#
+# default: 500
+# overwritten by: HASH_AWAIT_WARN_TIME
+hash_await_warn_time = 500
+
+[http_client]
+## In this section, you can configure the HTTP Client
+## that Rauthy uses for all different kind's of tasks,
+## like e.g. fetching ephemeral client information,
+## remote JWKS, connecting to Upstream Auth Providers,
+## or for Slack notifications.
+##
+## NOTE: The only exception is the Matrix Event
+## Notification client, if you have this configured.
+## Because of the internal structure of Matrix dependencies,
+## this cannot easily re-use the global client!
+##
+## Rauthy creates a single Lazily Initialized instance
+## with connection pooling to reduce the amount of TLS
+## handshakes necessary, especially during high traffic.
+
+# The connect timeout in seconds for new connections.
+#
+# default: 10
+# overwritten by: HTTP_CONNECT_TIMEOUT
+connect_timeout = 10
+
+# The total request timeout in seconds for all outgoing
+# requests.
+#
+# default: 10
+# overwritten by: HTTP_REQUEST_TIMEOUT
+request_timeout = 10
+
+# Set the min TLS version for all outgoing connections.
+# Allowed values: '1.3', '1.2', '1.1', '1.0'
+#
+# default: '1.3'
+# overwritten by: HTTP_MIN_TLS
+min_tls = '1.3'
+
+# The duration in seconds for idle connections in the pool.
+# To reduce memory consumption slightly, you may reduce
+# this value at the cost of needing more TLS handshakes
+# and re-connecting more often.
+#
+# default: 900
+# overwritten by: HTTP_IDLE_TIMEOUT
+idle_timeout = 900
+
+# By default, the HTTP Client will enforce HTTPS and
+# simply fail if an unencrypted HTTP URL is given
+# anywhere.
+# However, you can allow this by setting `true`.
+#
+# default: false
+# overwritten by: HTTP_DANGER_UNENCRYPTED
+danger_unencrypted = true
+
+# By default, the HTTP Client will enforce valid TLS
+# certificates and simply fail if an invalid certificate
+# is used anywhere.
+# However, you can allow this by setting `true`.
+#
+# default: false
+# overwritten by: HTTP_DANGER_INSECURE
+danger_insecure = true
+
+# You can provide a root certificate bundle, if you
+# are running servers / clients Rauthy needs to connect
+# to with self-signed certificates.
+# The certificates need to be in PEM format.
+#
+# overwritten by: HTTP_CUST_ROOT_CA_BUNDLE
+root_ca_bundle = '''
+-----BEGIN CERTIFICATE-----
+MIIB6jCCAXCgAwIBAgIUAy+9AMu+aD5XPijMTt7AUPIVSegwCgYIKoZIzj0EAwMw
+HTEbMBkGA1UEAwwSUmF1dGh5IERldiBDQSBSb290MB4XDTIzMDgyODEyNTkzNVoX
+DTMzMTEwMzExNDMzNVowKDEmMCQGA1UEAwwdUmF1dGh5IERldiBJVCBDQSBJbnRl
+cm1lZGlhdGUwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAARdJ1mDnL0PFP6tZQMBv1rb
+QI93c9nrvb8h6RBM6K2QYuR7wzgczq/7M25bxfCjSKeggcTxZFpQ0XLZd1/Sd7ro
+Uh7djqIb+7gAE+BjF5T8ojfR5faEE3gyEtfuFjmCNaGjZjBkMB8GA1UdIwQYMBaA
+FBVtvfty7HtxzyGOHbRuSt4de1R9MA4GA1UdDwEB/wQEAwIBhjAdBgNVHQ4EFgQU
+Ay+9AMu+aD5XPijMTt7AUPIVSegwEgYDVR0TAQH/BAgwBgEB/wIBADAKBggqhkjO
+PQQDAwNoADBlAjAfNDErqAmZLaoQTqekfUzynfb3Fzvs5VCHGB0U69SCupy7kOPM
+gPcUGAdJ+EzTqckCMQC4Xlt6jb3VhDI6r/IG+qQFULZcjMSEmE5Xx6EsLif2F8Do
+fbHFiSzbPGflHtUZb9U=
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIB3jCCAWSgAwIBAgIUFW29+3Lse3HPIY4dtG5K3h17VH0wCgYIKoZIzj0EAwMw
+HTEbMBkGA1UEAwwSUmF1dGh5IERldiBDQSBSb290MCAXDTIyMDYwMTE5NTIzMloY
+DzIwNTMxMDI5MTE0MzMyWjAdMRswGQYDVQQDDBJSYXV0aHkgRGV2IENBIFJvb3Qw
+djAQBgcqhkjOPQIBBgUrgQQAIgNiAAQIHLkIjIrbgtsMl5skOGzPQYVq7eUNuLPQ
+x5N1yEr9ZNPVIXC7qaQy6U5krhyHagTfKQ+nuuD53vTkMeOS5dO2xE5EspgdOtD8
+Xo8YqEInmwfgPEy/K58r+CuukvMxSXCjYzBhMB8GA1UdIwQYMBaAFBVtvfty7Htx
+zyGOHbRuSt4de1R9MA4GA1UdDwEB/wQEAwIBhjAdBgNVHQ4EFgQUFW29+3Lse3HP
+IY4dtG5K3h17VH0wDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAwNoADBlAjB8
+gaKoJpfJFxNYQV8eK8weQkywlg4GnzIPj3TJVvwCSnhoPXvXRWyS5ytA5LSiRM8C
+MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
+++E=
+-----END CERTIFICATE-----
+'''
+
+[i18n]
+# Can be set to filter the languages to show in the UI. If not
+# set, all available i18n translations will be shown in the
+# language selector.
+# To show only specific ones, provide them here as a
+# space-separated value.
+#
+# Languages for all user-facing pages.
+# Available Options: en de zhhans ko
+# overwritten by: FILTER_LANG_COMMON
+filter_lang_common = ['en', 'de', 'zhhans', 'ko']
+# Languages for the Admin UI.
+# Available Options: en de ko
+# overwritten by: FILTER_LANG_ADMIN
+filter_lang_admin = ['en', 'de', 'ko']
+
+[lifetimes]
+# Set the grace time in seconds for how long in seconds the refresh
+# token should still be valid after usage. Keep this value small,
+# but do not set it to 0 with an HA deployment to not get issues with
+# small HA cache latencies.
+#
+# If you have an external client, which does concurrent requests, from
+# which the request interceptor wants to refresh the token, you may
+# have multiple hits on the endpoint and all of them should be valid.
+#
+# Caching is done on the endpoint itself, but grace time of 0 will only
+# be good for a single instance of rauthy.
+#
+# default: 5
+# overwritten by: REFRESH_TOKEN_GRACE_TIME
+refresh_token_grace_time = 5
+
+# Global default lifetime in hours for refresh tokens.
+#
+# default: 48
+# overwritten by: REFRESH_TOKEN_LIFETIME
+refresh_token_lifetime = 48
+
+# Session lifetime in seconds - the session can not be extended
+# beyond this time and a new login will be forced. This is the
+# session for the authorization code flow.
+#
+# default: 14400
+# overwritten by: SESSION_LIFETIME
+session_lifetime = 43200
+
+# If 'true', a 2FA / MFA check will be done with each automatic
+# token generation, even with an active session, which kind of
+# makes the session useless with Webauthn enabled, but provides
+# maximum amount of security. If 'false', the user will not get
+# an MFA prompt with an active session at the authorization endpoint.
+#
+# default: false
+# overwritten by: SESSION_RENEW_MFA
+session_renew_mfa = true
+
+# Session timeout in seconds. When a new token / login is requested
+# before this timeout hits the limit, the user will be authenticated
+# without prompting for the credentials again.
+#
+# This is the value which can extend the session, until it hits its
+# maximum lifetime set with session_lifetime.
+#
+# default: 5400
+# overwritten by: SESSION_TIMEOUT
+session_timeout = 5400
+
+# Lifetime in minutes for password reset magic links.
+#
+# default: 30
+# overwritten by: ML_LT_PWD_RESET
+magic_link_pwd_reset = 30
+
+# Lifetime in minutes for the first password magic link,
+# for setting the initial password.
+#
+# default: 4320
+# overwritten by: ML_LT_PWD_FIRST
+magic_link_pwd_first = 4320
+
+# JWKS auto rotate cronjob. This will (by default) rotate all JWKs every
+# 1. day of the month. If you need smaller intervals, you may adjust this
+# value. For security reasons, you cannot fully disable it.
+# In a HA deployment, this job will only be executed on the current cache
+# leader at that time.
+# Format: "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 30 3 1 * * *"
+# overwritten by: JWK_AUTOROTATE_CRON
+jwk_autorotate_cron = '0 30 3 1 * * *'
+
+[logging]
+# This is the log level for stdout logs
+# Accepts: error, warn, info, debug, trace
+#
+# default: 'info'
+# overwritten by: LOG_LEVEL
+level = 'debug'
+
+# The log level for the `Hiqlite` persistence layer.
+# At the time of writing, only the cache will use `hiqlite`
+#
+# default: info
+# overwritten by: LOG_LEVEL_DATABASE
+level_database = 'info'
+
+# This is a special config which allows the configuration of
+# customized access logs. These logs will be logged with each
+# request in addition to the normal LOG_LEVEL logs.
+# The following values are valid:
+# - `debug`
+#   CAUTION: The Debug setting logs every information available
+#   to the middleware which includes SENSITIVE HEADERS
+#   DO NOT use the Debug level in a working production environment!
+# - `verbose`
+#   Verbose logging without headers - generates huge outputs
+# - `basic`
+#   Logs access to all endpoints apart from the Frontend ones which
+#   all js, css, ...
+# - `modifying`
+#   Logs only requests to modifying endpoints and skips all GET
+# - `off`
+#
+# default: 'modifying'
+# overwritten by: LOG_LEVEL_ACCESS
+#level_access = 'modifying'
+
+# You can change the log output format to JSON, if you set:
+# `log_fmt=json`.
+# Keep in mind, that some logs will include escaped values,
+# for instance when `Text` already logs a JSON in debug level.
+# Some other logs like an Event for instance will be formatted
+# as Text anyway. If you need to auto-parse events, please consider
+# using an API token and listen ot them actively.
+#
+# default: text
+# overwritten by: LOG_FMT
+#log_fmt = 'json'
+
+[mfa]
+# If 'true', MFA for an account must be enabled to access the
+# rauthy admin UI.
+#
+# default: true
+# overwritten by: ADMIN_FORCE_MFA
+admin_force_mfa = false
+
+[pow]
+# The difficulty for a Proof-of-Work (PoW).
+# The default is 20, which is reasonable for modern processors.
+# This is currently only used for the user registration via UI.
+# The value must be between 10 and 99.
+#
+# default: 19
+# overwritten by: POW_DIFFICULTY
+difficulty = 19
+
+# The expiration duration in seconds for a PoW
+#
+# default: 30
+# overwritten by: POW_EXP
+exp = 30
+
+[scim]
+# If set to `true`, already possibly synced groups / users on a
+# SCIM server may be deleted if either sync if disabled further
+# down the road.
+# Depending on your clients specifically, deleting a group / user
+# can have a major impact, like e.g. maybe the user had important
+# data inside that application that would be deleted automatically
+# as well. Depending on your use case, you may want to handle
+# deletions manually.
+#
+# If set to false, only the `externalId` field would be removed
+# for the targeted resources, but they would not be fully deleted.
+# This will basically unlink the resource from Rauthy, leaving it
+# behind independent.
+#
+# default: false
+# overwritten by: SCIM_SYNC_DELETE_GROUPS
+sync_delete_groups = true
+# overwritten by: SCIM_SYNC_DELETE_USERS
+sync_delete_users = true
+
+# The maximum amount of retries made for a failed SCIM task.
+# Failed tasks will be retried every 60 - 90 seconds from all
+# cluster nodes. The timeout between retries is randomized to
+# avoid overloading clients. It will be executed on each cluster
+# member to increase the chance of a update in case of network
+# segmentations.
+#
+# default: 100
+# overwritten by: SCIM_RETRY_COUNT
+retry_count = 100
+
+[server]
+# The server address to listen on. Can bind to a specific IP.
+# When LISTEN_SCHEME is set to use UNIX sockets, this specifies
+# the path to listen on.
+#
+# default: '0.0.0.0'
+# overwritten by: LISTEN_ADDRESS
+listen_address = '0.0.0.0'
+
+# The listen ports for HTTP / HTTPS, depending on the activated
+# 'LISTEN_SCHEME'
+#
+# default: 8080
+# overwritten by: LISTEN_PORT_HTTP
+port_http = 8080
+# default: 8443
+# overwritten by: LISTEN_PORT_HTTPS
+port_https = 8443
+
+# The scheme to use locally, valid values:
+# http | https | http_https | unix_http | unix_https
+# For more details about the UNIX domain socket, check out its
+# documentation page.
+#
+# default: http_https
+# overwritten by: LISTEN_SCHEME
+scheme = 'http'
+
+# The Public URL of the whole deployment
+# The LISTEN_SCHEME + PUB_URL must match the HTTP ORIGIN HEADER
+# later on, which is especially important when running Rauthy
+# behind a reverse proxy. In case of a non-standard port (80/443),
+# you need to add the port to the PUB_URL
+#
+# default: not set - mandatory
+# overwritten by: PUB_URL
+pub_url = 'localhost:8080'
+
+# Limits the amount of HTTP worker threads. This value
+# heavily impacts memory usage, even in idle. The default
+# values are:
+# - less than 4 CPU cores -> 1
+# - 4+ cores -> max(2, cores - MAX_HASH_THREADS - reserve)
+#   where `reserve` is 2 when `HIQLITE=true` and 1 otherwise.
+#
+# CAUTION: If you run your instance on a big underlying host,
+# you almost always want to manually set an appropriate
+# value. Rauthy can only see all available cores and not any
+# possibly set container limits. This means if it runs inside
+# a container on something like a 96 core host, Rauthy will
+# by default spawn very many threads.
+#
+# overwritten by: HTTP_WORKERS
+http_workers = 1
+
+# When rauthy is running behind a reverse proxy, set to true
+#
+# default: false
+# overwritten by: PROXY_MODE
+proxy_mode = false
+
+# A list of trusted proxy CIDRs. When `proxy_mode = true`
+# or `peer_ip_header_name` is set, these are mandatory to
+# be able to extract the real client IP properly and safely
+# to prevent IP header spoofing. All requests witha
+# different source will be blocked.
+#
+# default: []
+# overwritten by: TRUSTED_PROXIES - single String, \n separated values
+trusted_proxies = ['127.0.0.1/32']
+
+# To bring support for applications using deep-linking, you
+# can set custom URL schemes to be accepted when present in
+# the `Origin` header. For instance, a Tauri app would set
+# `tauri://` instead of `https://`.
+#
+# Provide the value as a space separated list of Strings,
+# like for instance: ["tauri", "myapp"]
+#
+# default: []
+# overwritten by: ADDITIONAL_ALLOWED_ORIGIN_SCHEMES - single String, \n separated values
+#additional_allowed_origin_schemes = ['tauri', 'myapp']
+
+# To enable or disable the additional HTTP server to expose
+# the /metrics endpoint.
+#
+# default: false
+# overwritten by: METRICS_ENABLE
+metrics_enable = false
+
+# The IP address to listen on for the /metrics endpoint.
+# You do not want to expose your metrics on a publicly
+# reachable endpoint!
+#
+# default: '0.0.0.0'
+# overwritten by: METRICS_ADDR
+#metrics_addr = '0.0.0.0'
+
+# The port to listen on for the /metrics endpoint.
+# You do not want to expose your metrics on a publicly
+# reachable endpoint!
+#
+# default: 9090
+# overwritten by: METRICS_PORT
+#metrics_port = 9090
+
+# Can be set to `true` to enable the Swagger UI.
+# This will consume ~13mb of additional memory.
+#
+# default: false
+# overwritten by: SWAGGER_UI_ENABLE
+swagger_ui_enable = true
+
+# Can be set to `true` to make the Swagger UI publicly
+# available. By default, you can only access it with a
+# valid `rauthy_admin` session.
+#
+# default: false
+# overwritten by: SWAGGER_UI_PUBLIC
+#swagger_ui_public = false
+
+# The interval in seconds in which keep-alives should be
+# sent to SSE clients. Depending on your network setup,
+# proxy timeouts, ..., you may adjust this value to fit
+# your needs.
+#
+# default: 30
+# overwritten by: SSE_KEEP_ALIVE
+#see_keep_alive = 30
+
+# Dynamic server side pagination threshold
+# If the total users count exceeds this value, Rauthy will dynamically
+# change search and pagination for users in the Admin UI from client
+# side to server side to not have a degradation in performance.
+#
+# default: 1000
+# overwritten by: SSP_THRESHOLD
+#ssp_threshold = 1000
+
+[suspicious_requests]
+# The "catch all" route handler on `/` will compare the request
+# path against a hardcoded list of common scan targets from bots
+# and attackers. If the path matches any of these targets, the
+# IP will be blacklisted preemptively for the set time in minutes.
+# You can disable it by setting it to `0`.
+#
+# default: 1440
+# overwritten by: SUSPICIOUS_REQUESTS_BLACKLIST
+blacklist = 5
+
+# Will emit a log with level of warning if a request to `/` has
+# been made that has not been caught by any of the usual routes
+# and handlers. Apart from a request to just `/` which will end
+# in a redirect to `/auth/v1`, all additional path's will be
+# logged. This can help to improve the internal suspicious
+# blocklist in the future.
+#
+# default: false
+# overwritten by: SUSPICIOUS_REQUESTS_LOG
+log = true
+
+[[templates]]
+# You can overwrite some default email templating values.
+# If you want to modify the basic templates themselves, this is
+# only possible with a custom build from source. The content
+# however can mostly be set here.
+# If the below values are not set, the default will be taken.
+#
+# NOTE: This is an array value, and you can specify it multiple
+# times for different `lang` / `typ` combinations.
+
+# one of: en de ko zh_hans
+lang = 'en'
+# pme of: password_new, password_reset
+typ = 'password_new'
+
+subject = 'New Password'
+header = 'New password for'
+text = ''
+click_link = 'Click the link below to get forwarded to the password form.'
+validity = 'This link is only valid for a short period of time for security reasons.'
+expires = 'Link expires:'
+footer = ''
+
+# Exists only for password reset E-Mails for initialized accounts.
+button_text_request_new = ''
+
+[tls]
+## UI + API TLS
+
+# Overwrite the path to the TLS certificate file in PEM
+# format for rauthy
+#
+#default: 'tls/tls.crt'
+# overwritten by: TLS_CERT
+cert_path = 'tls/cert-chain.pem'
+
+# Overwrite the path to the TLS private key file in PEM
+# format for rauthy. If the path / filename ends with '.der',
+# rauthy will parse it as DER, otherwise as PEM.
+#
+# default: 'tls/tls.key'
+# overwritten by: TLS_KEY
+key_path = 'tls/key.pem'
+
+[user_pictures]
+# The storage type for user pictures.
+# By default, they are saved inside the Database, which is not ideal.
+# If you only have a couple hundred users, this will be fine, but
+# anything larger should use an S3 bucket if available. For single
+# instance deployments, file storage to local disk is available
+# as well, but this must not be used with multi replica / HA
+# deployments.
+# Images will ba reduced in size to max 192px on the longest side.
+# They most often end up between 25 - 40kB in size.
+#
+# Available options: db file s3 disabled
+# Default: db
+# overwritten by: PICTURE_STORAGE_TYPE
+storage_type = 'db'
+
+# If `storage_type = file`, the path where pictures will be saved
+# can be changed with this value.
+#
+# default: ./pictures
+# overwritten by: PICTURE_PATH
+#path = './pictures'
+
+# Access values for the S3 bucket if `PICTURE_STORAGE_TYPE=s3`.
+# Not needed otherwise.
+# overwritten by: PIC_S3_URL
+#s3_url = 'https://s3.example.com'
+# overwritten by: PIC_S3_BUCKET
+#bucket = 'my_bucket'
+# overwritten by: PIC_S3_REGION
+#region = 'example'
+# overwritten by: PIC_S3_KEY
+#s3_key = 's3_key'
+# overwritten by: PIC_S3_SECRET
+#s3_secret = 's3_secret'
+# default: true
+# overwritten by: PIC_S3_PATH_STYLE
+#s3_path_style = true
+
+# Set the upload limit for user picture uploads in MB.
+#
+# default: 10
+# overwritten by: PICTURE_UPLOAD_LIMIT_MB
+#upload_limit_mb = 10
+
+# By default, user pictures can only be fetched with a valid
+# session, an API Key with access to Users + Read, or with a
+# valid token for this user. However, depending on where and
+# how you are using Rauthy for your user management, you may
+# want to make user pictures available publicly without any
+# authentication.
+#
+# User Picture URLs are "safe" in a way that you cannot guess
+# a valid URL. You will need to know the User ID + the Picture
+# ID. Both values are generated cryptographically secure in the
+# backend during creation. The Picture ID will also change
+# with every new upload.
+#
+# default: false
+# overwritten by: PICTURE_PUBLIC
+#public = false
+
+[user_registration]
+# If the User Registration endpoint should be accessible by anyone.
+# If not, an admin must create each new user.
+#
+# default: false
+# overwritten by: OPEN_USER_REG
+enable = true
+
+# Can be used when 'open_user_reg = true' to restrict the domains for
+# a registration. For instance, set it to
+# 'user_reg_domain_restriction = gmail.com' to allow only
+# registrations with 'user@gmail.com'.
+#
+# overwritten by: USER_REG_DOMAIN_RESTRICTION
+#domain_restriction = 'my-domain.com'
+
+# If `open_user_reg = true`, you can blacklist certain domains on
+# the open registration endpoint.
+#
+# default: []
+# overwritten by: USER_REG_DOMAIN_BLACKLIST - single String, \n separated values
+#domain_blacklist = [
+#    'example.com',
+#    'evil.net',
+#]
+
+# If set to `true`, any validation of the `redirect_uri` provided
+# during a user registration will be disabled. Clients can use
+# this feature to redirect the user back to their application
+# after a successful registration, so instead of ending up in the
+# user dashboard, they come back to the client app that initiated
+# the registration.
+#
+# The given `redirect_uri` will be compared against all registered
+# `client_uri`s and will throw an error, if there is no match.
+# However, this check will prevent ephemeral clients from using
+# this feature. Only if you need it in combination with ephemeral
+# clients, you should set this option to `true`. Otherwise, it is
+# advised to set the correct Client URI in the admin UI. The
+# `redirect_uri` will be allowed if it starts with any registered
+# `client_uri`.
+#
+# default: false
+# overwritten by: USER_REG_OPEN_REDIRECT
+#allow_open_redirect = false
+
+[webauthn]
+# The 'Relaying Party (RP) ID' - effective domain name.
+#
+# CAUTION: When this changes, already registered devices will
+# stop working and users cannot log in anymore!
+#
+# default: 'localhost'
+# overwritten by: RP_ID
+rp_id = 'localhost'
+
+# Url containing the effective domain name.
+#
+# DEV: If you want to test Webauthn via the Svelte DEV UI,
+# change the port number to :5173.
+#
+# !!! CAUTION: Must ALWAYS include the port number !!!
+#
+# default: 'http://localhost:8080'
+# overwritten by: RP_ORIGIN
+rp_origin = 'http://localhost:5173'
+
+# Non-critical RP Name
+# Has no security properties and may be changed without issues
+#
+# default: 'Rauthy IAM'
+# overwritten by: RP_NAME
+#rp_name = 'Rauthy IAM'
+
+# The Cache lifetime in seconds for Webauthn requests. Within
+# this time, a webauthn request must have been validated.
+#
+# default: 60
+# overwritten by: WEBAUTHN_REQ_EXP
+#req_exp = 60
+
+# The Cache lifetime for additional Webauthn Data like auth
+# codes and so on. Should not be lower than WEBAUTHN_REQ_EXP.
+# The value is in seconds
+#
+# default: 90
+# overwritten by: WEBAUTHN_DATA_EXP
+#data_exp = 90
+
+# With Webauthn enabled for a user, he needs to enter username
+# / password on a new system. If these credentials are verified,
+# Rauthy will set an additional cookie, which will determine
+# how long the user can then use only (safe) MFA passwordless
+# Webauthn login with Yubikeys, apple touch id, windows hello,
+# ... until he needs to verify his credentials again.
+#
+# Passwordless login is generally much safer than logging in
+# with a password. But sometimes it is possible, that the
+# Webauthn devices do not force the user to include a second
+# factor, which in that case would be a single factor login
+# again. That is why we should ask for the original password in
+# addition once in a while to set the cookie.
+#
+# The value is in hours
+# default: 2160
+# overwritten by: WEBAUTHN_RENEW_EXP
+#renew_exp = 2160
+
+# This feature can be set to 'true' to force User verification
+# during the Webauthn ceremony. UV will be true, if the user
+# does not only need to verify its presence by touching the key,
+# but by also providing proof that he knows (or is) some secret
+# via a PIN or biometric key for instance. With UV, we have a
+# true MFA scenario where UV == false (user presence only) would
+# be a 2FA scenario (with password).
+#
+# Be careful with this option, since Android and some special
+# combinations of OS + browser to not support UV yet or may have
+# weird edge cases, especially Android still has issues.
+#
+# default: false
+# overwritten by: WEBAUTHN_FORCE_UV
+#force_uv = true
+
+# Can be set to 'true' to disable password expiry for users that
+# have at least one active passkey. When set to 'false', the same
+# password expiry from the set policy will apply to these users
+# as well. With this option active, Rauthy will ignore any password
+# expiry set by the password policy for Webauthn users.
+#
+# default: true
+# overwritten by: WEBAUTHN_NO_PASSWORD_EXPIRY
+#no_password_exp = true

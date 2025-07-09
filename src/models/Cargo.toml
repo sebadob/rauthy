@@ -19,17 +19,24 @@ accept-language = { workspace = true }
 actix-multipart = { workspace = true }
 actix-web = { workspace = true }
 actix-web-lab = { workspace = true }
-anyhow = { workspace = true }
+arc-swap = { workspace = true }
 argon2 = { workspace = true }
 askama = { workspace = true }
 async-trait = { workspace = true }
+atrium-api = { workspace = true }
+atrium-common = { workspace = true }
+atrium-identity = { workspace = true }
+atrium-oauth = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }
 dotenvy = { workspace = true }
 ed25519-compact = { workspace = true }
+flate2 = { workspace = true }
 flume = { workspace = true }
+futures = { workspace = true }
 futures-util = { workspace = true }
 hex = { workspace = true }
+hickory-resolver = { workspace = true }
 hiqlite = { workspace = true }
 hiqlite-macros = { workspace = true }
 hmac-sha256 = { workspace = true }
@@ -37,9 +44,9 @@ hmac-sha512 = { workspace = true }
 image = { workspace = true }
 itertools = { workspace = true }
 lettre = { workspace = true }
+maxminddb = { workspace = true }
 mime = { workspace = true }
 num_cpus = { workspace = true }
-once_cell = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
 # 0.8 is necessary to provide a proper `thread_rng` for `rsa`
@@ -61,7 +68,9 @@ serde_rusqlite = { workspace = true }
 spow = { workspace = true }
 svg-hush = { workspace = true }
 strum = { workspace = true }
+tar = { workspace = true }
 time = { workspace = true }
+toml = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 utoipa = { workspace = true }

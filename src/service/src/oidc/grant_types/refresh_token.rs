@@ -1,19 +1,17 @@
 use crate::oidc::validation;
 use crate::token_set::TokenSet;
+use actix_web::HttpRequest;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
 };
-use actix_web::{HttpRequest, web};
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use std::str::FromStr;
 
 #[tracing::instrument(skip_all, fields(client_id = req_data.client_id, username = req_data.username))]
 pub async fn grant_type_refresh(
-    data: &web::Data<AppState>,
     req: HttpRequest,
     req_data: TokenRequest,
 ) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
@@ -25,6 +23,7 @@ pub async fn grant_type_refresh(
     }
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
     let client = Client::find_maybe_ephemeral(client_id).await?;
+    client.validate_enabled()?;
 
     let header_origin = client.get_validated_origin_header(&req)?;
 
@@ -41,7 +40,7 @@ pub async fn grant_type_refresh(
 
     // validate common refresh token claims first and get the payload
     let (ts, dpop_none) =
-        validation::validate_refresh_token(Some(client), &refresh_token, data, &req).await?;
+        validation::validate_refresh_token(Some(client), &refresh_token, &req).await?;
 
     let mut headers = Vec::new();
     if let Some(h) = header_origin {

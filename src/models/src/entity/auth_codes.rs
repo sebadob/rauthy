@@ -1,5 +1,5 @@
 use crate::database::{Cache, DB};
-use rauthy_common::constants::CACHE_TTL_AUTH_CODE;
+use crate::rauthy_config::RauthyConfig;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
@@ -49,8 +49,9 @@ impl AuthCode {
 
     // Saves an Authorization Code
     pub async fn save(&self) -> Result<(), ErrorResponse> {
+        let ttl = (300 + RauthyConfig::get().vars.webauthn.req_exp) as i64;
         DB::hql()
-            .put(Cache::AuthCode, self.id.clone(), self, *CACHE_TTL_AUTH_CODE)
+            .put(Cache::AuthCode, self.id.clone(), self, Some(ttl))
             .await?;
         Ok(())
     }

@@ -105,6 +105,7 @@
     function onkeydown(ev: KeyboardEvent) {
         switch (ev.code) {
             case 'Enter':
+                ev.preventDefault();
                 onclick?.(ev);
                 break;
             case 'ArrowLeft':

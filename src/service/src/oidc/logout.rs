@@ -2,16 +2,14 @@ use crate::oidc::bcl_logout_token::LogoutToken;
 use actix_web::cookie::SameSite;
 use actix_web::http::header::{ACCESS_CONTROL_ALLOW_METHODS, HeaderValue};
 use actix_web::http::{StatusCode, header};
-use actix_web::{HttpRequest, HttpResponse, web};
+use actix_web::{HttpRequest, HttpResponse};
 use rauthy_api_types::oidc::{BackchannelLogoutRequest, LogoutRequest};
-use rauthy_common::constants::{
-    COOKIE_SESSION, COOKIE_SESSION_FED_CM, EXPERIMENTAL_FED_CM_ENABLE, RAUTHY_VERSION,
-};
+use rauthy_common::constants::{COOKIE_SESSION, COOKIE_SESSION_FED_CM};
+use rauthy_common::http_client;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtIdClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
 use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
@@ -21,39 +19,12 @@ use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::user_login_states::UserLoginState;
 use rauthy_models::entity::users::User;
 use rauthy_models::html::HtmlCached;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::borrow::Cow;
-use std::env;
 use std::str::FromStr;
 use std::string::ToString;
-use std::sync::LazyLock;
-use std::time::Duration;
 use tokio::task::JoinSet;
 use tracing::{debug, error, info};
-
-static LOGOUT_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    let allow_http = env::var("BACKCHANNEL_DANGER_ALLOW_HTTP")
-        .unwrap_or_else(|_| "false".to_string())
-        .parse::<bool>()
-        .expect("Cannot parse BACKCHANNEL_DANGER_ALLOW_HTTP as bool");
-    let allow_insecure = env::var("BACKCHANNEL_DANGER_ALLOW_INSECURE")
-        .unwrap_or_else(|_| "false".to_string())
-        .parse::<bool>()
-        .expect("Cannot parse BACKCHANNEL_DANGER_ALLOW_INSECURE as bool");
-
-    info!(
-        "Building backchannel logout client with: BACKCHANNEL_DANGER_ALLOW_HTTP: {allow_http}, \
-    BACKCHANNEL_DANGER_ALLOW_INSECURE: {allow_insecure}"
-    );
-
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .connect_timeout(Duration::from_secs(10))
-        .https_only(!allow_http)
-        .danger_accept_invalid_certs(allow_insecure)
-        .user_agent(format!("Rauthy OIDC Client v{}", RAUTHY_VERSION))
-        .build()
-        .unwrap()
-});
 
 // We will allow more clock skew here for the token expiration validation to not be too
 // strict, as long as the signature of the token and all other things are valid.
@@ -65,7 +36,6 @@ pub async fn get_logout_html(
     req: HttpRequest,
     logout_request: LogoutRequest,
     session: Session,
-    data: &web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let theme_ts = ThemeCssFull::find_theme_ts_rauthy().await?;
     if logout_request.id_token_hint.is_none() {
@@ -79,7 +49,6 @@ pub async fn get_logout_html(
     let mut buf = Vec::with_capacity(512);
     JwtToken::validate_claims_into(
         &token_raw,
-        &data.issuer,
         Some(JwtTokenType::Id),
         LOGOUT_TOKEN_CLOCK_SKEW,
         &mut buf,
@@ -126,7 +95,6 @@ pub async fn get_logout_html(
 #[inline]
 pub async fn post_logout_handle(
     req: HttpRequest,
-    data: web::Data<AppState>,
     params: LogoutRequest,
     session: Option<Session>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -139,7 +107,6 @@ pub async fn post_logout_handle(
         if let Some(id_token_hint) = &params.id_token_hint {
             JwtToken::validate_claims_into(
                 id_token_hint,
-                &data.issuer,
                 Some(JwtTokenType::Id),
                 LOGOUT_TOKEN_CLOCK_SKEW,
                 &mut buf,
@@ -183,24 +150,26 @@ pub async fn post_logout_handle(
         let uid = session.user_id.clone();
         RefreshToken::delete_by_sid(session.id.clone()).await?;
         session.delete().await?;
-        execute_backchannel_logout(&data, sid.clone(), uid).await?;
+        execute_backchannel_logout(sid.clone(), uid).await?;
     }
 
     if let Some(user) = user {
         RefreshToken::invalidate_for_user(&user.id).await?;
         Session::invalidate_for_user(&user.id).await?;
-        execute_backchannel_logout(&data, None, Some(user.id)).await?;
+        execute_backchannel_logout(None, Some(user.id)).await?;
     }
 
     if is_backchannel {
         Ok(HttpResponse::build(StatusCode::OK).finish())
     } else {
-        let uri = post_logout_redirect_uri.as_ref().unwrap_or(&data.issuer);
+        let uri = post_logout_redirect_uri
+            .as_ref()
+            .unwrap_or(&RauthyConfig::get().issuer);
         let state = params
             .state
-            .map(|st| format!("?state={}", st))
+            .map(|st| format!("?state={st}"))
             .unwrap_or_default();
-        let loc = format!("{}{}", uri, state);
+        let loc = format!("{uri}{state}");
 
         let mut resp = HttpResponse::build(StatusCode::from_u16(302).unwrap())
             .append_header((header::LOCATION, loc))
@@ -210,7 +179,7 @@ pub async fn post_logout_handle(
             let cookie_session = ApiCookie::build(COOKIE_SESSION, &sid, 0);
             resp.add_cookie(&cookie_session)?;
 
-            if *EXPERIMENTAL_FED_CM_ENABLE {
+            if RauthyConfig::get().vars.fedcm.experimental_enable {
                 let cookie_fed_cm = ApiCookie::build_with_same_site(
                     COOKIE_SESSION_FED_CM,
                     Cow::from(&sid),
@@ -241,7 +210,7 @@ async fn find_session_with_user_fallback(
         match Session::find(sid).await {
             Ok(s) => Ok((Some(s), None)),
             Err(err) => {
-                debug!("Could not find `sid` from LogoutToken: {}", err);
+                debug!("Could not find `sid` from LogoutToken: {err}");
                 if let Some(uid) = uid {
                     Ok((None, Some(User::find(uid).await?)))
                 } else {
@@ -266,32 +235,45 @@ async fn find_session_with_user_fallback(
 ///
 /// Does NOT invalidate or delete any local sessions - only cares about remote clients with
 /// configured backchannel logout.
+///
+/// If you provide an `sid`, also provide a `uid` which would be used as fallback, if no login
+/// states for the given `sid` could be found.
+#[tracing::instrument(level = "debug")]
 pub async fn execute_backchannel_logout(
-    data: &web::Data<AppState>,
     sid: Option<String>,
     uid: Option<String>,
 ) -> Result<(), ErrorResponse> {
-    debug!("Executing backchannel logout for uid {uid:?} / sid {sid:?}");
+    debug_assert!(sid.is_some() || uid.is_some());
+    info!("Executing backchannel logout for uid {uid:?} / sid {sid:?}");
 
     let (states, sid) = if let Some(sid) = sid {
         let states = UserLoginState::find_by_session(sid.clone()).await?;
+        debug!("Login States for sid {sid}: {states:?}");
         // As a fallback, we will log out the whole user if we cannot find the session, just to
         // be sure we never miss any logout. Better logging out some unindented ones than missing
         // an important one.
         if states.is_empty() {
-            if uid.is_none() {
+            debug!("No Login States for sid {sid}");
+
+            if let Some(uid) = uid {
+                debug!("Searching Login States by user_id {uid:?}");
+                (UserLoginState::find_by_user(uid).await?, None)
+            } else {
+                debug!("No Login States found for both sid and uid - nothing to do");
                 return Ok(());
             }
-            (UserLoginState::find_by_user(uid.unwrap()).await?, None)
         } else {
             (states, Some(sid))
         }
-    } else if uid.is_none() {
-        return Ok(());
+    } else if let Some(uid) = uid {
+        (UserLoginState::find_by_user(uid).await?, None)
     } else {
-        (UserLoginState::find_by_user(uid.unwrap()).await?, None)
+        debug!("Both sid and uid are None - nothing to od");
+        return Ok(());
     };
+    debug!(sid, login_states = ?states);
     if states.is_empty() {
+        debug!("no login states found");
         return Ok(());
     }
 
@@ -301,6 +283,7 @@ pub async fn execute_backchannel_logout(
         .map(|st| st.client_id.as_str())
         .collect::<Vec<_>>();
     let clients = Client::find_all_bcl(&client_ids).await?;
+    debug!(backchannel_logout_clients = ?clients);
 
     if !clients.is_empty() {
         let mut kps: Vec<JwkKeyPair> = Vec::with_capacity(1);
@@ -313,6 +296,7 @@ pub async fn execute_backchannel_logout(
                 None
             };
             let sid = sid.clone();
+            debug!(sub, sid);
 
             let mut kp = kps.iter().find(|kp| kp.typ.as_str() == client.id_token_alg);
             if kp.is_none() {
@@ -325,7 +309,6 @@ pub async fn execute_backchannel_logout(
             if let Err(err) = send_backchannel_logout(
                 client.id.clone(),
                 client.backchannel_logout_uri.unwrap_or_default(),
-                &data.issuer,
                 sub,
                 sid,
                 kp.as_ref().unwrap(),
@@ -359,9 +342,8 @@ pub async fn execute_backchannel_logout(
 }
 
 /// Executes a backchannel logout for every user on every client in the background.
-pub async fn execute_backchannel_logout_for_everything(
-    data: web::Data<AppState>,
-) -> Result<(), ErrorResponse> {
+#[tracing::instrument(level = "debug")]
+pub async fn execute_backchannel_logout_for_everything() -> Result<(), ErrorResponse> {
     let clients = Client::find_all()
         .await?
         .into_iter()
@@ -369,24 +351,28 @@ pub async fn execute_backchannel_logout_for_everything(
         .collect::<Vec<_>>();
 
     for client in clients {
-        execute_backchannel_logout_by_client(&data, &client).await?;
+        execute_backchannel_logout_by_client(&client).await?;
     }
 
     Ok(())
 }
 
-pub async fn execute_backchannel_logout_by_client(
-    data: &web::Data<AppState>,
-    client: &Client,
-) -> Result<(), ErrorResponse> {
+#[tracing::instrument(level = "debug")]
+pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(), ErrorResponse> {
     if client.backchannel_logout_uri.is_none() {
         return Ok(());
     }
     let uri = client.backchannel_logout_uri.as_ref().unwrap();
 
+    info!(
+        "Executing full backchannel logout for client '{}' via '{uri}'",
+        client.id
+    );
+
     // We don't care about specific sessions here. Everything for this client should be logged out.
     // Skipping sessions and logging out whole users reduces the load.
     let states = UserLoginState::find_by_client_without_session(client.id.clone()).await?;
+    debug!("{:?}", states);
 
     let alg = JwkKeyPairAlg::from_str(client.id_token_alg.as_str())?;
     let kp = JwkKeyPair::find_latest(alg).await?;
@@ -396,7 +382,6 @@ pub async fn execute_backchannel_logout_by_client(
         if let Err(err) = send_backchannel_logout(
             client.id.clone(),
             uri.to_string(),
-            &data.issuer,
             Some(state.user_id),
             None,
             &kp,
@@ -404,7 +389,7 @@ pub async fn execute_backchannel_logout_by_client(
         )
         .await
         {
-            error!("Error executing Backchannel Logout: {}", err);
+            error!(?err, "executing Backchannel Logout");
         }
     }
 
@@ -412,7 +397,7 @@ pub async fn execute_backchannel_logout_by_client(
         if let Err(err) =
             res.map_err(|err| ErrorResponse::new(ErrorResponseType::Internal, err.to_string()))?
         {
-            error!("{err}");
+            error!(?err);
         }
     }
 
@@ -424,21 +409,25 @@ pub async fn execute_backchannel_logout_by_client(
 pub async fn send_backchannel_logout(
     client_id: String,
     backchannel_logout_uri: String,
-    issuer: &str,
     sub: Option<String>,
     sid: Option<String>,
     kp: &JwkKeyPair,
     tasks: &mut JoinSet<Result<(), ErrorResponse>>,
 ) -> Result<(), ErrorResponse> {
-    let logout_token = LogoutToken::new(issuer, &client_id, sub.as_deref(), sid.as_deref())
-        .into_token_with_kp(kp)?;
+    debug_assert!(sub.is_some() || sid.is_some());
+
+    let logout_token = LogoutToken::new(
+        &RauthyConfig::get().issuer,
+        &client_id,
+        sub.as_deref(),
+        sid.as_deref(),
+        RauthyConfig::get().vars.backchannel_logout.token_lifetime,
+    )
+    .into_token_with_kp(kp)?;
 
     tasks.spawn(async move {
-        debug!(
-            "Sending backchannel logout to {}: {}",
-            client_id, backchannel_logout_uri
-        );
-        let res = LOGOUT_CLIENT
+        debug!("Sending backchannel logout to {client_id}: {backchannel_logout_uri}");
+        let res = http_client()
             .post(backchannel_logout_uri)
             .form(&BackchannelLogoutRequest { logout_token })
             .send()
@@ -452,17 +441,12 @@ pub async fn send_backchannel_logout(
                 }
                 let text = resp.text().await.unwrap_or_default();
                 format!(
-                    "Error during Backchannel Logout for client '{}': HTTP {} - {}",
-                    client_id,
-                    status.as_u16(),
-                    text
+                    "Error during Backchannel Logout for client '{client_id}': HTTP {} - {text}",
+                    status.as_u16()
                 )
             }
             Err(err) => {
-                format!(
-                    "Error during Backchannel Logout for client '{}': {}",
-                    client_id, err
-                )
+                format!("Error during Backchannel Logout for client '{client_id}': {err}")
             }
         };
 

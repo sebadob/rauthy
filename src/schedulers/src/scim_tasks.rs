@@ -1,24 +1,20 @@
-use actix_web::web;
 use rauthy_common::utils::get_rand_between;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use rauthy_models::entity::groups::Group;
+use rauthy_models::entity::scim_types::ScimGroup;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::collections::HashMap;
-use std::env;
 use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
-pub async fn scim_task_retry(data: web::Data<AppState>) {
-    let retry_count = env::var("SCIM_RETRY_COUNT")
-        .as_deref()
-        .unwrap_or("100")
-        .parse::<u16>()
-        .expect("Cannot parse SCIM_RETRY_COUNT as u16");
+pub async fn scim_task_retry() {
+    let mut clients_scim: Vec<ClientScim> = Vec::with_capacity(1);
+    let mut groups_remote = HashMap::with_capacity(4);
 
     loop {
         // We want to randomize the sleep because this scheduler should run on all cluster members.
@@ -27,28 +23,29 @@ pub async fn scim_task_retry(data: web::Data<AppState>) {
         time::sleep(Duration::from_millis(millis)).await;
 
         debug!("Running scim_task_retry scheduler");
-        if let Err(err) = execute(&data, retry_count).await {
+        if let Err(err) = execute(&mut clients_scim, &mut groups_remote).await {
             error!("Error during scim_task_retry: {}", err.message);
         }
     }
 }
 
-async fn execute(data: &web::Data<AppState>, retry_count: u16) -> Result<(), ErrorResponse> {
+async fn execute(
+    clients_scim: &mut Vec<ClientScim>,
+    groups_remote: &mut HashMap<String, ScimGroup>,
+) -> Result<(), ErrorResponse> {
     let failures = FailedScimTask::find_all().await?;
     if failures.is_empty() {
         return Ok(());
     }
 
-    let mut clients_scim: Vec<ClientScim> = Vec::with_capacity(1);
     let groups_local = Group::find_all().await?;
-    let mut groups_remote = HashMap::with_capacity(groups_local.len());
 
     for failure in failures {
-        if failure.retry_count >= retry_count as i64 {
-            warn!("Retry count exceeded for scim task {:?}", failure);
+        if failure.retry_count >= RauthyConfig::get().vars.scim.retry_count as i64 {
+            warn!("Retry count exceeded for scim task {failure:?}");
 
             Event::scim_task_failed(&failure.client_id, &failure.action, failure.retry_count)
-                .send(&data.tx_events)
+                .send()
                 .await?;
 
             failure.delete().await?;
@@ -77,7 +74,7 @@ async fn execute(data: &web::Data<AppState>, retry_count: u16) -> Result<(), Err
             }
             ScimAction::UsersSync(last_created_ts) => {
                 client_scim
-                    .sync_users(Some(last_created_ts), &groups_local, &mut groups_remote)
+                    .sync_users(Some(last_created_ts), &groups_local, groups_remote)
                     .await
             }
             ScimAction::GroupCreateUpdate(group_id) => {
@@ -107,10 +104,7 @@ async fn execute(data: &web::Data<AppState>, retry_count: u16) -> Result<(), Err
                 failure.delete().await?;
             }
             Err(err) => {
-                error!(
-                    "Error executing scim task for client {}: {}",
-                    failure.client_id, err
-                );
+                error!(failure.client_id, ?err, "Error executing scim task",);
             }
         }
     }

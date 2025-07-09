@@ -19,9 +19,9 @@ pub async fn get_static_assets(
         if path.ends_with(".png") || path.ends_with(".webp") || path.ends_with(".jpg") {
             (Cow::from(path), "none")
         } else if accept_encoding.contains(&"br".parse().unwrap()) {
-            (Cow::from(format!("{}.br", path)), "br")
+            (Cow::from(format!("{path}.br")), "br")
         } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
-            (Cow::from(format!("{}.gz", path)), "gzip")
+            (Cow::from(format!("{path}.gz")), "gzip")
         } else {
             (Cow::from(path), "none")
         };
@@ -92,6 +92,15 @@ pub async fn get_admin_clients_html(req: HttpRequest) -> Result<HttpResponse, Er
 #[get("/admin/config/argon2")]
 pub async fn get_admin_config_argon2_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     HtmlCached::ConfigArgon2
+        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
+        .await
+}
+
+#[get("/admin/config/backups")]
+pub async fn get_admin_config_backups_html(
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::ConfigBackups
         .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
         .await
 }
@@ -185,6 +194,15 @@ pub async fn get_device_html(req: HttpRequest) -> Result<HttpResponse, ErrorResp
 #[get("/fedcm")]
 pub async fn get_fed_cm_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     HtmlCached::FedCM
+        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
+        .await
+}
+
+#[get("/users/password_reset")]
+pub async fn get_user_password_reset_fixed(
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::PasswordReset
         .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
         .await
 }

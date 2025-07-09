@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.30.0-20250528"
+version = "0.31.1"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -26,6 +26,7 @@ lto = false
 strip = false
 
 [patch.crates-io]
+#cryptr = { git = "https://github.com/sebadob/cryptr.git" }
 #hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
 #hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
 #hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
@@ -37,30 +38,39 @@ actix-multipart = "0.7.2"
 actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-lab = "0.24"
 actix-web-prom = "0.10"
-anyhow = "1"
-askama = "0.14"
+arc-swap = "1.7"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
+askama = "0.14"
 async-trait = "0.1.74"
+atrium-api = "0.25.3"
+atrium-common = "0.1.2"
+atrium-identity = "0.1.4"
+atrium-oauth = "0.1.2"
 base64 = "0.22.0"
 bincode = { version = "2", features = ["serde"] }
 brotli = "8"
+bytes = "1.10"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 cidr = "0.3.0"
 cron = "0.15"
-cryptr = { version = "0.6.0", features = ["s3", "streaming"] }
+cryptr = { version = "0.7", features = ["s3", "streaming"] }
 css-color = "0.2"
 deadpool = { version = "0.12", features = ["rt_tokio_1", "serde"] }
 deadpool-postgres = "0.14"
 dotenvy = "0.15"
 ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
+flate2 = "1.1"
 flume = "0.11"
 futures = "0.3"
 futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
-hiqlite = { version = "0.6.0", features = ["cache", "dashboard", "listen_notify_local"] }
-hiqlite-macros = { version = "0.6.0" }
+hickory-resolver = "0.25.2"
+hiqlite = { version = "0.9.1", features = [
+    "cache", "counters", "dashboard", "listen_notify_local"
+] }
+hiqlite-macros = { version = "0.9" }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
@@ -71,10 +81,10 @@ lettre = { version = "0.11", default-features = false, features = [
     "builder", "smtp-transport", "tokio1-rustls-tls", "tracing"
 ] }
 libflate = "2.1.0"
+maxminddb = "0.26"
 mime = "0.3.17"
 mime_guess = "2"
 num_cpus = "1"
-once_cell = "1.19.0"
 openssl = { version = "0.10.72", features = ["vendored"] }
 openssl-sys = { version = "0.9.105", features = ["vendored"] }
 oxiri = "0.2.2"
@@ -92,7 +102,7 @@ rsa = { version = "0.9.3", features = ["serde", "sha2"] }
 ruma = { version = "0.12.0", features = [
     "client-api-c", "client-ext-client-api", "client-reqwest", "markdown", "rand"
 ] }
-rusqlite = "0.34"
+rusqlite = "0.36"
 rust-embed = "8.5.0"
 rustls = { version = "0.23", default-features = false, features = ["logging", "std", "tls12", "ring"] }
 rustls-pki-types = "1.4.1"
@@ -102,13 +112,16 @@ semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_json_path = "0.7.1"
-serde_rusqlite = "0.38"
+serde_rusqlite = "0.39"
 serde_urlencoded = "0.7.1"
 spow = { version = "0.6", features = ["server"] }
 strum = { version = "0.27", features = ["derive"] }
 svg-hush = "0.9.4"
-tikv-jemallocator = "0.6"
+tar = "0.4.44"
+tikv-jemallocator = { version = "0.6", features = ["unprefixed_malloc_on_supported_platforms"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
+tls-hot-reload = "0.1"
+toml = "0.8.22"
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "tracing"] }
 tokio = { version = "1", features = ["full"] }
@@ -122,5 +135,3 @@ webauthn-rs = { version = "0.5", features = [
 ] }
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"
-
-

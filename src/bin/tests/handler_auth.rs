@@ -36,7 +36,7 @@ use tokio::time;
 mod common;
 
 // This is a very long running test - run it manually as a single test
-// TODO maybe moving it into its own module would work, so it does not block the others
+// maybe moving it into its own module would work, so it does not block the others
 #[tokio::test]
 #[ignore]
 async fn test_certs() -> Result<(), Box<dyn Error>> {
@@ -628,10 +628,12 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
         },
         kid: None,
     };
+
+    let _ = DPOP_TOKEN_ENDPOINT.set("http://localhost:8081/auth/v1/oidc/token".to_string());
     let mut claims = DPoPClaims {
         jti: "-BwC3ESc6acc2lTc".to_string(),
         htm: http::Method::POST.to_string(),
-        htu: DPOP_TOKEN_ENDPOINT.clone().to_string(),
+        htu: DPOP_TOKEN_ENDPOINT.get().unwrap().to_string(),
         iat: Utc::now().timestamp(),
         // ath: None,
         nonce: None,

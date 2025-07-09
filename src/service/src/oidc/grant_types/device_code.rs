@@ -1,13 +1,12 @@
 use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenScopes, TokenSet};
-use actix_web::{HttpResponse, web};
+use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
-use rauthy_common::constants::DEVICE_GRANT_POLL_INTERVAL;
 use rauthy_common::utils::new_store_id;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::devices::{DeviceAuthCode, DeviceEntity};
 use rauthy_models::entity::users::User;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::borrow::Cow;
 use std::net::IpAddr;
 use std::ops::{Add, Sub};
@@ -15,11 +14,7 @@ use tracing::{debug, error, warn};
 
 /// Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
 #[tracing::instrument(skip_all, fields(client_id = payload.client_id))]
-pub async fn grant_type_device_code(
-    data: &web::Data<AppState>,
-    peer_ip: IpAddr,
-    payload: TokenRequest,
-) -> HttpResponse {
+pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> HttpResponse {
     let device_code = match &payload.device_code {
         None => {
             return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
@@ -71,10 +66,9 @@ pub async fn grant_type_device_code(
     // We allow it to be 500ms shorter than specified to not get into
     // possible problems with slightly inaccurate client implementations.
     let now = Utc::now();
+    let interval = RauthyConfig::get().vars.device_grant.poll_interval as i64;
     let poll_thres = now
-        .sub(chrono::Duration::seconds(
-            *DEVICE_GRANT_POLL_INTERVAL as i64,
-        ))
+        .sub(chrono::Duration::seconds(interval))
         .add(chrono::Duration::milliseconds(500));
     if poll_thres < code.last_poll {
         warn!("device does not respect the poll interval");
@@ -85,7 +79,7 @@ pub async fn grant_type_device_code(
             error_description = Cow::from("poll interval has not been respected");
             if let Err(err) = code.delete().await {
                 // this should never happen
-                error!("Error deleting DeviceAuthCode from the cache: {:}", err);
+                error!(?err, "deleting DeviceAuthCode from the cache");
             }
         } else {
             error = OAuth2ErrorTypeResponse::SlowDown;
@@ -134,7 +128,7 @@ pub async fn grant_type_device_code(
 
         if let Err(err) = code.delete().await {
             // should really never happen - in cache only
-            error!("Error deleting DeviceAuthCode: {:?}", err);
+            error!(?err, "deleting DeviceAuthCode");
         }
 
         let id = new_store_id();
@@ -158,11 +152,10 @@ pub async fn grant_type_device_code(
                 error_description: Some(Cow::from(err.to_string())),
             });
         }
-        debug!("New Device with ID {} has been created", id);
+        debug!("New Device with ID {id} has been created");
 
         let ts = match TokenSet::from_user(
             &user,
-            data,
             &client,
             AuthTime::now(),
             None,
@@ -176,7 +169,7 @@ pub async fn grant_type_device_code(
         {
             Ok(ts) => ts,
             Err(err) => {
-                error!("Building Device TokenSet: {:?}", err);
+                error!(?err, "Building Device TokenSet");
                 return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
                     error: OAuth2ErrorTypeResponse::InvalidRequest,
                     error_description: Some(Cow::from(err.to_string())),
@@ -190,7 +183,7 @@ pub async fn grant_type_device_code(
     code.last_poll = now;
     if let Err(err) = code.save().await {
         // this should never happen
-        error!("Error saving the DeviceAuthCode: {:?}", err);
+        error!(?err, "Error saving the DeviceAuthCode");
     }
 
     HttpResponse::BadRequest().json(OAuth2ErrorResponse {

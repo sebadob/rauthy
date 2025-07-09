@@ -8,6 +8,7 @@ pub mod error_impls;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum ErrorResponseType {
     BadRequest,
+    Blocked,
     Connection,
     CSRFTokenError,
     Database,
@@ -37,7 +38,7 @@ pub enum ErrorResponseType {
 
 impl Display for ErrorResponseType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 

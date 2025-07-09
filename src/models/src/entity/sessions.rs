@@ -2,6 +2,7 @@ use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::SameSite;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, cookie, web};
@@ -9,7 +10,7 @@ use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_common::constants::{
-    CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER, SESSION_LIFETIME_FED_CM,
+    CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER,
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
@@ -398,7 +399,7 @@ OFFSET $3"#;
         Ok(sids)
     }
 
-    pub async fn save(&self) -> Result<(), ErrorResponse> {
+    pub async fn upsert(&self) -> Result<(), ErrorResponse> {
         let state_str = self.state.as_str();
 
         let sql = r#"
@@ -459,7 +460,7 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
         q: &str,
         limit: i64,
     ) -> Result<Vec<Self>, ErrorResponse> {
-        let q = format!("%{}%", q);
+        let q = format!("%{q}%");
 
         let size_hint = max(limit as usize, 1);
 
@@ -569,7 +570,7 @@ impl Session {
         ApiCookie::build_with_same_site(
             COOKIE_SESSION_FED_CM,
             Cow::from(&self.id),
-            *SESSION_LIFETIME_FED_CM,
+            RauthyConfig::get().vars.fedcm.session_lifetime as i64,
             SameSite::None,
         )
     }
@@ -658,11 +659,6 @@ impl Session {
             }
         };
 
-        debug!(
-            "Validating session: {:?}\nwith remote_ip: {:?}\non path: {:?}",
-            self, remote_ip, req_path
-        );
-
         if remote_ip.is_none() {
             return true;
         }
@@ -685,6 +681,7 @@ impl Session {
                 ];
                 #[cfg(not(debug_assertions))]
                 let exceptions = [
+                    "/auth/v1/atproto/client_metadata",
                     "/auth/v1/oidc/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
@@ -706,8 +703,10 @@ impl Session {
             }
         } else {
             warn!(
-                "Invalid access for session {} / {:?} with different IP: {:?}",
-                self.id, session_ip, remote_ip,
+                session_id = self.id,
+                ?session_ip,
+                ?remote_ip,
+                "Invalid access for session",
             );
             return false;
         }
@@ -748,7 +747,7 @@ impl Session {
     #[inline]
     pub async fn set_mfa(&mut self, value: bool) -> Result<(), ErrorResponse> {
         self.is_mfa = value;
-        self.save().await
+        self.upsert().await
     }
 
     #[inline(always)]
@@ -792,7 +791,7 @@ pub fn get_header_value<'a>(
     let res = req.headers().get(val).ok_or_else(|| {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            format!("Missing header value '{}'", val),
+            format!("Missing header value '{val}'"),
         )
     })?;
     Ok(res)

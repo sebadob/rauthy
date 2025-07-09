@@ -31,7 +31,6 @@ async fn test_backchannel_logout() -> Result<(), Box<dyn Error>> {
     // We could trigger a logout via `id_token_hint` for instance.
 
     let ts = get_token_set_init_client().await;
-    let now = Utc::now().timestamp();
 
     let res = client
         .post(&url)
@@ -45,12 +44,13 @@ async fn test_backchannel_logout() -> Result<(), Box<dyn Error>> {
         .await?;
     assert!(res.status().is_success());
 
-    let token_str = fs::read_to_string(target_file).await?;
+    let token_str = fs::read_to_string(target_file).await.unwrap();
     let mut buf = Vec::with_capacity(256);
     let (_, token) = LogoutToken::build_from_str(&token_str, &mut buf).unwrap();
     eprintln!("token: {token:?}");
     pretty_assertions::assert_eq!(token.iss, "http://localhost:8081/auth/v1");
     pretty_assertions::assert_eq!(token.aud, "init_client");
+    let now = Utc::now().timestamp();
     assert!(token.iat <= now);
     assert!(token.exp > now);
     pretty_assertions::assert_eq!(token.sub.as_deref(), Some("m4PJ3TnyP32LA8hzY23deme3"));

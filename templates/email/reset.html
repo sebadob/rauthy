@@ -9,5 +9,10 @@
 <p>{{ validity }}</p>
 <p><span class="font-label">{{ expires }}</span> <b>{{ exp }}</b></p>
 <a href="{{ link }}">{{ button_text }}</a>
-<footer>{{ footer }}</footer>
+<footer>
+    <p>{{ footer }}</p>
+    {%- if !link_request_new.is_empty() -%}
+    <a href="{{ link_request_new }}" data-faded="true">{{ button_text_request_new }}</a>
+    {%- endif -%}
+</footer>
 {% endblock %}

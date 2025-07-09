@@ -3,23 +3,21 @@ use actix_web::web::Query;
 use actix_web::{HttpResponse, delete, get, web};
 use rauthy_api_types::generic::PaginationParams;
 use rauthy_api_types::sessions::SessionResponse;
-use rauthy_common::constants::SSP_THRESHOLD;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use rauthy_models::events::event::Event;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::logout;
 use tokio::task;
 use tracing::error;
 use validator::Validate;
 
 /// Returns all existing sessions
-///
-/// TODO update pagination usage description
 ///
 /// **Permissions**
 /// - rauthy_admin
@@ -50,7 +48,7 @@ pub async fn get_sessions(
 
     // sessions will be dynamically paginated based on the same setting as users
     let user_count = User::count().await?;
-    if user_count >= *SSP_THRESHOLD as i64 {
+    if user_count >= RauthyConfig::get().vars.server.ssp_threshold as i64 {
         // TODO outsource the setup stuff here or keep it duplicated for better readability?
         // currently used here and in GET /users
         let page_size = params.page_size.unwrap_or(20) as i64;
@@ -121,10 +119,7 @@ pub async fn get_sessions(
     ),
 )]
 #[delete("/sessions")]
-pub async fn delete_sessions(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn delete_sessions(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     Session::invalidate_all().await?;
@@ -132,9 +127,9 @@ pub async fn delete_sessions(
 
     // This task should run async in the background, as it could take quite a long time to finish.
     task::spawn(async move {
-        if let Err(err) = logout::execute_backchannel_logout_for_everything(data).await {
-            // TODO we should throw an error or critical event in this case maybe, because
-            // invalidations for everything usually come with a good reason.
+        if let Err(err) = logout::execute_backchannel_logout_for_everything().await {
+            // TODO we should throw an error or new event in this case maybe, because
+            //  invalidations for everything usually come with a good reason.
             error!(
                 "Error during backchannel logout for the whole application: {:?}",
                 err
@@ -169,9 +164,12 @@ pub async fn delete_sessions_for_user(
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let uid = path.into_inner();
-    for sid in Session::invalidate_for_user(&uid).await? {
-        RefreshToken::delete_by_sid(sid).await?;
-    }
+    let user = User::find(uid).await?;
+    Session::invalidate_for_user(&user.id).await?;
+    RefreshToken::invalidate_for_user(&user.id).await?;
+    logout::execute_backchannel_logout(None, Some(user.id)).await?;
+
+    Event::force_logout(user.email).send().await?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -194,7 +192,6 @@ pub async fn delete_sessions_for_user(
 )]
 #[delete("/sessions/id/{session_id}")]
 pub async fn delete_session_by_id(
-    data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -202,10 +199,11 @@ pub async fn delete_session_by_id(
 
     let sid = path.into_inner();
     let session = Session::find(sid.clone()).await?;
-    session.delete().await?;
+    let uid = session.user_id.clone();
 
+    session.delete().await?;
     RefreshToken::delete_by_sid(sid.clone()).await?;
-    logout::execute_backchannel_logout(&data, Some(sid), None).await?;
+    logout::execute_backchannel_logout(Some(sid), uid).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

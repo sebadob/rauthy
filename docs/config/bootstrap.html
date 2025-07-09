@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -166,40 +177,36 @@ starts with an empty database for the very first time. This makes it possible to
 external tooling and have more control over it, or just use the same one all the time, because you may spin up an
 instance in test pipelines.</p>
 <p>You can change the default admin user E-Mail with:</p>
-<pre><code># If set, the email of the default admin will be changed
-# during the initialization of an empty production database.
-BOOTSTRAP_ADMIN_EMAIL="alfred@batcave.io"
+<pre><code class="language-toml">[bootstrap]
+# If set, the email of the default admin will be changed during
+# the initialization of an empty production database.
+#
+# default: 'admin@localhost'
+# overwritten by: BOOTSTRAP_ADMIN_EMAIL
+admin_email = 'admin@localhost'
 </code></pre>
 <p>The password can be bootstrapped in 2 ways:</p>
 <ul>
 <li>Provide a plain test password</li>
 <li>Provide the password hashed with argon2id</li>
 </ul>
-<pre><code># If set, this plain text password will be used for the
-# initial admin password instead of generating a random
-# password.
-BOOTSTRAP_ADMIN_PASSWORD_PLAIN="123SuperSafe"
+<pre><code class="language-toml">[bootstrap]
+# If set, this plain text password will be used for the initial
+# admin password instead of generating a random password.
+#
+# default: random -&gt; see logs on first start
+# overwritten by: BOOTSTRAP_ADMIN_PASSWORD_PLAIN
+password_plain = '123SuperSafe'
 
-# If set, this will take the argon2id hashed password
-# during the initialization of an empty production database.
-# If both BOOTSTRAP_ADMIN_PASSWORD_PLAIN and
-# BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID are set, the hashed version
-# will always be prioritized.
-BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+# If set, this will take the Argon2ID hashed password during the
+# initialization of an empty production database. If both
+# `password_plain` and `pasword_argon2id` are set, the hashed
+# version will always be prioritized.
+#
+# default: random -&gt; see logs on first start
+# overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
+pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 </code></pre>
-<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
-<div class="admonition-title">
-<div id="admonition-caution-title">
-<p>Caution</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-caution"></a>
-</div>
-<div>
-<p>When you provide the password hashed with argon2id, you need to properly quote the string like in this example with
-single <code>''</code>. This will probably change in a future version, so you would need to encode it as base64, but this is not
-the case right now (v0.24.0).</p>
-</div>
-</div>
 <h2 id="api-key"><a class="header" href="#api-key">API Key</a></h2>
 <p>In automated environments, you would usually not use a normal user to access the Rauthy API, since it is a bit more
 cumbersome to use from outside the browser because of additional CSRF tokens and security features. If you want to
@@ -243,7 +250,8 @@ most probably.</p>
 }
 </code></pre>
 <p>The config documentation for the bootstrap value should explain all further questions:</p>
-<pre><code># You can provide an API Key during the initial prod database
+<pre><code class="language-toml">[bootstrap]
+# You can provide an API Key during the initial prod database
 # bootstrap. This key must match the format and pass validation.
 # You need to provide it as a base64 encoded JSON in the format:
 #
@@ -285,17 +293,24 @@ most probably.</p>
 # ```
 #
 # You can use the `api_key_example.json` from `/` as
-# an example. Afterwards, just `base64 api_key_example.json | tr -d '\n'`
-BOOTSTRAP_API_KEY="ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY2VzcyI6IFsKICAgIHsKICAgICAgImdyb3VwIjogIkNsaWVudHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgImdyb3VwIjogIlJvbGVzIiwKICAgICAgImFjY2Vzc19yaWdodHMiOiBbCiAgICAgICAgInJlYWQiLAogICAgICAgICJjcmVhdGUiLAogICAgICAgICJ1cGRhdGUiLAogICAgICAgICJkZWxldGUiCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJncm91cCI6ICJHcm91cHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfQogIF0KfQ=="
+# an example. Afterward, just
+# `base64 api_key_example.json | tr -d '\n'`
+#
+# overwritten by: BOOTSTRAP_API_KEY
+api_key = 'ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY2VzcyI6IFsKICAgIHsKICAgICAgImdyb3VwIjogIkNsaWVudHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgImdyb3VwIjogIlJvbGVzIiwKICAgICAgImFjY2Vzc19yaWdodHMiOiBbCiAgICAgICAgInJlYWQiLAogICAgICAgICJjcmVhdGUiLAogICAgICAgICJ1cGRhdGUiLAogICAgICAgICJkZWxldGUiCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJncm91cCI6ICJHcm91cHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfQogIF0KfQ=='
+
 </code></pre>
 <p>The secret needs to be set with a second variable. Just make sure it contains at least 64 alphanumeric characters.</p>
-<pre><code># The secret for the above defined bootstrap API Key.
+<pre><code class="language-toml">[bootstrap]
+# The secret for the above defined bootstrap API Key.
 # This must be at least 64 alphanumeric characters long.
-# You will be able to use that key afterwards with setting
+# You will be able to use that key afterward with setting
 # the `Authorization` header:
 #
 # `Authorization: API-Key &lt;your_key_name_from_above&gt;$&lt;this_secret&gt;`
-BOOTSTRAP_API_KEY_SECRET=twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
+#
+# overwritten by: BOOTSTRAP_API_KEY_SECRET
+api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh'
 </code></pre>
 <p>With the values from this example, you will then be able to use the API key with providing the <code>Authorization</code> header
 with each request in the following format:</p>
@@ -303,18 +318,7 @@ with each request in the following format:</p>
 </code></pre>
 <pre><code>Authorization: API-Key bootstrap$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
 </code></pre>
-<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
-<div class="admonition-title">
-<div id="admonition-hint-title">
-<p>Hint</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-hint"></a>
-</div>
-<div>
-<p>API Keys are not nicely documented in this book yet, but should be self-explanatory when you take a look at the section
-in the Admin UI.</p>
-</div>
-</div>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">

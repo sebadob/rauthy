@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
-use std::net::Ipv4Addr;
+use std::net::IpAddr;
 use utoipa::ToSchema;
 use validator::Validate;
 
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct IpBlacklistRequest {
-    /// Validation: Ipv4Addr
+    /// Validation: IpAddr
     #[schema(value_type = str)]
-    pub ip: Ipv4Addr,
+    pub ip: IpAddr,
     // TODO max validation for inner i64 is broken in the macro in v0.18.1
     // #[validate(range(min = 1719784800, max = 4070905200))]
     /// Unix timestamp in seconds

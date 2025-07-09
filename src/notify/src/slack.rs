@@ -1,6 +1,6 @@
 use crate::{Notification, Notify};
 use async_trait::async_trait;
-use rauthy_common::HTTP_CLIENT;
+use rauthy_common::http_client;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Serialize;
 use tracing::{debug, error};
@@ -33,13 +33,18 @@ impl Notify for NotifierSlack {
         let msg = SlackMessageApi::new(color, fields);
         debug!("{:?}", msg);
 
-        match HTTP_CLIENT.post(&self.webhook_url).json(&msg).send().await {
+        match http_client()
+            .post(&self.webhook_url)
+            .json(&msg)
+            .send()
+            .await
+        {
             Ok(_) => {
                 debug!("Slack message sent successfully");
                 Ok(())
             }
             Err(err) => {
-                let e = format!("Unable to send message to Slack: {:?}", err);
+                let e = format!("Unable to send message to Slack: {err:?}");
                 error!("{e}");
                 Err(ErrorResponse::new(ErrorResponseType::Connection, e))
             }

@@ -1,9 +1,10 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::DB;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
 use chrono::Utc;
 use hiqlite_macros::params;
-use rauthy_common::constants::{PASSWORD_RESET_COOKIE_BINDING, PWD_CSRF_HEADER, PWD_RESET_COOKIE};
+use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -66,17 +67,17 @@ impl Display for MagicLinkUsage {
         // For types with a value, `$` was chosen as the separating characters since it is URL safe.
         // It also makes splitting of the value quite easy.
         match self {
-            MagicLinkUsage::EmailChange(email) => write!(f, "email_change${}", email),
+            MagicLinkUsage::EmailChange(email) => write!(f, "email_change${email}"),
             MagicLinkUsage::NewUser(redirect_uri) => {
                 if let Some(uri) = redirect_uri {
-                    write!(f, "new_user${}", uri)
+                    write!(f, "new_user${uri}")
                 } else {
                     write!(f, "new_user")
                 }
             }
             MagicLinkUsage::PasswordReset(redirect_uri) => {
                 if let Some(uri) = redirect_uri {
-                    write!(f, "password_reset${}", uri)
+                    write!(f, "password_reset${uri}")
                 } else {
                     write!(f, "password_reset")
                 }
@@ -100,7 +101,8 @@ impl Debug for MagicLink {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "id: {}(...), user_id: {}, csrf_token: {}(...), cookie: {:?}, exp: {}, used: {}, usage: {}",
+            "MagicLink {{ id: {}(...), user_id: {}, csrf_token: {}(...), cookie: {:?}, exp: {}, \
+            used: {}, usage: {} }}",
             &self.id[..5],
             self.user_id,
             &self.csrf_token[..5],
@@ -261,26 +263,31 @@ impl MagicLink {
             );
 
             let cookie_opt = ApiCookie::from_req(req, PWD_RESET_COOKIE);
+            let cookie_binding = RauthyConfig::get()
+                .vars
+                .access
+                .password_reset_cookie_binding;
             if let Some(cookie) = cookie_opt {
                 // the extracted cookie from the request starts with 'rauthy-pwd-reset='
                 if !cookie.ends_with(self.cookie.as_ref().unwrap()) {
-                    if *PASSWORD_RESET_COOKIE_BINDING {
+                    if cookie_binding {
                         return Err(err);
                     } else {
                         let ip = real_ip_from_req(req)?;
                         warn!(
-                            "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie from {}",
-                            ip
+                            ?ip,
+                            "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding \
+                            cookie",
                         );
                     }
                 }
-            } else if *PASSWORD_RESET_COOKIE_BINDING {
+            } else if cookie_binding {
                 return Err(err);
             } else {
                 let ip = real_ip_from_req(req)?;
                 warn!(
-                    "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie from {}",
-                    ip
+                    ?ip,
+                    "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie",
                 );
             }
         }

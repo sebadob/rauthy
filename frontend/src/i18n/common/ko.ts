@@ -3,6 +3,7 @@ import {type I18n} from "./interface";
 export const I18nKo: I18n = {
     lang: "ko",
     common: {
+        authenticate: "Authenticate",
         cancel: "취소",
         changeTheme: "테마 변경",
         close: "닫기",
@@ -36,8 +37,10 @@ export const I18nKo: I18n = {
         ],
         never: "없음",
         password: "비밀번호",
+        refresh: "Refresh",
         required: "필수 항목",
         save: "저장",
+        seconds: "seconds",
         selectI18n: "언어 선택",
         show: "보이기",
         summary: "요약",
@@ -62,6 +65,7 @@ export const I18nKo: I18n = {
         accessRenew: "접근 갱신 기한",
         accessRenewDelete: "갱신 비활성화",
         birthdate: "생년월일",
+        canModifyFor: "Passkeys can be modified for:",
         city: "도시",
         changePassword: "비밀번호 변경",
         convertAccount: "계정 전환",
@@ -134,6 +138,9 @@ export const I18nKo: I18n = {
         passwordForgotten: "비밀번호를 잊으셨나요?",
         passwordRequest: "요청",
         passwordRequired: "비밀번호는 필수입니다.",
+        passwordResetDesc: `Please provide your E-Mail to request a password reset link. If your address exists in out
+            database, you will receive a link via E-Mail.`,
+        passwordResetSuccess: "Request received. You can close this window now.",
         requestExpires: "만료일",
         requestExpired: "요청이 만료되었습니다.",
         signUp: "사용자 가입",
@@ -180,12 +187,15 @@ export const I18nKo: I18n = {
         errorReg: "가입 절차 시작 중 오류 발생",
         lastUsed: "마지막 사용일",
         noKey: "이 슬롯에 등록된 보안 키가 없습니다.",
+        reAuthenticatePasskey: "Before you can modify Passkeys, you need to authenticate with an already registered one:",
+        reAuthenticatePwd: "Before you can modify Passkeys, you need to re-authenticate with your password.",
         register: "등록",
         registerNew: "새 키 등록",
         registerd: "등록일",
         registerdKeys: "등록된 키",
         passkeyName: "패스키 이름",
         passkeyNameErr: "특수문자를 제외한 2자에서 32자이어야 합니다.",
+        passwordInvalid: "Password Invalid",
         test: "테스트",
         testError: "테스트 시작 중 오류 발생",
         testSuccess: "테스트 성공"
@@ -242,5 +252,10 @@ export const I18nKo: I18n = {
         register: "가입",
         success: "성공적으로 가입되었습니다.",
         userReg: "사용자 가입"
+    },
+    userRevoke: {
+        title: "Revoke Logins",
+        desc1: "All Logins and Sessions have been revoked for this user as much as possible.",
+        desc2: "You should immediately renew all your passwords!",
     }
 };

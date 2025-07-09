@@ -3,7 +3,6 @@ use actix_web::web::Json;
 use actix_web::{HttpResponse, delete, get, post, put, web};
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::scopes::Scope;
 use validator::Validate;
@@ -52,14 +51,13 @@ pub async fn get_scopes(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRe
 )]
 #[post("/scopes")]
 pub async fn post_scope(
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
     Json(payload): Json<ScopeRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Scopes, AccessRights::Create)?;
     payload.validate()?;
 
-    Scope::create(&data, payload)
+    Scope::create(payload)
         .await
         .map(|s| HttpResponse::Ok().json(s))
 }
@@ -81,7 +79,6 @@ pub async fn post_scope(
 )]
 #[put("/scopes/{id}")]
 pub async fn put_scope(
-    data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
     Json(payload): Json<ScopeRequest>,
@@ -89,7 +86,7 @@ pub async fn put_scope(
     principal.validate_api_key_or_admin_session(AccessGroup::Scopes, AccessRights::Update)?;
     payload.validate()?;
 
-    Scope::update(&data, path.as_str(), payload)
+    Scope::update(path.as_str(), payload)
         .await
         .map(|s| HttpResponse::Ok().json(ScopeResponse::from(s)))
 }
@@ -112,13 +109,12 @@ pub async fn put_scope(
 )]
 #[delete("/scopes/{id}")]
 pub async fn delete_scope(
-    data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Scopes, AccessRights::Delete)?;
 
-    Scope::delete(&data, path.as_str())
+    Scope::delete(path.as_str())
         .await
         .map(|_| HttpResponse::Ok().finish())
 }

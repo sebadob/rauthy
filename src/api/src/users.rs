@@ -1,6 +1,7 @@
 use crate::{ReqPrincipal, content_len_limit};
 use actix_web::http::StatusCode;
 use actix_web::http::header::{ACCEPT, HeaderName, HeaderValue, LOCATION};
+use actix_web::mime::TEXT_HTML;
 use actix_web::web::{Json, Query};
 use actix_web::{HttpRequest, HttpResponse, ResponseError, delete, get, patch, post, put, web};
 use chrono::Utc;
@@ -8,71 +9,61 @@ use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
 use rauthy_api_types::oidc::PasswordResetResponse;
 use rauthy_api_types::users::{
-    DeviceRequest, DeviceResponse, MfaPurpose, NewUserRegistrationRequest, NewUserRequest,
-    PasskeyResponse, PasswordResetRequest, RequestResetRequest, UpdateUserRequest,
-    UpdateUserSelfRequest, UserAttrConfigRequest, UserAttrConfigResponse,
-    UserAttrConfigValueResponse, UserAttrValueResponse, UserAttrValuesResponse,
-    UserAttrValuesUpdateRequest, UserEditableAttrResponse, UserEditableAttrsResponse,
-    UserPictureConfig, UserResponse, UserResponseSimple, WebIdRequest, WebIdResponse,
-    WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
+    DeviceRequest, DeviceResponse, MfaModTokenRequest, MfaModTokenResponse, MfaPurpose,
+    NewUserRegistrationRequest, NewUserRequest, PasskeyResponse, PasswordResetRequest,
+    RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAttrConfigRequest,
+    UserAttrConfigResponse, UserAttrConfigValueResponse, UserAttrValueResponse,
+    UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserEditableAttrResponse,
+    UserEditableAttrsResponse, UserPictureConfig, UserResponse, UserResponseSimple,
+    UserRevokeParams, WebIdRequest, WebIdResponse, WebauthnAuthFinishRequest,
+    WebauthnAuthStartRequest, WebauthnAuthStartResponse, WebauthnDeleteRequest,
     WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
-    COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, OPEN_USER_REG,
-    PWD_CSRF_HEADER, PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_BLACKLIST,
-    USER_REG_DOMAIN_RESTRICTION, USER_REG_OPEN_REDIRECT,
+    COOKIE_MFA, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, PWD_CSRF_HEADER,
+    PWD_RESET_COOKIE, TEXT_TURTLE,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
 use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::groups::Group;
+use rauthy_models::entity::login_locations::LoginLocation;
+use rauthy_models::entity::mfa_mod_token::MfaModToken;
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPicture};
 use rauthy_models::entity::pow::PowEntity;
+use rauthy_models::entity::refresh_tokens::RefreshToken;
+use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use rauthy_models::entity::user_revoke::UserRevoke;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webauthn;
-use rauthy_models::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData};
+use rauthy_models::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData, WebauthnServiceReq};
 use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::html::HtmlCached;
-use rauthy_models::html::templates::{Error3Html, ErrorHtml};
+use rauthy_models::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
+use rauthy_models::ipgeo;
 use rauthy_models::language::Language;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::helpers::get_bearer_token_from_header;
 use rauthy_service::oidc::logout;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::collections::HashMap;
-use std::env;
-use std::sync::LazyLock;
+use std::net::IpAddr;
 use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
-
-pub static PICTURE_PUBLIC: LazyLock<bool> = LazyLock::new(|| {
-    env::var("PICTURE_PUBLIC")
-        .as_deref()
-        .unwrap_or("false")
-        .parse::<bool>()
-        .expect("Cannot parse PICTURE_PUBLIC as bool")
-});
-pub static PICTURE_UPLOAD_LIMIT_MB: LazyLock<u16> = LazyLock::new(|| {
-    env::var("PICTURE_UPLOAD_LIMIT_MB")
-        .as_deref()
-        .unwrap_or("10")
-        .parse::<u16>()
-        .expect("Cannot parse PICTURE_UPLOAD_LIMIT_MB as u16")
-});
 
 /// Returns all existing users
 ///
@@ -104,7 +95,7 @@ pub async fn get_users(
     params.validate()?;
 
     let user_count = User::count().await?;
-    if user_count >= *SSP_THRESHOLD as i64 {
+    if user_count >= RauthyConfig::get().vars.server.ssp_threshold as i64 {
         let page_size = params.page_size.unwrap_or(20) as i64;
         let offset = params.offset.unwrap_or(0) as i64;
         let backwards = params.backwards.unwrap_or(false);
@@ -157,7 +148,6 @@ pub async fn get_users(
 )]
 #[post("/users")]
 pub async fn post_users(
-    data: web::Data<AppState>,
     req: HttpRequest,
     principal: ReqPrincipal,
     Json(payload): Json<NewUserRequest>,
@@ -165,9 +155,10 @@ pub async fn post_users(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Create)?;
     payload.validate()?;
 
-    let user = User::create_from_new(&data, payload).await?;
+    let user = User::create_from_new(payload).await?;
 
-    data.tx_events
+    RauthyConfig::get()
+        .tx_events
         .send_async(Event::new_user(
             user.email.clone(),
             real_ip_from_req(&req)?.to_string(),
@@ -175,7 +166,8 @@ pub async fn post_users(
         .await
         .unwrap();
     if user.is_admin() {
-        data.tx_events
+        RauthyConfig::get()
+            .tx_events
             .send_async(Event::new_rauthy_admin(
                 user.email.clone(),
                 real_ip_from_req(&req)?.to_string(),
@@ -308,9 +300,22 @@ pub async fn delete_cust_attr(
     principal
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Delete)?;
 
-    // No need for SCIM sync's - these attrs are custom and do not exist for SCIM
+    let attr_name = path.into_inner();
 
-    UserAttrConfigEntity::delete(path.into_inner()).await?;
+    let clients_scim = ClientScim::find_with_attr_mapping(&attr_name).await?;
+    if !clients_scim.is_empty() {
+        let groups = Group::find_all().await?;
+        tokio::spawn(async move {
+            let mut groups_remote = HashMap::with_capacity(groups.len());
+            for scim in clients_scim {
+                if let Err(err) = scim.sync_users(None, &groups, &mut groups_remote).await {
+                    error!("{}", err);
+                }
+            }
+        });
+    }
+
+    UserAttrConfigEntity::delete(attr_name).await?;
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -339,7 +344,9 @@ pub async fn get_user_picture_config(
 
     Ok(HttpResponse::Ok().json(UserPictureConfig {
         upload_allowed: *PICTURE_STORAGE_TYPE != PictureStorage::Disabled,
-        content_len_limit: *PICTURE_UPLOAD_LIMIT_MB as u32 * 1024 * 1024,
+        content_len_limit: RauthyConfig::get().vars.user_pictures.upload_limit_mb as u32
+            * 1024
+            * 1024,
     }))
 }
 
@@ -356,7 +363,7 @@ pub async fn get_user_picture_config(
 )]
 #[get("/users/register")]
 pub async fn get_users_register(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    if !*OPEN_USER_REG {
+    if !RauthyConfig::get().vars.user_registration.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
     HtmlCached::UserRegistration
@@ -381,21 +388,19 @@ pub async fn get_users_register(req: HttpRequest) -> Result<HttpResponse, ErrorR
 )]
 #[post("/users/register")]
 pub async fn post_users_register(
-    data: web::Data<AppState>,
     req: HttpRequest,
     Json(payload): Json<NewUserRegistrationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    post_users_register_handle(data, req, payload).await
+    post_users_register_handle(req, payload).await
 }
 
 // extracted to be usable from `post_dev_only_endpoints()`
 #[inline(always)]
 pub async fn post_users_register_handle(
-    data: web::Data<AppState>,
     req: HttpRequest,
     payload: NewUserRegistrationRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*OPEN_USER_REG {
+    if !RauthyConfig::get().vars.user_registration.enable {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "Open User Registration is not allowed".to_string(),
@@ -403,18 +408,17 @@ pub async fn post_users_register_handle(
     }
     payload.validate()?;
 
-    if let Some(restriction) = &*USER_REG_DOMAIN_RESTRICTION {
+    let reg = &RauthyConfig::get().vars.user_registration;
+
+    if let Some(restriction) = &reg.domain_restriction {
         if !payload.email.ends_with(restriction) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!(
-                    "Domain for the open registration are restricted to '@{}'",
-                    restriction
-                ),
+                format!("Domain for the open registration are restricted to '@{restriction}'"),
             ));
         }
-    } else if let Some(blacklist) = &*USER_REG_DOMAIN_BLACKLIST {
-        for blacklisted in blacklist {
+    } else if !reg.domain_blacklist.is_empty() {
+        for blacklisted in &reg.domain_blacklist {
             if payload.email.ends_with(blacklisted) {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -424,7 +428,7 @@ pub async fn post_users_register_handle(
         }
     }
     if let Some(redirect_uri) = &payload.redirect_uri {
-        if !*USER_REG_OPEN_REDIRECT {
+        if !reg.allow_open_redirect {
             let mut allow = false;
             for uri in Client::find_all_client_uris().await? {
                 if uri.starts_with(redirect_uri) {
@@ -446,9 +450,10 @@ pub async fn post_users_register_handle(
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
     let lang = Language::try_from(&req).unwrap_or_default();
-    let user = User::create_from_reg(&data, payload, lang).await?;
+    let user = User::create_from_reg(payload, lang).await?;
 
-    data.tx_events
+    RauthyConfig::get()
+        .tx_events
         .send_async(Event::new_user(
             user.email.clone(),
             real_ip_from_req(&req)?.to_string(),
@@ -644,6 +649,83 @@ pub async fn put_user_attr(
     Ok(HttpResponse::Ok().json(UserAttrValuesResponse { values }))
 }
 
+/// Retrieve an `MfaModToken` to be able to modify MFA keys
+///
+/// This endpoint is for password-only. If the user already has registered Passkeys, the token can
+/// be retrieved via a Webauthn-Flow.
+#[utoipa::path(
+    post,
+    path = "/users/{id}/mfa_token",
+    tag = "users",
+    request_body = MfaModTokenRequest,
+    responses(
+        (status = 200, description = "Ok", body = MfaModTokenResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[post("/users/{id}/mfa_token")]
+pub async fn post_user_mfa_token(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    req: HttpRequest,
+    Json(payload): Json<MfaModTokenRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+    payload.validate()?;
+
+    let user_id = principal.user_id()?;
+    if path.into_inner() != user_id {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "mismatch between path and Principal `id`",
+        ));
+    }
+
+    let user = User::find(user_id.to_string()).await?;
+
+    if let Some(password) = payload.password {
+        if user.has_webauthn_enabled() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "must provide `mfa_code` instead of `password`",
+            ));
+        }
+        if user.validate_password(password).await.is_err() {
+            // we don't want to return 401 on purpose to not trigger a redirect to login
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid password",
+            ));
+        }
+    } else if let Some(code) = payload.mfa_code {
+        if !user.has_webauthn_enabled() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "must provide `password`",
+            ));
+        }
+        let svc_req = WebauthnServiceReq::find(code).await?;
+        if svc_req.user_id != user.id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "mismatch in UserID",
+            ));
+        }
+        svc_req.delete().await?;
+    } else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "empty payload",
+        ));
+    }
+
+    let ip = real_ip_from_req(&req)?;
+    let token = MfaModToken::new(user_id.to_string(), ip).await?;
+
+    Ok(HttpResponse::Ok().json(MfaModTokenResponse::from(token)))
+}
+
 /// Upload a user picture
 ///
 /// Returns the new `picture_id` as the text body.
@@ -681,7 +763,7 @@ pub async fn put_user_picture(
         }
     }
 
-    content_len_limit(&req, *PICTURE_UPLOAD_LIMIT_MB)?;
+    content_len_limit(&req, RauthyConfig::get().vars.user_pictures.upload_limit_mb)?;
 
     let resp = UserPicture::upload(user_id.clone(), payload).await?;
 
@@ -716,12 +798,11 @@ pub async fn get_user_picture(
     path: web::Path<(String, String)>,
     req: HttpRequest,
     principal: Option<ReqPrincipal>,
-    data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let (user_id, picture_id) = path.into_inner();
 
-    let cors_header = if !*PICTURE_PUBLIC {
-        validate_user_picture_access(&req, &data, principal, &user_id).await?
+    let cors_header = if !RauthyConfig::get().vars.user_pictures.public {
+        validate_user_picture_access(&req, principal, &user_id).await?
     } else {
         None
     };
@@ -742,7 +823,6 @@ pub async fn get_user_picture(
 #[inline]
 async fn validate_user_picture_access(
     req: &HttpRequest,
-    data: &web::Data<AppState>,
     principal: Option<ReqPrincipal>,
     user_id: &str,
 ) -> Result<Option<(HeaderName, HeaderValue)>, ErrorResponse> {
@@ -760,7 +840,7 @@ async fn validate_user_picture_access(
 
     if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
         let mut buf = Vec::with_capacity(512);
-        if JwtToken::validate_claims_into(&bearer, &data.issuer, None, 0, &mut buf)
+        if JwtToken::validate_claims_into(&bearer, None, 0, &mut buf)
             .await
             .is_ok()
         {
@@ -936,13 +1016,12 @@ pub async fn delete_user_device(
 )]
 #[get("/users/{id}/email_confirm/{confirm_id}")]
 pub async fn get_user_email_confirm(
-    data: web::Data<AppState>,
     path: web::Path<(String, String)>,
     req: HttpRequest,
 ) -> HttpResponse {
     let lang = Language::try_from(&req).unwrap_or_default();
     let (user_id, confirm_id) = path.into_inner();
-    match User::confirm_email_address(&data, req, user_id, confirm_id).await {
+    match User::confirm_email_address(req, user_id, confirm_id).await {
         Ok(html) => HttpResponse::Ok().insert_header(HEADER_HTML).body(html),
         Err(err) => {
             let status = err.status_code();
@@ -1058,14 +1137,13 @@ pub async fn get_user_password_reset(
 )]
 #[put("/users/{id}/reset")]
 pub async fn put_user_password_reset(
-    data: web::Data<AppState>,
     path: web::Path<String>,
     req: HttpRequest,
     Json(payload): Json<PasswordResetRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    password_reset::handle_put_user_password_reset(&data, req, path.into_inner(), payload)
+    password_reset::handle_put_user_password_reset(req, path.into_inner(), payload)
         .await
         .map(|(cookie, location)| {
             if let Some(loc) = location {
@@ -1081,6 +1159,71 @@ pub async fn put_user_password_reset(
                     .finish()
             }
         })
+}
+
+/// Revoke a "Login from unknown location"
+#[utoipa::path(
+    get,
+    path = "/users/{id}/revoke/{code}",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{id}/revoke/{code}")]
+pub async fn get_user_revoke(
+    path: web::Path<(String, String)>,
+    req: HttpRequest,
+    Query(params): Query<UserRevokeParams>,
+) -> HttpResponse {
+    let (user_id, code) = path.into_inner();
+
+    let lang = Language::try_from(&req).unwrap_or_default();
+    let theme_ts = ThemeCssFull::find_theme_ts_rauthy()
+        .await
+        .unwrap_or_default();
+
+    let html = match user_revoke_handle(user_id, code, params.ip).await {
+        Ok(_) => UserRevokeHtml::build(&lang, theme_ts),
+        Err(err) => {
+            debug!("Error during user revoke: {err}");
+            Error3Html::build(&lang, theme_ts, err.status_code(), "Code not found")
+        }
+    };
+
+    HttpResponse::Ok().content_type(TEXT_HTML).body(html)
+}
+
+#[inline]
+async fn user_revoke_handle(
+    user_id: String,
+    code: String,
+    bad_ip: IpAddr,
+) -> Result<(), ErrorResponse> {
+    let revoke = UserRevoke::find(user_id).await?;
+    if revoke.code != code {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "invalid revoke code",
+        ));
+    }
+
+    Session::invalidate_for_user(&revoke.user_id).await?;
+    RefreshToken::invalidate_for_user(&revoke.user_id).await?;
+    LoginLocation::delete_for_user(revoke.user_id.clone()).await?;
+    logout::execute_backchannel_logout(None, Some(revoke.user_id.clone())).await?;
+
+    let user = User::find(revoke.user_id).await?;
+    UserRevoke::delete(user.id).await?;
+
+    let location = ipgeo::get_location_from_db(bad_ip)?;
+    Event::user_login_revoke(&user.email, bad_ip, location)
+        .send()
+        .await?;
+
+    Ok(())
 }
 
 /// Get all registered Webauthn Passkeys for a user
@@ -1140,7 +1283,6 @@ pub async fn get_user_webauthn_passkeys(
 )]
 #[post("/users/{id}/webauthn/auth/start")]
 pub async fn post_webauthn_auth_start(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     // The principal here must be optional to make cases like user password reset in a
     // fully new / different browser which does not have any lefter data or cookies
@@ -1194,7 +1336,7 @@ pub async fn post_webauthn_auth_start(
         }
     };
 
-    webauthn::auth_start(&data, id, payload.purpose)
+    webauthn::auth_start(id, payload.purpose)
         .await
         .map(|res| HttpResponse::Ok().json(res))
 }
@@ -1216,7 +1358,6 @@ pub async fn post_webauthn_auth_start(
 )]
 #[post("/users/{id}/webauthn/auth/finish")]
 pub async fn post_webauthn_auth_finish(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     Json(payload): Json<WebauthnAuthFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -1229,7 +1370,7 @@ pub async fn post_webauthn_auth_finish(
     // This here will simply fail, if the secret code from the /start does not exist
     // -> indirect validation through exising code.
 
-    let res = webauthn::auth_finish(&data, id, payload).await?;
+    let res = webauthn::auth_finish(id, payload).await?;
     Ok(res.into_response())
 }
 
@@ -1242,6 +1383,7 @@ pub async fn post_webauthn_auth_finish(
     delete,
     path = "/users/{id}/webauthn/delete/{name}",
     tag = "mfa",
+    request_body = WebauthnDeleteRequest,
     responses(
         (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
@@ -1252,7 +1394,11 @@ pub async fn post_webauthn_auth_finish(
 pub async fn delete_webauthn(
     path: web::Path<(String, String)>,
     principal: ReqPrincipal,
+    req: HttpRequest,
+    Json(payload): Json<WebauthnDeleteRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
     // Note: Currently, this is not allowed with an ApiKey on purpose
     let is_admin = match principal.validate_admin_session() {
         Ok(()) => true,
@@ -1267,6 +1413,17 @@ pub async fn delete_webauthn(
     // validate that Principal matches the user or is an admin
     if !is_admin {
         principal.is_user(&id)?;
+
+        let Some(token_id) = payload.mfa_mod_token_id else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "missing `mfa_mod_token_id`",
+            ));
+        };
+        let token = MfaModToken::find(&token_id).await?;
+        let ip = real_ip_from_req(&req)?;
+        token.validate(principal.user_id()?, ip)?;
+
         warn!("Passkey delete for user {} for key {}", id, name);
     } else {
         warn!("Passkey delete from admin for user {} for key {}", id, name);
@@ -1300,7 +1457,6 @@ pub async fn delete_webauthn(
 )]
 #[post("/users/{id}/webauthn/register/start")]
 pub async fn post_webauthn_reg_start(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
     req: HttpRequest,
@@ -1311,17 +1467,27 @@ pub async fn post_webauthn_reg_start(
     // If we have a magic link ID in the payload, we do not validate the active session / principal.
     // This is mandatory to make registering a passkey for a completely new account work.
     if payload.magic_link_id.is_some() && req.headers().get(PWD_CSRF_HEADER).is_some() {
-        password_reset::handle_put_user_passkey_start(&data, req, id.into_inner(), payload).await
+        password_reset::handle_put_user_passkey_start(req, id.into_inner(), payload).await
     } else {
         principal.validate_session_auth()?;
         // this endpoint is a CSRF check exception inside the Principal Middleware -> check here!
         principal.validate_session_csrf_exception(&req)?;
 
+        if payload.mfa_mod_token_id.is_none() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "missing `mfa_mod_token_id`",
+            ));
+        }
+        let mod_token = MfaModToken::find(payload.mfa_mod_token_id.as_ref().unwrap()).await?;
+        let ip = real_ip_from_req(&req)?;
+        mod_token.validate(principal.user_id()?, ip)?;
+
         // validate that Principal matches the user
         let id = id.into_inner();
         principal.is_user(&id)?;
 
-        webauthn::reg_start(&data, id, payload)
+        webauthn::reg_start(id, payload)
             .await
             .map(|ccr| HttpResponse::Ok().json(ccr))
     }
@@ -1345,7 +1511,6 @@ pub async fn post_webauthn_reg_start(
 )]
 #[post("/users/{id}/webauthn/register/finish")]
 pub async fn post_webauthn_reg_finish(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
     req: HttpRequest,
@@ -1356,7 +1521,7 @@ pub async fn post_webauthn_reg_finish(
     // If we have a magic link ID in the payload, we do not validate the active session / principal.
     // This is mandatory to make registering a passkey for a completely new account work.
     if payload.magic_link_id.is_some() {
-        password_reset::handle_put_user_passkey_finish(&data, req, id.into_inner(), payload).await
+        password_reset::handle_put_user_passkey_finish(req, id.into_inner(), payload).await
     } else {
         principal.validate_session_auth()?;
         // this endpoint is a CSRF check exception inside the Principal Middleware -> check here!
@@ -1366,7 +1531,7 @@ pub async fn post_webauthn_reg_finish(
         let id = id.into_inner();
         principal.is_user(&id)?;
 
-        webauthn::reg_finish(&data, id, payload).await?;
+        webauthn::reg_finish(id, payload).await?;
         Ok(HttpResponse::Created().finish())
     }
 }
@@ -1386,12 +1551,9 @@ pub async fn post_webauthn_reg_finish(
     ),
 )]
 #[get("/{id}/profile")]
-pub async fn get_user_webid(
-    data: web::Data<AppState>,
-    id: web::Path<String>,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_user_webid(id: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
     // check if webid's are enabled globally
-    if !*ENABLE_WEB_ID {
+    if !RauthyConfig::get().vars.ephemeral_clients.enable_web_id {
         return Ok(HttpResponse::MethodNotAllowed().finish());
     }
 
@@ -1401,7 +1563,7 @@ pub async fn get_user_webid(
 
     let resp = WebIdResponse {
         webid: webid.into(),
-        issuer: data.issuer.clone(),
+        issuer: RauthyConfig::get().issuer.clone(),
         email: user.email,
         given_name: user.given_name,
         family_name: user.family_name,
@@ -1430,7 +1592,7 @@ pub async fn get_user_webid_data(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     // check if webid's are enabled globally
-    if !*ENABLE_WEB_ID {
+    if !RauthyConfig::get().vars.ephemeral_clients.enable_web_id {
         return Ok(HttpResponse::MethodNotAllowed().finish());
     }
 
@@ -1468,7 +1630,8 @@ pub async fn put_user_webid_data(
     principal: ReqPrincipal,
     Json(payload): Json<WebIdRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*ENABLE_WEB_ID {
+    let vars = &RauthyConfig::get().vars;
+    if !vars.ephemeral_clients.enable_web_id {
         return Ok(HttpResponse::MethodNotAllowed().finish());
     }
     payload.validate()?;
@@ -1478,13 +1641,18 @@ pub async fn put_user_webid_data(
     let id = id.into_inner();
     principal.is_user(&id)?;
 
-    let web_id = WebId::try_new(id, payload.custom_triples.as_deref(), payload.expose_email)
-        .map_err(|e| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!("Invalid custom data. {}", e),
-            )
-        })?;
+    let web_id = WebId::try_new(
+        id,
+        payload.custom_triples.as_deref(),
+        payload.expose_email,
+        vars.server.pub_url.as_str(),
+    )
+    .map_err(|e| {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("Invalid custom data. {e}"),
+        )
+    })?;
 
     WebId::upsert(web_id).await?;
 
@@ -1496,11 +1664,6 @@ pub async fn put_user_webid_data(
 /// This Endpoint will always return an `OK` to not provide any additional attack surface.
 /// Only if the provided E-Mail exists in the Database, a password reset E-Mail will be sent out,
 /// otherwise it will just be ignored but still return an `OK`.
-///
-/// **Permissions**
-/// - authenticated
-/// - session-init
-/// - session-auth
 #[utoipa::path(
     post,
     path = "/users/request_reset",
@@ -1508,18 +1671,14 @@ pub async fn put_user_webid_data(
     request_body = RequestResetRequest,
     responses(
         (status = 200, description = "Ok"),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
     ),
 )]
 #[post("/users/request_reset")]
 pub async fn post_user_password_request_reset(
-    data: web::Data<AppState>,
     req: HttpRequest,
     Json(payload): Json<RequestResetRequest>,
-    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
     info!(
@@ -1527,10 +1686,11 @@ pub async fn post_user_password_request_reset(
         payload.email,
         real_ip_from_req(&req)?
     );
+    Pow::validate(&payload.pow)?;
 
     match User::find_by_email(payload.email).await {
         Ok(user) => user
-            .request_password_reset(&data, payload.redirect_uri)
+            .request_password_reset(payload.redirect_uri)
             .await
             .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish()),
         Err(_) => {
@@ -1584,7 +1744,6 @@ pub async fn get_user_by_email(
 )]
 #[put("/users/{id}")]
 pub async fn put_user_by_id(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     req: HttpRequest,
     principal: ReqPrincipal,
@@ -1593,7 +1752,7 @@ pub async fn put_user_by_id(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
     payload.validate()?;
 
-    handle_put_user_by_id(data, id.into_inner(), req, payload).await
+    handle_put_user_by_id(id.into_inner(), req, payload).await
 }
 
 /// Modifies a user via a patch operation
@@ -1613,7 +1772,6 @@ pub async fn put_user_by_id(
 )]
 #[patch("/users/{id}")]
 pub async fn patch_user(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     req: HttpRequest,
     principal: ReqPrincipal,
@@ -1625,20 +1783,20 @@ pub async fn patch_user(
     let upd_req = User::patch(user_id.clone(), payload).await?;
     upd_req.validate()?;
 
-    handle_put_user_by_id(data, user_id, req, upd_req).await
+    handle_put_user_by_id(user_id, req, upd_req).await
 }
 
 #[inline]
 async fn handle_put_user_by_id(
-    data: web::Data<AppState>,
     user_id: String,
     req: HttpRequest,
     payload: UpdateUserRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let (user, user_values, is_new_admin) = User::update(&data, user_id, payload, None).await?;
+    let (user, user_values, is_new_admin) = User::update(user_id, payload, None).await?;
 
     if is_new_admin {
-        data.tx_events
+        RauthyConfig::get()
+            .tx_events
             .send_async(Event::new_rauthy_admin(
                 user.email.clone(),
                 real_ip_from_req(&req)?.to_string(),
@@ -1678,7 +1836,6 @@ async fn handle_put_user_by_id(
 )]
 #[put("/users/{id}/self")]
 pub async fn put_user_self(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
     Json(payload): Json<UpdateUserSelfRequest>,
@@ -1690,7 +1847,7 @@ pub async fn put_user_self(
     let id = id.into_inner();
     principal.is_user(&id)?;
 
-    let (user, user_values, email_updated) = User::update_self_req(&data, id, payload).await?;
+    let (user, user_values, email_updated) = User::update_self_req(id, payload).await?;
 
     let cloned = user.clone();
     task::spawn(async move {
@@ -1755,14 +1912,13 @@ pub async fn post_user_self_convert_passkey(
 )]
 #[delete("/users/{id}")]
 pub async fn delete_user_by_id(
-    data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)?;
 
     let user = User::find(path.into_inner()).await?;
-    logout::execute_backchannel_logout(&data, None, Some(user.id.clone())).await?;
+    logout::execute_backchannel_logout(None, Some(user.id.clone())).await?;
     user.delete().await?;
 
     let clients_scim = ClientScim::find_all().await?;

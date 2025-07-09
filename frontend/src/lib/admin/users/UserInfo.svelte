@@ -16,7 +16,7 @@
     import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
-    import {PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME} from "$utils/patterns";
+    import {PATTERN_ALNUM, PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME} from "$utils/patterns";
     import Options from "$lib5/Options.svelte";
     import SelectList from "$lib5/select_list/SelectList.svelte";
     import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
@@ -26,6 +26,8 @@
     import UserPicture from "$lib/UserPicture.svelte";
     import type {PatchOp} from "$api/types/generic";
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider";
+    import {useSession} from "$state/session.svelte";
+    import Tooltip from "$lib/Tooltip.svelte";
 
     let {
         user = $bindable(),
@@ -43,11 +45,13 @@
 
     let t = useI18n();
     let ta = useI18nAdmin();
+    let session = useSession('admin');
 
     let err = $state('');
     let success = $state(false);
 
     let userOrig: undefined | UserResponse;
+    let isSelf = $derived(session.get()?.user_id === user.id);
 
     let email = $state('');
     let givenName = $state('');
@@ -190,6 +194,7 @@
                 payload.del.push('language');
             }
         }
+
         let roles = rolesItems.filter(i => i.selected).map(i => i.name);
         if (roles.join(',') !== userOrig?.roles?.join(',')) {
             if (roles.length > 0) {
@@ -198,6 +203,12 @@
                 payload.del.push('roles');
             }
         }
+        // anti-lockout check for self
+        if (isSelf && !roles.includes('rauthy_admin')) {
+            err = `${ta.users.antiLockout.rule}: ${ta.users.antiLockout.rauthyAdmin}`;
+            return;
+        }
+
         let groups = groupsItems.filter(i => i.selected).map(i => i.name);
         if (groups.join(',') !== userOrig?.groups?.join(',')) {
             if (groups.length > 0) {
@@ -206,6 +217,7 @@
                 payload.del.push('groups');
             }
         }
+
         if (enabled !== userOrig?.enabled) {
             payload.put.push({key: 'enabled', value: enabled});
         }
@@ -242,10 +254,9 @@
                 payload.del.push('user_values.street');
             }
         }
-        let zp = zip ? Number.parseInt(zip) : null;
-        if (zp !== userOrig?.user_values?.zip) {
+        if (zip !== userOrig?.user_values?.zip) {
             if (zip) {
-                payload.put.push({key: 'user_values.zip', value: zp});
+                payload.put.push({key: 'user_values.zip', value: zip});
             } else {
                 payload.del.push('user_values.zip');
             }
@@ -308,16 +319,42 @@
         </div>
 
         <div class="values">
-            <div>
-                <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
-                    {ta.common.enabled}
-                </InputCheckbox>
-            </div>
-            <div>
-                <InputCheckbox ariaLabel={t.account.emailVerified} bind:checked={emailVerified}>
-                    {t.account.emailVerified}
-                </InputCheckbox>
-            </div>
+            {#if isSelf}
+                <div>
+                    <Tooltip text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}>
+                        <InputCheckbox
+                                ariaLabel={ta.common.enabled}
+                                bind:checked={enabled}
+                                disabled
+                        >
+                            {ta.common.enabled}
+                        </InputCheckbox>
+                    </Tooltip>
+                </div>
+                <div>
+                    <Tooltip text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}>
+                        <InputCheckbox
+                                ariaLabel={t.account.emailVerified}
+                                bind:checked={emailVerified}
+                                disabled
+                        >
+                            {t.account.emailVerified}
+                        </InputCheckbox>
+                    </Tooltip>
+                </div>
+            {:else}
+                <div>
+                    <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
+                        {ta.common.enabled}
+                    </InputCheckbox>
+                </div>
+                <div>
+                    <InputCheckbox ariaLabel={t.account.emailVerified} bind:checked={emailVerified}>
+                        {t.account.emailVerified}
+                    </InputCheckbox>
+                </div>
+            {/if}
+
         </div>
 
         <div class="values">
@@ -376,13 +413,12 @@
                         pattern={PATTERN_STREET}
                 />
                 <Input
-                        typ="number"
                         bind:value={zip}
                         autocomplete="off"
                         label={t.account.zip}
                         placeholder={t.account.zip}
-                        min="1000"
-                        max="9999999"
+                        maxLength={24}
+                        pattern={PATTERN_ALNUM}
                 />
                 <Input
                         bind:value={city}
@@ -418,9 +454,17 @@
 
         <div class="values">
             <div style:margin-top=".5rem">
-                <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
-                    {t.account.accessExp}
-                </InputCheckbox>
+                {#if !expires && isSelf}
+                    <Tooltip text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}>
+                        <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires} disabled>
+                            {t.account.accessExp}
+                        </InputCheckbox>
+                    </Tooltip>
+                {:else}
+                    <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
+                        {t.account.accessExp}
+                    </InputCheckbox>
+                {/if}
             </div>
             {#if expires}
                 <div transition:slide={{duration: 150}}>

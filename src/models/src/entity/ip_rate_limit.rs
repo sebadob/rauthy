@@ -1,6 +1,6 @@
 use crate::database::{Cache, DB};
+use crate::rauthy_config::RauthyConfig;
 use chrono::{DateTime, Utc};
-use rauthy_common::constants::DEVICE_GRANT_RATE_LIMIT;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::ops::Add;
@@ -16,17 +16,21 @@ pub struct DeviceIpRateLimit {
 
 impl DeviceIpRateLimit {
     pub async fn insert(ip: String) -> Result<(), ErrorResponse> {
-        let limit_secs = DEVICE_GRANT_RATE_LIMIT.unwrap_or(1) as i64;
+        let limit_secs = RauthyConfig::get()
+            .vars
+            .device_grant
+            .rate_limit
+            .unwrap_or(1) as i64;
         let limit = Utc::now().add(chrono::Duration::seconds(limit_secs));
         DB::hql()
-            .put(Cache::IPRateLimit, ip, &limit, Some(limit_secs))
+            .put(Cache::IpRateLimit, ip, &limit, Some(limit_secs))
             .await?;
 
         Ok(())
     }
 
     pub async fn is_limited(ip: String) -> Result<Option<DateTime<Utc>>, ErrorResponse> {
-        let dt = DB::hql().get(Cache::IPRateLimit, ip).await?;
+        let dt = DB::hql().get(Cache::IpRateLimit, ip).await?;
         Ok(dt)
     }
 }

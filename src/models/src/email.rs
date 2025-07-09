@@ -1,24 +1,21 @@
-use crate::app_state::AppState;
+use crate::database::DB;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use crate::i18n_email::change_info_new::I18nEmailChangeInfoNew;
 use crate::i18n_email::confirm_change::I18nEmailConfirmChange;
+use crate::i18n_email::login_location::I18nEmailLoginLocation;
 use crate::i18n_email::password_new::I18nEmailPasswordNew;
 use crate::i18n_email::reset::I18nEmailReset;
 use crate::i18n_email::reset_info::I18nEmailResetInfo;
-use actix_web::web;
+use crate::rauthy_config::RauthyConfig;
 use askama::Template;
 use chrono::DateTime;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
 use lettre::{AsyncSmtpTransport, AsyncTransport, message};
-use rauthy_common::constants::{
-    EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME,
-};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::Notification;
-use std::env;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Receiver;
@@ -118,6 +115,8 @@ pub struct EMailResetHtml<'a> {
     pub expires: &'a str,
     pub button_text: &'a str,
     pub footer: &'a str,
+    pub link_request_new: &'a str,
+    pub button_text_request_new: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -133,6 +132,7 @@ pub struct EmailResetTxt<'a> {
     pub validity: &'a str,
     pub expires: &'a str,
     pub footer: &'a str,
+    pub link_request_new: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -160,6 +160,40 @@ pub struct EmailResetInfoTxt<'a> {
     pub expires_1: &'a str,
     pub expires_2: &'a str,
     pub update: &'a str,
+}
+
+#[derive(Default, Template)]
+#[template(path = "email/login_location.html")]
+pub struct EMailLoginLocationHtml<'a> {
+    pub lang: &'a str,
+    pub theme_vars: String,
+    pub email_sub_prefix: &'a str,
+    pub ip: &'a str,
+    pub user_agent: &'a str,
+    pub location: &'a str,
+    pub link_revoke: &'a str,
+    pub link_account: &'a str,
+    // i18n_email
+    pub unknown_location: &'a str,
+    pub if_invalid: &'a str,
+    pub revoke_link: &'a str,
+    pub account_link: &'a str,
+}
+
+#[derive(Default, Template)]
+#[template(path = "email/login_location.txt")]
+pub struct EmailLoginLocationTxt<'a> {
+    pub email_sub_prefix: &'a str,
+    pub ip: &'a str,
+    pub user_agent: &'a str,
+    pub location: &'a str,
+    pub link_revoke: &'a str,
+    pub link_account: &'a str,
+    // i18n_email
+    pub unknown_location: &'a str,
+    pub if_invalid: &'a str,
+    pub revoke_link: &'a str,
+    pub account_link: &'a str,
 }
 
 pub async fn send_email_notification(
@@ -197,20 +231,17 @@ pub async fn send_email_notification(
     match res {
         Ok(_) => {}
         Err(ref err) => {
-            error!("Error sending Event E-Mail notification: {:?}", err);
+            error!(?err, "sending Event E-Mail notification");
         }
     }
 }
 
-pub async fn send_email_change_info_new(
-    data: &web::Data<AppState>,
-    magic_link: &MagicLink,
-    user: &User,
-    new_email: String,
-) {
+pub async fn send_email_change_info_new(magic_link: &MagicLink, user: &User, new_email: String) {
     let link = format!(
         "{}/users/{}/email_confirm/{}",
-        data.issuer, magic_link.user_id, &magic_link.id,
+        RauthyConfig::get().issuer,
+        magic_link.user_id,
+        &magic_link.id,
     );
     let exp = email_ts_prettify(magic_link.exp);
     let theme_vars = ThemeCssFull::find_theme_variables_email()
@@ -218,8 +249,9 @@ pub async fn send_email_change_info_new(
         .unwrap_or_default();
 
     let i18n = I18nEmailChangeInfoNew::build(&user.language);
+    let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let text = EMailChangeInfoNewTxt {
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         link: &link,
         exp: &exp,
         header: i18n.header,
@@ -231,7 +263,7 @@ pub async fn send_email_change_info_new(
     let html = EMailChangeInfoNewHtml {
         lang: user.language.as_str(),
         theme_vars,
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         link: &link,
         exp: &exp,
         header: i18n.header,
@@ -244,7 +276,7 @@ pub async fn send_email_change_info_new(
     let req = EMail {
         recipient_name: user.email_recipient_name(),
         address: new_email.clone(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
+        subject: format!("{} - {}", email_sub_prefix, i18n.subject),
         text: text
             .render()
             .expect("Template rendering: EMailChangeInfoNewTxt"),
@@ -254,29 +286,31 @@ pub async fn send_email_change_info_new(
         ),
     };
 
-    let tx = &data.tx_email;
-    let res = tx.send_timeout(req, Duration::from_secs(10)).await;
+    let res = RauthyConfig::get()
+        .tx_email
+        .send_timeout(req, Duration::from_secs(10))
+        .await;
     match res {
         Ok(_) => {}
         Err(ref e) => {
             error!(
-                "Error sending magic link email request for user '{}': {:?}",
-                new_email, e
+                new_email, error = ?e,
+                "sending magic link email request",
             );
         }
     }
 }
 
 pub async fn send_email_confirm_change(
-    data: &web::Data<AppState>,
     user: &User,
     email_addr: &str,
     email_changed_to: &str,
     was_admin_action: bool,
 ) {
     let i18n = I18nEmailConfirmChange::build(&user.language);
+    let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let text = EMailConfirmChangeTxt {
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         header: i18n.subject,
         msg: i18n.msg,
         email_changed_to,
@@ -293,7 +327,7 @@ pub async fn send_email_confirm_change(
     let html = EMailConfirmChangeHtml {
         lang: user.language.as_str(),
         theme_vars,
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         header: i18n.subject,
         msg: i18n.msg,
         email_changed_to,
@@ -303,7 +337,7 @@ pub async fn send_email_confirm_change(
     let req = EMail {
         recipient_name: user.email_recipient_name(),
         address: email_addr.to_string(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
+        subject: format!("{email_sub_prefix} - {}", i18n.subject),
         text: text
             .render()
             .expect("Template rendering: EMailConfirmChangeTxt"),
@@ -313,33 +347,42 @@ pub async fn send_email_confirm_change(
         ),
     };
 
-    let tx = &data.tx_email;
-    let res = tx.send_timeout(req, Duration::from_secs(10)).await;
+    let res = RauthyConfig::get()
+        .tx_email
+        .send_timeout(req, Duration::from_secs(10))
+        .await;
     match res {
         Ok(_) => {}
         Err(ref e) => {
             error!(
-                "Error sending email change confirm for user '{}': {:?}",
-                email_addr, e
+                email_addr, error = ?e,
+                "sending email change confirm",
             );
         }
     }
 }
 
-pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, user: &User) {
+pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
     let link = format!(
         "{}/users/{}/reset/{}?type={}",
-        data.issuer, magic_link.user_id, &magic_link.id, magic_link.usage,
+        RauthyConfig::get().issuer,
+        magic_link.user_id,
+        &magic_link.id,
+        magic_link.usage,
     );
     let exp = email_ts_prettify(magic_link.exp);
     let theme_vars = ThemeCssFull::find_theme_variables_email()
         .await
         .unwrap_or_default();
 
-    let (subject, text, html) = if user.password.is_none() {
+    let is_new_user = user.password.is_none() && !user.has_webauthn_enabled();
+    let link_request_new: Option<String>;
+
+    let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
+    let (subject, text, html) = if is_new_user {
         let i18n = I18nEmailPasswordNew::build(&user.language);
         let text = EmailResetTxt {
-            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            email_sub_prefix,
             link: &link,
             exp: &exp,
             header: i18n.header,
@@ -347,13 +390,14 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
             text: i18n.text.unwrap_or_default(),
             validity: i18n.validity,
             expires: i18n.expires,
-            footer: i18n.text.unwrap_or_default(),
+            footer: i18n.footer.unwrap_or_default(),
+            link_request_new: "",
         };
 
         let html = EMailResetHtml {
             lang: user.language.as_str(),
             theme_vars,
-            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            email_sub_prefix,
             link: &link,
             exp: &exp,
             header: i18n.header,
@@ -362,14 +406,22 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
             validity: i18n.validity,
             expires: i18n.expires,
             button_text: i18n.button_text,
-            footer: i18n.text.unwrap_or_default(),
+            footer: i18n.footer.unwrap_or_default(),
+            link_request_new: "",
+            button_text_request_new: "",
         };
 
         (i18n.subject, text, html)
     } else {
         let i18n = I18nEmailReset::build(&user.language);
+        link_request_new = Some(format!(
+            "{}/users/password_reset?email_hint={}",
+            RauthyConfig::get().issuer,
+            user.email
+        ));
+
         let text = EmailResetTxt {
-            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            email_sub_prefix,
             link: &link,
             exp: &exp,
             header: i18n.header,
@@ -377,13 +429,14 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
             text: i18n.text.unwrap_or_default(),
             validity: i18n.validity,
             expires: i18n.expires,
-            footer: i18n.text.unwrap_or_default(),
+            footer: i18n.footer.unwrap_or_default(),
+            link_request_new: link_request_new.as_ref().unwrap(),
         };
 
         let html = EMailResetHtml {
             lang: user.language.as_str(),
             theme_vars,
-            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            email_sub_prefix,
             link: &link,
             exp: &exp,
             header: i18n.header,
@@ -392,7 +445,9 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
             validity: i18n.validity,
             expires: i18n.expires,
             button_text: i18n.button_text,
-            footer: i18n.text.unwrap_or_default(),
+            footer: i18n.footer.unwrap_or_default(),
+            link_request_new: link_request_new.as_ref().unwrap(),
+            button_text_request_new: i18n.button_text_request_new.unwrap_or_default(),
         };
 
         (i18n.subject, text, html)
@@ -401,31 +456,37 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
     let req = EMail {
         recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, subject),
+        subject: format!("{email_sub_prefix} - {subject}"),
         text: text.render().expect("Template rendering: EmailResetTxt"),
         html: Some(html.render().expect("Template rendering: EmailResetHtml")),
     };
 
-    let tx = &data.tx_email;
-    let res = tx.send_timeout(req, Duration::from_secs(10)).await;
+    let res = RauthyConfig::get()
+        .tx_email
+        .send_timeout(req, Duration::from_secs(10))
+        .await;
     match res {
         Ok(_) => {}
         Err(ref e) => {
             error!(
-                "Error sending magic link email request for user '{}': {:?}",
-                user.email, e
+                user.email, error = ?e,
+                "sending password reset email",
             );
         }
     }
 }
 
-pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
+pub async fn send_pwd_reset_info(user: &User) {
     let exp = email_ts_prettify(user.password_expires.unwrap());
-    let link = format!("{}/auth/v1/account", data.public_url);
+    let link = format!(
+        "{}/auth/v1/account",
+        RauthyConfig::get().pub_url_with_scheme
+    );
 
     let i18n = I18nEmailResetInfo::build(&user.language);
+    let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let text = EmailResetInfoTxt {
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         link: &link,
         exp: &exp.to_string(),
         expires_1: i18n.expires_1,
@@ -439,7 +500,7 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
     let html = EMailResetInfoHtml {
         lang: user.language.as_str(),
         theme_vars,
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        email_sub_prefix,
         link: &link,
         exp: &exp.to_string(),
         expires_1: i18n.expires_1,
@@ -451,7 +512,7 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
     let req = EMail {
         recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
+        subject: format!("{email_sub_prefix} - {}", i18n.subject),
         text: text
             .render()
             .expect("Template rendering: EmailResetInfoTxt"),
@@ -461,14 +522,92 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
         ),
     };
 
-    let tx = &data.tx_email;
-    let res = tx.send_timeout(req, Duration::from_secs(10)).await;
+    let res = RauthyConfig::get()
+        .tx_email
+        .send_timeout(req, Duration::from_secs(10))
+        .await;
     match res {
         Ok(_) => {}
         Err(ref e) => {
             error!(
-                "Error sending magic link email request for user '{}': {:?}",
-                user.email, e
+                user.email, error = ?e,
+                "sending password reset info",
+            );
+        }
+    }
+}
+
+pub async fn send_login_location(
+    user: &User,
+    ip: String,
+    user_agent: String,
+    location: Option<String>,
+    revoke_code: String,
+) {
+    let pub_url = &RauthyConfig::get().pub_url_with_scheme;
+    let link_revoke = format!(
+        "{pub_url}/auth/v1/users/{}/revoke/{revoke_code}?ip={ip}",
+        user.id
+    );
+    let link_account = format!("{pub_url}/auth/v1/account");
+    let location = location.as_deref().unwrap_or_default();
+
+    let i18n = I18nEmailLoginLocation::build(&user.language);
+    let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
+    let text = EmailLoginLocationTxt {
+        email_sub_prefix,
+        ip: &ip,
+        user_agent: &user_agent,
+        location,
+        link_revoke: &link_revoke,
+        link_account: &link_account,
+        unknown_location: i18n.unknown_location,
+        if_invalid: i18n.if_invalid,
+        revoke_link: i18n.revoke_link,
+        account_link: i18n.account_link,
+    };
+
+    let theme_vars = ThemeCssFull::find_theme_variables_email()
+        .await
+        .unwrap_or_default();
+    let html = EMailLoginLocationHtml {
+        lang: user.language.as_str(),
+        theme_vars,
+        email_sub_prefix,
+        ip: &ip,
+        user_agent: &user_agent,
+        location,
+        link_revoke: &link_revoke,
+        link_account: &link_account,
+        unknown_location: i18n.unknown_location,
+        if_invalid: i18n.if_invalid,
+        revoke_link: i18n.revoke_link,
+        account_link: i18n.account_link,
+    };
+
+    let req = EMail {
+        recipient_name: user.email_recipient_name(),
+        address: user.email.to_string(),
+        subject: format!("{email_sub_prefix} - {}", i18n.subject),
+        text: text
+            .render()
+            .expect("Template rendering: EMailLoginLocationTxt"),
+        html: Some(
+            html.render()
+                .expect("Template rendering: EMailLoginLocationHtml"),
+        ),
+    };
+
+    let res = RauthyConfig::get()
+        .tx_email
+        .send_timeout(req, Duration::from_secs(10))
+        .await;
+    match res {
+        Ok(_) => {}
+        Err(ref e) => {
+            error!(
+                user.email, error = ?e,
+                "sending login from new location email",
             );
         }
     }
@@ -479,8 +618,10 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
 
     // to make the integration tests not panic, results are taken and just thrown away
     // not the nicest approach for now, but it works
-    if test_mode || SMTP_URL.is_none() {
-        if SMTP_URL.is_none() {
+    let vars = &RauthyConfig::get().vars.email;
+    let url = &vars.smtp_url;
+    if test_mode || url.is_none() {
+        if url.is_none() {
             error!("SMTP_URL is not configured, cannot send out any E-Mails!");
         }
 
@@ -499,47 +640,45 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
     }
 
     let mailer = {
-        let smtp_url = SMTP_URL.as_deref().unwrap();
-        let smtp_port = env::var("SMTP_PORT")
-            .map(|s| s.parse::<u16>().expect("SMTP_PORT cannot be parsed to u16"))
-            .ok();
-        let smtp_insecure = env::var("SMTP_DANGER_INSECURE")
-            .unwrap_or_else(|_| "false".to_string())
-            .parse::<bool>()
-            .expect("Cannot parse SMTP_DANGER_INSECURE to bool");
+        let smtp_url = url.as_deref().unwrap();
 
         let mut retries = 0;
-        let retries_max = env::var("SMTP_CONNECT_RETRIES")
-            .unwrap_or_else(|_| "3".to_string())
-            .trim()
-            .parse::<u16>()
-            .expect("Cannot parse SMTP_CONNECT_RETRIES to u16");
 
-        let mut conn = if smtp_insecure {
-            conn_test_smtp_insecure(smtp_url, smtp_port).await
+        let mut conn = if vars.danger_insecure {
+            conn_test_smtp_insecure(smtp_url, vars.smtp_port).await
         } else {
-            connect_test_smtp(smtp_url, smtp_port).await
+            connect_test_smtp(smtp_url, vars.smtp_port).await
         };
 
         while let Err(err) = conn {
-            error!("{:?}", err);
+            error!(?err);
 
-            if retries >= retries_max {
+            if retries >= vars.connect_retries {
+                // do a graceful shutdown of the DB before `panic`king
+                if RauthyConfig::get().is_ha_cluster {
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
+                DB::hql().shutdown().await.unwrap();
+
                 panic!("SMTP connection retries exceeded");
             }
             retries += 1;
             tokio::time::sleep(Duration::from_secs(5)).await;
 
-            conn = if smtp_insecure {
-                conn_test_smtp_insecure(smtp_url, smtp_port).await
+            conn = if vars.danger_insecure {
+                conn_test_smtp_insecure(smtp_url, vars.smtp_port).await
             } else {
-                connect_test_smtp(smtp_url, smtp_port).await
+                connect_test_smtp(smtp_url, vars.smtp_port).await
             }
         }
         conn.unwrap()
     };
 
-    let from: message::Mailbox = SMTP_FROM
+    let from: message::Mailbox = RauthyConfig::get()
+        .vars
+        .email
+        .smtp_from
+        .as_ref()
         .parse()
         .expect("SMTP_FROM could not be parsed correctly");
 
@@ -567,7 +706,7 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
             match email {
                 Ok(addr) => match mailer.send(addr).await {
                     Ok(_) => info!("E-Mail to '{}' sent successfully!", req.address),
-                    Err(e) => error!("Could not send E-Mail: {:?}", e),
+                    Err(e) => error!(error = ?e, "Could not send E-Mail"),
                 },
                 Err(_) => error!("Error building the E-Mail to '{}'", req.address),
             }
@@ -578,11 +717,26 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
     }
 }
 
+#[tracing::instrument(level = "debug")]
 async fn connect_test_smtp(
     smtp_url: &str,
     smtp_port: Option<u16>,
 ) -> Result<AsyncSmtpTransport<lettre::Tokio1Executor>, ErrorResponse> {
-    let creds = authentication::Credentials::new(SMTP_USERNAME.clone(), SMTP_PASSWORD.clone());
+    let vars = &RauthyConfig::get().vars.email;
+    let username = vars
+        .smtp_username
+        .as_deref()
+        .expect("SMTP_USERNAME is not set")
+        .trim()
+        .to_string();
+    let password = vars
+        .smtp_password
+        .as_deref()
+        .expect("SMTP_PASSWORD is not set")
+        .trim()
+        .to_string();
+
+    let creds = authentication::Credentials::new(username, password);
 
     // always try fully wrapped TLS first
     let mut builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
@@ -597,7 +751,7 @@ async fn connect_test_smtp(
 
     match conn.test_connection().await {
         Ok(true) => {
-            info!("Successfully connected to {} via TLS", smtp_url);
+            info!("Successfully connected to {smtp_url} via TLS");
             return Ok(conn);
         }
         Ok(false) => {
@@ -607,7 +761,7 @@ async fn connect_test_smtp(
             );
         }
         Err(err) => {
-            warn!("Could not connect to {} via TLS: {:?}", smtp_url, err,);
+            warn!(?err, "Could not connect to {smtp_url} via TLS");
         }
     }
 
@@ -624,26 +778,20 @@ async fn connect_test_smtp(
 
     match conn.test_connection().await {
         Ok(true) => {
-            info!("Successfully connected to {} via STARTTLS", smtp_url);
+            info!(smtp_url, "Successfully connected via STARTTLS");
             return Ok(conn);
         }
         Ok(false) => {
-            error!("Could not connect to {} via STARTTLS either", smtp_url);
+            error!(smtp_url, "Could not connect via STARTTLS either");
         }
         Err(err) => {
-            warn!(
-                "Could not connect to {} via STARTTLS either: {:?}",
-                smtp_url, err,
-            );
+            warn!(smtp_url, ?err, "Could not connect via STARTTLS either",);
         }
     }
 
     Err(ErrorResponse::new(
         ErrorResponseType::Internal,
-        format!(
-            "Could not connect to {} - neither TLS nor STARTTLS worked",
-            smtp_url
-        ),
+        format!("Could not connect to {smtp_url} - neither TLS nor STARTTLS worked"),
     ))
 }
 
@@ -659,16 +807,13 @@ async fn conn_test_smtp_insecure(
     match conn.test_connection().await {
         Ok(true) => {
             warn!(
-                "Successfully connected to INSECURE SMTP relay {}:{}",
-                smtp_url, port
+                smtp_url,
+                port, "Successfully connected to INSECURE SMTP relay ",
             );
             Ok(conn)
         }
         Ok(false) => {
-            error!(
-                "Could not connect to insecure SMTP relay on {}:{}",
-                smtp_url, port
-            );
+            error!(smtp_url, port, "Could not connect to insecure SMTP relay",);
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
                 "Could not connect to localhost SMTP relay",
@@ -676,8 +821,10 @@ async fn conn_test_smtp_insecure(
         }
         Err(err) => {
             error!(
-                "Could not connect to insecure SMTP relay on {}:{} -> {:?}",
-                smtp_url, port, err
+                smtp_url,
+                port,
+                ?err,
+                "Could not connect to insecure SMTP relay",
             );
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
@@ -692,5 +839,5 @@ async fn conn_test_smtp_insecure(
 fn email_ts_prettify(ts: i64) -> String {
     let dt = DateTime::from_timestamp(ts, 0).unwrap_or_default();
     let fmt = dt.format("%d/%m/%Y %H:%M:%S");
-    format!("{} UTC", fmt)
+    format!("{fmt} UTC")
 }

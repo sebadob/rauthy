@@ -19,6 +19,6 @@ src/bin/tests/test_data
 .npm_cache
 pnpm-lock.yaml
 pictures/
-heaptrack.rauthy.*
+heaptrack.*
 static
 templates/html

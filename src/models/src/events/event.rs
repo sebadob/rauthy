@@ -1,18 +1,10 @@
 use crate::database::DB;
 use crate::entity::failed_scim_tasks::ScimAction;
-use crate::events::{
-    EVENT_LEVEL_FAILED_LOGIN, EVENT_LEVEL_FAILED_LOGINS_7, EVENT_LEVEL_FAILED_LOGINS_10,
-    EVENT_LEVEL_FAILED_LOGINS_15, EVENT_LEVEL_FAILED_LOGINS_20, EVENT_LEVEL_FAILED_LOGINS_25,
-    EVENT_LEVEL_IP_BLACKLISTED, EVENT_LEVEL_JWKS_ROTATE, EVENT_LEVEL_NEW_RAUTHY_ADMIN,
-    EVENT_LEVEL_NEW_RAUTHY_VERSION, EVENT_LEVEL_NEW_USER, EVENT_LEVEL_RAUTHY_HEALTHY,
-    EVENT_LEVEL_RAUTHY_START, EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED,
-    EVENT_LEVEL_USER_EMAIL_CHANGE, EVENT_LEVEL_USER_PASSWORD_RESET,
-};
+use crate::rauthy_config::RauthyConfig;
 use chrono::{DateTime, Timelike, Utc};
 use hiqlite::Row;
 use hiqlite_macros::params;
 use rauthy_api_types::events::EventResponse;
-use rauthy_common::constants::EMAIL_SUB_PREFIX;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_local_hostname, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -80,7 +72,7 @@ impl Display for EventLevel {
             EventLevel::Warning => "WARNING ",
             EventLevel::Critical => "CRITICAL",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -157,7 +149,7 @@ pub enum EventType {
     NewUserRegistered,
     NewRauthyAdmin,
     NewRauthyVersion,
-    PossibleBruteForce, // TODO
+    PossibleBruteForce, // currently unused - kind of covered by IpBlacklisted
     RauthyStarted,
     RauthyHealthy,
     RauthyUnhealthy,
@@ -167,6 +159,9 @@ pub enum EventType {
     Test,
     BackchannelLogoutFailed,
     ScimTaskFailed,
+    ForcedLogout,
+    UserLoginRevoke,
+    SuspiciousApiScan,
 }
 
 impl Default for EventType {
@@ -184,7 +179,7 @@ impl Display for EventType {
             Self::IpBlacklistRemoved => write!(f, "IP blacklist removed"),
             Self::JwksRotated => write!(f, "JWKS has been rotated"),
             Self::NewUserRegistered => write!(f, "New user registered"),
-            Self::NewRauthyAdmin => write!(f, "New rauthy_admin member"),
+            Self::NewRauthyAdmin => write!(f, "New Rauthy_admin member"),
             Self::NewRauthyVersion => write!(f, "New Rauthy App Version available"),
             Self::PossibleBruteForce => write!(f, "Possible brute force"),
             Self::RauthyStarted => write!(f, "Rauthy has been restarted"),
@@ -196,6 +191,9 @@ impl Display for EventType {
             Self::Test => write!(f, "TEST"),
             Self::BackchannelLogoutFailed => write!(f, "Backchannel logout failed"),
             Self::ScimTaskFailed => write!(f, "SCIM task failed"),
+            Self::ForcedLogout => write!(f, "Forced user logout"),
+            Self::UserLoginRevoke => write!(f, "User revoked illegal login"),
+            Self::SuspiciousApiScan => write!(f, "Suspicous API scan"),
         }
     }
 }
@@ -222,6 +220,9 @@ impl From<rauthy_api_types::events::EventType> for EventType {
                 Self::BackchannelLogoutFailed
             }
             rauthy_api_types::events::EventType::ScimTaskFailed => Self::ScimTaskFailed,
+            rauthy_api_types::events::EventType::ForcedLogout => Self::ForcedLogout,
+            rauthy_api_types::events::EventType::UserLoginRevoke => Self::UserLoginRevoke,
+            rauthy_api_types::events::EventType::SuspiciousApiScan => Self::SuspiciousApiScan,
         }
     }
 }
@@ -246,6 +247,9 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::Test => Self::Test,
             EventType::BackchannelLogoutFailed => Self::BackchannelLogoutFailed,
             EventType::ScimTaskFailed => Self::ScimTaskFailed,
+            EventType::ForcedLogout => Self::ForcedLogout,
+            EventType::UserLoginRevoke => Self::UserLoginRevoke,
+            EventType::SuspiciousApiScan => Self::SuspiciousApiScan,
         }
     }
 }
@@ -270,6 +274,9 @@ impl EventType {
             Self::Test => "TEST",
             Self::BackchannelLogoutFailed => "BackchannelLogoutFailed",
             Self::ScimTaskFailed => "ScimTaskFailed",
+            Self::ForcedLogout => "ForcedLogout",
+            Self::UserLoginRevoke => "UserLoginRevoke",
+            Self::SuspiciousApiScan => "SuspiciousApiScan",
         }
     }
 
@@ -295,6 +302,9 @@ impl EventType {
             EventType::Test => 14,
             EventType::BackchannelLogoutFailed => 15,
             EventType::ScimTaskFailed => 16,
+            EventType::ForcedLogout => 17,
+            EventType::UserLoginRevoke => 18,
+            EventType::SuspiciousApiScan => 19,
         }
     }
 }
@@ -319,8 +329,14 @@ impl From<String> for EventType {
             "TEST" => Self::Test,
             "BackchannelLogoutFailed" => Self::BackchannelLogoutFailed,
             "ScimTaskFailed" => Self::ScimTaskFailed,
+            "ForcedLogout" => Self::ForcedLogout,
+            "UserLoginRevoke" => Self::UserLoginRevoke,
+            "SuspiciousApiScan" => Self::SuspiciousApiScan,
             // just return test to never panic
-            _ => Self::Test,
+            s => {
+                error!("EventType::from() for invalid String: {s}");
+                Self::Test
+            }
         }
     }
 }
@@ -351,6 +367,9 @@ impl From<i64> for EventType {
             14 => EventType::Test,
             15 => EventType::BackchannelLogoutFailed,
             16 => EventType::ScimTaskFailed,
+            17 => EventType::ForcedLogout,
+            18 => EventType::UserLoginRevoke,
+            19 => EventType::SuspiciousApiScan,
             _ => EventType::Test,
         }
     }
@@ -403,7 +422,8 @@ impl From<&Event> for Notification {
             EventLevel::Warning => "⚠️",
             EventLevel::Critical => "🆘",
         };
-        let head = format!("{} {} - {}", icon, *EMAIL_SUB_PREFIX, value.level.as_str());
+        let prefix = RauthyConfig::get().vars.email.sub_prefix.as_ref();
+        let head = format!("{icon} {prefix} - {}", value.level.as_str());
 
         let d = DateTime::from_timestamp(value.timestamp / 1000, 0).unwrap_or_default();
         let row_1 = format!("{} {}", d.format("%Y/%m/%d %H:%M:%S"), value.typ);
@@ -460,6 +480,12 @@ impl From<&Event> for Notification {
                 value.data.unwrap_or_default(),
                 value.text.as_deref().unwrap_or_default()
             )),
+            EventType::ForcedLogout => Some(format!(
+                "User `{}` was force-logged-out",
+                value.text.as_deref().unwrap_or_default()
+            )),
+            EventType::UserLoginRevoke => value.text.clone(),
+            EventType::SuspiciousApiScan => value.text.clone(),
         };
 
         Self {
@@ -618,13 +644,14 @@ impl Event {
 
     /// The EventLevel will change depending on the amount of invalid logins
     pub fn invalid_login(failed_logins: u32, ip: String) -> Self {
+        let events = &RauthyConfig::get().vars.events;
         let level = match failed_logins {
-            l if l >= 25 => EVENT_LEVEL_FAILED_LOGINS_25.get().unwrap(),
-            l if l >= 20 => EVENT_LEVEL_FAILED_LOGINS_20.get().unwrap(),
-            l if l >= 15 => EVENT_LEVEL_FAILED_LOGINS_15.get().unwrap(),
-            l if l >= 10 => EVENT_LEVEL_FAILED_LOGINS_10.get().unwrap(),
-            l if l >= 7 => EVENT_LEVEL_FAILED_LOGINS_7.get().unwrap(),
-            _ => EVENT_LEVEL_FAILED_LOGIN.get().unwrap(),
+            l if l >= 25 => events.level_failed_logins_25.clone(),
+            l if l >= 20 => events.level_failed_logins_20.clone(),
+            l if l >= 15 => events.level_failed_logins_15.clone(),
+            l if l >= 10 => events.level_failed_logins_10.clone(),
+            l if l >= 7 => events.level_failed_logins_7.clone(),
+            _ => events.level_failed_login.clone(),
         };
         Self::new(
             level.clone(),
@@ -637,11 +664,15 @@ impl Event {
 
     pub fn backchannel_logout_failed(client_id: &str, user_id: &str, retries: i64) -> Self {
         Self::new(
-            EventLevel::Critical,
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_backchannel_logout_failed
+                .clone(),
             EventType::BackchannelLogoutFailed,
             None,
             Some(retries),
-            Some(format!("{} / {}", client_id, user_id)),
+            Some(format!("{client_id} / {user_id}")),
         )
     }
 
@@ -655,9 +686,19 @@ impl Event {
         )
     }
 
+    pub fn force_logout(user_email: String) -> Self {
+        Self::new(
+            RauthyConfig::get().vars.events.level_force_logout.clone(),
+            EventType::ForcedLogout,
+            None,
+            None,
+            Some(user_email),
+        )
+    }
+
     pub fn ip_blacklisted(exp: DateTime<Utc>, ip: String) -> Self {
         Self::new(
-            EVENT_LEVEL_IP_BLACKLISTED.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_ip_blacklisted.clone(),
             EventType::IpBlacklisted,
             Some(ip),
             Some(exp.timestamp()),
@@ -667,7 +708,7 @@ impl Event {
 
     pub fn ip_blacklist_removed(ip: String) -> Self {
         Self::new(
-            EVENT_LEVEL_IP_BLACKLISTED.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_ip_blacklisted.clone(),
             EventType::IpBlacklistRemoved,
             Some(ip),
             None,
@@ -677,7 +718,7 @@ impl Event {
 
     pub fn new_user(email: String, ip: String) -> Self {
         Self::new(
-            EVENT_LEVEL_NEW_USER.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_new_user.clone(),
             EventType::NewUserRegistered,
             Some(ip),
             None,
@@ -687,7 +728,7 @@ impl Event {
 
     pub fn new_rauthy_admin(email: String, ip: String) -> Self {
         Self::new(
-            EVENT_LEVEL_NEW_RAUTHY_ADMIN.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_rauthy_admin.clone(),
             EventType::NewRauthyAdmin,
             Some(ip),
             None,
@@ -697,7 +738,7 @@ impl Event {
 
     pub fn new_rauthy_version(version_url: String) -> Self {
         Self::new(
-            EVENT_LEVEL_NEW_RAUTHY_VERSION.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_rauthy_version.clone(),
             EventType::NewRauthyVersion,
             None,
             None,
@@ -707,7 +748,7 @@ impl Event {
 
     pub fn jwks_rotated() -> Self {
         Self::new(
-            EVENT_LEVEL_JWKS_ROTATE.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_jwks_rotate.clone(),
             EventType::JwksRotated,
             None,
             None,
@@ -715,10 +756,31 @@ impl Event {
         )
     }
 
+    pub fn user_login_revoke(
+        user_email: &str,
+        bad_ip: IpAddr,
+        bad_location: Option<String>,
+    ) -> Self {
+        let loc = bad_location.as_deref().unwrap_or("Unknown Location");
+        let text = format!("User `{user_email}` revoked illegal login from {bad_ip} ({loc})");
+
+        Self::new(
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_user_login_revoke
+                .clone(),
+            EventType::UserLoginRevoke,
+            Some(bad_ip.to_string()),
+            None,
+            Some(text),
+        )
+    }
+
     pub fn rauthy_started() -> Self {
         let text = format!("Rauthy has been started on host {}", get_local_hostname());
         Self::new(
-            EVENT_LEVEL_RAUTHY_START.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_rauthy_start.clone(),
             EventType::RauthyStarted,
             None,
             None,
@@ -729,7 +791,7 @@ impl Event {
     pub fn rauthy_healthy() -> Self {
         let text = format!("Rauthy is healthy now on host {}", get_local_hostname());
         Self::new(
-            EVENT_LEVEL_RAUTHY_HEALTHY.get().cloned().unwrap(),
+            RauthyConfig::get().vars.events.level_rauthy_healthy.clone(),
             EventType::RauthyHealthy,
             None,
             None,
@@ -743,7 +805,11 @@ impl Event {
             get_local_hostname()
         );
         Self::new(
-            EVENT_LEVEL_RAUTHY_UNHEALTHY.get().cloned().unwrap(),
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_rauthy_unhealthy
+                .clone(),
             EventType::RauthyUnhealthy,
             None,
             None,
@@ -753,7 +819,11 @@ impl Event {
 
     pub fn rauthy_unhealthy_db() -> Self {
         Self::new(
-            EVENT_LEVEL_RAUTHY_UNHEALTHY.get().cloned().unwrap(),
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_rauthy_unhealthy
+                .clone(),
             EventType::RauthyUnhealthy,
             None,
             None,
@@ -763,21 +833,46 @@ impl Event {
 
     pub fn scim_task_failed(client_id: &str, action: &ScimAction, retries: i64) -> Self {
         Self::new(
-            EventLevel::Critical,
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_scim_task_failed
+                .clone(),
             EventType::BackchannelLogoutFailed,
             None,
             Some(retries),
-            Some(format!("{} / {:?}", client_id, action)),
+            Some(format!("{client_id} / {action:?}")),
         )
     }
 
     pub fn secrets_migrated(ip: IpAddr) -> Self {
         Self::new(
-            EVENT_LEVEL_SECRETS_MIGRATED.get().cloned().unwrap(),
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_secrets_migrated
+                .clone(),
             EventType::SecretsMigrated,
             Some(ip.to_string()),
             None,
             None,
+        )
+    }
+
+    pub fn suspicious_request(path: &str, ip: IpAddr, location: Option<String>) -> Self {
+        let loc = location.as_deref().unwrap_or("Unknown Location");
+        let text = format!("Suspicious request to '{path}' from {ip} ({loc})");
+
+        Self::new(
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_suspicious_request
+                .clone(),
+            EventType::SuspiciousApiScan,
+            Some(ip.to_string()),
+            None,
+            Some(text),
         )
     }
 
@@ -793,7 +888,11 @@ impl Event {
 
     pub fn user_email_change(text: String, ip: Option<IpAddr>) -> Self {
         Self::new(
-            EVENT_LEVEL_USER_EMAIL_CHANGE.get().cloned().unwrap(),
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_user_email_change
+                .clone(),
             EventType::UserEmailChange,
             ip.map(|ip| ip.to_string()),
             None,
@@ -803,7 +902,11 @@ impl Event {
 
     pub fn user_password_reset(text: String, ip: Option<String>) -> Self {
         Self::new(
-            EVENT_LEVEL_USER_PASSWORD_RESET.get().cloned().unwrap(),
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_user_password_reset
+                .clone(),
             EventType::UserPasswordReset,
             ip,
             None,
@@ -833,7 +936,7 @@ impl Event {
                     self.text.as_deref().unwrap_or_default()
                 )
             }
-            // PossibleBruteForce is not yet implemented / recognized
+            // PossibleBruteForce is currently not in use
             EventType::PossibleBruteForce => String::default(),
             EventType::RauthyStarted => self.text.clone().unwrap(),
             EventType::RauthyHealthy => self.text.clone().unwrap(),
@@ -865,18 +968,26 @@ impl Event {
                     self.text.as_deref().unwrap_or_default()
                 )
             }
+            EventType::ForcedLogout => {
+                format!(
+                    "User `{}` was force-logged-out",
+                    self.text.as_deref().unwrap_or_default()
+                )
+            }
+            EventType::UserLoginRevoke => self.text.clone().unwrap_or_default(),
+            EventType::SuspiciousApiScan => self.text.clone().unwrap_or_default(),
         }
     }
 
     #[inline(always)]
-    pub async fn send(self, tx: &flume::Sender<Self>) -> Result<(), ErrorResponse> {
-        match tx.send_async(self).await {
+    pub async fn send(self) -> Result<(), ErrorResponse> {
+        match RauthyConfig::get().tx_events.send_async(self).await {
             Ok(_) => Ok(()),
             Err(err) => {
-                error!("Event::send: {:?}", err);
+                error!(?err, "Event::send()");
                 Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
-                    format!("Error sending event internally: {:?}", err),
+                    format!("Error sending event internally: {err:?}"),
                 ))
             }
         }

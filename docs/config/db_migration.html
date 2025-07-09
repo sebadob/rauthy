@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -162,12 +173,12 @@
 want to migrate to Postgres for whatever reason. Or you started with Postgres and yuo want to reduce your memory
 footprint by switching to Hiqlite. All of this is easily possible.</p>
 <p><strong>Solution:</strong> <code>MIGRATE_DB_FROM</code></p>
-<p>If you set the <code>MIGRATE_DB_FROM</code> in Rauthy's config, it will perform a migration at the next restart.<br />
+<p>If you set the <code>MIGRATE_DB_FROM</code> ENV var, it will perform a migration at the next restart.<br />
 The way it works is the following:</p>
 <ol>
-<li>At startup, have a look if <code>MIGRATE_DB_FROM</code> is configured</li>
+<li>At startup, have a look if <code>MIGRATE_DB_FROM</code> is given</li>
 <li>If yes, then connect to the given database</li>
-<li>At the same time, connect to the database specified via <code>HIQLITE</code> and <code>DATABASE_URL</code></li>
+<li>At the same time, connect to the database specified via the normal config values</li>
 <li>Overwrite all existing data in the target database with the data from the <code>MIGRATE_DB_FROM</code> source</li>
 <li>Close the connection to <code>MIGRATE_DB_FROM</code></li>
 <li>Start normal operation</li>
@@ -183,30 +194,6 @@ The way it works is the following:</p>
 <p><code>MIGRATE_DB_FROM</code> overwrites any data in the target database! Be very careful with this option.</p>
 <p>If you do not remove the <code>MIGRATE_DB_FROM</code> after the migration has been done, it will overwrite the target again with
 the next restart of the application. Remove the config variable immediately after the migration has finished.</p>
-</div>
-</div>
-<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
-<div class="admonition-title">
-<div id="admonition-info-title">
-<p>Info</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-info"></a>
-</div>
-<div>
-<p><strong>any version below 0.27.0:</strong> if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
-switch to the correct Rauthy image as well.</p>
-</div>
-</div>
-<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
-<div class="admonition-title">
-<div id="admonition-hint-title">
-<p>Hint</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-hint"></a>
-</div>
-<div>
-<p>The easiest to do is to just set <code>MIGRATE_DB_FROM</code> as an environmant variable, which is easier and quicker to remove
-again afterwards.</p>
 </div>
 </div>
 

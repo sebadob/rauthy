@@ -5,15 +5,14 @@ use actix_web::{
 };
 use chrono::Utc;
 use futures::future::LocalBoxFuture;
-use rauthy_common::constants::{
-    COOKIE_SESSION, SESSION_TIMEOUT, SESSION_VALIDATE_IP, TOKEN_API_KEY,
-};
+use rauthy_common::constants::{COOKIE_SESSION, TOKEN_API_KEY};
 use rauthy_common::utils::real_ip_from_svc_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::entity::api_keys::{ApiKey, ApiKeyEntity};
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::future::{Ready, ready};
 use std::rc::Rc;
 use tracing::debug;
@@ -76,15 +75,6 @@ where
                 principal.session = Some(s);
             }
 
-            // TODO this would work and reject docs requests with __Host- cookies,
-            // but not with secure + path -> session would not exist
-            // if req.path().starts_with("/docs/") && !principal.is_admin() {
-            //     return Err(Error::from(ErrorResponse::new(
-            //         ErrorResponseType::Unauthorized,
-            //         "Only Admins are allowed to see the API documentation",
-            //     )));
-            // }
-
             req.extensions_mut().insert(principal);
 
             service.call(req).await
@@ -105,7 +95,7 @@ async fn get_api_key_from_headers(req: &ServiceRequest) -> Result<Option<ApiKey>
     } else {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Malformed 'Authorization' header".to_string(),
+            "Malformed 'Authorization' header",
         ));
     };
     let api_key_value = if k.ne(TOKEN_API_KEY) || k.is_empty() {
@@ -134,18 +124,22 @@ async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>
 
     match Session::find(session_id).await {
         Ok(mut session) => {
-            let remote_ip = if *SESSION_VALIDATE_IP {
+            let remote_ip = if RauthyConfig::get().vars.access.session_validate_ip {
                 real_ip_from_svc_req(req).ok()
             } else {
                 None
             };
 
-            if session.is_valid(*SESSION_TIMEOUT, remote_ip, req.path()) {
+            if session.is_valid(
+                RauthyConfig::get().vars.lifetimes.session_timeout,
+                remote_ip,
+                req.path(),
+            ) {
                 let now = Utc::now().timestamp();
                 // only update the last_seen, if it is older than 10 seconds
                 if session.last_seen < now - 10 {
                     session.last_seen = now;
-                    session.save().await?;
+                    session.upsert().await?;
                 }
 
                 if req.method() == http::Method::GET
@@ -163,10 +157,7 @@ async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>
             }
         }
         Err(err) => {
-            debug!(
-                "ERROR: Could not lookup the session from the cookie: {:?}",
-                err
-            );
+            debug!(?err, "ERROR: Could not lookup the session from the cookie",);
             Ok(None)
         }
     }

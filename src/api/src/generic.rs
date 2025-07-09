@@ -2,7 +2,7 @@ use crate::ReqPrincipal;
 use actix_web::http::header;
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, HeaderValue};
 use actix_web::web::{Json, Query};
-use actix_web::{HttpRequest, HttpResponse, Responder, get, post, put, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, get, post, put};
 use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_api_types::generic::{
@@ -11,63 +11,56 @@ use rauthy_api_types::generic::{
     PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
-    APP_START, APPLICATION_JSON, HEADER_ALLOW_ALL_ORIGINS, HEALTH_CHECK_DELAY_SECS, IDX_LOGIN_TIME,
-    RAUTHY_VERSION, SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
+    APP_START, APPLICATION_JSON, CSRF_HEADER, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME,
+    PWD_CSRF_HEADER, RAUTHY_VERSION,
 };
 use rauthy_common::utils::real_ip_from_req;
-use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::app_version::LatestAppVersion;
+use rauthy_models::entity::ip_blacklist::IpBlacklist;
 use rauthy_models::entity::is_db_alive;
 use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
 use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
-use rauthy_models::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq};
+use rauthy_models::ipgeo;
 use rauthy_models::language::Language;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
-use std::env;
-use std::ops::{Add, Sub};
+use std::fmt::Write;
+use std::ops::Sub;
 use std::str::FromStr;
 use std::sync::LazyLock;
 use tracing::{error, info, warn};
 use validator::Validate;
 
 pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
-    let common = env::var("FILTER_LANG_COMMON")
-        .unwrap_or_else(|_| "en de zhhans ko".to_string())
-        .trim()
-        .split(" ")
-        .filter_map(|v| {
-            let tr = v.trim();
-            if tr.is_empty() {
-                None
-            } else {
-                if !["en", "de", "zhhans", "ko"].contains(&tr) {
-                    panic!("Invalid config for FILTER_LANG_COMMON.\nAllowed values: en de zhhans ko\nfound: {}", tr);
+    let common = RauthyConfig::get().vars.i18n.filter_lang_common
+        .iter()
+        .map(|v| {
+                if !["en", "de", "zhhans", "ko"].contains(&v.as_ref()) {
+                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de zhhans ko\nfound: {v}");
                 }
-                Some(Language::from(tr).into())
-            }
+                Language::from(v.as_ref()).into()
         })
         .collect::<Vec<_>>();
-    let admin = env::var("FILTER_LANG_ADMIN")
-        .unwrap_or_else(|_| "en de ko".to_string())
-        .trim()
-        .split(" ")
-        .filter_map(|v| {
-            let tr = v.trim();
-            if tr.is_empty() {
-                None
-            } else {
-                if !["en", "de", "ko"].contains(&tr) {
-                    panic!("Invalid config for FILTER_LANG_ADMIN.\nAllowed values: en de ko\nfound: {}", tr);
-                }
-                Some(Language::from(tr).into())
+
+    let admin = RauthyConfig::get()
+        .vars
+        .i18n
+        .filter_lang_admin
+        .iter()
+        .map(|v| {
+            if !["en", "de", "zhhans", "ko"].contains(&v.as_ref()) {
+                panic!(
+                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de zhhans ko\nfound: {v}",
+                );
             }
+            Language::from(v.as_ref()).into()
         })
         .collect::<Vec<_>>();
 
@@ -157,7 +150,6 @@ pub async fn get_enc_keys(principal: ReqPrincipal) -> Result<HttpResponse, Error
 )]
 #[post("/encryption/migrate")]
 pub async fn post_migrate_enc_key(
-    data: web::Data<AppState>,
     req: HttpRequest,
     principal: ReqPrincipal,
     Json(payload): Json<EncKeyMigrateRequest>,
@@ -166,9 +158,10 @@ pub async fn post_migrate_enc_key(
     payload.validate()?;
 
     let ip = real_ip_from_req(&req)?;
-    encryption::migrate_encryption_alg(&data, &payload.key_id).await?;
+    encryption::migrate_encryption_alg(&payload.key_id).await?;
 
-    data.tx_events
+    RauthyConfig::get()
+        .tx_events
         .send_async(Event::secrets_migrated(ip))
         .await
         .unwrap();
@@ -210,10 +203,7 @@ pub async fn get_i18n_config() -> Result<HttpResponse, ErrorResponse> {
     ),
 )]
 #[get("/login_time")]
-pub async fn get_login_time(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_login_time(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Generic, AccessRights::Read)?;
 
     let login_time: u32 = DB::hql()
@@ -221,10 +211,11 @@ pub async fn get_login_time(
         .await?
         .unwrap_or(2000);
 
+    let params = &RauthyConfig::get().argon2_params;
     let argon2_params = Argon2ParamsResponse {
-        m_cost: data.argon2_params.m_cost(),
-        t_cost: data.argon2_params.t_cost(),
-        p_cost: data.argon2_params.p_cost(),
+        m_cost: params.m_cost(),
+        t_cost: params.t_cost(),
+        p_cost: params.p_cost(),
     };
     let resp = LoginTimeResponse {
         argon2_params,
@@ -340,6 +331,8 @@ pub async fn ping() -> impl Responder {
 )]
 #[post("/pow")]
 pub async fn post_pow() -> Result<HttpResponse, ErrorResponse> {
+    // TODO can we limit the creation of new pows in a way that makes sense?
+    //  By IP could be problematic if lots of users have the same public IP.
     let pow = PowEntity::create().await?;
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
@@ -417,7 +410,9 @@ pub async fn post_update_language(
 )]
 #[get("/health")]
 pub async fn get_health() -> impl Responder {
-    if Utc::now().sub(*APP_START).num_seconds() < *HEALTH_CHECK_DELAY_SECS as i64 {
+    if Utc::now().sub(*APP_START).num_seconds()
+        < RauthyConfig::get().vars.database.health_check_delay_secs as i64
+    {
         info!("Early health check within the HEALTH_CHECK_DELAY_SECS timeframe - returning true");
         HttpResponse::Ok().json(HealthResponse {
             db_healthy: true,
@@ -457,20 +452,19 @@ pub async fn get_ready() -> impl Responder {
 /// Catch all - redirects from root to the "real root" /auth/v1/
 /// If `BLACKLIST_SUSPICIOUS_REQUESTS` is set, it will also compare the
 /// request path against common bot / hacker scan targets and blacklist preemptively.
-#[get("/")]
-pub async fn catch_all(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
+#[get("/{_:.*}")]
+pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     let path = req.path();
-    let ip = real_ip_from_req(&req)?.to_string();
+    let ip = real_ip_from_req(&req)?;
 
-    if *SUSPICIOUS_REQUESTS_LOG && path.len() > 1 {
+    let vars = &RauthyConfig::get().vars.suspicious_requests;
+    if vars.log && path.len() > 1 {
         // TODO create a new event type for these? maybe too many events ...?
         warn!("Suspicious request path '{}' from {}", path, ip)
     }
 
-    if *SUSPICIOUS_REQUESTS_BLACKLIST > 0
+    if vars.blacklist > 0
+        // `/` will be the path of length 1
         && path.len() > 1
         && suspicious_request_block::is_scan_target(path)
     {
@@ -478,19 +472,21 @@ pub async fn catch_all(
             "Blacklisting suspicious target path request '{}' from {}",
             path, ip,
         );
-        let exp = Utc::now().add(chrono::Duration::minutes(
-            *SUSPICIOUS_REQUESTS_BLACKLIST as i64,
-        ));
-        if let Err(err) = data
-            .tx_ip_blacklist
-            .send_async(IpBlacklistReq::Blacklist(IpBlacklist { ip, exp }))
-            .await
-        {
+
+        if let Err(err) = IpBlacklist::put(ip.to_string(), vars.blacklist as i64).await {
             error!(
                 "Error blacklisting suspicious request - please repot this bug: {:?}",
                 err
             );
         }
+
+        let location = ipgeo::get_location_from_db(ip)?;
+        Event::suspicious_request(path, ip, location).send().await?;
+
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotFound,
+            "You have been blocked because of API scanning. This incident has been reported.",
+        ));
     }
 
     Ok(HttpResponse::MovedPermanently()
@@ -516,6 +512,8 @@ pub async fn redirect_v1() -> HttpResponse {
 )]
 #[get("/version")]
 pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
+    // TODO maybe require an auth session here and only show to admins?
+
     let resp = match LatestAppVersion::find().await {
         Some(latest) => {
             let update_available = match Version::from_str(RAUTHY_VERSION) {
@@ -545,6 +543,11 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
 }
 
 /// Returns the remote IP that Rauthy has extracted for this client
+///
+/// During development, with `debug_assertions` enabled, this endpoint returns the full set of HTTP
+/// headers the request comes in with. A release build though will only return the extracted
+/// "real IP". This is useful for checking any reverse proxy configuration and making sure the
+/// setup is correct.
 #[utoipa::path(
     get,
     path = "/whoami",
@@ -555,8 +558,28 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
 )]
 #[get("/whoami")]
 pub async fn get_whoami(req: HttpRequest) -> String {
-    match real_ip_from_req(&req) {
-        Ok(ip) => ip.to_string(),
-        Err(_) => "UNKNOWN".to_string(),
+    if RauthyConfig::get().vars.access.whoami_headers {
+        let mut s = String::with_capacity(32);
+
+        let ip = real_ip_from_req(&req)
+            .map(|ip| ip.to_string())
+            .unwrap_or_default();
+        let _ = writeln!(s, "{ip}\n");
+
+        for (k, v) in req.headers() {
+            let key = k.as_str();
+            let value = if key == "cookie" || key == CSRF_HEADER || key == PWD_CSRF_HEADER {
+                "<hidden>"
+            } else {
+                v.to_str().unwrap_or_default()
+            };
+            let _ = writeln!(s, "{key}: {value}, ");
+        }
+
+        s
+    } else {
+        real_ip_from_req(&req)
+            .map(|ip| ip.to_string())
+            .unwrap_or_default()
     }
 }

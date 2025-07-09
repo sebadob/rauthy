@@ -15,7 +15,11 @@ export type EventType = 'InvalidLogins'
     | 'UserPasswordReset'
     | 'Test'
     | 'BackchannelLogoutFailed'
-    | 'ScimTaskFailed';
+    | 'ScimTaskFailed'
+    | 'ForcedLogout'
+    | 'UserLoginRevoke'
+    | 'SuspiciousApiScan'
+    ;
 
 export interface EventsRequest {
     /// Unix timestamp in seconds

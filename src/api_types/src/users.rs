@@ -2,11 +2,12 @@ use crate::cust_validation::{validate_vec_groups, validate_vec_roles};
 use crate::generic::Language;
 use crate::oidc::AddressClaim;
 use rauthy_common::regex::{
-    RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_NAME,
+    RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_NAME,
     RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_STREET, RE_URI, RE_USER_NAME,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::net::IpAddr;
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -40,6 +41,7 @@ pub struct MfaAwaitRequest {
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub enum MfaPurpose {
     Login(String),
+    MfaModToken,
     PasswordNew,
     PasswordReset,
     Test,
@@ -121,6 +123,9 @@ pub struct RequestResetRequest {
     /// Redirect URI used after a successful reset - validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
     pub redirect_uri: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
+    pub pow: String,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -191,8 +196,9 @@ pub struct UserValuesRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-.\s]{0,48}`
     #[validate(regex(path = "*RE_STREET", code = "[a-zA-Z0-9À-ÿ-.\\s]{0,48}"))]
     pub street: Option<String>,
-    #[validate(range(min = 1000, max = 9999999))]
-    pub zip: Option<i32>,
+    /// Validation: `[a-zA-Z0-9]`, max length 24
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"), length(max = 24))]
+    pub zip: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-]{0,48}`
     #[validate(regex(path = "*RE_CITY", code = "[a-zA-Z0-9À-ÿ-]{0,48}"))]
     pub city: Option<String>,
@@ -263,6 +269,22 @@ pub struct UserAttrValuesUpdateRequest {
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
+pub struct UserRevokeParams {
+    /// Validation: IpAddr
+    #[schema(value_type = str)]
+    pub ip: IpAddr,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct MfaModTokenRequest {
+    #[validate(length(max = 256))]
+    pub password: Option<String>,
+    #[validate(length(min = 48, max = 48))]
+    pub mfa_code: Option<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnAuthStartRequest {
     pub purpose: MfaPurpose,
@@ -280,6 +302,12 @@ pub struct WebauthnAuthFinishRequest {
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
+pub struct WebauthnDeleteRequest {
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: Option<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnRegStartRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
@@ -288,6 +316,8 @@ pub struct WebauthnRegStartRequest {
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "*RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: Option<String>,
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -326,6 +356,15 @@ pub struct DeviceResponse {
     pub refresh_exp: Option<i64>,
     pub peer_ip: String,
     pub name: String,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct MfaModTokenResponse {
+    pub id: String,
+    pub user_id: String,
+    pub exp: i64,
+    pub ip: String,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -507,7 +546,7 @@ pub struct UserValuesResponse {
     pub birthdate: Option<String>,
     pub phone: Option<String>,
     pub street: Option<String>,
-    pub zip: Option<i32>,
+    pub zip: Option<String>,
     pub city: Option<String>,
     pub country: Option<String>,
 }

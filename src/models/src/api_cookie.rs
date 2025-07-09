@@ -1,8 +1,9 @@
+use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::{Cookie, SameSite};
 use actix_web::dev::ServiceRequest;
 use actix_web::{HttpRequest, cookie};
 use cryptr::EncValue;
-use rauthy_common::constants::{COOKIE_MODE, COOKIE_SET_PATH, CookieMode};
+use rauthy_common::constants::CookieMode;
 use rauthy_common::utils::{base64_decode, base64_encode};
 use std::borrow::Cow;
 use std::fmt::Display;
@@ -29,10 +30,11 @@ impl ApiCookie {
         N: Into<Cow<'c, str>> + Display,
         V: Into<Cow<'b, str>> + Display,
     {
-        let path = if *COOKIE_SET_PATH { "/auth" } else { "/" };
-        let (name, secure, path) = match *COOKIE_MODE {
-            CookieMode::Host => (format!("__Host-{}", name), true, "/"),
-            CookieMode::Secure => (format!("__Secure-{}", name), true, path),
+        let access = &RauthyConfig::get().vars.access;
+        let path = if access.cookie_set_path { "/auth" } else { "/" };
+        let (name, secure, path) = match access.cookie_mode {
+            CookieMode::Host => (format!("__Host-{name}"), true, "/"),
+            CookieMode::Secure => (format!("__Secure-{name}"), true, path),
             CookieMode::DangerInsecure => {
                 warn!("Building INSECURE cookie - you MUST NEVER use this in production");
                 (name.to_string(), false, path)
@@ -62,9 +64,9 @@ impl ApiCookie {
     where
         N: Into<Cow<'c, str>> + Display,
     {
-        let name = match *COOKIE_MODE {
-            CookieMode::Host => format!("__Host-{}", cookie_name),
-            CookieMode::Secure => format!("__Secure-{}", cookie_name),
+        let name = match RauthyConfig::get().vars.access.cookie_mode {
+            CookieMode::Host => format!("__Host-{cookie_name}"),
+            CookieMode::Secure => format!("__Secure-{cookie_name}"),
             CookieMode::DangerInsecure => cookie_name.to_string(),
         };
         // req.cookie(&name)
@@ -75,9 +77,9 @@ impl ApiCookie {
     where
         N: Into<Cow<'c, str>> + Display,
     {
-        let name = match *COOKIE_MODE {
-            CookieMode::Host => format!("__Host-{}", cookie_name),
-            CookieMode::Secure => format!("__Secure-{}", cookie_name),
+        let name = match RauthyConfig::get().vars.access.cookie_mode {
+            CookieMode::Host => format!("__Host-{cookie_name}"),
+            CookieMode::Secure => format!("__Secure-{cookie_name}"),
             CookieMode::DangerInsecure => cookie_name.to_string(),
         };
         Self::cookie_into_value(req.cookie(&name))
@@ -94,24 +96,5 @@ impl ApiCookie {
                 Some(String::from_utf8_lossy(dec.as_ref()).to_string())
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use cryptr::EncKeys;
-
-    #[test]
-    fn test_api_cookie() {
-        dotenvy::from_filename("rauthy-test.cfg").ok();
-        let _ = EncKeys::from_env().unwrap().init();
-
-        let val = "my_cookie_val_1337";
-
-        let cookie = ApiCookie::build("myCookie", val, 10);
-        let val_from = ApiCookie::cookie_into_value(Some(cookie)).unwrap();
-
-        assert_eq!(val, val_from);
     }
 }

@@ -1,8 +1,6 @@
-use crate::app_state::AppState;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
-use actix_web::web;
-use rauthy_common::constants::{EMAIL_SUB_PREFIX, PUB_URL};
+use crate::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use serde::Serialize;
 use std::sync::OnceLock;
@@ -46,12 +44,12 @@ impl FedCMAccount {
             // Rauthy does not store user pictures
             picture: None,
             // TODO how should we decide which clients to return here? How to make this dynamic?
-            // simply all of them? Or introduce a new flow to allow fedCm and filter?
+            //  simply all of them? Or introduce a new flow to allow fedCm and filter?
             // approved_clients: clients,
-            // TODO not sure if it produces errors and problems if we populate this value at all
+            //  not sure if it produces errors and problems if we populate this value at all
             approved_clients: Vec::default(),
             login_hints: vec![login_hint, "state=fedcm".to_string()],
-            domain_hints: vec![PUB_URL.to_string()],
+            domain_hints: vec![RauthyConfig::get().vars.server.pub_url.clone()],
         }
     }
 }
@@ -93,9 +91,9 @@ pub struct FedCMIdPIcon {
 }
 
 impl FedCMIdPIcon {
-    fn rauthy_logo(issuer: &str) -> Self {
+    fn rauthy_logo() -> Self {
         Self {
-            url: format!("{}/clients/rauthy/logo", issuer),
+            url: format!("{}/clients/rauthy/logo", RauthyConfig::get().issuer),
             // Rauthy's default icon is an SVG which is fine according to the spec -> no size
             size: None,
         }
@@ -111,11 +109,11 @@ pub struct FedCMIdPBranding {
 }
 
 impl FedCMIdPBranding {
-    async fn new(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
-        let rauthy_icon = FedCMIdPIcon::rauthy_logo(&data.issuer);
+    async fn new() -> Result<Self, ErrorResponse> {
+        let rauthy_icon = FedCMIdPIcon::rauthy_logo();
 
         // this is pretty inefficient, but FedCM is in experimental testing only anyway
-        let css = ThemeCssFull::find("rauthy".to_string()).await?;
+        let css = ThemeCssFull::find_with_default("rauthy".to_string()).await?;
         let background_color = format!(
             "hsl({} {} {})",
             css.light.bg[0], css.light.bg[1], css.light.bg[2]
@@ -131,7 +129,7 @@ impl FedCMIdPBranding {
             // color for text on IDP branded widgets.
             color: Some(color),
             icons: vec![rauthy_icon],
-            name: Some(&*EMAIL_SUB_PREFIX),
+            name: Some(&RauthyConfig::get().vars.email.sub_prefix),
         })
     }
 }
@@ -148,12 +146,12 @@ pub struct FedCMIdPConfig {
 }
 
 impl FedCMIdPConfig {
-    pub async fn get(data: &web::Data<AppState>) -> Result<&'static Self, ErrorResponse> {
+    pub async fn get() -> Result<&'static Self, ErrorResponse> {
         if let Some(slf) = IDP_CONFIG.get() {
             return Ok(slf);
         }
 
-        let branding = FedCMIdPBranding::new(data).await?;
+        let branding = FedCMIdPBranding::new().await?;
         let slf = Self {
             accounts_endpoint: "/auth/v1/fed_cm/accounts",
             client_metadata_endpoint: "/auth/v1/fed_cm/client_meta",
@@ -194,10 +192,10 @@ pub struct WebIdentity {
     pub provider_urls: Vec<String>,
 }
 
-impl WebIdentity {
-    pub fn new(issuer: &str) -> Self {
+impl Default for WebIdentity {
+    fn default() -> Self {
         Self {
-            provider_urls: vec![format!("{}/fed_cm/config", issuer)],
+            provider_urls: vec![format!("{}/fed_cm/config", RauthyConfig::get().issuer)],
         }
     }
 }

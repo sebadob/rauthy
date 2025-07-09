@@ -1,10 +1,9 @@
 use crate::token_set::{DpopFingerprint, TokenSet};
+use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{HttpRequest, web};
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::dpop_proof::DPoPProof;
@@ -12,7 +11,6 @@ use std::str::FromStr;
 
 #[tracing::instrument(skip_all, fields(client_id = req_data.client_id, username = req_data.username))]
 pub async fn grant_type_credentials(
-    data: &web::Data<AppState>,
     req: HttpRequest,
     req_data: TokenRequest,
 ) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
@@ -25,16 +23,11 @@ pub async fn grant_type_credentials(
 
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
     let client = Client::find(client_id).await?;
+    client.validate_enabled()?;
     if !client.confidential {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "'client_credentials' flow is allowed for confidential clients only",
-        ));
-    }
-    if !client.enabled {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "client is disabled",
         ));
     }
     let secret = client_secret.ok_or_else(|| {
@@ -50,7 +43,7 @@ pub async fn grant_type_credentials(
             if let Some(nonce) = &proof.claims.nonce {
                 headers.push((
                     HeaderName::from_str(HEADER_DPOP_NONCE).unwrap(),
-                    HeaderValue::from_str(nonce).unwrap(),
+                    HeaderValue::from_str(nonce)?,
                 ));
             }
             Some(DpopFingerprint(proof.jwk_fingerprint()?))
@@ -65,6 +58,6 @@ pub async fn grant_type_credentials(
         ClientDyn::update_used(&client.id).await?;
     }
 
-    let ts = TokenSet::for_client_credentials(data, &client, dpop_fingerprint).await?;
+    let ts = TokenSet::for_client_credentials(&client, dpop_fingerprint).await?;
     Ok((ts, headers))
 }

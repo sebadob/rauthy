@@ -1,9 +1,10 @@
 use crate::database::{Cache, DB};
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
+use crate::rauthy_config::RauthyConfig;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, http};
 use chrono::{DateTime, Utc};
-use rauthy_common::constants::{DPOP_FORCE_NONCE, DPOP_NONCE_EXP, DPOP_TOKEN_ENDPOINT, TOKEN_DPOP};
+use rauthy_common::constants::{DPOP_TOKEN_ENDPOINT, TOKEN_DPOP};
 use rauthy_common::regex::RE_TOKEN_68;
 use rauthy_common::utils::{base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -21,14 +22,15 @@ pub struct DPoPNonce {
 
 impl Debug for DPoPNonce {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "exp: {}, value: <hidden>", self.exp)
+        write!(f, "DPoPNonce {{ exp: {}, value: <hidden> }}", self.exp)
     }
 }
 
 impl DPoPNonce {
     /// Creates a new DPoP nonce, inserts it into the cache and returns its value.
     pub async fn new_value() -> Result<String, ErrorResponse> {
-        let exp = Utc::now().add(chrono::Duration::seconds(*DPOP_NONCE_EXP as i64));
+        let nonce_exp = RauthyConfig::get().vars.dpop.nonce_exp as i64;
+        let exp = Utc::now().add(chrono::Duration::seconds(nonce_exp));
         let slf = Self {
             exp,
             value: get_rand(32),
@@ -36,23 +38,13 @@ impl DPoPNonce {
 
         let client = DB::hql();
         client
-            .put(
-                Cache::DPoPNonce,
-                "latest",
-                &slf,
-                Some(*DPOP_NONCE_EXP as i64),
-            )
+            .put(Cache::DPoPNonce, "latest", &slf, Some(nonce_exp))
             .await?;
 
         // we need by its own value additionally, because the "latest" may be overwritten
         // before its expiration
         client
-            .put(
-                Cache::DPoPNonce,
-                slf.value.clone(),
-                &slf,
-                Some(*DPOP_NONCE_EXP as i64),
-            )
+            .put(Cache::DPoPNonce, slf.value.clone(), &slf, Some(nonce_exp))
             .await?;
 
         Ok(slf.value)
@@ -289,7 +281,7 @@ impl DPoPProof {
             .map_err(|err| err.message)?;
 
         // 7. The jwk JOSE Header Parameter does not contain a private key.
-        // TODO ?
+        // Not really our responsibility to check this, or should we?
 
         // 8. The htm claim matches the HTTP method of the current request.
         if self.claims.htm.as_str() != http::Method::POST.as_str() {
@@ -298,7 +290,7 @@ impl DPoPProof {
 
         // 9. The htu claim matches the HTTP URI value for the HTTP request in
         // which the JWT was received, ignoring any query and fragment parts.
-        if self.claims.htu != DPOP_TOKEN_ENDPOINT.to_string() {
+        if Some(&self.claims.htu) != DPOP_TOKEN_ENDPOINT.get() {
             return Err("Invalid 'htu' claim".to_string());
         }
 
@@ -332,14 +324,14 @@ impl DPoPProof {
         if let Some(nonce) = &self.claims.nonce {
             if !DPoPNonce::is_valid(nonce.clone()).await {
                 let latest = DPoPNonce::get_latest().await.unwrap_or_else(|err| {
-                    error!("Cache lookup error during DPoP nonce generation: {:?}", err);
+                    error!(?err, "Cache lookup error during DPoP nonce generation");
                     err.message.to_string()
                 });
                 return Err(latest);
             }
-        } else if *DPOP_FORCE_NONCE {
+        } else if RauthyConfig::get().vars.dpop.force_nonce {
             let latest = DPoPNonce::get_latest().await.unwrap_or_else(|err| {
-                error!("Cache lookup error during DPoP nonce generation: {:?}", err);
+                error!(?err, "Cache lookup error during DPoP nonce generation");
                 err.message.to_string()
             });
             return Err(latest);
@@ -364,9 +356,6 @@ mod tests {
 
     #[test]
     fn test_dpop_validation_eddsa() {
-        // mandatory to read the PUB_URL for the request validation
-        dotenvy::from_filename("rauthy-test.cfg").ok();
-
         // manually build up a dpop token
         let kp = ed25519_compact::KeyPair::generate();
 
@@ -386,10 +375,12 @@ mod tests {
             kid: None,
         };
 
+        let _ = DPOP_TOKEN_ENDPOINT.set("http://localhost:8081/auth/v1/oidc/token".to_string());
+
         let claims = DPoPClaims {
             jti: "-BwC3ESc6acc2lTc".to_string(),
             htm: http::Method::POST.to_string(),
-            htu: DPOP_TOKEN_ENDPOINT.clone().to_string(),
+            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().to_string(),
             iat: Utc::now().timestamp(),
             nonce: None,
         };
@@ -399,12 +390,12 @@ mod tests {
         let header_b64 = base64_url_no_pad_encode(header_json.as_bytes());
         let claims_json = serde_json::to_string(&claims).unwrap();
         let claims_b64 = base64_url_no_pad_encode(claims_json.as_bytes());
-        let mut token_raw = format!("{}.{}", header_b64, claims_b64);
+        let mut token_raw = format!("{header_b64}.{claims_b64}");
 
         let sig = kp.sk.sign(&token_raw, Some(Noise::generate()));
         let sig_b64 = base64_url_no_pad_encode(sig.as_ref());
-        write!(token_raw, ".{}", sig_b64).unwrap();
-        println!("test signed token:\n{}", token_raw);
+        write!(token_raw, ".{sig_b64}").unwrap();
+        println!("test signed token:\n{token_raw}");
 
         // now we have our token like it should come in with the DPoP header -> try to verify it
         let dpop = DPoPProof::try_from_str(None, token_raw.as_str()).unwrap();
@@ -441,10 +432,12 @@ mod tests {
             kid: None,
         };
 
+        let _ = DPOP_TOKEN_ENDPOINT.set("http://localhost:8081/auth/v1/oidc/token".to_string());
+
         let claims = DPoPClaims {
             jti: "-BwC3ESc6acc2lTc".to_string(),
             htm: http::Method::POST.to_string(),
-            htu: DPOP_TOKEN_ENDPOINT.clone().to_string(),
+            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().to_string(),
             iat: Utc::now().timestamp(),
             nonce: None,
         };

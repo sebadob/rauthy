@@ -1,24 +1,24 @@
+use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use rauthy_api_types::oidc::{LoginRefreshRequest, LoginRequest};
-use rauthy_common::constants::{COOKIE_MFA, SESSION_RENEW_MFA, WEBAUTHN_REQ_EXP};
+use rauthy_common::constants::COOKIE_MFA;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::login_locations::LoginLocation;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::{AccountType, User};
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_models::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use std::fmt::Write;
 use tracing::trace;
 
 pub async fn post_authorize(
-    data: &web::Data<AppState>,
     req: &HttpRequest,
     req_data: LoginRequest,
     mut session: Session,
@@ -83,7 +83,7 @@ pub async fn post_authorize(
 
     if let Some(pwd) = req_data.password {
         *has_password_been_hashed = true;
-        user.validate_password(data, pwd).await?;
+        user.validate_password(pwd).await?;
 
         // update user info
         // in case of webauthn login, the info will be updated in the oidc finish step
@@ -98,6 +98,7 @@ pub async fn post_authorize(
 
     // client validations
     let client = Client::find_maybe_ephemeral(req_data.client_id).await?;
+    client.validate_enabled()?;
     client.validate_mfa(&user).inspect_err(|_| {
         // in this case, we do not want to add a login delay
         // the user password was correct, we only need a passkey being added to the account
@@ -109,8 +110,9 @@ pub async fn post_authorize(
     let header_origin = client.get_validated_origin_header(req)?;
 
     // build authorization code
+    let webauthn_req_exp = RauthyConfig::get().vars.webauthn.req_exp;
     let code_lifetime = if user.has_webauthn_enabled() {
-        client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
+        client.auth_code_lifetime + webauthn_req_exp as i32
     } else {
         client.auth_code_lifetime
     };
@@ -127,30 +129,34 @@ pub async fn post_authorize(
     );
     code.save().await?;
 
+    let user_id = user.id.clone();
+    let email = user.email.clone();
+    let has_webauthn_enabled = user.has_webauthn_enabled();
+
+    LoginLocation::spawn_background_check(user, req)?;
+
     let mut loc = format!("{}?code={}", req_data.redirect_uri, code.id);
     if let Some(state) = req_data.state {
-        write!(loc, "&state={}", state)?;
+        write!(loc, "&state={state}")?;
     };
 
-    // TODO double check that we do not have any problems with the direct webauthn login here
-    // TODO should we allow to skip this step if set so in the config?
     // check if we need to validate the 2nd factor
-    if user.has_webauthn_enabled() {
+    if has_webauthn_enabled {
         session.set_mfa(true).await?;
 
         let step = AuthStepAwaitWebauthn {
             code: get_rand(48),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
-            user_id: user.id.clone(),
-            email: user.email,
-            exp: *WEBAUTHN_REQ_EXP as u64,
+            user_id: user_id.clone(),
+            email,
+            exp: webauthn_req_exp as u64,
             session,
         };
 
         WebauthnLoginReq {
             code: step.code.clone(),
-            user_id: user.id,
+            user_id,
             header_loc: loc,
             header_origin: step
                 .header_origin
@@ -163,8 +169,8 @@ pub async fn post_authorize(
         Ok(AuthStep::AwaitWebauthn(step))
     } else {
         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
-            user_id: user.id,
-            email: user.email,
+            user_id,
+            email,
             header_loc: (header::LOCATION, HeaderValue::from_str(&loc)?),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
@@ -191,8 +197,9 @@ pub async fn post_authorize_refresh(
     client.validate_mfa(&user)?;
 
     let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
+    let webauthn_req_exp = RauthyConfig::get().vars.webauthn.req_exp;
     let code_lifetime = if user.has_webauthn_enabled() {
-        client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
+        client.auth_code_lifetime + webauthn_req_exp as i32
     } else {
         client.auth_code_lifetime
     };
@@ -209,22 +216,25 @@ pub async fn post_authorize_refresh(
     );
     code.save().await?;
 
+    // We don't need another location check - we can only get here with an already authenticated
+    // session and no auth-check is being performed.
+
     // build location header
     let header_loc = if let Some(s) = req_data.state {
-        format!("{}?code={}&state={}", req_data.redirect_uri, code.id, s)
+        format!("{}?code={}&state={s}", req_data.redirect_uri, code.id)
     } else {
         format!("{}?code={}", req_data.redirect_uri, code.id)
     };
 
     // check if we need to validate the 2nd factor
-    if user.has_webauthn_enabled() && *SESSION_RENEW_MFA {
+    if user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa {
         let step = AuthStepAwaitWebauthn {
             code: get_rand(48),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
             user_id: user.id.clone(),
             email: user.email,
-            exp: *WEBAUTHN_REQ_EXP as u64,
+            exp: webauthn_req_exp as u64,
             session: session.clone(),
         };
 

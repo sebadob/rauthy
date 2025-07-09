@@ -10,7 +10,7 @@ use rauthy_api_types::auth_providers::{
 use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse};
 use rauthy_api_types::generic::LogoParams;
 use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
-use rauthy_common::constants::HEADER_JSON;
+use rauthy_common::constants::{HEADER_JSON, PROVIDER_ATPROTO};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, AuthProviderTemplate,
@@ -72,6 +72,13 @@ pub async fn post_provider(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
     payload.validate()?;
+
+    if payload.issuer == PROVIDER_ATPROTO {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Must not contain a reserved name",
+        ));
+    }
 
     if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
@@ -207,7 +214,7 @@ pub async fn post_provider_callback_handle(
     resp.add_cookie(&cookie).map_err(|err| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
-            format!("Error adding cookie after map_auth_step: {}", err),
+            format!("Error adding cookie after map_auth_step: {err}"),
         )
     })?;
     Ok(resp)

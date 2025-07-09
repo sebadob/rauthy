@@ -1,7 +1,8 @@
 use crate::entity::api_keys::{AccessGroup, AccessRights, ApiKey};
 use crate::entity::sessions::{Session, SessionState};
+use crate::rauthy_config::RauthyConfig;
 use actix_web::{HttpRequest, web};
-use rauthy_common::constants::{ADMIN_FORCE_MFA, RAUTHY_ADMIN_ROLE};
+use rauthy_common::constants::RAUTHY_ADMIN_ROLE;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::trace;
 
@@ -87,8 +88,8 @@ impl Principal {
                 Err(_) => Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
                     format!(
-                        "Bad permissions for given ApiKey. Needed: {:?} / {:?}",
-                        access_group, access_rights,
+                        "Bad permissions for given ApiKey. Needed: {access_group:?} / \
+                        {access_rights:?}"
                     ),
                 )),
             }
@@ -111,7 +112,7 @@ impl Principal {
             ));
         }
 
-        if *ADMIN_FORCE_MFA && !self.has_mfa_active() {
+        if RauthyConfig::get().vars.mfa.admin_force_mfa && !self.has_mfa_active() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::MfaRequired,
                 "Rauthy admin access only allowed with MFA active",

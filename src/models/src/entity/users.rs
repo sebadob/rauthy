@@ -1,4 +1,3 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
 use crate::entity::continuation_token::ContinuationToken;
@@ -16,9 +15,11 @@ use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
 use crate::html::templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
 use crate::language::Language;
-use actix_web::{HttpRequest, web};
+use crate::rauthy_config::RauthyConfig;
+use actix_web::HttpRequest;
 use argon2::PasswordHash;
 use chrono::Utc;
+use core::str::Split;
 use hiqlite::Params;
 use hiqlite_macros::params;
 use rauthy_api_types::PatchOp;
@@ -29,15 +30,14 @@ use rauthy_api_types::users::{
     UserValuesResponse,
 };
 use rauthy_common::constants::{
-    CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, PUB_URL_WITH_SCHEME,
-    RAUTHY_ADMIN_ROLE, WEBAUTHN_NO_PASSWORD_EXPIRY,
+    CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use std::cmp::{max, min};
+use std::cmp::max;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
@@ -165,10 +165,10 @@ impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
-        let idx = format!("{}_{}", IDX_USERS, &user_id);
+        let idx = format!("{IDX_USERS}_{user_id}");
         client.delete(Cache::User, idx).await?;
 
-        let idx = format!("{}_{}", IDX_USERS, &email);
+        let idx = format!("{IDX_USERS}_{email}");
         client.delete(Cache::User, idx).await?;
 
         Ok(())
@@ -222,7 +222,6 @@ impl User {
     }
 
     pub async fn create(
-        data: &web::Data<AppState>,
         new_user: User,
         post_reset_redirect_uri: Option<String>,
     ) -> Result<Self, ErrorResponse> {
@@ -230,11 +229,11 @@ impl User {
 
         let magic_link = MagicLink::create(
             slf.id.clone(),
-            data.ml_lt_pwd_first as i64,
+            RauthyConfig::get().vars.lifetimes.magic_link_pwd_first as i64,
             MagicLinkUsage::NewUser(post_reset_redirect_uri),
         )
         .await?;
-        send_pwd_reset(data, &magic_link, &slf).await;
+        send_pwd_reset(&magic_link, &slf).await;
 
         Ok(slf)
     }
@@ -243,17 +242,13 @@ impl User {
         Self::insert(new_user).await
     }
 
-    pub async fn create_from_new(
-        data: &web::Data<AppState>,
-        new_user_req: NewUserRequest,
-    ) -> Result<User, ErrorResponse> {
+    pub async fn create_from_new(new_user_req: NewUserRequest) -> Result<User, ErrorResponse> {
         let new_user = User::from_new_user_req(new_user_req).await?;
-        User::create(data, new_user, None).await
+        User::create(new_user, None).await
     }
 
     /// Inserts a user from the open registration endpoint into the database
     pub async fn create_from_reg(
-        data: &web::Data<AppState>,
         req_data: NewUserRegistrationRequest,
         lang: Language,
     ) -> Result<User, ErrorResponse> {
@@ -264,7 +259,7 @@ impl User {
             ..Default::default()
         };
         new_user.language = lang;
-        let new_user = User::create(data, new_user, req_data.redirect_uri).await?;
+        let new_user = User::create(new_user, req_data.redirect_uri).await?;
 
         Ok(new_user)
     }
@@ -290,7 +285,7 @@ impl User {
     }
 
     pub async fn exists(id: String) -> Result<(), ErrorResponse> {
-        let idx = format!("{}_{}", IDX_USERS, id);
+        let idx = format!("{IDX_USERS}_{id}");
 
         let opt: Option<Self> = DB::hql().get(Cache::User, idx).await?;
         if opt.is_some() {
@@ -315,7 +310,7 @@ impl User {
     }
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let idx = format!("{}_{}", IDX_USERS, id);
+        let idx = format!("{IDX_USERS}_{id}");
         let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
@@ -336,7 +331,7 @@ impl User {
     pub async fn find_by_email(email: String) -> Result<User, ErrorResponse> {
         let email = email.to_lowercase();
 
-        let idx = format!("{}_{}", IDX_USERS, email);
+        let idx = format!("{IDX_USERS}_{email}");
         let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
@@ -449,7 +444,7 @@ ORDER BY created_at ASC"#;
     pub async fn find_for_fed_cm_validated(user_id: String) -> Result<Self, ErrorResponse> {
         // We will stick to the WWW-Authenticate header for now and use duplicated code from
         // some OAuth2 api for now until the spec has settled on an error behavior.
-        debug!("Looking up FedCM user_id {}", user_id);
+        debug!("Looking up FedCM user_id {user_id}");
         let slf = Self::find(user_id).await.map_err(|_| {
             debug!("FedCM user not found");
             ErrorResponse::new(
@@ -664,7 +659,7 @@ LIMIT $2"#;
                     birthdate: row.get("birthdate"),
                     phone: row.get("phone"),
                     street: row.get("street"),
-                    zip: row.get::<Option<i64>>("zip").map(|zip| zip as i32),
+                    zip: row.get("zip"),
                     city: row.get("city"),
                     country: row.get("country"),
                 };
@@ -719,7 +714,8 @@ LIMIT $2"#;
         if slf.password.is_none() && !slf.has_webauthn_enabled() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "You must have at least a password or passkey set up before you can remove a provider link",
+                "You must have at least a password or passkey set up before you can \
+                remove a provider link",
             ));
         }
 
@@ -877,14 +873,14 @@ LIMIT $2"#;
         }
 
         if let Some(email) = old_email {
-            let idx = format!("{}_{}", IDX_USERS, email);
+            let idx = format!("{IDX_USERS}_{email}");
             client.delete(Cache::User, idx).await?;
         }
 
-        let idx = format!("{}_{}", IDX_USERS, &self.id);
+        let idx = format!("{IDX_USERS}_{}", self.id);
         client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
 
-        let idx = format!("{}_{}", IDX_USERS, &self.email);
+        let idx = format!("{IDX_USERS}_{}", self.email);
         client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
 
         Ok(())
@@ -896,7 +892,7 @@ LIMIT $2"#;
         q: &str,
         limit: i64,
     ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
-        let q = format!("%{}%", q);
+        let q = format!("%{q}%");
         let size_hint = max(limit, 1) as usize;
 
         let res = match idx {
@@ -1046,9 +1042,8 @@ LIMIT $2"#;
                             "birthdate" => uv.birthdate = put.value.as_str().map(String::from),
                             "phone" => uv.phone = put.value.as_str().map(String::from),
                             "street" => uv.street = put.value.as_str().map(String::from),
-                            "zip" => {
-                                uv.zip = put.value.as_i64().map(|i| min(i32::MAX as i64, i) as i32)
-                            }
+                            "zip" => uv.zip = put.value.as_str().map(String::from),
+
                             "city" => uv.city = put.value.as_str().map(String::from),
                             "country" => uv.country = put.value.as_str().map(String::from),
                             v => {
@@ -1112,7 +1107,6 @@ LIMIT $2"#;
     }
 
     pub async fn update(
-        data: &web::Data<AppState>,
         id: String,
         mut upd_user: UpdateUserRequest,
         user: Option<User>,
@@ -1151,7 +1145,8 @@ LIMIT $2"#;
         user.save(old_email.clone()).await?;
 
         if upd_user.password.is_some() {
-            data.tx_events
+            RauthyConfig::get()
+                .tx_events
                 .send_async(Event::user_password_reset(
                     format!("Reset done by admin for user {}", user.email),
                     None,
@@ -1166,11 +1161,12 @@ LIMIT $2"#;
             Session::invalidate_for_user(&user.id).await?;
 
             // send out confirmation E-Mails to both addresses
-            send_email_confirm_change(data, &user, &user.email, &user.email, true).await;
-            send_email_confirm_change(data, &user, old_email, &user.email, true).await;
+            send_email_confirm_change(&user, &user.email, &user.email, true).await;
+            send_email_confirm_change(&user, old_email, &user.email, true).await;
 
-            let event_text = format!("Change by admin: {} -> {}", old_email, user.email);
-            data.tx_events
+            let event_text = format!("Change by admin: {old_email} -> {}", user.email);
+            RauthyConfig::get()
+                .tx_events
                 .send_async(Event::user_email_change(event_text, None))
                 .await
                 .unwrap();
@@ -1205,7 +1201,6 @@ LIMIT $2"#;
     /// Updates a user from himself. This is needed for the account page to make each user able to
     /// update its own data.
     pub async fn update_self_req(
-        data: &web::Data<AppState>,
         id: String,
         upd_user: UpdateUserSelfRequest,
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
@@ -1214,7 +1209,7 @@ LIMIT $2"#;
         let mut password = None;
         if let Some(pwd_new) = upd_user.password_new {
             if let Some(pwd_curr) = upd_user.password_current {
-                user.validate_password(data, pwd_curr).await?;
+                user.validate_password(pwd_curr).await?;
             } else if let Some(mfa_code) = upd_user.mfa_code {
                 let svc_req = WebauthnServiceReq::find(mfa_code).await?;
                 if svc_req.user_id != user.id {
@@ -1246,7 +1241,7 @@ LIMIT $2"#;
                     MagicLinkUsage::EmailChange(email.clone()),
                 )
                 .await?;
-                send_email_change_info_new(data, &ml, &user, email).await;
+                send_email_change_info_new(&ml, &user, email).await;
                 true
             } else {
                 false
@@ -1278,7 +1273,7 @@ LIMIT $2"#;
         };
 
         // a user cannot become a new admin from a self-req
-        let (user, user_values, _is_new_admin) = User::update(data, id, req, Some(user)).await?;
+        let (user, user_values, _is_new_admin) = User::update(id, req, Some(user)).await?;
         Ok((user, user_values, email_updated))
     }
 
@@ -1375,8 +1370,7 @@ impl User {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!(
-                    "New password does not include the minimum lower character count: {}",
-                    lower_req
+                    "New password does not include the minimum lower character count: {lower_req}"
                 ),
             ));
         }
@@ -1386,8 +1380,7 @@ impl User {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!(
-                    "New password does not include the minimum upper character count: {}",
-                    upper_req
+                    "New password does not include the minimum upper character count: {upper_req}"
                 ),
             ));
         }
@@ -1396,10 +1389,7 @@ impl User {
         if digit_req > count_digit {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!(
-                    "New password does not include the minimum digit count: {}",
-                    digit_req
-                ),
+                format!("New password does not include the minimum digit count: {digit_req}"),
             ));
         }
 
@@ -1408,8 +1398,7 @@ impl User {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!(
-                    "New password does not include the minimum special character count: {}",
-                    special_req
+                    "New password does not include the minimum special character count: {special_req}"
                 ),
             ));
         }
@@ -1428,8 +1417,8 @@ impl User {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
                                 format!(
-                                    "The new password must not be one of the last {} used passwords",
-                                    recent_req,
+                                    "The new password must not be one of the last {recent_req} used \
+                                    passwords"
                                 ),
                             ));
                         }
@@ -1443,7 +1432,7 @@ impl User {
                         }
                     }
 
-                    most_recent.passwords = format!("{}\n{}", new_hash, new_recent.join("\n"));
+                    most_recent.passwords = format!("{new_hash}\n{}", new_recent.join("\n"));
                     most_recent.save().await?;
                 }
 
@@ -1453,7 +1442,7 @@ impl User {
             }
         }
 
-        if *WEBAUTHN_NO_PASSWORD_EXPIRY && self.has_webauthn_enabled() {
+        if RauthyConfig::get().vars.webauthn.no_password_exp && self.has_webauthn_enabled() {
             self.password_expires = None;
         } else {
             let password_expires = rules.valid_days.map(|d| {
@@ -1496,7 +1485,6 @@ impl User {
     }
 
     pub async fn confirm_email_address(
-        data: &web::Data<AppState>,
         req: HttpRequest,
         user_id: String,
         confirm_id: String,
@@ -1528,12 +1516,13 @@ impl User {
         Session::invalidate_for_user(&user.id).await?;
 
         // send out confirmation E-Mails to both addresses
-        send_email_confirm_change(data, &user, &user.email, &user.email, false).await;
-        send_email_confirm_change(data, &user, &old_email, &user.email, false).await;
+        send_email_confirm_change(&user, &user.email, &user.email, false).await;
+        send_email_confirm_change(&user, &old_email, &user.email, false).await;
 
-        let event_text = format!("{} -> {}", old_email, user.email);
+        let event_text = format!("{old_email} -> {}", user.email);
         let ip = real_ip_from_req(&req).ok();
-        data.tx_events
+        RauthyConfig::get()
+            .tx_events
             .send_async(Event::user_email_change(event_text, ip))
             .await
             .unwrap();
@@ -1567,14 +1556,14 @@ impl User {
         if i == 0 {
             // the group is the first entry
             if old_groups.len() > group.len() {
-                let g = format!("{},", group);
+                let g = format!("{group},");
                 self.groups = Some(old_groups.replace(&g, ""));
             } else {
                 self.groups = None;
             }
         } else {
             // the role is at the end or in the middle
-            let g = format!(",{}", group);
+            let g = format!(",{group}");
             self.groups = Some(old_groups.replace(&g, ""));
         }
     }
@@ -1594,21 +1583,21 @@ impl User {
         if i == 0 {
             // the role is the first entry
             if self.roles.len() > role.len() {
-                let r = format!("{},", role);
+                let r = format!("{role},");
                 self.roles = self.roles.replace(&r, "");
             } else {
                 self.roles = String::from("");
             }
         } else {
             // the role is at the end or in the middle
-            let r = format!(",{}", role);
+            let r = format!(",{role}");
             self.roles = self.roles.replace(&r, "");
         }
     }
 
     pub fn email_recipient_name(&self) -> String {
         if let Some(n) = &self.family_name {
-            format!("{} {}", self.given_name, n)
+            format!("{} {n}", self.given_name)
         } else {
             self.given_name.to_string()
         }
@@ -1633,6 +1622,7 @@ impl User {
         Ok(user)
     }
 
+    #[inline]
     pub fn get_groups(&self) -> Vec<String> {
         let mut res = Vec::new();
         if self.groups.is_some() {
@@ -1645,6 +1635,12 @@ impl User {
         res
     }
 
+    #[inline]
+    pub fn groups_iter(&self) -> Split<char> {
+        self.groups.as_deref().unwrap_or_default().split(',')
+    }
+
+    #[inline]
     pub fn get_roles(&self) -> Vec<String> {
         let mut res = Vec::new();
         if !self.roles.is_empty() {
@@ -1653,6 +1649,11 @@ impl User {
                 .for_each(|r| res.push(r.trim().to_owned()));
         }
         res
+    }
+
+    #[inline]
+    pub fn roles_iter(&self) -> Split<char> {
+        self.roles.as_str().split(',')
     }
 
     #[inline(always)]
@@ -1699,12 +1700,12 @@ impl User {
     pub fn is_argon2_uptodate(&self, params: &argon2::Params) -> Result<bool, ErrorResponse> {
         if self.password.is_none() {
             error!(
-                "Trying to validate argon2 params with not set password for user '{:?}'",
-                self.id
+                user_id = self.id,
+                "Trying to validate argon2 params with not set password"
             );
             return Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
-                String::from("Cannot validate argon2 param - password is not set"),
+                "Cannot validate argon2 param - password is not set",
             ));
         }
         let hash = PasswordHash::new(self.password.as_ref().unwrap())
@@ -1721,17 +1722,16 @@ impl User {
         Ok(false)
     }
 
+    #[inline]
     pub fn is_admin(&self) -> bool {
-        self.get_roles()
-            .iter()
-            .any(|r| r.as_str() == RAUTHY_ADMIN_ROLE)
+        self.roles_iter().any(|r| r == RAUTHY_ADMIN_ROLE)
     }
 
     async fn is_email_free(email: String) -> Result<(), ErrorResponse> {
         match User::find_by_email(email).await {
             Ok(_) => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "E-Mail is already in use".to_string(),
+                "E-Mail is already in use",
             )),
             Err(_) => Ok(()),
         }
@@ -1743,7 +1743,7 @@ impl User {
         if self.password.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("The password to validate is not set yet"),
+                "The password to validate is not set yet",
             ));
         }
         let hash = self.password.as_ref().unwrap().to_owned();
@@ -1753,8 +1753,9 @@ impl User {
     pub fn picture_uri(&self) -> Option<String> {
         self.picture_id.as_ref().map(|pic_id| {
             format!(
-                "{}/auth/v1/users/{}/picture/{}",
-                *PUB_URL_WITH_SCHEME, self.id, pic_id
+                "{}/auth/v1/users/{}/picture/{pic_id}",
+                RauthyConfig::get().pub_url_with_scheme,
+                self.id,
             )
         })
     }
@@ -1762,7 +1763,7 @@ impl User {
     pub fn push_group(&mut self, group: &str) {
         if self.groups.is_some() {
             let g = self.groups.as_ref().unwrap();
-            self.groups = Some(format!("{},{}", g, group));
+            self.groups = Some(format!("{g},{group}"));
         } else {
             self.groups = Some(group.to_owned());
         }
@@ -1770,7 +1771,7 @@ impl User {
 
     pub fn push_role(&mut self, role: &str) {
         if !self.roles.is_empty() {
-            self.roles = format!("{},{}", self.roles, role);
+            self.roles = format!("{},{role}", self.roles);
         } else {
             role.clone_into(&mut self.roles);
         }
@@ -1778,10 +1779,8 @@ impl User {
 
     pub async fn request_password_reset(
         &self,
-        data: &web::Data<AppState>,
         redirect_uri: Option<String>,
     ) -> Result<(), ErrorResponse> {
-        // TODO implement something with a Backup Code for passkey only accounts?
         // deny for passkey only accounts
         if self.account_type() == AccountType::Passkey {
             return Ok(());
@@ -1795,17 +1794,18 @@ impl User {
         } else {
             MagicLinkUsage::PasswordReset(redirect_uri)
         };
-        let new_ml = MagicLink::create(self.id.clone(), data.ml_lt_pwd_reset as i64, usage).await?;
-        send_pwd_reset(data, &new_ml, self).await;
+        let new_ml = MagicLink::create(
+            self.id.clone(),
+            RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
+            usage,
+        )
+        .await?;
+        send_pwd_reset(&new_ml, self).await;
 
         Ok(())
     }
 
-    pub async fn validate_password(
-        &self,
-        data: &web::Data<AppState>,
-        plain_password: String,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn validate_password(&self, plain_password: String) -> Result<(), ErrorResponse> {
         if self.password.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::PasswordExpired,
@@ -1815,7 +1815,6 @@ impl User {
 
         if let Some(exp) = self.password_expires {
             if exp < OffsetDateTime::now_utc().unix_timestamp() {
-                // TODO introduce some "is allowed to refresh" variable
                 if !self.enabled {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::PasswordExpired,
@@ -1827,11 +1826,11 @@ impl User {
                 return if self.match_passwords(plain_password.clone()).await? {
                     let magic_link = MagicLink::create(
                         self.id.clone(),
-                        data.ml_lt_pwd_reset as i64,
+                        RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
                         MagicLinkUsage::PasswordReset(None),
                     )
                     .await?;
-                    send_pwd_reset(data, &magic_link, self).await;
+                    send_pwd_reset(&magic_link, self).await;
 
                     Err(ErrorResponse::new(
                         ErrorResponseType::PasswordRefresh,

@@ -1,25 +1,23 @@
 use crate::api_cookie::ApiCookie;
-use crate::app_state::AppState;
-use crate::entity::auth_providers::AuthProviderTemplate;
+use crate::entity::auth_providers::{AuthProvider, AuthProviderTemplate};
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::language::Language;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::Cookie;
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, HttpResponseBuilder, web};
+use actix_web::{HttpResponse, HttpResponseBuilder};
 use askama::Template;
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
-use rauthy_common::constants::{
-    DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE,
-    USER_REG_DOMAIN_RESTRICTION,
-};
+use rauthy_common::constants::{HEADER_HTML, PROVIDER_ATPROTO, PWD_RESET_COOKIE};
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Serialize;
 use std::borrow::Cow;
+use std::cmp::max;
 use std::fmt::{Debug, Display, Formatter};
 use tracing::warn;
 
@@ -34,7 +32,7 @@ impl Display for FrontendAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             FrontendAction::Refresh => write!(f, "Refresh"),
-            FrontendAction::MfaLogin(s) => write!(f, "MfaLogin {}", s),
+            FrontendAction::MfaLogin(s) => write!(f, "MfaLogin {s}"),
             FrontendAction::None => write!(f, "None"),
         }
     }
@@ -60,6 +58,7 @@ pub struct TplPasswordReset {
 // -> frontend/src/utils/constants.ts -> TPL_* values
 #[derive(Debug)]
 pub enum HtmlTemplate {
+    AtprotoId(String),
     /// Auth providers as pre-built, cached JSON value
     AuthProviders(String),
     ClientName(String),
@@ -84,11 +83,21 @@ impl HtmlTemplate {
     ///
     /// TODO maybe deactivate completely without debug_assertions?
     pub async fn build_from_str(
-        data: web::Data<AppState>,
         s: &str,
         session: Option<Session>,
     ) -> Result<(Self, Option<Cookie<'_>>), ErrorResponse> {
         match s {
+            "tpl_atproto_id" => {
+                if RauthyConfig::get().vars.atproto.enable {
+                    let provider = AuthProvider::find_by_iss(PROVIDER_ATPROTO.to_string()).await?;
+                    Ok((Self::AtprotoId(provider.id), None))
+                } else {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::NotFound,
+                        "atproto disabled",
+                    ))
+                }
+            }
             "tpl_auth_providers" => {
                 let json = AuthProviderTemplate::get_all_json_template().await?;
                 Ok((Self::AuthProviders(json), None))
@@ -108,12 +117,18 @@ impl HtmlTemplate {
                 }
             }
             "tpl_device_user_code_length" => Ok((
-                Self::DeviceUserCodeLength(*DEVICE_GRANT_USER_CODE_LENGTH),
+                Self::DeviceUserCodeLength(max(
+                    RauthyConfig::get().vars.device_grant.user_code_length,
+                    255,
+                ) as u8),
                 None,
             )),
             "tpl_email_old" => Ok((Self::EmailOld("OLD@EMAIL.LOCAL".to_string()), None)),
             "tpl_email_new" => Ok((Self::EmailOld("NEW@EMAIL.LOCAL".to_string()), None)),
-            "tpl_is_reg_open" => Ok((Self::IsRegOpen(*OPEN_USER_REG), None)),
+            "tpl_is_reg_open" => Ok((
+                Self::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
+                None,
+            )),
             // the LoginAction requires a complex logic + validation.
             // Simply always return None during local dev.
             "tpl_login_action" => Ok((Self::LoginAction(FrontendAction::None), None)),
@@ -121,7 +136,12 @@ impl HtmlTemplate {
             // "tpl_client_url" => todo!("extract info from referrer?"),
             "tpl_restricted_email_domain" => Ok((
                 Self::RestrictedEmailDomain(
-                    USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+                    RauthyConfig::get()
+                        .vars
+                        .user_registration
+                        .domain_restriction
+                        .clone()
+                        .unwrap_or_default(),
                 ),
                 None,
             )),
@@ -147,10 +167,16 @@ impl HtmlTemplate {
                 );
 
                 let user_id = session
-                    .expect("To make the tpl_password_reset work automatically in local dev, you need to be logged in")
+                    .expect(
+                        "To make the tpl_password_reset work automatically in local dev, \
+                    you need to be logged in",
+                    )
                     .user_id
                     .clone()
-                    .expect("To make the tpl_password_reset work automatically in local dev, you need to be logged in");
+                    .expect(
+                        "To make the tpl_password_reset work automatically in local dev, \
+                    you need to be logged in",
+                    );
                 let user = User::find(user_id).await?;
 
                 MagicLink::delete_all_pwd_reset_for_user(user.id.clone()).await?;
@@ -159,8 +185,12 @@ impl HtmlTemplate {
                 } else {
                     MagicLinkUsage::PasswordReset(None)
                 };
-                let mut ml =
-                    MagicLink::create(user.id.clone(), data.ml_lt_pwd_reset as i64, usage).await?;
+                let mut ml = MagicLink::create(
+                    user.id.clone(),
+                    RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
+                    usage,
+                )
+                .await?;
                 let cookie_val = get_rand(48);
                 ml.cookie = Some(cookie_val);
                 ml.save().await?;
@@ -189,6 +219,7 @@ impl HtmlTemplate {
     /// Returns the `id` that will be used for the HTML `<template>` element.
     pub fn id(&self) -> &'static str {
         match self {
+            Self::AtprotoId(_) => "tpl_atproto_id",
             Self::AuthProviders(_) => "tpl_auth_providers",
             Self::ClientName(_) => "tpl_client_name",
             Self::ClientUrl(_) => "tpl_client_url",
@@ -208,9 +239,10 @@ impl HtmlTemplate {
     }
 
     // TODO find a way to borrow values dynamically, no matter the type
-    // -> does rinja accept generic traits like `Display`?
+    //  -> does askama accept generic traits like `Display`?
     pub fn inner(&self) -> String {
         match self {
+            Self::AtprotoId(i) => i.to_string(),
             Self::AuthProviders(i) => i.to_string(),
             Self::ClientName(i) => i.to_string(),
             Self::ClientUrl(i) => i.to_string(),
@@ -245,7 +277,9 @@ impl IndexHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::IsRegOpen(*OPEN_USER_REG)],
+            templates: &[HtmlTemplate::IsRegOpen(
+                RauthyConfig::get().vars.user_registration.enable,
+            )],
         };
 
         res.render().unwrap()
@@ -310,9 +344,10 @@ impl DeviceHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::DeviceUserCodeLength(
-                *DEVICE_GRANT_USER_CODE_LENGTH,
-            )],
+            templates: &[HtmlTemplate::DeviceUserCodeLength(max(
+                RauthyConfig::get().vars.device_grant.user_code_length,
+                255,
+            ) as u8)],
         };
 
         res.render().unwrap()
@@ -585,6 +620,28 @@ pub struct AdminConfigArgon2Html<'a> {
 impl AdminConfigArgon2Html<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigArgon2Html {
+            lang: lang.as_str(),
+            client_id: "rauthy",
+            theme_ts,
+            ..Default::default()
+        };
+
+        res.render().unwrap()
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/admin/config/backups.html")]
+pub struct AdminConfigBackupsHtml<'a> {
+    lang: &'a str,
+    client_id: &'a str,
+    theme_ts: i64,
+    templates: &'a [HtmlTemplate],
+}
+
+impl AdminConfigBackupsHtml<'_> {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
+        let res = AdminConfigBackupsHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
@@ -955,6 +1012,16 @@ impl PwdResetHtml<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "error/blocked.html")]
+pub struct BlockedHtml;
+
+impl BlockedHtml {
+    pub fn build() -> String {
+        BlockedHtml.render().unwrap()
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "error/429.html")]
 pub struct TooManyRequestsHtml {
     pub ip: String,
@@ -1005,10 +1072,59 @@ impl UserRegisterHtml<'_> {
             client_id: "rauthy",
             theme_ts,
             templates: &[HtmlTemplate::RestrictedEmailDomain(
-                USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+                RauthyConfig::get()
+                    .vars
+                    .user_registration
+                    .domain_restriction
+                    .clone()
+                    .unwrap_or_default(),
             )],
         }
         .render()
         .expect("rendering register.html")
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/users/{id}/revoke/revoke.html")]
+pub struct UserRevokeHtml<'a> {
+    lang: &'a str,
+    client_id: &'a str,
+    theme_ts: i64,
+    templates: &'a [HtmlTemplate],
+}
+
+impl UserRevokeHtml<'_> {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
+        UserRevokeHtml {
+            lang: lang.as_str(),
+            client_id: "rauthy",
+            theme_ts,
+            templates: &[],
+        }
+        .render()
+        .expect("rendering revoke.html")
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/users/password_reset.html")]
+pub struct UserPasswordResetHtml<'a> {
+    lang: &'a str,
+    client_id: &'a str,
+    theme_ts: i64,
+    templates: &'a [HtmlTemplate],
+}
+
+impl UserPasswordResetHtml<'_> {
+    pub fn build(lang: &Language, theme_ts: i64, logo_updated: Option<i64>) -> String {
+        UserPasswordResetHtml {
+            lang: lang.as_str(),
+            client_id: "rauthy",
+            theme_ts,
+            templates: &[HtmlTemplate::ClientLogoUpdated(logo_updated)],
+        }
+        .render()
+        .expect("rendering password_reset.html")
     }
 }

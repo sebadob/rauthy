@@ -6,7 +6,7 @@
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import {slide} from "svelte/transition";
     import LangSelector from "$lib5/LangSelector.svelte";
-    import {TPL_PASSWORD_RESET} from "$utils/constants";
+    import {IS_DEV, TPL_PASSWORD_RESET} from "$utils/constants";
     import {useI18n} from "$state/i18n.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
@@ -17,7 +17,6 @@
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import A from "$lib5/A.svelte";
-    import {useIsDev} from "$state/is_dev.svelte";
     import {webauthnReg} from "$webauthn/registration";
     import Form from "$lib5/form/Form.svelte";
     import {PATTERN_USER_NAME} from "$utils/patterns";
@@ -26,7 +25,6 @@
     const inputWidth = '20rem';
 
     let t = useI18n();
-    let isDev = useIsDev().get();
 
     let tplData: undefined | PasswordResetTemplate = $state();
 
@@ -160,9 +158,6 @@
             method: 'PUT',
             headers: {
                 'content-type': 'application/json',
-                // TODO prefix with X-
-                // The same should be true for the session token
-                // -> mention breaking change in changelog when doing that!
                 'x-pwd-csrf-token': tplData?.csrf_token,
             },
             body: JSON.stringify(payload),
@@ -218,11 +213,13 @@
 {#snippet passwordInput()}
     {#if tplData}
         <Form action="" onSubmit={passwordReset}>
-            <PasswordPolicy
-                    bind:accepted
-                    policy={tplData.password_policy}
-                    password={password}
-            />
+            <div class="policy">
+                <PasswordPolicy
+                        bind:accepted
+                        policy={tplData.password_policy}
+                        password={password}
+                />
+            </div>
 
             <InputPassword
                     bind:ref={refPassword}
@@ -260,7 +257,7 @@
     {/if}
 {/snippet}
 
-{#if isDev}
+{#if IS_DEV}
     <div class="dev">
         <p>
             This window shows up during local dev,<br>
@@ -382,6 +379,13 @@
 <LangSelector absolute/>
 
 <style>
+    .container {
+        margin-top: -1.75rem;
+        max-height: calc(100dvh - 2.5rem);
+        max-width: 100dvw;
+        overflow-y: auto;
+    }
+
     .err {
         margin-top: .5rem;
         max-width: 20rem;
@@ -399,6 +403,11 @@
 
     .generate {
         margin-bottom: .66rem;
+    }
+
+    .policy {
+        max-width: 100dvw;
+        overflow: clip;
     }
 
     .typeChoice {

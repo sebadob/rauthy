@@ -3,6 +3,7 @@ use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_models::database::DB;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error};
 
 pub async fn refresh_tokens_cleanup() {
@@ -25,10 +26,14 @@ pub async fn refresh_tokens_cleanup() {
 
         if is_hiqlite() {
             if let Err(err) = DB::hql().execute(sql, params!(now)).await {
-                error!("Refresh Token Cleanup Error: {:?}", err)
+                error!(?err, "Refresh Token Cleanup")
             }
         } else if let Err(err) = DB::pg_execute(sql, &[&now]).await {
-            error!("Refresh Token Cleanup Error: {:?}", err)
+            error!(?err, "Refresh Token Cleanup")
         }
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }

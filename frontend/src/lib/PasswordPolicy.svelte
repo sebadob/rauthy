@@ -168,6 +168,7 @@
     .policyContainer {
         margin-left: -.5rem;
         margin-bottom: 1rem;
+        overflow: hidden;
     }
 
     .policyErr {

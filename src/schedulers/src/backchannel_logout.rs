@@ -1,25 +1,21 @@
-use actix_web::web;
 use rauthy_common::utils::get_rand_between;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::events::event::Event;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::logout;
-use std::env;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::task::JoinSet;
 use tokio::time;
 use tracing::{error, info, warn};
 
-pub async fn backchannel_logout_retry(data: web::Data<AppState>) {
-    let retry_count = env::var("BACKCHANNEL_LOGOUT_RETRY_COUNT")
-        .as_deref()
-        .unwrap_or("100")
-        .parse::<u16>()
-        .expect("Cannot parse BACKCHANNEL_LOGOUT_RETRY_COUNT as u16");
+pub async fn backchannel_logout_retry() {
+    let retry_count = RauthyConfig::get().vars.backchannel_logout.retry_count;
+    let mut clients: Vec<Client> = Vec::with_capacity(1);
+    let mut kps: Vec<JwkKeyPair> = Vec::with_capacity(1);
 
     loop {
         // We want to randomize the sleep because this scheduler should run on all cluster members.
@@ -27,14 +23,17 @@ pub async fn backchannel_logout_retry(data: web::Data<AppState>) {
         let millis = get_rand_between(60_000, 90_000);
         time::sleep(Duration::from_millis(millis)).await;
 
-        if let Err(err) = execute_logout_retries(&data, retry_count).await {
+        clients.clear();
+        kps.clear();
+        if let Err(err) = execute_logout_retries(&mut clients, &mut kps, retry_count).await {
             error!("Error during backchannel_logout_retry: {}", err.message);
         }
     }
 }
 
 async fn execute_logout_retries(
-    data: &web::Data<AppState>,
+    clients: &mut Vec<Client>,
+    kps: &mut Vec<JwkKeyPair>,
     retry_count: u16,
 ) -> Result<(), ErrorResponse> {
     let failures = FailedBackchannelLogout::find_all().await?;
@@ -42,20 +41,18 @@ async fn execute_logout_retries(
         return Ok(());
     }
 
-    let mut clients: Vec<Client> = Vec::with_capacity(1);
-    let mut kps: Vec<JwkKeyPair> = Vec::with_capacity(1);
     let mut tasks = JoinSet::new();
 
     for failure in failures {
         if failure.retry_count >= retry_count as i32 {
-            warn!("Retry count exceeded for backchannel logout {:?}", failure);
+            warn!("Retry count exceeded for backchannel logout {failure:?}");
 
             Event::backchannel_logout_failed(
                 &failure.client_id,
                 &failure.sub,
                 failure.retry_count as i64,
             )
-            .send(&data.tx_events)
+            .send()
             .await?;
 
             failure.delete().await?;
@@ -83,7 +80,8 @@ async fn execute_logout_retries(
         };
         if client.backchannel_logout_uri.is_none() {
             info!(
-                "Backchannel Logout URI for failed logout has been removed in the meantime - deleting the failure"
+                "Backchannel Logout URI for failed logout has been removed in the meantime - \
+                deleting the failure"
             );
             failure.delete().await?;
             continue;
@@ -100,7 +98,6 @@ async fn execute_logout_retries(
         match logout::send_backchannel_logout(
             client.id.clone(),
             client.backchannel_logout_uri.unwrap_or_default(),
-            &data.issuer,
             sub,
             sid,
             kp.unwrap(),
@@ -116,7 +113,7 @@ async fn execute_logout_retries(
                 failure.delete().await?;
             }
             Err(err) => {
-                error!("Error executing Backchannel Logout: {}", err);
+                error!(?err, "executing Backchannel Logout");
             }
         }
     }

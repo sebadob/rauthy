@@ -28,6 +28,14 @@ export let I18nAdminEn: I18nAdmin = {
         name: "Attribute Name",
         userEditable: "User Editable",
     },
+    backup: {
+        createBackup: "Create Backup",
+        disabledDesc: "This functionality only exists, if Hiqlite is configured as the database.",
+        lastModified: "Last Modified",
+        local: "Local",
+        name: "Name",
+        size: "Size",
+    },
     clients: {
         backchannelLogout: "If this client supports {{ OIDC_BCL }}, you can provide the URI here.",
         branding: {
@@ -317,7 +325,7 @@ export let I18nAdminEn: I18nAdmin = {
     scopes: {
         defaultNoMod: "This is a default OIDC Scope. These are immutable.",
         delete1: "Are you sure you want to delete this scope?",
-        deleteDefault: "OIDC Default Scopes können nicht gelöscht werden.",
+        deleteDefault: "Default OIDC scopes cannot be deleted.",
         mapping1: "You can map custom scopes to attributes.",
         mapping2: `All additional attributes, that were configured, can have a custom value for each user.
             When they are mapped to a scope, they can be included in the Access and / or ID Tokens.`,
@@ -336,6 +344,12 @@ export let I18nAdminEn: I18nAdmin = {
         delete: "Delete",
     },
     users: {
+        antiLockout: {
+            rule: 'Anti-Lockout Rule',
+            delete: 'cannot be deleted',
+            disable: 'cannot be disabled',
+            rauthyAdmin: 'rauthy_admin rule cannot be removed',
+        },
         attributes: "Attributes",
         deleteUser: "Are you sure you want to delete this user?",
         descAttr: `Set custom user attributes. All key / value pairs will be handles as String / JSON Value.`,

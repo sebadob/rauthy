@@ -1,19 +1,19 @@
 use crate::{
-    api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
-    scopes, sessions, themes, users,
+    api_keys, atproto, auth_providers, backup, blacklist, clients, events, fed_cm, generic, groups,
+    oidc, roles, scopes, sessions, themes, users,
 };
-use actix_web::web;
 use rauthy_api_types::*;
 use rauthy_api_types::{
-    api_keys::*, auth_providers::*, blacklist::*, clients::*, events::*, fed_cm::*, generic::*,
-    groups::*, oidc::*, roles::*, scopes::*, sessions::*, themes::*, users::*,
+    api_keys::*, auth_providers::*, backup::*, blacklist::*, clients::*, events::*, fed_cm::*,
+    forward_auth::*, generic::*, groups::*, oidc::*, roles::*, scopes::*, sessions::*, themes::*,
+    users::*,
 };
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::ListenScheme;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity;
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::token_set;
 use utoipa::openapi::{ExternalDocs, Server};
 use utoipa::{OpenApi, openapi};
@@ -27,6 +27,8 @@ use utoipa::{OpenApi, openapi};
         api_keys::delete_api_key,
         api_keys::get_api_key_test,
         api_keys::put_api_key_secret,
+
+        atproto::get_atproto_client_metadata,
 
         auth_providers::post_providers,
         auth_providers::post_provider,
@@ -42,6 +44,11 @@ use utoipa::{OpenApi, openapi};
         auth_providers::get_provider_img,
         auth_providers::put_provider_img,
 
+        backup::get_backups,
+        backup::post_backup,
+        backup::get_backup_local,
+        backup::get_backup_s3,
+
         blacklist::get_blacklist,
         blacklist::post_blacklist,
         blacklist::delete_blacklist,
@@ -56,6 +63,8 @@ use utoipa::{OpenApi, openapi};
         clients::put_clients,
         clients::put_generate_client_secret,
         clients::delete_client,
+        clients::get_forward_auth_oidc,
+        clients::get_forward_auth_callback,
 
         events::post_events,
         events::sse_events,
@@ -135,6 +144,13 @@ use utoipa::{OpenApi, openapi};
         users::get_user_by_id,
         users::get_user_attr,
         users::put_user_attr,
+        users::post_user_mfa_token,
+        users::put_user_picture,
+        users::get_user_picture,
+        users::delete_user_picture,
+        users::get_user_devices,
+        users::put_user_device_name,
+        users::delete_user_device,
         users::get_user_webid,
         users::get_user_webid_data,
         users::put_user_webid_data,
@@ -154,6 +170,7 @@ use utoipa::{OpenApi, openapi};
     ),
     components(
         schemas(
+            entity::atproto::DnsTxtResolver,
             entity::fed_cm::FedCMAccount,
             entity::fed_cm::FedCMAccounts,
             entity::fed_cm::FedCMIdPBranding,
@@ -176,6 +193,8 @@ use utoipa::{OpenApi, openapi};
             ApiKeyAccess,
             AuthProviderType,
             AuthProviderTemplate,
+            BackupListing,
+            BackupListings,
             EventLevel,
             EventResponse,
             EventType,
@@ -204,12 +223,16 @@ use utoipa::{OpenApi, openapi};
             MfaAwaitRequest,
             MfaPurpose,
             NewClientRequest,
+            DeviceRequest,
             DynamicClientRequest,
             EventLevel,
             EventsListenParams,
             EventsRequest,
+            ForwardAuthParams,
+            ForwardAuthCallbackParams,
             LoginRefreshRequest,
             GroupRequest,
+            MfaModTokenRequest,
             NewUserRequest,
             NewUserRegistrationRequest,
             RoleRequest,
@@ -240,6 +263,7 @@ use utoipa::{OpenApi, openapi};
             WebauthnRegFinishRequest,
             WebauthnAuthStartRequest,
             WebauthnAuthFinishRequest,
+            WebauthnDeleteRequest,
             WebIdRequest,
 
             ApiKeyResponse,
@@ -262,6 +286,7 @@ use utoipa::{OpenApi, openapi};
             OAuth2ErrorResponse,
             OAuth2ErrorTypeResponse,
             PasswordPolicyResponse,
+            MfaModTokenResponse,
             ProviderResponse,
             ProviderLinkedUserResponse,
             ProviderLookupResponse,
@@ -305,19 +330,21 @@ use utoipa::{OpenApi, openapi};
         (name = "health", description = "Ping, Health, Ready Check"),
         (name = "blacklist", description = "IP Blacklist endpoints"),
         (name = "api_keys", description = "API Keys endpoints"),
+        (name = "backup", description = "Backup endpoints"),
         (name = "generic", description = "Generic endpoints"),
         (name = "webid", description = "WebID endpoints"),
         (name = "fed_cm", description = "Experimental FedCM endpoints"),
+        (name = "atproto", description = "ATProto endpoints"),
         (name = "deprecated", description = "Deprecated endpoints - will be removed in a future version"),
     ),
 )]
 pub struct ApiDoc;
 
 impl ApiDoc {
-    pub fn build(app_state: &web::Data<AppState>) -> openapi::OpenApi {
+    pub fn build() -> openapi::OpenApi {
         let mut doc = Self::openapi();
 
-        doc.info = openapi::Info::new("Rauthy Single Sign-on", &format!("v{}", RAUTHY_VERSION));
+        doc.info = openapi::Info::new("Rauthy Single Sign-on", &format!("v{RAUTHY_VERSION}"));
 
         doc.external_docs = Some(ExternalDocs::new("https://sebadob.github.io/rauthy/"));
 
@@ -330,24 +357,26 @@ impl ApiDoc {
         // contact.email = Some(ADMIN);
         // doc.info.contact = Some(contact);
 
+        let listen_scheme = &RauthyConfig::get().listen_scheme;
+
         #[cfg(target_os = "windows")]
-        let scheme = if !*PROXY_MODE && app_state.listen_scheme == ListenScheme::Http {
+        let scheme = if !*PROXY_MODE.get().unwrap() && listen_scheme == &ListenScheme::Http {
             "http://"
         } else {
             "https://"
         };
 
         #[cfg(not(target_os = "windows"))]
-        let scheme = if (!*PROXY_MODE && app_state.listen_scheme == ListenScheme::Http)
-            || app_state.listen_scheme == ListenScheme::UnixHttp
+        let scheme = if (!*PROXY_MODE.get().unwrap() && listen_scheme == &ListenScheme::Http)
+            || listen_scheme == &ListenScheme::UnixHttp
         {
             "http://"
         } else {
             "https://"
         };
 
-        let pub_url = &app_state.public_url;
-        let url = format!("{}{}/auth/v1", scheme, pub_url);
+        let pub_url = &RauthyConfig::get().vars.server.pub_url;
+        let url = format!("{scheme}{pub_url}/auth/v1");
         doc.servers = Some(vec![Server::new(url)]);
 
         doc

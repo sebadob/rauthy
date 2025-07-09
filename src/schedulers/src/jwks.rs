@@ -1,22 +1,31 @@
 use crate::sleep_schedule_next;
-use actix_web::web;
 use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_common::constants::IDX_JWK_KID;
 use rauthy_common::is_hiqlite;
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::jwk::{JWKS, Jwk};
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::collections::HashSet;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error, info};
 
 /// Auto-Rotates JWKS
-pub async fn jwks_auto_rotate(data: web::Data<AppState>) {
+pub async fn jwks_auto_rotate() {
     // sec min hour day_of_month month day_of_week year
-    let schedule = cron::Schedule::from_str("0 30 3 1 * * *").unwrap();
+    let schedule = {
+        cron::Schedule::from_str(
+            RauthyConfig::get()
+                .vars
+                .lifetimes
+                .jwk_autorotate_cron
+                .as_ref(),
+        )
+        .unwrap()
+    };
 
     loop {
         sleep_schedule_next(&schedule).await;
@@ -26,7 +35,7 @@ pub async fn jwks_auto_rotate(data: web::Data<AppState>) {
             continue;
         }
 
-        if let Err(err) = JWKS::rotate(&data).await {
+        if let Err(err) = JWKS::rotate().await {
             error!("Error during JWKS auto-rotation: {}", err.message);
         }
     }
@@ -64,15 +73,10 @@ pub async fn jwks_cleanup() {
         let jwks_all = match res {
             Ok(jwks) => jwks,
             Err(err) => {
-                error!(
-                    "Error while running the jwks_cleanup - cannot access the DATABASE_URL: {}",
-                    err
-                );
+                error!(?err, "running the jwks_cleanup");
                 continue;
             }
         };
-
-        // TODO after rdbms migration has been done, a nice query can do this more easily
 
         // At this point, the latest / current one will always be the first for each key type.
         // Skip it and check the created timestamps for all following to be older than the max time
@@ -97,19 +101,23 @@ pub async fn jwks_cleanup() {
         for kid in to_delete {
             if is_hiqlite() {
                 if let Err(err) = DB::hql().execute(sql, params!()).await {
-                    error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
+                    error!(?err, "cannot clean up JWK {kid} in jwks_cleanup");
                     continue;
                 }
             } else if let Err(err) = DB::pg_execute(sql, &[]).await {
-                error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
+                error!(?err, "cannot clean up JWK {kid} in jwks_cleanup");
                 continue;
             }
 
-            let idx = format!("{}{}", IDX_JWK_KID, kid);
+            let idx = format!("{IDX_JWK_KID}{kid}");
             if let Err(err) = DB::hql().delete(Cache::App, idx).await {
-                error!("Error deleting JWK from cache: {}", err);
+                error!(?err, "deleting JWK from cache");
             }
         }
-        info!("Cleaned up old JWKs: {}", count);
+        info!("Cleaned up old JWKs: {count}");
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finished too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }

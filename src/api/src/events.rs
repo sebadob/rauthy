@@ -1,16 +1,15 @@
 use crate::ReqPrincipal;
 use actix_web::web::{Json, Query};
-use actix_web::{HttpRequest, HttpResponse, Responder, get, post, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, get, post};
 use actix_web_lab::sse;
 use chrono::Utc;
 use rauthy_api_types::events::{EventResponse, EventsListenParams, EventsRequest};
-use rauthy_common::constants::SSE_KEEP_ALIVE;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::events::event::Event;
 use rauthy_models::events::listener::EventRouterMsg;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use validator::Validate;
@@ -66,7 +65,6 @@ pub async fn post_events(
 )]
 #[get("/events/stream")]
 pub async fn sse_events(
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
     params: Query<EventsListenParams>,
     req: HttpRequest,
@@ -79,7 +77,7 @@ pub async fn sse_events(
     let (tx, rx) = mpsc::channel(10);
 
     let level = params.level.map(|l| l.into()).unwrap_or_default();
-    if let Err(err) = data
+    if let Err(err) = RauthyConfig::get()
         .tx_events_router
         .send_async(EventRouterMsg::ClientReg {
             ip,
@@ -91,11 +89,13 @@ pub async fn sse_events(
     {
         Err(ErrorResponse::new(
             ErrorResponseType::Internal,
-            format!("Cannot register SSE client: {:?}", err),
+            format!("Cannot register SSE client: {err:?}"),
         ))
     } else {
         Ok(sse::Sse::from_infallible_receiver(rx)
-            .with_keep_alive(Duration::from_secs(*SSE_KEEP_ALIVE as u64))
+            .with_keep_alive(Duration::from_secs(
+                RauthyConfig::get().vars.server.see_keep_alive as u64,
+            ))
             .with_retry_duration(Duration::from_secs(10)))
     }
 }
@@ -113,18 +113,15 @@ pub async fn sse_events(
 )]
 #[post("/events/test")]
 pub async fn post_event_test(
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Events, AccessRights::Create)?;
 
-    Event::test(real_ip_from_req(&req)?)
-        .send(&data.tx_events)
-        .await?;
+    Event::test(real_ip_from_req(&req)?).send().await?;
 
     #[cfg(debug_assertions)]
-    if *rauthy_common::constants::DEV_MODE {
+    if RauthyConfig::get().vars.dev.dev_mode {
         use rauthy_models::entity::failed_scim_tasks::ScimAction;
         use std::net::IpAddr;
 
@@ -133,60 +130,67 @@ pub async fn post_event_test(
         let ip = "0.0.0.0".parse::<IpAddr>().unwrap();
 
         Event::backchannel_logout_failed("dummy_client", "dummy_user", 3)
-            .send(&data.tx_events)
+            .send()
             .await?;
-        Event::invalid_login(1, ip.to_string())
-            .send(&data.tx_events)
-            .await?;
-        Event::brute_force(ip.to_string())
-            .send(&data.tx_events)
+        Event::invalid_login(1, ip.to_string()).send().await?;
+        Event::brute_force(ip.to_string()).send().await?;
+        Event::force_logout("dummy@example.com".to_string())
+            .send()
             .await?;
         Event::ip_blacklisted(Utc::now(), ip.to_string())
-            .send(&data.tx_events)
+            .send()
             .await?;
-        Event::ip_blacklist_removed(ip.to_string())
-            .send(&data.tx_events)
-            .await?;
+        Event::ip_blacklist_removed(ip.to_string()).send().await?;
         Event::new_user("test@dummy".to_string(), ip.to_string())
-            .send(&data.tx_events)
+            .send()
             .await?;
         Event::new_rauthy_admin("test-admin@dummy".to_string(), ip.to_string())
-            .send(&data.tx_events)
+            .send()
             .await?;
         Event::new_rauthy_version("https://github.com/sebadob/rauthy/releases".to_string())
-            .send(&data.tx_events)
+            .send()
             .await?;
-        Event::jwks_rotated().send(&data.tx_events).await?;
-        Event::rauthy_started().send(&data.tx_events).await?;
-        Event::rauthy_healthy().send(&data.tx_events).await?;
-        Event::rauthy_unhealthy_cache()
-            .send(&data.tx_events)
-            .await?;
-        Event::rauthy_unhealthy_db().send(&data.tx_events).await?;
+        Event::jwks_rotated().send().await?;
+        Event::user_login_revoke(
+            "alfred@batcave.io",
+            "123.123.123.123".parse().unwrap(),
+            Some("Gotham City".to_string()),
+        )
+        .send()
+        .await?;
+        Event::rauthy_started().send().await?;
+        Event::rauthy_healthy().send().await?;
+        Event::rauthy_unhealthy_cache().send().await?;
+        Event::rauthy_unhealthy_db().send().await?;
         Event::scim_task_failed("dummy_client", &ScimAction::GroupsSync, 3)
-            .send(&data.tx_events)
+            .send()
             .await?;
-        Event::secrets_migrated(ip).send(&data.tx_events).await?;
-        Event::test(ip).send(&data.tx_events).await?;
+        Event::secrets_migrated(ip).send().await?;
+        Event::suspicious_request(
+            "/.git/config",
+            "123.123.123.123".parse().unwrap(),
+            Some("Gotham City".to_string()),
+        )
+        .send()
+        .await?;
+        Event::test(ip).send().await?;
 
         let old_email = "old@mail";
         let new_mail = "new@mail";
-        let text = format!("{} -> {}", old_email, new_mail);
-        let text_admin = format!("Change by admin: {} -> {}", old_email, new_mail);
-        Event::user_email_change(text, Some(ip))
-            .send(&data.tx_events)
-            .await?;
+        let text = format!("{old_email} -> {new_mail}");
+        let text_admin = format!("Change by admin: {old_email} -> {new_mail}");
+        Event::user_email_change(text, Some(ip)).send().await?;
         Event::user_email_change(text_admin, Some(ip))
-            .send(&data.tx_events)
+            .send()
             .await?;
 
         let text = format!("Reset via Password Reset Form: {}", "dummy@mail");
         let text_admin = format!("Reset done by admin for user {}", "dummy@mail");
         Event::user_password_reset(text, Some(ip.to_string()))
-            .send(&data.tx_events)
+            .send()
             .await?;
         Event::user_password_reset(text_admin, Some(ip.to_string()))
-            .send(&data.tx_events)
+            .send()
             .await?;
     }
 

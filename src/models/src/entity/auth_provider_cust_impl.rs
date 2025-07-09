@@ -1,6 +1,6 @@
 use crate::entity::auth_providers::AuthProviderIdClaims;
-use rauthy_common::HTTP_CLIENT;
 use rauthy_common::constants::APPLICATION_JSON;
+use rauthy_common::http_client;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
 use serde::Deserialize;
@@ -32,20 +32,20 @@ pub async fn get_github_private_email(
 ) -> Result<(), ErrorResponse> {
     debug!("Trying to get User E-Mail via Github /user/emails endpoint");
 
-    let res = HTTP_CLIENT
+    let res = http_client()
         .get("https://api.github.com/user/emails")
-        .header(AUTHORIZATION, format!("Bearer {}", access_token))
+        .header(AUTHORIZATION, format!("Bearer {access_token}"))
         .header(ACCEPT, APPLICATION_JSON)
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await?;
 
     let status = res.status().as_u16();
-    debug!("GET /user/emails status: {}\n{:?}", status, res);
+    debug!("GET /user/emails status: {status}\n{res:?}");
 
     if status < 300 {
         let mut emails = res.json::<Vec<GithubEmailPrivateResponse>>().await?;
-        debug!("GET /user/emails status: {}", status);
+        debug!("GET /user/emails status: {status}");
 
         if emails.len() == 1 {
             let email = emails.swap_remove(0);
@@ -62,8 +62,6 @@ pub async fn get_github_private_email(
             }
         }
 
-        // TODO is it possible that Github returns multiple E-Mails for a user without
-        // any of them being flagged as primary?
         Err(ErrorResponse::new(
             ErrorResponseType::Internal,
             "Could not find a the primary user E-Mail in Github response",
@@ -72,7 +70,7 @@ pub async fn get_github_private_email(
         let text = res.text().await?;
         Err(ErrorResponse::new(
             ErrorResponseType::Connection,
-            format!("Error during User E-Mails lookup: {}", text),
+            format!("Error during User E-Mails lookup: {text}"),
         ))
     }
 }

@@ -113,7 +113,6 @@ impl JwtAccessClaims {
             validate_jwt!(Self, pubkey, token, config.verification_options.clone())?;
 
         let mut slf = claims.custom;
-        // TODO should we even include DPoP here or leave it out?
         if slf.typ != JwtTokenType::Bearer {
             return Err(RauthyError::Token(Cow::from("Must provide a Bearer token")));
         }
@@ -130,7 +129,7 @@ pub struct AddressClaim {
     pub formatted: String,
     pub street_address: Option<String>,
     pub locality: Option<String>,
-    pub postal_code: Option<i32>,
+    pub postal_code: Option<String>,
     pub country: Option<String>,
 }
 
@@ -151,6 +150,7 @@ pub struct JwtIdClaims {
     pub address: Option<AddressClaim>,
     pub birthdate: Option<String>,
     pub locale: Option<String>,
+    pub picture: Option<String>,
     pub phone: Option<String>,
     pub roles: Vec<String>,
     pub groups: Option<Vec<String>>,

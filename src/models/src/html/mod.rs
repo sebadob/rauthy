@@ -1,11 +1,13 @@
 use crate::database::{Cache, DB};
 use crate::entity::auth_providers::AuthProviderTemplate;
+use crate::entity::logos::{Logo, LogoType};
 use crate::html::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
-    AdminConfigArgon2Html, AdminConfigEncryptionHtml, AdminConfigJwksHtml, AdminConfigPolicyHtml,
-    AdminEventsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
-    AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml, HtmlTemplate, IndexHtml, LogoutHtml,
-    ProviderCallbackHtml, ProvidersHtml, UserRegisterHtml,
+    AdminConfigArgon2Html, AdminConfigBackupsHtml, AdminConfigEncryptionHtml, AdminConfigJwksHtml,
+    AdminConfigPolicyHtml, AdminEventsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml,
+    AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml, HtmlTemplate,
+    IndexHtml, LogoutHtml, ProviderCallbackHtml, ProvidersHtml, UserPasswordResetHtml,
+    UserRegisterHtml,
 };
 use crate::language::Language;
 use actix_web::http::header::ACCEPT_ENCODING;
@@ -36,6 +38,7 @@ pub enum HtmlCached {
     AdminUsers,
     AuthProviderCallback,
     ConfigArgon2,
+    ConfigBackups,
     ConfigEncryption,
     ConfigJwks,
     ConfigPolicy,
@@ -44,6 +47,7 @@ pub enum HtmlCached {
     FedCM,
     Index,
     Logout(String),
+    PasswordReset,
     UserRegistration,
 }
 
@@ -66,6 +70,7 @@ impl HtmlCached {
             Self::AdminUsers => "admin_users",
             Self::AuthProviderCallback => "auth_provider_cb",
             Self::ConfigArgon2 => "cfg_argon2",
+            Self::ConfigBackups => "cfg_backup",
             Self::ConfigEncryption => "cfg_encryption",
             Self::ConfigJwks => "cfg_jwks",
             Self::ConfigPolicy => "cfg_policy",
@@ -74,13 +79,14 @@ impl HtmlCached {
             Self::FedCM => "fed_cm",
             Self::Index => "index",
             Self::Logout(_) => "logout",
+            Self::PasswordReset => "password_reset",
             Self::UserRegistration => "user_reg",
         }
     }
 
     #[inline]
     fn cache_key(&self, lang: &Language, encoding: &str) -> String {
-        format!("{}_{}_{}", self.as_str(), lang.as_str(), encoding)
+        format!("{}_{}_{encoding}", self.as_str(), lang.as_str())
     }
 
     /// Handles the request and builds a full `HttpResponse` with compression and caching.
@@ -103,10 +109,10 @@ impl HtmlCached {
         } else {
             "none"
         };
-        debug!("encoding: {}", encoding);
+        debug!(encoding);
 
         let lang = Language::try_from(&req).unwrap_or_default();
-        debug!("lang: {}", lang);
+        debug!(language = ?lang);
         let cache_key = if with_cache {
             if let Some(bytes) = DB::hql()
                 .get_bytes(Cache::Html, self.cache_key(&lang, encoding))
@@ -141,6 +147,7 @@ impl HtmlCached {
             Self::AdminUsers => AdminUsersHtml::build(&lang, theme_ts),
             Self::AuthProviderCallback => ProviderCallbackHtml::build(&lang, theme_ts),
             Self::ConfigArgon2 => AdminConfigArgon2Html::build(&lang, theme_ts),
+            Self::ConfigBackups => AdminConfigBackupsHtml::build(&lang, theme_ts),
             Self::ConfigEncryption => AdminConfigEncryptionHtml::build(&lang, theme_ts),
             Self::ConfigJwks => AdminConfigJwksHtml::build(&lang, theme_ts),
             Self::ConfigPolicy => AdminConfigPolicyHtml::build(&lang, theme_ts),
@@ -149,6 +156,10 @@ impl HtmlCached {
             Self::FedCM => FedCMHtml::build(&lang, theme_ts),
             Self::Index => IndexHtml::build(&lang, theme_ts),
             Self::Logout(csrf_token) => LogoutHtml::build(csrf_token, &lang, theme_ts),
+            Self::PasswordReset => {
+                let logo_updated = Logo::find_updated("rauthy", &LogoType::Client).await?;
+                UserPasswordResetHtml::build(&lang, theme_ts, logo_updated)
+            }
             Self::UserRegistration => UserRegisterHtml::build(&lang, theme_ts),
         };
         let body_bytes = match encoding {

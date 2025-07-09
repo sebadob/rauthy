@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -157,10 +168,31 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="unix-domain-sockets"><a class="header" href="#unix-domain-sockets">UNIX Domain Sockets</a></h1>
-<p>Rauthy supports listening on a UNIX domain socket. To enable this feature, you will need to specify the following configurations.</p>
-<pre><code>LISTEN_SCHEME=unix_http/unix_https
-LISTEN_ADDRESS=path_to_server.sock
-PROXY_MODE=true
+<p>Rauthy supports listening on a UNIX domain socket. To enable this feature, you will need to specify the following
+configurations.</p>
+<pre><code class="language-toml">[server]
+# The server address to listen on. Can bind to a specific IP.
+# When LISTEN_SCHEME is set to use UNIX sockets, this specifies
+# the path to listen on.
+#
+# default: '0.0.0.0'
+# overwritten by: LISTEN_ADDRESS
+listen_address = "0.0.0.0"
+
+# The scheme to use locally, valid values:
+# http | https | http_https | unix_http | unix_https
+# For more details about the UNIX domain socket, check out its
+# documentation page.
+#
+# default: http_https
+# overwritten by: LISTEN_SCHEME
+scheme = "unix_https"
+
+# When rauthy is running behind a reverse proxy, set to true
+#
+# default: false
+# overwritten by: PROXY_MODE
+proxy_mode = true
 </code></pre>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
@@ -171,12 +203,18 @@ PROXY_MODE=true
 </div>
 <div>
 <p>Note that <code>unix_https</code> does not make a socket with TLS. When <code>unix_https</code> is used, the socket will still be plain HTTP!</p>
-<p><code>unix_https</code> specifies the scheme to be prepended to <code>PUB_URL</code>, so whether to use<code>unix_http</code> and <code>unix_https</code> depends on the scheme you are using on the reverse-proxy.</p>
+<p><code>unix_https</code> specifies the scheme to be prepended to <code>pub_url</code>, so whether to use<code>unix_http</code> and <code>unix_https</code> depends on the scheme you are using on the reverse-proxy.</p>
 </div>
 </div>
-<p>UNIX domain sockets should be used with a reverse proxy. Without such a proxy, Rauthy could not know the IP address of visitors, and it will see all visitors as 192.0.0.8, the IPv4 dummy address. Rate-limits and IP blacklists will apply on all visitors at the same time.</p>
-<p>After setting up a reverse proxy, please also remember to set your proxy to send peer IP in headers (for example, <code>X-Forwarded-For</code>), and set <code>PROXY_MODE</code> to let Rauthy read the IP. Once everything is set, check the <code>/auth/v1/whoami</code> endpoint to see if your IP address is shown correctly.</p>
-<p>It is also recommended to use POSIX ACLs to limit access to Rauthy socket to your reverse proxy, so other UNIX users won't be able to connect to the socket directly and bypass the reverse proxy.</p>
+<p>UNIX domain sockets should be used with a reverse proxy. Without such a proxy, Rauthy could not know the IP address of
+visitors, and it will see all visitors as <code>192.0.0.8</code>, the IPv4 dummy address. Rate-limits and IP blacklists will apply
+on
+all visitors at the same time.</p>
+<p>After setting up a reverse proxy, please also remember to set your proxy to send peer IP in headers (for example,
+<code>X-Forwarded-For</code>), and set <code>PROXY_MODE</code> to let Rauthy read the IP. Once everything is set, check the <code>/auth/v1/whoami</code>
+endpoint to see if your IP address is shown correctly.</p>
+<p>It is also recommended to use POSIX ACLs to limit access to Rauthy socket to your reverse proxy, so other UNIX users
+won't be able to connect to the socket directly and bypass the reverse proxy.</p>
 
                     </main>
 
@@ -186,7 +224,7 @@ PROXY_MODE=true
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../auth_providers/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../config/tuning.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -200,7 +238,7 @@ PROXY_MODE=true
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../auth_providers/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../config/tuning.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

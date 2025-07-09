@@ -13,8 +13,8 @@
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
     import {fetchPost} from "$api/fetch";
     import type {WebauthnLoginResponse} from "$api/types/authorize.ts";
-    import {useIsDev} from "$state/is_dev.svelte";
     import type {ProviderCallbackRequest} from "$api/types/auth_provider.ts";
+    import {IS_DEV} from "$utils/constants";
 
     let t = useI18n();
     let clientMfaForce = $state(false);
@@ -42,16 +42,18 @@
             error = "'code' is missing in URL"
             return;
         }
+        let iss = useParam('iss').get();
 
         let payload: ProviderCallbackRequest = {
             state,
             code,
             pkce_verifier: getVerifierUpstreamFromStorage(),
             xsrf_token: getProviderToken(),
+            iss_atproto: iss,
         };
 
         let url = '/auth/v1/providers/callback';
-        if (useIsDev().get()) {
+        if (IS_DEV) {
             url = '/auth/v1/dev/providers_callback';
         }
         let res = await fetchPost<undefined | WebauthnLoginResponse>(url, payload);
@@ -64,7 +66,6 @@
             error = '';
             let body = res.body;
             if (body && 'user_id' in body && 'code' in body) {
-                // TODO is there a nicer way of making TS happy with type checking?
                 userId = body.user_id as string;
                 mfaPurpose = {Login: body.code as string};
             } else {

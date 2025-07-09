@@ -1,6 +1,6 @@
 use rauthy_common::regex::{
-    RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GRANT_TYPES, RE_GROUPS_ROLES_SCOPES,
-    RE_ORIGIN, RE_URI,
+    RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GRANT_TYPES, RE_GROUPS, RE_ORIGIN,
+    RE_ROLES_SCOPES, RE_URI,
 };
 use validator::ValidationError;
 
@@ -82,7 +82,7 @@ pub fn validate_vec_grant_types(value: &[String]) -> Result<(), ValidationError>
 pub fn validate_vec_origin(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
-        if !RE_ORIGIN.is_match(v) {
+        if !RE_ORIGIN.get().unwrap().is_match(v) {
             err = Some("^(http|https)://[a-z0-9.:-]+$");
         }
     });
@@ -127,8 +127,8 @@ pub fn validate_vec_grant_type(value: &[String]) -> Result<(), ValidationError> 
 pub fn validate_vec_groups(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
-        if !RE_GROUPS_ROLES_SCOPES.is_match(v) {
-            err = Some("^[a-z0-9-_/,:*]{2,64}$");
+        if !RE_GROUPS.is_match(v) {
+            err = Some("^[a-zA-Z0-9-_/,:*\\s]{2,64}$");
         }
     });
     if let Some(e) = err {
@@ -141,7 +141,7 @@ pub fn validate_vec_groups(value: &[String]) -> Result<(), ValidationError> {
 pub fn validate_vec_roles(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
-        if !RE_GROUPS_ROLES_SCOPES.is_match(v) {
+        if !RE_ROLES_SCOPES.is_match(v) {
             err = Some("^[a-z0-9-_/,:*]{2,64}$");
         }
     });
@@ -155,7 +155,7 @@ pub fn validate_vec_roles(value: &[String]) -> Result<(), ValidationError> {
 pub fn validate_vec_scopes(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
-        if !RE_GROUPS_ROLES_SCOPES.is_match(v) {
+        if !RE_ROLES_SCOPES.is_match(v) {
             err = Some("^[a-z0-9-_/,:*]{2,64}$");
         }
     });

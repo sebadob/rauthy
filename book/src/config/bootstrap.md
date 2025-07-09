@@ -14,10 +14,14 @@ instance in test pipelines.
 
 You can change the default admin user E-Mail with:
 
-```
-# If set, the email of the default admin will be changed
-# during the initialization of an empty production database.
-BOOTSTRAP_ADMIN_EMAIL="alfred@batcave.io"
+```toml
+[bootstrap]
+# If set, the email of the default admin will be changed during
+# the initialization of an empty production database.
+#
+# default: 'admin@localhost'
+# overwritten by: BOOTSTRAP_ADMIN_EMAIL
+admin_email = 'admin@localhost'
 ```
 
 The password can be bootstrapped in 2 ways:
@@ -25,24 +29,23 @@ The password can be bootstrapped in 2 ways:
 - Provide a plain test password
 - Provide the password hashed with argon2id
 
-```
-# If set, this plain text password will be used for the
-# initial admin password instead of generating a random
-# password.
-BOOTSTRAP_ADMIN_PASSWORD_PLAIN="123SuperSafe"
+```toml
+[bootstrap]
+# If set, this plain text password will be used for the initial
+# admin password instead of generating a random password.
+#
+# default: random -> see logs on first start
+# overwritten by: BOOTSTRAP_ADMIN_PASSWORD_PLAIN
+password_plain = '123SuperSafe'
 
-# If set, this will take the argon2id hashed password
-# during the initialization of an empty production database.
-# If both BOOTSTRAP_ADMIN_PASSWORD_PLAIN and
-# BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID are set, the hashed version
-# will always be prioritized.
-BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
-```
-
-```admonish caution
-When you provide the password hashed with argon2id, you need to properly quote the string like in this example with
-single `''`. This will probably change in a future version, so you would need to encode it as base64, but this is not 
-the case right now (v0.24.0).
+# If set, this will take the Argon2ID hashed password during the
+# initialization of an empty production database. If both
+# `password_plain` and `pasword_argon2id` are set, the hashed
+# version will always be prioritized.
+#
+# default: random -> see logs on first start
+# overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
+pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 ```
 
 ## API Key
@@ -95,7 +98,8 @@ An example json, which would create a key named `bootstrap` with access to `clie
 
 The config documentation for the bootstrap value should explain all further questions:
 
-```
+```toml
+[bootstrap]
 # You can provide an API Key during the initial prod database
 # bootstrap. This key must match the format and pass validation.
 # You need to provide it as a base64 encoded JSON in the format:
@@ -138,20 +142,27 @@ The config documentation for the bootstrap value should explain all further ques
 # ```
 #
 # You can use the `api_key_example.json` from `/` as
-# an example. Afterwards, just `base64 api_key_example.json | tr -d '\n'`
-BOOTSTRAP_API_KEY="ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY2VzcyI6IFsKICAgIHsKICAgICAgImdyb3VwIjogIkNsaWVudHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgImdyb3VwIjogIlJvbGVzIiwKICAgICAgImFjY2Vzc19yaWdodHMiOiBbCiAgICAgICAgInJlYWQiLAogICAgICAgICJjcmVhdGUiLAogICAgICAgICJ1cGRhdGUiLAogICAgICAgICJkZWxldGUiCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJncm91cCI6ICJHcm91cHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfQogIF0KfQ=="
+# an example. Afterward, just
+# `base64 api_key_example.json | tr -d '\n'`
+#
+# overwritten by: BOOTSTRAP_API_KEY
+api_key = 'ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY2VzcyI6IFsKICAgIHsKICAgICAgImdyb3VwIjogIkNsaWVudHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgImdyb3VwIjogIlJvbGVzIiwKICAgICAgImFjY2Vzc19yaWdodHMiOiBbCiAgICAgICAgInJlYWQiLAogICAgICAgICJjcmVhdGUiLAogICAgICAgICJ1cGRhdGUiLAogICAgICAgICJkZWxldGUiCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJncm91cCI6ICJHcm91cHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfQogIF0KfQ=='
+
 ```
 
 The secret needs to be set with a second variable. Just make sure it contains at least 64 alphanumeric characters.
 
-```
+```toml
+[bootstrap]
 # The secret for the above defined bootstrap API Key.
 # This must be at least 64 alphanumeric characters long.
-# You will be able to use that key afterwards with setting
+# You will be able to use that key afterward with setting
 # the `Authorization` header:
 #
 # `Authorization: API-Key <your_key_name_from_above>$<this_secret>`
-BOOTSTRAP_API_KEY_SECRET=twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
+#
+# overwritten by: BOOTSTRAP_API_KEY_SECRET
+api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh'
 ```
 
 With the values from this example, you will then be able to use the API key with providing the `Authorization` header
@@ -163,9 +174,4 @@ Authorization: API-Key <API Key name>$<API Key secret>
 
 ```
 Authorization: API-Key bootstrap$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
-```
-
-```admonish hint
-API Keys are not nicely documented in this book yet, but should be self-explanatory when you take a look at the section
-in the Admin UI.
 ```

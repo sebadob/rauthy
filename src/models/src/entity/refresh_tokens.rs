@@ -21,7 +21,8 @@ impl Debug for RefreshToken {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "id: {}(...), user_id: {}, nbf: {}, exp: {}, scope: {:?}, is_mfa: {}, session_id: {:?}",
+            "RefreshToken {{ id: {}(...), user_id: {}, nbf: {}, exp: {}, scope: {:?}, is_mfa: {}, \
+            session_id: {:?} }}",
             &self.id[..5],
             self.user_id,
             self.nbf,
@@ -56,8 +57,8 @@ impl RefreshToken {
         exp: i64,
         scope: Option<String>,
         // TODO should we even save mfa for refresh tokens?
-        // even if the original token has been issued with mfa, the refresh
-        // token not really is, because it can be given without user interaction.
+        //  even if the original token has been issued with mfa, the refresh
+        //  token not really is, because it can be given without user interaction.
         is_mfa: bool,
         session_id: Option<String>,
     ) -> Result<Self, ErrorResponse> {

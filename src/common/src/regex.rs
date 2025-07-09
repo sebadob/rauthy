@@ -1,9 +1,7 @@
-use crate::constants::ADDITIONAL_ALLOWED_ORIGIN_SCHEMES;
 use regex::Regex;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, OnceLock};
 
 pub static RE_ALNUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]+$").unwrap());
-// TODO maybe drop all 24, 48, 64 and validate only with ALNUM to have fewer regexes
 pub static RE_ALNUM_48: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap());
 pub static RE_ALNUM_64: LazyLock<Regex> =
@@ -43,23 +41,17 @@ pub static RE_GRANT_TYPES: LazyLock<Regex> = LazyLock::new(|| {
 pub static RE_GRANT_TYPES_EPHEMERAL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap()
 });
-pub static RE_GROUPS_ROLES_SCOPES: LazyLock<Regex> =
+pub static RE_ROLES_SCOPES: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-_/,:*]{2,64}$").unwrap());
+pub static RE_GROUPS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/,:*\s]{2,64}$").unwrap());
 pub static RE_LOWERCASE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-_/]{2,128}$").unwrap());
 pub static RE_LOWERCASE_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-_/\s]{2,128}$").unwrap());
 pub static RE_MFA_CODE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap());
-pub static RE_ORIGIN: LazyLock<Regex> = LazyLock::new(|| {
-    let additional_schemes = ADDITIONAL_ALLOWED_ORIGIN_SCHEMES.join("|");
-    let pattern = if additional_schemes.is_empty() {
-        r"^(http|https)://[a-z0-9.:-]+$".to_string()
-    } else {
-        format!("^(http|https|{})://[a-z0-9.:-]+$", additional_schemes)
-    };
-    Regex::new(&pattern).unwrap()
-});
+pub static RE_ORIGIN: OnceLock<Regex> = OnceLock::new();
 pub static RE_PHONE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+[0-9]{0,32}$").unwrap());
 pub static RE_SCOPE_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-_/:\s*]{0,512}$").unwrap());
@@ -76,3 +68,7 @@ pub static RE_TOKEN_68: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap());
 pub static RE_TOKEN_ENDPOINT_AUTH_METHOD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(client_secret_post|client_secret_basic|none)$").unwrap());
+
+pub static RE_ATPROTO_HANDLE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$").unwrap()
+});

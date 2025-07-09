@@ -2,8 +2,10 @@ use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_models::database::DB;
+use rauthy_models::rauthy_config::RauthyConfig;
 use std::ops::Sub;
 use std::time::Duration;
+use tokio::time;
 use tracing::{debug, error};
 
 /// Cleans up old / expired Sessions.
@@ -28,15 +30,27 @@ pub async fn sessions_cleanup() {
 
         debug!("Running sessions_cleanup scheduler");
 
-        let thres = Utc::now().sub(chrono::Duration::hours(24)).timestamp();
-        let sql = "DELETE FROM sessions WHERE exp < $1";
+        let now = Utc::now();
+        let exp = now.sub(chrono::Duration::minutes(1)).timestamp();
+        let timeout_secs = RauthyConfig::get().vars.lifetimes.session_timeout as i64;
+        let timeout = now
+            .sub(chrono::Duration::seconds(timeout_secs))
+            .sub(chrono::Duration::minutes(1))
+            .timestamp();
+
+        // either completely expired, or timeout reached
+        let sql = "DELETE FROM sessions WHERE exp < $1 OR last_seen < $2";
 
         if is_hiqlite() {
-            if let Err(err) = DB::hql().execute(sql, params!(thres)).await {
-                error!("Session Cleanup Error: {:?}", err)
+            if let Err(err) = DB::hql().execute(sql, params!(exp, timeout)).await {
+                error!(?err, "Session Cleanup")
             }
-        } else if let Err(err) = DB::pg_execute(sql, &[&thres]).await {
-            error!("Session Cleanup Error: {:?}", err)
+        } else if let Err(err) = DB::pg_execute(sql, &[&exp, &timeout]).await {
+            error!(?err, "Session Cleanup")
         }
+
+        // For some reason, the interval could `.tick()` multiple times,
+        // if it finishes too quickly.
+        time::sleep(Duration::from_secs(3)).await;
     }
 }

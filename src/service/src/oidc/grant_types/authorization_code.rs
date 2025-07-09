@@ -2,16 +2,15 @@ use crate::token_set::{
     AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce, TokenScopes,
     TokenSet,
 };
+use actix_web::HttpRequest;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
 };
-use actix_web::{HttpRequest, web};
 use chrono::Utc;
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::utils::{base64_url_encode, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
@@ -28,7 +27,6 @@ use tracing::warn;
     fields(client_id = req_data.client_id, username = req_data.username)
 )]
 pub async fn grant_type_authorization_code(
-    data: &web::Data<AppState>,
     req: HttpRequest,
     req_data: TokenRequest,
 ) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
@@ -54,9 +52,10 @@ pub async fn grant_type_authorization_code(
         .map_err(|_| {
             ErrorResponse::new(
                 ErrorResponseType::NotFound,
-                format!("Client '{}' not found", client_id),
+                format!("Client '{client_id}' not found"),
             )
         })?;
+    client.validate_enabled()?;
     let header_origin = client.get_validated_origin_header(&req)?;
     if client.confidential {
         let secret = client_secret.ok_or_else(|| {
@@ -111,7 +110,7 @@ pub async fn grant_type_authorization_code(
     };
     // validate the oidc code
     if code.client_id != client_id {
-        let err = format!("Wrong 'code' for client_id '{}'", client_id);
+        let err = format!("Wrong 'code' for client_id '{client_id}'");
         warn!(err);
         return Err(ErrorResponse::new(ErrorResponseType::Unauthorized, err));
     }
@@ -156,7 +155,6 @@ pub async fn grant_type_authorization_code(
     let user = User::find(code.user_id.clone()).await?;
     let token_set = TokenSet::from_user(
         &user,
-        data,
         &client,
         AuthTime::given(user.last_login.unwrap_or_else(|| Utc::now().timestamp())),
         dpop_fingerprint,
@@ -179,11 +177,10 @@ pub async fn grant_type_authorization_code(
             code.delete().await?;
             return Err(err);
         }
-        session.validate_user_expiry(&user)?;
         session.user_id = Some(user.id.clone());
-        session.roles = Some(user.roles);
-        session.groups = user.groups;
-        session.save().await?;
+        session.roles = Some(user.roles.clone());
+        session.groups = user.groups.clone();
+        session.upsert().await?;
     }
     code.delete().await?;
 
@@ -193,8 +190,10 @@ pub async fn grant_type_authorization_code(
 
     // backchannel logout and login state tracking is not supported for ephemeral clients
     if !client.is_ephemeral() {
-        UserLoginState::insert(user.id, client.id, code.session_id).await?;
+        UserLoginState::insert(user.id.clone(), client.id, code.session_id).await?;
     }
+
+    // No location check here, this is done in `POST /authorize` already
 
     Ok((token_set, headers))
 }

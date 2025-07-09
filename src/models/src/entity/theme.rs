@@ -36,10 +36,7 @@ impl From<hiqlite::Row<'_>> for ThemeCssFull {
             let dark = ThemeCss::from(row.get::<Vec<u8>>("dark").as_slice());
             (light, dark)
         } else {
-            error!(
-                "Invalid CSS version {} returned from database, using defaults",
-                version
-            );
+            error!("Invalid CSS version {version} returned from database, using defaults");
             (ThemeCss::default_light(), ThemeCss::default_dark())
         };
 
@@ -65,10 +62,7 @@ impl From<tokio_postgres::Row> for ThemeCssFull {
 
             (light, dark)
         } else {
-            error!(
-                "Invalid CSS version {} returned from database, using defaults",
-                version
-            );
+            error!("Invalid CSS version {version} returned from database, using defaults");
             (ThemeCss::default_light(), ThemeCss::default_dark())
         };
 
@@ -109,7 +103,8 @@ impl From<ThemeCssFull> for ThemeRequestResponse {
 
 // CRUD
 impl ThemeCssFull {
-    pub async fn find(client_id: String) -> Result<Self, ErrorResponse> {
+    /// Returns either the custom theme for a client, if it exists, and the default on any error.
+    pub async fn find_with_default(client_id: String) -> Result<Self, ErrorResponse> {
         let sql = "SELECT * FROM themes WHERE client_id = $1";
         let slf: Self = if is_hiqlite() {
             DB::hql()
@@ -119,6 +114,37 @@ impl ThemeCssFull {
             DB::pg_query_opt(sql, &[&client_id]).await?
         }
         .unwrap_or_default();
+
+        Ok(slf)
+    }
+
+    /// Returns either the custom theme for a client, if it exists, or tries to find the `rauthy`
+    /// theme as a fallback. If both values don't exist, returns default values.
+    pub async fn find_with_fallback(client_id: String) -> Result<Self, ErrorResponse> {
+        let is_rauthy = client_id == "rauthy";
+
+        let sql = "SELECT * FROM themes WHERE client_id = $1";
+        let opt: Option<Self> = if is_hiqlite() {
+            DB::hql()
+                .query_map_optional(sql, params!(client_id))
+                .await?
+        } else {
+            DB::pg_query_opt(sql, &[&client_id]).await?
+        };
+        if let Some(slf) = opt {
+            return Ok(slf);
+        }
+
+        let slf: Self = if !is_rauthy {
+            if is_hiqlite() {
+                DB::hql().query_map_optional(sql, params!("rauthy")).await?
+            } else {
+                DB::pg_query_opt(sql, &[&"rauthy"]).await?
+            }
+            .unwrap_or_default()
+        } else {
+            Self::default()
+        };
 
         Ok(slf)
     }
@@ -134,7 +160,7 @@ impl ThemeCssFull {
             return Ok(vars.to_string());
         }
 
-        let full = Self::find("rauthy".to_string()).await?;
+        let full = Self::find_with_fallback("rauthy".to_string()).await?;
         let mut vars = String::with_capacity(128);
         full.light.append_css(&mut vars)?;
         write!(vars, "--border-radius:{};", full.border_radius)?;
@@ -155,12 +181,14 @@ impl ThemeCssFull {
     /// the latest TS for the `Rauthy` theme is returned.
     #[inline(always)]
     pub async fn find_theme_ts(client_id: String) -> Result<i64, ErrorResponse> {
-        Ok(Self::find(client_id).await?.last_update)
+        Ok(Self::find_with_default(client_id).await?.last_update)
     }
 
     #[inline(always)]
     pub async fn find_theme_ts_rauthy() -> Result<i64, ErrorResponse> {
-        Ok(Self::find("rauthy".to_string()).await?.last_update)
+        Ok(Self::find_with_default("rauthy".to_string())
+            .await?
+            .last_update)
     }
 
     pub async fn delete(client_id: String) -> Result<(), ErrorResponse> {
@@ -173,15 +201,8 @@ impl ThemeCssFull {
             DB::pg_execute(sql, &[&id]).await?;
         }
 
-        if client_id == "rauthy" {
-            // To make sure that all admin HTML will be pre-built with the new timestamp,
-            // we need to clear all caches to have a more efficient way of caching.
-            //
-            // No need to rebuild any other HTML, because the theme for clients is fetched
-            // only during `/authorize, which is dynamically built each time and not cached.
-            DB::hql().clear_cache(Cache::Html).await?;
-        }
-        Self::invalidate_caches(client_id).await?;
+        DB::hql().clear_cache(Cache::ThemeTs).await?;
+        DB::hql().clear_cache(Cache::Html).await?;
 
         Ok(())
     }
@@ -226,53 +247,26 @@ SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
             .await?;
         }
 
-        if client_id == "rauthy" {
-            DB::hql().delete(Cache::Html, CACHE_KEY_EMAIL_CSS).await?;
-        }
-        // TODO if we have the prebuild fn at some point, favor this instead of invalidation
-        Self::invalidate_caches(client_id).await?;
+        DB::hql().clear_cache(Cache::ThemeTs).await?;
+        DB::hql().clear_cache(Cache::Html).await?;
 
         Ok(())
     }
 }
 
 impl ThemeCssFull {
-    // TODO fn to pre-build and compress themes for all existing clients at app startup
-
-    #[inline]
-    fn cache_key_plain(client_id: &str) -> String {
-        format!("{}_theme_plain", client_id)
-    }
-
     #[inline]
     fn cache_key_br(client_id: &str) -> String {
-        format!("{}_theme_br", client_id)
+        format!("{client_id}_theme_br")
     }
 
     #[inline]
     fn cache_key_gzip(client_id: &str) -> String {
-        format!("{}_theme_gzip", client_id)
-    }
-
-    async fn invalidate_caches(client_id: String) -> Result<(), ErrorResponse> {
-        let client = DB::hql();
-
-        client
-            .delete(Cache::Html, Self::cache_key_plain(&client_id))
-            .await?;
-        client
-            .delete(Cache::Html, Self::cache_key_br(&client_id))
-            .await?;
-        client
-            .delete(Cache::Html, Self::cache_key_gzip(&client_id))
-            .await?;
-        client.delete(Cache::ThemeTs, client_id.to_string()).await?;
-
-        Ok(())
+        format!("{client_id}_theme_gzip")
     }
 
     pub async fn plain(client_id: String) -> Result<String, ErrorResponse> {
-        let slf = Self::find(client_id).await?;
+        let slf = Self::find_with_fallback(client_id).await?;
         let res = slf.as_css()?;
         Ok(res)
     }

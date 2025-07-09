@@ -8,6 +8,7 @@
     - [First Start](./getting_started/first_start.md)
 
 - [Production Config](config/production_config.md)
+    - [Minimal Production Config](config/config_minimal.md)
     - [Password Hashing](config/argon2.md)
     - [Passkeys](config/passkeys.md)
     - [Encryption](config/encryption.md)
@@ -21,6 +22,7 @@
     - [Bootstrapping](config/bootstrap.md)
     - [Database Migrations](config/db_migration.md)
     - [UNIX Domain Sockets](config/unix_socket.md)
+    - [Tuning](config/tuning.md)
 
 - [Authentication Providers](auth_providers/index.md)
     - [Github](./auth_providers/github.md)
@@ -34,6 +36,7 @@
     - [JSON Web Keys](work/jwks.md)
     - [I18n](work/i18n.md)
     - [User Logout](work/logout.md)
+    - [SCIM](work/scim.md)
 
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)

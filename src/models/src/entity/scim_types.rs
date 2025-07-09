@@ -57,7 +57,7 @@ impl ScimAddress {
             slf.street_address = Some(street.clone());
         }
 
-        if let Some(zip) = values.zip {
+        if let Some(zip) = &values.zip {
             slf.postal_code = Some(zip.to_string());
 
             if let Some(city) = &values.city {
@@ -183,8 +183,7 @@ impl ScimUser {
         client_scopes: &str,
     ) -> Result<Self, ErrorResponse> {
         let roles = user
-            .get_roles()
-            .iter()
+            .roles_iter()
             .map(|r| ScimValue {
                 value: r.to_string(),
                 display: None,

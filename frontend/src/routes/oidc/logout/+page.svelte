@@ -7,11 +7,10 @@
     import LangSelector from "$lib5/LangSelector.svelte";
     import type {LogoutParams} from "$api/types/logout.ts";
     import Template from "$lib5/Template.svelte";
-    import {TPL_CSRF_TOKEN} from "$utils/constants";
+    import {IS_DEV, TPL_CSRF_TOKEN} from "$utils/constants";
     import {useParam} from "$state/param.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import {formDataFromObj} from "$api/fetch";
-    import {useIsDev} from "$state/is_dev.svelte";
 
     let t = useI18n();
     let err = '';
@@ -45,10 +44,8 @@
         let csrfToken = getCsrfToken();
         purgeStorage();
 
-        let isDev = useIsDev().get();
-
         let url = '/auth/v1/oidc/logout';
-        if (isDev) {
+        if (IS_DEV) {
             url = '/auth/v1/dev/logout';
         }
 
@@ -59,7 +56,7 @@
                 'x-csrf-token': csrfToken,
             },
             // manual necessary during dev to avoid CORS issues when using the DEV vs static UI
-            redirect: isDev ? 'manual' : 'follow',
+            redirect: IS_DEV ? 'manual' : 'follow',
             body: formDataFromObj(logoutData),
         });
 

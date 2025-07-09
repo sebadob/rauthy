@@ -30,6 +30,14 @@ export interface I18nAdmin {
         name: string,
         userEditable: string,
     },
+    backup: {
+        createBackup: string,
+        disabledDesc: string,
+        lastModified: string,
+        local: string,
+        name: string,
+        size: string,
+    },
     clients: {
         backchannelLogout: string,
         branding: {
@@ -291,6 +299,12 @@ export interface I18nAdmin {
         delete: string,
     },
     users: {
+        antiLockout: {
+            rule: string,
+            delete: string,
+            disable: string,
+            rauthyAdmin: string,
+        },
         attributes: string,
         deleteUser: string,
         descAttr: string,

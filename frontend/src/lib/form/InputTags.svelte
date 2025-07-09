@@ -37,7 +37,7 @@
         typ?: 'text' | 'email' | 'url',
         id?: string,
         name?: string,
-        values: string[], // TODO for some reason, the compiler sees this as any[] ... ?
+        values: string[],
         datalist?: string[];
         label?: string,
         placeholder?: string,
@@ -65,7 +65,6 @@
     let list = $derived(datalist && datalist.length > 0 ? idDatalist : undefined);
 
     function deleteValue(value: string) {
-        // TODO this must be a false positive for string[] ..?
         values = values.filter(v => v !== value)
     }
 

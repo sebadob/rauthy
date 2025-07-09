@@ -4,7 +4,7 @@ use pretty_assertions::assert_eq;
 use rauthy_api_types::blacklist::IpBlacklistRequest;
 use reqwest::StatusCode;
 use std::error::Error;
-use std::net::Ipv4Addr;
+use std::net::IpAddr;
 use std::ops::Add;
 use std::time::Duration;
 
@@ -28,7 +28,10 @@ async fn test_ip_blacklist() -> Result<(), Box<dyn Error>> {
     let url_ip = format!("{}/whoami", get_backend_url());
     let res = client.get(&url_ip).send().await?;
     assert_eq!(res.status(), StatusCode::OK);
-    let ip = res.text().await?.parse::<Ipv4Addr>().unwrap();
+
+    let text = res.text().await.unwrap();
+    let (ip, _) = text.split_once('\n').unwrap();
+    let ip = ip.parse::<IpAddr>().unwrap();
     println!("parsed ip: {:?}", ip);
 
     // let's blacklist ourselves

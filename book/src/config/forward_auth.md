@@ -12,42 +12,55 @@ information about the user to the request. These headers could easily be read by
 The forward auth headers are disabled by default, because they can leak information, if you do not set up your internal
 environment carefully. You can enable the feature with
 
-```
-# You can enable authn/authz headers which would be added to the response
-# of the `/auth/v1/oidc/forward_auth` endpoint. With  `AUTH_HEADERS_ENABLE=true`,
-# the headers below will be added to authenticated requests. These could
-# be used on legacy downstream applications, that don't support OIDC on
-# their own.
-# However, be careful when using this, since this kind of authn/authz has
-# a lot of pitfalls out of the scope of Rauthy.
+```toml
+[auth_headers]
+# You can enable authn/authz headers which would be added to the
+# response of the `/auth/v1/oidc/forward_auth` endpoint. When set to
+# `true`, the headers below will be added to authenticated requests.
+# These could be used on legacy downstream applications, that don't
+# support OIDC on their own.
+#
+# However, be careful when using this, since this kind of authn/authz
+# has a lot of pitfalls out of the scope of Rauthy.
+#
 # default: false
-AUTH_HEADERS_ENABLE=false
-
+# overwritten by: AUTH_HEADERS_ENABLE
+enable = false
 ```
 
 You can also change the header names containing the information, if you need to support some older application that
 needs special naming for them:
 
-```
-# Configure the header names being used for the different values.
-# You can change them to your needs, if you cannot easily change your
+```toml
+[auth_headers]
+# Configure the header names being used for the different values. You
+# can change them to your needs, if you cannot easily change your
 # downstream apps.
+#
 # default: x-forwarded-user
-AUTH_HEADER_USER=x-forwarded-user
+# overwritten by: AUTH_HEADER_USER
+user = 'x-forwarded-user'
 # default: x-forwarded-user-roles
-AUTH_HEADER_ROLES=x-forwarded-user-roles
+# overwritten by: AUTH_HEADER_ROLES
+roles = 'x-forwarded-user-roles'
 # default: x-forwarded-user-groups
-AUTH_HEADER_GROUPS=x-forwarded-user-groups
+# overwritten by: AUTH_HEADER_GROUPS
+groups = 'x-forwarded-user-groups'
 # default: x-forwarded-user-email
-AUTH_HEADER_EMAIL=x-forwarded-user-email
+# overwritten by: AUTH_HEADER_EMAIL
+email = 'x-forwarded-user-email'
 # default: x-forwarded-user-email-verified
-AUTH_HEADER_EMAIL_VERIFIED=x-forwarded-user-email-verified
+# overwritten by: AUTH_HEADER_EMAIL_VERIFIED
+email_verified = 'x-forwarded-user-email-verified'
 # default: x-forwarded-user-family-name
-AUTH_HEADER_FAMILY_NAME=x-forwarded-user-family-name
+# overwritten by: AUTH_HEADER_FAMILY_NAME
+family_name = 'x-forwarded-user-family-name'
 # default: x-forwarded-user-given-name
-AUTH_HEADER_GIVEN_NAME=x-forwarded-user-given-name
+# overwritten by: AUTH_HEADER_GIVEN_NAME
+given_name = 'x-forwarded-user-given-name'
 # default: x-forwarded-user-mfa
-AUTH_HEADER_MFA=x-forwarded-user-mfa
+# overwritten by: AUTH_HEADER_MFA
+mfa = 'x-forwarded-user-mfa'
 ```
 
 ```admonish caution

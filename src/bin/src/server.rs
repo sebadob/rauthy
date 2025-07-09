@@ -3,25 +3,23 @@ use actix_web::rt::System;
 use actix_web::{App, HttpServer, middleware, web};
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
-use rauthy_common::constants::{SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL};
+use rauthy_common::is_hiqlite;
 use rauthy_common::utils::UseDummyAddress;
-use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
-    api_keys, auth_providers, blacklist, clients, dev_only, events, fed_cm, generic, groups, html,
-    oidc, roles, scopes, sessions, themes, users,
+    api_keys, atproto, auth_providers, backup, blacklist, clients, dev_only, events, fed_cm,
+    generic, groups, html, oidc, roles, scopes, sessions, swagger_ui, themes, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::ListenScheme;
-use rauthy_models::app_state::AppState;
+use rauthy_models::rauthy_config::RauthyConfig;
+use std::cmp::max;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
-use std::{env, thread};
+use std::thread;
 use tracing::{error, info};
-use utoipa_swagger_ui::SwaggerUi;
-
 // TODO Currently, we have some duplicated code in here for building the HttpServer.
 // This is due to the strict typing from actix_web. We want to be able to conditionally `.wrap`
 // the server with an optional prometheus metrics collector.
@@ -31,9 +29,9 @@ use utoipa_swagger_ui::SwaggerUi;
 // There is most probably a way to do this when we wrap it inside something like
 // `Box<dyn ServiceFactory<_>>`, but I have not figured out the correct type for that yet.
 
-pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Result<()> {
-    let listen_scheme = app_state.listen_scheme.clone();
-    let listen_addr = app_state.listen_addr.clone();
+pub async fn server_with_metrics() -> std::io::Result<()> {
+    let listen_scheme = RauthyConfig::get().listen_scheme.clone();
+    let listen_addr = RauthyConfig::get().vars.server.listen_address.to_string();
 
     let shared_registry = Registry::new();
     let metrics = PrometheusMetricsBuilder::new("api")
@@ -44,41 +42,26 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
         .build()
         .unwrap();
 
-    let swagger_internal = if *SWAGGER_UI_INTERNAL {
-        Some(swagger_ui(&app_state))
-    } else {
-        None
-    };
-
     thread::spawn(move || {
-        let addr = env::var("METRICS_ADDR").unwrap_or_else(|_| "0.0.0.0".to_string());
-        let port = env::var("METRICS_PORT").unwrap_or_else(|_| "9090".to_string());
-        if let Err(err) = Ipv4Addr::from_str(&addr) {
-            let msg = format!("Error parsing METRICS_ADDR: {}", err);
+        let vars = &RauthyConfig::get().vars.server;
+        if let Err(err) = Ipv4Addr::from_str(&vars.metrics_addr) {
+            let msg = format!("Error parsing METRICS_ADDR: {err}");
             error!(msg);
             panic!("{}", msg);
         }
-        let addr_full = format!("{}:{}", addr, port);
+        let addr_full = format!("{}:{}", vars.metrics_addr, vars.metrics_port);
 
-        info!("Metrics available on: http://{}/metrics", addr_full);
-        let srv = if let Some(swagger_ui) = swagger_internal {
-            info!(
-                "Serving Swagger UI internally on: http://{}/docs/v1/swagger-ui/",
-                addr_full
-            );
-            HttpServer::new(move || App::new().wrap(metrics.clone()).service(swagger_ui.clone()))
-                .workers(1)
-                .bind(addr_full)
-                .unwrap()
-                .run()
-        } else {
-            HttpServer::new(move || App::new().wrap(metrics.clone()))
-                .workers(1)
-                .bind(addr_full)
-                .unwrap()
-                .run()
-        };
-        System::new().block_on(srv).unwrap();
+        info!("Metrics available on: http://{addr_full}/metrics");
+        // TODO create single threaded runtime specifically -> probably use tokio
+        System::new()
+            .block_on(
+                HttpServer::new(move || App::new().wrap(metrics.clone()))
+                    .workers(1)
+                    .bind(addr_full)
+                    .unwrap()
+                    .run(),
+            )
+            .unwrap();
     });
 
     let metrics_collector = PrometheusMetricsBuilder::new("rauthy")
@@ -92,7 +75,6 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
     let server = HttpServer::new(move || {
         let mut app = App::new()
             .wrap(RauthyLoggingMiddleware)
-            .app_data(app_state.clone())
             .wrap(RauthyPrincipalMiddleware)
             .wrap(CsrfProtectionMiddleware)
             .wrap(default_headers())
@@ -107,19 +89,15 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
             .wrap(metrics_collector.clone())
             .service(oidc::get_well_known)
             .service(fed_cm::get_fed_cm_well_known)
-            .service(generic::catch_all)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
             .wrap(RauthyIpBlacklistMiddleware)
-            .service(api_services());
-
-        if *SWAGGER_UI_EXTERNAL {
-            app = app.service(swagger_ui(&app_state));
-        }
+            .service(api_services())
+            .service(generic::catch_all);
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
-            &app_state.listen_scheme,
+            &RauthyConfig::get().listen_scheme,
             ListenScheme::UnixHttp | ListenScheme::UnixHttps
         ) {
             app = app.app_data(UseDummyAddress);
@@ -134,7 +112,10 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
     match listen_scheme {
         ListenScheme::Http => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{listen_addr}:{}",
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .run()
                 .await
         }
@@ -142,7 +123,10 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
         ListenScheme::Https => {
             server
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{listen_addr}:{}",
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -151,9 +135,15 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
 
         ListenScheme::HttpHttps => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{listen_addr}:{}",
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{listen_addr}:{}",
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -167,32 +157,27 @@ pub async fn server_with_metrics(app_state: web::Data<AppState>) -> std::io::Res
     }
 }
 
-pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::Result<()> {
-    let listen_scheme = app_state.listen_scheme.clone();
-    let listen_addr = app_state.listen_addr.clone();
+pub async fn server_without_metrics() -> std::io::Result<()> {
+    let listen_scheme = RauthyConfig::get().listen_scheme.clone();
+    let listen_addr = RauthyConfig::get().vars.server.listen_address.to_string();
 
     let server = HttpServer::new(move || {
         let mut app = App::new()
             .wrap(RauthyLoggingMiddleware)
-            .app_data(app_state.clone())
             .wrap(RauthyPrincipalMiddleware)
             .wrap(CsrfProtectionMiddleware)
             .wrap(default_headers())
             .service(oidc::get_well_known)
             .service(fed_cm::get_fed_cm_well_known)
-            .service(generic::catch_all)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
             .wrap(RauthyIpBlacklistMiddleware)
-            .service(api_services());
-
-        if *SWAGGER_UI_EXTERNAL {
-            app = app.service(swagger_ui(&app_state));
-        }
+            .service(api_services())
+            .service(generic::catch_all);
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
-            &app_state.listen_scheme,
+            &RauthyConfig::get().listen_scheme,
             ListenScheme::UnixHttp | ListenScheme::UnixHttps
         ) {
             app = app.app_data(UseDummyAddress);
@@ -207,7 +192,10 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
     match listen_scheme {
         ListenScheme::Http => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{listen_addr}:{}",
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .run()
                 .await
         }
@@ -215,7 +203,10 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
         ListenScheme::Https => {
             server
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{listen_addr}:{}",
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -224,9 +215,15 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
 
         ListenScheme::HttpHttps => {
             server
-                .bind(format!("{}:{}", &listen_addr, get_http_port()))?
+                .bind(format!(
+                    "{listen_addr}:{}",
+                    RauthyConfig::get().vars.server.port_http
+                ))?
                 .bind_rustls_0_23(
-                    format!("{}:{}", &listen_addr, get_https_port()),
+                    format!(
+                        "{listen_addr}:{}",
+                        RauthyConfig::get().vars.server.port_https
+                    ),
                     tls::load_tls().await,
                 )?
                 .run()
@@ -238,18 +235,6 @@ pub async fn server_without_metrics(app_state: web::Data<AppState>) -> std::io::
             server.bind_uds(listen_addr)?.run().await
         }
     }
-}
-
-fn get_http_port() -> String {
-    let port = env::var("LISTEN_PORT_HTTP").unwrap_or_else(|_| "8080".to_string());
-    info!("HTTP listen port: {}", port);
-    port
-}
-
-fn get_https_port() -> String {
-    let port = env::var("LISTEN_PORT_HTTPS").unwrap_or_else(|_| "8443".to_string());
-    info!("HTTPS listen port: {}", port);
-    port
 }
 
 fn default_headers() -> middleware::DefaultHeaders {
@@ -281,6 +266,7 @@ fn api_services() -> actix_web::Scope {
                 .service(api_keys::delete_api_key)
                 .service(api_keys::get_api_key_test)
                 .service(api_keys::put_api_key_secret)
+                .service(atproto::get_atproto_client_metadata)
                 .service(auth_providers::post_providers)
                 .service(auth_providers::get_providers_minimal)
                 .service(auth_providers::post_provider)
@@ -295,6 +281,10 @@ fn api_services() -> actix_web::Scope {
                 .service(auth_providers::get_provider_img)
                 .service(auth_providers::put_provider_img)
                 .service(auth_providers::post_provider_link)
+                .service(backup::get_backups)
+                .service(backup::post_backup)
+                .service(backup::get_backup_local)
+                .service(backup::get_backup_s3)
                 .service(blacklist::get_blacklist)
                 .service(blacklist::post_blacklist)
                 .service(blacklist::delete_blacklist)
@@ -311,6 +301,7 @@ fn api_services() -> actix_web::Scope {
                 .service(html::get_admin_blacklist_html)
                 .service(html::get_admin_clients_html)
                 .service(html::get_admin_config_argon2_html)
+                .service(html::get_admin_config_backups_html)
                 .service(html::get_admin_config_encryption_html)
                 .service(html::get_admin_config_jwks_html)
                 .service(html::get_admin_config_policy_html)
@@ -356,6 +347,8 @@ fn api_services() -> actix_web::Scope {
                 .service(clients::post_clients_dyn)
                 .service(clients::get_clients_dyn)
                 .service(clients::put_clients_dyn)
+                .service(clients::get_forward_auth_oidc)
+                .service(clients::get_forward_auth_callback)
                 .service(generic::get_login_time)
                 .service(fed_cm::get_fed_cm_accounts)
                 .service(fed_cm::get_fed_cm_config)
@@ -367,6 +360,7 @@ fn api_services() -> actix_web::Scope {
                 .service(users::get_users)
                 .service(users::get_users_register)
                 .service(users::post_users_register)
+                .service(html::get_user_password_reset_fixed)
                 .service(users::get_cust_attr)
                 .service(users::post_cust_attr)
                 .service(users::put_cust_attr)
@@ -376,6 +370,7 @@ fn api_services() -> actix_web::Scope {
                 .service(users::get_user_attr)
                 .service(users::get_user_attr_editable)
                 .service(users::put_user_attr)
+                .service(users::post_user_mfa_token)
                 .service(users::put_user_picture)
                 .service(users::get_user_picture)
                 .service(users::delete_user_picture)
@@ -400,6 +395,7 @@ fn api_services() -> actix_web::Scope {
                 .service(users::put_user_self)
                 .service(users::delete_user_by_id)
                 .service(users::post_user_password_request_reset)
+                .service(users::get_user_revoke)
                 .service(users::get_user_webauthn_passkeys)
                 .service(users::post_webauthn_reg_start)
                 .service(users::post_webauthn_reg_finish)
@@ -438,29 +434,26 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::get_health)
                 .service(generic::get_i18n_config)
                 .service(generic::get_ready)
+                .service(swagger_ui::get_openapi_doc)
+                .service(swagger_ui::get_swagger_ui)
                 .service(html::get_static_assets),
         )
 }
 
-fn swagger_ui(app_state: &web::Data<AppState>) -> SwaggerUi {
-    SwaggerUi::new("/docs/v1/swagger-ui/{_:.*}")
-        .url("/docs/v1/api-doc/openapi.json", ApiDoc::build(app_state))
-        .config(
-            utoipa_swagger_ui::Config::from("../api-doc/openapi.json")
-                .try_it_out_enabled(false)
-                .supported_submit_methods(["get"])
-                .filter(true),
-        )
-}
-
 fn workers() -> usize {
-    let mut workers = env::var("HTTP_WORKERS")
-        .as_deref()
-        .unwrap_or("0")
-        .parse::<usize>()
-        .expect("Unable to parse HTTP_WORKERS");
+    let vars = &RauthyConfig::get().vars;
+    let mut workers = vars.server.http_workers as usize;
     if workers == 0 {
-        workers = num_cpus::get();
+        let cores = num_cpus::get();
+        if cores < 4 {
+            workers = 1;
+        } else {
+            let reserve = if is_hiqlite() { 2 } else { 1 };
+            workers = max(
+                2,
+                cores as i64 - vars.hashing.max_hash_threads as i64 - reserve,
+            ) as usize;
+        }
     }
     workers
 }

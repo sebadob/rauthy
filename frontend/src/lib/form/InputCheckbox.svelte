@@ -28,7 +28,7 @@
     }
 </script>
 
-<label class="font-label noselect">
+<label class="font-label noselect" data-disabled={disabled}>
     <input
             type="checkbox"
             style:border-color={borderColor}
@@ -52,6 +52,10 @@
         grid-template-columns: 1rem auto;
         gap: .66rem;
         cursor: pointer;
+    }
+
+    label[data-disabled="true"] {
+        cursor: not-allowed;
     }
 
     input[type="checkbox"] {

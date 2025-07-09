@@ -1,5 +1,5 @@
 use crate::database::{Cache, DB};
-use rauthy_common::constants::{POW_DIFFICULTY, POW_EXP};
+use crate::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use spow::pow::Pow;
 
@@ -7,14 +7,21 @@ pub struct PowEntity;
 
 impl PowEntity {
     pub async fn create() -> Result<Pow, ErrorResponse> {
-        let pow = Pow::with_difficulty(*POW_DIFFICULTY, *POW_EXP)?;
+        let cfg = &RauthyConfig::get().vars;
+        let difficulty = if cfg.dev.dev_mode {
+            10
+        } else {
+            cfg.pow.difficulty
+        };
+
+        let pow = Pow::with_difficulty(difficulty, cfg.pow.exp as u32)?;
 
         DB::hql()
             .put(
                 Cache::PoW,
                 pow.challenge.clone(),
                 &pow,
-                Some(*POW_EXP as i64),
+                Some(cfg.pow.exp as i64),
             )
             .await?;
 

@@ -1,12 +1,12 @@
 use crate::api_cookie::ApiCookie;
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::users::{AccountType, User};
+use crate::rauthy_config::RauthyConfig;
+use actix_web::HttpResponse;
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
-use actix_web::{HttpResponse, web};
 use chrono::Utc;
 use cryptr::EncValue;
 use deadpool_postgres::GenericClient;
@@ -16,10 +16,7 @@ use rauthy_api_types::users::{
     MfaPurpose, PasskeyResponse, WebauthnAuthFinishRequest, WebauthnAuthStartResponse,
     WebauthnLoginFinishResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
-use rauthy_common::constants::{
-    CACHE_TTL_WEBAUTHN, CACHE_TTL_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_FORCE_UV,
-    WEBAUTHN_NO_PASSWORD_EXPIRY, WEBAUTHN_RENEW_EXP, WEBAUTHN_REQ_EXP,
-};
+use rauthy_common::constants::{COOKIE_MFA, IDX_WEBAUTHN};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{base64_decode, deserialize, serialize};
 use rauthy_common::utils::{base64_encode, get_rand};
@@ -67,8 +64,8 @@ impl Debug for PasskeyEntity {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "user_id: {}, name: {}, passkey_user_id: {}, passkey: <hidden>, \
-        credential_id: <hidden>, registered: {}, last_used: {}, user_verified: {:?}",
+            "PasskeyEntity {{ user_id: {}, name: {}, passkey_user_id: {}, passkey: <hidden>, \
+        credential_id: <hidden>, registered: {}, last_used: {}, user_verified: {:?} }}",
             self.user_id,
             self.name,
             self.passkey_user_id,
@@ -317,9 +314,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
             DB::pg_query_one(sql, &[&user_id, &name]).await?
         };
 
-        client
-            .put(Cache::Webauthn, idx, &slf, *CACHE_TTL_WEBAUTHN)
-            .await?;
+        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp as i64);
+        client.put(Cache::Webauthn, idx, &slf, ttl).await?;
 
         Ok(slf)
     }
@@ -349,9 +345,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
                 .collect::<Vec<_>>()
         };
 
-        client
-            .put(Cache::Webauthn, idx, &creds, *CACHE_TTL_WEBAUTHN)
-            .await?;
+        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp as i64);
+        client.put(Cache::Webauthn, idx, &creds, ttl).await?;
 
         Ok(creds.into_iter().map(CredentialID::from).collect())
     }
@@ -371,9 +366,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
             DB::pg_query(sql, &[&user_id], 2).await?
         };
 
-        client
-            .put(Cache::Webauthn, idx, &pks, *CACHE_TTL_WEBAUTHN)
-            .await?;
+        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp as i64);
+        client.put(Cache::Webauthn, idx, &pks, ttl).await?;
 
         Ok(pks)
     }
@@ -393,9 +387,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
             DB::pg_query(sql, &[&user_id], 2).await?
         };
 
-        client
-            .put(Cache::Webauthn, idx, &pks, *CACHE_TTL_WEBAUTHN)
-            .await?;
+        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp as i64);
+        client.put(Cache::Webauthn, idx, &pks, ttl).await?;
 
         Ok(pks)
     }
@@ -430,12 +423,13 @@ WHERE user_id = $3 AND name = $4"#,
     async fn update_caches_after_update(&self) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
+        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp as i64);
         client
             .put(
                 Cache::Webauthn,
                 Self::cache_idx_single(&self.user_id, &self.name),
                 self,
-                *CACHE_TTL_WEBAUTHN,
+                ttl,
             )
             .await?;
 
@@ -460,25 +454,25 @@ impl PasskeyEntity {
     /// Index for a single passkey for a user
     #[inline]
     fn cache_idx_single(user_id: &str, name: &str) -> String {
-        format!("{}{}{}", IDX_WEBAUTHN, user_id, name)
+        format!("{IDX_WEBAUTHN}{user_id}{name}")
     }
 
     /// Index for all passkeys a user has
     #[inline]
     fn cache_idx_user(user_id: &str) -> String {
-        format!("{}{}", IDX_WEBAUTHN, user_id)
+        format!("{IDX_WEBAUTHN}{user_id}")
     }
 
     /// Index for all passkeys a user has
     #[inline]
     fn cache_idx_user_with_uv(user_id: &str) -> String {
-        format!("{}_UV_{}", IDX_WEBAUTHN, user_id)
+        format!("{IDX_WEBAUTHN}_UV_{user_id}",)
     }
 
     /// Index for credentials for a user
     #[inline]
     fn cache_idx_creds(user_id: &str) -> String {
-        format!("{}{}_creds", IDX_WEBAUTHN, user_id)
+        format!("{IDX_WEBAUTHN}{user_id}_creds")
     }
 }
 
@@ -501,7 +495,8 @@ pub struct WebauthnCookie {
 
 impl WebauthnCookie {
     pub fn new(email: String) -> Self {
-        let exp = OffsetDateTime::now_utc().add(::time::Duration::hours(*WEBAUTHN_RENEW_EXP));
+        let renew = RauthyConfig::get().vars.webauthn.renew_exp as i64;
+        let exp = OffsetDateTime::now_utc().add(::time::Duration::hours(renew));
         Self { email, exp }
     }
 
@@ -564,13 +559,9 @@ impl WebauthnData {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
+        let ttl = Some(RauthyConfig::get().vars.webauthn.data_exp as i64);
         DB::hql()
-            .put(
-                Cache::Webauthn,
-                self.code.clone(),
-                &self,
-                *CACHE_TTL_WEBAUTHN_DATA,
-            )
+            .put(Cache::Webauthn, self.code.clone(), &self, ttl)
             .await?;
         Ok(())
     }
@@ -580,7 +571,6 @@ impl WebauthnData {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum WebauthnAdditionalData {
     Login(WebauthnLoginReq),
-    // the String inside the Service(_) is always the corresponding user id
     Service(WebauthnServiceReq),
     Test,
 }
@@ -650,13 +640,9 @@ impl WebauthnLoginReq {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
+        let ttl = Some(RauthyConfig::get().vars.webauthn.data_exp as i64);
         DB::hql()
-            .put(
-                Cache::Webauthn,
-                self.code.clone(),
-                self,
-                *CACHE_TTL_WEBAUTHN_DATA,
-            )
+            .put(Cache::Webauthn, self.code.clone(), self, ttl)
             .await?;
         Ok(())
     }
@@ -694,20 +680,15 @@ impl WebauthnServiceReq {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
+        let ttl = Some(RauthyConfig::get().vars.webauthn.data_exp as i64);
         DB::hql()
-            .put(
-                Cache::Webauthn,
-                self.code.clone(),
-                self,
-                *CACHE_TTL_WEBAUTHN_DATA,
-            )
+            .put(Cache::Webauthn, self.code.clone(), self, ttl)
             .await?;
         Ok(())
     }
 }
 
 pub async fn auth_start(
-    data: &web::Data<AppState>,
     user_id: String,
     purpose: MfaPurpose,
 ) -> Result<WebauthnAuthStartResponse, ErrorResponse> {
@@ -717,7 +698,7 @@ pub async fn auth_start(
             let d = WebauthnLoginReq::find(code).await?;
             WebauthnAdditionalData::Login(d)
         }
-        MfaPurpose::PasswordNew | MfaPurpose::PasswordReset => {
+        MfaPurpose::MfaModToken | MfaPurpose::PasswordNew | MfaPurpose::PasswordReset => {
             let svc_req = WebauthnServiceReq::new(user_id.clone());
             svc_req.save().await?;
             WebauthnAdditionalData::Service(svc_req)
@@ -726,7 +707,8 @@ pub async fn auth_start(
     };
 
     let user = User::find(user_id).await?;
-    let force_uv = user.account_type() == AccountType::Passkey || *WEBAUTHN_FORCE_UV;
+    let force_uv =
+        user.account_type() == AccountType::Passkey || RauthyConfig::get().vars.webauthn.force_uv;
     let pks = if force_uv {
         // in this case, filter out all presence only keys
         PasskeyEntity::find_for_user_with_uv(&user.id)
@@ -750,10 +732,14 @@ pub async fn auth_start(
         ));
     }
 
-    match data.webauthn.start_passkey_authentication(pks.as_slice()) {
+    match RauthyConfig::get()
+        .webauthn
+        .start_passkey_authentication(pks.as_slice())
+    {
         Ok((mut rcr, auth_state)) => {
+            let req_exp = RauthyConfig::get().vars.webauthn.req_exp;
             // timeout expected in ms
-            rcr.public_key.timeout = Some(*WEBAUTHN_REQ_EXP * 1000);
+            rcr.public_key.timeout = Some(req_exp as u32 * 1000);
 
             if force_uv {
                 rcr.public_key.user_verification = UserVerificationPolicy::Required;
@@ -773,12 +759,12 @@ pub async fn auth_start(
                 code: auth_data.code,
                 rcr,
                 user_id: user.id,
-                exp: *WEBAUTHN_REQ_EXP as u64,
+                exp: req_exp as u64,
             })
         }
 
         Err(err) => {
-            error!("Webauthn challenge authentication: {:?}", err);
+            error!(?err, "Webauthn challenge authentication");
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
                 "Internal error with Webauthn Challenge Authentication",
@@ -788,7 +774,6 @@ pub async fn auth_start(
 }
 
 pub async fn auth_finish(
-    data: &web::Data<AppState>,
     user_id: String,
     req: WebauthnAuthFinishRequest,
 ) -> Result<WebauthnAdditionalData, ErrorResponse> {
@@ -796,19 +781,20 @@ pub async fn auth_finish(
     let auth_state = serde_json::from_str(&auth_data.auth_state_json)?;
 
     let mut user = User::find(user_id).await?;
-    let force_uv = user.account_type() == AccountType::Passkey || *WEBAUTHN_FORCE_UV;
+    let force_uv =
+        user.account_type() == AccountType::Passkey || RauthyConfig::get().vars.webauthn.force_uv;
 
     let pks = PasskeyEntity::find_for_user(&user.id).await?;
 
-    match data
+    match RauthyConfig::get()
         .webauthn
         .finish_passkey_authentication(&req.data, &auth_state)
     {
         Ok(auth_result) => {
             if force_uv && !auth_result.user_verified() {
                 warn!(
-                    "Webauthn Authentication Ceremony without User Verification for user {:?}",
-                    user.id
+                    user.id,
+                    "Webauthn Authentication Ceremony without User Verification",
                 );
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -852,12 +838,12 @@ pub async fn auth_finish(
                 }
             }
 
-            info!("Webauthn Authentication successful for user {}", uid);
+            info!(user.id = uid, "Webauthn Authentication successful");
 
             Ok(auth_data.data)
         }
         Err(err) => {
-            error!("Webauthn Auth Finish: {:?}", err);
+            error!(?err, "Webauthn Auth Finish");
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 format!("{err}"),
@@ -874,7 +860,6 @@ pub struct WebauthnReg {
 }
 
 pub async fn reg_start(
-    data: &web::Data<AppState>,
     user_id: String,
     req: WebauthnRegStartRequest,
 ) -> Result<CreationChallengeResponse, ErrorResponse> {
@@ -886,7 +871,7 @@ pub async fn reg_start(
     };
     let cred_ids = PasskeyEntity::find_cred_ids_for_user(&user.id).await?;
 
-    match data.webauthn.start_passkey_registration(
+    match RauthyConfig::get().webauthn.start_passkey_registration(
         passkey_user_id,
         &user.email,
         &user.email,
@@ -894,9 +879,10 @@ pub async fn reg_start(
     ) {
         Ok((mut ccr, reg_state)) => {
             // timeout expected in ms
-            ccr.public_key.timeout = Some(*WEBAUTHN_REQ_EXP * 1000);
+            let cfg = &RauthyConfig::get().vars.webauthn;
+            ccr.public_key.timeout = Some(cfg.req_exp as u32 * 1000);
 
-            if *WEBAUTHN_FORCE_UV || user.account_type() == AccountType::Passkey {
+            if cfg.force_uv || user.account_type() == AccountType::Passkey {
                 // in this case we need to force UV no matter what is set in the config
                 ccr.public_key.authenticator_selection =
                     if let Some(mut auth_sel) = ccr.public_key.authenticator_selection {
@@ -922,14 +908,14 @@ pub async fn reg_start(
             // persist the reg_state
             let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
             DB::hql()
-                .put(Cache::Webauthn, idx, &reg_data, *CACHE_TTL_WEBAUTHN)
+                .put(Cache::Webauthn, idx, &reg_data, Some(cfg.req_exp as i64))
                 .await?;
 
             Ok(ccr)
         }
 
         Err(err) => {
-            error!("Webauthn challenge register: {:?}", err);
+            error!(?err, "Webauthn challenge register");
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
                 "Internal error with Webauthn Challenge Registration",
@@ -938,11 +924,7 @@ pub async fn reg_start(
     }
 }
 
-pub async fn reg_finish(
-    data: &web::Data<AppState>,
-    id: String,
-    req: WebauthnRegFinishRequest,
-) -> Result<(), ErrorResponse> {
+pub async fn reg_finish(id: String, req: WebauthnRegFinishRequest) -> Result<(), ErrorResponse> {
     let mut user = User::find(id).await?;
 
     let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
@@ -960,19 +942,19 @@ pub async fn reg_finish(
     let reg_data = res.unwrap();
 
     let reg_state = serde_json::from_str::<PasskeyRegistration>(&reg_data.reg_state)?;
-    match data
+    match RauthyConfig::get()
         .webauthn
         .finish_passkey_registration(&req.data, &reg_state)
     {
         Ok(pk) => {
             // force UV check
+            let cfg = &RauthyConfig::get().vars.webauthn;
             let cred = Credential::from(pk.clone());
-            if (user.account_type() != AccountType::Password || *WEBAUTHN_FORCE_UV)
-                && !cred.user_verified
+            if (user.account_type() != AccountType::Password || cfg.force_uv) && !cred.user_verified
             {
                 warn!(
-                    "Webauthn Registration Ceremony without User Verification for user {:?}",
-                    user.id
+                    user.id,
+                    "Webauthn Registration Ceremony without User Verification",
                 );
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -983,7 +965,7 @@ pub async fn reg_finish(
             let user_id = user.id.clone();
             let create_user = if user.webauthn_user_id.is_none() {
                 user.webauthn_user_id = Some(reg_data.passkey_user_id.to_string());
-                if user.password.is_none() || *WEBAUTHN_NO_PASSWORD_EXPIRY {
+                if user.password.is_none() || cfg.no_password_exp {
                     user.password_expires = None;
                 }
                 Some(user)
@@ -1001,10 +983,10 @@ pub async fn reg_finish(
             )
             .await?;
 
-            info!("New PasskeyEntity saved successfully for user {}", user_id);
+            info!(user_id, "New PasskeyEntity saved successfully");
         }
         Err(err) => {
-            error!("Webauthn Reg Finish: {:?}", err);
+            error!(?err, "Webauthn Reg Finish");
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!("{err}"),

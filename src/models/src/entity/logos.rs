@@ -192,7 +192,7 @@ impl Logo {
         if img.height() < size_small {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!("size must be at least {} px", size_small),
+                format!("size must be at least {size_small} px"),
             ));
         }
 
@@ -405,16 +405,16 @@ impl Logo {
     #[inline]
     fn cache_idx(typ: &LogoType, id: &str) -> String {
         match typ {
-            LogoType::Client => format!("{}_{}", IDX_CLIENT_LOGO, id),
-            LogoType::AuthProvider => format!("{}_{}", IDX_AUTH_PROVIDER_LOGO, id),
+            LogoType::Client => format!("{IDX_CLIENT_LOGO}_{id}"),
+            LogoType::AuthProvider => format!("{IDX_AUTH_PROVIDER_LOGO}_{id}"),
         }
     }
 
     #[inline]
     fn cache_idx_updated(typ: &LogoType, id: &str) -> String {
         match typ {
-            LogoType::Client => format!("{}_{}_updated", IDX_CLIENT_LOGO, id),
-            LogoType::AuthProvider => format!("{}_{}_updated", IDX_AUTH_PROVIDER_LOGO, id),
+            LogoType::Client => format!("{IDX_CLIENT_LOGO}_{id}_updated"),
+            LogoType::AuthProvider => format!("{IDX_AUTH_PROVIDER_LOGO}_{id}_updated"),
         }
     }
 

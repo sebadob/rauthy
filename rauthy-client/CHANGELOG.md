@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.10.0
+
+- A new `ScimToken` has been added which can be used in SCIM endpoints to have an easy validation of the token without
+  any manual work. It comes with an `axum` extractor and the usage is shown in the `axum` example. It is necessary
+  on endpoints without any `Scim*` extractors like `GET /users/{id}` for instance.
+- Some SCIM types also had changed values and some `Option<_>` values have been changed into non-optional, even if they
+  are optional by the SCIM RFC. The reason they are made mandatory is, because Rauthy will reject request when some
+  specific values do not exist. Other values like `_ref` in some situations have been removed completely, because Rauthy
+  does not care about them at all, and they are unnecessary overhead.
+- The `LogoutToken.sub` claims was not set properly as well in some situations and the value was missing completely.
+- The `picture` claim that Rauthy sends by now has been added to `JwtIdClaims`.
+
+## v0.9.0
+
+### Breaking
+
+The type of the `postal_code` in the `id_token` -> address claims has been changed from `i32` to `String`. This has
+been changed with Rauthy `v0.30` for more compatibility.
+
 ## v0.8.0
 
 ### OIDC Backchannel Logout

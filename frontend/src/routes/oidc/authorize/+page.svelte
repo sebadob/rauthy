@@ -9,13 +9,15 @@
     import Input from "$lib5/form/Input.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import {
+        IS_DEV,
         PKCE_VERIFIER_UPSTREAM,
         TPL_AUTH_PROVIDERS, TPL_CLIENT_LOGO_UPDATED,
         TPL_CLIENT_NAME,
         TPL_CLIENT_URL,
         TPL_CSRF_TOKEN,
         TPL_IS_REG_OPEN,
-        TPL_LOGIN_ACTION
+        TPL_LOGIN_ACTION,
+        TPL_ATPROTO_ID
     } from "$utils/constants.js";
     import IconHome from "$icons/IconHome.svelte";
     import Main from "$lib5/Main.svelte";
@@ -28,7 +30,6 @@
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
     import {fetchPost, type IResponse} from "$api/fetch";
-    import {useIsDev} from "$state/is_dev.svelte";
     import type {
         CodeChallengeMethod,
         LoginRefreshRequest,
@@ -44,19 +45,19 @@
     import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
     import {fetchSolvePow} from "$utils/pow";
     import {generatePKCE} from "$utils/pkce";
+    import {PATTERN_ATPROTO_ID} from "$utils/patterns";
 
     const inputWidth = "18rem";
 
     let t = useI18n();
-    let isDev = useIsDev().get();
 
-    let authorizeUrl = $derived(isDev ? '/auth/v1/dev/authorize' : '/auth/v1/oidc/authorize');
+    let authorizeUrl = $derived(IS_DEV ? '/auth/v1/dev/authorize' : '/auth/v1/oidc/authorize');
 
     let clientId = useParam('client_id').get();
     let clientName = $state('');
     // we can't use undefined to avoid a JSON error in the Template component
     let clientLogoUpdated = $state(-1);
-    let clientUri = $state(isDev ? '/auth/v1' : '');
+    let clientUri = $state(IS_DEV ? '/auth/v1' : '');
     let redirectUri = useParam('redirect_uri').get();
     let nonce = useParam('nonce').get();
     let scopes = useParam('scope').get()?.split(' ') || [];
@@ -65,6 +66,7 @@
     let refPassword: undefined | HTMLInputElement = $state();
 
     let stateParam = useParam('state').get();
+    let stateEncoded = $derived(stateParam ? encodeURIComponent(stateParam) : undefined);
     let challenge = useParam('code_challenge').get();
     let challengeMethod: CodeChallengeMethod = useParam('code_challenge_method').get() as CodeChallengeMethod;
     let refresh = false;
@@ -86,10 +88,15 @@
     let emailAfterSubmit = $state('');
     let isRegOpen = $state(false);
 
+    let atprotoId = $state('');
+    let atprotoHandle = $state('');
+
+    let isAtproto = $state(false);
+
     let email = $state(useParam('login_hint').get() || '');
     let password = $state('');
     let userId = $state('');
-    let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset);
+    let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset && !isAtproto);
 
     onMount(() => {
         if (!needsPassword) {
@@ -128,7 +135,7 @@
     });
 
     $effect(() => {
-        if (isDev) {
+        if (IS_DEV) {
             // Make sure to create a session manually during dev.
             // In prod, it will be handled automatically during the GET already.
             createSessionDev();
@@ -167,7 +174,7 @@
         const payload: LoginRefreshRequest = {
             client_id: clientId,
             redirect_uri: redirectUri,
-            state: stateParam,
+            state: stateEncoded,
             nonce: nonce,
             scopes
         };
@@ -181,6 +188,10 @@
     }
 
     async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
+        if (isAtproto) {
+            return providerLogin(atprotoId);
+        }
+
         err = '';
 
         if (!clientId) {
@@ -201,7 +212,7 @@
             pow,
             client_id: clientId,
             redirect_uri: redirectUri,
-            state: stateParam,
+            state: stateEncoded,
             nonce: nonce,
             scopes,
         };
@@ -225,7 +236,7 @@
         }
 
         let url = '/auth/v1/oidc/authorize';
-        if (useIsDev().get()) {
+        if (IS_DEV) {
             url = '/auth/v1/dev/authorize';
         }
 
@@ -249,7 +260,6 @@
             err = '';
             let body = res.body;
             if (body && 'user_id' in body && 'code' in body) {
-                // TODO is there a nicer way of making TS happy with type checking?
                 userId = body.user_id as string;
                 mfaPurpose = {Login: body.code as string};
             } else {
@@ -301,7 +311,15 @@
         }
     }
 
+    function isProviderAtProto(providerId: string): boolean {
+        return providerId === atprotoId;
+    }
+
     function onEmailInput() {
+        if (isAtproto) {
+            return;
+        }
+
         // this will basically remove the password input again if the user was asked to provide
         // a password and afterward changes his email again
         if (needsPassword && emailAfterSubmit !== email) {
@@ -349,6 +367,7 @@
             provider_id: id,
             pkce_challenge,
             pow,
+            ...isAtproto && {handle: atprotoHandle},
         };
 
         let res = await fetchPost<string>('/auth/v1/providers/login', payload);
@@ -381,12 +400,13 @@
     }
 
     async function requestReset() {
-        let payload: RequestResetRequest = {email};
+        isLoading = true;
+        let pow = await fetchSolvePow() || '';
+
+        let payload: RequestResetRequest = {email, pow};
         if (clientUri) {
             payload.redirect_uri = encodeURI(clientUri);
         }
-
-        isLoading = true;
 
         let res = await fetchPost('/auth/v1/users/request_reset', payload);
         if (res.error) {
@@ -398,6 +418,9 @@
         isLoading = false;
     }
 
+    function toggleAtproto() {
+        isAtproto = !isAtproto;
+    }
 </script>
 
 <svelte:head>
@@ -405,6 +428,7 @@
 </svelte:head>
 
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
+<Template id={TPL_ATPROTO_ID} bind:value={atprotoId}/>
 <Template id={TPL_CLIENT_NAME} bind:value={clientName}/>
 <Template id={TPL_CLIENT_URL} bind:value={clientUri}/>
 <Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated}/>
@@ -449,20 +473,33 @@
                 {#if !clientMfaForce}
                     <Form action={authorizeUrl} {onSubmit}>
                         <div class:emailMinHeight={!showPasswordInput}>
-                            <Input
-                                    bind:ref={refEmail}
-                                    typ="email"
-                                    name="email"
-                                    bind:value={email}
-                                    autocomplete="email"
-                                    label={t.common.email}
-                                    placeholder={t.common.email}
-                                    errMsg={t.authorize.validEmail}
-                                    disabled={tooManyRequests || clientMfaForce}
-                                    onInput={onEmailInput}
-                                    width={inputWidth}
-                                    required
-                            />
+                            {#if isAtproto}
+                                <Input
+                                        name="handle"
+                                        bind:value={atprotoHandle}
+                                        label="Handle / DID"
+                                        placeholder="Handle / DID"
+                                        pattern={PATTERN_ATPROTO_ID}
+                                        disabled={tooManyRequests}
+                                        width={inputWidth}
+                                        required
+                                />
+                            {:else}
+                                <Input
+                                        bind:ref={refEmail}
+                                        typ="email"
+                                        name="email"
+                                        bind:value={email}
+                                        autocomplete="email"
+                                        label={t.common.email}
+                                        placeholder={t.common.email}
+                                        errMsg={t.authorize.validEmail}
+                                        disabled={tooManyRequests || clientMfaForce}
+                                        onInput={onEmailInput}
+                                        width={inputWidth}
+                                        required
+                                />
+                            {/if}
                         </div>
 
                         {#if showPasswordInput}
@@ -488,8 +525,8 @@
                             {/if}
                         {/if}
 
-                        {#if !tooManyRequests && !clientMfaForce}
-                            {#if showReset}
+                        {#if !tooManyRequests && !clientMfaForce }
+                            {#if showReset && !isAtproto}
                                 <div class="btn flex-col">
                                     <Button onclick={requestReset}>
                                         {t.authorize.passwordRequest}
@@ -501,11 +538,18 @@
                                         {t.authorize.login}
                                     </Button>
                                 </div>
+                                {#if isAtproto}
+                                    <div class="btn flex-col">
+                                        <Button level={2} onclick={toggleAtproto}>
+                                            {t.common.cancel}
+                                        </Button>
+                                    </div>
+                                {/if}
                             {/if}
                         {/if}
                     </Form>
 
-                    {#if isRegOpen && !showResetRequest && !tooManyRequests}
+                    {#if isRegOpen && !showResetRequest && !tooManyRequests && !isAtproto}
                         {#if clientUri}
                             <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
                                 {t.authorize.signUp}
@@ -538,7 +582,7 @@
                     </div>
                 {/if}
 
-                {#if !clientMfaForce && providers.length > 0}
+                {#if !clientMfaForce && providers.length > 0 && !isAtproto}
                     <div class="providers flex-col">
                         <div class="providersSeparator">
                             <div class="separator"></div>
@@ -552,7 +596,7 @@
                             <ButtonAuthProvider
                                     ariaLabel={`Login: ${provider.name}`}
                                     {provider}
-                                    onclick={providerLogin}
+                                    onclick={isProviderAtProto(provider.id) ? toggleAtproto : providerLogin}
                                     {isLoading}
                             />
                         {/each}

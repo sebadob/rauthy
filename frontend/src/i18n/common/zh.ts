@@ -3,6 +3,7 @@ import {type I18n} from "./interface";
 export const I18nZh: I18n = {
     lang: "zh",
     common: {
+        authenticate: "Authenticate",
         cancel: "取消",
         changeTheme: "更换主题",
         close: "关闭",
@@ -36,8 +37,10 @@ export const I18nZh: I18n = {
         ],
         never: "从不",
         password: "密码",
+        refresh: "Refresh",
         required: "必填",
         save: "保存",
+        seconds: "seconds",
         selectI18n: "选择语言",
         show: "显示",
         summary: "概要",
@@ -62,6 +65,7 @@ export const I18nZh: I18n = {
         accessRenew: "续期至",
         accessRenewDelete: "禁止续期",
         birthdate: "生日",
+        canModifyFor: "Passkeys can be modified for:",
         city: "城市",
         changePassword: "更改密码",
         convertAccount: "转换账户",
@@ -134,6 +138,9 @@ export const I18nZh: I18n = {
         passwordForgotten: "忘记密码",
         passwordRequest: "请求",
         passwordRequired: "密码必填。",
+        passwordResetDesc: `Please provide your E-Mail to request a password reset link. If your address exists in out
+            database, you will receive a link via E-Mail.`,
+        passwordResetSuccess: "Request received. You can close this window now.",
         requestExpires: "请求过期于",
         requestExpired: "请求已过期",
         signUp: "用户注册",
@@ -180,12 +187,15 @@ export const I18nZh: I18n = {
         errorReg: "开始注册过程时出现错误。",
         lastUsed: "最后使用",
         noKey: "此槽位没有已注册的安全密钥",
+        reAuthenticatePasskey: "Before you can modify Passkeys, you need to authenticate with an already registered one:",
+        reAuthenticatePwd: "Before you can modify Passkeys, you need to re-authenticate with your password.",
         register: "注册",
         registerNew: "注册新的密钥",
         registerd: "注册时间",
         registerdKeys: "已注册的密钥",
         passkeyName: "密钥名称",
         passkeyNameErr: "需要名称需要有2-32个非特殊字符",
+        passwordInvalid: "Password Invalid",
         test: "测试",
         testError: "开始测试时出现错误",
         testSuccess: "测试成功！"
@@ -242,5 +252,10 @@ export const I18nZh: I18n = {
         register: "注册",
         success: "注册成功",
         userReg: "用户注册"
+    },
+    userRevoke: {
+        title: "Revoke Logins",
+        desc1: "All Logins and Sessions have been revoked for this user as much as possible.",
+        desc2: "You should immediately renew all your passwords!",
     }
 };

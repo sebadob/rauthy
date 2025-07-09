@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -167,25 +178,25 @@ However, you should at least take a look at them and verify, that they work for 
 described in the Admin UI itself, I just want to guide you to this utility especially, since it is an important step
 security wise.</p>
 <p>When you are logged in to the Admin UI, please navigate to <code>Config</code> -&gt; <code>Argon2 Parameters</code> to find your values.
-After they have been found, apply them to the rauthy config and restart the deployment.<br />
+After they have been found, apply them to the Rauthy config and restart the deployment.<br />
 Keep in mind, that if you run the application in a way, where memory is limited, for instance inside Kubernetes with
-resource limits set too low, that it will crash, if either <code>ARGON2_M_COST</code> is set too high or the memory limit too low.</p>
+resource limits set too low, that it will crash, if either <code>hashing.argon2_m_cost</code> is set too high or the memory limit
+too low.</p>
 <p>There is one additional, really important config variable need to be taken into account for the tuning.<br />
-Since this operation is really ressource intense, you can limit the amount of threads, which can run in parallel doing
+Since this operation is really resource intense, you can limit the amount of threads, which can run in parallel doing
 hashing operations. This is really important when we think about constrained memory again.</p>
-<p><code>MAX_HASH_THREADS</code> limits the maximum amount of parallel password hashes at the exact same time to never exceed system
-memory while still allowing a good amount of memory.<br />
-The <strong>default value is 2</strong>.</p>
+<p><code>hashing.max_hash_threads</code> limits the maximum amount of parallel password hashes at the exact same time to never exceed
+system memory while still allowing a good amount of memory. The <strong>default value is 2</strong>.</p>
 <p>The rule is simple: Allow as many resources as possible for hashing to have the maximum amount of security, while
 restricting it as much as necessary.</p>
-<p>For smaller deployments, set <code>MAX_HASH_THREADS=1</code>, which will technically allows only one user login at the exact same
-time. This value makes an external rate limiting for the login obsolete (while you may add some for the others).</p>
+<p>For smaller deployments, set <code>hashing.max_hash_threads</code>, which will technically allows only one user login at the exact
+same time. This value makes an external rate limiting for the login obsolete (while you may add some for the others).</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../config/production_config.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../config/config_minimal.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -199,7 +210,7 @@ time. This value makes an external rate limiting for the login obsolete (while y
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../config/production_config.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../config/config_minimal.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 

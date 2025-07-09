@@ -12,7 +12,7 @@ pub struct UserValues {
     pub birthdate: Option<String>,
     pub phone: Option<String>,
     pub street: Option<String>,
-    pub zip: Option<i32>,
+    pub zip: Option<String>,
     pub city: Option<String>,
     pub country: Option<String>,
 }
@@ -34,7 +34,7 @@ impl From<tokio_postgres::Row> for UserValues {
 impl UserValues {
     #[inline(always)]
     fn cache_idx(user_id: &str) -> String {
-        format!("{}_{}", IDX_USERS_VALUES, user_id)
+        format!("{IDX_USERS_VALUES}_{user_id}")
     }
 
     pub async fn find(user_id: &str) -> Result<Option<Self>, ErrorResponse> {
@@ -78,7 +78,7 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#
                         &values.birthdate,
                         &values.phone,
                         &values.street,
-                        values.zip,
+                        &values.zip,
                         &values.city,
                         &values.country
                     ),

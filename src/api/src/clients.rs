@@ -9,21 +9,19 @@ use rauthy_api_types::clients::{
     ClientResponse, ClientSecretRequest, ClientSecretResponse, DynamicClientRequest,
     DynamicClientResponse, NewClientRequest, UpdateClientRequest,
 };
+use rauthy_api_types::forward_auth::{ForwardAuthCallbackParams, ForwardAuthParams};
 use rauthy_api_types::generic::LogoParams;
-use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::clients_scim::ClientScim;
 use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
-use rauthy_models::entity::groups::Group;
 use rauthy_models::entity::logos::{Logo, LogoType};
-use rauthy_service::client;
+use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::{helpers, logout};
-use std::collections::HashMap;
+use rauthy_service::{client, forward_auth};
 use tokio::task;
 use tracing::{debug, error};
 use validator::Validate;
@@ -168,16 +166,15 @@ pub async fn post_clients(
 )]
 #[post("/clients_dyn")]
 pub async fn post_clients_dyn(
-    data: web::Data<AppState>,
     Json(payload): Json<DynamicClientRequest>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*ENABLE_DYN_CLIENT_REG {
+    if !RauthyConfig::get().vars.dynamic_clients.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
     payload.validate()?;
 
-    if let Some(token) = &*DYN_CLIENT_REG_TOKEN {
+    if let Some(token) = &RauthyConfig::get().vars.dynamic_clients.reg_token {
         let bearer = helpers::get_bearer_token_from_header(req.headers())?;
         if token != &bearer {
             return Ok(HttpResponse::Unauthorized()
@@ -193,7 +190,7 @@ pub async fn post_clients_dyn(
         ClientDyn::rate_limit_ip(ip).await?;
     }
 
-    Client::create_dynamic(&data, payload).await.map(|resp| {
+    Client::create_dynamic(payload).await.map(|resp| {
         HttpResponse::Created()
             // The registration should be possible from another Web UI by RFC
             .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
@@ -215,11 +212,10 @@ pub async fn post_clients_dyn(
 )]
 #[get("/clients_dyn/{id}")]
 pub async fn get_clients_dyn(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*ENABLE_DYN_CLIENT_REG {
+    if !RauthyConfig::get().vars.dynamic_clients.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
 
@@ -229,7 +225,7 @@ pub async fn get_clients_dyn(
     client_dyn.validate_token(&bearer)?;
 
     let client = Client::find(id).await?;
-    let resp = client.into_dynamic_client_response(&data, client_dyn, false)?;
+    let resp = client.into_dynamic_client_response(client_dyn, false)?;
     Ok(HttpResponse::Ok().json(resp))
 }
 
@@ -248,12 +244,11 @@ pub async fn get_clients_dyn(
 )]
 #[put("/clients_dyn/{id}")]
 pub async fn put_clients_dyn(
-    data: web::Data<AppState>,
     Json(payload): Json<DynamicClientRequest>,
     id: web::Path<String>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*ENABLE_DYN_CLIENT_REG {
+    if !RauthyConfig::get().vars.dynamic_clients.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
     payload.validate()?;
@@ -263,7 +258,7 @@ pub async fn put_clients_dyn(
     let client_dyn = ClientDyn::find(id.clone()).await?;
     client_dyn.validate_token(&bearer)?;
 
-    let resp = Client::update_dynamic(&data, payload, client_dyn).await?;
+    let resp = Client::update_dynamic(payload, client_dyn).await?;
     Ok(HttpResponse::Ok().json(resp))
 }
 
@@ -299,27 +294,10 @@ pub async fn put_clients(
 
     let resp = if let Some((scim, needs_sync)) = scim {
         let resp = client.into_response(Some(scim.clone()));
-
         debug!("scim needs sync: {:?}", needs_sync);
         if needs_sync {
-            // We want to sync the groups synchronous to catch possible config errors early.
-            // The user sync however can take a very long time depending on the amount of users,
-            // so it will be pushed into the background.
-            let groups = if scim.sync_groups {
-                scim.sync_groups().await?;
-                Group::find_all().await?
-            } else {
-                Vec::default()
-            };
-
-            task::spawn(async move {
-                let mut groups_remote = HashMap::with_capacity(groups.len());
-                if let Err(err) = scim.sync_users(None, &groups, &mut groups_remote).await {
-                    error!("{}", err);
-                }
-            });
+            scim.sync_full().await?;
         }
-
         resp
     } else {
         client.into_response(None)
@@ -512,7 +490,6 @@ pub async fn put_generate_client_secret(
 )]
 #[delete("/clients/{id}")]
 pub async fn delete_client(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -534,7 +511,7 @@ pub async fn delete_client(
     let client_clone = client.clone();
     task::spawn(async move {
         let cid = client_clone.id.clone();
-        if let Err(err) = logout::execute_backchannel_logout_by_client(&data, &client_clone).await {
+        if let Err(err) = logout::execute_backchannel_logout_by_client(&client_clone).await {
             error!(
                 "Error during async backchannel logout after client delete: {:?}",
                 err
@@ -552,4 +529,70 @@ pub async fn delete_client(
     client.delete().await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+/// Forward auth endpoint with OIDC flow.
+///
+/// In contrast to the much more simple `/oidc/forward_auth`, which only check the `Authorization`
+/// header for a valid JWT token, this endpoint expects an encrypted cookie and redirects to the
+/// login / callback if invalid.
+#[utoipa::path(
+    get,
+    path = "/clients/{id}/forward_auth",
+    tag = "clients",
+    params(ForwardAuthParams),
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+    ),
+)]
+#[tracing::instrument(level = "debug", skip(req))]
+#[get("/clients/{id}/forward_auth")]
+pub async fn get_forward_auth_oidc(
+    id: web::Path<String>,
+    req: HttpRequest,
+    params: Query<ForwardAuthParams>,
+) -> Result<HttpResponse, ErrorResponse> {
+    params.validate()?;
+
+    match forward_auth::get_forward_auth_client(id.into_inner(), req, params.into_inner()).await {
+        Ok(r) => {
+            debug!("Forward Auth is OK");
+            Ok(r)
+        }
+        Err(err) => {
+            debug!("Error during GET /clients/{{id}}/forward_auth: {:?}", err);
+            Err(err)
+        }
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/clients/{id}/forward_auth/callback",
+    tag = "clients",
+    params(ForwardAuthCallbackParams),
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+    ),
+)]
+#[tracing::instrument(level = "debug", skip(req))]
+#[get("/clients/{id}/forward_auth/callback")]
+pub async fn get_forward_auth_callback(
+    id: web::Path<String>,
+    req: HttpRequest,
+    params: Query<ForwardAuthCallbackParams>,
+) -> Result<HttpResponse, ErrorResponse> {
+    params.validate()?;
+
+    match forward_auth::get_forward_auth_client_callback(id.into_inner(), req, params.into_inner())
+        .await
+    {
+        Ok(r) => Ok(r),
+        Err(err) => {
+            debug!("Error: {:?}", err);
+            Err(err)
+        }
+    }
 }

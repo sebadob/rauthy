@@ -42,6 +42,17 @@
         <script src="../toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -162,21 +173,28 @@
 There are a lot of way better tools out there to handle this task.</p>
 <h2 id="hiqlite"><a class="header" href="#hiqlite">Hiqlite</a></h2>
 <p>If Rauthy is using Hiqlite, it does automatic backups, which can be configured with:</p>
-<pre><code># When the auto-backup task should run.
+<pre><code class="language-toml">[cluster]
+# When the auto-backup task should run.
 # Accepts cron syntax:
 # "sec min hour day_of_month month day_of_week year"
+#
 # default: "0 30 2 * * * *"
-HQL_BACKUP_CRON="0 30 2 * * * *"
+# overwritten by: HQL_BACKUP_CRON
+backup_cron = "0 30 2 * * * *"
 
-# Local backups older than the configured days will be cleaned up after
-# the backup cron job.
+# Backups older than the configured days will be cleaned up on S3
+# after the backup cron job `backup_cron`.
+#
 # default: 30
-#HQL_BACKUP_KEEP_DAYS=30
+# overwritten by: HQL_BACKUP_KEEP_DAYS
+backup_keep_days = 30
 
 # Backups older than the configured days will be cleaned up locally
 # after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
+#
 # default: 3
-#HQL_BACKUP_KEEP_DAYS_LOCAL=3
+# overwritten by: HQL_BACKUP_KEEP_DAYS_LOCAL
+backup_keep_days_local = 3
 </code></pre>
 <p>All these backups are written inside the pod / container into <code>data/state_machine/backups</code>.</p>
 <p>This difference makes it possible, that you could add a second volume mount to the container.<br />
@@ -189,15 +207,22 @@ backups and older ones on cheaper object storage.</p>
 <p>Rauthy has been tested against MinIO and Garage S3 storage and is working fine with both, so I expect and standard S3
 API to just work out of the box. You need to provide an Access Key + Secret with write access to an existing bucket
 and Rauthy will take care of the rest. All backups pushed to S3 will automatically encrypted with the currently active
-<code>ENC_KEY_ACTIVE</code> from the Rauthy config.</p>
+<code>encryption.key_active</code> from the Rauthy config.</p>
 <p>The configuration is done with the following values:</p>
-<pre><code># Access values for the S3 bucket where backups will be pushed to.
-#HQL_S3_URL=https://s3.example.com
-#HQL_S3_BUCKET=my_bucket
-#HQL_S3_REGION=example
-#HQL_S3_PATH_STYLE=true
-#HQL_S3_KEY=s3_key
-#HQL_S3_SECRET=s3_secret
+<pre><code class="language-toml">[cluster]
+# Access values for the S3 bucket where backups will be pushed to.
+# overwritten by: HQL_S3_URL
+s3_url = "https://s3.example.com"
+# overwritten by: HQL_S3_BUCKET
+s3_bucket = "my_bucket"
+# overwritten by: HQL_S3_REGION
+s3_region = "my_region"
+# overwritten by: HQL_S3_PATH_STYLE
+s3_path_style = true
+# overwritten by: HQL_S3_KEY
+s3_key = "my_key"
+# overwritten by: HQL_S3_SECRET
+s3_secret = "my_secret"
 </code></pre>
 <h2 id="disaster-recovery"><a class="header" href="#disaster-recovery">Disaster Recovery</a></h2>
 <p>If you really lost all your data, you can easily restore automatically from the latest backup. This works with either a
@@ -208,12 +233,12 @@ This, again, works only for Hiqlite. When you are using Postgres, you should use
 <p>The process is really simple:</p>
 <ol>
 <li>Have the cluster shut down. This is probably the case anyway, if you need to restore from a backup.</li>
-<li>Provide a backup file name on S3 storage with the <code>HQL_BACKUP_RESTORE</code> value with prefix <code>s3:</code> (encrypted), or a file
-on disk (plain sqlite file) with the prefix <code>file:</code>.</li>
+<li>Provide a backup file name on S3 storage with the <code>HQL_BACKUP_RESTORE</code> ENV value with prefix <code>s3:</code> (encrypted), or a
+file on disk (plain sqlite file) with the prefix <code>file:</code>.</li>
 <li>Start up Rauthy</li>
 <li>Check the logs and wait for the backup to be finished</li>
 <li>After a successful restore, Rauthy will start its normal operation</li>
-<li>Make sure to remove the HQL_BACKUP_RESTORE env value.</li>
+<li>Make sure to remove the <code>HQL_BACKUP_RESTORE</code> env value.</li>
 </ol>
 <div id="admonition-danger" class="admonition admonish-danger" role="note" aria-labelledby="admonition-danger-title">
 <div class="admonition-title">
@@ -228,7 +253,7 @@ If you don't do it, Rauthy will re-apply the same backup with each following res
 </div>
 </div>
 <p>You only need to set this single value:</p>
-<pre><code># If you ever need to restore from a backup, the process is simple.
+<pre><code class="language-toml"># If you ever need to restore from a backup, the process is simple.
 # 1. Have the cluster shut down. This is probably the case anyway, if
 #    you need to restore from a backup.
 # 2. Provide the backup file name on S3 storage with the
@@ -236,7 +261,7 @@ If you don't do it, Rauthy will re-apply the same backup with each following res
 # 3. Start up the cluster again.
 # 4. After the restart, make sure to remove the HQL_BACKUP_RESTORE
 #    env value.
-#HQL_BACKUP_RESTORE=
+HQL_BACKUP_RESTORE = ""
 </code></pre>
 
                     </main>

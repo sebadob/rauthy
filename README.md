@@ -176,26 +176,14 @@ at the exact same time you need to support.
 
 Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/), or start directly by taking a look at
 the application yourself with docker on your localhost. Rauthy comes with a setting for very quick and easy local
-testing and taking a first look. By setting `LOCAL_TEST=true`, an (insecure) demo config is being loaded at startup.
+testing and taking a first look. By setting `LOCAL_TEST=true`, a demo config is being loaded at startup.
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8080:8080 ghcr.io/sebadob/rauthy:0.29.4
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.31.1
 ```
 
-This config **will only work on localhost** though. If you want to use a remote machine for testing, you need to use TLS
-with at least self-signed certificates. The container image includes some, but you should really only use them for
-testing.
-
-To use and activate the testing TLS certificates, execute the following:
-
-```
-docker run -it --rm \
-  -e LOCAL_TEST=true \
-  -e LISTEN_SCHEME=https \
-  -e PUB_URL=example.com:8443 \
-  -p 8443:8443 \
-  ghcr.io/sebadob/rauthy:0.29.4
-```
+> This command starts an HTTPS server with self-signed certificates.  
+> Make sure to append the `https://` scheme if you open the URL manually.
 
 ## Support
 

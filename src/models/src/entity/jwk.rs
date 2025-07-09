@@ -1,6 +1,6 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::events::event::Event;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::web;
 use cryptr::{EncKeys, EncValue};
 use ed25519_compact::Noise;
@@ -13,7 +13,7 @@ use rauthy_common::constants::{
 use rauthy_common::utils::{
     base64_url_encode, base64_url_no_pad_decode, base64_url_no_pad_decode_buf, get_rand,
 };
-use rauthy_common::{HTTP_CLIENT, is_hiqlite};
+use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
 use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey};
@@ -43,7 +43,7 @@ impl Debug for Jwk {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "kid: {}, created_at: {}, signature: {:?}, enc_key_id: {}, jwk: <hidden>",
+            "Jwk {{ kid: {}, created_at: {}, signature: {:?}, enc_key_id: {}, jwk: <hidden> }}",
             self.kid, self.created_at, self.signature, self.enc_key_id,
         )
     }
@@ -169,7 +169,7 @@ impl JWKS {
     }
 
     /// Rotates and generates a whole new Set of JWKs for signing JWT Tokens
-    pub async fn rotate(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn rotate() -> Result<(), ErrorResponse> {
         info!("Starting JWKS rotation - this might take some time");
 
         // let key = data.enc_keys.get(&data.enc_key_active).unwrap();
@@ -257,25 +257,25 @@ impl JWKS {
         client
             .delete(
                 Cache::App,
-                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS256.as_str()),
+                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS256.as_str()),
             )
             .await?;
         client
             .delete(
                 Cache::App,
-                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS384.as_str()),
+                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS384.as_str()),
             )
             .await?;
         client
             .delete(
                 Cache::App,
-                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS512.as_str()),
+                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS512.as_str()),
             )
             .await?;
         client
             .delete(
                 Cache::App,
-                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::EdDSA.as_str()),
+                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::EdDSA.as_str()),
             )
             .await?;
 
@@ -284,7 +284,8 @@ impl JWKS {
 
         info!("Finished JWKS rotation");
 
-        data.tx_events
+        RauthyConfig::get()
+            .tx_events
             .send_async(Event::jwks_rotated())
             .await
             .unwrap();
@@ -385,7 +386,7 @@ impl JWKSPublicKey {
             }
             JwkKeyPairAlg::EdDSA => {
                 let key = ed25519_compact::SecretKey::from_der(&key_pair.bytes)?;
-                let x = base64_url_encode(&key.public_key().to_der());
+                let x = base64_url_encode(key.public_key().as_slice());
                 Self {
                     kty: JwkKeyPairType::OKP,
                     alg: Some(key_pair.typ.clone()),
@@ -414,7 +415,7 @@ impl JWKSPublicKey {
             return res;
         }
 
-        let res = match HTTP_CLIENT
+        let res = match http_client()
             .get(jwks_uri)
             .header(CONTENT_TYPE, APPLICATION_JSON)
             .send()
@@ -452,7 +453,7 @@ impl JWKSPublicKey {
                 } else {
                     Err(ErrorResponse::new(
                         ErrorResponseType::Connection,
-                        format!("Error connecting to {}", jwks_uri),
+                        format!("Error connecting to {jwks_uri}"),
                     ))
                 }
             }
@@ -460,13 +461,12 @@ impl JWKSPublicKey {
                 error!("{}", err);
                 Err(ErrorResponse::new(
                     ErrorResponseType::Connection,
-                    format!("Error connecting to {}", jwks_uri),
+                    format!("Error connecting to {jwks_uri}"),
                 ))
             }
         };
 
         DB::hql()
-            // TODO make cache lifetime configurable as well
             .put(Cache::JwksRemote, kid, &res, Some(3600))
             .await?;
 
@@ -480,7 +480,7 @@ impl JWKSPublicKey {
                 if self.e.is_none() || self.n.is_none() {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Internal,
-                        "Incorrect format for RSA JWK: e / n missing".to_string(),
+                        "Incorrect format for RSA JWK: e / n missing",
                     ));
                 }
 
@@ -488,10 +488,8 @@ impl JWKSPublicKey {
                 let e = self.e.as_deref().unwrap();
                 let n = self.n.as_deref().unwrap();
                 format!(
-                    "{{\"e\":\"{}\",\"kty\":\"{}\",\"n\":\"{}\"}}",
-                    e,
+                    "{{\"e\":\"{e}\",\"kty\":\"{}\",\"n\":\"{n}\"}}",
                     self.kty.as_str(),
-                    n
                 )
             }
 
@@ -499,7 +497,7 @@ impl JWKSPublicKey {
                 if self.crv.is_none() || self.x.is_none() {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Internal,
-                        "Incorrect format for OKP JWK: crv / x missing".to_string(),
+                        "Incorrect format for OKP JWK: crv / x missing",
                     ));
                 }
 
@@ -507,10 +505,8 @@ impl JWKSPublicKey {
                 let crv = self.crv.as_deref().unwrap();
                 let x = self.x.as_deref().unwrap();
                 format!(
-                    "{{\"crv\":\"{}\",\"kty\":\"{}\",\"x\":\"{}\"}}",
-                    crv,
+                    "{{\"crv\":\"{crv}\",\"kty\":\"{}\",\"x\":\"{x}\"}}",
                     self.kty.as_str(),
-                    x
                 )
             }
         };
@@ -631,7 +627,11 @@ pub struct JwkKeyPair {
 
 impl Debug for JwkKeyPair {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "kid: {}, typ: {}, bytes: <hidden>", self.kid, self.typ)
+        write!(
+            f,
+            "JwkKeyPair {{ kid: {}, typ: {}, bytes: <hidden> }}",
+            self.kid, self.typ
+        )
     }
 }
 
@@ -671,7 +671,7 @@ impl JwkKeyPair {
 
     // Returns a JWK by a given Key Identifier (kid)
     pub async fn find(kid: String) -> Result<Self, ErrorResponse> {
-        let idx = format!("{}{}", IDX_JWK_KID, kid);
+        let idx = format!("{IDX_JWK_KID}{kid}");
         let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::App, &idx).await? {

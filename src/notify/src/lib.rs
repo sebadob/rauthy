@@ -70,7 +70,7 @@ impl Notification {
         let mut builder = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(10))
             .timeout(Duration::from_secs(10))
-            .user_agent(format!("Rauthy v{} Notifier", RAUTHY_VERSION))
+            .user_agent(format!("Rauthy v{RAUTHY_VERSION} Notifier"))
             .min_tls_version(tls::Version::TLS_1_2)
             .pool_idle_timeout(Duration::from_secs(600))
             .danger_accept_invalid_certs(disable_tls_validation);
