@@ -42,6 +42,7 @@ pub struct MfaAwaitRequest {
 pub enum MfaPurpose {
     Login(String),
     MfaModToken,
+    PamLogin,
     PasswordNew,
     PasswordReset,
     Test,

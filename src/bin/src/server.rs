@@ -7,7 +7,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_handlers::{
     api_keys, atproto, auth_providers, backup, blacklist, clients, dev_only, events, fed_cm,
-    generic, groups, html, oidc, roles, scopes, sessions, swagger_ui, themes, users,
+    generic, groups, html, oidc, pam, roles, scopes, sessions, swagger_ui, themes, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -357,6 +357,10 @@ fn api_services() -> actix_web::Scope {
                 .service(fed_cm::post_fed_cm_token)
                 .service(fed_cm::get_fed_client_config)
                 .service(fed_cm::get_fed_cm_status)
+                .service(pam::post_preflight)
+                .service(pam::post_login)
+                .service(pam::post_mfa_start)
+                .service(pam::post_mfa_finish)
                 .service(users::get_users)
                 .service(users::get_users_register)
                 .service(users::post_users_register)
