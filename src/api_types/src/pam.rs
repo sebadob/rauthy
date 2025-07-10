@@ -48,7 +48,7 @@ pub struct PamMfaStartRequest {
     pub user_email: String,
 }
 
-#[derive(Deserialize, Validate, ToSchema, Serialize)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct PamMfaFinishRequest {
     #[validate(length(max = 32))]
     pub user_id: String,
