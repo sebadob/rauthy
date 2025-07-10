@@ -1,15 +1,20 @@
 use actix_web::{HttpRequest, HttpResponse, post};
 use actix_web_lab::extract::Json;
+use chrono::Utc;
 use rauthy_api_types::pam::{
     PamLoginRequest, PamLoginResponse, PamMfaFinishRequest, PamMfaStartRequest,
     PamPreflightRequest, PamPreflightResponse,
 };
 use rauthy_api_types::users::MfaPurpose;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::failed_login_counter::FailedLoginCounter;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
+use std::cmp::max;
+use std::time::Duration;
 use validator::Validate;
 
 #[post("/pam/preflight")]
@@ -21,16 +26,24 @@ pub async fn post_preflight(
 
     let client = Client::find(payload.client_id).await?;
     client.validate_enabled()?;
+
+    // TODO find a way to allow public clients without exposing possibility for username-enumeration.
+    //  -> maybe require a PoW in these cases, or simply always?
+    if !client.confidential {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "PAM Login is only allowed for confidential clients",
+        ));
+    }
+
     // TODO as soon as it exists, validate PAM is allowed in the first place
     client.validate_secret(&payload.client_secret, &req).await?;
     let user = User::find_by_email(payload.user_email).await?;
     user.check_expired()?;
     user.check_enabled()?;
-    client.validate_user_groups(&user)?;
 
     Ok(HttpResponse::Ok().json(PamPreflightResponse {
-        // TODO disallow if e.g group prefix does not match
-        login_allowed: true,
+        login_allowed: client.validate_user_groups(&user).is_ok(),
         mfa_required: user.has_webauthn_enabled(),
     }))
 }
@@ -50,15 +63,45 @@ pub async fn post_login(
 
     let client = Client::find(payload.client_id).await?;
     client.validate_enabled()?;
+
+    // TODO find a way to allow public clients without exposing possibility for username-enumeration.
+    //  -> maybe require a PoW in these cases, or simply always?
+    if !client.confidential {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "PAM Login is only allowed for confidential clients",
+        ));
+    }
+
     // TODO as soon as it exists, validate PAM is allowed in the first place
     client.validate_secret(&payload.client_secret, &req).await?;
-    let user = User::find_by_email(payload.user_email).await?;
+    let mut user = User::find_by_email(payload.user_email).await?;
     user.check_expired()?;
     user.check_enabled()?;
     client.validate_user_groups(&user)?;
 
     if let Some(password) = payload.user_password {
-        user.validate_password(password).await?;
+        match user.validate_password(password).await {
+            Ok(_) => {
+                user.last_login = Some(Utc::now().timestamp());
+                user.last_failed_login = None;
+                user.failed_login_attempts = None;
+                user.save(None).await?;
+            }
+            Err(err) => {
+                user.last_failed_login = Some(Utc::now().timestamp());
+                user.failed_login_attempts = Some(user.failed_login_attempts.unwrap_or(0) + 1);
+                user.save(None).await?;
+
+                let ip = real_ip_from_req(&req)?;
+                let failed_logins = FailedLoginCounter::increase(ip.to_string()).await?;
+
+                let sec = max(failed_logins, 10) as u64;
+                tokio::time::sleep(Duration::from_secs(sec)).await;
+
+                return Err(err);
+            }
+        }
     }
 
     if let Some(code) = payload.webauthn_code {
