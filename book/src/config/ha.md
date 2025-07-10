@@ -20,7 +20,18 @@ config value.
 
 Earlier versions of Rauthy have been using [redhac](https://github.com/sebadob/redhac) for the HA cache layer. While
 `redhac` was working fine, it had a few design issues I wanted to get rid of. Since `v0.26.0`, Rauthy uses the
-above-mentioned [Hiqlite](https://github.com/sebadob/hiqlite) instead. You only need to configure a few variables:
+above-mentioned [Hiqlite](https://github.com/sebadob/hiqlite) instead. You only need to configure a few variables.
+
+```admonish caution
+Even when using Postgres as your DB of choice, in HA deployments, you should always provide persistent volumes to your 
+Rauthy Pods. One reason is that it smoothes out rolling releases, because even though you can keep the Cache Raft 
+in-memory only because it can handle these situations, even when using Postgres, Rauthy will create at least an empty 
+SQLite cache layer. If this loses state between restarts and they happen too fast for instance, this can end up in 
+crashes.
+
+It is also very recommended to persist the cache on disk anyway (which is the default), to keep things like not yet used 
+Auth Codes between restarts.
+```
 
 ### `node_id`
 
@@ -97,4 +108,5 @@ If you are using a service mesh like for instance [linkerd](https://linkerd.io/)
 all pods by default, you can use the HA cache with just plain HTTP, since `linkerd` will encapsulate the traffic anyway.
 In this case, there is nothing to do.
 
-However, if you do not have encryption between pods by default, I would highly recommend, that you use [TLS](tls.md). 
+However, if you do not have encryption between pods by default, I would highly recommend, that you use [TLS](tls.md).
+

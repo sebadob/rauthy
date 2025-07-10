@@ -18,7 +18,6 @@
     - [Sessions](config/sessions.md)
     - [User Registration](config/user_reg.md)
     - [High Availability](config/ha.md)
-    - [Forward Authentication](config/forward_auth.md)
     - [Bootstrapping](config/bootstrap.md)
     - [Database Migrations](config/db_migration.md)
     - [UNIX Domain Sockets](config/unix_socket.md)
@@ -37,6 +36,7 @@
     - [I18n](work/i18n.md)
     - [User Logout](work/logout.md)
     - [SCIM](work/scim.md)
+    - [Forward Authentication](work/forward_auth.md)
 
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)
