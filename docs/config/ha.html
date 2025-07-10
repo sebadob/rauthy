@@ -191,7 +191,24 @@ config value.</p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>Earlier versions of Rauthy have been using <a href="https://github.com/sebadob/redhac">redhac</a> for the HA cache layer. While
 <code>redhac</code> was working fine, it had a few design issues I wanted to get rid of. Since <code>v0.26.0</code>, Rauthy uses the
-above-mentioned <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> instead. You only need to configure a few variables:</p>
+above-mentioned <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> instead. You only need to configure a few variables.</p>
+<div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">
+<div class="admonition-title">
+<div id="admonition-caution-1-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-caution-1"></a>
+</div>
+<div>
+<p>Even when using Postgres as your DB of choice, in HA deployments, you should always provide persistent volumes to your
+Rauthy Pods. One reason is that it smoothes out rolling releases, because even though you can keep the Cache Raft
+in-memory only because it can handle these situations, even when using Postgres, Rauthy will create at least an empty
+SQLite cache layer. If this loses state between restarts and they happen too fast for instance, this can end up in
+crashes.</p>
+<p>It is also very recommended to persist the cache on disk anyway (which is the default), to keep things like not yet used
+Auth Codes between restarts.</p>
+</div>
+</div>
 <h3 id="node_id"><a class="header" href="#node_id"><code>node_id</code></a></h3>
 <p>The <code>cluster.node_id</code> is mandatory, even for a single replica deployment with only a single node in <code>cluster.nodes</code>.
 If you deploy Rauthy as a StatefulSet inside Kubernetes, you can ignore this value and just set <code>HQL_NODE_ID_FROM</code>
@@ -259,7 +276,7 @@ In this case, there is nothing to do.</p>
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../config/forward_auth.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../config/bootstrap.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -273,7 +290,7 @@ In this case, there is nothing to do.</p>
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../config/forward_auth.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../config/bootstrap.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
