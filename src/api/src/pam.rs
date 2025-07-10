@@ -78,6 +78,7 @@ pub async fn post_login(
     }
 
     Ok(HttpResponse::Ok().json(PamLoginResponse {
+        user_id: user.id,
         can_sudo: false, // TODO some client config for golden ticket
     }))
 }

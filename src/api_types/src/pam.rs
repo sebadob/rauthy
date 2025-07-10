@@ -64,5 +64,6 @@ pub struct PamPreflightResponse {
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct PamLoginResponse {
+    pub user_id: String,
     pub can_sudo: bool,
 }
