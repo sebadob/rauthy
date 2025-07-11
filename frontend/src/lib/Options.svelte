@@ -123,7 +123,7 @@
     function onkeydown(ev: KeyboardEvent) {
         let code = ev.code;
 
-        if (code === 'ArrowDown') {
+        if (code === 'ArrowDown' || code === 'Tab') {
             ev.preventDefault();
             if (hasFilteredItems()) {
                 selected += 1;

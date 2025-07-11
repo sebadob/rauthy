@@ -1,7 +1,7 @@
 <script lang="ts">
     import type {Snippet} from "svelte";
     import Button from "$lib5/button/Button.svelte";
-    import {genKey} from "../utils/helpers";
+    import {genKey} from "$utils/helpers";
 
     let {
         ref = $bindable(),
@@ -18,6 +18,7 @@
         close = $bindable(),
 
         onToggle,
+        onTab,
         onLeft,
         onRight,
         onUp,
@@ -37,6 +38,7 @@
         close?: () => void;
 
         onToggle?: (newState: 'open' | 'closed') => void;
+        onTab?: () => void,
         onLeft?: () => void,
         onRight?: () => void,
         onUp?: () => void,
@@ -92,6 +94,7 @@
             {onclick}
             invisible={btnInvisible}
             isDisabled={btnDisabled}
+            {onTab}
             {onLeft}
             {onRight}
             {onUp}
