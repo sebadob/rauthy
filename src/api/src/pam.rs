@@ -140,10 +140,11 @@ pub async fn post_mfa_start(
 
 #[post("/pam/mfa/finish")]
 pub async fn post_mfa_finish(
+    req: HttpRequest,
     Json(payload): Json<PamMfaFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let resp = webauthn::auth_finish(payload.user_id, payload.data).await?;
+    let resp = webauthn::auth_finish(payload.user_id, &req, payload.data).await?;
     Ok(resp.into_response())
 }
