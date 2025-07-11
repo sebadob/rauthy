@@ -518,7 +518,11 @@
 
                             {#if showResetRequest && !tooManyRequests}
                                 <div class="forgotten">
-                                    <Button invisible onclick={handleShowReset}>
+                                    <Button
+                                            ariaLabel={t.authorize.passwordForgotten}
+                                            invisible
+                                            onclick={handleShowReset}
+                                    >
                                         {t.authorize.passwordForgotten}
                                     </Button>
                                 </div>
@@ -528,19 +532,19 @@
                         {#if !tooManyRequests && !clientMfaForce }
                             {#if showReset && !isAtproto}
                                 <div class="btn flex-col">
-                                    <Button onclick={requestReset}>
+                                    <Button ariaLabel={t.authorize.passwordRequest} onclick={requestReset}>
                                         {t.authorize.passwordRequest}
                                     </Button>
                                 </div>
                             {:else}
                                 <div class="btn flex-col">
-                                    <Button type="submit" {isLoading}>
+                                    <Button ariaLabel={t.authorize.login} type="submit" {isLoading}>
                                         {t.authorize.login}
                                     </Button>
                                 </div>
                                 {#if isAtproto}
                                     <div class="btn flex-col">
-                                        <Button level={2} onclick={toggleAtproto}>
+                                        <Button ariaLabel={t.common.cancel} level={2} onclick={toggleAtproto}>
                                             {t.common.cancel}
                                         </Button>
                                     </div>
@@ -576,7 +580,7 @@
 
                 {#if clientMfaForce}
                     <div class="btn flex-col">
-                        <Button onclick={() => window.location.href = '/auth/v1/account'}>
+                        <Button ariaLabel="Account" onclick={() => window.location.href = '/auth/v1/account'}>
                             Account
                         </Button>
                     </div>
