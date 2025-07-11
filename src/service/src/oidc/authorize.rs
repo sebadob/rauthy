@@ -85,6 +85,12 @@ pub async fn post_authorize(
         *has_password_been_hashed = true;
         user.validate_password(pwd).await?;
 
+        // This would also send a location notification if an attacker only knows a password, but
+        // is later on unable to fully compromise an account when MFA is missing. However, this is
+        // not really a false positive. We want to inform a user even if only the password got
+        // stolen, so that users change them even without full account compromise.
+        LoginLocation::spawn_background_check(user.clone(), req)?;
+
         // update user info
         // in case of webauthn login, the info will be updated in the oidc finish step
         user.last_login = Some(Utc::now().timestamp());
@@ -129,34 +135,28 @@ pub async fn post_authorize(
     );
     code.save().await?;
 
-    let user_id = user.id.clone();
-    let email = user.email.clone();
-    let has_webauthn_enabled = user.has_webauthn_enabled();
-
-    LoginLocation::spawn_background_check(user, req)?;
-
     let mut loc = format!("{}?code={}", req_data.redirect_uri, code.id);
     if let Some(state) = req_data.state {
         write!(loc, "&state={state}")?;
     };
 
     // check if we need to validate the 2nd factor
-    if has_webauthn_enabled {
+    if user.has_webauthn_enabled() {
         session.set_mfa(true).await?;
 
         let step = AuthStepAwaitWebauthn {
             code: get_rand(48),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
-            user_id: user_id.clone(),
-            email,
+            user_id: user.id.clone(),
+            email: user.email,
             exp: webauthn_req_exp as u64,
             session,
         };
 
         WebauthnLoginReq {
             code: step.code.clone(),
-            user_id,
+            user_id: user.id,
             header_loc: loc,
             header_origin: step
                 .header_origin
@@ -169,8 +169,8 @@ pub async fn post_authorize(
         Ok(AuthStep::AwaitWebauthn(step))
     } else {
         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
-            user_id,
-            email,
+            user_id: user.id,
+            email: user.email,
             header_loc: (header::LOCATION, HeaderValue::from_str(&loc)?),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,

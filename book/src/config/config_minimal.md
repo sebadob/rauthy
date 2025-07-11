@@ -176,16 +176,3 @@ TL;DR for generating a `encryption.keys`:
 
 <pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"</code></pre>
 ```
-
-```admonish hint
-If you can guarantee that there can only ever be a single process / container that uses your volume mount, you probably
-always want to set `cluster.wal_ignore_lock = true`. This will start an auto-recovery process after a container crashed
-or was force-killed. If `hiqlite-wal` finds an existing lockfile, it will ignore it and try to recover orphaned logs,
-and it does a deep integrity check of the latest WAL file to make sure all open in-memory buffers from before the crash
-were written, or it will throw some away if their CRC does not match the header value.
-
-Such a guarantee is given for instance when you only ever run Rauthy inside a container with a fixed name, that uses
-some directory on disk. If that is true, your container runtime will only allow a single one, because there would be a
-name conflict otherwise. Or if you run inside K8s with `ReadWriteOnce` volumes, a volume can only be mounted to a single 
-Pod at a time. In these situations, you always want `cluster.wal_ignore_lock = true`.
-```
