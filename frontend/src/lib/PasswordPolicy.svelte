@@ -1,6 +1,7 @@
 <script lang="ts">
     import {useI18n} from "$state/i18n.svelte.js";
     import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
+    import CheckIcon from "$lib/CheckIcon.svelte";
 
     let {
         policy,
@@ -103,47 +104,53 @@
         <b>{t.passwordPolicy.passwordPolicy}</b>
 
         <ul>
-            <li class="li" class:policyErr={!!errPolicy[0]}>
-                {t.passwordPolicy.lengthMin}
+            <li class:policyErr={!!errPolicy[0]}>
+                <CheckIcon checked={!errPolicy[0]}/>
+                {t.passwordPolicy.lengthMin}:
                 {policy.length_min}
             </li>
 
-            <li class="li" class:policyErr={!!errPolicy[1]}>
-                {t.passwordPolicy.lengthMax}
+            <li class:policyErr={!!errPolicy[1]}>
+                <CheckIcon checked={!errPolicy[1]}/>
+                {t.passwordPolicy.lengthMax}:
                 {policy?.length_max || 0}
             </li>
 
             {#if -1 !== policy.include_lower_case}
-                <li class="li" class:policyErr={!!errPolicy[2]}>
-                    {t.passwordPolicy.lowercaseMin}
+                <li class:policyErr={!!errPolicy[2]}>
+                    <CheckIcon checked={!errPolicy[2]}/>
+                    {t.passwordPolicy.lowercaseMin}:
                     {policy?.include_lower_case || 0}
                 </li>
             {/if}
 
             {#if -1 !== policy.include_upper_case}
-                <li class="li" class:policyErr={!!errPolicy[3]}>
-                    {t.passwordPolicy.uppercaseMin}
+                <li class:policyErr={!!errPolicy[3]}>
+                    <CheckIcon checked={!errPolicy[3]}/>
+                    {t.passwordPolicy.uppercaseMin}:
                     {policy?.include_upper_case || 0}
                 </li>
             {/if}
 
             {#if -1 !== policy.include_digits}
-                <li class="li" class:policyErr={!!errPolicy[4]}>
-                    {t.passwordPolicy.digitsMin}
+                <li class:policyErr={!!errPolicy[4]}>
+                    <CheckIcon checked={!errPolicy[4]}/>
+                    {t.passwordPolicy.digitsMin}:
                     {policy?.include_digits || 0}
                 </li>
             {/if}
 
             {#if -1 !== policy.include_special}
-                <li class="li" class:policyErr={!!errPolicy[5]}>
-                    {t.passwordPolicy.specialMin}
+                <li class:policyErr={!!errPolicy[5]}>
+                    <CheckIcon checked={!errPolicy[5]}/>
+                    {t.passwordPolicy.specialMin}:
                     {policy?.include_special || 0}
                 </li>
             {/if}
 
             {#if -1 !== policy.not_recently_used}
-                <li class="li">
-                    {t.passwordPolicy.notRecent}
+                <li class="used">
+                    {t.passwordPolicy.notRecent}:
                     {policy?.not_recently_used || 0}
                 </li>
             {/if}
@@ -158,11 +165,14 @@
 
     ul {
         margin-left: 1rem;
+        list-style: none;
     }
 
-    .li {
-        margin-left: 1.5rem;
-        width: 100%;
+    li {
+        margin-left: 0;
+        display: flex;
+        align-items: center;
+        gap: .25rem;
     }
 
     .policyContainer {
@@ -173,5 +183,9 @@
 
     .policyErr {
         color: hsl(var(--error));
+    }
+
+    .used {
+        margin-left: .3rem;
     }
 </style>
