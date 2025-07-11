@@ -1359,6 +1359,7 @@ pub async fn post_webauthn_auth_start(
 #[post("/users/{id}/webauthn/auth/finish")]
 pub async fn post_webauthn_auth_finish(
     id: web::Path<String>,
+    req: HttpRequest,
     Json(payload): Json<WebauthnAuthFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
@@ -1370,7 +1371,7 @@ pub async fn post_webauthn_auth_finish(
     // This here will simply fail, if the secret code from the /start does not exist
     // -> indirect validation through exising code.
 
-    let res = webauthn::auth_finish(id, payload).await?;
+    let res = webauthn::auth_finish(id, &req, payload).await?;
     Ok(res.into_response())
 }
 

@@ -1,12 +1,13 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
+use crate::entity::login_locations::LoginLocation;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::users::{AccountType, User};
 use crate::rauthy_config::RauthyConfig;
-use actix_web::HttpResponse;
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
+use actix_web::{HttpRequest, HttpResponse};
 use chrono::Utc;
 use cryptr::EncValue;
 use deadpool_postgres::GenericClient;
@@ -775,9 +776,10 @@ pub async fn auth_start(
 
 pub async fn auth_finish(
     user_id: String,
-    req: WebauthnAuthFinishRequest,
+    req: &HttpRequest,
+    payload: WebauthnAuthFinishRequest,
 ) -> Result<WebauthnAdditionalData, ErrorResponse> {
-    let auth_data = WebauthnData::find(req.code).await?;
+    let auth_data = WebauthnData::find(payload.code).await?;
     let auth_state = serde_json::from_str(&auth_data.auth_state_json)?;
 
     let mut user = User::find(user_id).await?;
@@ -788,7 +790,7 @@ pub async fn auth_finish(
 
     match RauthyConfig::get()
         .webauthn
-        .finish_passkey_authentication(&req.data, &auth_state)
+        .finish_passkey_authentication(&payload.data, &auth_state)
     {
         Ok(auth_result) => {
             if force_uv && !auth_result.user_verified() {
@@ -802,6 +804,8 @@ pub async fn auth_finish(
                 ));
             }
             let uid = user.id.clone();
+
+            LoginLocation::spawn_background_check(user.clone(), req)?;
 
             if auth_result.needs_update() {
                 for mut pk_entity in pks {
@@ -861,7 +865,7 @@ pub struct WebauthnReg {
 
 pub async fn reg_start(
     user_id: String,
-    req: WebauthnRegStartRequest,
+    payload: WebauthnRegStartRequest,
 ) -> Result<CreationChallengeResponse, ErrorResponse> {
     let user = User::find(user_id).await?;
     let passkey_user_id = if let Some(id) = &user.webauthn_user_id {
@@ -906,7 +910,7 @@ pub async fn reg_start(
             };
 
             // persist the reg_state
-            let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
+            let idx = format!("reg_{:?}_{}", payload.passkey_name, user.id);
             DB::hql()
                 .put(Cache::Webauthn, idx, &reg_data, Some(cfg.req_exp as i64))
                 .await?;
@@ -924,10 +928,13 @@ pub async fn reg_start(
     }
 }
 
-pub async fn reg_finish(id: String, req: WebauthnRegFinishRequest) -> Result<(), ErrorResponse> {
+pub async fn reg_finish(
+    id: String,
+    payload: WebauthnRegFinishRequest,
+) -> Result<(), ErrorResponse> {
     let mut user = User::find(id).await?;
 
-    let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
+    let idx = format!("reg_{:?}_{}", payload.passkey_name, user.id);
     let client = DB::hql();
 
     let res: Option<WebauthnReg> = client.get(Cache::Webauthn, &idx).await?;
@@ -944,7 +951,7 @@ pub async fn reg_finish(id: String, req: WebauthnRegFinishRequest) -> Result<(),
     let reg_state = serde_json::from_str::<PasskeyRegistration>(&reg_data.reg_state)?;
     match RauthyConfig::get()
         .webauthn
-        .finish_passkey_registration(&req.data, &reg_state)
+        .finish_passkey_registration(&payload.data, &reg_state)
     {
         Ok(pk) => {
             // force UV check
@@ -977,7 +984,7 @@ pub async fn reg_finish(id: String, req: WebauthnRegFinishRequest) -> Result<(),
                 user_id.clone(),
                 create_user,
                 reg_data.passkey_user_id,
-                req.passkey_name,
+                payload.passkey_name,
                 pk,
                 cred.user_verified,
             )
