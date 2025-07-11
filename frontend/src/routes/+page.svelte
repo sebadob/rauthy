@@ -27,7 +27,7 @@
 </script>
 
 <svelte:head>
-    <title>Rauthy</title>
+    <title>Rauthy Home</title>
 </svelte:head>
 
 <Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen}/>

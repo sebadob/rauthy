@@ -424,7 +424,7 @@
 </script>
 
 <svelte:head>
-    <title>Login {clientName || clientId}</title>
+    <title>Login: {clientName || clientId}</title>
 </svelte:head>
 
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
