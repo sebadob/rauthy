@@ -75,8 +75,12 @@
     });
 
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLInputElement }) {
-        isValid();
-        onBlur?.();
+        isError = false;
+        // the animation frame triggers some screen readers to re-read errors if they still exist
+        requestAnimationFrame(() => {
+            isValid();
+            onBlur?.();
+        });
     }
 
     function oninput(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
@@ -154,12 +158,13 @@
             {onkeydown}
             onsubmit={onSubmit}
     />
-    <div class="label">
+    <div aria-live="assertive" class="label">
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
         </label>
         {#if isError}
             <div
+                    aria-relevant="all"
                     class="error"
                     class:errWithLabel={!!label}
                     transition:slide={{duration: 150}}

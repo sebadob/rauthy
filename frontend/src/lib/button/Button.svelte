@@ -20,6 +20,7 @@
         popovertarget,
         popovertargetaction,
         onclick,
+        onTab,
         onLeft,
         onRight,
         onUp,
@@ -45,6 +46,7 @@
         children: Snippet,
 
         onclick?: (ev: Event) => void,
+        onTab?: () => void,
         onLeft?: () => void,
         onRight?: () => void,
         onUp?: () => void,
@@ -105,8 +107,10 @@
     function onkeydown(ev: KeyboardEvent) {
         switch (ev.code) {
             case 'Enter':
-                ev.preventDefault();
-                onclick?.(ev);
+                if (onclick) {
+                    ev.preventDefault();
+                    onclick(ev);
+                }
                 break;
             case 'ArrowLeft':
                 onLeft?.();
@@ -120,9 +124,14 @@
             case 'ArrowDown':
                 onDown?.();
                 break;
+            case 'Tab':
+                if (onTab) {
+                    onTab();
+                    ev.preventDefault();
+                }
+                break;
         }
     }
-
 </script>
 
 <button
@@ -147,13 +156,13 @@
         {...rest}
 >
     {#if isLoading}
-        <div class="load">
+        <span class="load">
             <Loading background={false} color={loadingColor()}/>
-        </div>
+        </span>
     {:else if showText}
-        <div in:fade class="font-label">
+        <span in:fade class="font-label">
             {@render children()}
-        </div>
+        </span>
     {/if}
 </button>
 

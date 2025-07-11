@@ -13,6 +13,10 @@
 
 </script>
 
+<svelte:head>
+    <title>Rauthy Config</title>
+</svelte:head>
+
 <NavSub width="11rem" paddingTop="9.5rem">
     <NavLinkSub href="/auth/v1/admin/config/policy">
         {t.passwordPolicy.passwordPolicy}

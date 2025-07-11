@@ -10,6 +10,7 @@
     let t = useI18n();
 
     let theme = useTheme();
+    let activeTheme = $derived(theme.isDark() ? 'dark' : 'light');
 
     $effect(() => {
         const mediaPref = window?.matchMedia?.('(prefers-color-scheme:dark)')?.matches ?? false;
@@ -48,7 +49,12 @@
 </script>
 
 <div class="container" class:absolute>
-    <Button ariaLabel={t.common.changeTheme} invisible onclick={toggle}>
+    <div aria-live="polite" style:display="none">{t.common.activeTheme}: {activeTheme}</div>
+    <Button
+            ariaLabel={t.common.changeTheme.replaceAll('{{ CURRENT }}', activeTheme)}
+            invisible
+            onclick={toggle}
+    >
         {#if theme.isDark() === true}
             <div class="icon moon">
                 <svg

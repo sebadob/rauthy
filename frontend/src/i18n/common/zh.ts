@@ -3,9 +3,10 @@ import {type I18n} from "./interface";
 export const I18nZh: I18n = {
     lang: "zh",
     common: {
+        activeTheme: "Active color scheme",
         authenticate: "Authenticate",
         cancel: "取消",
-        changeTheme: "更换主题",
+        changeTheme: "Change Theme - Active: {{ CURRENT }}",
         close: "关闭",
         copyToClip: "复制到剪贴板",
         delete: "删除",

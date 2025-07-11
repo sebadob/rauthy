@@ -5,6 +5,7 @@
 export interface I18n {
     lang: string,
     common: {
+        activeTheme: string,
         authenticate: string,
         cancel: string,
         changeTheme: string,

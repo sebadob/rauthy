@@ -64,12 +64,13 @@
 
 <div
         role="contentinfo"
+        aria-label={`Event Level: ${event.level}}`}
         class="event"
         class:highlight
         class:inline
         style:border-left={`2px solid ${eventColor(event.level)}`}
 >
-    <div class="ts">
+    <div aria-label="Timestamp" class="ts">
         {formatDateFromTs(event.timestamp / 1000)}
     </div>
 
@@ -96,7 +97,7 @@
 
     {#if event.ip}
         <div>
-            <Button invisible onclick={() => copyToClip(event.ip || '')}>
+            <Button ariaLabel="IP Address" invisible onclick={() => copyToClip(event.ip || '')}>
                 <Tooltip text={tooltip} yOffset={20}>
                     <div class="ip font-mono">
                         {event.ip}

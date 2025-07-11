@@ -3,9 +3,10 @@ import {type I18n} from "./interface";
 export const I18nDe: I18n = {
     lang: "de",
     common: {
+        activeTheme: "Aktives Farbschema",
         authenticate: "Authentifizieren",
         cancel: "Abbrechen",
-        changeTheme: "Farbschema wechseln",
+        changeTheme: "Farbschema wechseln - Aktiv: {{ CURRENT }}",
         close: "Schließen",
         copyToClip: "Wert in Zwischenablage kopieren",
         delete: "Löschen",
