@@ -35,15 +35,15 @@
 <Main>
     <ContentCenter>
         <div class="btn">
-            <Button onclick={redirectToAccount} width={btnWidth}>
+            <Button ariaLabel={t.index.accountLogin} onclick={redirectToAccount} width={btnWidth}>
                 {t.index.accountLogin}
             </Button>
             {#if isRegOpen}
-                <Button level={2} onclick={redirectToReg} width={btnWidth}>
+                <Button ariaLabel={t.index.register} level={2} onclick={redirectToReg} width={btnWidth}>
                     {t.index.register}
                 </Button>
             {/if}
-            <Button level={3} onclick={redirectToAdmin} width={btnWidth}>
+            <Button ariaLabel={t.index.adminLogin} level={3} onclick={redirectToAdmin} width={btnWidth}>
                 {t.index.adminLogin}
             </Button>
         </div>

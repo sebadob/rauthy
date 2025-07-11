@@ -538,7 +538,12 @@
                                 </div>
                             {:else}
                                 <div class="btn flex-col">
-                                    <Button ariaLabel={t.authorize.login} type="submit" {isLoading}>
+                                    <Button
+                                            type="submit"
+                                            ariaLabel={t.authorize.login}
+                                            onclick={() => onSubmit()}
+                                            {isLoading}
+                                    >
                                         {t.authorize.login}
                                     </Button>
                                 </div>
