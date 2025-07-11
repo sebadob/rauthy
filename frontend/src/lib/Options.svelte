@@ -133,10 +133,12 @@
             if (hasFilteredItems()) {
                 selected -= 1;
             }
-        } else if (code === 'Enter' && selected > -1) {
-            select(optionsFiltered[selected]);
-        } else if (code === 'Enter' && selected === -1 && optionsFiltered.length === 1) {
-            select(optionsFiltered[0]);
+        } else if (code === 'Enter') {
+            if (selected > -1) {
+                select(optionsFiltered[selected]);
+            } else if (selected === -1 && optionsFiltered.length === 1) {
+                select(optionsFiltered[0]);
+            }
         }
     }
 
@@ -160,7 +162,7 @@
 
 <Popover
         bind:ref
-        {ariaLabel}
+        ariaLabel={ariaLabel || value?.toString() || 'Options'}
         roleButton="combobox"
         btnInvisible
         bind:close

@@ -51,12 +51,14 @@
     let refPopover: undefined | HTMLDivElement = $state();
     let isOpen = $state(false);
 
-    $effect(() => {
-        close = closePopover;
-    });
+    close = () => refPopover?.hidePopover();
 
     function onclick(ev: Event) {
         ev.stopPropagation();
+
+        if (ev.type === 'keydown' && (ev as KeyboardEvent).code === 'Enter') {
+            ref?.click();
+        }
 
         if (ref && refPopover) {
             if (absolute) {
@@ -70,10 +72,6 @@
         } else {
             console.warn('button and popover ref missing');
         }
-    }
-
-    function closePopover() {
-        refPopover?.hidePopover();
     }
 
     function ontoggle(ev: ToggleEvent) {
