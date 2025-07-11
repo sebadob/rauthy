@@ -3,9 +3,10 @@ import {type I18n} from "./interface";
 export const I18nEn: I18n = {
     lang: "en",
     common: {
+        activeTheme: "Active color scheme",
         authenticate: "Authenticate",
         cancel: "Cancel",
-        changeTheme: "Change Theme",
+        changeTheme: "Change Theme - Active: {{ CURRENT }}",
         close: "Close",
         copyToClip: "Copy value to clipboard",
         delete: "Delete",

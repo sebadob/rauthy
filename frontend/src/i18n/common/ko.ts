@@ -3,9 +3,10 @@ import {type I18n} from "./interface";
 export const I18nKo: I18n = {
     lang: "ko",
     common: {
+        activeTheme: "Active color scheme",
         authenticate: "Authenticate",
         cancel: "취소",
-        changeTheme: "테마 변경",
+        changeTheme: "Change Theme - Active: {{ CURRENT }}",
         close: "닫기",
         copyToClip: "클립보드로 복사",
         delete: "삭제",
