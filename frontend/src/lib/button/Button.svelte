@@ -147,13 +147,13 @@
         {...rest}
 >
     {#if isLoading}
-        <div class="load">
+        <span class="load">
             <Loading background={false} color={loadingColor()}/>
-        </div>
+        </span>
     {:else if showText}
-        <div in:fade class="font-label">
+        <span in:fade class="font-label">
             {@render children()}
-        </div>
+        </span>
     {/if}
 </button>
 
