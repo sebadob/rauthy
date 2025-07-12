@@ -13,9 +13,9 @@ pub struct PamPreflightRequest {
         path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
-    pub client_id: String,
-    #[validate(length(max = 64))]
-    pub client_secret: String,
+    pub machine_id: String,
+    #[validate(length(min = 64, max = 64))]
+    pub machine_secret: String,
     /// Validation: `email`
     #[validate(email)]
     pub user_email: String,
@@ -28,9 +28,9 @@ pub struct PamLoginRequest {
         path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
-    pub client_id: String,
-    #[validate(length(max = 64))]
-    pub client_secret: String,
+    pub machine_id: String,
+    #[validate(length(min = 64, max = 64))]
+    pub machine_secret: String,
     /// Validation: `email`
     #[validate(email)]
     pub user_email: String,
@@ -41,6 +41,7 @@ pub struct PamLoginRequest {
     pub webauthn_code: Option<String>,
 }
 
+// TODO we could require machine id + secret here as well
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct PamMfaStartRequest {
     /// Validation: `email`
@@ -56,6 +57,29 @@ pub struct PamMfaFinishRequest {
     pub data: WebauthnAuthFinishRequest,
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+pub enum Getent {
+    Users,
+    Groups,
+    Username(String),
+    UserId(u32),
+    Groupname(String),
+    GroupId(u32),
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct PamGetentRequest {
+    /// Validation: `^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$`
+    #[validate(regex(
+        path = "*RE_CLIENT_ID_EPHEMERAL",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
+    ))]
+    pub machine_id: String,
+    #[validate(length(min = 64, max = 64))]
+    pub machine_secret: String,
+    pub getent: Getent,
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct PamPreflightResponse {
     pub login_allowed: bool,
@@ -63,7 +87,18 @@ pub struct PamPreflightResponse {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub struct PamLoginResponse {
-    pub user_id: String,
-    pub can_sudo: bool,
+pub struct PamGroupResponse {
+    pub id: u32,
+    pub name: String,
+    // Vec<{username}>
+    pub members: Vec<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PamUserResponse {
+    pub id: u32,
+    pub name: String,
+    pub gid: u32,
+    pub email: String,
+    pub shell: String,
 }

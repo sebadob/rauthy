@@ -4450,7 +4450,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.31.2-pam-20250710"
+version = "0.31.2-pam-20250712-1"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4491,7 +4491,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.31.2-pam-20250710"
+version = "0.31.2-pam-20250712-1"
 dependencies = [
  "actix-web",
  "openssl",
@@ -4509,7 +4509,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.31.2-pam-20250710"
+version = "0.31.2-pam-20250712-1"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4536,7 +4536,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.31.2-pam-20250710"
+version = "0.31.2-pam-20250712-1"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4574,7 +4574,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.31.2-pam-20250710"
+version = "0.31.2-pam-20250712-1"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4595,6 +4595,7 @@ dependencies = [
  "rauthy-service",
  "rust-embed",
  "semver",
+ "serde",
  "serde_json",
  "serde_urlencoded",
  "spow",
@@ -4608,7 +4609,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.31.2-pam-20250710"
+version = "0.31.2-pam-20250712-1"
 dependencies = [
  "chrono",
  "openssl",
@@ -4625,7 +4626,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.31.2-pam-20250710"
+version = "0.31.2-pam-20250712-1"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4641,7 +4642,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.31.2-pam-20250710"
+version = "0.31.2-pam-20250712-1"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -4722,7 +4723,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.31.2-pam-20250710"
+version = "0.31.2-pam-20250712-1"
 dependencies = [
  "async-trait",
  "openssl",
@@ -4738,7 +4739,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.31.2-pam-20250710"
+version = "0.31.2-pam-20250712-1"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4758,7 +4759,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.31.2-pam-20250710"
+version = "0.31.2-pam-20250712-1"
 dependencies = [
  "actix-web",
  "chrono",

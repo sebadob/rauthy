@@ -35,3 +35,4 @@ tokio = { workspace = true }
 utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 validator = { workspace = true }
+serde = { version = "1.0.219", features = ["derive"] }

@@ -1,49 +1,45 @@
-use actix_web::{HttpRequest, HttpResponse, post};
+use actix_web::http::header::AUTHORIZATION;
+use actix_web::web::Path;
+use actix_web::{HttpRequest, HttpResponse, get, post};
 use actix_web_lab::extract::Json;
 use chrono::Utc;
 use rauthy_api_types::pam::{
-    PamLoginRequest, PamLoginResponse, PamMfaFinishRequest, PamMfaStartRequest,
-    PamPreflightRequest, PamPreflightResponse,
+    Getent, PamGetentRequest, PamGroupResponse, PamLoginRequest, PamMfaFinishRequest,
+    PamMfaStartRequest, PamPreflightRequest, PamPreflightResponse, PamUserResponse,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::failed_login_counter::FailedLoginCounter;
+use rauthy_models::entity::pam::groups::PamGroup;
+use rauthy_models::entity::pam::hosts::PamHost;
+use rauthy_models::entity::pam::tokens::PamToken;
+use rauthy_models::entity::pam::users::PamUser;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
+use serde::Serialize;
 use std::cmp::max;
 use std::time::Duration;
+use tracing::{info, warn};
+use utoipa::ToSchema;
 use validator::Validate;
 
 #[post("/pam/preflight")]
 pub async fn post_preflight(
-    req: HttpRequest,
     Json(payload): Json<PamPreflightRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let client = Client::find(payload.client_id).await?;
-    client.validate_enabled()?;
+    let machine = PamHost::find(payload.machine_id).await?;
+    machine.validate_secret(payload.machine_secret)?;
 
-    // TODO find a way to allow public clients without exposing possibility for username-enumeration.
-    //  -> maybe require a PoW in these cases, or simply always?
-    if !client.confidential {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "PAM Login is only allowed for confidential clients",
-        ));
-    }
-
-    // TODO as soon as it exists, validate PAM is allowed in the first place
-    client.validate_secret(&payload.client_secret, &req).await?;
     let user = User::find_by_email(payload.user_email).await?;
     user.check_expired()?;
     user.check_enabled()?;
 
     Ok(HttpResponse::Ok().json(PamPreflightResponse {
-        login_allowed: client.validate_user_groups(&user).is_ok(),
+        login_allowed: machine.is_login_allowed(&user),
         mfa_required: user.has_webauthn_enabled(),
     }))
 }
@@ -61,25 +57,21 @@ pub async fn post_login(
         ));
     }
 
-    let client = Client::find(payload.client_id).await?;
-    client.validate_enabled()?;
+    let machine = PamHost::find(payload.machine_id).await?;
+    machine.validate_secret(payload.machine_secret)?;
 
-    // TODO find a way to allow public clients without exposing possibility for username-enumeration.
-    //  -> maybe require a PoW in these cases, or simply always?
-    if !client.confidential {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "PAM Login is only allowed for confidential clients",
-        ));
-    }
-
-    // TODO as soon as it exists, validate PAM is allowed in the first place
-    client.validate_secret(&payload.client_secret, &req).await?;
     let mut user = User::find_by_email(payload.user_email).await?;
     user.check_expired()?;
     user.check_enabled()?;
-    client.validate_user_groups(&user)?;
 
+    if !machine.is_login_allowed(&user) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Not allowed to log in to this machine",
+        ));
+    }
+
+    let ip = real_ip_from_req(&req)?;
     if let Some(password) = payload.user_password {
         match user.validate_password(password).await {
             Ok(_) => {
@@ -87,16 +79,21 @@ pub async fn post_login(
                 user.last_failed_login = None;
                 user.failed_login_attempts = None;
                 user.save(None).await?;
+
+                FailedLoginCounter::reset(ip.to_string()).await?;
+
+                info!("New PAM login for user {}", user.email);
             }
             Err(err) => {
                 user.last_failed_login = Some(Utc::now().timestamp());
                 user.failed_login_attempts = Some(user.failed_login_attempts.unwrap_or(0) + 1);
                 user.save(None).await?;
 
-                let ip = real_ip_from_req(&req)?;
                 let failed_logins = FailedLoginCounter::increase(ip.to_string()).await?;
 
-                let sec = max(failed_logins, 10) as u64;
+                warn!(?err, "Failed PAM login for user {}", user.email);
+
+                let sec = max(failed_logins, 5) as u64;
                 tokio::time::sleep(Duration::from_secs(sec)).await;
 
                 return Err(err);
@@ -113,17 +110,15 @@ pub async fn post_login(
             ));
         }
         svc_req.delete().await?;
-    } else if client.force_mfa {
+    } else if machine.force_mfa {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "This client requires MFA",
         ));
     }
 
-    Ok(HttpResponse::Ok().json(PamLoginResponse {
-        user_id: user.id,
-        can_sudo: false, // TODO some client config for golden ticket
-    }))
+    let token = PamToken::new(user).await?;
+    Ok(HttpResponse::Ok().json(token))
 }
 
 #[post("/pam/mfa/start")]
@@ -147,4 +142,100 @@ pub async fn post_mfa_finish(
 
     let resp = webauthn::auth_finish(payload.user_id, &req, payload.data).await?;
     Ok(resp.into_response())
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub enum PamGetentResponse {
+    Users(Vec<PamUserResponse>),
+    User(PamUserResponse),
+    Groups(Vec<PamGroupResponse>),
+    Group(PamGroupResponse),
+}
+
+#[get("/pam/getent")]
+pub async fn get_getent(
+    Json(payload): Json<PamGetentRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
+    let host = PamHost::find(payload.machine_id).await?;
+    host.validate_secret(payload.machine_secret)?;
+
+    let resp = match payload.getent {
+        Getent::Users => {
+            // TODO somehow limit users to only the ones that are allowed to log in
+            let users = PamUser::find_all()
+                .await?
+                .into_iter()
+                .map(PamUserResponse::from)
+                .collect::<Vec<_>>();
+            PamGetentResponse::Users(users)
+        }
+        Getent::Groups => {
+            // TODO we should probably have a default config or pool that can be assigned to
+            // machines, with default groups and so on
+            let groups = PamGroup::find_all().await?;
+            let mut res = Vec::with_capacity(groups.len());
+            for group in groups {
+                // TODO this could be made more efficient when we build it up manually
+                //  and fetch all users in advance, only once.
+                res.push(group.build_response().await?);
+            }
+            PamGetentResponse::Groups(res)
+        }
+        Getent::Username(name) => {
+            let user = PamUser::find_by_name(name).await?;
+            PamGetentResponse::User(PamUserResponse::from(user))
+        }
+        Getent::UserId(id) => {
+            let user = PamUser::find_by_id(id).await?;
+            PamGetentResponse::User(PamUserResponse::from(user))
+        }
+        Getent::Groupname(name) => {
+            let group = PamGroup::find_by_name(name).await?;
+            PamGetentResponse::Group(group.build_response().await?)
+        }
+        Getent::GroupId(id) => {
+            let group = PamGroup::find_by_id(id).await?;
+            PamGetentResponse::Group(group.build_response().await?)
+        }
+    };
+
+    Ok(HttpResponse::Ok().json(resp))
+}
+
+#[get("/pam/validate/{user_id}")]
+pub async fn get_validate_user(
+    user_id: Path<String>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = user_id.into_inner();
+
+    let Some(header) = req.headers().get(AUTHORIZATION) else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "Token missing",
+        ));
+    };
+    let s = header.to_str().unwrap_or_default();
+    let Some(token_id) = s.strip_prefix("PamToken ") else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "Invalid Authorization header",
+        ));
+    };
+    let token = PamToken::find(token_id.to_string()).await?;
+    if token.user_id != user_id {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "User ID mismatch",
+        ));
+    }
+    // TODO maybe additional token validation or rely on cache ttl?
+
+    let user = User::find(user_id).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
+
+    Ok(HttpResponse::Ok().finish())
 }
