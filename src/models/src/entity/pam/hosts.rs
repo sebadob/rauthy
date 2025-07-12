@@ -1,5 +1,5 @@
 use crate::database::DB;
-use crate::entity::users::User;
+use crate::entity::pam::users::PamUser;
 use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
 use hiqlite_macros::params;
@@ -18,7 +18,6 @@ pub struct PamHost {
     pub name: Option<String>,
     pub dns: Option<String>,
     pub notes: Option<String>,
-    pub groups_prefix: Option<String>,
 }
 
 impl From<hiqlite::Row<'_>> for PamHost {
@@ -36,7 +35,6 @@ impl From<hiqlite::Row<'_>> for PamHost {
             name: row.get("name"),
             dns: row.get("dns"),
             notes: row.get("notes"),
-            groups_prefix: row.get("groups_prefix"),
         }
     }
 }
@@ -56,7 +54,6 @@ impl From<tokio_postgres::Row> for PamHost {
             name: row.get("name"),
             dns: row.get("dns"),
             notes: row.get("notes"),
-            groups_prefix: row.get("groups_prefix"),
         }
     }
 }
@@ -104,11 +101,22 @@ impl PamHost {
 
 impl PamHost {
     #[inline]
-    pub fn is_login_allowed(&self, user: &User) -> bool {
-        if let Some(prefix) = &self.groups_prefix
-            && !user.groups_iter().any(|g| g.starts_with(prefix))
-        {
-            return false;
+    pub async fn is_login_allowed(&self, user: &PamUser) -> bool {
+        if !self.gid == user.gid {
+            let sql = "SELECT 1 FROM pam_groups_users WHERE gid = $1 AND uid = $2";
+            let is_in_group = if is_hiqlite() {
+                DB::hql()
+                    .query_raw_one(sql, params!(self.gid, user.id))
+                    .await
+                    .is_ok()
+            } else {
+                DB::pg_query_one_row(sql, &[&self.gid, &user.id])
+                    .await
+                    .is_ok()
+            };
+            if !is_in_group {
+                return false;
+            }
         }
 
         true

@@ -13,12 +13,11 @@ pub struct PamPreflightRequest {
         path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
-    pub machine_id: String,
+    pub host_id: String,
     #[validate(length(min = 64, max = 64))]
-    pub machine_secret: String,
-    /// Validation: `email`
-    #[validate(email)]
-    pub user_email: String,
+    pub host_secret: String,
+    // TODO regex for linux username validation
+    pub username: String,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -28,12 +27,11 @@ pub struct PamLoginRequest {
         path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
-    pub machine_id: String,
+    pub host_id: String,
     #[validate(length(min = 64, max = 64))]
-    pub machine_secret: String,
-    /// Validation: `email`
-    #[validate(email)]
-    pub user_email: String,
+    pub host_secret: String,
+    // TODO regex for linux username validation
+    pub username: String,
     /// Validation: Applies password policy - max 256 characters
     #[validate(length(max = 256))]
     pub user_password: Option<String>,
@@ -74,9 +72,9 @@ pub struct PamGetentRequest {
         path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
-    pub machine_id: String,
+    pub host_id: String,
     #[validate(length(min = 64, max = 64))]
-    pub machine_secret: String,
+    pub host_secret: String,
     pub getent: Getent,
 }
 

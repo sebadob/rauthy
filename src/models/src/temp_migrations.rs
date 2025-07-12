@@ -43,8 +43,7 @@ CREATE TABLE pam_hosts
     ip        TEXT,
     name      TEXT,
     dns       TEXT,
-    notes     TEXT,
-    groups_prefix TEXT
+    notes     TEXT
 ) STRICT;
 
 CREATE INDEX pam_hosts_gid_index
@@ -113,7 +112,7 @@ VALUES  ('pam_groups', 100000),
         let group = PamGroup::insert("test_group".to_string(), false).await?;
         PamHost::insert("test".to_string(), group.id).await?;
 
-        if let Ok(user) = User::find_by_email("".to_string()).await {
+        if let Ok(user) = User::find_by_email("sebastian.dobe@gmail.com".to_string()).await {
             PamUser::insert("sebadob".to_string(), user.email).await?;
         } else if let Ok(user) = User::find_by_email("admin@localhost".to_string()).await {
             PamUser::insert("sebadob".to_string(), user.email).await?;

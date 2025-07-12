@@ -1,5 +1,6 @@
 use crate::database::DB;
 use crate::entity::pam::groups::PamGroup;
+use hiqlite::StmtIndex;
 use hiqlite_macros::params;
 use rauthy_api_types::pam::PamUserResponse;
 use rauthy_common::is_hiqlite;
@@ -43,17 +44,30 @@ impl PamUser {
     pub async fn insert(username: String, email: String) -> Result<(), ErrorResponse> {
         let group = PamGroup::insert(username, true).await?;
 
-        let sql = r#"
+        let sql_user = r#"
 INSERT INTO pam_users (name, gid, email, shell)
 VALUES ($1, $2, $3, '/bin/bash')
+RETURNING id
 "#;
+        let sql_rel = "INSERT INTO pam_groups_users (gid, uid) VALUES ($1, $2)";
 
         if is_hiqlite() {
             DB::hql()
-                .execute(sql, params!(group.name, group.id, email))
+                .txn([
+                    (sql_user, params!(group.name, group.id, email)),
+                    (sql_rel, params!(group.id, StmtIndex(0).column("id"))),
+                ])
                 .await?;
         } else {
-            DB::pg_execute(sql, &[&group.name, &group.id, &email]).await?;
+            // TODO we need a custom query for postgres for the relation here
+            todo!()
+            // let mut cl = DB::pg().await?;
+            // let txn = cl.transaction().await?;
+            //
+            // DB::pg_txn_append(&txn, sql_user, &[&group.name, &group.id, &email]).await?;
+            // DB::pg_txn_append(&txn, sql_rel, &[&group.id, &group.id, &email]).await?;
+            //
+            // txn.commit().await?;
         }
 
         Ok(())

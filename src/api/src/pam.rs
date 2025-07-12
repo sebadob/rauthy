@@ -31,16 +31,32 @@ pub async fn post_preflight(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let machine = PamHost::find(payload.machine_id).await?;
-    machine.validate_secret(payload.machine_secret)?;
+    let host = PamHost::find(payload.host_id).await?;
+    host.validate_secret(payload.host_secret)?;
 
-    let user = User::find_by_email(payload.user_email).await?;
+    let pam_user = PamUser::find_by_name(payload.username).await?;
+    if !host.is_login_allowed(&pam_user).await {
+        return Ok(HttpResponse::Ok().json(PamPreflightResponse {
+            login_allowed: false,
+            mfa_required: host.force_mfa,
+        }));
+    }
+
+    let user = User::find_by_email(pam_user.email).await?;
     user.check_expired()?;
     user.check_enabled()?;
 
+    if host.force_mfa && !user.has_webauthn_enabled() {
+        // TODO maybe send a different status code here to better differentiate
+        return Ok(HttpResponse::Ok().json(PamPreflightResponse {
+            login_allowed: false,
+            mfa_required: true,
+        }));
+    }
+
     Ok(HttpResponse::Ok().json(PamPreflightResponse {
-        login_allowed: machine.is_login_allowed(&user),
-        mfa_required: user.has_webauthn_enabled(),
+        login_allowed: true,
+        mfa_required: user.has_webauthn_enabled() || host.force_mfa,
     }))
 }
 
@@ -57,19 +73,20 @@ pub async fn post_login(
         ));
     }
 
-    let machine = PamHost::find(payload.machine_id).await?;
-    machine.validate_secret(payload.machine_secret)?;
+    let host = PamHost::find(payload.host_id).await?;
+    host.validate_secret(payload.host_secret)?;
 
-    let mut user = User::find_by_email(payload.user_email).await?;
-    user.check_expired()?;
-    user.check_enabled()?;
-
-    if !machine.is_login_allowed(&user) {
+    let pam_user = PamUser::find_by_name(payload.username).await?;
+    if !host.is_login_allowed(&pam_user).await {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
-            "Not allowed to log in to this machine",
+            "Not allowed to log in to this host",
         ));
     }
+
+    let mut user = User::find_by_email(pam_user.email).await?;
+    user.check_expired()?;
+    user.check_enabled()?;
 
     let ip = real_ip_from_req(&req)?;
     if let Some(password) = payload.user_password {
@@ -110,10 +127,10 @@ pub async fn post_login(
             ));
         }
         svc_req.delete().await?;
-    } else if machine.force_mfa {
+    } else if host.force_mfa {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
-            "This client requires MFA",
+            "This host requires MFA",
         ));
     }
 
@@ -158,8 +175,8 @@ pub async fn get_getent(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let host = PamHost::find(payload.machine_id).await?;
-    host.validate_secret(payload.machine_secret)?;
+    let host = PamHost::find(payload.host_id).await?;
+    host.validate_secret(payload.host_secret)?;
 
     let resp = match payload.getent {
         Getent::Users => {
