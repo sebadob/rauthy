@@ -49,7 +49,7 @@ INSERT INTO pam_users (name, gid, email, shell)
 VALUES ($1, $2, $3, '/bin/bash')
 RETURNING id
 "#;
-        let sql_rel = "INSERT INTO pam_groups_users (gid, uid) VALUES ($1, $2)";
+        let sql_rel = "INSERT INTO pam_rel_groups_users (gid, uid) VALUES ($1, $2)";
 
         if is_hiqlite() {
             DB::hql()

@@ -104,7 +104,7 @@ RETURNING *
 impl PamGroup {
     pub async fn build_response(self) -> Result<PamGroupResponse, ErrorResponse> {
         let sql = r#"
-SELECT name FROM pam_groups_users pu
+SELECT name FROM pam_rel_groups_users pu
 JOIN pam_users u on pu.uid = u.id
 WHERE pu.gid = $1
 "#;

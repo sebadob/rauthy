@@ -4,8 +4,9 @@ use actix_web::{HttpRequest, HttpResponse, get, post};
 use actix_web_lab::extract::Json;
 use chrono::Utc;
 use rauthy_api_types::pam::{
-    Getent, PamGetentRequest, PamGroupResponse, PamLoginRequest, PamMfaFinishRequest,
-    PamMfaStartRequest, PamPreflightRequest, PamPreflightResponse, PamUserResponse,
+    Getent, PamGetentRequest, PamGroupResponse, PamHostSimpleResponse, PamLoginRequest,
+    PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest, PamPreflightResponse,
+    PamUserResponse,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::utils::real_ip_from_req;
@@ -31,7 +32,7 @@ pub async fn post_preflight(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let host = PamHost::find(payload.host_id).await?;
+    let host = PamHost::find_simple(payload.host_id).await?;
     host.validate_secret(payload.host_secret)?;
 
     let pam_user = PamUser::find_by_name(payload.username).await?;
@@ -73,7 +74,7 @@ pub async fn post_login(
         ));
     }
 
-    let host = PamHost::find(payload.host_id).await?;
+    let host = PamHost::find_simple(payload.host_id).await?;
     host.validate_secret(payload.host_secret)?;
 
     let pam_user = PamUser::find_by_name(payload.username).await?;
@@ -167,6 +168,8 @@ pub enum PamGetentResponse {
     User(PamUserResponse),
     Groups(Vec<PamGroupResponse>),
     Group(PamGroupResponse),
+    Hosts(Vec<PamHostSimpleResponse>),
+    Host(PamHostSimpleResponse),
 }
 
 #[get("/pam/getent")]
@@ -176,7 +179,7 @@ pub async fn get_getent(
     info!("getent {:?}", payload.getent);
     payload.validate()?;
 
-    let host = PamHost::find(payload.host_id).await?;
+    let host = PamHost::find_by_alias_full(payload.host_id).await?;
     host.validate_secret(payload.host_secret)?;
 
     let resp = match payload.getent {
@@ -189,6 +192,15 @@ pub async fn get_getent(
                 .collect::<Vec<_>>();
             PamGetentResponse::Users(users)
         }
+        Getent::Username(name) => {
+            let user = PamUser::find_by_name(name).await?;
+            PamGetentResponse::User(PamUserResponse::from(user))
+        }
+        Getent::UserId(id) => {
+            let user = PamUser::find_by_id(id).await?;
+            PamGetentResponse::User(PamUserResponse::from(user))
+        }
+
         Getent::Groups => {
             // TODO we should probably have a default config or pool that can be assigned to
             // machines, with default groups and so on
@@ -201,14 +213,6 @@ pub async fn get_getent(
             }
             PamGetentResponse::Groups(res)
         }
-        Getent::Username(name) => {
-            let user = PamUser::find_by_name(name).await?;
-            PamGetentResponse::User(PamUserResponse::from(user))
-        }
-        Getent::UserId(id) => {
-            let user = PamUser::find_by_id(id).await?;
-            PamGetentResponse::User(PamUserResponse::from(user))
-        }
         Getent::Groupname(name) => {
             let group = PamGroup::find_by_name(name).await?;
             PamGetentResponse::Group(group.build_response().await?)
@@ -216,6 +220,23 @@ pub async fn get_getent(
         Getent::GroupId(id) => {
             let group = PamGroup::find_by_id(id).await?;
             PamGetentResponse::Group(group.build_response().await?)
+        }
+
+        Getent::Hosts => {
+            let hosts = PamHost::find_in_group_full(host.gid)
+                .await?
+                .into_iter()
+                .map(PamHostSimpleResponse::from)
+                .collect::<Vec<_>>();
+            PamGetentResponse::Hosts(hosts)
+        }
+        Getent::Hostname(name) => {
+            let host = PamHost::find_by_alias_full(name).await?;
+            PamGetentResponse::Host(PamHostSimpleResponse::from(host))
+        }
+        Getent::HostIp(ip) => {
+            let host = PamHost::find_by_ip_full(ip).await?;
+            PamGetentResponse::Host(PamHostSimpleResponse::from(host))
         }
     };
 

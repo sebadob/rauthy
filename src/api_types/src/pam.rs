@@ -1,6 +1,7 @@
 use crate::users::WebauthnAuthFinishRequest;
 use rauthy_common::regex::{RE_CLIENT_ID_EPHEMERAL, RE_LINUX_USERNAME};
 use serde::{Deserialize, Serialize};
+use std::net::IpAddr;
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -60,11 +61,16 @@ pub struct PamMfaFinishRequest {
 #[derive(Debug, Deserialize, ToSchema)]
 pub enum Getent {
     Users,
-    Groups,
-    Username(String),
     UserId(u32),
+    Username(String),
+    Groups,
     Groupname(String),
     GroupId(u32),
+    Hosts,
+    Hostname(String),
+    /// Validation: IpAddr
+    #[schema(value_type = str)]
+    HostIp(IpAddr),
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -80,10 +86,32 @@ pub struct PamGetentRequest {
     pub getent: Getent,
 }
 
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct PamHostUpdateRequest {
+    pub hostname: String,
+    pub gid: u32,
+    pub force_mfa: bool,
+    pub notes: Option<String>,
+    /// Validation: IpAddr
+    #[schema(value_type = str)]
+    pub ips: Vec<IpAddr>,
+    pub aliases: Vec<String>,
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct PamPreflightResponse {
     pub login_allowed: bool,
     pub mfa_required: bool,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PamHostSimpleResponse {
+    pub id: String,
+    pub name: String,
+    pub aliases: Vec<String>,
+    /// Validation: IpAddr
+    #[schema(value_type = str)]
+    pub addresses: Vec<IpAddr>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

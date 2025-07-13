@@ -4,6 +4,7 @@ use crate::entity::pam::hosts::PamHost;
 use crate::entity::pam::users::PamUser;
 use crate::entity::users::User;
 use hiqlite_macros::params;
+use rauthy_api_types::pam::PamHostUpdateRequest;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 
@@ -33,21 +34,50 @@ CREATE UNIQUE INDEX pam_groups_name_uindex
 CREATE TABLE pam_hosts
 (
     id        TEXT    NOT NULL
-        CONSTRAINT pam_machines_pk
+        CONSTRAINT pam_hosts_pk
             PRIMARY KEY,
-    secret    BLOB    NOT NULL,
-    gid      INTEGER NOT NULL
+    hostname  TEXT    NOT NULL,
+    gid       INTEGER NOT NULL
         CONSTRAINT pam_hosts_pam_groups_id_fk
             REFERENCES pam_groups,
+    secret    BLOB    NOT NULL,
     force_mfa INTEGER NOT NULL,
-    ip        TEXT,
-    name      TEXT,
-    dns       TEXT,
     notes     TEXT
 ) STRICT;
 
 CREATE INDEX pam_hosts_gid_index
     ON pam_hosts (gid);
+
+CREATE UNIQUE INDEX pam_hosts_hostname_gid_uindex
+    ON pam_hosts (hostname, gid);
+
+CREATE TABLE pam_hosts_ips
+(
+    host_id TEXT NOT NULL
+        CONSTRAINT pam_hosts_ips_pam_hosts_id_fk
+            REFERENCES pam_hosts
+            ON DELETE CASCADE,
+    ip      TEXT NOT NULL,
+    CONSTRAINT pam_hosts_ips_pk
+        PRIMARY KEY (host_id, ip)
+) STRICT;
+
+CREATE INDEX pam_hosts_ips_ip_index
+    ON pam_hosts_ips (ip);
+
+CREATE TABLE pam_hosts_aliases
+(
+    host_id TEXT NOT NULL
+        CONSTRAINT pam_hosts_aliases_pam_hosts_id_fk
+            REFERENCES pam_hosts
+            ON DELETE CASCADE,
+    alias   TEXT NOT NULL,
+    CONSTRAINT pam_hosts_aliases_pk
+        PRIMARY KEY (host_id, alias)
+) STRICT;
+
+CREATE INDEX pam_hosts_aliases_alias_index
+    ON pam_hosts_aliases (alias);
 
 CREATE TABLE pam_users
 (
@@ -74,17 +104,17 @@ CREATE UNIQUE INDEX pam_users_name_uindex
 CREATE UNIQUE INDEX pam_users_email_uindex
     ON pam_users (email);
 
-CREATE TABLE pam_groups_users
+CREATE TABLE pam_rel_groups_users
 (
     gid INTEGER NOT NULL
-        CONSTRAINT pam_groups_users_pam_groups_id_fk
+        CONSTRAINT pam_rel_groups_users_pam_groups_id_fk
             REFERENCES pam_groups
             ON DELETE CASCADE,
     uid INTEGER NOT NULL
-        CONSTRAINT pam_groups_users_pam_users_id_fk
+        CONSTRAINT pam_rel_groups_users_pam_users_id_fk
             REFERENCES pam_users
             ON DELETE CASCADE,
-    CONSTRAINT pam_groups_users_pk
+    CONSTRAINT pam_rel_groups_users_pk
         PRIMARY KEY (gid, uid)
 ) STRICT;
 
@@ -96,21 +126,36 @@ VALUES  ('pam_groups', 100000),
 
         client
             .txn([
+                ("DROP TABLE IF EXISTS pam_hosts_ips", params!()),
+                ("DROP TABLE IF EXISTS pam_hosts_aliases", params!()),
                 ("DROP TABLE IF EXISTS pam_hosts", params!()),
-                ("DROP TABLE IF EXISTS pam_groups_users", params!()),
+                ("DROP TABLE IF EXISTS pam_rel_groups_users", params!()),
                 ("DROP TABLE IF EXISTS pam_users", params!()),
                 ("DROP TABLE IF EXISTS pam_groups", params!()),
-                (
-                    "DELETE FROM sqlite_sequence WHERE name IN ('pam_groups', 'pam_users')",
-                    params!(),
-                ),
+                // (
+                //     "DELETE FROM sqlite_sequence WHERE name IN ('pam_groups', 'pam_users')",
+                //     params!(),
+                // ),
             ])
             .await?;
 
         client.batch(sql).await?;
 
         let group = PamGroup::insert("test_group".to_string(), false).await?;
-        PamHost::insert("test".to_string(), group.id).await?;
+
+        let host = PamHost::insert("test".to_string(), group.id).await?;
+        let payload = PamHostUpdateRequest {
+            hostname: "penguin".to_string(),
+            gid: group.id,
+            force_mfa: true,
+            notes: Some("Joker is not the Batman".to_string()),
+            ips: vec![
+                "192.168.14.20".parse().unwrap(),
+                "127.0.0.1".parse().unwrap(),
+            ],
+            aliases: vec!["localhost".to_string(), "alias.test".to_string()],
+        };
+        PamHost::update(host.id, payload).await?;
 
         if let Ok(user) = User::find_by_email("sebastian.dobe@gmail.com".to_string()).await {
             PamUser::insert("sebadob".to_string(), user.email).await?;

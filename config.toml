@@ -428,7 +428,7 @@ nodes = [
 #
 # default: false
 # overwritten by: HQL_LOG_STATEMENTS
-log_statements = false
+log_statements = true
 
 # The size of the internal cache for prepared statements.
 #
