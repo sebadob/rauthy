@@ -101,7 +101,7 @@ RETURNING *
 
     #[inline(always)]
     async fn find_aliases(host_id: String) -> Result<Vec<String>, ErrorResponse> {
-        let sql = "SELECT alias FROM pam_hosts_aliases WHERE id = $1";
+        let sql = "SELECT alias FROM pam_hosts_aliases WHERE host_id = $1";
 
         let aliases = if is_hiqlite() {
             DB::hql()
@@ -132,7 +132,7 @@ RETURNING *
                 .await?
                 .into_iter()
                 .map(|mut r| {
-                    let host_id = r.get::<String>("id");
+                    let host_id = r.get::<String>("host_id");
                     let alias = r.get::<String>("alias");
                     (host_id, alias)
                 })
@@ -142,7 +142,7 @@ RETURNING *
                 .await?
                 .into_iter()
                 .map(|r| {
-                    let host_id = r.get::<_, String>("id");
+                    let host_id = r.get::<_, String>("host_id");
                     let alias = r.get::<_, String>("alias");
                     (host_id, alias)
                 })
@@ -163,7 +163,7 @@ RETURNING *
 
     #[inline(always)]
     async fn find_ips(host_id: String) -> Result<Vec<IpAddr>, ErrorResponse> {
-        let sql = "SELECT ip FROM pam_hosts_ips WHERE id = $1";
+        let sql = "SELECT ip FROM pam_hosts_ips WHERE host_id = $1";
 
         let ips = if is_hiqlite() {
             DB::hql()
@@ -195,7 +195,7 @@ RETURNING *
                 .into_iter()
                 .filter_map(|mut r| {
                     if let Ok(ip) = r.get::<String>("ip").parse::<IpAddr>() {
-                        let host_id = r.get::<String>("id");
+                        let host_id = r.get::<String>("host_id");
                         Some((host_id, ip))
                     } else {
                         None
@@ -208,7 +208,7 @@ RETURNING *
                 .into_iter()
                 .filter_map(|r| {
                     if let Ok(ip) = r.get::<_, String>("ip").parse::<IpAddr>() {
-                        let host_id = r.get::<_, String>("id");
+                        let host_id = r.get::<_, String>("host_id");
                         Some((host_id, ip))
                     } else {
                         None
