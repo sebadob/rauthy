@@ -1,5 +1,5 @@
 use crate::users::WebauthnAuthFinishRequest;
-use rauthy_common::regex::RE_CLIENT_ID_EPHEMERAL;
+use rauthy_common::regex::{RE_CLIENT_ID_EPHEMERAL, RE_LINUX_USERNAME};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -16,7 +16,8 @@ pub struct PamPreflightRequest {
     pub host_id: String,
     #[validate(length(min = 64, max = 64))]
     pub host_secret: String,
-    // TODO regex for linux username validation
+    /// Validation: `^[a-z][a-z0-9_-]{1,63}$`
+    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,63}$"))]
     pub username: String,
 }
 
@@ -30,11 +31,12 @@ pub struct PamLoginRequest {
     pub host_id: String,
     #[validate(length(min = 64, max = 64))]
     pub host_secret: String,
-    // TODO regex for linux username validation
+    //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
+    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,63}$"))]
     pub username: String,
     /// Validation: Applies password policy - max 256 characters
     #[validate(length(max = 256))]
-    pub user_password: Option<String>,
+    pub password: Option<String>,
     #[validate(length(max = 64))]
     pub webauthn_code: Option<String>,
 }

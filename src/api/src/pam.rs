@@ -66,7 +66,7 @@ pub async fn post_login(
     Json(payload): Json<PamLoginRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
-    if payload.user_password.is_none() && payload.webauthn_code.is_none() {
+    if payload.password.is_none() && payload.webauthn_code.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "at least one of password or webauthn_code must be given",
@@ -89,7 +89,7 @@ pub async fn post_login(
     user.check_enabled()?;
 
     let ip = real_ip_from_req(&req)?;
-    if let Some(password) = payload.user_password {
+    if let Some(password) = payload.password {
         match user.validate_password(password).await {
             Ok(_) => {
                 user.last_login = Some(Utc::now().timestamp());
@@ -173,6 +173,7 @@ pub enum PamGetentResponse {
 pub async fn get_getent(
     Json(payload): Json<PamGetentRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    info!("getent {:?}", payload.getent);
     payload.validate()?;
 
     let host = PamHost::find(payload.host_id).await?;

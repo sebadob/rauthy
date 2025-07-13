@@ -103,20 +103,24 @@ RETURNING *
 
 impl PamGroup {
     pub async fn build_response(self) -> Result<PamGroupResponse, ErrorResponse> {
-        let sql = "SELECT uid FROM pam_groups_users WHERE gid = $1";
+        let sql = r#"
+SELECT name FROM pam_groups_users pu
+JOIN pam_users u on pu.uid = u.id
+WHERE pu.gid = $1
+"#;
 
         let members = if is_hiqlite() {
             DB::hql()
                 .query_raw(sql, params!(self.id))
                 .await?
                 .into_iter()
-                .map(|mut r| r.get("uid"))
+                .map(|mut r| r.get("name"))
                 .collect::<Vec<String>>()
         } else {
             DB::pg_query_rows(sql, &[&self.id], 4)
                 .await?
                 .into_iter()
-                .map(|r| r.get("uid"))
+                .map(|r| r.get("name"))
                 .collect::<Vec<String>>()
         };
 

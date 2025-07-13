@@ -41,6 +41,9 @@ pub static RE_GRANT_TYPES: LazyLock<Regex> = LazyLock::new(|| {
 pub static RE_GRANT_TYPES_EPHEMERAL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap()
 });
+// slightly modified from the original: at least 2 characters and max 64
+pub static RE_LINUX_USERNAME: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-z][a-z0-9_-]{1,63}$").unwrap());
 pub static RE_ROLES_SCOPES: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-_/,:*]{2,64}$").unwrap());
 pub static RE_GROUPS: LazyLock<Regex> =

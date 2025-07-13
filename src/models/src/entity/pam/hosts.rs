@@ -60,7 +60,9 @@ impl From<tokio_postgres::Row> for PamHost {
 
 impl PamHost {
     pub async fn insert(id: String, gid: u32) -> Result<(), ErrorResponse> {
-        let secret = secure_random_alnum(64);
+        // TODO !!! REMOVE HARDCODED SECRET AFTER TESTING !!!
+        let secret = "zlxYQm3swa98p6xf4dYnT0z4tICQyABzwbuqk7jzSlCnLXXhxxk9yprJKo9WwRu7".to_string();
+        // let secret = secure_random_alnum(64);
         let enc = EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec();
 
         let sql = "INSERT INTO pam_hosts (id, secret, gid, force_mfa) VALUES ($1, $2, $3, true)";
