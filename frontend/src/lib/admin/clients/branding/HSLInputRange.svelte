@@ -24,9 +24,11 @@
 <div class="outer">
     <div class="container" style:border-color={hsl}>
         <div>
-            <label for={id} class="font-label">
-                {label}
-            </label>
+            <h5>
+                <label for={id} class="font-label">
+                    {label}
+                </label>
+            </h5>
             <div {id} class="values">
                 <InputRange
                         label="Hue"
@@ -68,6 +70,10 @@
 </div>
 
 <style>
+    h5 {
+        margin: 0 0 .25rem 0;
+    }
+
     label {
         color: hsl(var(--text-high));
         margin-left: .5rem;

@@ -13,8 +13,13 @@
     import PaginationServerSide from "$lib5/pagination/PaginationServerSide.svelte";
     import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props";
     import {fetchSearchServer, type SearchParamsIdxSession} from "$utils/search";
+    import {useTrigger} from "$state/callback.svelte";
 
     let ta = useI18nAdmin();
+
+    let refOpts: undefined | HTMLButtonElement = $state();
+    let tr = useTrigger();
+    tr.set('navMain', () => refOpts?.focus());
 
     let err = $state('');
     let sessions: SessionResponse[] = $state([]);
@@ -170,6 +175,7 @@
 <ContentAdmin>
     <div class="top">
         <OrderSearchBar
+                bind:ref={refOpts}
                 bind:value={searchValue}
                 {searchOptions}
                 bind:searchOption

@@ -12,8 +12,11 @@
     import type {ClientResponse} from "$api/types/clients.ts";
     import ClientAddNew from "$lib5/admin/clients/ClientAddNew.svelte";
     import ClientDetails from "$lib5/admin/clients/ClientDetails.svelte";
+    import {useTrigger} from "$state/callback.svelte";
 
-    let ta = useI18nAdmin();
+    let refAddNew: undefined | HTMLButtonElement = $state();
+    let tr = useTrigger();
+    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -90,7 +93,7 @@
         width="min(20rem, 100dvw)"
         thresholdNavSub={700}
 >
-    <ButtonAddModal level={clients.length === 0 ? 1 : 2} bind:closeModal alignRight>
+    <ButtonAddModal bind:ref={refAddNew} level={clients.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ClientAddNew onSave={onAddNew} {clients}/>
     </ButtonAddModal>
     <OrderSearchBar
@@ -105,7 +108,10 @@
     {#snippet buttonTiles()}
         <div class="clientsList">
             {#each clientsFiltered as client (client.id)}
-                <NavButtonTile onclick={() => cid.set(client.id)} selected={cid.get() === client.id}>
+                <NavButtonTile
+                        onclick={() => {cid.set(client.id); tr.trigger('navSubSub')}}
+                        selected={cid.get() === client.id}
+                >
                     <div class="tile">
                         {client.id}
                         <div class="muted">

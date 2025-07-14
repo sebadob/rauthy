@@ -11,8 +11,13 @@
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
     import ApiKeyDetails from "$lib5/admin/api_keys/ApiKeyDetails.svelte";
     import ApiKeyAddNew from "$lib5/admin/api_keys/ApiKeyAddNew.svelte";
+    import {useTrigger} from "$state/callback.svelte";
 
     let ta = useI18nAdmin();
+
+    let refAddNew: undefined | HTMLButtonElement = $state();
+    let tr = useTrigger();
+    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -76,7 +81,7 @@
         width="min(20rem, 100dvw)"
         thresholdNavSub={700}
 >
-    <ButtonAddModal level={keys.length === 0 ? 1 : 2} bind:closeModal alignRight>
+    <ButtonAddModal bind:ref={refAddNew} level={keys.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ApiKeyAddNew {keys} onSave={onNewKey}/>
     </ButtonAddModal>
     <OrderSearchBar

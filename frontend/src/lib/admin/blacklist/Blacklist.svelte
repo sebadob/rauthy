@@ -16,9 +16,14 @@
     import Form from "$lib5/form/Form.svelte";
     import Tooltip from "$lib5/Tooltip.svelte";
     import Pagination from "$lib5/pagination/Pagination.svelte";
+    import {useTrigger} from "$state/callback.svelte";
 
     let t = useI18n();
     let ta = useI18nAdmin();
+
+    let refOpts: undefined | HTMLButtonElement = $state();
+    let tr = useTrigger();
+    tr.set('navMain', () => refOpts?.focus());
 
     const blacklistThreshold = 30;
 
@@ -117,6 +122,7 @@
 <ContentAdmin>
     <div class="top">
         <OrderSearchBar
+                bind:ref={refOpts}
                 bind:value={searchValue}
                 {orderOptions}
                 {onChangeOrder}

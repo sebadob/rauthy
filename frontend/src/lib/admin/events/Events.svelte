@@ -9,6 +9,7 @@
     import {onDestroy} from "svelte";
     import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import {fetchPost} from "$api/fetch";
+    import {useTrigger} from "$state/callback.svelte";
 
     const latest = 50;
 
@@ -117,12 +118,12 @@
                 />
             </div>
 
-            <Button level={3} onclick={sendTestEvent}>
+            <Button ariaLabel="Test Event" level={3} onclick={sendTestEvent}>
                 Test
             </Button>
         </div>
 
-        <div class="data">
+        <div aria-live="polite" aria-relevant="additions" class="data">
             {#each eventsFiltered as event (event.id)}
                 <Event {event}/>
             {/each}

@@ -1,7 +1,7 @@
 <script lang="ts">
     import type {Snippet} from "svelte";
     import Button from "$lib5/button/Button.svelte";
-    import {genKey} from "../utils/helpers";
+    import {genKey} from "$utils/helpers";
 
     let {
         ref = $bindable(),
@@ -18,6 +18,7 @@
         close = $bindable(),
 
         onToggle,
+        onTab,
         onLeft,
         onRight,
         onUp,
@@ -37,6 +38,7 @@
         close?: () => void;
 
         onToggle?: (newState: 'open' | 'closed') => void;
+        onTab?: () => void,
         onLeft?: () => void,
         onRight?: () => void,
         onUp?: () => void,
@@ -49,12 +51,14 @@
     let refPopover: undefined | HTMLDivElement = $state();
     let isOpen = $state(false);
 
-    $effect(() => {
-        close = closePopover;
-    });
+    close = () => refPopover?.hidePopover();
 
     function onclick(ev: Event) {
         ev.stopPropagation();
+
+        if (ev.type === 'keydown' && (ev as KeyboardEvent).code === 'Enter') {
+            ref?.click();
+        }
 
         if (ref && refPopover) {
             if (absolute) {
@@ -68,10 +72,6 @@
         } else {
             console.warn('button and popover ref missing');
         }
-    }
-
-    function closePopover() {
-        refPopover?.hidePopover();
     }
 
     function ontoggle(ev: ToggleEvent) {
@@ -92,6 +92,7 @@
             {onclick}
             invisible={btnInvisible}
             isDisabled={btnDisabled}
+            {onTab}
             {onLeft}
             {onRight}
             {onUp}

@@ -7,7 +7,7 @@
     let t = useI18n();
 </script>
 
-<fieldset>
+<fieldset aria-hidden="true">
     <legend class="font-label">{t.common.legend}</legend>
     <ul class:wide>
         <li style:border-color={eventColor('info')}>Info</li>

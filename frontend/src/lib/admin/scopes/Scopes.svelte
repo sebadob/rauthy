@@ -13,8 +13,13 @@
     import ScopeDetails from "$lib5/admin/scopes/ScopeDetails.svelte";
     import ScopeAddNew from "./ScopeAddNew.svelte";
     import {isDefaultScope} from "$utils/helpers";
+    import {useTrigger} from "$state/callback.svelte";
 
     let ta = useI18nAdmin();
+
+    let refAddNew: undefined | HTMLButtonElement = $state();
+    let tr = useTrigger();
+    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -96,7 +101,7 @@
         width="min(20rem, 100dvw)"
         thresholdNavSub={700}
 >
-    <ButtonAddModal level={scopes.length === 0 ? 1 : 2} bind:closeModal alignRight>
+    <ButtonAddModal bind:ref={refAddNew} level={scopes.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ScopeAddNew onSave={onAddNew} {scopes}/>
     </ButtonAddModal>
     <OrderSearchBar

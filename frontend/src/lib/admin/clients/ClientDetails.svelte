@@ -7,6 +7,7 @@
     import ClientSecret from "$lib5/admin/clients/ClientSecret.svelte";
     import ClientDelete from "$lib5/admin/clients/ClientDelete.svelte";
     import ClientBranding from "$lib5/admin/clients/branding/ClientBranding.svelte";
+    import {useTrigger} from "$state/callback.svelte";
 
     let {
         client,
