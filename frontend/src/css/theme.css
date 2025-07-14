@@ -14,7 +14,7 @@ body {
     --text-high: 200 15% 25%;
     --bg: 34 25% 97%;
     --bg-high: 34 20% 90%;
-    --action: 34 100% 59%;
+    --action: 34 100% 40%;
     --accent: 246 60% 53%;
     --error: 15 100% 37%;
 
@@ -42,6 +42,7 @@ Must be the same as in @media (prefers-color-scheme: dark) -> body
         --text-high: 34 7% 90%;
         --bg: 200 40% 6%;
         --bg-high: 200 20% 17%;
+        --action: 34 100% 59%;
         --btn-text: hsl(var(--bg));
     }
 }
@@ -80,6 +81,7 @@ Must be the same as in @media (prefers-color-scheme: dark) -> body
         --text-high: 200 15% 25%;
         --bg: 34 25% 97%;
         --bg-high: 34 20% 90%;
+        --action: 34 100% 40%;
         --btn-text: white;
     }
 }
