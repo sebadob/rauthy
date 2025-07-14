@@ -21,7 +21,11 @@
     } = $props();
 
     let t = useI18n();
+
     let refDialog: undefined | HTMLDialogElement;
+    let refContent: undefined | HTMLDivElement = $state();
+    let refFirst: undefined | HTMLElement = $state();
+    let refLast: undefined | HTMLElement = $state();
 
     $effect(() => {
         closeModal = close;
@@ -32,6 +36,61 @@
             refDialog?.showModal();
         }
     })
+
+    $effect(() => {
+        if (refContent && (showModal || prerender)) {
+            let elems = findFocusable(refContent.children);
+
+            if (elems.length > 0) {
+                refFirst = elems[0];
+                refLast = elems[elems.length - 1];
+
+                refFirst.addEventListener('keydown', ev => {
+                    if (ev.code === 'Tab' && ev.shiftKey) {
+                        ev.preventDefault();
+                        refLast?.focus();
+                    }
+                })
+                refLast.addEventListener('keydown', ev => {
+                    if (ev.code === 'Tab' && !ev.shiftKey) {
+                        ev.preventDefault();
+                        refFirst?.focus();
+                    }
+                })
+
+                refFirst.focus();
+            }
+        } else {
+            refFirst = undefined;
+            refLast = undefined;
+        }
+    });
+
+    function findFocusable(elems: HTMLCollection): HTMLElement[] {
+        let res: HTMLElement[] = [];
+
+        for (let elem of elems) {
+            console.log(elem.tagName);
+            if (elem.getAttribute("hidden") === 'true' || elem.getAttribute("disabled") === 'true') {
+                // noop
+            } else if (elem.getAttribute('tabindex') !== null) {
+                res.push(elem as HTMLElement);
+            } else if (['A', 'AREA'].includes(elem.tagName) && elem.getAttribute('href') !== null) {
+                res.push(elem as HTMLElement);
+            } else if (['BUTTON', 'IFRAME', 'INPUT', 'SELECT', 'TEXTAREA'].includes(elem.tagName)) {
+                res.push(elem as HTMLElement);
+            }
+
+            if (elem.children) {
+                let els = findFocusable(elem.children);
+                if (els.length > 0) {
+                    res.push(...els);
+                }
+            }
+        }
+
+        return res;
+    }
 
     function close(ev?: Event) {
         ev?.preventDefault();
@@ -66,7 +125,7 @@ We need the onclick listener here to make easy click-outside work.
         }}
         onclick={outsideClick}
 >
-    <div role="none" onclick={stopPropagation}>
+    <div bind:this={refContent} role="none" onclick={stopPropagation}>
         {#if !strict}
             <div class="relative">
                 <div class="absolute close">

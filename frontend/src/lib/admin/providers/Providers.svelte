@@ -10,8 +10,13 @@
     import ProviderDetails from "$lib5/admin/providers/ProviderDetails.svelte";
     import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import ProviderAddNew from "$lib5/admin/providers/ProviderAddNew.svelte";
+    import {useTrigger} from "$state/callback.svelte";
 
     let ta = useI18nAdmin();
+
+    let refAddNew: undefined | HTMLButtonElement = $state();
+    let tr = useTrigger();
+    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -47,7 +52,7 @@
 </script>
 
 <NavSub width="11rem" buttonTilesAriaControls="federation" paddingTop="6.65rem">
-    <ButtonAddModal level={providers.length === 0 ? 1 : 2} bind:closeModal>
+    <ButtonAddModal bind:ref={refAddNew} level={providers.length === 0 ? 1 : 2} bind:closeModal>
         <ProviderAddNew {onSave}/>
     </ButtonAddModal>
 

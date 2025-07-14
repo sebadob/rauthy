@@ -7,11 +7,13 @@
     import {useI18nAdmin} from "$state/i18n_admin.svelte";
 
     let {
+        ref = $bindable(),
         onChange,
         options = [],
         borderless,
         firstDirReverse,
     }: {
+        ref?: undefined | HTMLButtonElement,
         onChange: (option: string, direction: 'up' | 'down') => void,
         options: string[],
         borderless?: boolean,
@@ -31,6 +33,7 @@
 <div class="container">
     <Tooltip text={ta.search.orderBy}>
         <Options
+                bind:ref
                 ariaLabel={ta.search.orderBy}
                 {options}
                 bind:value={selected}

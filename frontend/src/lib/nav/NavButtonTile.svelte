@@ -72,8 +72,6 @@
     }
 
     .pictureLeft > div {
-        height: 2.25rem;
-        overflow: clip;
         margin-left: -.1rem;
     }
 </style>

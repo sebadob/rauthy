@@ -18,6 +18,11 @@
     import {fetchSearchServer, type SearchParamsIdxUser} from "$utils/search";
     import UserPicture from "$lib/UserPicture.svelte";
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider";
+    import {useTrigger} from "$state/callback.svelte";
+
+    let refAddNew: undefined | HTMLButtonElement = $state();
+    let tr = useTrigger();
+    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
     let err = $state('');
@@ -193,7 +198,11 @@
 </script>
 
 {#snippet navTile(user: UserResponseSimple)}
-    <NavButtonTile onclick={() => uid.set(user.id)} selected={uid.get() === user.id} pictureLeft>
+    <NavButtonTile
+            onclick={() => {uid.set(user.id); tr.trigger('navSubSub')}}
+            selected={uid.get() === user.id}
+            pictureLeft
+    >
         <div class="navBtn">
             <div class="picture">
                 <UserPicture
@@ -223,7 +232,7 @@
         width="min(23rem, 100dvw)"
         thresholdNavSub={700}
 >
-    <ButtonAddModal level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
+    <ButtonAddModal bind:ref={refAddNew} level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <UserAddNew onSave={onAddNew} {roles} {groups}/>
     </ButtonAddModal>
     <OrderSearchBar

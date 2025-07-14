@@ -9,8 +9,13 @@
     import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from "$utils/form";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
     import ContentAdmin from "$lib5/ContentAdmin.svelte";
+    import {useTrigger} from "$state/callback.svelte";
 
     let ta = useI18nAdmin();
+
+    let refOpts: undefined | HTMLButtonElement = $state();
+    let tr = useTrigger();
+    tr.set('navMain', () => refOpts?.focus());
 
     let events: EventResponse[] = $state([]);
     let eventsFiltered: EventResponse[] = $state([]);
@@ -84,6 +89,7 @@
 <ContentAdmin>
     <div id="archive">
         <OrderSearchBar
+                bind:ref={refOpts}
                 {searchOptions}
                 bind:searchOption
                 bind:value={searchValue}

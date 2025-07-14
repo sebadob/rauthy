@@ -11,8 +11,13 @@
     import type {RoleResponse} from "$api/types/roles.ts";
     import RoleAddNew from "$lib5/admin/roles/RoleAddNew.svelte";
     import RoleDetails from "$lib5/admin/roles/RoleDetails.svelte";
+    import {useTrigger} from "$state/callback.svelte";
 
     let ta = useI18nAdmin();
+
+    let refAddNew: undefined | HTMLButtonElement = $state();
+    let tr = useTrigger();
+    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -82,7 +87,7 @@
         width="min(20rem, 100dvw)"
         thresholdNavSub={700}
 >
-    <ButtonAddModal level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
+    <ButtonAddModal bind:ref={refAddNew} level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <RoleAddNew onSave={onAddNew} {roles}/>
     </ButtonAddModal>
     <OrderSearchBar

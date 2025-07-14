@@ -9,12 +9,14 @@
         level = 2,
         closeModal = $bindable(),
         onClose,
+        ref = $bindable(),
         children,
     }: {
         alignRight?: boolean,
         level?: number,
         closeModal?: undefined | (() => void),
         onClose?: () => void,
+        ref?: undefined | HTMLButtonElement,
         children: Snippet,
     } = $props();
 
@@ -25,7 +27,7 @@
 </script>
 
 <div class:alignRight>
-    <Button level={showModal ? levelModal : level} onclick={() => showModal = true}>
+    <Button bind:ref level={showModal ? levelModal : level} onclick={() => showModal = true}>
         {ta.common.addNew}
     </Button>
     <Modal bind:showModal bind:closeModal {onClose}>

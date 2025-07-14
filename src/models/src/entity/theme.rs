@@ -476,7 +476,7 @@ impl ThemeCss {
             text_high: [200, 15, 25],
             bg: [34, 25, 97],
             bg_high: [34, 20, 90],
-            action: [34, 100, 59],
+            action: [34, 100, 40],
             accent: [265, 100, 53],
             error: [15, 100, 37],
             btn_text: "hsl(200 15 3)".to_string(),

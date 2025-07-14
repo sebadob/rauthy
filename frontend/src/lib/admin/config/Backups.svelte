@@ -72,10 +72,10 @@
                     {backup.name}
                 </span>
         </A>
-        <div class="muted right">
+        <div class="font-mono muted right">
             {formatDateFromTs(backup.last_modified)}
         </div>
-        <div class="muted right">
+        <div class="font-mono muted right">
             {#if backup.size}
                 {prettyFileSize(backup.size)}
             {:else}
@@ -144,6 +144,6 @@
 
     .row {
         display: grid;
-        grid-template-columns: 20rem 10rem 6rem;
+        grid-template-columns: 20rem 12rem 8rem;
     }
 </style>
