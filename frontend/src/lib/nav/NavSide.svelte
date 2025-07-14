@@ -6,7 +6,6 @@
     import AppVersion from "../AppVersion.svelte";
     import RauthyLogo from "$lib5/RauthyLogo.svelte";
     import NavLink from "$lib5/nav/NavLink.svelte";
-    import IconBurger from "$icons/IconBurger.svelte";
     import IconArrowPathSquare from "$icons/IconArrowPathSquare.svelte";
     import IconUserGroup from "$icons/IconUserGroup.svelte";
     import IconDocText from "$icons/IconDocText.svelte";
@@ -93,9 +92,21 @@
                 <div class="absolute flex space-between navmod" aria-hidden={!collapsed && !optsButtons}>
                     <div>
                         <Button ariaControls="mainNav" invisible onclick={toggleCollapsed}>
-                            <span class="inner">
-                                <IconBurger/>
-                            </span>
+                            <svg
+                                    aria-expanded={!collapsed}
+                                    class="inner"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width={2}
+                                    width="1.5rem"
+                                    opacity={0.90}
+                            >
+                                <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                                />
+                            </svg>
                         </Button>
                     </div>
 
