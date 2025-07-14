@@ -145,15 +145,15 @@ VALUES  ('pam_groups', 100000),
 
         let host = PamHost::insert("test".to_string(), group.id).await?;
         let payload = PamHostUpdateRequest {
-            hostname: "penguin".to_string(),
+            hostname: "batman".to_string(),
             gid: group.id,
             force_mfa: true,
             notes: Some("Joker is not the Batman".to_string()),
             ips: vec![
-                "192.168.14.20".parse().unwrap(),
-                "127.0.0.1".parse().unwrap(),
+                "123.123.123.123".parse().unwrap(),
+                "1.2.3.4".parse().unwrap(),
             ],
-            aliases: vec!["localhost".to_string(), "alias.test".to_string()],
+            aliases: vec!["batman".to_string(), "batcave.batman".to_string()],
         };
         PamHost::update(host.id, payload).await?;
 
