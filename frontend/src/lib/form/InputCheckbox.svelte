@@ -8,6 +8,7 @@
         borderColor = 'hsl(var(--bg-high))',
         name,
         children,
+        onclickOverride,
     }: {
         checked: boolean,
         disabled?: boolean,
@@ -15,9 +16,15 @@
         borderColor?: string,
         name?: string,
         children?: Snippet,
+        onclickOverride?: (bool: boolean) => void,
     } = $props();
 
     function onclick() {
+        if (onclickOverride) {
+            onclickOverride(!checked);
+            return;
+        }
+
         checked = !checked;
     }
 

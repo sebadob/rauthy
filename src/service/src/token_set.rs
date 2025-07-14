@@ -140,10 +140,29 @@ impl TokenSet {
         let email = if scope.contains("email") {
             if let Some(user) = user.as_ref() {
                 if let Some(cust_email_mapping) = &client.cust_email_mapping {
-                    let attrs = UserAttrValueEntity::find_for_user(&user.id).await.unwrap();
+                    // IMPROVEMENT: Always fetch the user arrs here and pass
+                    // them into the id_token creation down below. Currently all
+                    // custom attrs are fetched twice in case of a custom
+                    // mapping.
+                    let attrs = UserAttrValueEntity::find_for_user(&user.id).await?;
 
-                    let attr = attrs.iter().find(|v| v.key == *cust_email_mapping).unwrap();
-                    let email = serde_json::from_slice(&attr.value).unwrap();
+                    let attr = attrs
+                        .iter()
+                        .find(|v| v.key == *cust_email_mapping)
+                        .ok_or_else(|| {
+                            ErrorResponse::new(
+                                ErrorResponseType::NotFound,
+                                format!("Attribute `{cust_email_mapping}` not set for user"),
+                            )
+                        })?;
+                    let email = serde_json::from_slice(&attr.value).map_err(|e| {
+                        ErrorResponse::new(
+                            ErrorResponseType::Internal,
+                            format!(
+                                "Attribute `{cust_email_mapping}` could not be deserialize: `{e}`"
+                            ),
+                        )
+                    })?;
                     Some(email)
                 } else {
                     Some(user.email.clone())

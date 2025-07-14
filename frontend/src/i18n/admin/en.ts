@@ -52,6 +52,10 @@ export let I18nAdminEn: I18nAdmin = {
         confidential: "Confidential",
         confidentialNoSecret: "This is a non-confidential client and therefore has not secret.",
         config: "Client Configuration",
+        custEmailMapping: "Custom E-Mail Mapping",
+        custEmailMappingExplanation: "Use a custom attribute for the E-Mail that will be provided to the client.",
+        custEmailMappingNoAttrs: `No custom attributes are available for custom E-Mail mapping.
+        The attribute must be of type \`email\` and must not be user editable.`,
         delete1: "Are you sure you want to delete this client?",
         descAuthCode: `The validity for auth codes can be adjusted for increased security. Auth codes
             can be used only once and are valid for 60 seconds by default. The shorter the validity, the
@@ -64,12 +68,12 @@ export let I18nAdminEn: I18nAdmin = {
             Only users, that are assigned to a matching group, will be allowed to log in.`,
         descOrigin: `External, additionally allowed origins - usually only necessary, if this client
             needs to make requests to Rauthy directly from the browser, typically SPAs.`,
-        descPKCE: `If the client supports it, you should always activate S256 PKCE for additional 
-            security. If a non-confidential client (e.g. a SPA) is being used, you must at least 
+        descPKCE: `If the client supports it, you should always activate S256 PKCE for additional
+            security. If a non-confidential client (e.g. a SPA) is being used, you must at least
             activate one of the PKCE challenges to have enough security.`,
         descPKCEEnforce: `If any PKCE is activated, Rauthy will enforce the usage during Logins, and
             rejects login request that do not contain a valida challenge.`,
-        descUri: `You can provide as many redirect URIs as you like. At the end of each, you can use 
+        descUri: `You can provide as many redirect URIs as you like. At the end of each, you can use
             <code>*</code> as a Wildcard.`,
         errConfidentialPKCE: `The client must either be confidential or have at least one PKCE
             challenge activated.`,
@@ -77,7 +81,7 @@ export let I18nAdminEn: I18nAdmin = {
         groupLoginPrefix: "Login Group Prefix",
         name: "Client Name",
         scim: {
-            baseUri: `The SCIM base URI is the one from which the sub routes like 
+            baseUri: `The SCIM base URI is the one from which the sub routes like
                 <code>{base_uri}/Users/{id}</base_uri></code> can be derived correctly.`,
             desc: "If this client supports {{ SCIM_LINK }}, you can activate it here.",
             enable: "Enable SCIMv2",
@@ -91,7 +95,7 @@ export let I18nAdminEn: I18nAdmin = {
             reqLi1: "The client must handle <code>externalId</code> correctly.",
             reqLi2: `At least <code>/Users</code> endpoints with <code>filter=externalId eq "*"</code> and
                 <code>filter=userName eq "*"</code> must be supported.`,
-            reqLi3: `If groups should be synchronized, <code>/Groups</code> must also support 
+            reqLi3: `If groups should be synchronized, <code>/Groups</code> must also support
                 <code>filter=displayName eq "*"</code>.`,
         },
         scopes: {
@@ -99,7 +103,7 @@ export let I18nAdminEn: I18nAdmin = {
             default: "Default Scopes",
             desc: `Allowed Scopes are the ones the client is allowed to request dynamically during
             a redirect to the login when using the <code>authorization_code</code> flow. The default
-            scopes will always be added to the tokens to solve some issues when using the 
+            scopes will always be added to the tokens to solve some issues when using the
             <code>password</code> for instance.`,
         },
         secret: {
@@ -149,11 +153,11 @@ export let I18nAdminEn: I18nAdmin = {
             keysAvailable: "Available Keys",
             migrate: "Migrate",
             migrateToKey: 'Migrate all existing encrypted values to the following key',
-            p1: `These Keys are used for an additional encryption at rest, independently from any data store technology 
+            p1: `These Keys are used for an additional encryption at rest, independently from any data store technology
             used under the hood. They are configured statically, but can be rotated and migrated on this page manually.`,
             p2: `The active key is statically set in the Rauthy config file / environment variables. It cannot be changed
             here dynamically. All new JWK encryption's will always use the currently active key.`,
-            p3: `If you migrate all existing secrets, it might take a few seconds to finish, if you have a big 
+            p3: `If you migrate all existing secrets, it might take a few seconds to finish, if you have a big
             dataset.`,
             pNotPossible: 'To be able to migrate, at least 2 encryption keys need to be available.',
         },
@@ -162,16 +166,16 @@ export let I18nAdminEn: I18nAdmin = {
 
             currValuesHead: 'Current values',
             currValues1: 'The current values from the backend are the following:',
-            currValuesNote: `Note: The Login Time from the backend does only provide a good guideline after at least 5 
-            successful logins, after Rauthy has been started. The base value is always 2000 ms after a fresh restart 
+            currValuesNote: `Note: The Login Time from the backend does only provide a good guideline after at least 5
+            successful logins, after Rauthy has been started. The base value is always 2000 ms after a fresh restart
             and will adjust over time with each successful login.`,
             currValuesThreadsAccess: 'Threads (p_cost) Rauthy has access to',
 
             loginTimeHead: 'A word about Login Time',
-            loginTime1: `Generally, users want everything as fast as possible. When doing a safe login though, a time 
-            between 500 - 1000 ms should not be a problem. The login time must not be too short, since it would lower 
+            loginTime1: `Generally, users want everything as fast as possible. When doing a safe login though, a time
+            between 500 - 1000 ms should not be a problem. The login time must not be too short, since it would lower
             the strength of the hash, of course.`,
-            loginTime2: `To provide as much safety by default as possible, this utility does not allow you to go below 
+            loginTime2: `To provide as much safety by default as possible, this utility does not allow you to go below
             500 ms for the login time.`,
 
             mCost1: `The <code>m_cost</code> defines the amount of <b>memory (in kB)</b>, which is used for the hashing.
@@ -179,12 +183,12 @@ export let I18nAdminEn: I18nAdmin = {
             When you hash 4 passwords at the same time, for instance, the backend needs <code>4 x m_cost</code>
             during the hashing. These resources must be available.`,
             mCost2: `Tuning <code>m_cost</code> is pretty easy. Define the max amount of memory that Rauthy should use,
-            divide it by the number of max allowed parallel logins (<code>MAX_HASH_THREADS</code>) and subtract a small 
+            divide it by the number of max allowed parallel logins (<code>MAX_HASH_THREADS</code>) and subtract a small
             static amount of memory. How much static memory should be taken into account depends on the used database
             and the total amount of users, but will typically be in the range of 32 - 96 MB.`,
             mCost3: 'The minimal allowed <code>m_cost</code> is <code>32768</code>.',
 
-            pCost1: `The <code>p_cost</code> defines the amount of <b>parallelism</b> for hashing. This value most often 
+            pCost1: `The <code>p_cost</code> defines the amount of <b>parallelism</b> for hashing. This value most often
             tops out at ~8, which is the default for Rauthy.`,
             pCost2: `The general rule is:<br>
             Set the <code>p_cost</code> to twice the size of cores your have available.<br>
@@ -192,33 +196,33 @@ export let I18nAdminEn: I18nAdmin = {
             However, this value must take the configured allowed parallel logins (<code>MAX_HASH_THREADS</code>) into
             account and be reduced accordingly.`,
 
-            tCost1: `The <code>t_cost</code> defines the amount of <b>time</b> for hashing. This value is actually the 
-            only value, that needs tuning, since <code>m_cost</code> and <code>p_cost</code> are basically given by the 
+            tCost1: `The <code>t_cost</code> defines the amount of <b>time</b> for hashing. This value is actually the
+            only value, that needs tuning, since <code>m_cost</code> and <code>p_cost</code> are basically given by the
             environment.`,
             tCost2: `Tuning is easy: Set <code>m_cost</code> and <code>p_cost</code> accordingly and then increase
             <code>t_cost</code> as long as you have not reached your hashing-time-goal.`,
 
             utilityHead: 'Parameter Calculation Utility',
-            utility1: `You can use this tool to approximate good values for your deployment. Keep in mind, that this 
-            should be executed with Rauthy in its final place with all final resources available. You should execute 
+            utility1: `You can use this tool to approximate good values for your deployment. Keep in mind, that this
+            should be executed with Rauthy in its final place with all final resources available. You should execute
             this utility during load to not over tune.`,
-            utility2: `<code>m_cost</code> is optional and the safe minimal value of <code>32768</code> would be chosen, 
+            utility2: `<code>m_cost</code> is optional and the safe minimal value of <code>32768</code> would be chosen,
             if empty. <code>p_cost</code> is optional too and Rauthy will utilize all threads it can see, if empty.`,
 
             time: "Time",
             targetTime: "Target Time",
             tune: 'Important: These values need to be tuned on the final architecture!',
-            pDetials: `If you want a detailed introduction to Argon2ID, many sources exist online. This guide just 
+            pDetials: `If you want a detailed introduction to Argon2ID, many sources exist online. This guide just
             gives very short overview about the values. Three of them need to be configured:`,
-            pTune: `They change depending on the capabilities of the system. The more powerful the system, the more safe 
+            pTune: `They change depending on the capabilities of the system. The more powerful the system, the more safe
             these values can be.`,
             pUtility: `This utility helps you find the best Argon2ID settings for your platform.
-            Argon2ID is currently the safest available password hashing algorithm. To use it to its fullest potential, 
+            Argon2ID is currently the safest available password hashing algorithm. To use it to its fullest potential,
             it has to be tuned for each deployment.`,
         },
         openapi: "If you want to integrate an external application and use Rauthy's API, take a look at the",
         openapiNote: `Depending on the backend configuration, the Swagger UI may not be exposed publicly at this point.
-            It is however by default available via the internal metrics HTTP server to not expose any 
+            It is however by default available via the internal metrics HTTP server to not expose any
             information.`,
         source: "The source code can be found here",
     },
@@ -242,7 +246,7 @@ export let I18nAdminEn: I18nAdmin = {
         p1: "These are the Json Web Keys (JWKs) used for token singing.",
         p2: `The JWKs will be rotated by default every 1st of a month. For all newly created tokens, only the latest
         available key for the given algorithm will be used for signing. Old keys will be kept for a while to make sure
-        that currently valid tokens can still be validated properly. After a while, they will be cleaned up 
+        that currently valid tokens can still be validated properly. After a while, they will be cleaned up
         automatically.`,
         p3: `Keys can also be rotated manually. Depending on the hardware this Rauthy instance is running on, it might
         take a few seconds.`,
@@ -359,7 +363,7 @@ export let I18nAdminEn: I18nAdmin = {
         forceLogout: `Are you sure you want to invalidate all existing sessions and delete all refresh tokens
             for this user?`,
         lastLogin: "Last Login",
-        manualInitDesc: `The user can also be initialized here, In this case though, you need to communicate the 
+        manualInitDesc: `The user can also be initialized here, In this case though, you need to communicate the
             password directly.`,
         manualInit: "Manual Initialization",
         mfaDelete1: "You can delete Passkeys for this users.",

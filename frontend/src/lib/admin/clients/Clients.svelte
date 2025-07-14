@@ -27,7 +27,7 @@
     let client: undefined | ClientResponse = $state();
     let cid = useParam('cid');
     let scopesAll: string[] = $state([]);
-    let attrsAll: string[] = $state([]);
+    let attrsEmail: string[] = $state([]);
 
     const searchOptions = ['ID'];
     let searchOption = $state(searchOptions[0]);
@@ -37,7 +37,7 @@
     onMount(() => {
         fetchClients();
         fetchScopes();
-        fetchAttrs();
+        fetchEmailAttrs();
     });
 
     $effect(() => {
@@ -71,10 +71,10 @@
         }
     }
 
-    async function fetchAttrs() {
+    async function fetchEmailAttrs() {
         let res = await fetchGet<UserAttrConfigResponse>('/auth/v1/users/attr');
         if (res.body) {
-            attrsAll = res.body.values.map((a) => a.name);
+            attrsEmail = res.body.values.filter((a) => a.typ && a.typ === 'email' && !a.user_editable).map((a) => a.name);
         } else {
             err = res.error?.message || 'Error';
         }
@@ -144,7 +144,7 @@
 
     <div id="groups">
         {#if client}
-            <ClientDetails {client} {clients} {scopesAll} {attrsAll} {onSave}/>
+            <ClientDetails {client} {clients} {scopesAll} attrsAll={attrsEmail} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>

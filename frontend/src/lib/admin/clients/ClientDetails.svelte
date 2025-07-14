@@ -52,7 +52,7 @@
 
 <div class="details">
     {#if selected === ta.nav.config}
-        <ClientConfig {client} {clients} {scopesAll} {attrsAll} {onSave}/>
+        <ClientConfig {client} {clients} {scopesAll} attrsEmail={attrsAll} {onSave}/>
     {:else if selected === 'Secret'}
         <ClientSecret {client}/>
     {:else if selected === 'Branding'}
