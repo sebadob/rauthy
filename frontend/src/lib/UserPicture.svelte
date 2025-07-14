@@ -29,6 +29,8 @@
 
     let t = useI18n();
 
+    let refDel: undefined | HTMLButtonElement = $state();
+
     let config = $derived(usePictureConfig().get());
 
     let err = $state('');
@@ -166,6 +168,9 @@
 
             if (res.ok) {
                 pictureId = await res.text();
+                setTimeout(() => {
+                    refDel?.focus();
+                }, 100);
             } else {
                 let error: ErrorResponse = await res.json();
                 if (res.status === 406) {
@@ -220,11 +225,14 @@
                 <IconUpload {width}/>
             </label>
             <input
+                    tabindex="0"
                     {id}
                     type="file"
                     disabled={isUploading}
+                    aria-label="Upload Picture"
                     aria-disabled={isUploading}
-                    aria-hidden="true"
+                    onfocusin={() => showUpload = true}
+                    onfocusout={() => showUpload = false}
                     {accept}
                     bind:files
             />
@@ -241,7 +249,7 @@
         {#if size === 'large' && pictureId}
             <div class="relative">
                 <div class="delete">
-                    <Button invisible onclick={deletePicture}>
+                    <Button bind:ref={refDel} invisible onclick={deletePicture}>
                         <div title={t.common.delete}>
                             <IconStop/>
                         </div>
@@ -266,11 +274,15 @@
         background: hsl(var(--bg));
     }
 
-    input[type="file"]::file-selector-button {
-        display: none;
+    input {
+        margin: 0;
+        padding: 0;
+        width: 0;
+        height: 0;
+        overflow: hidden;
     }
 
-    input[aria-hidden="true"] {
+    input[type="file"]::file-selector-button {
         display: none;
     }
 
