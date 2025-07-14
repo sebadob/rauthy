@@ -179,7 +179,7 @@ pub async fn get_getent(
     info!("getent {:?}", payload.getent);
     payload.validate()?;
 
-    let host = PamHost::find_by_alias_full(payload.host_id).await?;
+    let host = PamHost::find_simple(payload.host_id).await?;
     host.validate_secret(payload.host_secret)?;
 
     let resp = match payload.getent {

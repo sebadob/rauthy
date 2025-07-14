@@ -257,7 +257,7 @@ SELECT * FROM pam_hosts WHERE id = (
 
     pub async fn find_by_alias_full(hostname: String) -> Result<Self, ErrorResponse> {
         let sql = r#"
-SELECT * FROM pam_hosts WHERE id = $1 OR id = (
+SELECT * FROM pam_hosts WHERE hostname = $1 OR id = (
     SELECT host_id FROM pam_hosts_aliases
     WHERE alias = $1
     LIMIT 1
