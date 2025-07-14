@@ -11,8 +11,13 @@
     import type {UserAttrConfigResponse, UserAttrConfigValueResponse} from "$api/types/user_attrs.ts";
     import AttrAddNew from "$lib5/admin/attrs/AttrAddNew.svelte";
     import AttrDetails from "$lib5/admin/attrs/AttrDetails.svelte";
+    import {useTrigger} from "$state/callback.svelte";
 
     let ta = useI18nAdmin();
+
+    let refAddNew: undefined | HTMLButtonElement = $state();
+    let tr = useTrigger();
+    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -78,7 +83,7 @@
         width="min(20rem, 100dvw)"
         thresholdNavSub={700}
 >
-    <ButtonAddModal level={attrs.length === 0 ? 1 : 2} bind:closeModal alignRight>
+    <ButtonAddModal bind:ref={refAddNew} level={attrs.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <AttrAddNew onSave={onAddNew} {attrs}/>
     </ButtonAddModal>
     <OrderSearchBar

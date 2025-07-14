@@ -2,6 +2,7 @@
     import type {Snippet} from "svelte";
     import {genKey} from "$utils/helpers";
     import Button from "$lib5/button/Button.svelte";
+    import {useTrigger} from "$state/callback.svelte";
 
     let {
         width = 'min(25rem, 100dvw)',

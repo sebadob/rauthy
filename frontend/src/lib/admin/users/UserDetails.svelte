@@ -14,6 +14,7 @@
     import UserForceLogout from "./UserForceLogout.svelte";
     import UserDelete from "$lib5/admin/users/UserDelete.svelte";
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider";
+    import {useTrigger} from "$state/callback.svelte";
 
     let {
         userId,
@@ -44,6 +45,11 @@
     let selected = $state(tabs[0]);
 
     let focusFirst: undefined | (() => void) = $state();
+    useTrigger().set('navSubSub', () => {
+        requestAnimationFrame(() => {
+            focusFirst?.();
+        });
+    });
 
     let err = $state('');
     let user: undefined | UserResponse = $state();
@@ -56,9 +62,7 @@
         let res = await fetchGet<UserResponse>(`/auth/v1/users/${userId}`);
         if (res.body) {
             user = res.body;
-            requestAnimationFrame(() => {
-                focusFirst?.();
-            });
+            focusFirst?.();
         } else {
             err = res.error?.message || 'Error fetching user';
         }

@@ -1,6 +1,7 @@
 <script lang="ts">
     import A from "$lib5/A.svelte";
     import type {Snippet} from "svelte";
+    import {useTrigger} from "$state/callback.svelte";
 
     let {
         compact,
@@ -20,11 +21,29 @@
 
     const urlPrefix = '/auth/v1/admin';
 
+    let tr = useTrigger();
+
     let width = $derived(compact ? "1.5rem" : "1.2rem");
     let href = $derived(`${urlPrefix}${route}${params}`);
+
+    function onclick() {
+        // This is a bit of a hacky solution.
+        // Our main issue, is that we are trying to solve a chicken-and-egg problem here.
+        // The focus trigger function is set inside the component we are linking to, so it can only
+        // exist AFTER our link was opened. If we only await the next animation frame, we have a fail
+        // because of a race condition. The timeout of 100ms should be more than enough though.
+        // The trigger does not depend on data we need to load inside the component, so it should be fine.
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                tr.trigger('navMain');
+            }, 100);
+        });
+    }
+
+
 </script>
 
-<A {href} hideUnderline {highlightIncludes}>
+<A {href} hideUnderline {highlightIncludes} {onclick}>
     {#if compact}
         <div class="compact">
             <div class="iconCompact">

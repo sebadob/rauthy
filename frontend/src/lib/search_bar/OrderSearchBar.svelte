@@ -3,6 +3,7 @@
     import SearchBar from "$lib5/search_bar/SearchBar.svelte";
 
     let {
+        ref = $bindable(),
         searchOptions,
         searchOption = $bindable(),
         datalist,
@@ -17,6 +18,7 @@
 
         borderless,
     }: {
+        ref?: undefined | HTMLButtonElement,
         searchOptions?: string[],
         searchOption?: string,
         datalist?: string[];
@@ -35,6 +37,7 @@
 
 <div class="container">
     <OrderBy
+            bind:ref
             options={orderOptions}
             onChange={onChangeOrder}
             {borderless}

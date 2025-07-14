@@ -11,8 +11,13 @@
     import type {GroupResponse} from "$api/types/groups.ts";
     import GroupAddNew from "$lib5/admin/groups/GroupAddNew.svelte";
     import GroupDetails from "$lib5/admin/groups/GroupDetails.svelte";
+    import {useTrigger} from "$state/callback.svelte";
 
     let ta = useI18nAdmin();
+
+    let refAddNew: undefined | HTMLButtonElement = $state();
+    let tr = useTrigger();
+    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -82,7 +87,7 @@
         width="min(20rem, 100dvw)"
         thresholdNavSub={700}
 >
-    <ButtonAddModal level={groups.length === 0 ? 1 : 2} bind:closeModal alignRight>
+    <ButtonAddModal bind:ref={refAddNew} level={groups.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <GroupAddNew onSave={onAddNew} {groups}/>
     </ButtonAddModal>
     <OrderSearchBar

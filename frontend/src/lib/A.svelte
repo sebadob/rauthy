@@ -3,6 +3,7 @@
     import {page} from "$app/state";
 
     let {
+        ref = $bindable(),
         href,
         target,
         selectedStep = false,
@@ -11,8 +12,10 @@
         highlightExact = false,
         highlightIncludes,
         highlightWithParams = false,
+        onclick,
         children,
     }: {
+        ref?: undefined | HTMLAnchorElement,
         href: string,
         target?: string,
         selectedStep?: boolean,
@@ -21,6 +24,7 @@
         highlightExact?: boolean,
         highlightIncludes?: string,
         highlightWithParams?: boolean,
+        onclick?: () => void,
         children: Snippet,
     } = $props();
 
@@ -54,25 +58,29 @@
         }
     });
 
+    function onkeydown(ev: KeyboardEvent) {
+        if (ev.code === 'Enter') {
+            onclick?.();
+        }
+    }
+
 </script>
 
 <a
+        bind:this={ref}
         class="font-label"
         class:hideUnderline
         {href}
         {target}
         aria-current={ariaCurrentType}
         data-highlight={highlight}
+        {onclick}
+        {onkeydown}
 >
     {@render children()}
 </a>
 
 <style>
-    /*a, a:link, a:visited {*/
-    /*    color: hsl(var(--text));*/
-    /*    !*transition: all 150ms ease-in-out;*!*/
-    /*}*/
-
     a[data-highlight="true"], a[data-highlight="true"]:link, a[data-highlight="true"]:visited {
         color: hsl(var(--action));
     }
@@ -80,11 +88,6 @@
     .hideUnderline {
         text-decoration: none;
     }
-
-    /*a:hover, a:active {*/
-    /*    color: hsl(var(--action));*/
-    /*    text-decoration: underline;*/
-    /*}*/
 
     a[aria-current="page"],
     a[aria-current="step"] {

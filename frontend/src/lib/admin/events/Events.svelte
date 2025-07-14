@@ -9,6 +9,7 @@
     import {onDestroy} from "svelte";
     import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import {fetchPost} from "$api/fetch";
+    import {useTrigger} from "$state/callback.svelte";
 
     const latest = 50;
 
