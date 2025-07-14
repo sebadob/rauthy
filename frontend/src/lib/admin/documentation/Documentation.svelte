@@ -6,7 +6,7 @@
 
     let ta = useI18nAdmin();
 
-    let ref: undefined | HTMLButtonElement = $state();
+    let ref: undefined | HTMLAnchorElement = $state();
     let tr = useTrigger();
     tr.set('navMain', () => ref?.focus());
 </script>
