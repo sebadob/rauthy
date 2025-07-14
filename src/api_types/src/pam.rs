@@ -45,9 +45,9 @@ pub struct PamLoginRequest {
 // TODO we could require machine id + secret here as well
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct PamMfaStartRequest {
-    /// Validation: `email`
-    #[validate(email)]
-    pub user_email: String,
+    //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
+    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,63}$"))]
+    pub username: String,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

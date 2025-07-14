@@ -85,7 +85,7 @@ pub async fn post_login(
         ));
     }
 
-    let mut user = User::find_by_email(pam_user.email).await?;
+    let mut user = User::find_by_email(pam_user.email.clone()).await?;
     user.check_expired()?;
     user.check_enabled()?;
 
@@ -135,7 +135,7 @@ pub async fn post_login(
         ));
     }
 
-    let token = PamToken::new(user, pam_user.name).await?;
+    let token = PamToken::new(user, pam_user).await?;
     Ok(HttpResponse::Ok().json(token))
 }
 
@@ -145,7 +145,8 @@ pub async fn post_mfa_start(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let user = User::find_by_email(payload.user_email).await?;
+    let pam_user = PamUser::find_by_name(payload.username).await?;
+    let user = User::find_by_email(pam_user.email).await?;
 
     let resp = webauthn::auth_start(user.id, MfaPurpose::PamLogin).await?;
     Ok(HttpResponse::Ok().json(resp))
