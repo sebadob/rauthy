@@ -16,6 +16,7 @@ pub struct PamToken {
     pub exp: i64,
     pub user_id: String,
     pub user_email: String,
+    pub username: String,
     pub roles: Vec<String>,
     pub groups: Vec<String>,
 }
@@ -24,12 +25,13 @@ impl Debug for PamToken {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "PamAuthToken {{ id: {}(...), exp: {}, user_id: {}, user_email: {}, roles: {:?}, \
-            groups: {:?} }}",
+            "PamAuthToken {{ id: {}(...), exp: {}, user_id: {}, user_email: {}, username: {}, \
+            roles: {:?}, groups: {:?} }}",
             &self.id[..5],
             self.exp,
             self.user_id,
             self.user_email,
+            self.username,
             self.roles,
             self.groups,
         )
@@ -41,7 +43,7 @@ impl Debug for PamToken {
 //  the existing patch level for stress-free testing. The current Rauthy version is still in the
 //  patch-phase.
 impl PamToken {
-    pub async fn new(user: User) -> Result<Self, ErrorResponse> {
+    pub async fn new(user: User, username: String) -> Result<Self, ErrorResponse> {
         let lifetime_secs = 300;
         // let lifetime_secs = 16 * 3600;
 
@@ -55,6 +57,7 @@ impl PamToken {
                 .timestamp(),
             user_id: user.id,
             user_email: user.email,
+            username,
             roles,
             groups,
         };

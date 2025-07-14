@@ -135,7 +135,7 @@ pub async fn post_login(
         ));
     }
 
-    let token = PamToken::new(user).await?;
+    let token = PamToken::new(user, pam_user.name).await?;
     Ok(HttpResponse::Ok().json(token))
 }
 

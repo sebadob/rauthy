@@ -147,7 +147,7 @@ VALUES  ('pam_groups', 100000),
         let payload = PamHostUpdateRequest {
             hostname: "batman".to_string(),
             gid: group.id,
-            force_mfa: true,
+            force_mfa: false,
             notes: Some("Joker is not the Batman".to_string()),
             ips: vec![
                 "123.123.123.123".parse().unwrap(),
