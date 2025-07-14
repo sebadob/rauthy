@@ -13,20 +13,16 @@
     let activeTheme = $derived(theme.isDark() ? 'dark' : 'light');
 
     $effect(() => {
-        const mediaPref = window?.matchMedia?.('(prefers-color-scheme:dark)')?.matches ?? false;
+        const mediaPrefDark = window?.matchMedia?.('(prefers-color-scheme:dark)')?.matches ?? false;
 
         if (theme.isDark() === undefined) {
-            const darkModeSaved = window?.localStorage?.getItem(storageIdx);
-            if (darkModeSaved) {
-                let newValue = "true" === darkModeSaved;
-                if (theme.isDark() === mediaPref) {
-                    localStorage.removeItem(storageIdx);
-                }
-                theme.setIsDark(newValue);
-                // darkMode = newValue;
+            const modeSaved = window?.localStorage?.getItem(storageIdx);
+            if (modeSaved === 'dark') {
+                theme.setIsDark(true);
+            } else if (modeSaved === 'light') {
+                theme.setIsDark(false);
             } else {
-                theme.setIsDark(mediaPref);
-                // darkMode = mediaPref;
+                theme.setIsDark(mediaPrefDark);
             }
         } else if (theme.isDark()) {
             document.body.classList.remove("theme-light");
@@ -36,11 +32,7 @@
             document.body.classList.add("theme-light");
         }
 
-        if (mediaPref === theme.isDark()) {
-            localStorage.removeItem(storageIdx);
-        } else {
-            localStorage.setItem(storageIdx, 'true');
-        }
+        localStorage.setItem(storageIdx, theme.isDark() ? 'dark' : 'light');
     });
 
     function toggle() {
