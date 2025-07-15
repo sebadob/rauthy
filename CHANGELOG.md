@@ -1,5 +1,17 @@
 # Changelog
 
+## UNRELEASED
+
+### Bugfix
+
+- It was possible that a "Login from new location" notification was sent out for Passkey-only accounts, if someone knew
+  all the right values incl the username, but was not able to get past the MFA / Passkey challenge. This would have been
+  a false-positive.
+  [#1105](https://github.com/sebadob/rauthy/pull/1105)
+- After Rauthy received an accessibility review from [HAN](https://www.han.nl/) as part of the NGI funding, it was
+  declared as "fairly accessible" already, but there were still some things that have been improved after the review.
+  [#1099](https://github.com/sebadob/rauthy/issues/1099)
+
 ## v0.31.1
 
 ### Bugfix
