@@ -380,7 +380,7 @@ impl UserPicture {
                 info!("Using Database as User Picture Storage");
             }
             PictureStorage::File => {
-                if RauthyConfig::get().is_ha_deployment {
+                if RauthyConfig::get().is_ha_cluster {
                     panic!(
                         "You can only use local file storage for User Pictures for a single instance"
                     );
