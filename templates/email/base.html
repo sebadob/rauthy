@@ -40,7 +40,7 @@
 
     a, a:link, a:visited {
         padding: .25rem .5rem;
-        color: hsl(var(--text));
+        color: var(--btn-text);
         transition: all 150ms ease-in-out;
         background: hsl(var(--action));
         border-radius: var(--border-radius);
@@ -50,12 +50,13 @@
     }
 
     a:hover, a:active {
-        color: hsl(var(--text-high));
+        color: var(--btn-text);
         box-shadow: 1px 1px 2px hsl(var(--bg-high));
     }
 
     a[data-faded="true"] {
         border: 1px solid hsl(var(--action));
+        color: var(--action);
         background-color: hsl(var(--bg));
     }
 
