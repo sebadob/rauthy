@@ -24,7 +24,6 @@ static CONFIG: OnceLock<RauthyConfig> = OnceLock::new();
 #[derive(Debug)]
 pub struct RauthyConfig {
     pub argon2_params: argon2::Params,
-    pub is_ha_deployment: bool,
     pub issuer: String,
     pub is_primary_node: bool,
     pub is_ha_cluster: bool,
@@ -91,8 +90,6 @@ impl RauthyConfig {
             ),
         };
 
-        info!("Public URL: {}", vars.server.pub_url);
-
         let argon2_params = argon2::Params::new(
             vars.hashing.argon2_m_cost,
             vars.hashing.argon2_t_cost,
@@ -100,7 +97,6 @@ impl RauthyConfig {
             None,
         )
         .expect("Unable to build Argon2id params, check the values in the [hashing] section");
-        debug!("Argon2id Params: {argon2_params:?}");
 
         #[cfg(target_os = "windows")]
         let is_https = matches!(listen_scheme, ListenScheme::HttpHttps | ListenScheme::Https)
@@ -112,7 +108,6 @@ impl RauthyConfig {
         ) || vars.server.proxy_mode;
         let issuer_scheme = if is_https { "https" } else { "http" };
         let issuer = format!("{issuer_scheme}://{}/auth/v1", vars.server.pub_url);
-        debug!("Issuer: {issuer}");
 
         let Ok(log_level_access) = LogLevelAccess::from_str(&vars.logging.level_access) else {
             panic!(
@@ -182,7 +177,6 @@ impl RauthyConfig {
 
         let slf = Self {
             argon2_params,
-            is_ha_deployment: node_config.nodes.len() > 1,
             issuer,
             is_primary_node: node_config.node_id == 1 || node_config.nodes.len() == 1,
             is_ha_cluster: node_config.nodes.len() > 1,
@@ -199,6 +193,27 @@ impl RauthyConfig {
         };
 
         Ok((slf, node_config))
+    }
+
+    pub fn debug_logs() {
+        let slf = Self::get();
+
+        // we don't to log everything, just the important values
+        info!("Public URL: {}", slf.vars.server.pub_url);
+        debug!("Proxy Mode: {}", slf.vars.server.proxy_mode);
+        debug!("Trusted Proxies: {:?}", slf.vars.server.trusted_proxies);
+        info!("Issuer: {}", slf.issuer);
+        debug!("HA Deployment: {}", slf.is_ha_cluster);
+        debug!(
+            "Argon2id Params: m_code: {}, t_cost: {}, p_cost: {}",
+            slf.argon2_params.m_cost(),
+            slf.argon2_params.t_cost(),
+            slf.argon2_params.p_cost()
+        );
+
+        if slf.vars.dev.dev_mode {
+            warn!("You started with DEV Mode enabled. Do NOT use this in production!");
+        }
     }
 
     pub fn init_static(self) {
