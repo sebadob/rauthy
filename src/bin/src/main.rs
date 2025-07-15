@@ -97,6 +97,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         warn!("Application started in Integration Test Mode");
     }
 
+    RauthyConfig::debug_logs();
+
     // init BEFORE Hiqlite to avoid issues in case of mis-config
     rauthy_models::ipgeo::init_geo().await;
 
