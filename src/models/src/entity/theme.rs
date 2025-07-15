@@ -479,7 +479,7 @@ impl ThemeCss {
             action: [34, 100, 40],
             accent: [265, 100, 53],
             error: [15, 100, 37],
-            btn_text: "hsl(200 15 3)".to_string(),
+            btn_text: "white".to_string(),
             theme_sun: "hsla(var(--action) / .7)".to_string(),
             theme_moon: "hsla(var(--accent) / .85)".to_string(),
         }
