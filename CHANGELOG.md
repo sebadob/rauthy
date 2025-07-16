@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.31.2
 
 ### Bugfix
 
