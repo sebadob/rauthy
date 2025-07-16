@@ -176,7 +176,7 @@ SET bearer_token = $2, base_endpoint = $3, sync_groups = $4, group_sync_prefix =
 }
 
 impl ClientScim {
-    fn decrypt_bearer_token(encrypted_token: Vec<u8>) -> Result<String, ErrorResponse> {
+    pub(crate) fn decrypt_bearer_token(encrypted_token: Vec<u8>) -> Result<String, ErrorResponse> {
         let bytes = EncValue::try_from(encrypted_token)?.decrypt()?;
         let cleartext = String::from_utf8_lossy(bytes.as_ref()).to_string();
         Ok(cleartext)
