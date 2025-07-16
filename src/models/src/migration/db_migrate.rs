@@ -224,6 +224,11 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     inserts::user_attr_values(before).await?;
 
     // USERS VALUES
+    debug!("Migrating table: users_values");
+    let before = query_sqlite::<UserValues>(&conn, "SELECT * FROM users_values").await?;
+    inserts::users_values(before).await?;
+
+    // USER REVOKE
     debug!("Migrating table: user_revoke");
     let mut stmt = conn.prepare("SELECT * FROM user_revoke")?;
     let before = stmt
@@ -236,11 +241,6 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .map(|r| r.unwrap())
         .collect_vec();
     inserts::user_revoke(before).await?;
-
-    // USER REVOKE
-    debug!("Migrating table: users_values");
-    let before = query_sqlite::<UserValues>(&conn, "SELECT * FROM users_values").await?;
-    inserts::users_values(before).await?;
 
     // DEVICES
     debug!("Migrating table: devices");
