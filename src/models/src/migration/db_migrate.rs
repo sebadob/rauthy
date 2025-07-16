@@ -464,7 +464,22 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // CLIENTS SCIM
     debug!("Migrating table: clients_scim");
-    let before = DB::pg_query_map_with(&cl, "SELECT * FROM clients_scim", &[], 0).await?;
+    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM clients_scim", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| {
+            let bearer_token =
+                ClientScim::decrypt_bearer_token(row.get::<_, Vec<u8>>("bearer_token"))
+                    .expect("Column clients_scim.bearer_token corrupted");
+            ClientScim {
+                client_id: row.get("client_id"),
+                bearer_token,
+                base_uri: row.get("base_endpoint"),
+                sync_groups: row.get("sync_groups"),
+                group_sync_prefix: row.get("group_sync_prefix"),
+            }
+        })
+        .collect::<Vec<_>>();
     inserts::clients_scim(before).await?;
 
     // GROUPS
@@ -555,7 +570,15 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // FAILED SCIM TASKS
     debug!("Migrating table: failed_scim_tasks");
-    let before = DB::pg_query_map_with(&cl, "SELECT * FROM failed_scim_tasks", &[], 0).await?;
+    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM failed_scim_tasks", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| FailedScimTask {
+            action: ScimAction::from(row.get::<_, String>("action").as_str()),
+            client_id: row.get("client_id"),
+            retry_count: row.get::<_, i32>("retry_count") as i64,
+        })
+        .collect::<Vec<_>>();
     inserts::failed_scim_tasks(before).await?;
 
     // RECENT PASSWORDS

@@ -29,6 +29,7 @@ use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::Event;
+use cryptr::EncValue;
 use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
@@ -341,12 +342,13 @@ VALUES ($1, $2, $3, $4, $5)"#;
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
+            let bearer_encrypted = EncValue::encrypt(b.bearer_token.as_bytes())?.into_bytes();
             DB::hql()
                 .execute(
                     sql_2,
                     params!(
                         b.client_id,
-                        b.bearer_token,
+                        bearer_encrypted.as_ref(),
                         b.base_uri,
                         b.sync_groups,
                         b.group_sync_prefix
@@ -357,11 +359,12 @@ VALUES ($1, $2, $3, $4, $5)"#;
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
+            let bearer_encrypted = EncValue::encrypt(b.bearer_token.as_bytes())?.into_bytes();
             DB::pg_execute(
                 sql_2,
                 &[
                     &b.client_id,
-                    &b.bearer_token,
+                    &bearer_encrypted.as_ref(),
                     &b.base_uri,
                     &b.sync_groups,
                     &b.group_sync_prefix,
@@ -531,7 +534,7 @@ VALUES ($1, $2, $3)"#;
         for b in data_before {
             DB::pg_execute(
                 sql_2,
-                &[&b.client_id, &b.action.to_string(), &b.retry_count],
+                &[&b.client_id, &b.action.to_string(), &(b.retry_count as i32)],
             )
             .await?;
         }

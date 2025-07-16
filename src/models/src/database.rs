@@ -3,7 +3,6 @@ use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, db_migrate, init_prod};
 use crate::rauthy_config::RauthyConfig;
 use futures_util::StreamExt;
-use hiqlite::NodeConfig;
 use hiqlite::cache_idx::CacheIndex;
 use hiqlite_macros::embed::*;
 use rauthy_common::{is_hiqlite, is_postgres};
@@ -212,12 +211,13 @@ impl DB {
         }
 
         // migrate dynamic DB data
-        if !RauthyConfig::get().vars.dev.dev_mode && RauthyConfig::get().is_primary_node {
+        let config = RauthyConfig::get();
+        if !config.vars.dev.dev_mode && config.is_primary_node {
             init_prod::migrate_init_prod().await?;
         }
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {
-            if NodeConfig::from_env().nodes.len() > 1 {
+            if config.is_ha_cluster {
                 // TODO does this error make sense or might we be able to do it anyway?
                 error!(
                     r#"
@@ -256,7 +256,7 @@ impl DB {
                     );
                 };
             }
-        } else if RauthyConfig::get().vars.dev.dev_mode && RauthyConfig::get().is_primary_node {
+        } else if config.vars.dev.dev_mode && config.is_primary_node {
             migrate_dev_data().await.expect("Migrating DEV DATA");
         }
 
@@ -371,11 +371,21 @@ impl DB {
         expected_rows_size_hint: usize,
     ) -> Result<Vec<tokio_postgres::Row>, ErrorResponse> {
         let cl = Self::pg().await?;
-        let st = cl.prepare_cached(stmt).await?;
-        let s = cl.query_raw(&st, Self::params_iter(params)).await?;
+        Self::pg_query_rows_with(&cl, stmt, params, expected_rows_size_hint).await
+    }
+
+    #[inline]
+    pub async fn pg_query_rows_with<'a>(
+        client: &PgClient,
+        stmt: &str,
+        params: &'a [&'a (dyn postgres_types::ToSql + Sync)],
+        expected_rows_size_hint: usize,
+    ) -> Result<Vec<tokio_postgres::Row>, ErrorResponse> {
+        let st = client.prepare_cached(stmt).await?;
+        let s = client.query_raw(&st, Self::params_iter(params)).await?;
         pin!(s);
 
-        let mut res = Vec::with_capacity(expected_rows_size_hint);
+        let mut res: Vec<tokio_postgres::Row> = Vec::with_capacity(expected_rows_size_hint);
         while let Some(row) = s.next().await {
             res.push(row?);
         }
