@@ -173,8 +173,8 @@ pub enum PamGetentResponse {
     Host(PamHostSimpleResponse),
 }
 
-#[get("/pam/getent")]
-pub async fn get_getent(
+#[post("/pam/getent")]
+pub async fn post_getent(
     Json(payload): Json<PamGetentRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     info!("getent {:?}", payload.getent);

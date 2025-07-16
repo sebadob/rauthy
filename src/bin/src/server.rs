@@ -362,7 +362,7 @@ fn api_services() -> actix_web::Scope {
                 .service(pam::post_mfa_start)
                 .service(pam::post_mfa_finish)
                 .service(pam::get_validate_user)
-                .service(pam::get_getent)
+                .service(pam::post_getent)
                 .service(users::get_users)
                 .service(users::get_users_register)
                 .service(users::post_users_register)
