@@ -3,12 +3,15 @@ use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::auth_providers::AuthProvider;
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
+use crate::entity::clients_scim::ClientScim;
 use crate::entity::config::ConfigEntity;
 use crate::entity::db_version::DbVersion;
 use crate::entity::devices::DeviceEntity;
 use crate::entity::failed_backchannel_logout::FailedBackchannelLogout;
+use crate::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use crate::entity::groups::Group;
 use crate::entity::jwk::Jwk;
+use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::password::RecentPasswordsEntity;
@@ -21,6 +24,7 @@ use crate::entity::sessions::{Session, SessionState};
 use crate::entity::theme::{ThemeCss, ThemeCssFull};
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::user_login_states::UserLoginState;
+use crate::entity::user_revoke::UserRevoke;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
@@ -139,6 +143,25 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     .await?;
     inserts::client_logos(before).await?;
 
+    // CLIENTS SCIM
+    debug!("Migrating table: clients_scim");
+    let mut stmt = conn.prepare("SELECT * FROM clients_scim")?;
+    let before = stmt
+        .query_map([], |row| {
+            let bearer_token = ClientScim::decrypt_bearer_token(row.get("bearer_token")?)
+                .expect("Column clients_scim.bearer_token corrupted");
+            Ok(ClientScim {
+                client_id: row.get("client_id")?,
+                bearer_token,
+                base_uri: row.get("base_endpoint")?,
+                sync_groups: row.get("sync_groups")?,
+                group_sync_prefix: row.get("group_sync_prefix")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::clients_scim(before).await?;
+
     // GROUPS
     debug!("Migrating table: groups");
     let before = query_sqlite::<Group>(&conn, "SELECT * FROM groups").await?;
@@ -205,6 +228,20 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     let before = query_sqlite::<UserValues>(&conn, "SELECT * FROM users_values").await?;
     inserts::users_values(before).await?;
 
+    // USER REVOKE
+    debug!("Migrating table: user_revoke");
+    let mut stmt = conn.prepare("SELECT * FROM user_revoke")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(UserRevoke {
+                user_id: row.get("user_id")?,
+                code: row.get("code")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::user_revoke(before).await?;
+
     // DEVICES
     debug!("Migrating table: devices");
     let before = query_sqlite::<DeviceEntity>(&conn, "SELECT * FROM devices").await?;
@@ -245,12 +282,44 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     let before = query_sqlite::<UserLoginState>(&conn, "SELECT * FROM user_login_states").await?;
     inserts::user_login_states(before).await?;
 
+    // LOGIN LOCATIONS
+    debug!("Migrating table: login_locations");
+    let mut stmt = conn.prepare("SELECT * FROM login_locations")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(LoginLocation {
+                user_id: row.get("user_id")?,
+                ip: row.get("ip")?,
+                last_seen: row.get("last_seen")?,
+                user_agent: row.get("user_agent")?,
+                location: row.get("location")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::login_locations(before).await?;
+
     // FAILED BACKCHANNEL LOGOUTS
     debug!("Migrating table: failed_backchannel_logouts");
     let before =
         query_sqlite::<FailedBackchannelLogout>(&conn, "SELECT * FROM failed_backchannel_logouts")
             .await?;
     inserts::failed_backchannel_logouts(before).await?;
+
+    // FAILED SCIM TASKS
+    debug!("Migrating table: failed_scim_tasks");
+    let mut stmt = conn.prepare("SELECT * FROM failed_scim_tasks")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(FailedScimTask {
+                action: ScimAction::from(row.get::<_, String>("action")?.as_str()),
+                client_id: row.get("client_id")?,
+                retry_count: row.get::<_, i64>("retry_count")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::failed_scim_tasks(before).await?;
 
     // RECENT PASSWORDS
     debug!("Migrating table: recent_passwords");
@@ -393,6 +462,26 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     .await?;
     inserts::client_logos(before).await?;
 
+    // CLIENTS SCIM
+    debug!("Migrating table: clients_scim");
+    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM clients_scim", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| {
+            let bearer_token =
+                ClientScim::decrypt_bearer_token(row.get::<_, Vec<u8>>("bearer_token"))
+                    .expect("Column clients_scim.bearer_token corrupted");
+            ClientScim {
+                client_id: row.get("client_id"),
+                bearer_token,
+                base_uri: row.get("base_endpoint"),
+                sync_groups: row.get("sync_groups"),
+                group_sync_prefix: row.get("group_sync_prefix"),
+            }
+        })
+        .collect::<Vec<_>>();
+    inserts::clients_scim(before).await?;
+
     // GROUPS
     debug!("Migrating table: groups");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM groups", &[], 4).await?;
@@ -443,6 +532,11 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM users_values", &[], 0).await?;
     inserts::users_values(before).await?;
 
+    // USER REVOKE
+    debug!("Migrating table: user_revoke");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM user_revoke", &[], 0).await?;
+    inserts::user_revoke(before).await?;
+
     // DEVICES
     debug!("Migrating table: devices");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM devices", &[], 0).await?;
@@ -463,11 +557,29 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM user_login_states", &[], 0).await?;
     inserts::user_login_states(before).await?;
 
+    // LOGIN LOCATIONS
+    debug!("Migrating table: login_locations");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM login_locations", &[], 0).await?;
+    inserts::login_locations(before).await?;
+
     // FAILED BACKCHANNEL LOGOUTS
     debug!("Migrating table: failed_backchannel_logouts");
     let before =
         DB::pg_query_map_with(&cl, "SELECT * FROM failed_backchannel_logouts", &[], 0).await?;
     inserts::failed_backchannel_logouts(before).await?;
+
+    // FAILED SCIM TASKS
+    debug!("Migrating table: failed_scim_tasks");
+    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM failed_scim_tasks", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| FailedScimTask {
+            action: ScimAction::from(row.get::<_, String>("action").as_str()),
+            client_id: row.get("client_id"),
+            retry_count: row.get::<_, i32>("retry_count") as i64,
+        })
+        .collect::<Vec<_>>();
+    inserts::failed_scim_tasks(before).await?;
 
     // RECENT PASSWORDS
     debug!("Migrating table: recent_passwords");

@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.31.2
 
 ### Bugfix
 
@@ -11,6 +11,8 @@
 - After Rauthy received an accessibility review from [HAN](https://www.han.nl/) as part of the NGI funding, it was
   declared as "fairly accessible" already, but there were still some things that have been improved after the review.
   [#1099](https://github.com/sebadob/rauthy/issues/1099)
+- When using the `MIGRATE_DB_FROM` feature, some of the latest changes and features were missing in migration queries.
+  [#1116](https://github.com/sebadob/rauthy/issues/1116)
 
 ## v0.31.1
 
