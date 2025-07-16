@@ -3,11 +3,14 @@ use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::auth_providers::AuthProvider;
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
+use crate::entity::clients_scim::ClientScim;
 use crate::entity::config::ConfigEntity;
 use crate::entity::devices::DeviceEntity;
 use crate::entity::failed_backchannel_logout::FailedBackchannelLogout;
+use crate::entity::failed_scim_tasks::FailedScimTask;
 use crate::entity::groups::Group;
 use crate::entity::jwk::Jwk;
+use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::password::RecentPasswordsEntity;
@@ -20,11 +23,13 @@ use crate::entity::sessions::Session;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::user_login_states::UserLoginState;
+use crate::entity::user_revoke::UserRevoke;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::Event;
+use cryptr::EncValue;
 use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
@@ -212,9 +217,9 @@ INSERT INTO clients
 (id, name, enabled, confidential, secret, secret_kid, redirect_uris, post_logout_redirect_uris,
 allowed_origins, flows_enabled, access_token_alg, id_token_alg, auth_code_lifetime,
 access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts,
-backchannel_logout_uri)
+backchannel_logout_uri, restrict_group_prefix)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#;
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)"#;
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -244,7 +249,8 @@ VALUES
                         b.force_mfa,
                         b.client_uri,
                         b.contacts,
-                        b.backchannel_logout_uri
+                        b.backchannel_logout_uri,
+                        b.restrict_group_prefix
                     ),
                 )
                 .await?;
@@ -276,6 +282,7 @@ VALUES
                     &b.client_uri,
                     &b.contacts,
                     &b.backchannel_logout_uri,
+                    &b.restrict_group_prefix,
                 ],
             )
             .await?;
@@ -318,6 +325,49 @@ VALUES ($1, $2, $3, $4, $5)"#;
                     &b.last_used,
                     &b.registration_token,
                     &b.token_endpoint_auth_method,
+                ],
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn clients_scim(data_before: Vec<ClientScim>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM clients_scim";
+    let sql_2 = r#"
+INSERT INTO clients_scim (client_id, bearer_token, base_endpoint, sync_groups, group_sync_prefix)
+VALUES ($1, $2, $3, $4, $5)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            let bearer_encrypted = EncValue::encrypt(b.bearer_token.as_bytes())?.into_bytes();
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(
+                        b.client_id,
+                        bearer_encrypted.as_ref(),
+                        b.base_uri,
+                        b.sync_groups,
+                        b.group_sync_prefix
+                    ),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            let bearer_encrypted = EncValue::encrypt(b.bearer_token.as_bytes())?.into_bytes();
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.client_id,
+                    &bearer_encrypted.as_ref(),
+                    &b.base_uri,
+                    &b.sync_groups,
+                    &b.group_sync_prefix,
                 ],
             )
             .await?;
@@ -462,6 +512,36 @@ VALUES ($1, $2, $3, $4)"#;
     Ok(())
 }
 
+pub async fn failed_scim_tasks(data_before: Vec<FailedScimTask>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM failed_scim_tasks";
+    let sql_2 = r#"
+INSERT INTO failed_scim_tasks (client_id, action, retry_count)
+VALUES ($1, $2, $3)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(b.client_id, b.action.to_string(), b.retry_count),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(
+                sql_2,
+                &[&b.client_id, &b.action.to_string(), &(b.retry_count as i32)],
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
 pub async fn groups(data_before: Vec<Group>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM groups";
     let sql_2 = "INSERT INTO groups (id, name) VALUES ($1, $2)";
@@ -514,6 +594,36 @@ VALUES ($1, $2, $3, $4, $5)"#;
                     &b.enc_key_id,
                     &b.jwk,
                 ],
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn login_locations(data_before: Vec<LoginLocation>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM login_locations";
+    let sql_2 = r#"
+INSERT INTO login_locations (user_id, ip, last_seen, user_agent, location)
+VALUES ($1, $2, $3, $4, $5)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(b.user_id, b.ip, b.last_seen, b.user_agent, b.location),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(
+                sql_2,
+                &[&b.user_id, &b.ip, &b.last_seen, &b.user_agent, &b.location],
             )
             .await?;
         }
@@ -880,17 +990,30 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
 pub async fn user_attr_config(data_before: Vec<UserAttrConfigEntity>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM user_attr_config";
-    let sql_2 = "INSERT INTO user_attr_config (name, \"desc\") VALUES ($1, $2)";
+    let sql_2 = r#"
+INSERT INTO user_attr_config (name, "desc", default_value, typ, user_editable)
+VALUES ($1, $2, $3, $4, $5)"#;
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::hql().execute(sql_2, params!(b.name, b.desc)).await?;
+            let typ = b.typ.as_ref().map(|t| t.as_str());
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(b.name, b.desc, b.default_value, typ, b.user_editable),
+                )
+                .await?;
         }
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            DB::pg_execute(sql_2, &[&b.name, &b.desc]).await?;
+            let typ = b.typ.as_ref().map(|t| t.as_str());
+            DB::pg_execute(
+                sql_2,
+                &[&b.name, &b.desc, &b.default_value, &typ, &b.user_editable],
+            )
+            .await?;
         }
     }
     Ok(())
@@ -1068,6 +1191,26 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
                 ],
             )
             .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn user_revoke(data_before: Vec<UserRevoke>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM user_revoke";
+    let sql_2 = r#"
+INSERT INTO user_revoke (user_id, code)
+VALUES ($1, $2)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql().execute(sql_2, params!(b.user_id, b.code)).await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[&b.user_id, &b.code]).await?;
         }
     }
     Ok(())
