@@ -424,3 +424,24 @@ spec:
         - name: rauthy
           port: 8080
 ```
+
+### Caddy
+
+This is a very simple Caddy config example to get you started:
+
+```
+test.example.com {
+    handle {
+        forward_auth rauthy {
+            uri /auth/v1/clients/test/forward_auth?redirect_state=302
+        }
+        reverse_proxy x.x.x.x:xx
+    }
+    handle /auth/v1/clients/* {
+        reverse_proxy rauthy {
+            header_up X-Forwarded-Method {method}
+            header_up X-Forwarded-Uri {uri}
+        }
+    }
+}
+```
