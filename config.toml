@@ -1716,6 +1716,14 @@ level_database = 'info'
 # overwritten by: ADMIN_FORCE_MFA
 admin_force_mfa = false
 
+[pam]
+# Can be set to `true` to allow PAM logins by default for new
+# users.
+#
+# default: false
+# overwritten by: PAM_ALLOW_LOGINS_DEFAULT
+allow_logins_default = false
+
 [pow]
 # The difficulty for a Proof-of-Work (PoW).
 # The default is 20, which is reasonable for modern processors.

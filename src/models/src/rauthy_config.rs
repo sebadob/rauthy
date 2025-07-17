@@ -262,6 +262,7 @@ pub struct Vars {
     pub lifetimes: VarsLifetimes,
     pub logging: VarsLogging,
     pub mfa: VarsMfa,
+    pub pam: VarsPam,
     pub pow: VarsPow,
     pub scim: VarsScim,
     pub server: VarsServer,
@@ -483,6 +484,9 @@ impl Default for Vars {
             },
             mfa: VarsMfa {
                 admin_force_mfa: true,
+            },
+            pam: VarsPam {
+                allow_logins_default: false,
             },
             pow: VarsPow {
                 difficulty: 19,
@@ -718,6 +722,7 @@ impl Vars {
         slf.parse_lifetimes(&mut table);
         slf.parse_logging(&mut table);
         slf.parse_mfa(&mut table);
+        slf.parse_pam(&mut table);
         slf.parse_pow(&mut table);
         slf.parse_scim(&mut table);
         slf.parse_server(&mut table);
@@ -1982,6 +1987,16 @@ impl Vars {
         }
     }
 
+    fn parse_pam(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "pam") else {
+            return;
+        };
+
+        if let Some(v) = t_bool(&mut table, "pam", "difficulty", "PAM_ALLOW_LOGINS_DEFAULT") {
+            self.pam.allow_logins_default = v;
+        }
+    }
+
     fn parse_pow(&mut self, table: &mut toml::Table) {
         let Some(mut table) = t_table(table, "pow") else {
             return;
@@ -2678,6 +2693,11 @@ pub struct VarsLogging {
 #[derive(Debug)]
 pub struct VarsMfa {
     pub admin_force_mfa: bool,
+}
+
+#[derive(Debug)]
+pub struct VarsPam {
+    pub allow_logins_default: bool,
 }
 
 #[derive(Debug)]

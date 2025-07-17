@@ -48,8 +48,8 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, picture_id = $18
-WHERE id = $19"#;
+auth_provider_id = $16, federation_uid = $17, picture_id = $18, allow_pam_logins = $19
+WHERE id = $20"#;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
@@ -99,6 +99,7 @@ pub struct User {
     pub auth_provider_id: Option<String>,
     pub federation_uid: Option<String>,
     pub picture_id: Option<String>,
+    pub allow_pam_logins: bool,
 }
 
 impl Debug for User {
@@ -109,7 +110,7 @@ impl Debug for User {
         roles: {}, groups: {:?}, enabled: {}, email_verified: {}, password_expires: {:?}, \
         created_at: {}, last_login: {:?}, last_failed_login: {:?}, failed_login_attempts: {:?}, \
         language: {}, webauthn_user_id: {:?}, user_expires: {:?}, auth_provider_id: {:?}, \
-        federation_uid: {:?}, picture_id: {:?} }}",
+        federation_uid: {:?}, picture_id: {:?}, allow_pam_logins: {} }}",
             self.id,
             self.email,
             self.given_name,
@@ -129,6 +130,7 @@ impl Debug for User {
             self.auth_provider_id,
             self.federation_uid,
             self.picture_id,
+            self.allow_pam_logins,
         )
     }
 }
@@ -156,6 +158,7 @@ impl From<tokio_postgres::Row> for User {
             auth_provider_id: row.get("auth_provider_id"),
             federation_uid: row.get("federation_uid"),
             picture_id: row.get("picture_id"),
+            allow_pam_logins: row.get("allow_pam_logins"),
         }
     }
 }
@@ -553,11 +556,13 @@ OFFSET $2"#;
 
     pub async fn insert(new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
+        let allow_pam_logins = RauthyConfig::get().vars.pam.allow_logins_default;
+
         let sql = r#"
 INSERT INTO USERS
 (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
+last_login, language, user_expires, auth_provider_id, federation_uid, picture_id, allow_pam_logins)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -578,7 +583,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                         new_user.user_expires,
                         &new_user.auth_provider_id,
                         &new_user.federation_uid,
-                        &new_user.picture_id
+                        &new_user.picture_id,
+                        allow_pam_logins
                     ),
                 )
                 .await?;
@@ -601,6 +607,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                     &new_user.auth_provider_id,
                     &new_user.federation_uid,
                     &new_user.picture_id,
+                    &allow_pam_logins,
                 ],
             )
             .await?;
@@ -653,6 +660,7 @@ LIMIT $2"#;
                     auth_provider_id: None,
                     federation_uid: None,
                     picture_id: row.get("picture_id"),
+                    allow_pam_logins: false,
                 };
                 let values = UserValues {
                     id: user.id.clone(),
@@ -690,6 +698,7 @@ LIMIT $2"#;
                     auth_provider_id: None,
                     federation_uid: None,
                     picture_id: row.get("picture_id"),
+                    allow_pam_logins: false,
                 };
                 let values = UserValues {
                     id: user.id.clone(),
@@ -757,6 +766,7 @@ LIMIT $2"#;
                 self.auth_provider_id,
                 self.federation_uid,
                 self.picture_id,
+                self.allow_pam_logins,
                 self.id
             ),
         ));
@@ -796,6 +806,7 @@ LIMIT $2"#;
                 &self.auth_provider_id,
                 &self.federation_uid,
                 &self.picture_id,
+                &self.allow_pam_logins,
                 &self.id,
             ],
         )
@@ -835,6 +846,7 @@ LIMIT $2"#;
                         &self.auth_provider_id,
                         &self.federation_uid,
                         &self.picture_id,
+                        self.allow_pam_logins,
                         &self.id
                     ),
                 )
@@ -861,6 +873,7 @@ LIMIT $2"#;
                     &self.auth_provider_id,
                     &self.federation_uid,
                     &self.picture_id,
+                    &self.allow_pam_logins,
                     &self.id,
                 ],
             )
@@ -981,6 +994,7 @@ LIMIT $2"#;
             roles,
             groups,
             enabled: u.enabled,
+            allow_pam_logins: u.allow_pam_logins,
             email_verified: u.email_verified,
             user_expires: u.user_expires,
             user_values,
@@ -993,6 +1007,8 @@ LIMIT $2"#;
     ) -> Result<UpdateUserRequest, ErrorResponse> {
         let mut upd_req = User::upd_req_from_db(user_id).await?;
         let mut uv = upd_req.user_values.unwrap_or_default();
+
+        let pam_logins_default = RauthyConfig::get().vars.pam.allow_logins_default;
 
         for put in payload.put {
             match put.key.as_str() {
@@ -1034,6 +1050,9 @@ LIMIT $2"#;
                     )
                 }
                 "enabled" => upd_req.enabled = put.value.as_bool().unwrap_or(true),
+                "allow_pam_logins" => {
+                    upd_req.allow_pam_logins = put.value.as_bool().unwrap_or(pam_logins_default)
+                }
                 "email_verified" => upd_req.email_verified = put.value.as_bool().unwrap_or(true),
                 "user_expires" => upd_req.user_expires = put.value.as_i64(),
                 key => {
@@ -1139,6 +1158,7 @@ LIMIT $2"#;
         user.groups = Group::sanitize(upd_user.groups).await?;
 
         user.enabled = upd_user.enabled;
+        user.allow_pam_logins = upd_user.allow_pam_logins;
         user.email_verified = upd_user.email_verified;
         user.user_expires = upd_user.user_expires;
 
@@ -1267,6 +1287,7 @@ LIMIT $2"#;
             roles: user.get_roles(),
             groups,
             enabled: user.enabled,
+            allow_pam_logins: user.allow_pam_logins,
             email_verified: user.email_verified,
             user_expires: user.user_expires,
             user_values: upd_user.user_values,
@@ -1679,6 +1700,7 @@ impl User {
             roles,
             groups,
             enabled: self.enabled,
+            allow_pam_logins: self.allow_pam_logins,
             email_verified: self.email_verified,
             password_expires: self.password_expires,
             created_at: self.created_at,
@@ -1879,6 +1901,7 @@ impl Default for User {
             auth_provider_id: None,
             federation_uid: None,
             picture_id: None,
+            allow_pam_logins: RauthyConfig::get().vars.pam.allow_logins_default,
         }
     }
 }
@@ -1931,6 +1954,7 @@ mod tests {
             auth_provider_id: None,
             federation_uid: None,
             picture_id: None,
+            allow_pam_logins: false,
         };
         let session = Session::try_new(&user, 1, None);
         assert!(session.is_err());
@@ -1990,6 +2014,7 @@ mod tests {
             auth_provider_id: None,
             federation_uid: None,
             picture_id: None,
+            allow_pam_logins: false,
         };
 
         // enabled

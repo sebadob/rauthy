@@ -52,6 +52,7 @@ export interface UpdateUserRequest {
     /// Validation: PATTERN_GROUP
     groups?: string[],
     enabled: boolean,
+    allow_pam_logins: boolean,
     email_verified: boolean,
     /// Unix timestamp in seconds
     user_expires?: number,
@@ -109,6 +110,7 @@ export interface UserResponse {
     roles: string[],
     groups?: string[],
     enabled: boolean,
+    allow_pam_logins: boolean,
     email_verified: boolean,
     password_expires?: number,
     created_at: number,
