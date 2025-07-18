@@ -2,14 +2,16 @@
     import Button from "$lib5/button/Button.svelte";
     import Input from "$lib5/form/Input.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
+    import Options from "$lib5/Options.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import {fetchPut} from "$api/fetch";
     import Form from "$lib5/form/Form.svelte";
-    import type {UserAttrConfigRequest, UserAttrConfigValueResponse} from "$api/types/user_attrs.ts";
+    import type {UserAttrConfigRequest, UserAttrConfigTyp, UserAttrConfigValueResponse} from "$api/types/user_attrs.ts";
     import {PATTERN_ATTR, PATTERN_ATTR_DESC} from "$utils/patterns";
     import CheckIcon from "$lib/CheckIcon.svelte";
     import {slide} from "svelte/transition";
+    import { ATTR_TYPES } from "$utils/constants";
 
     let {
         attr,
@@ -34,7 +36,9 @@
     let name = $state(attr.name);
     let desc = $state(attr.desc);
     let defaultValue = $state(attr.default_value);
+    let typ: UserAttrConfigTyp | '-'  = $state(attr.typ || '-')
     let userEditable = $state(attr.user_editable || false);
+
 
     let showMakeEditable = $state(false);
 
@@ -43,6 +47,7 @@
             name = attr.name;
             desc = attr.desc;
             defaultValue = attr.default_value;
+            typ = attr.typ || '-';
             userEditable = attr.user_editable || false;
 
             showMakeEditable = false;
@@ -66,6 +71,7 @@
             name,
             desc: desc || undefined,
             default_value: defaultValue || undefined,
+            typ: typ != '-' ? typ : undefined,
             user_editable: userEditable || false,
         }
 
@@ -107,6 +113,14 @@
             placeholder={ta.attrs.defaultValue}
             {width}
     />
+    <div class="flex gap-05">
+        {ta.attrs.typ}
+        <Options
+            ariaLabel={ta.attrs.typ}
+            options={ATTR_TYPES}
+            bind:value={typ}
+        />
+    </div>
 
     <div class="editableRow">
         <div class="flex gap-05">

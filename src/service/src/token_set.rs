@@ -138,10 +138,42 @@ impl TokenSet {
             .unwrap_or_else(|| Cow::from(client.default_scopes.replace(',', " ")));
 
         let email = if scope.contains("email") {
-            user.as_ref().map(|u| u.email.as_str())
+            if let Some(user) = user.as_ref() {
+                if let Some(cust_email_mapping) = &client.cust_email_mapping {
+                    // IMPROVEMENT: Always fetch the user arrs here and pass
+                    // them into the id_token creation down below. Currently all
+                    // custom attrs are fetched twice in case of a custom
+                    // mapping.
+                    let attrs = UserAttrValueEntity::find_for_user(&user.id).await?;
+
+                    let attr = attrs
+                        .iter()
+                        .find(|v| v.key == *cust_email_mapping)
+                        .ok_or_else(|| {
+                            ErrorResponse::new(
+                                ErrorResponseType::NotFound,
+                                format!("Attribute `{cust_email_mapping}` not set for user"),
+                            )
+                        })?;
+                    let email = serde_json::from_slice(&attr.value).map_err(|e| {
+                        ErrorResponse::new(
+                            ErrorResponseType::Internal,
+                            format!(
+                                "Attribute `{cust_email_mapping}` could not be deserialize: `{e}`"
+                            ),
+                        )
+                    })?;
+                    Some(email)
+                } else {
+                    Some(user.email.clone())
+                }
+            } else {
+                None
+            }
         } else {
             None
         };
+        let email = email.as_deref();
         let roles = user.map(|u| u.roles_iter().collect());
         let groups = if scope.contains("groups") {
             user.map(|u| u.groups_iter().collect())
@@ -162,7 +194,7 @@ impl TokenSet {
                 typ: JwtTokenType::Bearer,
                 azp: &client.id,
                 scope: Some(scope),
-                preferred_username: user.as_ref().map(|u| u.email.as_str()),
+                preferred_username: email,
                 did: did.as_deref(),
                 cnf: dpop_fingerprint
                     .as_ref()
