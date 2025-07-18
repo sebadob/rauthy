@@ -1,13 +1,14 @@
 use crate::ReqPrincipal;
 use actix_web::http::header::AUTHORIZATION;
 use actix_web::web::Path;
-use actix_web::{HttpRequest, HttpResponse, get, post};
+use actix_web::{HttpRequest, HttpResponse, delete, get, post, put};
 use actix_web_lab::extract::Json;
 use chrono::Utc;
 use rauthy_api_types::pam::{
-    Getent, PamGetentRequest, PamGroupMembersResponse, PamGroupResponse, PamHostSimpleResponse,
-    PamLoginRequest, PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest,
-    PamPreflightResponse, PamUserResponse, PamUsernameCheckRequest,
+    Getent, PamGetentRequest, PamGroupMembersResponse, PamGroupResponse, PamHostCreateRequest,
+    PamHostDetailsResponse, PamHostSimpleResponse, PamHostUpdateRequest, PamLoginRequest,
+    PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest, PamPreflightResponse,
+    PamUserResponse, PamUsernameCheckRequest,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::utils::real_ip_from_req;
@@ -28,39 +29,183 @@ use tracing::{info, warn};
 use utoipa::ToSchema;
 use validator::Validate;
 
-#[post("/pam/preflight")]
-pub async fn post_preflight(
-    Json(payload): Json<PamPreflightRequest>,
+#[post("/pam/check")]
+pub async fn post_username_check(
+    principal: ReqPrincipal,
+    Json(payload): Json<PamUsernameCheckRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    // The PoW is requested because if you had an instance with open registration and enabled
+    // PAM account creation rights by default, this could be abused for username enumeration
+    // otherwise.
+    Pow::validate(&payload.pow)?;
+
+    if ["root", "admin"].contains(&payload.username.as_str()) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Blacklisted username",
+        ));
+    }
+
+    match PamUser::find_by_name(payload.username).await {
+        Ok(_) => Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "username already taken",
+        )),
+        Err(_) => Ok(HttpResponse::Ok().finish()),
+    }
+}
+
+#[post("/pam/getent")]
+pub async fn post_getent(
+    Json(payload): Json<PamGetentRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    info!("getent {:?}", payload.getent);
     payload.validate()?;
 
     let host = PamHost::find_simple(payload.host_id).await?;
     host.validate_secret(payload.host_secret)?;
 
-    let pam_user = PamUser::find_by_name(payload.username).await?;
-    if !host.is_login_allowed(&pam_user).await {
-        return Ok(HttpResponse::Ok().json(PamPreflightResponse {
-            login_allowed: false,
-            mfa_required: host.force_mfa,
-        }));
-    }
+    let resp = match payload.getent {
+        Getent::Users => {
+            // TODO somehow limit users to only the ones that are allowed to log in
+            let users = PamUser::find_all()
+                .await?
+                .into_iter()
+                .map(PamUserResponse::from)
+                .collect::<Vec<_>>();
+            PamGetentResponse::Users(users)
+        }
+        Getent::Username(name) => {
+            let user = PamUser::find_by_name(name).await?;
+            PamGetentResponse::User(PamUserResponse::from(user))
+        }
+        Getent::UserId(id) => {
+            let user = PamUser::find_by_id(id).await?;
+            PamGetentResponse::User(PamUserResponse::from(user))
+        }
 
-    let user = User::find_by_email(pam_user.email).await?;
-    user.check_expired()?;
-    user.check_enabled()?;
+        Getent::Groups => {
+            // TODO we should probably have a default config or pool that can be assigned to
+            // machines, with default groups and so on
+            let groups = PamGroup::find_all().await?;
+            let mut res = Vec::with_capacity(groups.len());
+            for group in groups {
+                // TODO this could be made more efficient when we build it up manually
+                //  and fetch all users in advance, only once.
+                res.push(group.build_members_response().await?);
+            }
+            PamGetentResponse::Groups(res)
+        }
+        Getent::Groupname(name) => {
+            let group = PamGroup::find_by_name(name).await?;
+            PamGetentResponse::Group(group.build_members_response().await?)
+        }
+        Getent::GroupId(id) => {
+            let group = PamGroup::find_by_id(id).await?;
+            PamGetentResponse::Group(group.build_members_response().await?)
+        }
 
-    if host.force_mfa && !user.has_webauthn_enabled() {
-        // TODO maybe send a different status code here to better differentiate
-        return Ok(HttpResponse::Ok().json(PamPreflightResponse {
-            login_allowed: false,
-            mfa_required: true,
-        }));
-    }
+        Getent::Hosts => {
+            let hosts = PamHost::find_in_group_full(host.gid)
+                .await?
+                .into_iter()
+                .map(PamHostSimpleResponse::from)
+                .collect::<Vec<_>>();
+            PamGetentResponse::Hosts(hosts)
+        }
+        Getent::Hostname(name) => {
+            let host = PamHost::find_by_alias_full(name).await?;
+            PamGetentResponse::Host(PamHostSimpleResponse::from(host))
+        }
+        Getent::HostIp(ip) => {
+            let host = PamHost::find_by_ip_full(ip).await?;
+            PamGetentResponse::Host(PamHostSimpleResponse::from(host))
+        }
+    };
 
-    Ok(HttpResponse::Ok().json(PamPreflightResponse {
-        login_allowed: true,
-        mfa_required: user.has_webauthn_enabled() || host.force_mfa,
-    }))
+    Ok(HttpResponse::Ok().json(resp))
+}
+
+#[get("/pam/groups")]
+pub async fn get_pam_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let groups = PamGroup::find_all()
+        .await?
+        .into_iter()
+        .map(PamGroupResponse::from)
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(groups))
+}
+
+#[get("/pam/hosts")]
+pub async fn get_hosts(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let hosts = PamHost::find_all_simple()
+        .await?
+        .into_iter()
+        .map(PamHostSimpleResponse::from)
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(hosts))
+}
+
+#[post("/pam/hosts")]
+pub async fn post_hosts(
+    payload: Json<PamHostCreateRequest>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+    payload.validate()?;
+
+    let payload = payload.into_inner();
+    let host = PamHost::insert(payload.hostname, payload.gid, payload.force_mfa).await?;
+
+    Ok(HttpResponse::Ok().json(PamHostSimpleResponse::from(host)))
+}
+
+#[get("/pam/hosts/{id}")]
+pub async fn get_host_details(
+    id: Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let host = PamHost::find_by_id_full(id.into_inner()).await?;
+
+    // TODO maybe don't even include the secret here, only on-demand via a dedicated POST endpoint?
+
+    Ok(HttpResponse::Ok().json(PamHostDetailsResponse::from(host)))
+}
+
+#[put("/pam/hosts/{id}")]
+pub async fn put_host(
+    id: Path<String>,
+    principal: ReqPrincipal,
+    payload: Json<PamHostUpdateRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+    payload.validate()?;
+
+    PamHost::update(id.into_inner(), payload.into_inner()).await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[delete("/pam/hosts/{id}")]
+pub async fn delete_host(
+    id: Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    PamHost::delete(id.into_inner()).await?;
+
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[post("/pam/login")]
@@ -175,116 +320,39 @@ pub enum PamGetentResponse {
     Host(PamHostSimpleResponse),
 }
 
-#[post("/pam/getent")]
-pub async fn post_getent(
-    Json(payload): Json<PamGetentRequest>,
+#[post("/pam/preflight")]
+pub async fn post_preflight(
+    Json(payload): Json<PamPreflightRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    info!("getent {:?}", payload.getent);
     payload.validate()?;
 
     let host = PamHost::find_simple(payload.host_id).await?;
     host.validate_secret(payload.host_secret)?;
 
-    let resp = match payload.getent {
-        Getent::Users => {
-            // TODO somehow limit users to only the ones that are allowed to log in
-            let users = PamUser::find_all()
-                .await?
-                .into_iter()
-                .map(PamUserResponse::from)
-                .collect::<Vec<_>>();
-            PamGetentResponse::Users(users)
-        }
-        Getent::Username(name) => {
-            let user = PamUser::find_by_name(name).await?;
-            PamGetentResponse::User(PamUserResponse::from(user))
-        }
-        Getent::UserId(id) => {
-            let user = PamUser::find_by_id(id).await?;
-            PamGetentResponse::User(PamUserResponse::from(user))
-        }
-
-        Getent::Groups => {
-            // TODO we should probably have a default config or pool that can be assigned to
-            // machines, with default groups and so on
-            let groups = PamGroup::find_all().await?;
-            let mut res = Vec::with_capacity(groups.len());
-            for group in groups {
-                // TODO this could be made more efficient when we build it up manually
-                //  and fetch all users in advance, only once.
-                res.push(group.build_members_response().await?);
-            }
-            PamGetentResponse::Groups(res)
-        }
-        Getent::Groupname(name) => {
-            let group = PamGroup::find_by_name(name).await?;
-            PamGetentResponse::Group(group.build_members_response().await?)
-        }
-        Getent::GroupId(id) => {
-            let group = PamGroup::find_by_id(id).await?;
-            PamGetentResponse::Group(group.build_members_response().await?)
-        }
-
-        Getent::Hosts => {
-            let hosts = PamHost::find_in_group_full(host.gid)
-                .await?
-                .into_iter()
-                .map(PamHostSimpleResponse::from)
-                .collect::<Vec<_>>();
-            PamGetentResponse::Hosts(hosts)
-        }
-        Getent::Hostname(name) => {
-            let host = PamHost::find_by_alias_full(name).await?;
-            PamGetentResponse::Host(PamHostSimpleResponse::from(host))
-        }
-        Getent::HostIp(ip) => {
-            let host = PamHost::find_by_ip_full(ip).await?;
-            PamGetentResponse::Host(PamHostSimpleResponse::from(host))
-        }
-    };
-
-    Ok(HttpResponse::Ok().json(resp))
-}
-
-#[post("/pam/check")]
-pub async fn post_username_check(
-    principal: ReqPrincipal,
-    Json(payload): Json<PamUsernameCheckRequest>,
-) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
-
-    // The PoW is requested because if you had an instance with open registration and enabled
-    // PAM account creation rights by default, this could be abused for username enumeration
-    // otherwise.
-    Pow::validate(&payload.pow)?;
-
-    if ["root", "admin"].contains(&payload.username.as_str()) {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "Blacklisted username",
-        ));
+    let pam_user = PamUser::find_by_name(payload.username).await?;
+    if !host.is_login_allowed(&pam_user).await {
+        return Ok(HttpResponse::Ok().json(PamPreflightResponse {
+            login_allowed: false,
+            mfa_required: host.force_mfa,
+        }));
     }
 
-    match PamUser::find_by_name(payload.username).await {
-        Ok(_) => Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "username already taken",
-        )),
-        Err(_) => Ok(HttpResponse::Ok().finish()),
+    let user = User::find_by_email(pam_user.email).await?;
+    user.check_expired()?;
+    user.check_enabled()?;
+
+    if host.force_mfa && !user.has_webauthn_enabled() {
+        // TODO maybe send a different status code here to better differentiate
+        return Ok(HttpResponse::Ok().json(PamPreflightResponse {
+            login_allowed: false,
+            mfa_required: true,
+        }));
     }
-}
 
-#[get("/pam/groups")]
-pub async fn get_pam_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
-
-    let groups = PamGroup::find_all()
-        .await?
-        .into_iter()
-        .map(PamGroupResponse::from)
-        .collect::<Vec<_>>();
-
-    Ok(HttpResponse::Ok().json(groups))
+    Ok(HttpResponse::Ok().json(PamPreflightResponse {
+        login_allowed: true,
+        mfa_required: user.has_webauthn_enabled() || host.force_mfa,
+    }))
 }
 
 #[get("/pam/users/{user_id}")]

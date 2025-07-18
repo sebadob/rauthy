@@ -28,9 +28,24 @@ pub struct PamPreflightRequest {
     pub host_id: String,
     #[validate(length(min = 64, max = 64))]
     pub host_secret: String,
-    /// Validation: `^[a-z][a-z0-9_-]{1,63}$`
+    //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
     #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
     pub username: String,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct PamHostCreateRequest {
+    /// Validation: `^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$`
+    #[validate(
+        length(max = 61),
+        regex(
+            path = "*RE_LINUX_HOSTNAME",
+            code = "^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$"
+        )
+    )]
+    pub hostname: String,
+    pub gid: u32,
+    pub force_mfa: bool,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -101,7 +116,7 @@ pub struct PamGetentRequest {
 pub struct PamHostUpdateRequest {
     /// Validation: `^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$`
     #[validate(
-        length(min = 2, max = 61),
+        length(max = 61),
         regex(
             path = "*RE_LINUX_HOSTNAME",
             code = "^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$"
@@ -142,6 +157,19 @@ pub struct PamHostSimpleResponse {
     pub aliases: Vec<String>,
     #[schema(value_type = str)]
     pub addresses: Vec<IpAddr>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PamHostDetailsResponse {
+    pub id: String,
+    pub hostname: String,
+    pub gid: u32,
+    pub secret: String,
+    pub force_mfa: bool,
+    pub notes: Option<String>,
+    #[schema(value_type = str)]
+    pub ips: Vec<IpAddr>,
+    pub aliases: Vec<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

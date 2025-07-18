@@ -8,10 +8,12 @@
     import SearchBar from "$lib/search_bar/SearchBar.svelte";
     import Tabs from "$lib/tabs/Tabs.svelte";
     import {fetchGet} from "$api/fetch";
-    import type {PamGroupResponse} from "$api/types/pam";
+    import type {PamGroupResponse, PamHostSimpleResponse} from "$api/types/pam";
     import {onMount} from "svelte";
     import NavButtonTile from "$lib/nav/NavButtonTile.svelte";
     import PAMGroupDetails from "$lib/admin/pam/groups/PAMGroupDetails.svelte";
+    import PAMAddHost from "$lib/admin/pam/hosts/PAMAddHost.svelte";
+    import PAMHostDetails from "$lib/admin/pam/hosts/PAMHostDetails.svelte";
 
 
     let t = useI18n();
@@ -29,7 +31,7 @@
 
     let selectedUser: undefined | PamGroupResponse = $state();
     let selectedGroup: undefined | PamGroupResponse = $state();
-    let selectedHost: undefined | PamGroupResponse = $state();
+    let selectedHost: undefined | PamHostSimpleResponse = $state();
 
     let err = $state('');
 
@@ -38,6 +40,11 @@
         let s = searchValue.toLowerCase();
         return groups.filter(g => g.name.toLowerCase().includes(s));
     });
+    let hosts: PamHostSimpleResponse[] = $state([]);
+    let hostsFiltered: PamHostSimpleResponse[] = $derived.by(() => {
+        let s = searchValue.toLowerCase();
+        return hosts.filter(g => g.name.toLowerCase().includes(s));
+    });
 
     let isUser = $derived(selectedNav === tabs[0]);
     let isGroup = $derived(selectedNav === tabs[1]);
@@ -45,6 +52,7 @@
 
     onMount(() => {
         fetchGroups();
+        fetchHosts();
     });
 
     $effect(() => {
@@ -61,6 +69,21 @@
             err = res.error?.message || 'ERROR';
         }
     }
+
+    async function fetchHosts() {
+        let res = await fetchGet<PamHostSimpleResponse[]>('/auth/v1/pam/hosts');
+        if (res.body) {
+            hosts = res.body;
+        } else {
+            err = res.error?.message || 'ERROR';
+        }
+    }
+
+    function onCreateHost(host: PamHostSimpleResponse) {
+        closeModal?.();
+        fetchHosts();
+        selectedHost = host;
+    }
 </script>
 
 <NavSub
@@ -70,8 +93,13 @@
         thresholdNavSub={700}
 >
     <ButtonAddModal bind:ref={refAddNew} level={2} bind:closeModal alignRight>
-        MODAL ADD NEW TODO
-        <!--        <ScopeAddNew onSave={onAddNew} {scopes}/>-->
+        {#if isUser}
+            TODO
+        {:else if isGroup}
+            TODO
+        {:else if isHost}
+            <PAMAddHost {groups} onCreate={onCreateHost}/>
+        {/if}
     </ButtonAddModal>
 
     <div class="tabs">
@@ -89,16 +117,28 @@
             {#if isUser}
                 USERS TODO
             {:else if isGroup}
-                {#each groupsFiltered as group (group.id)}
-                    <NavButtonTile onclick={() => selectedGroup = group} selected={group.id === selectedGroup?.id}>
+                {#if groupsFiltered.length === 0}
+                    {ta.common.noEntries}
+                {:else}
+                    {#each groupsFiltered as group (group.id)}
+                        <NavButtonTile onclick={() => selectedGroup = group} selected={group.id === selectedGroup?.id}>
                             <span class="typ font-mono">
                                 {group.typ[0].toUpperCase()}
                             </span>
-                        {group.name}
-                    </NavButtonTile>
-                {/each}
+                            {group.name}
+                        </NavButtonTile>
+                    {/each}
+                {/if}
             {:else if isHost}
-                HOSTS TODO
+                {#if hostsFiltered.length === 0}
+                    {ta.common.noEntries}
+                {:else}
+                    {#each hostsFiltered as host (host.id)}
+                        <NavButtonTile onclick={() => selectedHost = host} selected={host.id === selectedHost?.id}>
+                            {host.name}
+                        </NavButtonTile>
+                    {/each}
+                {/if}
             {/if}
         </div>
     {/snippet}
@@ -111,7 +151,14 @@
         {:else if isGroup && selectedGroup}
             <PAMGroupDetails group={selectedGroup}/>
         {:else if isHost && selectedHost}
-            HOSTS TODO
+            <PAMHostDetails
+                    hostSimple={selectedHost}
+                    {groups}
+                    onDelete={() => {
+                        fetchHosts();
+                        selectedHost = undefined;
+                    }}
+            />
         {/if}
     </div>
 </ContentAdmin>

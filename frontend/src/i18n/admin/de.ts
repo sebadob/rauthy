@@ -278,8 +278,11 @@ export let I18nAdminDe: I18nAdmin = {
         state: "Status",
     },
     pam: {
+        addHost: "Neuer PAM Host",
+        deleteHost: "Soll dieser Host wirklich gelöscht werden?",
         groupName: "Gruppenname",
         groupType: "Gruppen-Typ",
+        nameExistsAlready: "Name is bereits vergeben",
         hostGroupDesc: `Host-Gruppen dienen der Gruppierung von Hosts. NSS lookups eines Hosts innerhalb der Gruppe
             liefern als Ergebnis sämtliche anderen Hosts innerhalb dieser zurück. Benutzer können Zugriff auf Hosts
             bekommen, indem sie wiederum einer Host-Gruppe zugeordnet werden.`,

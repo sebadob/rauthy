@@ -39,3 +39,9 @@ TODO:
  - host groups should only be deletable when they have no host assigned
  - generic + local groups should be deletable at any time
 -->
+
+<style>
+    h1 {
+        margin-top: 0;
+    }
+</style>

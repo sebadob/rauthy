@@ -82,15 +82,11 @@ pub fn validate_vec_grant_types(value: &[String]) -> Result<(), ValidationError>
 pub fn validate_vec_linux_hostname(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
 
-    if value.is_empty() {
-        err = Some("'flows_enabled' cannot be empty when provided");
-    } else {
-        value.iter().for_each(|v| {
-            if !RE_LINUX_HOSTNAME.is_match(v) {
-                err = Some("^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$");
-            }
-        });
-    }
+    value.iter().for_each(|v| {
+        if !RE_LINUX_HOSTNAME.is_match(v) {
+            err = Some("^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$");
+        }
+    });
 
     if let Some(e) = err {
         return Err(ValidationError::new(e));

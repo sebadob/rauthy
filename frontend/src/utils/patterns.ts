@@ -15,6 +15,7 @@ export const PATTERN_CSS_VALUE_LOOSE = '^[a-z0-9\\-,.#\\(\\)%\\/\\s]+$';
 export const PATTERN_GROUP = '^[a-zA-Z0-9\\-_\\/,:*\\s]{2,64}$';
 export const PATTERN_ROLE_SCOPE = '^[a-z0-9\\-_\\/,:*]{2,64}$';
 // export const PATTERN_IPV4 = '^(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}$';
+export const PATTERN_LINUX_HOSTNAME = '^[a-zA-Z0-9][a-zA-Z0-9\\-.]*[a-zA-Z0-9]$';
 export const PATTERN_LINUX_USERNAME = '^[a-z][a-z0-9_\\-]{1,61}$';
 export const PATTERN_LOWERCASE = '^[a-z0-9\\-_\\/]{2,128}$';
 export const PATTERN_ORIGIN = '^(http|https)://[a-z0-9.:\\-]+$';

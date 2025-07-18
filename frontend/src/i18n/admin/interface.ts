@@ -224,8 +224,11 @@ export interface I18nAdmin {
         state: string,
     },
     pam: {
+        addHost: string,
+        deleteHost: string,
         groupName: string,
         groupType: string,
+        nameExistsAlready: string,
         hostGroupDesc: string,
         userGroupDesc: string,
         wheelGroupDesc: string,

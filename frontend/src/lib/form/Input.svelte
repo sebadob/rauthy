@@ -16,6 +16,7 @@
         placeholder = '',
         disabled = false,
 
+        minLength,
         maxLength,
         min,
         max,
@@ -46,6 +47,7 @@
         autocomplete?: FullAutoFill | null | undefined,
         placeholder?: string,
         disabled?: boolean | null | undefined,
+        minLength?: number | null | undefined,
         maxLength?: number | null | undefined,
         min?: string,
         max?: string,
@@ -143,6 +145,7 @@
             {disabled}
             aria-disabled={disabled}
 
+            minlength={minLength || undefined}
             maxlength={maxLength || undefined}
             min={min || undefined}
             max={max || undefined}

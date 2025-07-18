@@ -255,8 +255,13 @@ export let I18nAdminKo: I18nAdmin = {
         state: "상태",
     },
     pam: {
+        addHost: "New PAM Host",
+        deleteHost: "Do you really want to delete this host?",
         groupName: "Groupname",
         groupType: "Group Type",
+        nameExistsAlready: "Name is already taken",
+        hostGroupDesc: `Host groups are used to group hosts. NSS lookups of a host within the group return all other 
+            hosts within it as a result. Users can access hosts by assigning them to a host group.`,
         userGroupDesc: `User groups are managed automatically and tightly coupled with the user with the same
             username.`,
         wheelGroupDesc: `This group is special. It is immutable and is assigned to users dynamically depending on their

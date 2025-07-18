@@ -1,8 +1,9 @@
 use crate::database::DB;
 use crate::entity::pam::users::PamUser;
 use cryptr::EncValue;
+use cryptr::utils::secure_random_alnum;
 use hiqlite_macros::params;
-use rauthy_api_types::pam::{PamHostSimpleResponse, PamHostUpdateRequest};
+use rauthy_api_types::pam::{PamHostDetailsResponse, PamHostSimpleResponse, PamHostUpdateRequest};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -61,26 +62,27 @@ impl From<tokio_postgres::Row> for PamHost {
 }
 
 impl PamHost {
-    pub async fn insert(hostname: String, gid: u32) -> Result<Self, ErrorResponse> {
-        // TODO !!! REMOVE HARDCODED UD + SECRET AFTER TESTING !!!
-        let id = "BsFEpoAcVmlHgDGNSeiKmgIS".to_string();
-        // let id = secure_random_alnum(24);
-        let secret = "YFs7fly1lu9WRHsxzScOu1Qso9F1hLzbTrctrNJvT8rpfMY3SJ6w1uWG3fZxPm4H".to_string();
-        // let secret = secure_random_alnum(64);
+    pub async fn insert(
+        hostname: String,
+        gid: u32,
+        force_mfa: bool,
+    ) -> Result<Self, ErrorResponse> {
+        let id = secure_random_alnum(24);
+        let secret = secure_random_alnum(64);
         let enc = EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec();
 
         let sql = r#"
 INSERT INTO pam_hosts (id, hostname, gid, secret, force_mfa)
-VALUES ($1, $2, $3, $4, true)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *
 "#;
 
         let slf = if is_hiqlite() {
             DB::hql()
-                .execute_returning_map_one(sql, params!(id, hostname, gid, enc))
+                .execute_returning_map_one(sql, params!(id, hostname, gid, enc, force_mfa))
                 .await?
         } else {
-            DB::pg_query_one(sql, &[&id, &hostname, &gid, &enc]).await?
+            DB::pg_query_one(sql, &[&id, &hostname, &gid, &enc, &force_mfa]).await?
         };
 
         Ok(slf)
@@ -229,6 +231,25 @@ RETURNING *
         Ok(res)
     }
 
+    pub async fn find_by_id_full(id: String) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM pam_hosts WHERE id = $1";
+
+        let mut slf: Self = if is_hiqlite() {
+            DB::hql().query_map_one(sql, params!(id)).await?
+        } else {
+            DB::pg_query_one(sql, &[&id]).await?
+        };
+
+        // We don't have them in a single query with some aggregate function because it would be
+        // a bit less efficient to build up a bigger string first and then destructure and parse
+        // it again. By default, Rauthy uses Hiqlite, which means there's no network latency added
+        // for DB queries.
+        slf.aliases = Self::find_aliases(slf.id.clone()).await?;
+        slf.ips = Self::find_ips(slf.id.clone()).await?;
+
+        Ok(slf)
+    }
+
     pub async fn find_by_ip_full(ip: IpAddr) -> Result<Self, ErrorResponse> {
         let sql = r#"
 SELECT * FROM pam_hosts WHERE id = (
@@ -305,6 +326,7 @@ LIMIT 1
         Ok(hosts)
     }
 
+    /// Finds basic host data.
     pub async fn find_all_simple() -> Result<Vec<Self>, ErrorResponse> {
         let sql = "SELECT * FROM pam_hosts";
 
@@ -317,6 +339,7 @@ LIMIT 1
         Ok(res)
     }
 
+    /// Finds hosts with all details, JOINs with IPs and Aliases.
     pub async fn find_all_full() -> Result<Vec<Self>, ErrorResponse> {
         let sql = "SELECT * FROM pam_hosts";
 
@@ -339,6 +362,18 @@ LIMIT 1
         }
 
         Ok(hosts)
+    }
+
+    pub async fn delete(host_id: String) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM pam_hosts WHERE id = $1";
+
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(host_id)).await?;
+        } else {
+            DB::pg_execute(sql, &[&host_id]).await?;
+        }
+
+        Ok(())
     }
 
     pub async fn update(
@@ -456,6 +491,21 @@ impl From<PamHost> for PamHostSimpleResponse {
             name: h.hostname,
             aliases: h.aliases,
             addresses: h.ips,
+        }
+    }
+}
+
+impl From<PamHost> for PamHostDetailsResponse {
+    fn from(h: PamHost) -> Self {
+        Self {
+            id: h.id,
+            hostname: h.hostname,
+            gid: h.gid,
+            secret: h.secret,
+            force_mfa: h.force_mfa,
+            notes: h.notes,
+            ips: h.ips,
+            aliases: h.aliases,
         }
     }
 }
