@@ -230,6 +230,8 @@ export interface I18nAdmin {
         groupType: string,
         nameExistsAlready: string,
         hostGroupDesc: string,
+        secretShow: string,
+        secretRotate: string,
         userGroupDesc: string,
         wheelGroupDesc: string,
     },

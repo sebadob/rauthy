@@ -164,12 +164,17 @@ pub struct PamHostDetailsResponse {
     pub id: String,
     pub hostname: String,
     pub gid: u32,
-    pub secret: String,
     pub force_mfa: bool,
     pub notes: Option<String>,
     #[schema(value_type = str)]
     pub ips: Vec<IpAddr>,
     pub aliases: Vec<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PamHostSecretResponse {
+    pub id: String,
+    pub secret: String,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

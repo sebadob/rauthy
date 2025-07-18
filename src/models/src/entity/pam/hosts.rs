@@ -446,6 +446,20 @@ WHERE id = $5
 
         Ok(())
     }
+
+    pub async fn rotate_secret(host_id: String) -> Result<String, ErrorResponse> {
+        let secret = secure_random_alnum(64);
+        let enc = EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec();
+
+        let sql = "UPDATE pam_hosts SET secret = $1 WHERE id = $2";
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(enc, host_id)).await?;
+        } else {
+            DB::pg_execute(sql, &[&enc, &host_id]).await?;
+        }
+
+        Ok(secret)
+    }
 }
 
 impl PamHost {
@@ -501,7 +515,6 @@ impl From<PamHost> for PamHostDetailsResponse {
             id: h.id,
             hostname: h.hostname,
             gid: h.gid,
-            secret: h.secret,
             force_mfa: h.force_mfa,
             notes: h.notes,
             ips: h.ips,

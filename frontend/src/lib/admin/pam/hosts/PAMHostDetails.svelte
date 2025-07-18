@@ -19,6 +19,7 @@
     import {slide} from "svelte/transition";
     import {useI18n} from "$state/i18n.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
+    import PAMHostSecret from "$lib/admin/pam/hosts/PAMHostSecret.svelte";
 
     let {
         hostSimple,
@@ -115,8 +116,7 @@
         {host.id}
     </LabeledValue>
 
-    TODO SECRET
-    <!--{host.secret}-->
+    <PAMHostSecret hostId={host.id}/>
 
     <Form action={url} {onSubmit}>
         <Input

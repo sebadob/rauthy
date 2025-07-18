@@ -54,6 +54,11 @@ export interface PamHostDetailsResponse {
     aliases: string[],
 }
 
+export interface PamHostSecretResponse {
+    id: string,
+    secret: string,
+}
+
 export interface PamUserResponse {
     id: number,
     name: string,

@@ -6,9 +6,9 @@ use actix_web_lab::extract::Json;
 use chrono::Utc;
 use rauthy_api_types::pam::{
     Getent, PamGetentRequest, PamGroupMembersResponse, PamGroupResponse, PamHostCreateRequest,
-    PamHostDetailsResponse, PamHostSimpleResponse, PamHostUpdateRequest, PamLoginRequest,
-    PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest, PamPreflightResponse,
-    PamUserResponse, PamUsernameCheckRequest,
+    PamHostDetailsResponse, PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest,
+    PamLoginRequest, PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest,
+    PamPreflightResponse, PamUserResponse, PamUsernameCheckRequest,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::utils::real_ip_from_req;
@@ -177,9 +177,35 @@ pub async fn get_host_details(
 
     let host = PamHost::find_by_id_full(id.into_inner()).await?;
 
-    // TODO maybe don't even include the secret here, only on-demand via a dedicated POST endpoint?
-
     Ok(HttpResponse::Ok().json(PamHostDetailsResponse::from(host)))
+}
+
+#[post("/pam/hosts/{id}/secret")]
+pub async fn post_host_secret(
+    id: Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let host = PamHost::find_simple(id.into_inner()).await?;
+
+    Ok(HttpResponse::Ok().json(PamHostSecretResponse {
+        id: host.id,
+        secret: host.secret,
+    }))
+}
+
+#[put("/pam/hosts/{id}/secret")]
+pub async fn put_host_secret(
+    id: Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let id = id.into_inner();
+    let secret = PamHost::rotate_secret(id.clone()).await?;
+
+    Ok(HttpResponse::Ok().json(PamHostSecretResponse { id, secret }))
 }
 
 #[put("/pam/hosts/{id}")]

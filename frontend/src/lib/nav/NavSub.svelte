@@ -2,7 +2,6 @@
     import type {Snippet} from "svelte";
     import {genKey} from "$utils/helpers";
     import Button from "$lib5/button/Button.svelte";
-    import {useTrigger} from "$state/callback.svelte";
 
     let {
         width = 'min(25rem, 100dvw)',
@@ -127,7 +126,7 @@
 
 <style>
     nav {
-        /*background: hsl(var(--bg));*/
+        background: hsl(var(--bg));
         border-left: 1px solid hsla(var(--bg-high) / .35);
         border-right: 1px solid hsla(var(--bg-high) / .23);
         border-radius: 0 var(--border-radius) var(--border-radius) 0;

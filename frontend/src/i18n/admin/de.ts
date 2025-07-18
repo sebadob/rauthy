@@ -286,6 +286,8 @@ export let I18nAdminDe: I18nAdmin = {
         hostGroupDesc: `Host-Gruppen dienen der Gruppierung von Hosts. NSS lookups eines Hosts innerhalb der Gruppe
             liefern als Ergebnis sämtliche anderen Hosts innerhalb dieser zurück. Benutzer können Zugriff auf Hosts
             bekommen, indem sie wiederum einer Host-Gruppe zugeordnet werden.`,
+        secretShow: "Secret Anzeigen",
+        secretRotate: "Secret Rotieren",
         userGroupDesc: `Benutzer-Gruppen sind automatisch verwaltet und eng an den Benutzer mit demselben Namen
             gekoppelt.`,
         wheelGroupDesc: `Diese Gruppe ist speziell. Sie ist unveränderlich und wird Benutzern dynamisch zugewiesen in
