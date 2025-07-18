@@ -1,13 +1,10 @@
-ALTER TABLE users
-    ADD allow_pam_logins BOOL DEFAULT false NOT NULL;
-
 CREATE TABLE pam_groups
 (
     id            bigserial NOT NULL
         CONSTRAINT pam_groups_pk
             PRIMARY KEY,
     name          varchar   NOT NULL ,
-    is_user_group bool      NOT NULL
+    typ           varchar   NOT NULL
 );
 
 create unique index pam_groups_name_uindex
@@ -102,3 +99,8 @@ CREATE TABLE pam_rel_groups_users
 
 ALTER SEQUENCE pam_groups_id_seq RESTART WITH 100000;
 ALTER SEQUENCE pam_users_id_seq RESTART WITH 100000;
+
+      -- add default group
+INSERT INTO pam_groups (name, typ)
+VALUES ('wheel-rauthy', 'immutable'),
+       ('default', 'host');

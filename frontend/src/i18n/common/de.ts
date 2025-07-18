@@ -93,6 +93,15 @@ export const I18nDe: I18n = {
         navMfa: "MFA",
         navLogout: "Logout",
         other: "Sonstiges",
+        pam: {
+            checkAvailability: 'Verfügbarkeit Prüfen',
+            create1: 'Es wurde noch kein PAM Benutzer erstellt.',
+            create2: `Die Erstellung eines Benutzers funktioniert nur für noch nicht vergebene Benutzernamen, und ist
+                einmalig und unumkehrbar. Es wird dem gewählten Namen automatisch ein festes Prefix hinzugefügt.`,
+            create3: `Der Name kann nicht nachträglich geändert oder gelöscht werden, und sollte daher sorgfältig 
+                gewählt werden!`,
+            username: 'Benutzername',
+        },
         passwordConfirm: "Passwort bestätigen",
         passwordCurr: "Derzeitiges Passwort",
         passwordCurrReq: "Derzeitiges Passwort ist notwendig",

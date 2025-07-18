@@ -1623,7 +1623,7 @@ session_lifetime = 43200
 #
 # default: false
 # overwritten by: SESSION_RENEW_MFA
-session_renew_mfa = true
+#session_renew_mfa = true
 
 # Session timeout in seconds. When a new token / login is requested
 # before this timeout hits the limit, the user will be authenticated

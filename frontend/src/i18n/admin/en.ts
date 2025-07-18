@@ -266,6 +266,16 @@ export let I18nAdminEn: I18nAdmin = {
         lastSeen: "Last Seen",
         state: "State",
     },
+    pam: {
+        groupName: "Groupname",
+        groupType: "Group Type",
+        hostGroupDesc: `Host groups are used to group hosts. NSS lookups of a host within the group return all other 
+            hosts within it as a result. Users can access hosts by assigning them to a host group.`,
+        userGroupDesc: `User groups are managed automatically and tightly coupled with the user with the same
+            username.`,
+        wheelGroupDesc: `This group is special. It is immutable and is assigned to users dynamically depending on their
+            group configuration.`,
+    },
     passwordPolicy: {
         configDesc: "Policy for new passwords.",
         resetSet0: "The value 0 deactivates the requirement.",

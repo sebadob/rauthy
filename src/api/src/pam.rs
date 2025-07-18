@@ -1,12 +1,13 @@
+use crate::ReqPrincipal;
 use actix_web::http::header::AUTHORIZATION;
 use actix_web::web::Path;
 use actix_web::{HttpRequest, HttpResponse, get, post};
 use actix_web_lab::extract::Json;
 use chrono::Utc;
 use rauthy_api_types::pam::{
-    Getent, PamGetentRequest, PamGroupResponse, PamHostSimpleResponse, PamLoginRequest,
-    PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest, PamPreflightResponse,
-    PamUserResponse,
+    Getent, PamGetentRequest, PamGroupMembersResponse, PamGroupResponse, PamHostSimpleResponse,
+    PamLoginRequest, PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest,
+    PamPreflightResponse, PamUserResponse, PamUsernameCheckRequest,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::utils::real_ip_from_req;
@@ -20,6 +21,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use serde::Serialize;
+use spow::pow::Pow;
 use std::cmp::max;
 use std::time::Duration;
 use tracing::{info, warn};
@@ -167,8 +169,8 @@ pub async fn post_mfa_finish(
 pub enum PamGetentResponse {
     Users(Vec<PamUserResponse>),
     User(PamUserResponse),
-    Groups(Vec<PamGroupResponse>),
-    Group(PamGroupResponse),
+    Groups(Vec<PamGroupMembersResponse>),
+    Group(PamGroupMembersResponse),
     Hosts(Vec<PamHostSimpleResponse>),
     Host(PamHostSimpleResponse),
 }
@@ -210,17 +212,17 @@ pub async fn post_getent(
             for group in groups {
                 // TODO this could be made more efficient when we build it up manually
                 //  and fetch all users in advance, only once.
-                res.push(group.build_response().await?);
+                res.push(group.build_members_response().await?);
             }
             PamGetentResponse::Groups(res)
         }
         Getent::Groupname(name) => {
             let group = PamGroup::find_by_name(name).await?;
-            PamGetentResponse::Group(group.build_response().await?)
+            PamGetentResponse::Group(group.build_members_response().await?)
         }
         Getent::GroupId(id) => {
             let group = PamGroup::find_by_id(id).await?;
-            PamGetentResponse::Group(group.build_response().await?)
+            PamGetentResponse::Group(group.build_members_response().await?)
         }
 
         Getent::Hosts => {
@@ -242,6 +244,60 @@ pub async fn post_getent(
     };
 
     Ok(HttpResponse::Ok().json(resp))
+}
+
+#[post("/pam/check")]
+pub async fn post_username_check(
+    principal: ReqPrincipal,
+    Json(payload): Json<PamUsernameCheckRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    // The PoW is requested because if you had an instance with open registration and enabled
+    // PAM account creation rights by default, this could be abused for username enumeration
+    // otherwise.
+    Pow::validate(&payload.pow)?;
+
+    if ["root", "admin"].contains(&payload.username.as_str()) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Blacklisted username",
+        ));
+    }
+
+    match PamUser::find_by_name(payload.username).await {
+        Ok(_) => Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "username already taken",
+        )),
+        Err(_) => Ok(HttpResponse::Ok().finish()),
+    }
+}
+
+#[get("/pam/groups")]
+pub async fn get_pam_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let groups = PamGroup::find_all()
+        .await?
+        .into_iter()
+        .map(PamGroupResponse::from)
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(groups))
+}
+
+#[get("/pam/users/{user_id}")]
+pub async fn get_pam_user(
+    user_id: Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = user_id.into_inner();
+    principal.validate_user_or_admin(&user_id)?;
+
+    let user = PamUser::find_by_user_id(user_id).await?;
+
+    Ok(HttpResponse::Ok().json(PamUserResponse::from(user)))
 }
 
 #[get("/pam/validate/{user_id}")]

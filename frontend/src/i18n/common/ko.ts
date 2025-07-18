@@ -93,6 +93,14 @@ export const I18nKo: I18n = {
         navMfa: "MFA",
         navLogout: "로그아웃",
         other: "Other",
+        pam: {
+            checkAvailability: 'Check Availability',
+            create1: 'No PAM user has been created yet.',
+            create2: `You can create a user only with a free username and this operation is unique and irreversible.
+                A fixed prefix is automatically added to the name.`,
+            create3: `The name cannot be changed or deleted afterwards, and should therefore be carefully elected!`,
+            username: 'Username',
+        },
         passwordConfirm: "비밀번호 확인",
         passwordCurr: "현재 비밀번호",
         passwordCurrReq: "현재 비밀번호가 필요합니다.",

@@ -19,6 +19,7 @@
     import IconLogout from "$icons/IconLogout.svelte";
     import Button from "$lib/button/Button.svelte";
     import AccOther from "$lib/account/AccOther.svelte";
+    import AccPAM from "$lib/account/AccPAM.svelte";
 
     let {
         user = $bindable(),
@@ -42,42 +43,27 @@
     let viewModeWideCompact = $derived(innerWidth && innerWidth < 1000);
 
     let selected = $state(t.account.navInfo);
-    let tabsCompact = $derived(!!webIdData ?
-        [
-            t.account.navInfo,
+    let tabsWide = $derived.by(() => {
+        let tabs = [];
+        
+        if (user.allow_pam_logins) {
+            tabs.push('PAM');
+        }
+        tabs = [
+            ...tabs,
             t.account.navMfa,
             t.account.devices,
             t.account.navEdit,
             t.common.password,
-            'WebID',
-            t.account.other,
-            t.account.navLogout,
-        ]
-        : [
-            t.account.navInfo,
-            t.account.navMfa,
-            t.account.devices,
-            t.account.navEdit,
-            t.common.password,
-            t.account.other,
-            t.account.navLogout,
-        ]);
-    let tabsWide = $derived(!!webIdData ?
-        [
-            t.account.navMfa,
-            t.account.devices,
-            t.account.navEdit,
-            t.common.password,
-            'WebID',
-            t.account.other,
-        ]
-        : [
-            t.account.navMfa,
-            t.account.devices,
-            t.account.navEdit,
-            t.common.password,
-            t.account.other,
-        ]);
+        ];
+        if (!!webIdData) {
+            tabs.push('WebID');
+        }
+        tabs.push(t.account.other);
+
+        return tabs;
+    });
+    let tabsCompact = $derived([t.account.navInfo, ...tabsWide, t.account.navLogout]);
 
     onMount(() => {
         if (useParam('v').get() === 'devices') {
@@ -88,6 +74,8 @@
     $effect(() => {
         if (viewModePhone || viewModeWideCompact) {
             selected = t.account.navInfo;
+        } else if (user.allow_pam_logins) {
+            selected = 'PAM';
         } else {
             selected = t.account.navMfa;
         }
@@ -120,6 +108,8 @@
             <div class="innerPhone">
                 {#if selected === t.account.navInfo}
                     <AccInfo bind:user {providers} {authProvider} viewModePhone {webIdData}/>
+                {:else if selected === 'PAM'}
+                    <AccPAM {user}/>
                 {:else if selected === t.account.navEdit}
                     <AccEdit bind:user viewModePhone/>
                 {:else if selected === t.common.password}
@@ -155,6 +145,8 @@
                 <div class="inner">
                     {#if selected === t.account.navInfo}
                         <AccInfo bind:user {webIdData} {providers} {authProvider}/>
+                    {:else if selected === 'PAM'}
+                        <AccPAM {user}/>
                     {:else if selected === t.account.navEdit}
                         <AccEdit bind:user/>
                     {:else if selected === t.common.password}

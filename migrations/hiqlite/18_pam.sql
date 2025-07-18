@@ -1,13 +1,10 @@
-ALTER TABLE users
-    ADD allow_pam_logins INTEGER DEFAULT 0 NOT NULL;
-
 CREATE TABLE pam_groups
 (
-    id            INTEGER NOT NULL
+    id   INTEGER NOT NULL
         CONSTRAINT pam_groups_pk
             PRIMARY KEY AUTOINCREMENT,
-    name          TEXT    NOT NULL,
-    is_user_group INTEGER NOT NULL
+    name TEXT    NOT NULL,
+    typ  TEXT    NOT NULL
 ) STRICT;
 
 CREATE UNIQUE INDEX pam_groups_name_uindex
@@ -102,5 +99,10 @@ CREATE TABLE pam_rel_groups_users
 
 -- make sure uid + gid sequences start at 100_000
 INSERT INTO sqlite_sequence (name, seq)
-VALUES ('pam_groups', 100000),
-       ('pam_users', 100000);
+VALUES ('pam_groups', 99999),
+       ('pam_users', 99999);
+
+-- add default group
+INSERT INTO pam_groups (name, typ)
+VALUES ('wheel-rauthy', 'immutable'),
+       ('default', 'host');

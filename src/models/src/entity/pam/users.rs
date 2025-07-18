@@ -1,5 +1,5 @@
 use crate::database::DB;
-use crate::entity::pam::groups::PamGroup;
+use crate::entity::pam::groups::{PamGroup, PamGroupType};
 use hiqlite::StmtIndex;
 use hiqlite_macros::params;
 use rauthy_api_types::pam::PamUserResponse;
@@ -42,7 +42,7 @@ impl From<tokio_postgres::Row> for PamUser {
 
 impl PamUser {
     pub async fn insert(username: String, email: String) -> Result<(), ErrorResponse> {
-        let group = PamGroup::insert(username, true).await?;
+        let group = PamGroup::insert(username, PamGroupType::User).await?;
 
         let sql_user = r#"
 INSERT INTO pam_users (name, gid, email, shell)
@@ -92,6 +92,22 @@ RETURNING id
             DB::hql().query_map_one(sql, params!(id)).await?
         } else {
             DB::pg_query_one(sql, &[&id]).await?
+        };
+
+        Ok(slf)
+    }
+
+    pub async fn find_by_user_id(user_id: String) -> Result<Self, ErrorResponse> {
+        let sql = r#"
+SELECT * FROM pam_users WHERE email = (
+    SELECT email FROM users WHERE id = $1
+)
+"#;
+
+        let slf = if is_hiqlite() {
+            DB::hql().query_map_one(sql, params!(user_id)).await?
+        } else {
+            DB::pg_query_one(sql, &[&user_id]).await?
         };
 
         Ok(slf)

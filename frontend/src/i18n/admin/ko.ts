@@ -254,6 +254,14 @@ export let I18nAdminKo: I18nAdmin = {
         lastSeen: "마지막 사용시간",
         state: "상태",
     },
+    pam: {
+        groupName: "Groupname",
+        groupType: "Group Type",
+        userGroupDesc: `User groups are managed automatically and tightly coupled with the user with the same
+            username.`,
+        wheelGroupDesc: `This group is special. It is immutable and is assigned to users dynamically depending on their
+            group configuration.`,
+    },
     passwordPolicy: {
         configDesc: "새 비밀번호에 대한 정책입니다.",
         resetSet0: "0으로 설정하면 비활성화됩니다.",

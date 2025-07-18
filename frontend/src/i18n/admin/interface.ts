@@ -223,6 +223,13 @@ export interface I18nAdmin {
         lastSeen: string,
         state: string,
     },
+    pam: {
+        groupName: string,
+        groupType: string,
+        hostGroupDesc: string,
+        userGroupDesc: string,
+        wheelGroupDesc: string,
+    },
     passwordPolicy: {
         configDesc: string,
         resetSet0: string,

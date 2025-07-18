@@ -152,7 +152,6 @@ pub struct UpdateUserRequest {
     #[validate(custom(function = "validate_vec_groups"))]
     pub groups: Option<Vec<String>>,
     pub enabled: bool,
-    pub allow_pam_logins: bool,
     pub email_verified: bool,
     // TODO max validation for inner i64 is broken in the macro in v0.18.1
     // #[validate(range(min = 1719784800, max = 4070905200))]
@@ -493,7 +492,6 @@ pub struct UserResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<Vec<String>>,
     pub enabled: bool,
-    pub allow_pam_logins: bool,
     pub email_verified: bool,
     /// Unix timestamp in seconds
     #[serde(skip_serializing_if = "Option::is_none")]

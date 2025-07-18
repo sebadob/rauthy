@@ -1,39 +1,50 @@
+use crate::cust_validation::validate_vec_linux_hostname;
 use crate::users::WebauthnAuthFinishRequest;
-use rauthy_common::regex::{RE_CLIENT_ID_EPHEMERAL, RE_LINUX_USERNAME};
+use rauthy_common::regex::{RE_ALNUM, RE_LINUX_HOSTNAME, RE_LINUX_USERNAME, RE_URI};
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use utoipa::ToSchema;
 use validator::Validate;
 
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum PamGroupType {
+    Immutable,
+    Host,
+    User,
+    Generic,
+    Local,
+}
+
 /// Preflight request for PAM authentications to check, if the given user would be allowed to log
 /// in to this client and if so, under which conditions.
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct PamPreflightRequest {
-    /// Validation: `^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$`
-    #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
-        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
-    ))]
+    /// Validation: `^[a-zA-Z0-9]{24}$`
+    #[validate(
+        length(min = 24, max = 24),
+        regex(path = "*RE_ALNUM", code = "^[a-zA-Z0-9]{24}$")
+    )]
     pub host_id: String,
     #[validate(length(min = 64, max = 64))]
     pub host_secret: String,
     /// Validation: `^[a-z][a-z0-9_-]{1,63}$`
-    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,63}$"))]
+    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
     pub username: String,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct PamLoginRequest {
-    /// Validation: `^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$`
-    #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
-        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
-    ))]
+    /// Validation: `^[a-zA-Z0-9]{24}$`
+    #[validate(
+        length(min = 24, max = 24),
+        regex(path = "*RE_ALNUM", code = "^[a-zA-Z0-9]{24}$")
+    )]
     pub host_id: String,
     #[validate(length(min = 64, max = 64))]
     pub host_secret: String,
     //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
-    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,63}$"))]
+    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
     pub username: String,
     /// Validation: Applies password policy - max 256 characters
     #[validate(length(max = 256))]
@@ -46,7 +57,7 @@ pub struct PamLoginRequest {
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct PamMfaStartRequest {
     //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
-    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,63}$"))]
+    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
     pub username: String,
 }
 
@@ -75,11 +86,11 @@ pub enum Getent {
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct PamGetentRequest {
-    /// Validation: `^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$`
-    #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
-        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
-    ))]
+    /// Validation: `^[a-zA-Z0-9]{24}$`
+    #[validate(
+        length(min = 24, max = 24),
+        regex(path = "*RE_ALNUM", code = "^[a-zA-Z0-9]{24}$")
+    )]
     pub host_id: String,
     #[validate(length(min = 64, max = 64))]
     pub host_secret: String,
@@ -88,6 +99,14 @@ pub struct PamGetentRequest {
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct PamHostUpdateRequest {
+    /// Validation: `^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$`
+    #[validate(
+        length(min = 2, max = 61),
+        regex(
+            path = "*RE_LINUX_HOSTNAME",
+            code = "^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$"
+        )
+    )]
     pub hostname: String,
     pub gid: u32,
     pub force_mfa: bool,
@@ -95,7 +114,19 @@ pub struct PamHostUpdateRequest {
     /// Validation: IpAddr
     #[schema(value_type = str)]
     pub ips: Vec<IpAddr>,
+    /// Validation: `^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$`
+    #[validate(custom(function = "validate_vec_linux_hostname"))]
     pub aliases: Vec<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+pub struct PamUsernameCheckRequest {
+    //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
+    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
+    pub username: String,
+    /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
+    pub pow: String,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -109,7 +140,6 @@ pub struct PamHostSimpleResponse {
     pub id: String,
     pub name: String,
     pub aliases: Vec<String>,
-    /// Validation: IpAddr
     #[schema(value_type = str)]
     pub addresses: Vec<IpAddr>,
 }
@@ -118,7 +148,14 @@ pub struct PamHostSimpleResponse {
 pub struct PamGroupResponse {
     pub id: u32,
     pub name: String,
-    // Vec<{username}>
+    pub typ: PamGroupType,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PamGroupMembersResponse {
+    pub id: u32,
+    pub name: String,
+    pub typ: PamGroupType,
     pub members: Vec<String>,
 }
 
