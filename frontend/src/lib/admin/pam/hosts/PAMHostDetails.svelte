@@ -151,18 +151,18 @@
         </div>
 
         <InputTags
-                label="IP Addresses"
+                label={ta.pam.ipAddresses}
                 bind:values={host.ips}
                 width={widthAreas}
         />
         <InputTags
-                label="Host Aliases"
+                label={ta.pam.hostAliases}
                 bind:values={host.aliases}
                 pattern={PATTERN_LINUX_HOSTNAME}
                 width={widthAreas}
         />
         <InputArea
-                label="Notes"
+                label={ta.pam.notes}
                 bind:value={host.notes}
                 width={widthAreas}
         />

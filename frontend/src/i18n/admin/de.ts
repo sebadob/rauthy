@@ -282,7 +282,10 @@ export let I18nAdminDe: I18nAdmin = {
         deleteHost: "Soll dieser Host wirklich gelöscht werden?",
         groupName: "Gruppenname",
         groupType: "Gruppen-Typ",
+        hostAliases: "Host Aliase",
+        ipAddresses: "IP Adressen",
         nameExistsAlready: "Name is bereits vergeben",
+        notes: "Notizen",
         hostGroupDesc: `Host-Gruppen dienen der Gruppierung von Hosts. NSS lookups eines Hosts innerhalb der Gruppe
             liefern als Ergebnis sämtliche anderen Hosts innerhalb dieser zurück. Benutzer können Zugriff auf Hosts
             bekommen, indem sie wiederum einer Host-Gruppe zugeordnet werden.`,

@@ -271,7 +271,10 @@ export let I18nAdminEn: I18nAdmin = {
         deleteHost: "Do you really want to delete this host?",
         groupName: "Groupname",
         groupType: "Group Type",
+        hostAliases: "Host Aliases",
+        ipAddresses: "IP Addresses",
         nameExistsAlready: "Name is already taken",
+        notes: "Notes",
         hostGroupDesc: `Host groups are used to group hosts. NSS lookups of a host within the group return all other 
             hosts within it as a result. Users can access hosts by assigning them to a host group.`,
         secretShow: "Show Secret",

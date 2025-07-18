@@ -21,6 +21,7 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
+    let ref: undefined | HTMLInputElement = $state();
     let err = $state('');
 
     const options = groups.filter(g => g.typ === 'host').map(g => g.name);
@@ -30,6 +31,12 @@
         hostname: '',
         gid: 0,
         force_mfa: true,
+    });
+
+    $effect(() => {
+        requestAnimationFrame(() => {
+            ref?.focus();
+        });
     });
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
@@ -59,6 +66,7 @@
 
     <Form action="/auth/v1/pam/hosts" {onSubmit}>
         <Input
+                bind:ref
                 label="Hostname"
                 placeholder="Hostname"
                 bind:value={host.hostname}
