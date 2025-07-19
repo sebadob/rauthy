@@ -17,9 +17,9 @@
         size = 'medium',
         disableUpload,
     }: {
-        userId: string;
+        userId?: string;
         fallbackCharacters: string;
-        pictureId: undefined | string;
+        pictureId?: string;
         size?: 'small' | 'medium' | 'large';
         disableUpload?: boolean,
     } = $props();

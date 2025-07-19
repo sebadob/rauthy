@@ -12,7 +12,7 @@
         rows = 10,
         cols = 60,
         show = $bindable(false),
-        width = 'min(25rem, calc(100dvw - .5rem))',
+        width = 'min(25rem, calc(100dvw - 2rem))',
         ...rest
     }: {
         ariaLabel: string,
@@ -59,11 +59,11 @@
             <Button ariaLabel={show ? t.common.hide : t.common.show} invisible onclick={toggle}>
                 {#if show}
                     <div title={t.common.hide}>
-                        <IconEye width={22}/>
+                        <IconEye/>
                     </div>
                 {:else}
                     <div title={t.common.show}>
-                        <IconEyeSlash width={22}/>
+                        <IconEyeSlash/>
                     </div>
                 {/if}
             </Button>
@@ -79,7 +79,7 @@
     <textarea
             aria-label={ariaLabel}
             style:width={width}
-            style:padding-right="2.75rem"
+            style:padding-right="3.25rem"
             disabled
             bind:value={text}
             {rows}
@@ -91,6 +91,7 @@
 <style>
     textarea {
         width: 100%;
+        /*width: min(100%, calc(100dvw - 2rem));*/
         padding: .25rem .5rem;
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);

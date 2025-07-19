@@ -15,6 +15,7 @@ pub mod ipgeo;
 pub mod language;
 pub mod migration;
 pub mod rauthy_config;
+pub mod temp_migrations;
 pub mod vault_config;
 
 pub enum AuthStep {

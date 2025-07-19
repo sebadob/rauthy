@@ -70,7 +70,6 @@
         let res: HTMLElement[] = [];
 
         for (let elem of elems) {
-            console.log(elem.tagName);
             if (elem.getAttribute("hidden") === 'true' || elem.getAttribute("disabled") === 'true') {
                 // noop
             } else if (elem.getAttribute('tabindex') !== null) {

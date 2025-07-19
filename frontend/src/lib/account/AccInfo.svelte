@@ -168,12 +168,12 @@
 
     <div class={classRow}>
         <div class={classLabel}>{t.account.roles}</div>
-        <span class="value">{user.roles || 'None'}</span>
+        <span class="value">{user.roles.join(', ') || 'None'}</span>
     </div>
 
     <div class={classRow}>
         <div class={classLabel}>{t.account.groups}</div>
-        <span class="value">{user.groups || 'None'}</span>
+        <span class="value">{user.groups?.join(', ') || 'None'}</span>
     </div>
 
     <div class={classRow}>

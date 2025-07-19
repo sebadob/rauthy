@@ -24,7 +24,7 @@ impl Debug for AuthCode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "id: {}(...), exp: {}, client_id: {}, user_id: {}, scopes: {:?}",
+            "AuthCode {{ id: {}(...), exp: {}, client_id: {}, user_id: {}, scopes: {:?} }}",
             &self.id[..5],
             self.exp,
             self.client_id,
