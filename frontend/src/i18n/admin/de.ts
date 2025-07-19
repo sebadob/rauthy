@@ -278,23 +278,30 @@ export let I18nAdminDe: I18nAdmin = {
         state: "Status",
     },
     pam: {
+        addGroup: "Neue PAM Gruppe",
         addHost: "Neuer PAM Host",
         deleteHost: "Soll dieser Host wirklich gelöscht werden?",
+        groupDescGeneric: `Generic Gruppen sind das Pendant zu Einträgen, die man überlicherweise in /etc/group finden
+            würde. Benutzer können diesen zugewiesen werden und sie werden durch NSS Lookups ans System zurückgeliefert.`,
+        groupDescHost: `Host-Gruppen dienen der Gruppierung von Hosts. NSS lookups eines Hosts innerhalb der Gruppe
+            liefern als Ergebnis sämtliche anderen Hosts innerhalb dieser zurück. Benutzer können Zugriff auf Hosts
+            bekommen, indem sie wiederum einer Host-Gruppe zugeordnet werden.`,
+        groupDescLocal: `Local Gruppen verhalten sich fast identisch zu Generic Gruppen, mit dem Unterschied, dass sie
+            zwar eine ID in der Rauthy Datenbank haben, der NSS Proxy auf dem jeweiligen Host sie aber mit einer ID
+            aus /etc/group verknüpft. Auf diese Weise können Rauthy Benutzer bereits lokal existierenden Gruppen 
+            zugeordnet werden.`,
+        groupDescUser: `Benutzer-Gruppen sind automatisch verwaltet und eng an den Benutzer mit demselben Namen
+            gekoppelt.`,
+        groupDescWheel: `Diese Gruppe ist speziell. Sie ist unveränderlich und wird Benutzern dynamisch zugewiesen in
+            Abhängigkeit von der Gruppenzugehörigkeit.`,
         groupName: "Gruppenname",
         groupType: "Gruppen-Typ",
         hostAliases: "Host Aliase",
         ipAddresses: "IP Adressen",
         nameExistsAlready: "Name is bereits vergeben",
         notes: "Notizen",
-        hostGroupDesc: `Host-Gruppen dienen der Gruppierung von Hosts. NSS lookups eines Hosts innerhalb der Gruppe
-            liefern als Ergebnis sämtliche anderen Hosts innerhalb dieser zurück. Benutzer können Zugriff auf Hosts
-            bekommen, indem sie wiederum einer Host-Gruppe zugeordnet werden.`,
         secretShow: "Secret Anzeigen",
         secretRotate: "Secret Rotieren",
-        userGroupDesc: `Benutzer-Gruppen sind automatisch verwaltet und eng an den Benutzer mit demselben Namen
-            gekoppelt.`,
-        wheelGroupDesc: `Diese Gruppe ist speziell. Sie ist unveränderlich und wird Benutzern dynamisch zugewiesen in
-            Abhängigkeit von der Gruppenzugehörigkeit.`,
     },
     passwordPolicy: {
         configDesc: "Regeln für neue Passwörter.",

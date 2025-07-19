@@ -267,22 +267,28 @@ export let I18nAdminEn: I18nAdmin = {
         state: "State",
     },
     pam: {
+        addGroup: "New PAM Group",
         addHost: "New PAM Host",
         deleteHost: "Do you really want to delete this host?",
+        groupDescGeneric: `Generic groups are the counterpart to entries that are usually found in /etc/group. Users 
+            can be assigned to these and they are returned to the system by NSS Lookups.`,
+        groupDescHost: `Host groups are used to group hosts. NSS lookups of a host within the group return all other 
+            hosts within it as a result. Users can access hosts by assigning them to a host group.`,
+        groupDescLocal: `Local groups behave almost identically to Generic groups, with the difference that they have 
+            an ID in the Rauthy database, but the NSS proxy on the respective host will convert it to an ID from 
+            /etc/group. In this way, Rauthy users can be assigned to groups that already exist locally.`,
+        groupDescUser: `User groups are managed automatically and tightly coupled with the user with the same
+            username.`,
+        groupDescWheel: `This group is special. It is immutable and is assigned to users dynamically depending on their
+            group configuration.`,
         groupName: "Groupname",
         groupType: "Group Type",
         hostAliases: "Host Aliases",
         ipAddresses: "IP Addresses",
         nameExistsAlready: "Name is already taken",
         notes: "Notes",
-        hostGroupDesc: `Host groups are used to group hosts. NSS lookups of a host within the group return all other 
-            hosts within it as a result. Users can access hosts by assigning them to a host group.`,
         secretShow: "Show Secret",
         secretRotate: "Rotate Secret",
-        userGroupDesc: `User groups are managed automatically and tightly coupled with the user with the same
-            username.`,
-        wheelGroupDesc: `This group is special. It is immutable and is assigned to users dynamically depending on their
-            group configuration.`,
     },
     passwordPolicy: {
         configDesc: "Policy for new passwords.",

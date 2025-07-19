@@ -16,21 +16,12 @@ pub enum PamGroupType {
     Local,
 }
 
-/// Preflight request for PAM authentications to check, if the given user would be allowed to log
-/// in to this client and if so, under which conditions.
 #[derive(Debug, Deserialize, Validate, ToSchema)]
-pub struct PamPreflightRequest {
-    /// Validation: `^[a-zA-Z0-9]{24}$`
-    #[validate(
-        length(min = 24, max = 24),
-        regex(path = "*RE_ALNUM", code = "^[a-zA-Z0-9]{24}$")
-    )]
-    pub host_id: String,
-    #[validate(length(min = 64, max = 64))]
-    pub host_secret: String,
+pub struct PamGroupCreateRequest {
     //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
     #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
-    pub username: String,
+    pub name: String,
+    pub typ: PamGroupType,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -134,6 +125,23 @@ pub struct PamHostUpdateRequest {
     pub aliases: Vec<String>,
 }
 
+/// Preflight request for PAM authentications to check, if the given user would be allowed to log
+/// in to this client and if so, under which conditions.
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct PamPreflightRequest {
+    /// Validation: `^[a-zA-Z0-9]{24}$`
+    #[validate(
+        length(min = 24, max = 24),
+        regex(path = "*RE_ALNUM", code = "^[a-zA-Z0-9]{24}$")
+    )]
+    pub host_id: String,
+    #[validate(length(min = 64, max = 64))]
+    pub host_secret: String,
+    //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
+    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
+    pub username: String,
+}
+
 #[derive(Deserialize, Validate, ToSchema)]
 pub struct PamUsernameCheckRequest {
     //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
@@ -145,9 +153,24 @@ pub struct PamUsernameCheckRequest {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub struct PamPreflightResponse {
-    pub login_allowed: bool,
-    pub mfa_required: bool,
+pub struct PamGroupResponse {
+    pub id: u32,
+    pub name: String,
+    pub typ: PamGroupType,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PamGroupHostsCountResponse {
+    pub gid: u32,
+    pub count: u32,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PamGroupMembersResponse {
+    pub id: u32,
+    pub name: String,
+    pub typ: PamGroupType,
+    pub members: Vec<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -178,18 +201,9 @@ pub struct PamHostSecretResponse {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub struct PamGroupResponse {
-    pub id: u32,
-    pub name: String,
-    pub typ: PamGroupType,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct PamGroupMembersResponse {
-    pub id: u32,
-    pub name: String,
-    pub typ: PamGroupType,
-    pub members: Vec<String>,
+pub struct PamPreflightResponse {
+    pub login_allowed: bool,
+    pub mfa_required: bool,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

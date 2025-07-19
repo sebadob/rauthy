@@ -302,6 +302,20 @@ LIMIT 1
         Ok(slf)
     }
 
+    pub async fn count_with_group(gid: u32) -> Result<i64, ErrorResponse> {
+        let sql = "SELECT COUNT(*) AS count FROM pam_hosts WHERE gid = $1";
+
+        let count: i64 = if is_hiqlite() {
+            let mut row = DB::hql().query_raw_one(sql, params!(gid)).await?;
+            row.get("count")
+        } else {
+            let row = DB::pg_query_one_row(sql, &[&gid]).await?;
+            row.get("count")
+        };
+
+        Ok(count)
+    }
+
     pub async fn find_in_group_full(gid: u32) -> Result<Vec<Self>, ErrorResponse> {
         let sql = "SELECT * FROM pam_hosts WHERE gid = $1";
 

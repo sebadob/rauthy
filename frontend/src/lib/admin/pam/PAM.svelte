@@ -12,8 +12,9 @@
     import {onMount} from "svelte";
     import NavButtonTile from "$lib/nav/NavButtonTile.svelte";
     import PAMGroupDetails from "$lib/admin/pam/groups/PAMGroupDetails.svelte";
-    import PAMAddHost from "$lib/admin/pam/hosts/PAMAddHost.svelte";
+    import PamHostAdd from "$lib/admin/pam/hosts/PAMHostAdd.svelte";
     import PAMHostDetails from "$lib/admin/pam/hosts/PAMHostDetails.svelte";
+    import PAMGroupAdd from "$lib/admin/pam/groups/PAMGroupAdd.svelte";
 
 
     let t = useI18n();
@@ -79,6 +80,12 @@
         }
     }
 
+    function onCreateGroup(group: PamGroupResponse) {
+        closeModal?.();
+        fetchGroups();
+        selectedGroup = group;
+    }
+
     function onCreateHost(host: PamHostSimpleResponse) {
         closeModal?.();
         fetchHosts();
@@ -96,9 +103,9 @@
         {#if isUser}
             TODO
         {:else if isGroup}
-            TODO
+            <PAMGroupAdd {groups} onCreate={onCreateGroup}/>
         {:else if isHost}
-            <PAMAddHost {groups} onCreate={onCreateHost}/>
+            <PamHostAdd {groups} onCreate={onCreateHost}/>
         {/if}
     </ButtonAddModal>
 
@@ -149,7 +156,13 @@
         {#if isUser && selectedUser}
             USERS TODO
         {:else if isGroup && selectedGroup}
-            <PAMGroupDetails group={selectedGroup}/>
+            <PAMGroupDetails
+                    group={selectedGroup}
+                    onDelete={() => {
+                        fetchGroups();
+                        selectedGroup = undefined;
+                    }}
+            />
         {:else if isHost && selectedHost}
             <PAMHostDetails
                     hostSimple={selectedHost}

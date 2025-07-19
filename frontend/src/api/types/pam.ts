@@ -5,6 +5,12 @@ export type PamGroupType =
     'generic' |
     'local';
 
+export interface PamGroupCreateRequest {
+    //// Validation: PATTERN_LINUX_USERNAME
+    name: string,
+    typ: PamGroupType,
+}
+
 export interface PamHostCreateRequest {
     /// Validation: `PATTERN_LINUX_HOSTNAME, min 2, max 63
     hostname: string,
@@ -34,6 +40,11 @@ export interface PamGroupResponse {
     id: number,
     name: string,
     typ: PamGroupType,
+}
+
+export interface PamGroupHostsCountResponse {
+    gid: number,
+    count: number,
 }
 
 export interface PamHostSimpleResponse {

@@ -1,11 +1,12 @@
 use crate::database::DB;
+use crate::entity::pam::hosts::PamHost;
 use hiqlite_macros::params;
 use rauthy_api_types::pam::{PamGroupMembersResponse, PamGroupResponse};
 use rauthy_common::is_hiqlite;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PamGroupType {
     Immutable,
@@ -123,6 +124,28 @@ RETURNING *
     }
 
     pub async fn delete(id: u32) -> Result<(), ErrorResponse> {
+        let slf = Self::find_by_id(id).await?;
+
+        if let Some(err) = match slf.typ {
+            PamGroupType::Immutable => Some("Immutable groups cannot be deleted"),
+            PamGroupType::Host => {
+                // only allow deletion if no host is assigned to this group
+                let count = PamHost::count_with_group(slf.id).await?;
+                if count > 0 {
+                    Some("Cannot delete group with assigned hosts")
+                } else {
+                    None
+                }
+            }
+            PamGroupType::User => {
+                Some("User groups are automatically managed and cannot be deleted")
+            }
+            PamGroupType::Generic => None,
+            PamGroupType::Local => None,
+        } {
+            return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
+        }
+
         let sql = "DELETE FROM pam_groups WHERE id = $1";
 
         if is_hiqlite() {
@@ -185,6 +208,18 @@ impl From<PamGroupType> for rauthy_api_types::pam::PamGroupType {
             PamGroupType::User => Self::User,
             PamGroupType::Generic => Self::Generic,
             PamGroupType::Local => Self::Local,
+        }
+    }
+}
+
+impl From<rauthy_api_types::pam::PamGroupType> for PamGroupType {
+    fn from(value: rauthy_api_types::pam::PamGroupType) -> Self {
+        match value {
+            rauthy_api_types::pam::PamGroupType::Immutable => Self::Immutable,
+            rauthy_api_types::pam::PamGroupType::Host => Self::Host,
+            rauthy_api_types::pam::PamGroupType::User => Self::User,
+            rauthy_api_types::pam::PamGroupType::Generic => Self::Generic,
+            rauthy_api_types::pam::PamGroupType::Local => Self::Local,
         }
     }
 }

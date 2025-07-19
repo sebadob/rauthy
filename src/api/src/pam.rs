@@ -5,10 +5,11 @@ use actix_web::{HttpRequest, HttpResponse, delete, get, post, put};
 use actix_web_lab::extract::Json;
 use chrono::Utc;
 use rauthy_api_types::pam::{
-    Getent, PamGetentRequest, PamGroupMembersResponse, PamGroupResponse, PamHostCreateRequest,
-    PamHostDetailsResponse, PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest,
-    PamLoginRequest, PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest,
-    PamPreflightResponse, PamUserResponse, PamUsernameCheckRequest,
+    Getent, PamGetentRequest, PamGroupCreateRequest, PamGroupHostsCountResponse,
+    PamGroupMembersResponse, PamGroupResponse, PamHostCreateRequest, PamHostDetailsResponse,
+    PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest, PamLoginRequest,
+    PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest, PamPreflightResponse,
+    PamUserResponse, PamUsernameCheckRequest,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::utils::real_ip_from_req;
@@ -141,6 +142,44 @@ pub async fn get_pam_groups(principal: ReqPrincipal) -> Result<HttpResponse, Err
     Ok(HttpResponse::Ok().json(groups))
 }
 
+#[post("/pam/groups")]
+pub async fn post_pam_groups(
+    principal: ReqPrincipal,
+    Json(payload): Json<PamGroupCreateRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+    payload.validate()?;
+
+    let group = PamGroup::insert(payload.name, payload.typ.into()).await?;
+
+    Ok(HttpResponse::Ok().json(group))
+}
+
+#[get("/pam/groups/{id}/hosts_count")]
+pub async fn get_pam_group_hosts_count(
+    id: Path<u32>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let gid = id.into_inner();
+    let count = PamHost::count_with_group(gid).await? as u32;
+
+    Ok(HttpResponse::Ok().json(PamGroupHostsCountResponse { gid, count }))
+}
+
+#[delete("/pam/groups/{id}")]
+pub async fn delete_pam_group(
+    id: Path<u32>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    PamGroup::delete(id.into_inner()).await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
 #[get("/pam/hosts")]
 pub async fn get_hosts(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
@@ -156,13 +195,12 @@ pub async fn get_hosts(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRes
 
 #[post("/pam/hosts")]
 pub async fn post_hosts(
-    payload: Json<PamHostCreateRequest>,
     principal: ReqPrincipal,
+    Json(payload): Json<PamHostCreateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
     payload.validate()?;
 
-    let payload = payload.into_inner();
     let host = PamHost::insert(payload.hostname, payload.gid, payload.force_mfa).await?;
 
     Ok(HttpResponse::Ok().json(PamHostSimpleResponse::from(host)))
@@ -212,12 +250,12 @@ pub async fn put_host_secret(
 pub async fn put_host(
     id: Path<String>,
     principal: ReqPrincipal,
-    payload: Json<PamHostUpdateRequest>,
+    Json(payload): Json<PamHostUpdateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
     payload.validate()?;
 
-    PamHost::update(id.into_inner(), payload.into_inner()).await?;
+    PamHost::update(id.into_inner(), payload).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
