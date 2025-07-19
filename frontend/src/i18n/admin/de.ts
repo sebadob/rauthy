@@ -123,6 +123,7 @@ export let I18nAdminDe: I18nAdmin = {
         account: "Account",
         addNew: "Neu Hinzufügen",
         back: "Zurück",
+        caution: "ACHTUNG",
         contact: "Kontakt",
         copiedToClip: "Wert wurde in die Zwischenablage kopiert",
         details: "Details",
@@ -280,6 +281,7 @@ export let I18nAdminDe: I18nAdmin = {
     pam: {
         addGroup: "Neue PAM Gruppe",
         addHost: "Neuer PAM Host",
+        addUser: "Neuer PAM Benutzer",
         deleteHost: "Soll dieser Host wirklich gelöscht werden?",
         groupDescGeneric: `Generic Gruppen sind das Pendant zu Einträgen, die man überlicherweise in /etc/group finden
             würde. Benutzer können diesen zugewiesen werden und sie werden durch NSS Lookups ans System zurückgeliefert.`,
@@ -302,6 +304,9 @@ export let I18nAdminDe: I18nAdmin = {
         notes: "Notizen",
         secretShow: "Secret Anzeigen",
         secretRotate: "Secret Rotieren",
+        userEmail: "Verlinkte Benutzer E-Mail",
+        usernameNewDesc: `Der Benutzername sollte sorgfältig gewählt werden. Er lässt sich aus sicherheitstechnischen
+            Gründen nachträglich nicht einfach ändern.`,
     },
     passwordPolicy: {
         configDesc: "Regeln für neue Passwörter.",

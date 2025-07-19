@@ -46,7 +46,7 @@
         let isTaken = groups.find(g => g.name === group.name);
 
         if (isTaken) {
-            err = 'Name already exists';
+            err = ta.pam.nameExistsAlready
             return true;
         }
         return false;
@@ -80,6 +80,7 @@
                 required
                 pattern={PATTERN_LINUX_USERNAME}
                 width="min(22rem, 100%)"
+                onBlur={isNameTaken}
         />
 
         <div class="row">

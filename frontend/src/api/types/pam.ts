@@ -30,6 +30,12 @@ export interface PamHostUpdateRequest {
     aliases: string[],
 }
 
+export interface PamUserCreateRequest {
+    //// Validation: PATTERN_LINUX_USERNAME
+    username: string,
+    email: string,
+}
+
 export interface PamUsernameCheckRequest {
     //// Validation: PATTERN_LINUX_USERNAME
     username: string,
@@ -68,6 +74,10 @@ export interface PamHostDetailsResponse {
 export interface PamHostSecretResponse {
     id: string,
     secret: string,
+}
+
+export interface PamUnlinkedEmailsResponse {
+    emails: string[],
 }
 
 export interface PamUserResponse {

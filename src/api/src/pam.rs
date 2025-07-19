@@ -9,7 +9,7 @@ use rauthy_api_types::pam::{
     PamGroupMembersResponse, PamGroupResponse, PamHostCreateRequest, PamHostDetailsResponse,
     PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest, PamLoginRequest,
     PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest, PamPreflightResponse,
-    PamUserResponse, PamUsernameCheckRequest,
+    PamUnlinkedEmailsResponse, PamUserCreateRequest, PamUserResponse, PamUsernameCheckRequest,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::utils::real_ip_from_req;
@@ -56,6 +56,17 @@ pub async fn post_username_check(
         )),
         Err(_) => Ok(HttpResponse::Ok().finish()),
     }
+}
+
+#[get("/pam/emails_unlinked")]
+pub async fn get_pam_emails_unlinked(
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    let emails = PamUser::find_emails_unlinked().await?;
+
+    Ok(HttpResponse::Ok().json(PamUnlinkedEmailsResponse { emails }))
 }
 
 #[post("/pam/getent")]
@@ -419,17 +430,55 @@ pub async fn post_preflight(
     }))
 }
 
-#[get("/pam/users/{user_id}")]
+#[get("/pam/users")]
+pub async fn get_pam_users(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let users = PamUser::find_all()
+        .await?
+        .into_iter()
+        .map(PamUserResponse::from)
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(users))
+}
+
+#[post("/pam/users")]
+pub async fn post_pam_users(
+    principal: ReqPrincipal,
+    Json(payload): Json<PamUserCreateRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+    payload.validate()?;
+
+    let user = User::find_by_email(payload.email).await?;
+    let pam_user = PamUser::insert(payload.username, user.email).await?;
+
+    Ok(HttpResponse::Ok().json(PamUserResponse::from(pam_user)))
+}
+
+#[get("/pam/users/{uid}")]
 pub async fn get_pam_user(
-    user_id: Path<String>,
+    uid: Path<u32>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let user_id = user_id.into_inner();
-    principal.validate_user_or_admin(&user_id)?;
+    principal.validate_session_auth()?;
 
-    let user = PamUser::find_by_user_id(user_id).await?;
+    let uid = uid.into_inner();
+    let pam_user = PamUser::find_by_id(uid).await?;
+    let user = User::find_by_email(pam_user.email).await?;
 
-    Ok(HttpResponse::Ok().json(PamUserResponse::from(user)))
+    principal.validate_user_or_admin(&user.id)?;
+
+    let resp = PamUserResponse {
+        id: pam_user.id,
+        name: pam_user.name,
+        gid: pam_user.gid,
+        email: user.email,
+        shell: pam_user.shell,
+    };
+
+    Ok(HttpResponse::Ok().json(resp))
 }
 
 #[get("/pam/validate/{user_id}")]

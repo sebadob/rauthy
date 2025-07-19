@@ -8,13 +8,15 @@
     import SearchBar from "$lib/search_bar/SearchBar.svelte";
     import Tabs from "$lib/tabs/Tabs.svelte";
     import {fetchGet} from "$api/fetch";
-    import type {PamGroupResponse, PamHostSimpleResponse} from "$api/types/pam";
+    import type {PamGroupResponse, PamHostSimpleResponse, PamUserResponse} from "$api/types/pam";
     import {onMount} from "svelte";
     import NavButtonTile from "$lib/nav/NavButtonTile.svelte";
     import PAMGroupDetails from "$lib/admin/pam/groups/PAMGroupDetails.svelte";
     import PamHostAdd from "$lib/admin/pam/hosts/PAMHostAdd.svelte";
     import PAMHostDetails from "$lib/admin/pam/hosts/PAMHostDetails.svelte";
     import PAMGroupAdd from "$lib/admin/pam/groups/PAMGroupAdd.svelte";
+    import PAMUserAdd from "$lib/admin/pam/users/PAMUserAdd.svelte";
+    import UserPicture from "$lib/UserPicture.svelte";
 
 
     let t = useI18n();
@@ -30,7 +32,7 @@
     const tabs = ['Users', 'Groups', 'Hosts'];
     let selectedNav = $state(tabs[0]);
 
-    let selectedUser: undefined | PamGroupResponse = $state();
+    let selectedUser: undefined | PamUserResponse = $state();
     let selectedGroup: undefined | PamGroupResponse = $state();
     let selectedHost: undefined | PamHostSimpleResponse = $state();
 
@@ -44,7 +46,12 @@
     let hosts: PamHostSimpleResponse[] = $state([]);
     let hostsFiltered: PamHostSimpleResponse[] = $derived.by(() => {
         let s = searchValue.toLowerCase();
-        return hosts.filter(g => g.name.toLowerCase().includes(s));
+        return hosts.filter(h => h.name.toLowerCase().includes(s));
+    });
+    let users: PamUserResponse[] = $state([]);
+    let usersFiltered: PamUserResponse[] = $derived.by(() => {
+        let s = searchValue.toLowerCase();
+        return users.filter(u => u.name.toLowerCase().includes(s));
     });
 
     let isUser = $derived(selectedNav === tabs[0]);
@@ -54,6 +61,7 @@
     onMount(() => {
         fetchGroups();
         fetchHosts();
+        fetchUsers();
     });
 
     $effect(() => {
@@ -80,6 +88,15 @@
         }
     }
 
+    async function fetchUsers() {
+        let res = await fetchGet<PamUserResponse[]>('/auth/v1/pam/users');
+        if (res.body) {
+            users = res.body;
+        } else {
+            err = res.error?.message || 'ERROR';
+        }
+    }
+
     function onCreateGroup(group: PamGroupResponse) {
         closeModal?.();
         fetchGroups();
@@ -91,6 +108,12 @@
         fetchHosts();
         selectedHost = host;
     }
+
+    function onCreateUser(user: PamUserResponse) {
+        closeModal?.();
+        fetchUsers();
+        selectedUser = user;
+    }
 </script>
 
 <NavSub
@@ -101,7 +124,7 @@
 >
     <ButtonAddModal bind:ref={refAddNew} level={2} bind:closeModal alignRight>
         {#if isUser}
-            TODO
+            <PAMUserAdd onCreate={onCreateUser}/>
         {:else if isGroup}
             <PAMGroupAdd {groups} onCreate={onCreateGroup}/>
         {:else if isHost}
@@ -122,7 +145,36 @@
     {#snippet buttonTiles()}
         <div class="navList">
             {#if isUser}
-                USERS TODO
+                {#if usersFiltered.length === 0}
+                    {ta.common.noEntries}
+                {:else}
+                    {#each usersFiltered as user (user.id)}
+                        <NavButtonTile
+                                onclick={() => selectedUser = user}
+                                selected={user.id === selectedUser?.id}
+                                pictureLeft
+                        >
+                            <div class="navBtn">
+                                <div class="picture">
+                                    <UserPicture
+                                            fallbackCharacters={user.name[0]}
+                                            size="small"
+                                            disableUpload
+                                    />
+                                </div>
+                                <div class="tile">
+                                    <div>
+                                        {user.name}
+                                    </div>
+                                    <div class="muted">
+                                        {user.email}
+                                    </div>
+                                </div>
+                            </div>
+
+                        </NavButtonTile>
+                    {/each}
+                {/if}
             {:else if isGroup}
                 {#if groupsFiltered.length === 0}
                     {ta.common.noEntries}
@@ -155,6 +207,7 @@
     <div id="pam">
         {#if isUser && selectedUser}
             USERS TODO
+            {selectedUser.name}
         {:else if isGroup && selectedGroup}
             <PAMGroupDetails
                     group={selectedGroup}
@@ -177,6 +230,18 @@
 </ContentAdmin>
 
 <style>
+    .muted {
+        margin-bottom: -.2rem;
+        opacity: .65;
+        font-size: .8rem;
+    }
+
+    .navBtn {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
     .navList {
         max-height: calc(100dvh - 9.5rem);
         margin-top: .5rem;
@@ -185,6 +250,14 @@
 
     .tabs {
         margin: 1rem 0 .5rem 0;
+    }
+
+    .tile {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        line-height: 1rem;
+        overflow-x: clip;
     }
 
     .typ {

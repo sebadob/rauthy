@@ -143,6 +143,15 @@ pub struct PamPreflightRequest {
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
+pub struct PamUserCreateRequest {
+    //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
+    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
+    pub username: String,
+    #[validate(email)]
+    pub email: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct PamUsernameCheckRequest {
     //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
     #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
@@ -204,6 +213,11 @@ pub struct PamHostSecretResponse {
 pub struct PamPreflightResponse {
     pub login_allowed: bool,
     pub mfa_required: bool,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct PamUnlinkedEmailsResponse {
+    pub emails: Vec<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

@@ -1,6 +1,5 @@
 use crate::database::DB;
 use crate::entity::pam::groups::{PamGroup, PamGroupType};
-use hiqlite::StmtIndex;
 use hiqlite_macros::params;
 use rauthy_api_types::pam::PamUserResponse;
 use rauthy_common::is_hiqlite;
@@ -41,36 +40,34 @@ impl From<tokio_postgres::Row> for PamUser {
 }
 
 impl PamUser {
-    pub async fn insert(username: String, email: String) -> Result<(), ErrorResponse> {
+    pub async fn insert(username: String, email: String) -> Result<Self, ErrorResponse> {
         let group = PamGroup::insert(username, PamGroupType::User).await?;
 
         let sql_user = r#"
 INSERT INTO pam_users (name, gid, email, shell)
 VALUES ($1, $2, $3, '/bin/bash')
-RETURNING id
+RETURNING *
 "#;
         let sql_rel = "INSERT INTO pam_rel_groups_users (gid, uid) VALUES ($1, $2)";
 
-        if is_hiqlite() {
-            DB::hql()
-                .txn([
-                    (sql_user, params!(group.name, group.id, email)),
-                    (sql_rel, params!(group.id, StmtIndex(0).column("id"))),
-                ])
+        let slf = if is_hiqlite() {
+            let slf: Self = DB::hql()
+                .execute_returning_map_one(sql_user, params!(group.name, group.id, email))
                 .await?;
-        } else {
-            // TODO we need a custom query for postgres for the relation here
-            todo!()
-            // let mut cl = DB::pg().await?;
-            // let txn = cl.transaction().await?;
-            //
-            // DB::pg_txn_append(&txn, sql_user, &[&group.name, &group.id, &email]).await?;
-            // DB::pg_txn_append(&txn, sql_rel, &[&group.id, &group.id, &email]).await?;
-            //
-            // txn.commit().await?;
-        }
+            DB::hql()
+                .execute(sql_rel, params!(group.id, slf.id))
+                .await?;
 
-        Ok(())
+            slf
+        } else {
+            let slf: Self = DB::pg_query_one(sql_user, &[&group.name, &group.id, &email]).await?;
+
+            DB::pg_execute(sql_rel, &[&group.id, &slf.id]).await?;
+
+            slf
+        };
+
+        Ok(slf)
     }
 
     pub async fn find_by_name(username: String) -> Result<Self, ErrorResponse> {
@@ -123,6 +120,31 @@ SELECT * FROM pam_users WHERE email = (
         };
 
         Ok(res)
+    }
+
+    pub async fn find_emails_unlinked() -> Result<Vec<String>, ErrorResponse> {
+        let sql = r#"
+SELECT u.email AS email FROM users u
+LEFT JOIN pam_users pu
+WHERE pu.id IS NULL
+"#;
+
+        let emails: Vec<String> = if is_hiqlite() {
+            DB::hql()
+                .query_raw(sql, params!())
+                .await?
+                .into_iter()
+                .map(|mut r| r.get("email"))
+                .collect::<Vec<_>>()
+        } else {
+            DB::pg_query_rows(sql, &[], 16)
+                .await?
+                .into_iter()
+                .map(|r| r.get("email"))
+                .collect::<Vec<_>>()
+        };
+
+        Ok(emails)
     }
 }
 

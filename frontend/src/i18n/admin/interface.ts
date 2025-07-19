@@ -103,6 +103,7 @@ export interface I18nAdmin {
         account: string,
         addNew: string,
         back: string,
+        caution: string,
         contact: string,
         copiedToClip: string,
         details: string,
@@ -226,6 +227,7 @@ export interface I18nAdmin {
     pam: {
         addGroup: string,
         addHost: string,
+        addUser: string,
         deleteHost: string,
         groupDescGeneric: string,
         groupDescHost: string,
@@ -240,6 +242,8 @@ export interface I18nAdmin {
         notes: string,
         secretShow: string,
         secretRotate: string,
+        userEmail: string,
+        usernameNewDesc: string,
     },
     passwordPolicy: {
         configDesc: string,

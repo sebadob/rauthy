@@ -45,6 +45,7 @@
             console.error('gid not found');
             return;
         }
+        err = '';
 
         host.gid = gid;
         let res = await fetchPost<PamHostSimpleResponse>(form.action, host);
