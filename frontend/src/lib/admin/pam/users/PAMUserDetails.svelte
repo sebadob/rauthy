@@ -290,11 +290,11 @@
     }
 
     .row-2 {
-        grid-template-columns: 1fr 5rem;
+        grid-template-columns: 1fr 4.5rem;
     }
 
     .row-3 {
-        grid-template-columns: 1fr 5rem 4rem;
+        grid-template-columns: 1fr 4.5rem 4.5rem;
     }
 
     .row:hover {
