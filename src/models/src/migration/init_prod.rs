@@ -169,7 +169,7 @@ WHERE email = 'admin@localhost'"#;
         // RSA256
         let jwk_plain = web::block(|| {
             let mut rng = rand_08::thread_rng();
-            rsa::RsaPrivateKey::new(&mut rng, 2028)
+            rsa::RsaPrivateKey::new(&mut rng, 2048)
                 .unwrap()
                 .to_pkcs8_der()
                 .unwrap()
