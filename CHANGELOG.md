@@ -6,7 +6,8 @@
 
 - The key creation of RSA keys for the RS256 signing algorithm had a typo and generated 2028 bit keys instead of 2048.
   This tiny difference is not really a huge issue in terms of security, but it made some clients fail to validate the
-  tokens, because they expected 2048.
+  tokens, because they expected 2048. If you currently have issues with some client that uses RS256, you will get a new
+  pair of keys via: `Admin UI -> Config -> JWKS -> Rotate Keys`
   [#1124](https://github.com/sebadob/rauthy/pull/1124)
 - The automatic Session Refresh action on the Login UI stopped working under some conditions. By default, as long as
   you have a valid session (and other config + request variables are met), you should not be prompted for another
