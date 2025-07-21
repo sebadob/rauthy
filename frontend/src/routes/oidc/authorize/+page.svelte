@@ -69,7 +69,6 @@
     let stateEncoded = $derived(stateParam ? encodeURIComponent(stateParam) : undefined);
     let challenge = useParam('code_challenge').get();
     let challengeMethod: CodeChallengeMethod = useParam('code_challenge_method').get() as CodeChallengeMethod;
-    let refresh = false;
     let existingMfaUser: undefined | string = $state();
     let providers: AuthProviderTemplate[] = $state([]);
     let mfaPurpose: undefined | MfaPurpose = $state();
@@ -105,7 +104,10 @@
     });
 
     $effect(() => {
-        if (refresh && clientId?.length || 0 > 0 && redirectUri?.length || 0 > 0) {
+        if ('Refresh' === loginAction
+            && clientId && clientId.length > 0
+            && redirectUri && redirectUri.length > 0
+        ) {
             onRefresh();
         }
     })
@@ -125,9 +127,7 @@
     });
 
     $effect(() => {
-        if ('Refresh' === loginAction) {
-            refresh = true;
-        } else if (loginAction?.startsWith('MfaLogin ')) {
+        if (loginAction?.startsWith('MfaLogin ')) {
             let mfaUser = loginAction.replace('MfaLogin ', '');
             email = mfaUser;
             existingMfaUser = mfaUser;
