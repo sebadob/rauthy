@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.31.3
+
+### Bugfix
+
+- The key creation for RSA keys for the RS256 signing algorithm had a typo and generated 2028 bit keys instead of 2048.
+  This tiny difference is not really a huge issue in terms of security, but it made some clients fail to validate the
+  tokens, because they expected 2048.
+  [#1124](https://github.com/sebadob/rauthy/pull/1124)
+- The automatic Session Refresh action on the Login UI stopped working under some conditions. By default, as long as
+  you have a valid session (and other config + request variables are met), you should not be prompted for another
+  login and the UI should refresh you session automatically and log you in. Getting this right is a bit tricky, because
+  most tests require a proper production deployment to include all affecting issues. Some changes have been made to the
+  trigger logic, but I am not sure if this fully fixes this bug yet. But, since the patch release came anyway because of
+  the RSA modulus, this "maybe fix" is included.
+  [#1128](https://github.com/sebadob/rauthy/pull/1128)
+
 ## v0.31.2
 
 ### Bugfix
