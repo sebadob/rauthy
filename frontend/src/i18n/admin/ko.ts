@@ -272,14 +272,17 @@ export let I18nAdminKo: I18nAdmin = {
         groupDescWheel: `This group is special. It is immutable and is assigned to users dynamically depending on their
             group configuration.`,
         groupName: "Groupname",
+        groups: "Groups",
         groupType: "Group Type",
         hostAliases: "Host Aliases",
         ipAddresses: "IP Addresses",
+        member: "Member",
         nameExistsAlready: "Name is already taken",
         notes: "Notes",
         secretShow: "Show Secret",
         secretRotate: "Rotate Secret",
         userEmail: "Linked User E-Mail",
+        username: "Username",
         usernameNewDesc: `The Username should be chosen carefully. Once created, it cannot be changed easily afterwards
             for security reasons.`,
     },

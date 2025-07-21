@@ -5,6 +5,12 @@ export type PamGroupType =
     'generic' |
     'local';
 
+export interface PamGroupUserLink {
+    uid: number,
+    gid: number,
+    wheel: boolean,
+}
+
 export interface PamGroupCreateRequest {
     //// Validation: PATTERN_LINUX_USERNAME
     name: string,
@@ -31,15 +37,21 @@ export interface PamHostUpdateRequest {
 }
 
 export interface PamUserCreateRequest {
-    //// Validation: PATTERN_LINUX_USERNAME
+    /// Validation: PATTERN_LINUX_USERNAME
     username: string,
     email: string,
 }
 
 export interface PamUsernameCheckRequest {
-    //// Validation: PATTERN_LINUX_USERNAME
+    /// Validation: PATTERN_LINUX_USERNAME
     username: string,
     pow: string,
+}
+
+export interface PamUserUpdateRequest {
+    /// Validation: max length 24
+    shell: string,
+    groups: PamGroupUserLink[],
 }
 
 export interface PamGroupResponse {
@@ -86,4 +98,13 @@ export interface PamUserResponse {
     gid: number,
     email: string,
     shell: string,
+}
+
+export interface PamUserDetailsResponse {
+    id: number,
+    name: string,
+    gid: number,
+    email: string,
+    shell: string,
+    groups: PamGroupUserLink[],
 }

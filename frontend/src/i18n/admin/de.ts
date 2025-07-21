@@ -297,14 +297,17 @@ export let I18nAdminDe: I18nAdmin = {
         groupDescWheel: `Diese Gruppe ist speziell. Sie ist unveränderlich und wird Benutzern dynamisch zugewiesen in
             Abhängigkeit von der Gruppenzugehörigkeit.`,
         groupName: "Gruppenname",
+        groups: "Gruppen",
         groupType: "Gruppen-Typ",
         hostAliases: "Host Aliase",
         ipAddresses: "IP Adressen",
+        member: "Mitglied",
         nameExistsAlready: "Name is bereits vergeben",
         notes: "Notizen",
         secretShow: "Secret Anzeigen",
         secretRotate: "Secret Rotieren",
         userEmail: "Verlinkte Benutzer E-Mail",
+        username: "Benutzername",
         usernameNewDesc: `Der Benutzername sollte sorgfältig gewählt werden. Er lässt sich aus sicherheitstechnischen
             Gründen nachträglich nicht einfach ändern.`,
     },

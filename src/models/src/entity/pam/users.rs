@@ -1,7 +1,7 @@
 use crate::database::DB;
 use crate::entity::pam::groups::{PamGroup, PamGroupType};
 use hiqlite_macros::params;
-use rauthy_api_types::pam::PamUserResponse;
+use rauthy_api_types::pam::{PamGroupUserLink, PamUserResponse};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
@@ -48,7 +48,10 @@ INSERT INTO pam_users (name, gid, email, shell)
 VALUES ($1, $2, $3, '/bin/bash')
 RETURNING *
 "#;
-        let sql_rel = "INSERT INTO pam_rel_groups_users (gid, uid) VALUES ($1, $2)";
+        let sql_rel = r#"
+INSERT INTO pam_rel_groups_users (gid, uid, wheel)
+VALUES ($1, $2, false)
+"#;
 
         let slf = if is_hiqlite() {
             let slf: Self = DB::hql()
@@ -125,7 +128,7 @@ SELECT * FROM pam_users WHERE email = (
     pub async fn find_emails_unlinked() -> Result<Vec<String>, ErrorResponse> {
         let sql = r#"
 SELECT u.email AS email FROM users u
-LEFT JOIN pam_users pu
+LEFT JOIN pam_users pu ON u.email = pu.email
 WHERE pu.id IS NULL
 "#;
 
@@ -145,6 +148,54 @@ WHERE pu.id IS NULL
         };
 
         Ok(emails)
+    }
+
+    pub async fn update_shell(uid: u32, shell: String) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE pam_users SET shell = $1 WHERE id = $2";
+
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(shell, uid)).await?;
+        } else {
+            DB::pg_execute(sql, &[&shell, &uid]).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn update_groups(
+        uid: u32,
+        groups: Vec<PamGroupUserLink>,
+    ) -> Result<(), ErrorResponse> {
+        let sql_remove = "DELETE FROM pam_rel_groups_users WHERE uid = $1";
+        let sql_insert = r#"
+INSERT INTO pam_rel_groups_users (gid, uid, wheel)
+VALUES ($1, $2, $3)
+"#;
+
+        if is_hiqlite() {
+            let mut txn = Vec::with_capacity(1 + groups.len());
+
+            txn.push((sql_remove, params!(uid)));
+            for group in groups {
+                debug_assert_eq!(uid, group.uid);
+                txn.push((sql_insert, params!(group.gid, uid, group.wheel)));
+            }
+
+            DB::hql().txn(txn).await?;
+        } else {
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
+
+            DB::pg_txn_append(&txn, sql_remove, &[&uid]).await?;
+            for group in groups {
+                debug_assert_eq!(uid, group.uid);
+                DB::pg_txn_append(&txn, sql_insert, &[&group.gid, &uid, &group.wheel]).await?;
+            }
+
+            txn.commit().await?;
+        }
+
+        Ok(())
     }
 }
 

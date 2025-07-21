@@ -9,12 +9,14 @@ use rauthy_api_types::pam::{
     PamGroupMembersResponse, PamGroupResponse, PamHostCreateRequest, PamHostDetailsResponse,
     PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest, PamLoginRequest,
     PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest, PamPreflightResponse,
-    PamUnlinkedEmailsResponse, PamUserCreateRequest, PamUserResponse, PamUsernameCheckRequest,
+    PamUnlinkedEmailsResponse, PamUserCreateRequest, PamUserDetailsResponse, PamUserResponse,
+    PamUserUpdateRequest, PamUsernameCheckRequest,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::failed_login_counter::FailedLoginCounter;
+use rauthy_models::entity::pam::group_user_links::PamGroupUserLink;
 use rauthy_models::entity::pam::groups::PamGroup;
 use rauthy_models::entity::pam::hosts::PamHost;
 use rauthy_models::entity::pam::tokens::PamToken;
@@ -470,15 +472,41 @@ pub async fn get_pam_user(
 
     principal.validate_user_or_admin(&user.id)?;
 
-    let resp = PamUserResponse {
+    let groups = PamGroupUserLink::find_for_user(pam_user.id)
+        .await?
+        .into_iter()
+        .map(rauthy_api_types::pam::PamGroupUserLink::from)
+        .collect::<Vec<_>>();
+
+    let resp = PamUserDetailsResponse {
         id: pam_user.id,
         name: pam_user.name,
         gid: pam_user.gid,
         email: user.email,
         shell: pam_user.shell,
+        groups,
     };
 
     Ok(HttpResponse::Ok().json(resp))
+}
+
+#[put("/pam/users/{uid}")]
+pub async fn put_pam_user(
+    uid: Path<u32>,
+    principal: ReqPrincipal,
+    Json(payload): Json<PamUserUpdateRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+    payload.validate()?;
+
+    let uid = uid.into_inner();
+    let pam_user = PamUser::find_by_id(uid).await?;
+    if pam_user.shell != payload.shell {
+        PamUser::update_shell(pam_user.id, payload.shell).await?;
+    }
+    PamUser::update_groups(pam_user.id, payload.groups).await?;
+
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[get("/pam/validate/{user_id}")]

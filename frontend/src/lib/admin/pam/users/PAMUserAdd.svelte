@@ -81,14 +81,17 @@
         />
 
         <LabeledValue label={ta.pam.userEmail}>
-            <Options
-                    ariaLabel={ta.pam.userEmail}
-                    {options}
-                    bind:value={user.email}
-                    borderless
-                    withSearch
-                    maxHeight="20rem"
-            />
+            <div class="flex">
+                <Options
+                        ariaLabel={ta.pam.userEmail}
+                        {options}
+                        bind:value={user.email}
+                        borderless
+                        withSearch
+                        maxHeight="20rem"
+                />
+                <span class="req">*</span>
+            </div>
         </LabeledValue>
 
         <div class="caution">
@@ -126,5 +129,10 @@
     .container {
         width: 20rem;
         text-align: left;
+    }
+
+    .req {
+        color: hsl(var(--error));
+        font-size: .7rem;
     }
 </style>

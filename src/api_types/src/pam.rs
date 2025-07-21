@@ -16,6 +16,13 @@ pub enum PamGroupType {
     Local,
 }
 
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct PamGroupUserLink {
+    pub uid: u32,
+    pub gid: u32,
+    pub wheel: bool,
+}
+
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct PamGroupCreateRequest {
     //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
@@ -161,6 +168,13 @@ pub struct PamUsernameCheckRequest {
     pub pow: String,
 }
 
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct PamUserUpdateRequest {
+    #[validate(length(max = 24))]
+    pub shell: String,
+    pub groups: Vec<PamGroupUserLink>,
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct PamGroupResponse {
     pub id: u32,
@@ -227,4 +241,14 @@ pub struct PamUserResponse {
     pub gid: u32,
     pub email: String,
     pub shell: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PamUserDetailsResponse {
+    pub id: u32,
+    pub name: String,
+    pub gid: u32,
+    pub email: String,
+    pub shell: String,
+    pub groups: Vec<PamGroupUserLink>,
 }

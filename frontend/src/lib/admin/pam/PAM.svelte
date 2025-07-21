@@ -17,7 +17,8 @@
     import PAMGroupAdd from "$lib/admin/pam/groups/PAMGroupAdd.svelte";
     import PAMUserAdd from "$lib/admin/pam/users/PAMUserAdd.svelte";
     import UserPicture from "$lib/UserPicture.svelte";
-
+    import PAMUserDetails from "$lib/admin/pam/users/PAMUserDetails.svelte";
+    import type {PamGroupsSorted} from "$lib/admin/pam/types";
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -29,7 +30,7 @@
     let closeModal: undefined | (() => void) = $state();
     let searchValue = $state('');
 
-    const tabs = ['Users', 'Groups', 'Hosts'];
+    const tabs = [ta.nav.users, ta.pam.groups, 'Hosts'];
     let selectedNav = $state(tabs[0]);
 
     let selectedUser: undefined | PamUserResponse = $state();
@@ -42,6 +43,36 @@
     let groupsFiltered: PamGroupResponse[] = $derived.by(() => {
         let s = searchValue.toLowerCase();
         return groups.filter(g => g.name.toLowerCase().includes(s));
+    });
+    let groupsSorted: PamGroupsSorted = $derived.by(() => {
+        let generic: PamGroupResponse[] = [];
+        let host: PamGroupResponse[] = [];
+        let local: PamGroupResponse[] = [];
+        let user: PamGroupResponse[] = [];
+
+        for (let group of groups) {
+            switch (group.typ) {
+                case 'generic':
+                    generic.push(group);
+                    break;
+                case 'host':
+                    host.push(group);
+                    break;
+                case 'local':
+                    local.push(group);
+                    break;
+                case 'user':
+                    user.push(group);
+                    break;
+            }
+        }
+
+        generic.sort((a, b) => a.name.localeCompare(b.name));
+        host.sort((a, b) => a.name.localeCompare(b.name));
+        local.sort((a, b) => a.name.localeCompare(b.name));
+        user.sort((a, b) => a.name.localeCompare(b.name));
+
+        return {generic, host, local, user}
     });
     let hosts: PamHostSimpleResponse[] = $state([]);
     let hostsFiltered: PamHostSimpleResponse[] = $derived.by(() => {
@@ -112,6 +143,7 @@
     function onCreateUser(user: PamUserResponse) {
         closeModal?.();
         fetchUsers();
+        fetchGroups();
         selectedUser = user;
     }
 </script>
@@ -206,8 +238,10 @@
 <ContentAdmin>
     <div id="pam">
         {#if isUser && selectedUser}
-            USERS TODO
-            {selectedUser.name}
+            <PAMUserDetails
+                    user={selectedUser}
+                    {groupsSorted}
+            />
         {:else if isGroup && selectedGroup}
             <PAMGroupDetails
                     group={selectedGroup}

@@ -62,6 +62,11 @@
 
         let res = await fetchGet<PamHostDetailsResponse>(url);
         if (res.body) {
+            if (res.body.notes) {
+                res.body.notes = res.body.notes.trim();
+            } else {
+                res.body.notes = '';
+            }
             host = res.body;
             groupName = groups.find(g => g.id === host?.gid)?.name || '';
         } else {

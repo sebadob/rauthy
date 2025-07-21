@@ -85,14 +85,15 @@ CREATE UNIQUE INDEX pam_users_email_uindex
 
 CREATE TABLE pam_rel_groups_users
 (
-    gid INTEGER NOT NULL
+    gid   INTEGER NOT NULL
         CONSTRAINT pam_rel_groups_users_pam_groups_id_fk
             REFERENCES pam_groups
             ON DELETE CASCADE,
-    uid INTEGER NOT NULL
+    uid   INTEGER NOT NULL
         CONSTRAINT pam_rel_groups_users_pam_users_id_fk
             REFERENCES pam_users
             ON DELETE CASCADE,
+    wheel INTEGER NOT NULL,
     CONSTRAINT pam_rel_groups_users_pk
         PRIMARY KEY (gid, uid)
 ) STRICT;

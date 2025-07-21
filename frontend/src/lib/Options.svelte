@@ -150,7 +150,8 @@
         return false;
     }
 
-    function select(option: string | number) {
+    function select(ev: Event, option: string | number) {
+        ev.preventDefault();
         value = option;
         searchValue = '';
 
@@ -194,7 +195,7 @@
 
         <div bind:this={refOptions} class="popoverOptions">
             {#each optionsFiltered as option, i}
-                <Button invisible invisibleOutline onclick={() => select(option)}>
+                <Button invisible invisibleOutline onclick={ev => select(ev, option)}>
                     <div
                             class="optPopover"
                             aria-selected={value === option}
