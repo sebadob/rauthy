@@ -121,6 +121,7 @@
 <style>
     .container {
         max-width: 48.5rem;
+        overflow: clip;
     }
 
     .header {
