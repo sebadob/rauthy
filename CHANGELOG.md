@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.31.3
+
+### Bugfix
+
+- The key creation of RSA keys for the RS256 signing algorithm had a typo and generated 2028 bit keys instead of 2048.
+  This tiny difference is not really a huge issue in terms of security, but it made some clients fail to validate the
+  tokens, because they expected 2048.
+  That bug came in with the big JWT rework in v0.30 and the Custom JWT implementation. If you currently have issues with
+  some client that uses RS256, you will get a new pair of keys via: `Admin UI -> Config -> JWKS -> Rotate Keys`
+  [#1124](https://github.com/sebadob/rauthy/pull/1124)
+- The automatic Session Refresh action on the Login UI stopped working under some conditions. By default, as long as
+  you have a valid session (and other config + request variables are met), you should not be prompted for another
+  login and the UI should refresh you session automatically and log you in. The effect trigger logic in the UI was
+  reworked slightly, and it fixed the issue in my test setup. If someone still has problems, please open an issue about
+  it.
+  [#1128](https://github.com/sebadob/rauthy/pull/1128)
+
 ## v0.31.2
 
 ### Bugfix

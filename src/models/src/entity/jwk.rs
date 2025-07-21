@@ -175,10 +175,10 @@ impl JWKS {
         // let key = data.enc_keys.get(&data.enc_key_active).unwrap();
         let enc_key_active = &EncKeys::get_static().enc_key_active;
 
-        // RSA256
+        // RS256
         let jwk_plain = web::block(|| {
             let mut rng = rand_08::thread_rng();
-            rsa::RsaPrivateKey::new(&mut rng, 2028)
+            rsa::RsaPrivateKey::new(&mut rng, 2048)
                 .unwrap()
                 .to_pkcs8_der()
                 .unwrap()
