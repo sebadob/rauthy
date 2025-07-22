@@ -3,7 +3,11 @@ use crate::entity::pam::users::PamUser;
 use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
 use hiqlite_macros::params;
-use rauthy_api_types::pam::{PamHostDetailsResponse, PamHostSimpleResponse, PamHostUpdateRequest};
+use rauthy_api_types::pam::{
+    PamGroupMembersResponse, PamGroupType, PamHostDetailsResponse, PamHostSimpleResponse,
+    PamHostUpdateRequest,
+};
+use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -477,6 +481,38 @@ WHERE id = $5
 }
 
 impl PamHost {
+    pub async fn build_wheel_group_response(
+        &self,
+    ) -> Result<PamGroupMembersResponse, ErrorResponse> {
+        let sql = r#"
+SELECT name FROM pam_rel_groups_users pu
+JOIN pam_users u ON pu.uid = u.id
+WHERE pu.gid = $1 AND pu.wheel = $2
+"#;
+
+        let members = if is_hiqlite() {
+            DB::hql()
+                .query_raw(sql, params!(self.gid, true))
+                .await?
+                .into_iter()
+                .map(|mut r| r.get("name"))
+                .collect::<Vec<String>>()
+        } else {
+            DB::pg_query_rows(sql, &[&self.id, &true], 4)
+                .await?
+                .into_iter()
+                .map(|r| r.get("name"))
+                .collect::<Vec<String>>()
+        };
+
+        Ok(PamGroupMembersResponse {
+            id: PAM_WHEEL_ID,
+            name: PAM_WHEEL_NAME.to_string(),
+            typ: PamGroupType::Immutable,
+            members,
+        })
+    }
+
     #[inline]
     pub async fn is_login_allowed(&self, user: &PamUser) -> bool {
         if !self.gid == user.gid {

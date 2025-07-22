@@ -13,11 +13,12 @@ use rauthy_api_types::pam::{
     PamUserUpdateRequest, PamUsernameCheckRequest,
 };
 use rauthy_api_types::users::MfaPurpose;
+use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::failed_login_counter::FailedLoginCounter;
 use rauthy_models::entity::pam::group_user_links::PamGroupUserLink;
-use rauthy_models::entity::pam::groups::PamGroup;
+use rauthy_models::entity::pam::groups::{PamGroup, PamGroupType};
 use rauthy_models::entity::pam::hosts::PamHost;
 use rauthy_models::entity::pam::tokens::PamToken;
 use rauthy_models::entity::pam::users::PamUser;
@@ -27,6 +28,7 @@ use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use serde::Serialize;
 use spow::pow::Pow;
 use std::cmp::max;
+use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 use tracing::{info, warn};
 use utoipa::ToSchema;
@@ -83,42 +85,100 @@ pub async fn post_getent(
 
     let resp = match payload.getent {
         Getent::Users => {
-            // TODO somehow limit users to only the ones that are allowed to log in
+            let links = PamGroupUserLink::find_for_group(host.gid)
+                .await?
+                .into_iter()
+                .map(|l| l.uid)
+                .collect::<BTreeSet<u32>>();
+
             let users = PamUser::find_all()
                 .await?
                 .into_iter()
-                .map(PamUserResponse::from)
+                .filter_map(|u| {
+                    if links.contains(&u.id) {
+                        Some(PamUserResponse::from(u))
+                    } else {
+                        None
+                    }
+                })
                 .collect::<Vec<_>>();
             PamGetentResponse::Users(users)
         }
         Getent::Username(name) => {
             let user = PamUser::find_by_name(name).await?;
+            // TODO make sure to check host gid membership
             PamGetentResponse::User(PamUserResponse::from(user))
         }
         Getent::UserId(id) => {
             let user = PamUser::find_by_id(id).await?;
+            // TODO make sure to check host gid membership
             PamGetentResponse::User(PamUserResponse::from(user))
         }
 
         Getent::Groups => {
             // TODO we should probably have a default config or pool that can be assigned to
             // machines, with default groups and so on
-            let groups = PamGroup::find_all().await?;
-            let mut res = Vec::with_capacity(groups.len());
-            for group in groups {
-                // TODO this could be made more efficient when we build it up manually
-                //  and fetch all users in advance, only once.
-                res.push(group.build_members_response().await?);
+            let mut groups = PamGroup::find_all()
+                .await?
+                .into_iter()
+                .filter_map(|g| match g.typ {
+                    PamGroupType::Immutable | PamGroupType::Host => None,
+                    _ => Some((
+                        g.id,
+                        PamGroupMembersResponse {
+                            id: g.id,
+                            name: g.name,
+                            typ: g.typ.into(),
+                            members: Vec::with_capacity(8),
+                        },
+                    )),
+                })
+                .collect::<BTreeMap<u32, PamGroupMembersResponse>>();
+
+            let users = PamUser::find_all()
+                .await?
+                .into_iter()
+                .map(|u| (u.id, u))
+                .collect::<BTreeMap<u32, PamUser>>();
+
+            let links = PamGroupUserLink::find_all().await?;
+
+            for link in links {
+                if let Some(group) = groups.get_mut(&link.gid) {
+                    if let Some(user) = users.get(&link.uid) {
+                        group.members.push(user.name.clone());
+                    }
+                }
             }
+
+            let mut res = groups.into_iter().map(|(_, g)| g).collect::<Vec<_>>();
+            res.push(host.build_wheel_group_response().await?);
+
             PamGetentResponse::Groups(res)
         }
         Getent::Groupname(name) => {
-            let group = PamGroup::find_by_name(name).await?;
-            PamGetentResponse::Group(group.build_members_response().await?)
+            let group = if name == PAM_WHEEL_NAME {
+                host.build_wheel_group_response().await?
+            } else {
+                // TODO limit by type
+                PamGroup::find_by_name(name)
+                    .await?
+                    .build_members_response()
+                    .await?
+            };
+            PamGetentResponse::Group(group)
         }
         Getent::GroupId(id) => {
-            let group = PamGroup::find_by_id(id).await?;
-            PamGetentResponse::Group(group.build_members_response().await?)
+            let group = if id == PAM_WHEEL_ID {
+                host.build_wheel_group_response().await?
+            } else {
+                // TODO limit by type
+                PamGroup::find_by_id(id)
+                    .await?
+                    .build_members_response()
+                    .await?
+            };
+            PamGetentResponse::Group(group)
         }
 
         Getent::Hosts => {

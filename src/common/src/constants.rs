@@ -71,6 +71,9 @@ pub const APP_ID_HEADER: &str = "mfa-app-id";
 pub const CSRF_HEADER: &str = "x-csrf-token";
 pub const PWD_CSRF_HEADER: &str = "x-pwd-csrf-token";
 
+pub const PAM_WHEEL_ID: u32 = 100_000;
+pub const PAM_WHEEL_NAME: &str = "wheel-rauthy";
+
 pub const ARGON2ID_M_COST_MIN: u32 = 32768;
 pub const ARGON2ID_T_COST_MIN: u32 = 1;
 pub const API_KEY_LENGTH: usize = 64;

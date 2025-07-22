@@ -31,7 +31,19 @@ impl From<tokio_postgres::Row> for PamGroupUserLink {
 }
 
 impl PamGroupUserLink {
-    pub async fn find_for_groups(gid: u32) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM pam_rel_groups_users";
+
+        let res = if is_hiqlite() {
+            DB::hql().query_map(sql, params!()).await?
+        } else {
+            DB::pg_query(sql, &[], 32).await?
+        };
+
+        Ok(res)
+    }
+
+    pub async fn find_for_group(gid: u32) -> Result<Vec<Self>, ErrorResponse> {
         let sql = "SELECT * FROM pam_rel_groups_users WHERE gid = $1";
 
         let res: Vec<Self> = if is_hiqlite() {
