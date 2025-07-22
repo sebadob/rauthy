@@ -56,6 +56,7 @@ pub async fn update_client(
     client.client_uri = client_req.client_uri;
     client.backchannel_logout_uri = client_req.backchannel_logout_uri;
     client.restrict_group_prefix = client_req.restrict_group_prefix;
+    client.cust_email_mapping = client_req.cust_email_mapping;
 
     client.save().await?;
 
