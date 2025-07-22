@@ -75,11 +75,9 @@ export interface I18n {
         navLogout: string,
         other: string,
         pam: {
-            checkAvailability: string,
-            create1: string,
-            create2: string,
-            create3: string,
+            generatePassword: string,
             username: string,
+            validFor: string,
         },
         passwordConfirm: string,
         passwordCurr: string,

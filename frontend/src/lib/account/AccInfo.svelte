@@ -14,20 +14,25 @@
     import UserPicture from "$lib/UserPicture.svelte";
     import {fetchSolvePow} from "$utils/pow";
     import {generatePKCE} from "$utils/pkce";
+    import type {PamUserResponse} from "$api/types/pam";
 
     let {
         user = $bindable(),
+        pamUser,
         providers,
         authProvider,
         webIdData,
         viewModePhone,
     }: {
         user: UserResponse,
+        pamUser: undefined | PamUserResponse,
         providers: AuthProvidersTemplate,
         authProvider: undefined | AuthProviderTemplate,
         viewModePhone?: boolean,
         webIdData: undefined | WebIdResponse,
     } = $props();
+
+    $inspect('pam User in info', pamUser);
 
     let t = useI18n();
 
@@ -112,6 +117,13 @@
         <div class={classLabel}>{t.common.email}</div>
         <span class="value">{user.email}</span>
     </div>
+
+    {#if pamUser}
+        <div class={classRow}>
+            <div class={classLabel}>PAM {t.account.user}</div>
+            <span class="value">{pamUser.name}</span>
+        </div>
+    {/if}
 
     <div class={classRow}>
         <div class={classLabel}>{t.account.givenName}</div>

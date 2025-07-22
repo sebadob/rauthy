@@ -376,6 +376,8 @@ fn api_services() -> actix_web::Scope {
                 .service(pam::post_preflight)
                 .service(pam::get_pam_users)
                 .service(pam::post_pam_users)
+                .service(pam::post_pam_password)
+                .service(pam::get_pam_user_self)
                 .service(pam::get_pam_user)
                 .service(pam::put_pam_user)
                 .service(pam::post_username_check)

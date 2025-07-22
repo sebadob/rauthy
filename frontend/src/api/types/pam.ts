@@ -42,12 +42,6 @@ export interface PamUserCreateRequest {
     email: string,
 }
 
-export interface PamUsernameCheckRequest {
-    /// Validation: PATTERN_LINUX_USERNAME
-    username: string,
-    pow: string,
-}
-
 export interface PamUserUpdateRequest {
     /// Validation: max length 24
     shell: string,
@@ -90,6 +84,12 @@ export interface PamHostSecretResponse {
 
 export interface PamUnlinkedEmailsResponse {
     emails: string[],
+}
+
+export interface PamPasswordResponse {
+    exp: number,
+    username: string,
+    password: string,
 }
 
 export interface PamUserResponse {

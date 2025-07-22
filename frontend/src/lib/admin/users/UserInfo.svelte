@@ -104,7 +104,6 @@
                 roles: user.roles,
                 groups: user.groups || [],
                 enabled: user.enabled,
-                allow_pam_logins: user.allow_pam_logins,
                 account_type: user.account_type,
                 email_verified: user.email_verified,
                 created_at: user.created_at,
@@ -131,7 +130,6 @@
             country = user.user_values?.country || '';
 
             enabled = user.enabled;
-            allowPamLogin = user.allow_pam_logins;
             emailVerified = user.email_verified;
             if (user.user_expires) {
                 let d = new Date(user.user_expires * 1000);
@@ -223,9 +221,6 @@
 
         if (enabled !== userOrig?.enabled) {
             payload.put.push({key: 'enabled', value: enabled});
-        }
-        if (allowPamLogin !== userOrig?.allow_pam_logins) {
-            payload.put.push({key: 'allow_pam_logins', value: allowPamLogin});
         }
         if (emailVerified !== userOrig?.email_verified) {
             payload.put.push({key: 'email_verified', value: emailVerified});

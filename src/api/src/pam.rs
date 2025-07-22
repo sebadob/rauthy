@@ -8,9 +8,9 @@ use rauthy_api_types::pam::{
     Getent, PamGetentRequest, PamGroupCreateRequest, PamGroupHostsCountResponse,
     PamGroupMembersResponse, PamGroupResponse, PamHostCreateRequest, PamHostDetailsResponse,
     PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest, PamLoginRequest,
-    PamMfaFinishRequest, PamMfaStartRequest, PamPreflightRequest, PamPreflightResponse,
-    PamUnlinkedEmailsResponse, PamUserCreateRequest, PamUserDetailsResponse, PamUserResponse,
-    PamUserUpdateRequest, PamUsernameCheckRequest,
+    PamMfaFinishRequest, PamMfaStartRequest, PamPasswordResponse, PamPreflightRequest,
+    PamPreflightResponse, PamUnlinkedEmailsResponse, PamUserCreateRequest, PamUserDetailsResponse,
+    PamUserResponse, PamUserUpdateRequest, PamUsernameCheckRequest,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
@@ -20,6 +20,7 @@ use rauthy_models::entity::failed_login_counter::FailedLoginCounter;
 use rauthy_models::entity::pam::group_user_links::PamGroupUserLink;
 use rauthy_models::entity::pam::groups::{PamGroup, PamGroupType};
 use rauthy_models::entity::pam::hosts::PamHost;
+use rauthy_models::entity::pam::remote_password::PamRemotePassword;
 use rauthy_models::entity::pam::tokens::PamToken;
 use rauthy_models::entity::pam::users::PamUser;
 use rauthy_models::entity::users::User;
@@ -457,6 +458,20 @@ pub enum PamGetentResponse {
     Host(PamHostSimpleResponse),
 }
 
+#[post("/pam/password")]
+pub async fn post_pam_password(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    let pam_user = PamUser::find_by_user_id(principal.user_id()?.to_string()).await?;
+    let pwd = PamRemotePassword::create(pam_user.name).await?;
+
+    Ok(HttpResponse::Ok().json(PamPasswordResponse {
+        exp: pwd.exp,
+        username: pwd.username,
+        password: pwd.password,
+    }))
+}
+
 #[post("/pam/preflight")]
 pub async fn post_preflight(
     Json(payload): Json<PamPreflightRequest>,
@@ -515,6 +530,15 @@ pub async fn post_pam_users(
 
     let user = User::find_by_email(payload.email).await?;
     let pam_user = PamUser::insert(payload.username, user.email).await?;
+
+    Ok(HttpResponse::Ok().json(PamUserResponse::from(pam_user)))
+}
+
+#[get("/pam/users/self")]
+pub async fn get_pam_user_self(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    let pam_user = PamUser::find_by_user_id(principal.user_id()?.to_string()).await?;
 
     Ok(HttpResponse::Ok().json(PamUserResponse::from(pam_user)))
 }

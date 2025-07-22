@@ -20,6 +20,8 @@
     import Button from "$lib/button/Button.svelte";
     import AccOther from "$lib/account/AccOther.svelte";
     import AccPAM from "$lib/account/AccPAM.svelte";
+    import type {PamUserResponse} from "$api/types/pam";
+    import {fetchGet} from "$api/fetch";
 
     let {
         user = $bindable(),
@@ -42,13 +44,15 @@
     let viewModePhone = $derived(innerWidth && innerWidth < 560);
     let viewModeWideCompact = $derived(innerWidth && innerWidth < 1000);
 
+    let pamUser: undefined | PamUserResponse = $state();
+
     let selected = $state(t.account.navInfo);
     let tabsWide = $derived.by(() => {
         let tabs = [];
-        
-        if (user.allow_pam_logins) {
+        if (pamUser) {
             tabs.push('PAM');
         }
+
         tabs = [
             ...tabs,
             t.account.navMfa,
@@ -66,6 +70,8 @@
     let tabsCompact = $derived([t.account.navInfo, ...tabsWide, t.account.navLogout]);
 
     onMount(() => {
+        fetchPamUser();
+
         if (useParam('v').get() === 'devices') {
             selected = t.account.devices;
         }
@@ -74,7 +80,7 @@
     $effect(() => {
         if (viewModePhone || viewModeWideCompact) {
             selected = t.account.navInfo;
-        } else if (user.allow_pam_logins) {
+        } else if (pamUser) {
             selected = 'PAM';
         } else {
             selected = t.account.navMfa;
@@ -86,6 +92,13 @@
             redirectToLogout();
         }
     });
+
+    async function fetchPamUser() {
+        let res = await fetchGet<PamUserResponse>('/auth/v1/pam/users/self');
+        if (res.body) {
+            pamUser = res.body;
+        }
+    }
 </script>
 
 <svelte:window bind:innerWidth/>
@@ -107,9 +120,9 @@
 
             <div class="innerPhone">
                 {#if selected === t.account.navInfo}
-                    <AccInfo bind:user {providers} {authProvider} viewModePhone {webIdData}/>
-                {:else if selected === 'PAM'}
-                    <AccPAM {user}/>
+                    <AccInfo bind:user {pamUser} {providers} {authProvider} viewModePhone {webIdData}/>
+                {:else if selected === 'PAM' && pamUser}
+                    <AccPAM {pamUser}/>
                 {:else if selected === t.account.navEdit}
                     <AccEdit bind:user viewModePhone/>
                 {:else if selected === t.common.password}
@@ -131,7 +144,7 @@
         <div class="wide">
             {#if !viewModeWideCompact}
                 <div clasS="info">
-                    <AccInfo bind:user {webIdData} {providers} {authProvider}/>
+                    <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider}/>
                 </div>
             {/if}
 
@@ -144,9 +157,9 @@
 
                 <div class="inner">
                     {#if selected === t.account.navInfo}
-                        <AccInfo bind:user {webIdData} {providers} {authProvider}/>
-                    {:else if selected === 'PAM'}
-                        <AccPAM {user}/>
+                        <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider}/>
+                    {:else if selected === 'PAM' && pamUser}
+                        <AccPAM {pamUser}/>
                     {:else if selected === t.account.navEdit}
                         <AccEdit bind:user/>
                     {:else if selected === t.common.password}

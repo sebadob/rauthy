@@ -224,6 +224,13 @@ pub struct PamHostSecretResponse {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+pub struct PamPasswordResponse {
+    pub exp: i64,
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PamPreflightResponse {
     pub login_allowed: bool,
     pub mfa_required: bool,
