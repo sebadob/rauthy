@@ -62,6 +62,10 @@ pub struct PamLoginRequest {
     /// Validation: Applies password policy - max 256 characters
     #[validate(length(max = 256))]
     pub password: Option<String>,
+    /// PAM remote password - generated via account dashboard.
+    /// Works for both password-only and MFA accounts.
+    #[validate(length(min = 16, max = 128))]
+    pub remote_password: Option<String>,
     #[validate(length(max = 64))]
     pub webauthn_code: Option<String>,
 }

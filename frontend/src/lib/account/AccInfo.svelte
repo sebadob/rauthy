@@ -32,8 +32,6 @@
         webIdData: undefined | WebIdResponse,
     } = $props();
 
-    $inspect('pam User in info', pamUser);
-
     let t = useI18n();
 
     let unlinkErr = $state(false);

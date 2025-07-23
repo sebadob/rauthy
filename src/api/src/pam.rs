@@ -30,6 +30,7 @@ use serde::Serialize;
 use spow::pow::Pow;
 use std::cmp::max;
 use std::collections::{BTreeMap, BTreeSet};
+use std::net::IpAddr;
 use std::time::Duration;
 use tracing::{info, warn};
 use utoipa::ToSchema;
@@ -352,10 +353,13 @@ pub async fn post_login(
     Json(payload): Json<PamLoginRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
-    if payload.password.is_none() && payload.webauthn_code.is_none() {
+    if payload.password.is_none()
+        && payload.webauthn_code.is_none()
+        && payload.remote_password.is_none()
+    {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "at least one of password or webauthn_code must be given",
+            "at least one of password, remote_password or webauthn_code must be given",
         ));
     }
 
@@ -374,37 +378,59 @@ pub async fn post_login(
     user.check_expired()?;
     user.check_enabled()?;
 
+    if host.force_mfa && !user.has_webauthn_enabled() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "This host requires MFA",
+        ));
+    }
+
     let ip = real_ip_from_req(&req)?;
+
+    #[inline]
+    async fn pwd_login_success(user: &mut User, ip: IpAddr) -> Result<(), ErrorResponse> {
+        user.last_login = Some(Utc::now().timestamp());
+        user.last_failed_login = None;
+        user.failed_login_attempts = None;
+        user.save(None).await?;
+
+        FailedLoginCounter::reset(ip.to_string()).await?;
+
+        info!("New PAM login for user {}", user.email);
+
+        Ok(())
+    }
+
+    #[inline]
+    async fn pwd_login_fail(
+        user: &mut User,
+        ip: IpAddr,
+        err: ErrorResponse,
+    ) -> Result<(), ErrorResponse> {
+        user.last_failed_login = Some(Utc::now().timestamp());
+        user.failed_login_attempts = Some(user.failed_login_attempts.unwrap_or(0) + 1);
+        user.save(None).await?;
+
+        let failed_logins = FailedLoginCounter::increase(ip.to_string()).await?;
+
+        warn!(?err, "Failed PAM login for user {}", user.email);
+
+        let sec = max(failed_logins, 5) as u64;
+        tokio::time::sleep(Duration::from_secs(sec)).await;
+
+        Err(err)
+    }
+
     if let Some(password) = payload.password {
         match user.validate_password(password).await {
             Ok(_) => {
-                user.last_login = Some(Utc::now().timestamp());
-                user.last_failed_login = None;
-                user.failed_login_attempts = None;
-                user.save(None).await?;
-
-                FailedLoginCounter::reset(ip.to_string()).await?;
-
-                info!("New PAM login for user {}", user.email);
+                pwd_login_success(&mut user, ip).await?;
             }
             Err(err) => {
-                user.last_failed_login = Some(Utc::now().timestamp());
-                user.failed_login_attempts = Some(user.failed_login_attempts.unwrap_or(0) + 1);
-                user.save(None).await?;
-
-                let failed_logins = FailedLoginCounter::increase(ip.to_string()).await?;
-
-                warn!(?err, "Failed PAM login for user {}", user.email);
-
-                let sec = max(failed_logins, 5) as u64;
-                tokio::time::sleep(Duration::from_secs(sec)).await;
-
-                return Err(err);
+                pwd_login_fail(&mut user, ip, err).await?;
             }
         }
-    }
-
-    if let Some(code) = payload.webauthn_code {
+    } else if let Some(code) = payload.webauthn_code {
         let svc_req = WebauthnServiceReq::find(code).await?;
         if user.id != svc_req.user_id {
             return Err(ErrorResponse::new(
@@ -413,11 +439,20 @@ pub async fn post_login(
             ));
         }
         svc_req.delete().await?;
-    } else if host.force_mfa {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "This host requires MFA",
-        ));
+    } else if let Some(password) = payload.remote_password {
+        let pwd = PamRemotePassword::get(pam_user.name.clone()).await?;
+        if password != pwd.password {
+            pwd_login_fail(
+                &mut user,
+                ip,
+                ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid Credentials"),
+            )
+            .await?;
+        } else {
+            pwd_login_success(&mut user, ip).await?;
+        }
+    } else {
+        unreachable!();
     }
 
     let token = PamToken::new(user, pam_user).await?;
