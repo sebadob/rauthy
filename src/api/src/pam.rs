@@ -32,7 +32,7 @@ use std::cmp::max;
 use std::collections::{BTreeMap, BTreeSet};
 use std::net::IpAddr;
 use std::time::Duration;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -104,6 +104,7 @@ pub async fn post_getent(
                     }
                 })
                 .collect::<Vec<_>>();
+
             PamGetentResponse::Users(users)
         }
         Getent::Username(name) => {
@@ -153,7 +154,7 @@ pub async fn post_getent(
                 }
             }
 
-            let mut res = groups.into_iter().map(|(_, g)| g).collect::<Vec<_>>();
+            let mut res = groups.into_values().collect::<Vec<_>>();
             res.push(host.build_wheel_group_response().await?);
 
             PamGetentResponse::Groups(res)
@@ -363,6 +364,9 @@ pub async fn post_login(
         ));
     }
 
+    // TODO REMOVE AFTER TESTING
+    warn!("REMOVE AFTER TESTING!\n{payload:?}\n");
+
     let host = PamHost::find_simple(payload.host_id).await?;
     host.validate_secret(payload.host_secret)?;
 
@@ -388,20 +392,6 @@ pub async fn post_login(
     let ip = real_ip_from_req(&req)?;
 
     #[inline]
-    async fn pwd_login_success(user: &mut User, ip: IpAddr) -> Result<(), ErrorResponse> {
-        user.last_login = Some(Utc::now().timestamp());
-        user.last_failed_login = None;
-        user.failed_login_attempts = None;
-        user.save(None).await?;
-
-        FailedLoginCounter::reset(ip.to_string()).await?;
-
-        info!("New PAM login for user {}", user.email);
-
-        Ok(())
-    }
-
-    #[inline]
     async fn pwd_login_fail(
         user: &mut User,
         ip: IpAddr,
@@ -422,13 +412,8 @@ pub async fn post_login(
     }
 
     if let Some(password) = payload.password {
-        match user.validate_password(password).await {
-            Ok(_) => {
-                pwd_login_success(&mut user, ip).await?;
-            }
-            Err(err) => {
-                pwd_login_fail(&mut user, ip, err).await?;
-            }
+        if let Err(err) = user.validate_password(password).await {
+            pwd_login_fail(&mut user, ip, err).await?;
         }
     } else if let Some(code) = payload.webauthn_code {
         let svc_req = WebauthnServiceReq::find(code).await?;
@@ -448,14 +433,22 @@ pub async fn post_login(
                 ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid Credentials"),
             )
             .await?;
-        } else {
-            pwd_login_success(&mut user, ip).await?;
         }
     } else {
         unreachable!();
     }
 
+    user.last_login = Some(Utc::now().timestamp());
+    user.last_failed_login = None;
+    user.failed_login_attempts = None;
+    user.save(None).await?;
+
+    FailedLoginCounter::reset(ip.to_string()).await?;
+
+    info!("New PAM login for user {}", user.email);
+
     let token = PamToken::new(user, pam_user).await?;
+
     Ok(HttpResponse::Ok().json(token))
 }
 

@@ -135,9 +135,9 @@
             }
         } else if (code === 'Enter') {
             if (selected > -1) {
-                select(optionsFiltered[selected]);
+                select(ev, optionsFiltered[selected]);
             } else if (selected === -1 && optionsFiltered.length === 1) {
-                select(optionsFiltered[0]);
+                select(ev, optionsFiltered[0]);
             }
         }
     }

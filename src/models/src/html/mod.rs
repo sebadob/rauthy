@@ -4,10 +4,10 @@ use crate::entity::logos::{Logo, LogoType};
 use crate::html::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigArgon2Html, AdminConfigBackupsHtml, AdminConfigEncryptionHtml, AdminConfigJwksHtml,
-    AdminConfigPolicyHtml, AdminEventsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml,
-    AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml, HtmlTemplate,
-    IndexHtml, LogoutHtml, ProviderCallbackHtml, ProvidersHtml, UserPasswordResetHtml,
-    UserRegisterHtml,
+    AdminConfigPolicyHtml, AdminEventsHtml, AdminGroupsHtml, AdminHtml, AdminPAMHtml,
+    AdminRolesHtml, AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml,
+    HtmlTemplate, IndexHtml, LogoutHtml, ProviderCallbackHtml, ProvidersHtml,
+    UserPasswordResetHtml, UserRegisterHtml,
 };
 use crate::language::Language;
 use actix_web::http::header::ACCEPT_ENCODING;
@@ -34,6 +34,7 @@ pub enum HtmlCached {
     AdminProviders,
     AdminRoles,
     AdminScopes,
+    AdminPAM,
     AdminSessions,
     AdminUsers,
     AuthProviderCallback,
@@ -66,6 +67,7 @@ impl HtmlCached {
             Self::AdminProviders => "admin_providers",
             Self::AdminRoles => "admin_roles",
             Self::AdminScopes => "admin_scopes",
+            Self::AdminPAM => "admin_pam",
             Self::AdminSessions => "admin_sessions",
             Self::AdminUsers => "admin_users",
             Self::AuthProviderCallback => "auth_provider_cb",
@@ -143,6 +145,7 @@ impl HtmlCached {
             Self::AdminProviders => ProvidersHtml::build(&lang, theme_ts),
             Self::AdminRoles => AdminRolesHtml::build(&lang, theme_ts),
             Self::AdminScopes => AdminScopesHtml::build(&lang, theme_ts),
+            Self::AdminPAM => AdminPAMHtml::build(&lang, theme_ts),
             Self::AdminSessions => AdminSessionsHtml::build(&lang, theme_ts),
             Self::AdminUsers => AdminUsersHtml::build(&lang, theme_ts),
             Self::AuthProviderCallback => ProviderCallbackHtml::build(&lang, theme_ts),

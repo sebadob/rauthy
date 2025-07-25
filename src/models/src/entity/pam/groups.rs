@@ -105,7 +105,7 @@ RETURNING *
         let slf = if is_hiqlite() {
             DB::hql().query_map_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_one(sql, &[&id]).await?
+            DB::pg_query_one(sql, &[&(id as i64)]).await?
         };
 
         Ok(slf)
@@ -151,7 +151,7 @@ RETURNING *
         if is_hiqlite() {
             DB::hql().execute(sql, params!(id)).await?
         } else {
-            DB::pg_execute(sql, &[&id]).await?
+            DB::pg_execute(sql, &[&(id as i64)]).await?
         };
 
         Ok(())
@@ -174,7 +174,7 @@ WHERE pu.gid = $1
                 .map(|mut r| r.get("name"))
                 .collect::<Vec<String>>()
         } else {
-            DB::pg_query_rows(sql, &[&self.id], 4)
+            DB::pg_query_rows(sql, &[&(self.id as i64)], 4)
                 .await?
                 .into_iter()
                 .map(|r| r.get("name"))

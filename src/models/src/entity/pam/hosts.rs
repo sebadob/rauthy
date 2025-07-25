@@ -86,7 +86,7 @@ RETURNING *
                 .execute_returning_map_one(sql, params!(id, hostname, gid, enc, force_mfa))
                 .await?
         } else {
-            DB::pg_query_one(sql, &[&id, &hostname, &gid, &enc, &force_mfa]).await?
+            DB::pg_query_one(sql, &[&id, &hostname, &(gid as i64), &enc, &force_mfa]).await?
         };
 
         Ok(slf)
@@ -313,7 +313,7 @@ LIMIT 1
             let mut row = DB::hql().query_raw_one(sql, params!(gid)).await?;
             row.get("count")
         } else {
-            let row = DB::pg_query_one_row(sql, &[&gid]).await?;
+            let row = DB::pg_query_one_row(sql, &[&(gid as i64)]).await?;
             row.get("count")
         };
 
@@ -326,7 +326,7 @@ LIMIT 1
         let mut hosts: Vec<Self> = if is_hiqlite() {
             DB::hql().query_map(sql, params!(gid)).await?
         } else {
-            DB::pg_query(sql, &[&gid], 8).await?
+            DB::pg_query(sql, &[&(gid as i64)], 8).await?
         };
 
         let aliases = Self::find_aliases_all().await?;
@@ -442,7 +442,7 @@ WHERE id = $5
                 sql_update,
                 &[
                     &payload.hostname,
-                    &payload.gid,
+                    &(payload.gid as i64),
                     &payload.force_mfa,
                     &payload.notes,
                     &host_id,
@@ -498,7 +498,7 @@ WHERE pu.gid = $1 AND pu.wheel = $2
                 .map(|mut r| r.get("name"))
                 .collect::<Vec<String>>()
         } else {
-            DB::pg_query_rows(sql, &[&self.id, &true], 4)
+            DB::pg_query_rows(sql, &[&(self.gid as i64), &true], 4)
                 .await?
                 .into_iter()
                 .map(|r| r.get("name"))
@@ -523,7 +523,7 @@ WHERE pu.gid = $1 AND pu.wheel = $2
                     .await
                     .is_ok()
             } else {
-                DB::pg_query_one_row(sql, &[&self.gid, &user.id])
+                DB::pg_query_one_row(sql, &[&(self.gid as i64), &(user.id as i64)])
                     .await
                     .is_ok()
             };

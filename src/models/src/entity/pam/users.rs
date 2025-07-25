@@ -63,9 +63,10 @@ VALUES ($1, $2, false)
 
             slf
         } else {
-            let slf: Self = DB::pg_query_one(sql_user, &[&group.name, &group.id, &email]).await?;
+            let slf: Self =
+                DB::pg_query_one(sql_user, &[&group.name, &(group.id as i64), &email]).await?;
 
-            DB::pg_execute(sql_rel, &[&group.id, &slf.id]).await?;
+            DB::pg_execute(sql_rel, &[&(group.id as i64), &(slf.id as i64)]).await?;
 
             slf
         };
@@ -91,7 +92,7 @@ VALUES ($1, $2, false)
         let slf = if is_hiqlite() {
             DB::hql().query_map_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_one(sql, &[&id]).await?
+            DB::pg_query_one(sql, &[&(id as i64)]).await?
         };
 
         Ok(slf)
@@ -156,7 +157,7 @@ WHERE pu.id IS NULL
         if is_hiqlite() {
             DB::hql().execute(sql, params!(shell, uid)).await?;
         } else {
-            DB::pg_execute(sql, &[&shell, &uid]).await?;
+            DB::pg_execute(sql, &[&shell, &(uid as i64)]).await?;
         }
 
         Ok(())
@@ -186,10 +187,15 @@ VALUES ($1, $2, $3)
             let mut cl = DB::pg().await?;
             let txn = cl.transaction().await?;
 
-            DB::pg_txn_append(&txn, sql_remove, &[&uid]).await?;
+            DB::pg_txn_append(&txn, sql_remove, &[&(uid as i64)]).await?;
             for group in groups {
                 debug_assert_eq!(uid, group.uid);
-                DB::pg_txn_append(&txn, sql_insert, &[&group.gid, &uid, &group.wheel]).await?;
+                DB::pg_txn_append(
+                    &txn,
+                    sql_insert,
+                    &[&(group.gid as i64), &(uid as i64), &group.wheel],
+                )
+                .await?;
             }
 
             txn.commit().await?;

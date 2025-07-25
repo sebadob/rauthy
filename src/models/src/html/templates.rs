@@ -829,6 +829,28 @@ impl AdminScopesHtml<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "html/admin/pam.html")]
+pub struct AdminPAMHtml<'a> {
+    lang: &'a str,
+    client_id: &'a str,
+    theme_ts: i64,
+    templates: &'a [HtmlTemplate],
+}
+
+impl AdminPAMHtml<'_> {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
+        let res = AdminPAMHtml {
+            lang: lang.as_str(),
+            client_id: "rauthy",
+            theme_ts,
+            ..Default::default()
+        };
+
+        res.render().unwrap()
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "html/admin/sessions.html")]
 pub struct AdminSessionsHtml<'a> {
     lang: &'a str,
