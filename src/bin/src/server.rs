@@ -381,7 +381,6 @@ fn api_services() -> actix_web::Scope {
                 .service(pam::get_pam_user_self)
                 .service(pam::get_pam_user)
                 .service(pam::put_pam_user)
-                .service(pam::post_username_check)
                 .service(pam::get_validate_user)
                 .service(users::get_users)
                 .service(users::get_users_register)

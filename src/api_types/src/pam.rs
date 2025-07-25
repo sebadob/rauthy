@@ -1,6 +1,6 @@
 use crate::cust_validation::validate_vec_linux_hostname;
 use crate::users::WebauthnAuthFinishRequest;
-use rauthy_common::regex::{RE_ALNUM, RE_LINUX_HOSTNAME, RE_LINUX_USERNAME, RE_URI};
+use rauthy_common::regex::{RE_ALNUM, RE_LINUX_HOSTNAME, RE_LINUX_USERNAME};
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use utoipa::ToSchema;
@@ -160,16 +160,6 @@ pub struct PamUserCreateRequest {
     pub username: String,
     #[validate(email)]
     pub email: String,
-}
-
-#[derive(Deserialize, Validate, ToSchema)]
-pub struct PamUsernameCheckRequest {
-    //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
-    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
-    pub username: String,
-    /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
-    pub pow: String,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]

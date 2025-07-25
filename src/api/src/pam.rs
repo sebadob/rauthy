@@ -10,7 +10,7 @@ use rauthy_api_types::pam::{
     PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest, PamLoginRequest,
     PamMfaFinishRequest, PamMfaStartRequest, PamPasswordResponse, PamPreflightRequest,
     PamPreflightResponse, PamUnlinkedEmailsResponse, PamUserCreateRequest, PamUserDetailsResponse,
-    PamUserResponse, PamUserUpdateRequest, PamUsernameCheckRequest,
+    PamUserResponse, PamUserUpdateRequest,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
@@ -27,42 +27,13 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use serde::Serialize;
-use spow::pow::Pow;
 use std::cmp::max;
 use std::collections::{BTreeMap, BTreeSet};
 use std::net::IpAddr;
 use std::time::Duration;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 use utoipa::ToSchema;
 use validator::Validate;
-
-#[post("/pam/check")]
-pub async fn post_username_check(
-    principal: ReqPrincipal,
-    Json(payload): Json<PamUsernameCheckRequest>,
-) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
-
-    // The PoW is requested because if you had an instance with open registration and enabled
-    // PAM account creation rights by default, this could be abused for username enumeration
-    // otherwise.
-    Pow::validate(&payload.pow)?;
-
-    if ["root", "admin"].contains(&payload.username.as_str()) {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "Blacklisted username",
-        ));
-    }
-
-    match PamUser::find_by_name(payload.username).await {
-        Ok(_) => Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "username already taken",
-        )),
-        Err(_) => Ok(HttpResponse::Ok().finish()),
-    }
-}
 
 #[get("/pam/emails_unlinked")]
 pub async fn get_pam_emails_unlinked(
@@ -109,18 +80,14 @@ pub async fn post_getent(
         }
         Getent::Username(name) => {
             let user = PamUser::find_by_name(name).await?;
-            // TODO make sure to check host gid membership
             PamGetentResponse::User(PamUserResponse::from(user))
         }
         Getent::UserId(id) => {
             let user = PamUser::find_by_id(id).await?;
-            // TODO make sure to check host gid membership
             PamGetentResponse::User(PamUserResponse::from(user))
         }
 
         Getent::Groups => {
-            // TODO we should probably have a default config or pool that can be assigned to
-            // machines, with default groups and so on
             let mut groups = PamGroup::find_all()
                 .await?
                 .into_iter()
@@ -163,7 +130,6 @@ pub async fn post_getent(
             let group = if name == PAM_WHEEL_NAME {
                 host.build_wheel_group_response().await?
             } else {
-                // TODO limit by type
                 PamGroup::find_by_name(name)
                     .await?
                     .build_members_response()
@@ -175,7 +141,6 @@ pub async fn post_getent(
             let group = if id == PAM_WHEEL_ID {
                 host.build_wheel_group_response().await?
             } else {
-                // TODO limit by type
                 PamGroup::find_by_id(id)
                     .await?
                     .build_members_response()
@@ -363,9 +328,6 @@ pub async fn post_login(
             "at least one of password, remote_password or webauthn_code must be given",
         ));
     }
-
-    // TODO REMOVE AFTER TESTING
-    warn!("REMOVE AFTER TESTING!\n{payload:?}\n");
 
     let host = PamHost::find_simple(payload.host_id).await?;
     host.validate_secret(payload.host_secret)?;
