@@ -277,7 +277,7 @@
     }
 
     .navList {
-        max-height: calc(100dvh - 9.5rem);
+        max-height: calc(100dvh - 10.25rem);
         margin-top: .5rem;
         overflow-y: auto;
     }
