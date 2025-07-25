@@ -103,7 +103,7 @@ INSERT INTO sqlite_sequence (name, seq)
 VALUES ('pam_groups', 99999),
        ('pam_users', 99999);
 
--- add default group
+-- add default groups
 INSERT INTO pam_groups (name, typ)
 VALUES ('wheel-rauthy', 'immutable'),
        ('default', 'host');

@@ -98,10 +98,11 @@ CREATE TABLE pam_rel_groups_users
         PRIMARY KEY (gid, uid)
 );
 
+-- make sure uid + gid sequences start at 100_000
 ALTER SEQUENCE pam_groups_id_seq RESTART WITH 100000;
 ALTER SEQUENCE pam_users_id_seq RESTART WITH 100000;
 
--- add default group
+-- add default groups
 INSERT INTO pam_groups (name, typ)
 VALUES ('wheel-rauthy', 'immutable'),
        ('default', 'host');
