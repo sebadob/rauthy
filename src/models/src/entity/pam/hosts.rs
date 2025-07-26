@@ -14,7 +14,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::net::IpAddr;
 
-// TODO probably change ip and dns into ref tables with multi values -> Vec<_>
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PamHost {
     pub id: String,
@@ -516,7 +515,7 @@ WHERE pu.gid = $1 AND pu.wheel = $2
     #[inline]
     pub async fn is_login_allowed(&self, user: &PamUser) -> bool {
         let sql = "SELECT 1 FROM pam_rel_groups_users WHERE gid = $1 AND uid = $2";
-        let is_in_group = if is_hiqlite() {
+        if is_hiqlite() {
             DB::hql()
                 .query_raw_one(sql, params!(self.gid, user.id))
                 .await
@@ -525,8 +524,7 @@ WHERE pu.gid = $1 AND pu.wheel = $2
             DB::pg_query_one_row(sql, &[&(self.gid as i64), &(user.id as i64)])
                 .await
                 .is_ok()
-        };
-        is_in_group
+        }
     }
 
     #[inline]

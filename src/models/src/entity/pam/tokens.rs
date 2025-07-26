@@ -70,14 +70,14 @@ impl PamToken {
         };
 
         DB::hql()
-            .put(Cache::AuthCode, slf.id.clone(), &slf, Some(lifetime_secs))
+            .put(Cache::PAM, slf.id.clone(), &slf, Some(lifetime_secs))
             .await?;
 
         Ok(slf)
     }
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        match DB::hql().get(Cache::AuthCode, id).await? {
+        match DB::hql().get(Cache::PAM, id).await? {
             Some(slf) => Ok(slf),
             None => Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
@@ -86,8 +86,8 @@ impl PamToken {
         }
     }
 
-    pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::AuthCode, self.id.clone()).await?;
+    pub async fn delete(self) -> Result<(), ErrorResponse> {
+        DB::hql().delete(Cache::PAM, self.id).await?;
         Ok(())
     }
 }

@@ -170,6 +170,16 @@ pub struct PamUserUpdateRequest {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+pub enum PamGetentResponse {
+    Users(Vec<PamUserResponse>),
+    User(PamUserResponse),
+    Groups(Vec<PamGroupMembersResponse>),
+    Group(PamGroupMembersResponse),
+    Hosts(Vec<PamHostSimpleResponse>),
+    Host(PamHostSimpleResponse),
+}
+
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PamGroupResponse {
     pub id: u32,
     pub name: String,

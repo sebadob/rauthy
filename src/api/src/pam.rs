@@ -5,7 +5,7 @@ use actix_web::{HttpRequest, HttpResponse, delete, get, post, put};
 use actix_web_lab::extract::Json;
 use chrono::Utc;
 use rauthy_api_types::pam::{
-    Getent, PamGetentRequest, PamGroupCreateRequest, PamGroupHostsCountResponse,
+    Getent, PamGetentRequest, PamGetentResponse, PamGroupCreateRequest, PamGroupHostsCountResponse,
     PamGroupMembersResponse, PamGroupResponse, PamHostCreateRequest, PamHostDetailsResponse,
     PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest, PamLoginRequest,
     PamMfaFinishRequest, PamMfaStartRequest, PamPasswordResponse, PamPreflightRequest,
@@ -14,9 +14,7 @@ use rauthy_api_types::pam::{
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
-use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::failed_login_counter::FailedLoginCounter;
 use rauthy_models::entity::pam::group_user_links::PamGroupUserLink;
 use rauthy_models::entity::pam::groups::{PamGroup, PamGroupType};
 use rauthy_models::entity::pam::hosts::PamHost;
@@ -26,13 +24,10 @@ use rauthy_models::entity::pam::users::PamUser;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
-use serde::Serialize;
 use std::cmp::max;
 use std::collections::{BTreeMap, BTreeSet};
-use std::net::IpAddr;
 use std::time::Duration;
-use tracing::{info, warn};
-use utoipa::ToSchema;
+use tracing::{debug, info, warn};
 use validator::Validate;
 
 #[get("/pam/emails_unlinked")]
@@ -50,7 +45,7 @@ pub async fn get_pam_emails_unlinked(
 pub async fn post_getent(
     Json(payload): Json<PamGetentRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    info!("getent {:?}", payload.getent);
+    debug!("getent {:?}", payload.getent);
     payload.validate()?;
 
     let host = PamHost::find_simple(payload.host_id).await?;
@@ -114,10 +109,10 @@ pub async fn post_getent(
             let links = PamGroupUserLink::find_all().await?;
 
             for link in links {
-                if let Some(group) = groups.get_mut(&link.gid) {
-                    if let Some(user) = users.get(&link.uid) {
-                        group.members.push(user.name.clone());
-                    }
+                if let Some(group) = groups.get_mut(&link.gid)
+                    && let Some(user) = users.get(&link.uid)
+                {
+                    group.members.push(user.name.clone());
                 }
             }
 
@@ -315,7 +310,6 @@ pub async fn delete_host(
 
 #[post("/pam/login")]
 pub async fn post_login(
-    req: HttpRequest,
     Json(payload): Json<PamLoginRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
@@ -351,23 +345,18 @@ pub async fn post_login(
         ));
     }
 
-    let ip = real_ip_from_req(&req)?;
-
     #[inline]
-    async fn pwd_login_fail(
-        user: &mut User,
-        ip: IpAddr,
-        err: ErrorResponse,
-    ) -> Result<(), ErrorResponse> {
+    async fn pwd_login_fail(user: &mut User, err: ErrorResponse) -> Result<(), ErrorResponse> {
         user.last_failed_login = Some(Utc::now().timestamp());
         user.failed_login_attempts = Some(user.failed_login_attempts.unwrap_or(0) + 1);
         user.save(None).await?;
 
-        let failed_logins = FailedLoginCounter::increase(ip.to_string()).await?;
+        // Note: We don't want to increase the FailedLoginCounter for the IP here, because
+        // this could be abused for DoS and block remote hosts with enough failed login atempts.
 
         warn!(?err, "Failed PAM login for user {}", user.email);
 
-        let sec = max(failed_logins, 5) as u64;
+        let sec = max(user.failed_login_attempts.unwrap_or(1), 5) as u64;
         tokio::time::sleep(Duration::from_secs(sec)).await;
 
         Err(err)
@@ -375,7 +364,7 @@ pub async fn post_login(
 
     if let Some(password) = payload.password {
         if let Err(err) = user.validate_password(password).await {
-            pwd_login_fail(&mut user, ip, err).await?;
+            pwd_login_fail(&mut user, err).await?;
         }
     } else if let Some(code) = payload.webauthn_code {
         let svc_req = WebauthnServiceReq::find(code).await?;
@@ -391,7 +380,6 @@ pub async fn post_login(
         if password != pwd.password {
             pwd_login_fail(
                 &mut user,
-                ip,
                 ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid Credentials"),
             )
             .await?;
@@ -404,8 +392,6 @@ pub async fn post_login(
     user.last_failed_login = None;
     user.failed_login_attempts = None;
     user.save(None).await?;
-
-    FailedLoginCounter::reset(ip.to_string()).await?;
 
     info!("New PAM login for user {}", user.email);
 
@@ -436,16 +422,6 @@ pub async fn post_mfa_finish(
 
     let resp = webauthn::auth_finish(payload.user_id, &req, payload.data).await?;
     Ok(resp.into_response())
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub enum PamGetentResponse {
-    Users(Vec<PamUserResponse>),
-    User(PamUserResponse),
-    Groups(Vec<PamGroupMembersResponse>),
-    Group(PamGroupMembersResponse),
-    Hosts(Vec<PamHostSimpleResponse>),
-    Host(PamHostSimpleResponse),
 }
 
 #[post("/pam/password")]
@@ -538,14 +514,9 @@ pub async fn get_pam_user(
     uid: Path<u32>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
+    principal.validate_admin_session()?;
 
-    let uid = uid.into_inner();
-    let pam_user = PamUser::find_by_id(uid).await?;
-    let user = User::find_by_email(pam_user.email).await?;
-
-    principal.validate_user_or_admin(&user.id)?;
-
+    let pam_user = PamUser::find_by_id(uid.into_inner()).await?;
     let groups = PamGroupUserLink::find_for_user(pam_user.id)
         .await?
         .into_iter()
@@ -556,7 +527,7 @@ pub async fn get_pam_user(
         id: pam_user.id,
         name: pam_user.name,
         gid: pam_user.gid,
-        email: user.email,
+        email: pam_user.email,
         shell: pam_user.shell,
         groups,
     };

@@ -67,7 +67,6 @@
     let country = $state('');
 
     let enabled = $state(false);
-    let allowPamLogin = $state(false);
     let emailVerified = $state(false);
     let expires = $state(false);
     let expDate = $state(fmtDateInput());
@@ -452,10 +451,6 @@
         <SelectList bind:items={groupsItems}>
             {t.account.groups.replaceAll(',', ' ')}
         </SelectList>
-
-        <InputCheckbox ariaLabel={ta.users.allowPamLogin} bind:checked={allowPamLogin}>
-            {ta.users.allowPamLogin}
-        </InputCheckbox>
 
         <div class="values">
             <div style:margin-top=".5rem">
