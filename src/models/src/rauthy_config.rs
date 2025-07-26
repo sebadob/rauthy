@@ -486,7 +486,8 @@ impl Default for Vars {
                 admin_force_mfa: true,
             },
             pam: VarsPam {
-                allow_logins_default: false,
+                remote_password_len: 24,
+                remote_password_ttl: 180,
             },
             pow: VarsPow {
                 difficulty: 19,
@@ -1992,8 +1993,21 @@ impl Vars {
             return;
         };
 
-        if let Some(v) = t_bool(&mut table, "pam", "difficulty", "PAM_ALLOW_LOGINS_DEFAULT") {
-            self.pam.allow_logins_default = v;
+        if let Some(v) = t_u8(
+            &mut table,
+            "pam",
+            "remote_password_len",
+            "PAM_REMOTE_PASSWORD_LEN",
+        ) {
+            self.pam.remote_password_len = v;
+        }
+        if let Some(v) = t_u16(
+            &mut table,
+            "pam",
+            "remote_password_ttl",
+            "PAM_REMOTE_PASSWORD_TTL",
+        ) {
+            self.pam.remote_password_ttl = v;
         }
     }
 
@@ -2697,7 +2711,8 @@ pub struct VarsMfa {
 
 #[derive(Debug)]
 pub struct VarsPam {
-    pub allow_logins_default: bool,
+    pub remote_password_len: u8,
+    pub remote_password_ttl: u16,
 }
 
 #[derive(Debug)]

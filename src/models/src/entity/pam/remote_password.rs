@@ -1,4 +1,5 @@
 use crate::database::{Cache, DB};
+use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -13,12 +14,10 @@ pub struct PamRemotePassword {
 
 impl PamRemotePassword {
     pub async fn create(username: String) -> Result<Self, ErrorResponse> {
-        // TODO length could be made configurable. For instance, when generating one via mobile,
-        //  and having no copy & paste available, could be very annoying when having longer ones.
-        let password = secure_random_alnum(16);
-        // TODO making this configurable as well is probably a good idea.
+        let config = &RauthyConfig::get().vars.pam;
+        let password = secure_random_alnum(config.remote_password_len as usize);
         let now = Utc::now().timestamp();
-        let ttl_secs = 180;
+        let ttl_secs = config.remote_password_ttl as i64;
         let exp = now + ttl_secs;
 
         let slf = Self {

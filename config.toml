@@ -1717,12 +1717,24 @@ level_database = 'info'
 admin_force_mfa = false
 
 [pam]
-# Can be set to `true` to allow PAM logins by default for new
-# users.
+# The length of newly generated PAM remote passwords via the
+# account dashboard. The default is fine as long as you can copy
+# & paste them. You may want to reduce the length here if you e.g.
+# occasionally generate them on mobile and need to type them
+# manually into some terminal.
 #
-# default: false
-# overwritten by: PAM_ALLOW_LOGINS_DEFAULT
-allow_logins_default = false
+# default: 24
+# overwritten by: PAM_REMOTE_PASSWORD_LEN
+#remote_password_len = 24
+
+# The TTL for newly generated PAM remote passwords in seconds.
+# The default gives you plenty of time to open a few sessions in
+# some terminals and maybe switch to `root` on some remote machines,
+# while still expiring quick enough to be secure.
+#
+# default: 180
+# overwritten by: PAM_REMOTE_PASSWORD_TTL
+#remote_password_ttl = 180
 
 [pow]
 # The difficulty for a Proof-of-Work (PoW).
