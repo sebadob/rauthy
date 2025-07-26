@@ -487,7 +487,7 @@ impl Default for Vars {
             },
             pam: VarsPam {
                 remote_password_len: 24,
-                remote_password_ttl: 180,
+                remote_password_ttl: 120,
             },
             pow: VarsPow {
                 difficulty: 19,

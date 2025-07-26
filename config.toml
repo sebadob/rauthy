@@ -1725,16 +1725,16 @@ admin_force_mfa = false
 #
 # default: 24
 # overwritten by: PAM_REMOTE_PASSWORD_LEN
-#remote_password_len = 24
+remote_password_len = 24
 
 # The TTL for newly generated PAM remote passwords in seconds.
 # The default gives you plenty of time to open a few sessions in
 # some terminals and maybe switch to `root` on some remote machines,
 # while still expiring quick enough to be secure.
 #
-# default: 180
+# default: 120
 # overwritten by: PAM_REMOTE_PASSWORD_TTL
-#remote_password_ttl = 180
+remote_password_ttl = 120
 
 [pow]
 # The difficulty for a Proof-of-Work (PoW).
