@@ -16,6 +16,13 @@ const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE;
 const B64_URL_SAFE_NO_PAD: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
 const B64_STD: engine::GeneralPurpose = general_purpose::STANDARD;
 
+#[macro_export]
+macro_rules! sha256 {
+    ($input:expr) => {
+        ring::digest::digest(&ring::digest::SHA256, $input).as_ref()
+    };
+}
+
 pub fn get_local_hostname() -> String {
     let hostname_os = gethostname();
     hostname_os

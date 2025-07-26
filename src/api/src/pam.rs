@@ -376,13 +376,11 @@ pub async fn post_login(
         }
         svc_req.delete().await?;
     } else if let Some(password) = payload.remote_password {
-        let pwd = PamRemotePassword::get(pam_user.name.clone()).await?;
-        if password != pwd.password {
-            pwd_login_fail(
-                &mut user,
-                ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid Credentials"),
-            )
-            .await?;
+        if let Err(err) = PamRemotePassword::get(pam_user.name.clone())
+            .await?
+            .compare_password(password.as_bytes())
+        {
+            pwd_login_fail(&mut user, err).await?;
         }
     } else {
         unreachable!();
@@ -429,12 +427,12 @@ pub async fn post_pam_password(principal: ReqPrincipal) -> Result<HttpResponse, 
     principal.validate_session_auth()?;
 
     let pam_user = PamUser::find_by_user_id(principal.user_id()?.to_string()).await?;
-    let pwd = PamRemotePassword::create(pam_user.name).await?;
+    let (pwd, password_plain) = PamRemotePassword::create(pam_user.name).await?;
 
     Ok(HttpResponse::Ok().json(PamPasswordResponse {
         exp: pwd.exp,
         username: pwd.username,
-        password: pwd.password,
+        password: password_plain,
     }))
 }
 

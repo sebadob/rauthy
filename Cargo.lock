@@ -4529,6 +4529,7 @@ dependencies = [
  "rauthy-error",
  "regex",
  "reqwest",
+ "ring",
  "serde",
  "tokio",
  "tracing",
