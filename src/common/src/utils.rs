@@ -293,6 +293,7 @@ mod tests {
         ];
         let proxies = build_trusted_proxies(&raw);
         let _ = TRUSTED_PROXIES.set(proxies);
+        let _ = TRUSTED_PROXIES.set(proxies);
         println!("{:?}", build_trusted_proxies(&raw));
 
         assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.1").unwrap(), false).is_ok());

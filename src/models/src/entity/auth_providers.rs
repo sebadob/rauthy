@@ -41,10 +41,9 @@ use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, deserialize,
     get_rand, new_store_id, serialize,
 };
-use rauthy_common::{http_client, is_hiqlite};
+use rauthy_common::{http_client, is_hiqlite, sha256};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
-use ring::digest;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, value};
 use serde_json_path::JsonPath;
@@ -884,8 +883,7 @@ impl AuthProviderCallback {
         debug!("callback csrf token is valid");
 
         // validate PKCE verifier
-        let hash = digest::digest(&digest::SHA256, payload.pkce_verifier.as_bytes());
-        let hash_base64 = base64_url_encode(hash.as_ref());
+        let hash_base64 = base64_url_encode(sha256!(payload.pkce_verifier.as_bytes()));
         if slf.pkce_challenge != hash_base64 {
             Self::delete(slf.callback_id).await?;
 
