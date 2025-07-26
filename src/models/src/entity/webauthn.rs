@@ -699,7 +699,10 @@ pub async fn auth_start(
             let d = WebauthnLoginReq::find(code).await?;
             WebauthnAdditionalData::Login(d)
         }
-        MfaPurpose::MfaModToken | MfaPurpose::PasswordNew | MfaPurpose::PasswordReset => {
+        MfaPurpose::MfaModToken
+        | MfaPurpose::PamLogin
+        | MfaPurpose::PasswordNew
+        | MfaPurpose::PasswordReset => {
             let svc_req = WebauthnServiceReq::new(user_id.clone());
             svc_req.save().await?;
             WebauthnAdditionalData::Service(svc_req)

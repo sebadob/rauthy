@@ -382,6 +382,7 @@
     }
 
     .keysContainer {
+        width: 100%;
         max-height: 20rem;
         overflow-y: auto;
     }

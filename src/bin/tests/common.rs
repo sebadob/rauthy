@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use rauthy_api_types::oidc::{LoginRequest, SessionInfoResponse, TokenRequest};
 use rauthy_common::constants::CSRF_HEADER;
+use rauthy_common::sha256;
 use rauthy_common::utils::base64_url_encode;
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
@@ -100,8 +101,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         "client_id=rauthy&redirect_uri={}&response_type=code",
         redirect_uri
     );
-    let hash = digest::digest(&digest::SHA256, challenge_plain.as_bytes());
-    let challenge_s256 = base64_url_encode(hash.as_ref());
+    let challenge_s256 = base64_url_encode(sha256!(challenge_plain.as_bytes()));
     let query_pkce = format!(
         "{}&code_challenge={}&code_challenge_method=S256",
         query, challenge_s256

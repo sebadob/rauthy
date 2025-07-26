@@ -262,7 +262,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
                 .unwrap_or(SessionState::Unknown);
             Ok(Session {
                 id: row.get("id")?,
-                csrf_token: row.get("id")?,
+                csrf_token: row.get("csrf_token")?,
                 user_id: row.get("user_id")?,
                 roles: row.get("roles")?,
                 groups: row.get("groups")?,

@@ -7,7 +7,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_handlers::{
     api_keys, atproto, auth_providers, backup, blacklist, clients, dev_only, events, fed_cm,
-    generic, groups, html, oidc, roles, scopes, sessions, swagger_ui, themes, users,
+    generic, groups, html, oidc, pam, roles, scopes, sessions, swagger_ui, themes, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -310,6 +310,7 @@ fn api_services() -> actix_web::Scope {
                 .service(html::get_admin_groups_html)
                 .service(html::get_admin_roles_html)
                 .service(html::get_admin_scopes_html)
+                .service(html::get_admin_pam_html)
                 .service(html::get_admin_providers_html)
                 .service(html::get_admin_sessions_html)
                 .service(html::get_admin_users_html)
@@ -357,6 +358,30 @@ fn api_services() -> actix_web::Scope {
                 .service(fed_cm::post_fed_cm_token)
                 .service(fed_cm::get_fed_client_config)
                 .service(fed_cm::get_fed_cm_status)
+                .service(pam::get_pam_emails_unlinked)
+                .service(pam::get_pam_groups)
+                .service(pam::post_pam_groups)
+                .service(pam::delete_pam_group)
+                .service(pam::get_pam_group_hosts_count)
+                .service(pam::get_hosts)
+                .service(pam::post_hosts)
+                .service(pam::get_host_details)
+                .service(pam::put_host)
+                .service(pam::post_host_secret)
+                .service(pam::put_host_secret)
+                .service(pam::delete_host)
+                .service(pam::post_getent)
+                .service(pam::post_login)
+                .service(pam::post_mfa_start)
+                .service(pam::post_mfa_finish)
+                .service(pam::post_preflight)
+                .service(pam::get_pam_users)
+                .service(pam::post_pam_users)
+                .service(pam::post_pam_password)
+                .service(pam::get_pam_user_self)
+                .service(pam::get_pam_user)
+                .service(pam::put_pam_user)
+                .service(pam::get_validate_user)
                 .service(users::get_users)
                 .service(users::get_users_register)
                 .service(users::post_users_register)

@@ -93,6 +93,11 @@ export const I18nZh: I18n = {
         navMfa: "多因子认证",
         navLogout: "退出登录",
         other: "Other",
+        pam: {
+            generatePassword: "New Password",
+            username: 'Username',
+            validFor: "Password valid for {{ secs }} seconds",
+        },
         passwordConfirm: "确认密码",
         passwordCurr: "当前密码",
         passwordCurrReq: "当前密码必填。",

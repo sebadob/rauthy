@@ -24,6 +24,7 @@
     import IconLogout from "$icons/IconLogout.svelte";
     import {redirectToLogout} from "$utils/helpers";
     import Tooltip from "$lib5/Tooltip.svelte";
+    import IconCommandLine from "$icons/IconCommandLine.svelte";
 
     let ta = useI18nAdmin();
 
@@ -168,6 +169,13 @@
                             <IconId {width}/>
                         {/snippet}
                         {ta.nav.scopes}
+                    </NavLink>
+
+                    <NavLink {compact} {params} route="/pam">
+                        {#snippet icon(width: string)}
+                            <IconCommandLine {width}/>
+                        {/snippet}
+                        PAM
                     </NavLink>
 
                     <NavLink {compact} {params} route="/sessions">

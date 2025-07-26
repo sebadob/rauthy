@@ -54,7 +54,7 @@
         {#if copyToClip}
             <div class="button">
                 <Button invisible onclick={() => copy(copyToClip)}>
-                    <Tooltip {text}>
+                    <Tooltip {text} xOffset={-150} yOffset={20}>
                         <IconClipboard width="1.25rem"/>
                     </Tooltip>
                 </Button>

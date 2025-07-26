@@ -262,6 +262,7 @@ pub struct Vars {
     pub lifetimes: VarsLifetimes,
     pub logging: VarsLogging,
     pub mfa: VarsMfa,
+    pub pam: VarsPam,
     pub pow: VarsPow,
     pub scim: VarsScim,
     pub server: VarsServer,
@@ -483,6 +484,10 @@ impl Default for Vars {
             },
             mfa: VarsMfa {
                 admin_force_mfa: true,
+            },
+            pam: VarsPam {
+                remote_password_len: 24,
+                remote_password_ttl: 120,
             },
             pow: VarsPow {
                 difficulty: 19,
@@ -718,6 +723,7 @@ impl Vars {
         slf.parse_lifetimes(&mut table);
         slf.parse_logging(&mut table);
         slf.parse_mfa(&mut table);
+        slf.parse_pam(&mut table);
         slf.parse_pow(&mut table);
         slf.parse_scim(&mut table);
         slf.parse_server(&mut table);
@@ -1982,6 +1988,29 @@ impl Vars {
         }
     }
 
+    fn parse_pam(&mut self, table: &mut toml::Table) {
+        let Some(mut table) = t_table(table, "pam") else {
+            return;
+        };
+
+        if let Some(v) = t_u8(
+            &mut table,
+            "pam",
+            "remote_password_len",
+            "PAM_REMOTE_PASSWORD_LEN",
+        ) {
+            self.pam.remote_password_len = v;
+        }
+        if let Some(v) = t_u16(
+            &mut table,
+            "pam",
+            "remote_password_ttl",
+            "PAM_REMOTE_PASSWORD_TTL",
+        ) {
+            self.pam.remote_password_ttl = v;
+        }
+    }
+
     fn parse_pow(&mut self, table: &mut toml::Table) {
         let Some(mut table) = t_table(table, "pow") else {
             return;
@@ -2678,6 +2707,12 @@ pub struct VarsLogging {
 #[derive(Debug)]
 pub struct VarsMfa {
     pub admin_force_mfa: bool,
+}
+
+#[derive(Debug)]
+pub struct VarsPam {
+    pub remote_password_len: u8,
+    pub remote_password_ttl: u16,
 }
 
 #[derive(Debug)]

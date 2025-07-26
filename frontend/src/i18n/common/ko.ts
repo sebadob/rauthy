@@ -93,6 +93,11 @@ export const I18nKo: I18n = {
         navMfa: "MFA",
         navLogout: "로그아웃",
         other: "Other",
+        pam: {
+            generatePassword: "New Password",
+            username: 'Username',
+            validFor: "Password valid for {{ secs }} seconds",
+        },
         passwordConfirm: "비밀번호 확인",
         passwordCurr: "현재 비밀번호",
         passwordCurrReq: "현재 비밀번호가 필요합니다.",

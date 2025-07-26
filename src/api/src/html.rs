@@ -170,6 +170,13 @@ pub async fn get_admin_scopes_html(req: HttpRequest) -> Result<HttpResponse, Err
         .await
 }
 
+#[get("/admin/pam")]
+pub async fn get_admin_pam_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::AdminPAM
+        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
+        .await
+}
+
 #[get("/admin/sessions")]
 pub async fn get_admin_sessions_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     HtmlCached::AdminSessions

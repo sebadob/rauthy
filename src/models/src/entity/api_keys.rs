@@ -4,10 +4,9 @@ use cryptr::{EncKeys, EncValue};
 use hiqlite_macros::params;
 use rauthy_api_types::api_keys::ApiKeyResponse;
 use rauthy_common::constants::{API_KEY_LENGTH, CACHE_TTL_APP};
-use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{deserialize, get_rand, serialize};
+use rauthy_common::{is_hiqlite, sha256};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 
@@ -52,8 +51,7 @@ impl ApiKeyEntity {
     ) -> Result<String, ErrorResponse> {
         let created = Utc::now().timestamp();
         let secret_plain = get_rand(API_KEY_LENGTH);
-        let secret_hash = digest::digest(&digest::SHA256, secret_plain.as_bytes());
-        let secret_enc = EncValue::encrypt(secret_hash.as_ref())?
+        let secret_enc = EncValue::encrypt(sha256!(secret_plain.as_bytes()))?
             .into_bytes()
             .to_vec();
 
@@ -140,8 +138,9 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
         // generate a new secret
         let secret_plain = get_rand(API_KEY_LENGTH);
-        let hash = digest::digest(&digest::SHA256, secret_plain.as_bytes());
-        let secret_enc = EncValue::encrypt(hash.as_ref())?.into_bytes().to_vec();
+        let secret_enc = EncValue::encrypt(sha256!(secret_plain.as_bytes()))?
+            .into_bytes()
+            .to_vec();
 
         // re-encrypt access rights with possibly new active key as well
         let access_bytes = serialize(&api_key.access)?;
@@ -396,8 +395,7 @@ impl ApiKey {
             }
         }
 
-        let hash = digest::digest(&digest::SHA256, secret.as_bytes());
-        if hash.as_ref() == self.secret.as_slice() {
+        if self.secret.as_slice() == sha256!(secret.as_bytes()) {
             Ok(())
         } else {
             Err(ErrorResponse::new(

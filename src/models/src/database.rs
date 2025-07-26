@@ -50,6 +50,7 @@ pub enum Cache {
     PoW,
     User,
     Webauthn,
+    PAM,
 }
 
 impl CacheIndex for Cache {

@@ -30,6 +30,7 @@ pub mod login_locations;
 pub mod logos;
 pub mod magic_links;
 pub mod mfa_mod_token;
+pub mod pam;
 pub mod password;
 pub mod pictures;
 pub mod pow;
