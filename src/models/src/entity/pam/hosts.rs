@@ -515,24 +515,18 @@ WHERE pu.gid = $1 AND pu.wheel = $2
 
     #[inline]
     pub async fn is_login_allowed(&self, user: &PamUser) -> bool {
-        if !self.gid == user.gid {
-            let sql = "SELECT 1 FROM pam_rel_groups_users WHERE gid = $1 AND uid = $2";
-            let is_in_group = if is_hiqlite() {
-                DB::hql()
-                    .query_raw_one(sql, params!(self.gid, user.id))
-                    .await
-                    .is_ok()
-            } else {
-                DB::pg_query_one_row(sql, &[&(self.gid as i64), &(user.id as i64)])
-                    .await
-                    .is_ok()
-            };
-            if !is_in_group {
-                return false;
-            }
-        }
-
-        true
+        let sql = "SELECT 1 FROM pam_rel_groups_users WHERE gid = $1 AND uid = $2";
+        let is_in_group = if is_hiqlite() {
+            DB::hql()
+                .query_raw_one(sql, params!(self.gid, user.id))
+                .await
+                .is_ok()
+        } else {
+            DB::pg_query_one_row(sql, &[&(self.gid as i64), &(user.id as i64)])
+                .await
+                .is_ok()
+        };
+        is_in_group
     }
 
     #[inline]
