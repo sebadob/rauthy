@@ -1,6 +1,6 @@
 use rauthy_common::regex::{
-    RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GRANT_TYPES, RE_GROUPS, RE_ORIGIN,
-    RE_ROLES_SCOPES, RE_URI,
+    RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GRANT_TYPES, RE_GROUPS, RE_LINUX_HOSTNAME,
+    RE_ORIGIN, RE_ROLES_SCOPES, RE_URI,
 };
 use validator::ValidationError;
 
@@ -71,6 +71,22 @@ pub fn validate_vec_grant_types(value: &[String]) -> Result<(), ValidationError>
             }
         });
     }
+
+    if let Some(e) = err {
+        return Err(ValidationError::new(e));
+    }
+    Ok(())
+}
+
+#[inline]
+pub fn validate_vec_linux_hostname(value: &[String]) -> Result<(), ValidationError> {
+    let mut err = None;
+
+    value.iter().for_each(|v| {
+        if !RE_LINUX_HOSTNAME.is_match(v) {
+            err = Some("^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$");
+        }
+    });
 
     if let Some(e) = err {
         return Err(ValidationError::new(e));

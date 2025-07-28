@@ -9,10 +9,9 @@ use argon2::{Algorithm, Argon2, PasswordHasher, Version};
 use cryptr::{EncKeys, EncValue};
 use hiqlite_macros::params;
 use rauthy_api_types::api_keys::ApiKeyRequest;
-use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{base64_decode, get_rand, new_store_id};
+use rauthy_common::{is_hiqlite, sha256};
 use rauthy_error::ErrorResponse;
-use ring::digest;
 use rsa::pkcs8::EncodePrivateKey;
 use time::OffsetDateTime;
 use tracing::{debug, info};
@@ -144,8 +143,7 @@ WHERE email = 'admin@localhost'"#;
 
             if let Some(secret_plain) = RauthyConfig::get().vars.bootstrap.api_key_secret.as_ref() {
                 assert!(secret_plain.len() >= 64);
-                let secret_hash = digest::digest(&digest::SHA256, secret_plain.as_bytes());
-                let secret_enc = EncValue::encrypt(secret_hash.as_ref())?
+                let secret_enc = EncValue::encrypt(sha256!(secret_plain.as_bytes()))?
                     .into_bytes()
                     .to_vec();
 

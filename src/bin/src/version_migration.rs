@@ -10,5 +10,7 @@ pub async fn manual_version_migrations() -> Result<(), ErrorResponse> {
         return Ok(());
     }
 
+    rauthy_models::temp_migrations::apply_temp_migrations().await?;
+
     Ok(())
 }

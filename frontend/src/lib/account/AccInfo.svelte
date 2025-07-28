@@ -14,15 +14,18 @@
     import UserPicture from "$lib/UserPicture.svelte";
     import {fetchSolvePow} from "$utils/pow";
     import {generatePKCE} from "$utils/pkce";
+    import type {PamUserResponse} from "$api/types/pam";
 
     let {
         user = $bindable(),
+        pamUser,
         providers,
         authProvider,
         webIdData,
         viewModePhone,
     }: {
         user: UserResponse,
+        pamUser: undefined | PamUserResponse,
         providers: AuthProvidersTemplate,
         authProvider: undefined | AuthProviderTemplate,
         viewModePhone?: boolean,
@@ -113,6 +116,13 @@
         <span class="value">{user.email}</span>
     </div>
 
+    {#if pamUser}
+        <div class={classRow}>
+            <div class={classLabel}>PAM {t.account.user}</div>
+            <span class="value">{pamUser.name}</span>
+        </div>
+    {/if}
+
     <div class={classRow}>
         <div class={classLabel}>{t.account.givenName}</div>
         <span class="value">{user.given_name}</span>
@@ -168,12 +178,12 @@
 
     <div class={classRow}>
         <div class={classLabel}>{t.account.roles}</div>
-        <span class="value">{user.roles || 'None'}</span>
+        <span class="value">{user.roles.join(', ') || 'None'}</span>
     </div>
 
     <div class={classRow}>
         <div class={classLabel}>{t.account.groups}</div>
-        <span class="value">{user.groups || 'None'}</span>
+        <span class="value">{user.groups?.join(', ') || 'None'}</span>
     </div>
 
     <div class={classRow}>

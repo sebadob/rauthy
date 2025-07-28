@@ -113,6 +113,7 @@ export let I18nAdminKo: I18nAdmin = {
         account: "계정",
         addNew: "생성",
         back: "뒤로",
+        caution: "CAUTION",
         contact: "연락처",
         copiedToClip: "클립보드로 복사되었습니다.",
         details: "자세히",
@@ -253,6 +254,37 @@ export let I18nAdminKo: I18nAdmin = {
         expires: "만료일",
         lastSeen: "마지막 사용시간",
         state: "상태",
+    },
+    pam: {
+        addGroup: "New PAM Group",
+        addHost: "New PAM Host",
+        addUser: "New PAM User",
+        deleteHost: "Do you really want to delete this host?",
+        groupDescGeneric: `Generic groups are the counterpart to entries that are usually found in /etc/group. Users 
+            can be assigned to these and they are returned to the system by NSS Lookups.`,
+        groupDescHost: `Host groups are used to group hosts. NSS lookups of a host within the group return all other 
+            hosts within it as a result. Users can access hosts by assigning them to a host group.`,
+        groupDescLocal: `Local groups behave almost identically to Generic groups, with the difference that they have 
+            an ID in the Rauthy database, but the NSS proxy on the respective host will convert it to an ID from 
+            /etc/group. In this way, Rauthy users can be assigned to groups that already exist locally.`,
+        groupDescUser: `User groups are managed automatically and tightly coupled with the user with the same
+            username.`,
+        groupDescWheel: `This group is special. It is immutable and is assigned to users dynamically depending on their
+            group configuration.`,
+        groupName: "Groupname",
+        groups: "Groups",
+        groupType: "Group Type",
+        hostAliases: "Host Aliases",
+        ipAddresses: "IP Addresses",
+        member: "Member",
+        nameExistsAlready: "Name is already taken",
+        notes: "Notes",
+        secretShow: "Show Secret",
+        secretRotate: "Rotate Secret",
+        userEmail: "Linked User E-Mail",
+        username: "Username",
+        usernameNewDesc: `The Username should be chosen carefully. Once created, it cannot be changed easily afterwards
+            for security reasons.`,
     },
     passwordPolicy: {
         configDesc: "새 비밀번호에 대한 정책입니다.",

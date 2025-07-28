@@ -135,9 +135,9 @@
             }
         } else if (code === 'Enter') {
             if (selected > -1) {
-                select(optionsFiltered[selected]);
+                select(ev, optionsFiltered[selected]);
             } else if (selected === -1 && optionsFiltered.length === 1) {
-                select(optionsFiltered[0]);
+                select(ev, optionsFiltered[0]);
             }
         }
     }
@@ -150,7 +150,8 @@
         return false;
     }
 
-    function select(option: string | number) {
+    function select(ev: Event, option: string | number) {
+        ev.preventDefault();
         value = option;
         searchValue = '';
 
@@ -194,7 +195,7 @@
 
         <div bind:this={refOptions} class="popoverOptions">
             {#each optionsFiltered as option, i}
-                <Button invisible invisibleOutline onclick={() => select(option)}>
+                <Button invisible invisibleOutline onclick={ev => select(ev, option)}>
                     <div
                             class="optPopover"
                             aria-selected={value === option}
@@ -265,6 +266,7 @@
 
     .popoverOptions {
         /*height: 100%;*/
+        width: 100%;
         display: flex;
         flex-direction: column;
         overflow-y: auto;

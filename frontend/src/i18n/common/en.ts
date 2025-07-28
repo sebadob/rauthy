@@ -93,6 +93,11 @@ export const I18nEn: I18n = {
         navMfa: "MFA",
         navLogout: "Logout",
         other: "Other",
+        pam: {
+            generatePassword: "New Password",
+            username: 'Username',
+            validFor: "Password valid for {{ secs }} seconds",
+        },
         passwordConfirm: "Confirm Password",
         passwordCurr: "Current Password",
         passwordCurrReq: "Current password is required",
