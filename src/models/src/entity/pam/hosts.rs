@@ -534,7 +534,7 @@ WHERE pu.gid = $1 AND pu.wheel = $2
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "Invalid machine secret",
+                "Invalid secret",
             ))
         }
     }

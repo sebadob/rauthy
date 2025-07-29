@@ -370,6 +370,7 @@ fn api_services() -> actix_web::Scope {
                 .service(pam::post_host_secret)
                 .service(pam::put_host_secret)
                 .service(pam::delete_host)
+                .service(pam::post_host_whoami)
                 .service(pam::post_getent)
                 .service(pam::post_login)
                 .service(pam::post_mfa_start)
