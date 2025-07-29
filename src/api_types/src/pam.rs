@@ -136,6 +136,12 @@ pub struct PamHostUpdateRequest {
     pub aliases: Vec<String>,
 }
 
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct PamHostWhoamiRequest {
+    #[validate(length(min = 64, max = 64))]
+    pub host_secret: String,
+}
+
 /// Preflight request for PAM authentications to check, if the given user would be allowed to log
 /// in to this client and if so, under which conditions.
 #[derive(Debug, Deserialize, Validate, ToSchema)]

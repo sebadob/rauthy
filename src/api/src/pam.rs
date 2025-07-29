@@ -7,10 +7,10 @@ use chrono::Utc;
 use rauthy_api_types::pam::{
     Getent, PamGetentRequest, PamGetentResponse, PamGroupCreateRequest, PamGroupHostsCountResponse,
     PamGroupMembersResponse, PamGroupResponse, PamHostCreateRequest, PamHostDetailsResponse,
-    PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest, PamLoginRequest,
-    PamMfaFinishRequest, PamMfaStartRequest, PamPasswordResponse, PamPreflightRequest,
-    PamPreflightResponse, PamUnlinkedEmailsResponse, PamUserCreateRequest, PamUserDetailsResponse,
-    PamUserResponse, PamUserUpdateRequest,
+    PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest, PamHostWhoamiRequest,
+    PamLoginRequest, PamMfaFinishRequest, PamMfaStartRequest, PamPasswordResponse,
+    PamPreflightRequest, PamPreflightResponse, PamUnlinkedEmailsResponse, PamUserCreateRequest,
+    PamUserDetailsResponse, PamUserResponse, PamUserUpdateRequest,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
@@ -306,6 +306,18 @@ pub async fn delete_host(
     PamHost::delete(id.into_inner()).await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+#[post("/pam/hosts/{id}/whoami")]
+pub async fn post_host_whoami(
+    id: Path<String>,
+    Json(payload): Json<PamHostWhoamiRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
+    let host = PamHost::find_by_id_full(id.into_inner()).await?;
+    host.validate_secret(payload.host_secret)?;
+    Ok(HttpResponse::Ok().json(PamHostDetailsResponse::from(host)))
 }
 
 #[post("/pam/login")]
