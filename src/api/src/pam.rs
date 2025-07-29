@@ -313,6 +313,8 @@ pub async fn post_host_whoami(
     id: Path<String>,
     Json(payload): Json<PamHostWhoamiRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
     let host = PamHost::find_by_id_full(id.into_inner()).await?;
     host.validate_secret(payload.host_secret)?;
     Ok(HttpResponse::Ok().json(PamHostDetailsResponse::from(host)))
