@@ -1,5 +1,5 @@
 use crate::ListenScheme;
-use crate::email::EMail;
+use crate::email::mailer::EMail;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use crate::vault_config::VaultConfig;

@@ -1,5 +1,5 @@
 use crate::database::DB;
-use crate::email;
+use crate::email::login_location;
 use crate::entity::user_revoke::UserRevoke;
 use crate::entity::users::User;
 use crate::ipgeo::get_location;
@@ -175,7 +175,14 @@ impl LoginLocation {
 
         let slf = Self::insert(user.id.clone(), ip, user_agent, location).await?;
         let revoke = UserRevoke::find_or_upsert(user.id.clone()).await?;
-        email::send_login_location(&user, slf.ip, slf.user_agent, slf.location, revoke.code).await;
+        login_location::send_login_location(
+            &user,
+            slf.ip,
+            slf.user_agent,
+            slf.location,
+            revoke.code,
+        )
+        .await;
 
         Ok(())
     }

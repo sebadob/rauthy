@@ -1,5 +1,6 @@
 use crate::database::{Cache, DB};
-use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
+use crate::email::email_change_info::send_email_change_info_new;
+use crate::email::{email_change_confirm, password_reset};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
@@ -233,7 +234,7 @@ impl User {
             MagicLinkUsage::NewUser(post_reset_redirect_uri),
         )
         .await?;
-        send_pwd_reset(&magic_link, &slf).await;
+        password_reset::send_pwd_reset(&magic_link, &slf).await;
 
         Ok(slf)
     }
@@ -1161,8 +1162,10 @@ LIMIT $2"#;
             Session::invalidate_for_user(&user.id).await?;
 
             // send out confirmation E-Mails to both addresses
-            send_email_confirm_change(&user, &user.email, &user.email, true).await;
-            send_email_confirm_change(&user, old_email, &user.email, true).await;
+            email_change_confirm::send_email_confirm_change(&user, &user.email, &user.email, true)
+                .await;
+            email_change_confirm::send_email_confirm_change(&user, old_email, &user.email, true)
+                .await;
 
             let event_text = format!("Change by admin: {old_email} -> {}", user.email);
             RauthyConfig::get()
@@ -1516,8 +1519,10 @@ impl User {
         Session::invalidate_for_user(&user.id).await?;
 
         // send out confirmation E-Mails to both addresses
-        send_email_confirm_change(&user, &user.email, &user.email, false).await;
-        send_email_confirm_change(&user, &old_email, &user.email, false).await;
+        email_change_confirm::send_email_confirm_change(&user, &user.email, &user.email, false)
+            .await;
+        email_change_confirm::send_email_confirm_change(&user, &old_email, &user.email, false)
+            .await;
 
         let event_text = format!("{old_email} -> {}", user.email);
         let ip = real_ip_from_req(&req).ok();
@@ -1800,7 +1805,7 @@ impl User {
             usage,
         )
         .await?;
-        send_pwd_reset(&new_ml, self).await;
+        password_reset::send_pwd_reset(&new_ml, self).await;
 
         Ok(())
     }
@@ -1830,7 +1835,7 @@ impl User {
                         MagicLinkUsage::PasswordReset(None),
                     )
                     .await?;
-                    send_pwd_reset(&magic_link, self).await;
+                    password_reset::send_pwd_reset(&magic_link, self).await;
 
                     Err(ErrorResponse::new(
                         ErrorResponseType::PasswordRefresh,

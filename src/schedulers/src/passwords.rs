@@ -4,7 +4,7 @@ use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use rauthy_models::database::DB;
-use rauthy_models::email::send_pwd_reset_info;
+use rauthy_models::email::password_reset_info::send_pwd_reset_info;
 use rauthy_models::entity::users::User;
 use std::ops::Add;
 use std::str::FromStr;
