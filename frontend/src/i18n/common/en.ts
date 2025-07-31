@@ -41,6 +41,7 @@ export const I18nEn: I18n = {
         refresh: "Refresh",
         required: "Required",
         save: "Save",
+        search: "Search",
         seconds: "seconds",
         selectI18n: "Select Language",
         show: "Show",

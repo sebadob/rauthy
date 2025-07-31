@@ -41,6 +41,7 @@ export const I18nDe: I18n = {
         refresh: "Erneuern",
         required: "Notwendig",
         save: "Speichern",
+        search: "Suchen",
         seconds: "Sekunden",
         selectI18n: "Sprache wählen",
         show: "Anzeigen",

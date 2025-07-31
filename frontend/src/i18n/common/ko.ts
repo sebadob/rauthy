@@ -41,6 +41,7 @@ export const I18nKo: I18n = {
         refresh: "Refresh",
         required: "필수 항목",
         save: "저장",
+        search: "검색",
         seconds: "seconds",
         selectI18n: "언어 선택",
         show: "보이기",

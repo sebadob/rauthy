@@ -66,6 +66,15 @@ export interface PamHostSimpleResponse {
     addresses: string[],
 }
 
+export interface PamHostAccessResponse {
+    hostname: string,
+    secret: string,
+    force_mfa: boolean,
+    notes?: string,
+    ips: string[],
+    aliases: string[],
+}
+
 export interface PamHostDetailsResponse {
     id: string,
     hostname: string,

@@ -41,6 +41,7 @@ export const I18nZh: I18n = {
         refresh: "Refresh",
         required: "必填",
         save: "保存",
+        search: "Search",
         seconds: "seconds",
         selectI18n: "选择语言",
         show: "显示",

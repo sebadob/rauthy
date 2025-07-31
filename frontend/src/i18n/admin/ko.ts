@@ -129,7 +129,6 @@ export let I18nAdminKo: I18nAdmin = {
         note: "참고",
         noEntries: "비어 있음",
         reset: "초기화",
-        search: "검색",
         searchOptions: "검색 옵션",
         until: "까지",
     },

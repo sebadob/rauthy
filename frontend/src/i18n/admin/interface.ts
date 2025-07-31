@@ -119,7 +119,6 @@ export interface I18nAdmin {
         note: string,
         noEntries: string,
         reset: string,
-        search: string,
         searchOptions: string,
         until: string,
     }
