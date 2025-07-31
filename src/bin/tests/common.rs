@@ -6,7 +6,6 @@ use rauthy_common::utils::base64_url_encode;
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Response, header};
-use ring::digest;
 use spow::pow::Pow;
 use std::error::Error;
 use std::sync::OnceLock;

@@ -291,9 +291,7 @@ mod tests {
             "172.16.0.1/32".to_string(),
             "10.10.10.10/31".to_string(),
         ];
-        let proxies = build_trusted_proxies(&raw);
-        let _ = TRUSTED_PROXIES.set(proxies);
-        let _ = TRUSTED_PROXIES.set(proxies);
+        let _ = TRUSTED_PROXIES.set(build_trusted_proxies(&raw));
         println!("{:?}", build_trusted_proxies(&raw));
 
         assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.1").unwrap(), false).is_ok());
