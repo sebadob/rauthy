@@ -7,6 +7,7 @@ pub mod mailer;
 pub mod notification;
 pub mod password_reset;
 pub mod password_reset_info;
+pub mod smtp_oauth_token;
 
 /// Prettifies unix timestamps for E-Mails in a better readable format for end users
 #[inline]

@@ -370,6 +370,11 @@ impl Default for Vars {
                 smtp_password: None,
                 smtp_from: "Rauthy <rauthy@localhost>".into(),
                 connect_retries: 3,
+                auth_xoauth2: false,
+                xoauth_url: None,
+                xoauth_client_id: None,
+                xoauth_client_secret: None,
+                xoauth_scope: None,
                 danger_insecure: false,
             },
             encryption: VarsEncryption {
@@ -1235,6 +1240,33 @@ impl Vars {
         ) {
             self.email.connect_retries = v;
         }
+
+        if let Some(v) = t_bool(&mut table, "email", "auth_xoauth2", "SMTP_AUTH_XOAUTH2") {
+            self.email.auth_xoauth2 = v;
+        }
+        if let Some(v) = t_str(&mut table, "email", "xoauth_url", "SMTP_XOAUTH2_URL") {
+            self.email.xoauth_url = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "email",
+            "xoauth_client_id",
+            "SMTP_XOAUTH2_CLIENT_ID",
+        ) {
+            self.email.xoauth_client_id = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "email",
+            "xoauth_client_secret",
+            "SMTP_XOAUTH2_CLIENT_SECRET",
+        ) {
+            self.email.xoauth_client_secret = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "email", "xoauth_scope", "SMTP_XOAUTH2_SCOPE") {
+            self.email.xoauth_scope = Some(v);
+        }
+
         if let Some(v) = t_bool(
             &mut table,
             "email",
@@ -2413,6 +2445,21 @@ impl Vars {
             );
         }
 
+        if self.email.auth_xoauth2 {
+            if self.email.xoauth_url.is_none() {
+                panic!("'auth_xoauth2' = true but 'xoauth_url' not set");
+            }
+            if self.email.xoauth_client_id.is_none() {
+                panic!("'auth_xoauth2' = true but 'xoauth_client_id' not set");
+            }
+            if self.email.xoauth_client_secret.is_none() {
+                panic!("'auth_xoauth2' = true but 'xoauth_client_secret' not set");
+            }
+            if self.email.xoauth_scope.is_none() {
+                panic!("'auth_xoauth2' = true but 'xoauth_scope' not set");
+            }
+        }
+
         if self.encryption.keys.is_empty() || self.encryption.key_active.is_empty() {
             panic!("Missing `encryption.keys` / `encryption.key_active`");
         }
@@ -2570,6 +2617,11 @@ pub struct VarsEmail {
     pub smtp_password: Option<String>,
     pub smtp_from: Cow<'static, str>,
     pub connect_retries: u16,
+    pub auth_xoauth2: bool,
+    pub xoauth_url: Option<String>,
+    pub xoauth_client_id: Option<String>,
+    pub xoauth_client_secret: Option<String>,
+    pub xoauth_scope: Option<String>,
     pub danger_insecure: bool,
 }
 

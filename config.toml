@@ -966,6 +966,32 @@ smtp_url = 'localhost'
 # overwritten by: SMTP_FROM
 #smtp_from = 'Rauthy <rauthy@localhost>'
 
+# Can be set to 'true' to enable `XOAUTH2` as authntication
+# mechanism when opening SMTP connections. If set, you must
+# provide all `xoauth_*` values below. Rauthy will then do
+# a `client_credentials` request to fetch an access token.
+#
+# You only need to provide the `smtp_username` and no
+# `smtp_password` in this case.
+#
+# default: false
+# overwritten by: SMTP_AUTH_XOAUTH2
+#auth_xoauth2 = false
+
+# These values must be given if `auth_xoauth2 = true`.
+# They will be used for a `client_credentials` request
+# to the `xoauth_url` to retrieve a token, that then
+# will be used for authentication via SMTP XOAUTH2.
+#
+# overwritten by: SMTP_XOAUTH2_URL
+#xoauth_url = ''
+# overwritten by: SMTP_XOAUTH2_CLIENT_ID
+#xoauth_client_id = ''
+# overwritten by: SMTP_XOAUTH2_CLIENT_SECRET
+#xoauth_client_secret = ''
+# overwritten by: SMTP_XOAUTH2_SCOPE
+#xoauth_scope = ''
+
 # The number of retries that should be done for connecting to
 # the given SMTP_URL.
 # When these retries are exceeded without success, Rauthy will

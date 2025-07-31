@@ -1,7 +1,9 @@
 use crate::database::DB;
+use crate::email::smtp_oauth_token::SmtpOauthToken;
 use crate::rauthy_config::RauthyConfig;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
+use lettre::transport::smtp::authentication::Mechanism;
 use lettre::{AsyncSmtpTransport, AsyncTransport, message};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::time::Duration;
@@ -133,14 +135,27 @@ async fn connect_test_smtp(
         .expect("SMTP_USERNAME is not set")
         .trim()
         .to_string();
-    let password = vars
-        .smtp_password
-        .as_deref()
-        .expect("SMTP_PASSWORD is not set")
-        .trim()
-        .to_string();
 
-    let creds = authentication::Credentials::new(username, password);
+    let mut mechanisms = Vec::with_capacity(2);
+    let creds = if vars.auth_xoauth2 {
+        mechanisms.push(Mechanism::Xoauth2);
+
+        // TODO maybe expect here?
+        let token = SmtpOauthToken::get().await?;
+        authentication::Credentials::new(username, token.access_token)
+    } else {
+        mechanisms.push(Mechanism::Plain);
+        mechanisms.push(Mechanism::Login);
+
+        let password = vars
+            .smtp_password
+            .as_deref()
+            .expect("SMTP_PASSWORD is not set")
+            .trim()
+            .to_string();
+
+        authentication::Credentials::new(username, password)
+    };
 
     // always try fully wrapped TLS first
     let mut builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
@@ -150,6 +165,7 @@ async fn connect_test_smtp(
     }
     let mut conn = builder
         .credentials(creds.clone())
+        .authentication(mechanisms)
         .timeout(Some(Duration::from_secs(10)))
         .build();
 

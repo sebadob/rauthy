@@ -104,6 +104,7 @@ pub const IDX_PASSWORD_RULES: &str = "password_rules_";
 pub const IDX_ROLES: &str = "roles_";
 pub const IDX_SCOPES: &str = "scopes_";
 pub const IDX_SESSIONS: &str = "sessions";
+pub const IDX_SMTP_OAUTH_TOKEN: &str = "smtp_oauth_token";
 pub const IDX_USERS: &str = "users_";
 pub const IDX_USER_COUNT: &str = "users_count_total";
 pub const IDX_USERS_VALUES: &str = "users_values_";
