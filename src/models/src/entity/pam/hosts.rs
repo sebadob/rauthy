@@ -4,8 +4,8 @@ use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
 use hiqlite_macros::params;
 use rauthy_api_types::pam::{
-    PamGroupMembersResponse, PamGroupType, PamHostDetailsResponse, PamHostSimpleResponse,
-    PamHostUpdateRequest,
+    PamGroupMembersResponse, PamGroupType, PamHostAccessResponse, PamHostDetailsResponse,
+    PamHostSimpleResponse, PamHostUpdateRequest,
 };
 use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
 use rauthy_common::is_hiqlite;
@@ -547,6 +547,18 @@ impl From<PamHost> for PamHostSimpleResponse {
             name: h.hostname,
             aliases: h.aliases,
             addresses: h.ips,
+        }
+    }
+}
+
+impl From<PamHost> for PamHostAccessResponse {
+    fn from(h: PamHost) -> Self {
+        Self {
+            hostname: h.hostname,
+            force_mfa: h.force_mfa,
+            notes: h.notes,
+            ips: h.ips,
+            aliases: h.aliases,
         }
     }
 }

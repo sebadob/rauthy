@@ -6,11 +6,11 @@ use actix_web_lab::extract::Json;
 use chrono::Utc;
 use rauthy_api_types::pam::{
     Getent, PamGetentRequest, PamGetentResponse, PamGroupCreateRequest, PamGroupHostsCountResponse,
-    PamGroupMembersResponse, PamGroupResponse, PamHostCreateRequest, PamHostDetailsResponse,
-    PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest, PamHostWhoamiRequest,
-    PamLoginRequest, PamMfaFinishRequest, PamMfaStartRequest, PamPasswordResponse,
-    PamPreflightRequest, PamPreflightResponse, PamUnlinkedEmailsResponse, PamUserCreateRequest,
-    PamUserDetailsResponse, PamUserResponse, PamUserUpdateRequest,
+    PamGroupMembersResponse, PamGroupResponse, PamHostAccessResponse, PamHostCreateRequest,
+    PamHostDetailsResponse, PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest,
+    PamHostWhoamiRequest, PamLoginRequest, PamMfaFinishRequest, PamMfaStartRequest,
+    PamPasswordResponse, PamPreflightRequest, PamPreflightResponse, PamUnlinkedEmailsResponse,
+    PamUserCreateRequest, PamUserDetailsResponse, PamUserResponse, PamUserUpdateRequest,
 };
 use rauthy_api_types::users::MfaPurpose;
 use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
@@ -240,6 +240,33 @@ pub async fn post_hosts(
     let host = PamHost::insert(payload.hostname, payload.gid, payload.force_mfa).await?;
 
     Ok(HttpResponse::Ok().json(PamHostSimpleResponse::from(host)))
+}
+
+#[get("/pam/hosts/user_access")]
+pub async fn get_hosts_user_access(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    let user = PamUser::find_by_user_id(principal.user_id()?.to_string()).await?;
+    let links = PamGroupUserLink::find_for_user(user.id)
+        .await?
+        .into_iter()
+        .map(|link| link.gid)
+        .collect::<Vec<_>>();
+
+    // finding all of them here because this will probably be cached in the future
+    let hosts = PamHost::find_all_full()
+        .await?
+        .into_iter()
+        .filter_map(|h| {
+            if links.contains(&h.gid) {
+                Some(PamHostAccessResponse::from(h))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(hosts))
 }
 
 #[get("/pam/hosts/{id}")]

@@ -216,6 +216,16 @@ pub struct PamHostSimpleResponse {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+pub struct PamHostAccessResponse {
+    pub hostname: String,
+    pub force_mfa: bool,
+    pub notes: Option<String>,
+    #[schema(value_type = str)]
+    pub ips: Vec<IpAddr>,
+    pub aliases: Vec<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PamHostDetailsResponse {
     pub id: String,
     pub hostname: String,

@@ -14,7 +14,7 @@
         id = genKey(),
         ariaLabel,
         value = $bindable(''),
-        placeholder = ta.common.search,
+        placeholder = t.common.search,
         datalist,
         options,
         option = $bindable(),
@@ -104,7 +104,7 @@
             {id}
             {list}
             autocomplete="off"
-            aria-label={ariaLabel || ta.common.search}
+            aria-label={ariaLabel || t.common.search}
             {pattern}
             {placeholder}
             onclick={ev => ev.stopPropagation()}
@@ -125,7 +125,7 @@
         <div class="absolute btnDelete">
             <Button ariaLabel={t.common.delete} invisible onclick={() => value = ''}>
                 <span class="backspace">
-                    <IconBackspace color="hsl(var(--bg-high))"/>
+                    <IconBackspace color="hsla(var(--text) / .5)"/>
                 </span>
             </Button>
         </div>
@@ -133,7 +133,7 @@
 
     {#if onSearch}
         <div class="btnSearch">
-            <Button ariaLabel={ta.common.search} invisible onclick={search}>
+            <Button ariaLabel={t.common.search} invisible onclick={search}>
                 <IconMagnify/>
             </Button>
         </div>

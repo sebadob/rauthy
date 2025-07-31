@@ -30,6 +30,7 @@ export interface I18n {
         refresh: string,
         required: string,
         save: string,
+        search: string,
         seconds: string,
         selectI18n: string,
         show: string,

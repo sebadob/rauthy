@@ -134,7 +134,6 @@ export let I18nAdminEn: I18nAdmin = {
         note: "Note",
         noEntries: "No Entries",
         reset: "Reset",
-        search: "Search",
         searchOptions: "Search Options",
         until: "Until",
     },

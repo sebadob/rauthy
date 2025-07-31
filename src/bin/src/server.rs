@@ -365,6 +365,7 @@ fn api_services() -> actix_web::Scope {
                 .service(pam::get_pam_group_hosts_count)
                 .service(pam::get_hosts)
                 .service(pam::post_hosts)
+                .service(pam::get_hosts_user_access)
                 .service(pam::get_host_details)
                 .service(pam::put_host)
                 .service(pam::post_host_secret)
