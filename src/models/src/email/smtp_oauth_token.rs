@@ -92,7 +92,7 @@ impl SmtpOauthToken {
                     }
                 }
                 Err(err) => {
-                    error!(?err, "Error during SMTP XOAUTH2 token fetch");
+                    error!(?err, "Error during SMTP OAUTH2 token fetch");
                     time::sleep(Duration::from_secs(5)).await;
                 }
             }
@@ -100,7 +100,7 @@ impl SmtpOauthToken {
 
         Err(ErrorResponse::new(
             ErrorResponseType::Connection,
-            "Could not fetch an SMTP OAuth token - retries exceeded",
+            "Could not fetch an SMTP OAUTH2 token - retries exceeded",
         ))
     }
 }

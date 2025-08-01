@@ -157,17 +157,19 @@ async fn connect_test_smtp(
         authentication::Credentials::new(username, password)
     };
 
+    // TODO add config var to skip trying real TLS
     // always try fully wrapped TLS first
     let mut builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
         .expect("Connection Error with 'SMTP_URL'");
     if let Some(port) = smtp_port {
         builder = builder.port(port);
     }
-    let mut conn = builder
+    let conn = builder
+        .authentication(mechanisms.clone())
         .credentials(creds.clone())
-        .authentication(mechanisms)
         .timeout(Some(Duration::from_secs(10)))
         .build();
+    warn!("SMTP connection opened");
 
     match conn.test_connection().await {
         Ok(true) => {
@@ -191,7 +193,8 @@ async fn connect_test_smtp(
     if let Some(port) = smtp_port {
         builder = builder.port(port);
     }
-    conn = builder
+    let conn = builder
+        .authentication(mechanisms)
         .credentials(creds)
         .timeout(Some(Duration::from_secs(10)))
         .build();
