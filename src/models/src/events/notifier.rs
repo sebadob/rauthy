@@ -1,5 +1,4 @@
-use crate::email;
-use crate::email::EMail;
+use crate::email::{mailer, notification};
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::rauthy_config::RauthyConfig;
 use async_trait::async_trait;
@@ -61,7 +60,9 @@ impl EventNotifier {
         Ok(())
     }
 
-    pub async fn init_notifiers(tx_email: mpsc::Sender<EMail>) -> Result<(), ErrorResponse> {
+    pub async fn init_notifiers(
+        tx_email: mpsc::Sender<mailer::EMail>,
+    ) -> Result<(), ErrorResponse> {
         let vars = &RauthyConfig::get().vars.events;
 
         // E-Mail
@@ -144,13 +145,13 @@ impl EventNotifier {
 struct NotifierEmail {
     notification_recipient_name: String,
     notification_email: String,
-    tx_email: mpsc::Sender<EMail>,
+    tx_email: mpsc::Sender<mailer::EMail>,
 }
 
 #[async_trait]
 impl Notify for NotifierEmail {
     async fn notify(&self, notification: &Notification) -> Result<(), ErrorResponse> {
-        email::send_email_notification(
+        notification::send_email_notification(
             self.notification_recipient_name.clone(),
             self.notification_email.clone(),
             &self.tx_email,
