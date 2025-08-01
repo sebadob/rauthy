@@ -157,38 +157,37 @@ async fn connect_test_smtp(
         authentication::Credentials::new(username, password)
     };
 
-    // TODO add config var to skip trying real TLS
-    // always try fully wrapped TLS first
-    let mut builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
-        .expect("Connection Error with 'SMTP_URL'");
-    if let Some(port) = smtp_port {
-        builder = builder.port(port);
-    }
-    let conn = builder
-        .authentication(mechanisms.clone())
-        .credentials(creds.clone())
-        .timeout(Some(Duration::from_secs(10)))
-        .build();
-    warn!("SMTP connection opened");
+    if !vars.starttls_only {
+        let mut builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
+            .expect("Connection Error with 'SMTP_URL'");
+        if let Some(port) = smtp_port {
+            builder = builder.port(port);
+        }
+        let conn = builder
+            .authentication(mechanisms.clone())
+            .credentials(creds.clone())
+            .timeout(Some(Duration::from_secs(10)))
+            .build();
+        warn!("SMTP connection opened");
 
-    match conn.test_connection().await {
-        Ok(true) => {
-            info!("Successfully connected to {smtp_url} via TLS");
-            return Ok(conn);
-        }
-        Ok(false) => {
-            warn!(
-                "Could not connect to {} via TLS. Trying downgrade to STARTTLS",
-                smtp_url,
-            );
-        }
-        Err(err) => {
-            warn!(?err, "Could not connect to {smtp_url} via TLS");
+        match conn.test_connection().await {
+            Ok(true) => {
+                info!("Successfully connected to {smtp_url} via TLS");
+                return Ok(conn);
+            }
+            Ok(false) => {
+                warn!(
+                    "Could not connect to {} via TLS. Trying downgrade to STARTTLS",
+                    smtp_url,
+                );
+            }
+            Err(err) => {
+                warn!(?err, "Could not connect to {smtp_url} via TLS");
+            }
         }
     }
 
-    // only if full TLS fails, try STARTTLS
-    builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(smtp_url)
+    let mut builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(smtp_url)
         .expect("Connection Error with 'SMTP_URL'");
     if let Some(port) = smtp_port {
         builder = builder.port(port);

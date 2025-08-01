@@ -375,6 +375,7 @@ impl Default for Vars {
                 xoauth_client_id: None,
                 xoauth_client_secret: None,
                 xoauth_scope: None,
+                starttls_only: false,
                 danger_insecure: false,
             },
             encryption: VarsEncryption {
@@ -1267,6 +1268,9 @@ impl Vars {
             self.email.xoauth_scope = Some(v);
         }
 
+        if let Some(v) = t_bool(&mut table, "email", "starttls_only", "SMTP_STARTTLS_ONLY") {
+            self.email.starttls_only = v;
+        }
         if let Some(v) = t_bool(
             &mut table,
             "email",
@@ -2622,6 +2626,7 @@ pub struct VarsEmail {
     pub xoauth_client_id: Option<String>,
     pub xoauth_client_secret: Option<String>,
     pub xoauth_scope: Option<String>,
+    pub starttls_only: bool,
     pub danger_insecure: bool,
 }
 
