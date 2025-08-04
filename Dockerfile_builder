@@ -10,7 +10,7 @@ RUN <<EOF
 set -e
 
 apt-get update
-apt-get install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu npm
+apt-get install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libpam0g-dev librust-libudev-sys-dev npm
 apt-get clean
 
 rustup target add aarch64-unknown-linux-gnu
