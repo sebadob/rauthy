@@ -237,7 +237,13 @@ pub async fn post_hosts(
     principal.validate_admin_session()?;
     payload.validate()?;
 
-    let host = PamHost::insert(payload.hostname, payload.gid, payload.force_mfa).await?;
+    let host = PamHost::insert(
+        payload.hostname,
+        payload.gid,
+        payload.force_mfa,
+        payload.local_password_only,
+    )
+    .await?;
 
     Ok(HttpResponse::Ok().json(PamHostSimpleResponse::from(host)))
 }
@@ -366,7 +372,7 @@ pub async fn post_login(
     host.validate_secret(payload.host_secret)?;
 
     let pam_user = PamUser::find_by_name(payload.username).await?;
-    if !host.is_login_allowed(&pam_user).await {
+    if !host.is_user_in_group(&pam_user).await {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "Not allowed to log in to this host",
@@ -376,13 +382,6 @@ pub async fn post_login(
     let mut user = User::find_by_email(pam_user.email.clone()).await?;
     user.check_expired()?;
     user.check_enabled()?;
-
-    if host.force_mfa && !user.has_webauthn_enabled() {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "This host requires MFA",
-        ));
-    }
 
     #[inline]
     async fn pwd_login_fail(user: &mut User, err: ErrorResponse) -> Result<(), ErrorResponse> {
@@ -402,6 +401,16 @@ pub async fn post_login(
     }
 
     if let Some(password) = payload.password {
+        if !host.local_password_only && user.has_webauthn_enabled() {
+            pwd_login_fail(
+                &mut user,
+                ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "MFA User and local_password_only not set",
+                ),
+            )
+            .await?;
+        }
         if let Err(err) = user.validate_password(password).await {
             pwd_login_fail(&mut user, err).await?;
         }
@@ -415,6 +424,14 @@ pub async fn post_login(
         }
         svc_req.delete().await?;
     } else if let Some(password) = payload.remote_password {
+        if host.force_mfa && !user.has_webauthn_enabled() {
+            pwd_login_fail(
+                &mut user,
+                ErrorResponse::new(ErrorResponseType::Forbidden, "This host requires MFA"),
+            )
+            .await?;
+        }
+
         if let Err(err) = PamRemotePassword::get(pam_user.name.clone())
             .await?
             .compare_password(password.as_bytes())
@@ -485,9 +502,10 @@ pub async fn post_preflight(
     host.validate_secret(payload.host_secret)?;
 
     let pam_user = PamUser::find_by_name(payload.username).await?;
-    if !host.is_login_allowed(&pam_user).await {
+    if !host.is_user_in_group(&pam_user).await {
         return Ok(HttpResponse::Ok().json(PamPreflightResponse {
             login_allowed: false,
+            local_password_only: host.local_password_only,
             mfa_required: host.force_mfa,
         }));
     }
@@ -496,16 +514,17 @@ pub async fn post_preflight(
     user.check_expired()?;
     user.check_enabled()?;
 
-    if host.force_mfa && !user.has_webauthn_enabled() {
-        // TODO maybe send a different status code here to better differentiate
+    if host.force_mfa && host.local_password_only && !user.has_webauthn_enabled() {
         return Ok(HttpResponse::Ok().json(PamPreflightResponse {
             login_allowed: false,
+            local_password_only: false,
             mfa_required: true,
         }));
     }
 
     Ok(HttpResponse::Ok().json(PamPreflightResponse {
         login_allowed: true,
+        local_password_only: host.local_password_only,
         mfa_required: user.has_webauthn_enabled() || host.force_mfa,
     }))
 }
