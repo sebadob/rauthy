@@ -88,6 +88,7 @@
             hostname: host.hostname,
             gid,
             force_mfa: host.force_mfa,
+            local_password_only: host.local_password_only,
             notes: notes ? notes : undefined,
             ips: host.ips,
             aliases: host.aliases,
@@ -155,6 +156,23 @@
             />
         </div>
 
+        <div class="row">
+            <div class="label">
+                {ta.pam.hostLocalPwdOnly}
+            </div>
+            <InputCheckbox
+                    ariaLabel={ta.pam.hostLocalPwdOnly}
+                    bind:checked={host.local_password_only}
+            />
+        </div>
+        {#if host.local_password_only}
+            <div class="err" transition:slide={{ duration: 150 }}>
+                <p>
+                    {ta.pam.hostLocalPwdOnlyInfo}
+                </p>
+            </div>
+        {/if}
+
         <InputTags
                 label={ta.pam.ipAddresses}
                 bind:values={host.ips}
@@ -215,13 +233,14 @@
     }
 
     .label {
+        margin-bottom: -.2rem;
         color: hsla(var(--text) / .8);
     }
 
     .row {
         margin: .5rem 0;
         display: grid;
-        grid-template-columns: 8rem 5rem;
+        grid-template-columns: 12rem 5.5rem;
         align-items: center;
     }
 </style>

@@ -44,6 +44,7 @@ pub struct PamHostCreateRequest {
     pub hostname: String,
     pub gid: u32,
     pub force_mfa: bool,
+    pub local_password_only: bool,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -127,6 +128,7 @@ pub struct PamHostUpdateRequest {
     pub hostname: String,
     pub gid: u32,
     pub force_mfa: bool,
+    pub local_password_only: bool,
     pub notes: Option<String>,
     /// Validation: IpAddr
     #[schema(value_type = str)]
@@ -219,6 +221,7 @@ pub struct PamHostSimpleResponse {
 pub struct PamHostAccessResponse {
     pub hostname: String,
     pub force_mfa: bool,
+    pub local_password_only: bool,
     pub notes: Option<String>,
     #[schema(value_type = str)]
     pub ips: Vec<IpAddr>,
@@ -231,6 +234,7 @@ pub struct PamHostDetailsResponse {
     pub hostname: String,
     pub gid: u32,
     pub force_mfa: bool,
+    pub local_password_only: bool,
     pub notes: Option<String>,
     #[schema(value_type = str)]
     pub ips: Vec<IpAddr>,
@@ -253,6 +257,7 @@ pub struct PamPasswordResponse {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct PamPreflightResponse {
     pub login_allowed: bool,
+    pub local_password_only: bool,
     pub mfa_required: bool,
 }
 

@@ -12,16 +12,17 @@ CREATE UNIQUE INDEX pam_groups_name_uindex
 
 CREATE TABLE pam_hosts
 (
-    id        TEXT    NOT NULL
+    id                  TEXT    NOT NULL
         CONSTRAINT pam_hosts_pk
             PRIMARY KEY,
-    hostname  TEXT    NOT NULL,
-    gid       INTEGER NOT NULL
+    hostname            TEXT    NOT NULL,
+    gid                 INTEGER NOT NULL
         CONSTRAINT pam_hosts_pam_groups_id_fk
             REFERENCES pam_groups,
-    secret    BLOB    NOT NULL,
-    force_mfa INTEGER NOT NULL,
-    notes     TEXT
+    secret              BLOB    NOT NULL,
+    force_mfa           INTEGER NOT NULL,
+    local_password_only INTEGER NOT NULL,
+    notes               TEXT
 ) STRICT;
 
 CREATE INDEX pam_hosts_gid_index
