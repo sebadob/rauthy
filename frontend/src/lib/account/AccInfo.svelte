@@ -284,6 +284,7 @@
 
     .value {
         max-width: 18rem;
+        padding-right: 1rem;
         word-break: break-word;
     }
 </style>
