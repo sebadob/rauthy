@@ -575,6 +575,7 @@ impl From<PamHost> for PamHostAccessResponse {
         Self {
             hostname: h.hostname,
             force_mfa: h.force_mfa,
+            local_password_only: h.local_password_only,
             notes: h.notes,
             ips: h.ips,
             aliases: h.aliases,
@@ -589,6 +590,7 @@ impl From<PamHost> for PamHostDetailsResponse {
             hostname: h.hostname,
             gid: h.gid,
             force_mfa: h.force_mfa,
+            local_password_only: h.local_password_only,
             notes: h.notes,
             ips: h.ips,
             aliases: h.aliases,

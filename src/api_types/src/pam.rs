@@ -221,6 +221,7 @@ pub struct PamHostSimpleResponse {
 pub struct PamHostAccessResponse {
     pub hostname: String,
     pub force_mfa: bool,
+    pub local_password_only: bool,
     pub notes: Option<String>,
     #[schema(value_type = str)]
     pub ips: Vec<IpAddr>,
@@ -233,6 +234,7 @@ pub struct PamHostDetailsResponse {
     pub hostname: String,
     pub gid: u32,
     pub force_mfa: bool,
+    pub local_password_only: bool,
     pub notes: Option<String>,
     #[schema(value_type = str)]
     pub ips: Vec<IpAddr>,

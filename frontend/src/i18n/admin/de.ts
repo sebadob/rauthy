@@ -299,6 +299,11 @@ export let I18nAdminDe: I18nAdmin = {
         groups: "Gruppen",
         groupType: "Gruppen-Typ",
         hostAliases: "Host Aliase",
+        hostLocalPwdOnly: "Lokaler Passwort Login",
+        hostLocalPwdOnlyInfo: `Wenn Lokaler Passwort Login gesetzt ist, überschreibt dies ein MFA Erzwingen für lokale
+            Logins. Ebenso wird (lokal) niemals ein Passkey verlangt, auch wenn der Nutzer MFA abgesichert ist. Diese
+            Option sollte nur gesetzt werden, wenn absolut notwendig, wie z.B. wenn MFA-gesicherte Nutzer lokale Logins
+            machen sollen, aber keine Hardware Passkeys verwenden.`,
         ipAddresses: "IP Adressen",
         member: "Mitglied",
         nameExistsAlready: "Name is bereits vergeben",
