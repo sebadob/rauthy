@@ -286,6 +286,11 @@ export let I18nAdminEn: I18nAdmin = {
         groups: "Groups",
         groupType: "Group Type",
         hostAliases: "Host Aliases",
+        hostLocalPwdOnly: "Local Password Login",
+        hostLocalPwdOnlyInfo: `When Local Password Login is set, it overwrites Force MFA for local logins. At the same
+            time, passkeys will never be requested (locally) during logins, even if a user is MFA-secured. This option
+            should only be set if really necessary, for instance if MFA-secured users should be able to do local logins
+            while not using hardware passkeys.`,
         ipAddresses: "IP Addresses",
         member: "Member",
         nameExistsAlready: "Name is already taken",

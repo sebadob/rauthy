@@ -21,6 +21,7 @@ pub struct PamHost {
     pub gid: u32,
     pub secret: String,
     pub force_mfa: bool,
+    pub local_password_only: bool,
     pub notes: Option<String>,
     pub ips: Vec<IpAddr>,
     pub aliases: Vec<String>,
@@ -38,6 +39,7 @@ impl From<hiqlite::Row<'_>> for PamHost {
             gid: row.get::<i64>("gid") as u32,
             secret,
             force_mfa: row.get("force_mfa"),
+            local_password_only: row.get("local_password_only"),
             notes: row.get("notes"),
             ips: Vec::default(),
             aliases: Vec::default(),
@@ -57,6 +59,7 @@ impl From<tokio_postgres::Row> for PamHost {
             gid: row.get::<_, i64>("gid") as u32,
             secret,
             force_mfa: row.get("force_mfa"),
+            local_password_only: row.get("local_password_only"),
             notes: row.get("notes"),
             ips: Vec::default(),
             aliases: Vec::default(),
@@ -69,23 +72,38 @@ impl PamHost {
         hostname: String,
         gid: u32,
         force_mfa: bool,
+        local_password_only: bool,
     ) -> Result<Self, ErrorResponse> {
         let id = secure_random_alnum(24);
         let secret = secure_random_alnum(64);
         let enc = EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec();
 
         let sql = r#"
-INSERT INTO pam_hosts (id, hostname, gid, secret, force_mfa)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO pam_hosts (id, hostname, gid, secret, force_mfa, local_password_only)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *
 "#;
 
         let slf = if is_hiqlite() {
             DB::hql()
-                .execute_returning_map_one(sql, params!(id, hostname, gid, enc, force_mfa))
+                .execute_returning_map_one(
+                    sql,
+                    params!(id, hostname, gid, enc, force_mfa, local_password_only),
+                )
                 .await?
         } else {
-            DB::pg_query_one(sql, &[&id, &hostname, &(gid as i64), &enc, &force_mfa]).await?
+            DB::pg_query_one(
+                sql,
+                &[
+                    &id,
+                    &hostname,
+                    &(gid as i64),
+                    &enc,
+                    &force_mfa,
+                    &local_password_only,
+                ],
+            )
+            .await?
         };
 
         Ok(slf)
@@ -399,8 +417,8 @@ LIMIT 1
     ) -> Result<(), ErrorResponse> {
         let sql_update = r#"
 UPDATE pam_hosts
-SET hostname = $1, gid = $2, force_mfa = $3, notes = $4
-WHERE id = $5
+SET hostname = $1, gid = $2, force_mfa = $3, local_password_only = $4, notes = $5
+WHERE id = $6
 "#;
         let sql_cleanup_1 = "DELETE FROM pam_hosts_ips WHERE host_id = $1";
         let sql_cleanup_2 = "DELETE FROM pam_hosts_aliases WHERE host_id = $1";
@@ -417,6 +435,7 @@ WHERE id = $5
                     payload.hostname,
                     payload.gid,
                     payload.force_mfa,
+                    payload.local_password_only,
                     payload.notes,
                     host_id.clone()
                 ),
@@ -513,7 +532,7 @@ WHERE pu.gid = $1 AND pu.wheel = $2
     }
 
     #[inline]
-    pub async fn is_login_allowed(&self, user: &PamUser) -> bool {
+    pub async fn is_user_in_group(&self, user: &PamUser) -> bool {
         let sql = "SELECT 1 FROM pam_rel_groups_users WHERE gid = $1 AND uid = $2";
         if is_hiqlite() {
             DB::hql()
@@ -556,6 +575,7 @@ impl From<PamHost> for PamHostAccessResponse {
         Self {
             hostname: h.hostname,
             force_mfa: h.force_mfa,
+            local_password_only: h.local_password_only,
             notes: h.notes,
             ips: h.ips,
             aliases: h.aliases,
@@ -570,6 +590,7 @@ impl From<PamHost> for PamHostDetailsResponse {
             hostname: h.hostname,
             gid: h.gid,
             force_mfa: h.force_mfa,
+            local_password_only: h.local_password_only,
             notes: h.notes,
             ips: h.ips,
             aliases: h.aliases,

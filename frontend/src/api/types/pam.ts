@@ -22,6 +22,7 @@ export interface PamHostCreateRequest {
     hostname: string,
     gid: number,
     force_mfa: boolean,
+    local_password_only: boolean,
 }
 
 export interface PamHostUpdateRequest {
@@ -29,6 +30,7 @@ export interface PamHostUpdateRequest {
     hostname: string,
     gid: number,
     force_mfa: boolean,
+    local_password_only: boolean,
     notes?: string,
     /// Validation: IpAddr
     ips: string[],
@@ -70,6 +72,7 @@ export interface PamHostAccessResponse {
     hostname: string,
     secret: string,
     force_mfa: boolean,
+    local_password_only: boolean,
     notes?: string,
     ips: string[],
     aliases: string[],
@@ -81,6 +84,7 @@ export interface PamHostDetailsResponse {
     gid: number,
     secret: string,
     force_mfa: boolean,
+    local_password_only: boolean,
     notes?: string,
     ips: string[],
     aliases: string[],

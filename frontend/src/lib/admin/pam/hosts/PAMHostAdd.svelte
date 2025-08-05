@@ -9,6 +9,7 @@
     import Options from "$lib/Options.svelte";
     import InputCheckbox from "$lib/form/InputCheckbox.svelte";
     import {fetchPost} from "$api/fetch";
+    import {slide} from "svelte/transition";
 
     let {
         groups,
@@ -31,6 +32,7 @@
         hostname: '',
         gid: 0,
         force_mfa: true,
+        local_password_only: false
     });
 
     $effect(() => {
@@ -97,6 +99,23 @@
             />
         </div>
 
+        <div class="row">
+            <div class="label">
+                {ta.pam.hostLocalPwdOnly}
+            </div>
+            <InputCheckbox
+                    ariaLabel={ta.pam.hostLocalPwdOnly}
+                    bind:checked={host.local_password_only}
+            />
+        </div>
+        {#if host.local_password_only}
+            <div class="err" transition:slide={{ duration: 150 }}>
+                <p>
+                    {ta.pam.hostLocalPwdOnlyInfo}
+                </p>
+            </div>
+        {/if}
+
         <div class="btn">
             <Button type="submit">
                 {t.common.save}
@@ -116,22 +135,28 @@
         font-size: 1.1rem;
     }
 
+    p {
+        max-width: 20rem;
+    }
+
     .btn {
         margin-top: 1rem;
     }
 
     .container {
+        width: 20rem;
         text-align: left;
     }
 
     .label {
+        margin-bottom: -.2rem;
         color: hsla(var(--text) / .8);
     }
 
     .row {
         margin: .5rem 0;
         display: grid;
-        grid-template-columns: 8rem 5rem;
+        grid-template-columns: 12rem 5.5rem;
         align-items: center;
     }
 </style>

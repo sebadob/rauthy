@@ -4,13 +4,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+ENV PKG_CONFIG_ALLOW_CROSS=1
 
 RUN <<EOF
 #!/bin/bash
 set -e
 
 apt-get update
-apt-get install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu npm
+apt-get install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libpam0g-dev librust-libudev-sys-dev npm
 apt-get clean
 
 rustup target add aarch64-unknown-linux-gnu
@@ -25,3 +26,4 @@ EOF
 WORKDIR /work
 
 CMD ["/bin/bash"]
+

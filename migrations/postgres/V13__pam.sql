@@ -12,16 +12,17 @@ create unique index pam_groups_name_uindex
 
 CREATE TABLE pam_hosts
 (
-    id        VARCHAR NOT NULL
+    id                  VARCHAR NOT NULL
         CONSTRAINT pam_hosts_pk
             PRIMARY KEY,
-    hostname  varchar NOT NULL,
-    gid       bigint  NOT NULL
+    hostname            varchar NOT NULL,
+    gid                 bigint  NOT NULL
         constraint pam_hosts_pam_groups_id_fk
             references pam_groups,
-    secret    bytea   NOT NULL,
-    force_mfa bool    NOT NULL,
-    notes     varchar
+    secret              bytea   NOT NULL,
+    force_mfa           bool    NOT NULL,
+    local_password_only bool    NOT NULL,
+    notes               varchar
 );
 
 CREATE INDEX pam_hosts_gid_index

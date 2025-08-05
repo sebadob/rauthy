@@ -237,6 +237,8 @@ export interface I18nAdmin {
         groups: string,
         groupType: string,
         hostAliases: string,
+        hostLocalPwdOnly: string,
+        hostLocalPwdOnlyInfo: string,
         ipAddresses: string,
         member: string,
         nameExistsAlready: string,
