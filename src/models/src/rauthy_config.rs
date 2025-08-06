@@ -740,9 +740,7 @@ impl Vars {
     }
 
     fn parse_dev(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "dev") else {
-            return;
-        };
+        let mut table = t_table(table, "dev");
 
         if let Some(v) = t_bool(&mut table, "dev", "dev_mode", "DEV_MODE") {
             self.dev.dev_mode = v;
@@ -764,9 +762,7 @@ impl Vars {
     }
 
     fn parse_atproto(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "atproto") else {
-            return;
-        };
+        let mut table = t_table(table, "atproto");
 
         if let Some(v) = t_bool(&mut table, "atproto", "enable", "ATPROTO_ENABLE") {
             self.atproto.enable = v;
@@ -774,9 +770,7 @@ impl Vars {
     }
 
     fn parse_access(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "access") else {
-            return;
-        };
+        let mut table = t_table(table, "access");
 
         if let Some(v) = t_bool(&mut table, "access", "userinfo_strict", "USERINFO_STRICT") {
             self.access.userinfo_strict = v;
@@ -839,9 +833,7 @@ impl Vars {
     }
 
     fn parse_auth_headers(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "auth_headers") else {
-            return;
-        };
+        let mut table = t_table(table, "auth_headers");
 
         if let Some(v) = t_bool(&mut table, "auth_headers", "enable", "AUTH_HEADERS_ENABLE") {
             self.auth_headers.enable = v;
@@ -889,9 +881,7 @@ impl Vars {
     }
 
     fn parse_backchannel_logout(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "backchannel_logout") else {
-            return;
-        };
+        let mut table = t_table(table, "backchannel_logout");
 
         if let Some(v) = t_u16(
             &mut table,
@@ -944,9 +934,7 @@ impl Vars {
     }
 
     fn parse_bootstrap(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "bootstrap") else {
-            return;
-        };
+        let mut table = t_table(table, "bootstrap");
 
         if let Some(v) = t_str(
             &mut table,
@@ -986,9 +974,7 @@ impl Vars {
     }
 
     fn parse_database(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "database") else {
-            return;
-        };
+        let mut table = t_table(table, "database");
 
         if let Some(v) = t_bool(&mut table, "database", "hiqlite", "HIQLITE") {
             self.database.hiqlite = v;
@@ -1074,9 +1060,7 @@ impl Vars {
     }
 
     fn parse_device_grant(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "device_grant") else {
-            return;
-        };
+        let mut table = t_table(table, "device_grant");
 
         if let Some(v) = t_u32(
             &mut table,
@@ -1121,9 +1105,7 @@ impl Vars {
     }
 
     fn parse_dpop(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "dpop") else {
-            return;
-        };
+        let mut table = t_table(table, "dpop");
 
         if let Some(v) = t_bool(&mut table, "dpop", "force_nonce", "DPOP_FORCE_NONCE") {
             self.dpop.force_nonce = v;
@@ -1134,9 +1116,7 @@ impl Vars {
     }
 
     fn parse_dynamic_clients(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "dynamic_clients") else {
-            return;
-        };
+        let mut table = t_table(table, "dynamic_clients");
 
         if let Some(v) = t_bool(
             &mut table,
@@ -1197,9 +1177,7 @@ impl Vars {
     }
 
     fn parse_email(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "email") else {
-            return;
-        };
+        let mut table = t_table(table, "email");
 
         if let Some(v) = t_str(
             &mut table,
@@ -1246,9 +1224,7 @@ impl Vars {
     }
 
     fn parse_encryption(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "encryption") else {
-            return;
-        };
+        let mut table = t_table(table, "encryption");
 
         if let Some(v) = t_str(&mut table, "encryption", "key_active", "ENC_KEY_ACTIVE") {
             self.encryption.key_active = v;
@@ -1259,9 +1235,7 @@ impl Vars {
     }
 
     fn parse_ephemeral_clients(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "ephemeral_clients") else {
-            return;
-        };
+        let mut table = t_table(table, "ephemeral_clients");
 
         if let Some(v) = t_bool(
             &mut table,
@@ -1325,9 +1299,7 @@ impl Vars {
     }
 
     fn parse_events(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "events") else {
-            return;
-        };
+        let mut table = t_table(table, "events");
 
         if let Some(v) = t_str(&mut table, "events", "email", "EVENT_EMAIL") {
             self.events.email = Some(v);
@@ -1649,9 +1621,7 @@ impl Vars {
     }
 
     fn parse_fedcm(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "fedcm") else {
-            return;
-        };
+        let mut table = t_table(table, "fedcm");
 
         if let Some(v) = t_bool(
             &mut table,
@@ -1680,9 +1650,7 @@ impl Vars {
     }
 
     fn parse_geo(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "geolocation") else {
-            return;
-        };
+        let mut table = t_table(table, "geolocation");
 
         if let Some(v) = t_bool(
             &mut table,
@@ -1752,9 +1720,7 @@ impl Vars {
     }
 
     fn parse_hashing(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "hashing") else {
-            return;
-        };
+        let mut table = t_table(table, "hashing");
 
         if let Some(v) = t_u32(&mut table, "hashing", "argon2_m_cost", "ARGON2_M_COST") {
             self.hashing.argon2_m_cost = v;
@@ -1785,9 +1751,7 @@ impl Vars {
     }
 
     async fn parse_hiqlite_config(&mut self, table: &mut toml::Table) -> hiqlite::NodeConfig {
-        let Some(table) = t_table(table, "cluster") else {
-            panic!("Missing mandatory `[cluster]` section");
-        };
+        let table = t_table(table, "cluster");
 
         if self.encryption.key_active.is_empty() || self.encryption.keys.is_empty() {
             panic!("Missing `encryption.keys` / `encryption.key_active`");
@@ -1808,9 +1772,7 @@ impl Vars {
     }
 
     fn parse_http_client(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "http_client") else {
-            return;
-        };
+        let mut table = t_table(table, "http_client");
 
         if let Some(v) = t_u32(
             &mut table,
@@ -1866,9 +1828,7 @@ impl Vars {
     }
 
     fn parse_i18n(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "i18n") else {
-            return;
-        };
+        let mut table = t_table(table, "i18n");
 
         if let Some(v) = t_str_vec(
             &mut table,
@@ -1884,9 +1844,7 @@ impl Vars {
     }
 
     fn parse_lifetimes(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "lifetimes") else {
-            return;
-        };
+        let mut table = t_table(table, "lifetimes");
 
         if let Some(v) = t_u16(
             &mut table,
@@ -1955,9 +1913,7 @@ impl Vars {
     }
 
     fn parse_logging(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "logging") else {
-            return;
-        };
+        let mut table = t_table(table, "logging");
 
         if let Some(v) = t_str(&mut table, "logging", "level", "LOG_LEVEL") {
             self.logging.level = v.into();
@@ -1979,9 +1935,7 @@ impl Vars {
     }
 
     fn parse_mfa(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "mfa") else {
-            return;
-        };
+        let mut table = t_table(table, "mfa");
 
         if let Some(v) = t_bool(&mut table, "mfa", "admin_force_mfa", "ADMIN_FORCE_MFA") {
             self.mfa.admin_force_mfa = v;
@@ -1989,9 +1943,7 @@ impl Vars {
     }
 
     fn parse_pam(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "pam") else {
-            return;
-        };
+        let mut table = t_table(table, "pam");
 
         if let Some(v) = t_u8(
             &mut table,
@@ -2012,9 +1964,7 @@ impl Vars {
     }
 
     fn parse_pow(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "pow") else {
-            return;
-        };
+        let mut table = t_table(table, "pow");
 
         if let Some(v) = t_u8(&mut table, "pow", "difficulty", "POW_DIFFICULTY") {
             self.pow.difficulty = v;
@@ -2025,9 +1975,7 @@ impl Vars {
     }
 
     fn parse_scim(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "scim") else {
-            return;
-        };
+        let mut table = t_table(table, "scim");
 
         if let Some(v) = t_bool(
             &mut table,
@@ -2051,9 +1999,7 @@ impl Vars {
     }
 
     fn parse_server(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "server") else {
-            return;
-        };
+        let mut table = t_table(table, "server");
 
         if let Some(v) = t_str(&mut table, "server", "listen_address", "LISTEN_ADDRESS") {
             self.server.listen_address = v.into();
@@ -2125,9 +2071,7 @@ impl Vars {
     }
 
     fn parse_suspicious_requests(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "suspicious_requests") else {
-            return;
-        };
+        let mut table = t_table(table, "suspicious_requests");
 
         if let Some(v) = t_u16(
             &mut table,
@@ -2267,9 +2211,7 @@ impl Vars {
     }
 
     fn parse_tls(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "tls") else {
-            return;
-        };
+        let mut table = t_table(table, "tls");
 
         if let Some(v) = t_str(&mut table, "tls", "cert_path", "TLS_CERT") {
             self.tls.cert_path = Some(v);
@@ -2280,9 +2222,7 @@ impl Vars {
     }
 
     fn parse_user_pictures(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "user_pictures") else {
-            return;
-        };
+        let mut table = t_table(table, "user_pictures");
 
         if let Some(v) = t_str(
             &mut table,
@@ -2337,9 +2277,7 @@ impl Vars {
     }
 
     fn parse_user_registration(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "user_registration") else {
-            return;
-        };
+        let mut table = t_table(table, "user_registration");
 
         if let Some(v) = t_bool(&mut table, "user_registration", "enable", "OPEN_USER_REG") {
             self.user_registration.enable = v;
@@ -2363,9 +2301,7 @@ impl Vars {
     }
 
     fn parse_webauthn(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "webauthn") else {
-            return;
-        };
+        let mut table = t_table(table, "webauthn");
 
         if let Some(v) = t_str(&mut table, "webauthn", "rp_id", "RP_ID") {
             self.webauthn.rp_id = v;
@@ -2941,11 +2877,14 @@ fn t_str_vec(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> O
     Some(res)
 }
 
-pub fn t_table(map: &mut toml::Table, key: &str) -> Option<toml::Table> {
-    let Value::Table(t) = map.remove(key)? else {
-        panic!("Expected type `Table` for {key}")
-    };
-    Some(t)
+pub fn t_table(map: &mut toml::Table, key: &str) -> toml::Table {
+    match map.remove(key) {
+        None => toml::Table::default(),
+        Some(Value::Table(t)) => t,
+        Some(_) => {
+            panic!("Expected type `Table` for {key}")
+        }
+    }
 }
 
 #[inline]
