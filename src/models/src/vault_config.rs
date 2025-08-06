@@ -87,9 +87,7 @@ impl VaultConfig {
     }
 
     fn parse_toml(&mut self, table: &mut toml::Table) {
-        let Some(mut table) = t_table(table, "vault") else {
-            return;
-        };
+        let mut table = t_table(table, "vault");
 
         self.vault_source.addr = table
             .remove("addr")
