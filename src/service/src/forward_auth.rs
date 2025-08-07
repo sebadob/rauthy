@@ -50,8 +50,7 @@ pub async fn get_forward_auth_client(
         }
         Some(s) => {
             debug!(fwd_auth_session = ?s);
-            let ip = Some(real_ip_from_req(&req)?);
-            if s.validate(ip).is_ok() {
+            if s.validate(&req).is_ok() {
                 if check_csrf {
                     match s.validate_csrf(&req, params.danger_cookie_insecure) {
                         Ok(_) => Some(s),
