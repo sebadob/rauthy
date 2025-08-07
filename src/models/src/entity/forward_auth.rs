@@ -6,7 +6,7 @@ use chrono::Utc;
 use cryptr::EncValue;
 use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_no_pad_decode, base64_url_no_pad_encode, deserialize,
-    serialize,
+    real_ip_from_req, serialize,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -73,15 +73,14 @@ impl ForwardAuthSession {
     }
 
     #[inline]
-    pub fn validate(&self, remote_ip: Option<IpAddr>) -> Result<(), ErrorResponse> {
-        if RauthyConfig::get().vars.access.session_validate_ip && remote_ip.is_none() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Forbidden,
-                "Missing peer IP in session validation",
-            ));
-        }
-
+    pub fn validate(&self, req: &HttpRequest) -> Result<(), ErrorResponse> {
+        let remote_ip = if RauthyConfig::get().vars.access.session_validate_ip {
+            real_ip_from_req(req).ok()
+        } else {
+            None
+        };
         let session_timeout = RauthyConfig::get().vars.lifetimes.session_timeout;
+
         if !self
             .inner
             .is_valid(session_timeout, remote_ip, "NO_EXCEPTION")
