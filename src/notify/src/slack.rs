@@ -60,7 +60,7 @@ struct SlackMessageApi<'a> {
 }
 
 impl SlackMessageApi<'_> {
-    pub fn new(color: &str, fields: Vec<SlackMessageField>) -> SlackMessageApi {
+    pub fn new(color: &str, fields: Vec<SlackMessageField>) -> SlackMessageApi<'_> {
         SlackMessageApi { color, fields }
     }
 }

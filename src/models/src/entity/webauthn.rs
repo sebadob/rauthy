@@ -501,7 +501,7 @@ impl WebauthnCookie {
         Self { email, exp }
     }
 
-    pub fn build(&self) -> Result<Cookie, ErrorResponse> {
+    pub fn build(&self) -> Result<Cookie<'_>, ErrorResponse> {
         let ser = serialize(self)?;
         let enc = EncValue::encrypt(&ser)?.into_bytes();
         let b64 = base64_encode(&enc);

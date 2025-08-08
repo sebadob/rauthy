@@ -776,20 +776,20 @@ WHERE id = $4"#;
         &self,
         cache_current_hours: Option<u8>,
     ) -> Result<(), ErrorResponse> {
-        if let Some(hours) = cache_current_hours {
-            if let Some(plain) = self.get_secret_cleartext()? {
-                // The original idea was to save secrets hashed. However, since the secrets are used as
-                // a key, the HashMap inside the `hiqlite` cache handler will take care of this for us,
-                // to they could not be read from memory at runtime.
-                DB::hql()
-                    .put_bytes(
-                        Cache::ClientSecret,
-                        plain,
-                        self.id.as_bytes().to_vec(),
-                        Some(hours as i64),
-                    )
-                    .await?;
-            }
+        if let Some(hours) = cache_current_hours
+            && let Some(plain) = self.get_secret_cleartext()?
+        {
+            // The original idea was to save secrets hashed. However, since the secrets are used as
+            // a key, the HashMap inside the `hiqlite` cache handler will take care of this for us,
+            // to they could not be read from memory at runtime.
+            DB::hql()
+                .put_bytes(
+                    Cache::ClientSecret,
+                    plain,
+                    self.id.as_bytes().to_vec(),
+                    Some(hours as i64),
+                )
+                .await?;
         }
         Ok(())
     }

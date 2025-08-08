@@ -203,14 +203,14 @@ impl ClientScim {
     }
 
     fn is_group_sync_prefix_match(&self, group: &Group) -> bool {
-        if let Some(prefix) = &self.group_sync_prefix {
-            if !group.name.starts_with(prefix) {
-                debug!(
-                    "Group name does not start with configured prefix for SCIM client {}",
-                    self.client_id
-                );
-                return false;
-            }
+        if let Some(prefix) = &self.group_sync_prefix
+            && !group.name.starts_with(prefix)
+        {
+            debug!(
+                "Group name does not start with configured prefix for SCIM client {}",
+                self.client_id
+            );
+            return false;
         }
         true
     }
@@ -430,16 +430,16 @@ impl ClientScim {
                         ),
                     )),
                     ScimResource::Group(remote) => {
-                        if let Some(ext_id) = &remote.external_id {
-                            if ext_id != &group.id {
-                                return Err(ErrorResponse::new(
-                                    ErrorResponseType::Scim,
-                                    format!(
-                                        "Error for SCIM client {} with group {}: Group has an external ID which does not match ours",
-                                        self.client_id, group.name
-                                    ),
-                                ));
-                            }
+                        if let Some(ext_id) = &remote.external_id
+                            && ext_id != &group.id
+                        {
+                            return Err(ErrorResponse::new(
+                                ErrorResponseType::Scim,
+                                format!(
+                                    "Error for SCIM client {} with group {}: Group has an external ID which does not match ours",
+                                    self.client_id, group.name
+                                ),
+                            ));
                         }
                         Ok(Some(*remote))
                     }
@@ -741,16 +741,16 @@ impl ClientScim {
                 let res = lr.resources.swap_remove(0);
                 match res {
                     ScimResource::User(remote) => {
-                        if let Some(ext_id) = &remote.external_id {
-                            if ext_id != user_id {
-                                let err = format!(
-                                    "Error for SCIM client {} with user {user_email}: User has an \
+                        if let Some(ext_id) = &remote.external_id
+                            && ext_id != user_id
+                        {
+                            let err = format!(
+                                "Error for SCIM client {} with user {user_email}: User has an \
                                     external ID which does not match ours",
-                                    self.client_id
-                                );
-                                error!("{}", err);
-                                return Err(ErrorResponse::new(ErrorResponseType::Scim, err));
-                            }
+                                self.client_id
+                            );
+                            error!("{}", err);
+                            return Err(ErrorResponse::new(ErrorResponseType::Scim, err));
                         }
                         Ok(Some(*remote))
                     }

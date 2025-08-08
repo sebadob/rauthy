@@ -124,17 +124,17 @@ pub async fn get_authorize(
 
     // check if the user needs to do the Webauthn login each time
     let mut action = FrontendAction::None;
-    if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA)) {
-        if let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await {
-            // we need to check this, because a user could deactivate MFA in another browser or
-            // be deleted while still having existing mfa cookies somewhere else
-            if user.has_webauthn_enabled() {
-                action = FrontendAction::MfaLogin(mfa_cookie.email);
+    if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
+        && let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await
+    {
+        // we need to check this, because a user could deactivate MFA in another browser or
+        // be deleted while still having existing mfa cookies somewhere else
+        if user.has_webauthn_enabled() {
+            action = FrontendAction::MfaLogin(mfa_cookie.email);
 
-                // if the user must do another MFA login anyway, we do never force a new session creation,
-                // because the authentication happens each time anyway
-                force_new_session = false;
-            }
+            // if the user must do another MFA login anyway, we do never force a new session creation,
+            // because the authentication happens each time anyway
+            force_new_session = false;
         }
     }
 
@@ -548,13 +548,13 @@ pub async fn post_device_auth(
         None
     };
 
-    if let Ok(secret) = client.get_secret_cleartext() {
-        if secret != payload.client_secret {
-            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::UnauthorizedClient,
-                error_description: Some(Cow::from("Invalid `client_secret`")),
-            });
-        }
+    if let Ok(secret) = client.get_secret_cleartext()
+        && secret != payload.client_secret
+    {
+        return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+            error_description: Some(Cow::from("Invalid `client_secret`")),
+        });
     }
 
     // we are good - create the code
