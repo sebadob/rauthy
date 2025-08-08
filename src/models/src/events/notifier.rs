@@ -31,31 +31,28 @@ impl EventNotifier {
         // if there will be more notifier targets in the future, a macro may make sense for a
         // cleaner code
 
-        if let Some((level, notifier)) = NOTIFIER_EMAIL.get() {
-            if event.typ == EventType::Test || &event.level.value() >= level {
-                if let Err(err) = notifier.notify(&notification).await {
-                    error!(?err, "sending Event via E-Mail Notifier");
-                    // TODO implement some retry mechanism
-                }
-            }
+        if let Some((level, notifier)) = NOTIFIER_EMAIL.get()
+            && (event.typ == EventType::Test || &event.level.value() >= level)
+            && let Err(err) = notifier.notify(&notification).await
+        {
+            error!(?err, "sending Event via E-Mail Notifier");
+            // TODO implement some retry mechanism
         }
 
-        if let Some((level, notifier)) = NOTIFIER_MATRIX.get() {
-            if event.typ == EventType::Test || &event.level.value() >= level {
-                if let Err(err) = notifier.notify(&notification).await {
-                    error!(?err, "sending Event via Matrix Notifier");
-                    // TODO implement some retry mechanism
-                }
-            }
+        if let Some((level, notifier)) = NOTIFIER_MATRIX.get()
+            && (event.typ == EventType::Test || &event.level.value() >= level)
+            && let Err(err) = notifier.notify(&notification).await
+        {
+            error!(?err, "sending Event via Matrix Notifier");
+            // TODO implement some retry mechanism
         }
 
-        if let Some((level, notifier)) = NOTIFIER_SLACK.get() {
-            if event.typ == EventType::Test || &event.level.value() >= level {
-                if let Err(err) = notifier.notify(&notification).await {
-                    error!(?err, "sending Event via Slack Notifier");
-                    // TODO implement some retry mechanism
-                }
-            }
+        if let Some((level, notifier)) = NOTIFIER_SLACK.get()
+            && (event.typ == EventType::Test || &event.level.value() >= level)
+            && let Err(err) = notifier.notify(&notification).await
+        {
+            error!(?err, "sending Event via Slack Notifier");
+            // TODO implement some retry mechanism
         }
 
         Ok(())

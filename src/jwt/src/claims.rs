@@ -103,7 +103,7 @@ impl AddressClaim<'_> {
 }
 
 impl<'a> From<&'a rauthy_api_types::oidc::AddressClaim> for AddressClaim<'a> {
-    fn from(value: &rauthy_api_types::oidc::AddressClaim) -> AddressClaim {
+    fn from(value: &rauthy_api_types::oidc::AddressClaim) -> AddressClaim<'_> {
         AddressClaim {
             formatted: value.formatted.to_string(),
             street_address: value.street_address.as_deref(),

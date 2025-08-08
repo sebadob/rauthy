@@ -333,13 +333,12 @@ pub async fn delete_cust_attr(
 pub async fn get_user_picture_config(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if let Err(err) = principal.validate_session_auth() {
-        if principal
+    if let Err(err) = principal.validate_session_auth()
+        && principal
             .validate_api_key(AccessGroup::Users, AccessRights::Read)
             .is_err()
-        {
-            return Err(err);
-        }
+    {
+        return Err(err);
     }
 
     Ok(HttpResponse::Ok().json(UserPictureConfig {
@@ -427,21 +426,21 @@ pub async fn post_users_register_handle(
             }
         }
     }
-    if let Some(redirect_uri) = &payload.redirect_uri {
-        if !reg.allow_open_redirect {
-            let mut allow = false;
-            for uri in Client::find_all_client_uris().await? {
-                if uri.starts_with(redirect_uri) {
-                    allow = true;
-                    break;
-                }
+    if let Some(redirect_uri) = &payload.redirect_uri
+        && !reg.allow_open_redirect
+    {
+        let mut allow = false;
+        for uri in Client::find_all_client_uris().await? {
+            if uri.starts_with(redirect_uri) {
+                allow = true;
+                break;
             }
-            if !allow {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "given `redirect_uri` not allowed",
-                ));
-            }
+        }
+        if !allow {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "given `redirect_uri` not allowed",
+            ));
         }
     }
 
@@ -754,13 +753,12 @@ pub async fn put_user_picture(
     }
 
     let user_id = path.into_inner();
-    if let Err(err) = principal.validate_user_or_admin(&user_id) {
-        if principal
+    if let Err(err) = principal.validate_user_or_admin(&user_id)
+        && principal
             .validate_api_key(AccessGroup::Users, AccessRights::Update)
             .is_err()
-        {
-            return Err(err);
-        }
+    {
+        return Err(err);
     }
 
     content_len_limit(&req, RauthyConfig::get().vars.user_pictures.upload_limit_mb)?;
@@ -882,13 +880,12 @@ pub async fn delete_user_picture(
 ) -> Result<HttpResponse, ErrorResponse> {
     let (user_id, picture_id) = path.into_inner();
 
-    if let Err(err) = principal.validate_user_or_admin(&user_id) {
-        if principal
+    if let Err(err) = principal.validate_user_or_admin(&user_id)
+        && principal
             .validate_api_key(AccessGroup::Users, AccessRights::Delete)
             .is_err()
-        {
-            return Err(err);
-        }
+    {
+        return Err(err);
     }
 
     UserPicture::remove(picture_id, user_id.clone()).await?;

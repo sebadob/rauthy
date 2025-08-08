@@ -163,13 +163,13 @@ impl ValidationClaims<'_> {
                 "Token is not valid yet",
             ));
         }
-        if let Some(typ) = expected_type {
-            if self.typ != typ {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::JwtToken,
-                    "Invalid `typ`",
-                ));
-            }
+        if let Some(typ) = expected_type
+            && self.typ != typ
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::JwtToken,
+                "Invalid `typ`",
+            ));
         }
         if self.iss != issuer {
             return Err(ErrorResponse::new(

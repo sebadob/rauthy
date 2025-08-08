@@ -1472,14 +1472,14 @@ impl User {
 
     #[inline]
     pub fn check_expired(&self) -> Result<(), ErrorResponse> {
-        if let Some(ts) = self.user_expires {
-            if Utc::now().timestamp() > ts {
-                trace!("User has expired");
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Disabled,
-                    "User has expired",
-                ));
-            }
+        if let Some(ts) = self.user_expires
+            && Utc::now().timestamp() > ts
+        {
+            trace!("User has expired");
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Disabled,
+                "User has expired",
+            ));
         }
         Ok(())
     }
@@ -1636,7 +1636,7 @@ impl User {
     }
 
     #[inline]
-    pub fn groups_iter(&self) -> Split<char> {
+    pub fn groups_iter(&self) -> Split<'_, char> {
         self.groups.as_deref().unwrap_or_default().split(',')
     }
 
@@ -1652,7 +1652,7 @@ impl User {
     }
 
     #[inline]
-    pub fn roles_iter(&self) -> Split<char> {
+    pub fn roles_iter(&self) -> Split<'_, char> {
         self.roles.as_str().split(',')
     }
 
@@ -1813,36 +1813,36 @@ impl User {
             ));
         }
 
-        if let Some(exp) = self.password_expires {
-            if exp < OffsetDateTime::now_utc().unix_timestamp() {
-                if !self.enabled {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::PasswordExpired,
-                        "The password has expired",
-                    ));
-                }
-
-                // if the given password does match, send out a reset link to set a new one
-                return if self.match_passwords(plain_password.clone()).await? {
-                    let magic_link = MagicLink::create(
-                        self.id.clone(),
-                        RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
-                        MagicLinkUsage::PasswordReset(None),
-                    )
-                    .await?;
-                    send_pwd_reset(&magic_link, self).await;
-
-                    Err(ErrorResponse::new(
-                        ErrorResponseType::PasswordRefresh,
-                        "The password has expired. A reset E-Mail has been sent out.",
-                    ))
-                } else {
-                    Err(ErrorResponse::new(
-                        ErrorResponseType::Unauthorized,
-                        "Invalid user credentials",
-                    ))
-                };
+        if let Some(exp) = self.password_expires
+            && exp < OffsetDateTime::now_utc().unix_timestamp()
+        {
+            if !self.enabled {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::PasswordExpired,
+                    "The password has expired",
+                ));
             }
+
+            // if the given password does match, send out a reset link to set a new one
+            return if self.match_passwords(plain_password.clone()).await? {
+                let magic_link = MagicLink::create(
+                    self.id.clone(),
+                    RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
+                    MagicLinkUsage::PasswordReset(None),
+                )
+                .await?;
+                send_pwd_reset(&magic_link, self).await;
+
+                Err(ErrorResponse::new(
+                    ErrorResponseType::PasswordRefresh,
+                    "The password has expired. A reset E-Mail has been sent out.",
+                ))
+            } else {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Invalid user credentials",
+                ))
+            };
         }
 
         if self.match_passwords(plain_password).await? {

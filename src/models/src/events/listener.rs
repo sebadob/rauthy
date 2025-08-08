@@ -166,10 +166,10 @@ impl EventListener {
                     }
 
                     // keep current events max size and push payload
-                    if events.len() > EVENTS_LATEST_LIMIT as usize {
-                        if let Some((_, id, _)) = events.pop_front() {
-                            event_ids.remove(&id);
-                        }
+                    if events.len() > EVENTS_LATEST_LIMIT as usize
+                        && let Some((_, id, _)) = events.pop_front()
+                    {
+                        event_ids.remove(&id);
                     }
                     events.push_back((event_level_value, event.id.clone(), sse_payload));
                     event_ids.insert(event.id);

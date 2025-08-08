@@ -290,25 +290,22 @@ impl TokenSet {
             claims.family_name = user.family_name.as_deref();
             claims.locale = Some(user.language.as_str());
 
-            if let Some(values) = &user_values {
-                if let Some(birthdate) = &values.birthdate {
-                    claims.birthdate = Some(birthdate.as_str());
-                }
+            if let Some(values) = &user_values
+                && let Some(birthdate) = &values.birthdate
+            {
+                claims.birthdate = Some(birthdate.as_str());
             }
 
             claims.picture = user.picture_uri().map(Cow::from);
         }
-        if add_address {
-            if let Some(values) = &user_values {
-                claims.address = rauthy_jwt::claims::AddressClaim::try_build(user, values);
-            }
+        if add_address && let Some(values) = &user_values {
+            claims.address = rauthy_jwt::claims::AddressClaim::try_build(user, values);
         }
-        if add_phone {
-            if let Some(values) = &user_values {
-                if let Some(phone) = &values.phone {
-                    claims.phone = Some(phone.as_str());
-                }
-            }
+        if add_phone
+            && let Some(values) = &user_values
+            && let Some(phone) = &values.phone
+        {
+            claims.phone = Some(phone.as_str());
         }
         if scope.contains("groups") {
             claims.groups = Some(user.get_groups());

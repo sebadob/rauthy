@@ -2762,8 +2762,8 @@ pub struct VarsAtproto {
 }
 
 fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<bool> {
-    if !env_var.is_empty() {
-        if let Ok(v) = env::var(env_var)
+    if !env_var.is_empty()
+        && let Ok(v) = env::var(env_var)
             .as_deref()
             .map(|v| match v.parse::<bool>() {
                 Ok(b) => b,
@@ -2771,9 +2771,8 @@ fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Opti
                     panic!("{}", err_env(env_var, "bool"));
                 }
             })
-        {
-            return Some(v);
-        }
+    {
+        return Some(v);
     }
 
     let Value::Boolean(b) = map.remove(key)? else {
@@ -2783,8 +2782,8 @@ fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Opti
 }
 
 fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<i64> {
-    if !env_var.is_empty() {
-        if let Ok(v) = env::var(env_var)
+    if !env_var.is_empty()
+        && let Ok(v) = env::var(env_var)
             .as_deref()
             .map(|v| match v.parse::<i64>() {
                 Ok(b) => b,
@@ -2792,9 +2791,8 @@ fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Optio
                     panic!("{}", err_env(env_var, "Integer"));
                 }
             })
-        {
-            return Some(v);
-        }
+    {
+        return Some(v);
     }
 
     let Value::Integer(i) = map.remove(key)? else {
@@ -2835,10 +2833,10 @@ fn t_u8(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> 
 }
 
 pub fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<String> {
-    if !env_var.is_empty() {
-        if let Ok(v) = env::var(env_var) {
-            return Some(v);
-        }
+    if !env_var.is_empty()
+        && let Ok(v) = env::var(env_var)
+    {
+        return Some(v);
     }
     let Value::String(s) = map.remove(key)? else {
         panic!("{}", err_t(key, parent, "String"));
@@ -2847,21 +2845,21 @@ pub fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> O
 }
 
 fn t_str_vec(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<Vec<String>> {
-    if !env_var.is_empty() {
-        if let Ok(arr) = env::var(env_var) {
-            return Some(
-                arr.lines()
-                    .filter_map(|l| {
-                        let trimmed = l.trim().to_string();
-                        if trimmed.is_empty() {
-                            None
-                        } else {
-                            Some(trimmed)
-                        }
-                    })
-                    .collect(),
-            );
-        }
+    if !env_var.is_empty()
+        && let Ok(arr) = env::var(env_var)
+    {
+        return Some(
+            arr.lines()
+                .filter_map(|l| {
+                    let trimmed = l.trim().to_string();
+                    if trimmed.is_empty() {
+                        None
+                    } else {
+                        Some(trimmed)
+                    }
+                })
+                .collect(),
+        );
     }
 
     let Value::Array(arr) = map.remove(key)? else {
