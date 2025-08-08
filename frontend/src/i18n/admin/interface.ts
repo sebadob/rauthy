@@ -27,7 +27,10 @@ export interface I18nAdmin {
         // inserted as html
         makeEditableP2: string,
         makeEditableP3: string,
+        addType: string,
+        removeType: string,
         name: string,
+        typ: string,
         userEditable: string,
     },
     backup: {
@@ -49,6 +52,9 @@ export interface I18nAdmin {
         confidential: string,
         confidentialNoSecret: string,
         config: string,
+        custEmailMapping: string,
+        custEmailMappingExplanation: string,
+        custEmailMappingNoAttrs: string,
         delete1: string,
         descAuthCode: string,
         descClientUri: string,

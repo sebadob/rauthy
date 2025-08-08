@@ -22,11 +22,14 @@ export let I18nAdminDe: I18nAdmin = {
         makeEditable: "Editierbar machen",
         makeEditableP1: "Dieses Attribut kann durch Benutzer editierbar gemacht werden.",
         makeEditableP2: `<b>ACHTUNG:</b> Diese Änderung kann niemals rückgängig gemacht werden! Jegliche Angaben durch
-            einen Benutzer direkt sind immer unvalidiert und dürfen NIEMALS für irgengeine Form von Authentifizierung 
+            einen Benutzer direkt sind immer unvalidiert und dürfen NIEMALS für irgengeine Form von Authentifizierung
             oder Authorisierung genutzt werden!`,
         makeEditableP3: `Ein Attribut kann deshalb niemals von editierbar zu nicht-editierbar gewandelt werden, weil
             für eine gewisse Zeit, unabhängig von der Dauer, unvalidierte Eingaben erlaubt waren.`,
+        addType: "Typ hinzufügen",
+        removeType: "Typ entfernen",
         name: "Attribut Name",
+        typ: "Typ",
         userEditable: "Durch Benutzer Editierbar",
     },
     backup: {
@@ -43,7 +46,7 @@ export let I18nAdminDe: I18nAdmin = {
             descHsl: `Die folgenden Werte müssen als HSL angegeben werden. Hier wird nur die Basis-Farbe
                 definiert. Alpha Kanäle und andere Werte werden vom Theme dynamisch angepasst.`,
             descFullCss: `Die folgenden Werte müssen vollständig gültige Angaben für CSS <code>color</code> sein.
-                Es können auch komplexe Kalkulationen oder die oben definierten CSS Variables 
+                Es können auch komplexe Kalkulationen oder die oben definierten CSS Variables
                 genutzt werden.`,
             descVariables: `Jede nachfolgende Beschriftung ist gleichzeitig der Name der CSS Variable. Das heisst,
                 dass z.B. die freien Eingaben wiederum die Variablen referenzieren können, z.B. mit
@@ -52,6 +55,10 @@ export let I18nAdminDe: I18nAdmin = {
         confidential: "Vertraulich",
         confidentialNoSecret: "Dies is kein vertraulicher Client und hat somit kein Secret.",
         config: "Client Konfiguration",
+        custEmailMapping: "Custom E-Mail Mapping",
+        custEmailMappingExplanation: "Use a custom attribute for the E-Mail that will be provided to the client.",
+        custEmailMappingNoAttrs: `No custom attributes are available for custom E-Mail mapping.
+        The attribute must be of type \`email\` and must not be user editable.`,
         delete1: "Soll dieser Client wirklich gelöscht werden?",
         descAuthCode: `Die Gültigkeit der Auth Codes kann angepasst werden um zusätzliche Sicherheit
             zu gewinnen. Auth Codes können nur einmalig verwendet werden und sind normalerweise für 60
@@ -62,14 +69,14 @@ export let I18nAdminDe: I18nAdmin = {
             Er dient lediglich der Anzeige auf der Login Seite.`,
         descGroupPrefix: `Der Login für diesen Client kann limitiert werden durch ein optionales Gruppen Prefix.
             Nur Benutzer, die zur entsprechenden Gruppe gehören, dürfen sich bei diesem Client einloggen.`,
-        descOrigin: `Externe, zusätzlich erlaubte Origins - normalerweise nur notwendig, wenn dieser 
+        descOrigin: `Externe, zusätzlich erlaubte Origins - normalerweise nur notwendig, wenn dieser
             Client direkt aus dem Browser heraus Requests zu Rauthy machen muss, typischerweise SPAs.`,
-        descPKCE: `Wenn der Client Support für PKCE hat, sollte zur zusätzlichen Sicherheit immer S256 
+        descPKCE: `Wenn der Client Support für PKCE hat, sollte zur zusätzlichen Sicherheit immer S256
             PKCE aktiviert werden. Wenn ein nicht-vertraulicher Client (z.B. eine SPA) genutzt wird, muss
             mindestens eine PKCE Challenge aktiviert sein, um ausreichend Sicherheit bieten zu können.`,
         descPKCEEnforce: `Wenn PKCE aktiviert ist, erzwingt Rauthy die Nutzung and verweigert Logins,
             die keine korrekte Challenge bereit stellen.`,
-        descUri: `Es können beliebig viele Redirect URIs angegeben werden. Am Ende einer Jeden wird 
+        descUri: `Es können beliebig viele Redirect URIs angegeben werden. Am Ende einer Jeden wird
             optional <code>*</code> als Wildcard akzeptiert.`,
         errConfidentialPKCE: `Der Client muss entweder vertraulich sein oder mindestens eine PKCE
             Challenge aktiviert haben.`,
@@ -77,7 +84,7 @@ export let I18nAdminDe: I18nAdmin = {
         groupLoginPrefix: "Login Gruppen Prefix",
         name: "Client Name",
         scim: {
-            baseUri: `Die SCIM base URI muss jene sein, von der Sub-Routen wie 
+            baseUri: `Die SCIM base URI muss jene sein, von der Sub-Routen wie
                 <code>{base_uri}/Users/{id}</base_uri></code> korrekt abgeleitet werden können.`,
             desc: "Sollte dieser client {{ SCIM_LINK }} unterstützen, kann es hier aktiviert werden.",
             enable: "SCIMv2 aktivieren",
@@ -91,7 +98,7 @@ export let I18nAdminDe: I18nAdmin = {
             reqLi1: "Der client muss <code>externalId</code> korrekt handhaben.",
             reqLi2: `Mindestens die <code>/Users</code> endpunkte mit <code>filter=externalId eq "*"</code> und
                 <code>filter=userName eq "*"</code> müssen unterstützt sein.`,
-            reqLi3: `Wenn Gruppen sychronisiert werden sollen, so müssen unter <code>/Groups</code> zusätzlich 
+            reqLi3: `Wenn Gruppen sychronisiert werden sollen, so müssen unter <code>/Groups</code> zusätzlich
                 <code>filter=displayName eq "*"</code> unterstützt sein.`,
         },
         scopes: {
@@ -107,7 +114,7 @@ export let I18nAdminDe: I18nAdmin = {
             cacheDuration: "Cache Dauer (Stunden)",
             generate: "Neues Secret Generieren",
             rotateDesc1: `Um unterbrechungsfreie Updates durchfürhen zu können, ist es möglich, das bestehende Secret
-                für eine gewisse Zeit im in-memory Cache zu behalten. Es kann ein Wert zwischen 1 und 24 Stunden 
+                für eine gewisse Zeit im in-memory Cache zu behalten. Es kann ein Wert zwischen 1 und 24 Stunden
                 angegeben werden.`,
             rotateDesc2: "Achtung: Das derzeitige Secret sollte nicht im Cache behalten werden, wenn es ein Leak gab!",
         },
@@ -151,13 +158,13 @@ export let I18nAdminDe: I18nAdmin = {
             keysAvailable: "Verfügbare Keys",
             migrate: "Migrieren",
             migrateToKey: "Migriere alle Werte zu folgendem Encryption Key",
-            p1: `Diese Schlüssel werden für die zusätzliche Verschlüsselung in verschiedenen Situationen genutzt, wie 
+            p1: `Diese Schlüssel werden für die zusätzliche Verschlüsselung in verschiedenen Situationen genutzt, wie
             z.B. gewisse Werte innerhalb der Datenbank oder Session Cookies. Sie sind statisch konfiguriert, aber können
             als best-practice manuell rotiert werden.`,
             p2: `Der aktive Schlüssel ist ebenfalls statisch im Rauthy config file gesetzt. Alle neu-verschlüsselten
             Werte werden mit dem aktiven Schlüssel verschlüsselt, während alte zur Rückwärts-Kompatibilität parallel
             existieren können.`,
-            p3: `Das Migrieren aller verschlüsselten Werte an dieser Stelle kann, je nach System, einige Zeit in 
+            p3: `Das Migrieren aller verschlüsselten Werte an dieser Stelle kann, je nach System, einige Zeit in
             Anspruch nehmen.`,
             pNotPossible: 'Zur Migration müssen mindestens 2 Encryption Keys vorhanden sein.',
         },
@@ -166,26 +173,26 @@ export let I18nAdminDe: I18nAdmin = {
 
             currValuesHead: 'Derzeitige Werte',
             currValues1: 'Die derzeitigen im Backend konfigurierten Werte sind die folgenden:',
-            currValuesNote: `Notiz: Die Login Zeit vom Backend wird nur dann eine gute Richtlinie sein, nachdem 
-            mindestens 5 erfolgreiche Logins seit dem letzten Neustart gemacht wurden. Der Ausgangswert ist immer 
+            currValuesNote: `Notiz: Die Login Zeit vom Backend wird nur dann eine gute Richtlinie sein, nachdem
+            mindestens 5 erfolgreiche Logins seit dem letzten Neustart gemacht wurden. Der Ausgangswert ist immer
             2000 ms und wird mit jedem erfolgreichen Login neu gemittelt.`,
             currValuesThreadsAccess: 'Threads (p_cost) die Rauthy zur Verfügung stehen',
 
             loginTimeHead: 'Ein paar Worte zur Login Zeit',
             loginTime1: `Generell möchten User alles so schnell wie möglich. Für eine sichere Login Prozedur jedoch
             sollte mindestens eine Dauer von 500 - 1000 ms anvisiert werden and kein Problem darstellen. Die Zeit zum
-            Passwort Hashing darf nicht zu kurz gewählt werden, weil dadurch die Stärke des Hashes reduziert werden 
+            Passwort Hashing darf nicht zu kurz gewählt werden, weil dadurch die Stärke des Hashes reduziert werden
             würde.`,
             loginTime2: `Um standardmäßig genügend Sicherheit zu gewährleisten, erlaubt dieses Tool keine kleineren
             Werte als 500 ms für die Login Zeit.`,
 
             mCost1: `Die <code>m_cost</code> definiert die Menga an <b>Speicher (in kB)</b> die zum Hashing verwendet
-            wird. Je höher dieser Wert, umso besser (sicherer), aber die notwendigen Ressourcen müssen natürlich 
+            wird. Je höher dieser Wert, umso besser (sicherer), aber die notwendigen Ressourcen müssen natürlich
             vorhanden sein.<br>
             Wenn z.B. 4 Passwörter zur selben Zeit gehasht werden, wird selbstverständlich <code>4 x m_cost</code>
             an Speicher benötigt, was zu jeder Zeit zur Verfügung stehen muss.`,
             mCost2: `Den "richtigen" Wert für <code>m_cost</code> zu finden ist glücklicherweise sehr einfach. Definiere
-            das Maximum an Speicher, das Rauthy nutzen sollte, dividiere die Menge durch die Anzahl paralleler Logins, 
+            das Maximum an Speicher, das Rauthy nutzen sollte, dividiere die Menge durch die Anzahl paralleler Logins,
             die möglich sein sollten (<code>MAX_HASH_THREADS</code>) und ziehe hier von eine gewisse statische Menge ab.
             Die Höhe des statisch benötigten Speichers hängt von der gewählten Datenbank und Anzahl Benutzer ab, jedoch
             wird sie in den meisten Fällen im Bereich von 32 - 96 MB sein.`,
@@ -196,22 +203,22 @@ export let I18nAdminDe: I18nAdmin = {
             pCost2: `Die generelle Regel lautet:<br>
             Setze <code>p_cost</code> auf den zweifachen Wert der verfügbares CPU Kerne.<br>
             Wenn z.B. 4 Kerne zur Verfügung stehen, wäre eine <code>p_cost</code> von 8 ein guter Wert.<br>
-            Der Wert muss allerdings die maximale Anzahl parallel erlaubter Logins (<code>MAX_HASH_THREADS</code>) 
+            Der Wert muss allerdings die maximale Anzahl parallel erlaubter Logins (<code>MAX_HASH_THREADS</code>)
             berücksichtigen und ggf. entsprechend reduziert werden.`,
 
             tCost1: `<code>t_cost</code> ist ein Multiplikator für die <b>Zeit</b> fürs Hashing. Dies ist der einzige
-            Wert, der durch Testen auf der Zielarchitektur gefunden werden muss, weil <code>m_cost</code> und 
+            Wert, der durch Testen auf der Zielarchitektur gefunden werden muss, weil <code>m_cost</code> und
             <code>p_cost</code> gewissenermaßen vorgegeben sind.`,
             tCost2: `Das Finden des Wertes ist einfach: Setze <code>m_cost</code> und <code>p_cost</code> wie oben
             erklärt und erhöhe <code>t_cost</code> so lange, bis die gewünschte Login Zeit erreicht wird.`,
 
             utilityHead: 'Parameter Berechnungs-Werkzeug',
-            utility1: `Das folgende Werkzeug kann zum Finden passender Werte für dieses Rauthy deployment genutzt 
-            werden. Da die Werte von sehr vielen Faktoren abhängen, sollten dieser auf der finalen Architektur 
-            eingestellt werden, am besten zu Zeiten der am höchsten erwarteten Last, um keine zu hohen Werte 
+            utility1: `Das folgende Werkzeug kann zum Finden passender Werte für dieses Rauthy deployment genutzt
+            werden. Da die Werte von sehr vielen Faktoren abhängen, sollten dieser auf der finalen Architektur
+            eingestellt werden, am besten zu Zeiten der am höchsten erwarteten Last, um keine zu hohen Werte
             einzustellen.`,
             utility2: `<code>m_cost</code> ist Optional und der als minimal sichere Wert von 32768 würde automatisch
-            gewählt werden. Sollte <code>p_cost</code> ebenfalls nicht gegeben sein, so wird Rauthy die maximal 
+            gewählt werden. Sollte <code>p_cost</code> ebenfalls nicht gegeben sein, so wird Rauthy die maximal
             verfügbare Menge and Kernen nutzen.`,
 
             time: "Zeit",
@@ -219,10 +226,10 @@ export let I18nAdminDe: I18nAdmin = {
             tune: 'Wichtig: Diese Werten müssen auf der finalen Architektur eingestellt werden!',
             pDetials: `Für eine detailiertere Einführung in den Argon2ID Alrogithmus stehen vielen Quellen online zur
             Verfügung. Hier werden nur ganz kurz die Werte erklärt. Die folgenden drei Werte müssen konfiguriert werden:`,
-            pTune: `Die Werte können stark variieren in Abhängigkeit vom System und der generellen Systemlast. Je 
+            pTune: `Die Werte können stark variieren in Abhängigkeit vom System und der generellen Systemlast. Je
             stärker das System, desto sicherere Werte können gewählt werden.`,
             pUtility: `Dieses Werkzeug ist eine Hilfe zum Finden der besten Argon2ID Werte für das jeweilige System.
-            Argon2ID is der derzeit sicherste, verfügbare Passwort Hashing Algorithmus. Um das volle Potential 
+            Argon2ID is der derzeit sicherste, verfügbare Passwort Hashing Algorithmus. Um das volle Potential
             ausschöpfen zu können, müssen die Werte allerdings auf das System angepasst werden.`,
             mCost3: "Der minimal erlaubte Wert für <code>m_cost</code> ist <code>32768</code>."
         },
@@ -249,8 +256,8 @@ export let I18nAdminDe: I18nAdmin = {
     jwks: {
         alg: "Algorithmus",
         p1: "Dies sind die Json Web Keys (JWKs) die für das Signieren der Tokens genutzt werden.",
-        p2: `JWKs werden standardmäßig automatisch an jedem 1. des Monats rotiert. Für alle neuen Tokens wird 
-        immer die aktuellste Version eines Keys für den jeweiligen Algorithmus verwerndet. Alte Keys werden für 
+        p2: `JWKs werden standardmäßig automatisch an jedem 1. des Monats rotiert. Für alle neuen Tokens wird
+        immer die aktuellste Version eines Keys für den jeweiligen Algorithmus verwerndet. Alte Keys werden für
         eine Weile behalten um bestehende Tokens validieren zu können und nach einer gewissen Zeit automatisch gelöscht.`,
         p3: `Die Keys können manuell rotiert werden. Abhängig von der Hardware auf der diese Rauthy Instanz läuft,
         kann dies einige Sekunden in Anspruch nehmen.`,
@@ -327,7 +334,7 @@ export let I18nAdminDe: I18nAdmin = {
             clientName: "Client Name",
             custRootCa: "Eigenes Root CA PEM",
             descAuthMethod: `Die Authentication Method, welche für den <code>/token</code> Endpunkt genutzt werden soll.
-                Die meisten Provider sollten mit <code>basic</code> funktionieren, manche jedoch nur mit 
+                Die meisten Provider sollten mit <code>basic</code> funktionieren, manche jedoch nur mit
                 <code>post</code>. In seltenen Fällen müssen beide Optionen aktiviert werden, auch wenn es gegen das
                 RFC verstößt.`,
             descClientId: "Client ID, vom Auth Provider vorgegeben.",
@@ -403,9 +410,9 @@ export let I18nAdminDe: I18nAdmin = {
         },
         attributes: "Attribute",
         deleteUser: "Soll dieser Benutzer wirklich gelöscht werden?",
-        descAttr: `Setze individuelle Benutzer Attribute. Alle Key / Value Paare 
+        descAttr: `Setze individuelle Benutzer Attribute. Alle Key / Value Paare
             werden als String / JSON Wert gehandhabt.`,
-        forceLogout: `Sollen sämtliche, für diesen Benutzer existierenden Sessions invalidiert und 
+        forceLogout: `Sollen sämtliche, für diesen Benutzer existierenden Sessions invalidiert und
             Refresh Tokens gelöscht werden?`,
         lastLogin: "Letzter Login",
         manualInitDesc: `Der Benutzer kann jedoch ebenfalls hier initialisiert werden. In diesem Fall muss das

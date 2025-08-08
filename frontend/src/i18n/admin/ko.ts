@@ -23,7 +23,10 @@ export let I18nAdminKo: I18nAdmin = {
             untrusted data and MUST NEVER be used for any form of authentication or authorization!`,
         makeEditableP3: `An attribute cannot be changed from editable to non-editable, because it allowed untrusted
             inputs in the past, no matter for how long this was the case.`,
+        addType: "Add Type",
+        removeType: "Remove Type",
         name: "속성 이름",
+        typ: "Type",
         userEditable: "User Editable",
     },
     backup: {
@@ -47,6 +50,10 @@ export let I18nAdminKo: I18nAdmin = {
         confidential: "기밀",
         confidentialNoSecret: "이 클라이언트는 기밀이 아닌 클라이언트이므로 Secret이 없습니다.",
         config: "클라이언트 설정",
+        custEmailMapping: "Custom E-Mail Mapping",
+        custEmailMappingExplanation: "Use a custom attribute for the E-Mail that will be provided to the client.",
+        custEmailMappingNoAttrs: `No custom attributes are available for custom E-Mail mapping.
+        The attribute must be of type \`email\` and must not be user editable.`,
         delete1: "이 클라이언트를 삭제하시겠습니까?",
         descAuthCode: `보안을 강화하기 위해 인증 코드의 유효 기간을 조정할 수 있습니다. 인증 코드는
             한 번만 사용할 수 있으며 기본적으로 60초 동안 유효합니다. 클라이언트가 로그인 절차를
@@ -70,7 +77,7 @@ export let I18nAdminKo: I18nAdmin = {
         groupLoginPrefix: "Login Group Prefix",
         name: "클라이언트 이름",
         scim: {
-            baseUri: `The SCIM base URI is the one from which the sub routes like 
+            baseUri: `The SCIM base URI is the one from which the sub routes like
                 <code>{base_uri}/Users/{id}</base_uri></code> can be derived correctly.`,
             desc: "If this client supports {{ SCIM_LINK }}, you can activate it here.",
             enable: "Enable SCIMv2",
@@ -84,7 +91,7 @@ export let I18nAdminKo: I18nAdmin = {
             reqLi1: "The client must handle <code>externalId</code> correctly.",
             reqLi2: `At least <code>/Users</code> endpoints with <code>filter=externalId eq "*"</code> and
                 <code>filter=userName eq "*"</code> must be supported.`,
-            reqLi3: `If groups should be synchronized, <code>/Groups</code> must also support 
+            reqLi3: `If groups should be synchronized, <code>/Groups</code> must also support
                 <code>filter=displayName eq "*"</code>.`,
         },
         scopes: {
@@ -381,7 +388,7 @@ export let I18nAdminKo: I18nAdmin = {
         descAttr: `사용자 지정 속성을 설정합니다. 모든 키/값 쌍은 문자열/JSON 값으로 처리됩니다.`,
         forceLogout: `기존 세션을 모두 삭제하고, 이 사용자의 모든 Refresh 토큰을 삭제하시겠습니까?`,
         lastLogin: "마지막 로그인",
-        manualInitDesc: `The user can also be initialized here, In this case though, you need to communicate the 
+        manualInitDesc: `The user can also be initialized here, In this case though, you need to communicate the
             password directly.`,
         manualInit: "Manual Initialization",
         mfaDelete1: "이 사용자의 패스키를 삭제할 수 있습니다.",
