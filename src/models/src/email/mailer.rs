@@ -4,7 +4,7 @@ use crate::rauthy_config::RauthyConfig;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
 use lettre::transport::smtp::authentication::Mechanism;
-use lettre::{AsyncSmtpTransport, AsyncTransport, message};
+use lettre::{AsyncSmtpTransport, AsyncTransport, Tokio1Executor, message};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -19,7 +19,7 @@ pub struct EMail {
     pub html: Option<String>,
 }
 
-pub async fn sender(mut rx: mpsc::Receiver<EMail>, test_mode: bool) {
+pub async fn sender(rx: mpsc::Receiver<EMail>, test_mode: bool) {
     debug!("E-Mail sender started");
 
     // to make the integration tests not panic, results are taken and just thrown away
@@ -27,67 +27,38 @@ pub async fn sender(mut rx: mpsc::Receiver<EMail>, test_mode: bool) {
     let vars = &RauthyConfig::get().vars.email;
     let url = &vars.smtp_url;
     if test_mode || url.is_none() {
-        if url.is_none() {
-            error!("SMTP_URL is not configured, cannot send out any E-Mails!");
-        }
+        sender_test_debug(rx).await;
+    } else {
+        sender_default_smtp(url.as_deref().unwrap(), rx).await;
+    }
+}
 
-        loop {
-            let req = rx.recv().await;
-            if req.is_some() {
-                debug!(
-                    "New E-Mail for address: {:?}",
-                    req.as_ref().unwrap().address
-                );
-            } else {
-                warn!("Received 'None' in email 'sender' - exiting");
-                return;
-            }
+async fn sender_test_debug(mut rx: mpsc::Receiver<EMail>) {
+    warn!("SMTP_URL is not configured or test mode is set, cannot send out any E-Mails!");
+
+    loop {
+        let req = rx.recv().await;
+        if req.is_some() {
+            debug!(
+                "New E-Mail for address: {:?}",
+                req.as_ref().unwrap().address
+            );
+        } else {
+            warn!("Received 'None' in email 'sender' - exiting");
+            return;
         }
     }
+}
 
-    let mailer = {
-        let smtp_url = url.as_deref().unwrap();
-
-        let mut retries = 0;
-
-        let mut conn = if vars.danger_insecure {
-            conn_test_smtp_insecure(smtp_url, vars.smtp_port).await
-        } else {
-            connect_test_smtp(smtp_url, vars.smtp_port).await
-        };
-
-        while let Err(err) = conn {
-            error!(?err);
-
-            if retries >= vars.connect_retries {
-                // do a graceful shutdown of the DB before `panic`king
-                if RauthyConfig::get().is_ha_cluster {
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                }
-                DB::hql().shutdown().await.unwrap();
-
-                panic!("SMTP connection retries exceeded");
-            }
-            retries += 1;
-            tokio::time::sleep(Duration::from_secs(5)).await;
-
-            conn = if vars.danger_insecure {
-                conn_test_smtp_insecure(smtp_url, vars.smtp_port).await
-            } else {
-                connect_test_smtp(smtp_url, vars.smtp_port).await
-            }
-        }
-        conn.unwrap()
-    };
-
-    let from: message::Mailbox = RauthyConfig::get()
-        .vars
-        .email
+async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<EMail>) {
+    let vars = &RauthyConfig::get().vars.email;
+    let from: message::Mailbox = vars
         .smtp_from
         .as_ref()
         .parse()
         .expect("SMTP_FROM could not be parsed correctly");
 
+    let mut mailer = create_mailer(smtp_url).await;
     loop {
         debug!("Listening for incoming send E-Mail requests");
         if let Some(req) = rx.recv().await {
@@ -110,17 +81,87 @@ pub async fn sender(mut rx: mpsc::Receiver<EMail>, test_mode: bool) {
             };
 
             match email {
-                Ok(addr) => match mailer.send(addr).await {
-                    Ok(_) => info!("E-Mail to '{}' sent successfully!", req.address),
-                    Err(e) => error!(error = ?e, "Could not send E-Mail"),
-                },
-                Err(_) => error!("Error building the E-Mail to '{}'", req.address),
+                Ok(message) => {
+                    match mailer.send(message.clone()).await {
+                        Ok(_) => {
+                            info!("E-Mail to '{}' sent successfully!", req.address);
+                            continue;
+                        }
+                        Err(err) => {
+                            error!(error = ?err, "Could not send E-Mail - establishing new connection and retry");
+                        }
+                    }
+
+                    // short timeout if sending fails, maybe the network just had a short hiccup
+                    tokio::time::sleep(Duration::from_millis(500)).await;
+
+                    // Only try to recreate the connection if we use XOAUTH2, because it uses
+                    // expiring tokens for authentication. Normal SMTP connections should handle
+                    // reconnects automatically under the hood.
+                    if vars.auth_xoauth2 {
+                        mailer = create_mailer(smtp_url).await;
+                    }
+
+                    match mailer.send(message.clone()).await {
+                        Ok(_) => {
+                            info!("E-Mail to '{}' sent successfully after retry!", req.address);
+                        }
+                        Err(err) => {
+                            // we want to panic if multiple sends fail so emails don't get lost
+                            // silently
+                            panic!("Could not send E-Mail even after retrying: {err:?}");
+                        }
+                    }
+                }
+                Err(err) => {
+                    // this should never happen
+                    error!("Error building the E-Mail to '{}': {:?}", req.address, err);
+                }
             }
         } else {
             warn!("Received 'None' in email 'sender' - exiting");
             break;
         }
     }
+}
+
+/// Connects to SMTP.
+///
+/// # Panics
+///
+/// If the connection is not possible after retries were exceeded.
+async fn create_mailer(smtp_url: &str) -> AsyncSmtpTransport<Tokio1Executor> {
+    let vars = &RauthyConfig::get().vars.email;
+
+    let mut conn = if vars.danger_insecure {
+        conn_test_smtp_insecure(smtp_url, vars.smtp_port).await
+    } else {
+        connect_test_smtp(smtp_url, vars.smtp_port).await
+    };
+
+    let mut retries = 0;
+    while let Err(err) = conn {
+        error!(?err);
+
+        if retries >= vars.connect_retries {
+            // do a graceful shutdown of the DB before `panic`king
+            if RauthyConfig::get().is_ha_cluster {
+                tokio::time::sleep(Duration::from_secs(5)).await;
+            }
+            DB::hql().shutdown().await.unwrap();
+
+            panic!("SMTP connection retries exceeded");
+        }
+        retries += 1;
+        tokio::time::sleep(Duration::from_secs(5)).await;
+
+        conn = if vars.danger_insecure {
+            conn_test_smtp_insecure(smtp_url, vars.smtp_port).await
+        } else {
+            connect_test_smtp(smtp_url, vars.smtp_port).await
+        }
+    }
+    conn.unwrap()
 }
 
 #[tracing::instrument(level = "debug")]

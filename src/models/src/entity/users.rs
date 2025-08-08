@@ -1,6 +1,7 @@
 use crate::database::{Cache, DB};
+use crate::email::email_change_confirm::send_email_confirm_change;
 use crate::email::email_change_info::send_email_change_info_new;
-use crate::email::{email_change_confirm, password_reset};
+use crate::email::password_reset::send_pwd_reset;
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
