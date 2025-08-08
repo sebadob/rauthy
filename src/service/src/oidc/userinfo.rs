@@ -141,10 +141,10 @@ pub async fn get_userinfo(
         user_values = UserValues::find(&user.id).await?;
         user_values_fetched = true;
 
-        if let Some(values) = &user_values {
-            if let Some(birthdate) = &values.birthdate {
-                userinfo.birthdate = Some(birthdate.clone());
-            }
+        if let Some(values) = &user_values
+            && let Some(birthdate) = &values.birthdate
+        {
+            userinfo.birthdate = Some(birthdate.clone());
         }
     }
 
@@ -165,10 +165,10 @@ pub async fn get_userinfo(
             // user_values_fetched = true;
         }
 
-        if let Some(values) = &user_values {
-            if let Some(phone) = &values.phone {
-                userinfo.phone = Some(phone.clone());
-            }
+        if let Some(values) = &user_values
+            && let Some(phone) = &values.phone
+        {
+            userinfo.phone = Some(phone.clone());
         }
     }
 

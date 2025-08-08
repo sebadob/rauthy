@@ -561,12 +561,12 @@ impl Session {
         })
     }
 
-    pub fn client_cookie(&self) -> cookie::Cookie {
+    pub fn client_cookie(&self) -> cookie::Cookie<'_> {
         let max_age = self.exp - Utc::now().timestamp();
         ApiCookie::build(COOKIE_SESSION, Cow::from(&self.id), max_age)
     }
 
-    pub fn client_cookie_fed_cm(&self) -> cookie::Cookie {
+    pub fn client_cookie_fed_cm(&self) -> cookie::Cookie<'_> {
         ApiCookie::build_with_same_site(
             COOKIE_SESSION_FED_CM,
             Cow::from(&self.id),

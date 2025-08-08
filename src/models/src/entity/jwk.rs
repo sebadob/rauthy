@@ -562,13 +562,13 @@ impl JWKSPublicKey {
                                 "OKP kty must have 'crv'",
                             ));
                         }
-                        if let Some(crv) = &self.crv {
-                            if crv != "Ed25519" {
-                                return Err(ErrorResponse::new(
-                                    ErrorResponseType::BadRequest,
-                                    "Only 'Ed25519' for 'crv' is supported",
-                                ));
-                            }
+                        if let Some(crv) = &self.crv
+                            && crv != "Ed25519"
+                        {
+                            return Err(ErrorResponse::new(
+                                ErrorResponseType::BadRequest,
+                                "Only 'Ed25519' for 'crv' is supported",
+                            ));
                         }
 
                         if self.n.is_some() || self.e.is_some() {

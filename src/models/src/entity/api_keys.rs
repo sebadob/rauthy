@@ -386,13 +386,13 @@ impl ApiKey {
 
     #[inline(always)]
     pub fn validate_secret(&self, secret: &str) -> Result<(), ErrorResponse> {
-        if let Some(exp) = self.expires {
-            if Utc::now().timestamp() > exp {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Unauthorized,
-                    "API Key has expired",
-                ));
-            }
+        if let Some(exp) = self.expires
+            && Utc::now().timestamp() > exp
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "API Key has expired",
+            ));
         }
 
         if self.secret.as_slice() == sha256!(secret.as_bytes()) {
