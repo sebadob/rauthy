@@ -106,7 +106,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .expect("Error starting the database / cache layer");
 
     debug!("Starting E-Mail handler");
-    tokio::spawn(mailer::sender(rx_email, test_mode));
+    tokio::spawn(mailer::sender(rx_email));
 
     debug!("Applying database migrations");
     DB::migrate().await.expect("Database migration error");

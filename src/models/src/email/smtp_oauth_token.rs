@@ -32,12 +32,6 @@ pub struct SmtpOauthToken {
 
 impl SmtpOauthToken {
     pub async fn get() -> Result<Self, ErrorResponse> {
-        if !RauthyConfig::get().vars.email.auth_xoauth2 {
-            panic!(
-                "SmtpOauthToken fetch with no configured auth_xoauth2 - this should never happen"
-            );
-        }
-
         if let Some(slf) = DB::hql().get(Cache::App, IDX_SMTP_OAUTH_TOKEN).await? {
             return Ok(slf);
         }

@@ -6,6 +6,7 @@ use lettre::transport::smtp::authentication;
 use lettre::transport::smtp::authentication::Mechanism;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Tokio1Executor, message};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use serde::Deserialize;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
@@ -19,17 +20,45 @@ pub struct EMail {
     pub html: Option<String>,
 }
 
-pub async fn sender(rx: mpsc::Receiver<EMail>, test_mode: bool) {
+#[derive(Debug, PartialEq, Deserialize)]
+pub enum SmtpConnMode {
+    Default,
+    XOauth2,
+    MicrosoftGraph,
+    Test,
+}
+
+impl From<&str> for SmtpConnMode {
+    fn from(s: &str) -> Self {
+        match s {
+            "default" => Self::Default,
+            "xoauth2" => Self::XOauth2,
+            "microsoft_graph" => Self::MicrosoftGraph,
+            "test" => Self::Test,
+            _ => panic!("Invalid smtp_conn_mode, expected one of: default xoauth2 microsoft_graph"),
+        }
+    }
+}
+
+pub async fn sender(rx: mpsc::Receiver<EMail>) {
     debug!("E-Mail sender started");
 
     // to make the integration tests not panic, results are taken and just thrown away
     // not the nicest approach for now, but it works
     let vars = &RauthyConfig::get().vars.email;
     let url = &vars.smtp_url;
-    if test_mode || url.is_none() {
+    if url.is_none() {
         sender_test_debug(rx).await;
     } else {
-        sender_default_smtp(url.as_deref().unwrap(), rx).await;
+        match vars.smtp_conn_mode {
+            SmtpConnMode::Default | SmtpConnMode::XOauth2 => {
+                sender_default_smtp(url.as_deref().unwrap(), rx).await
+            }
+            SmtpConnMode::MicrosoftGraph => {
+                todo!("SmtpConnMode::MicrosoftGraph")
+            }
+            SmtpConnMode::Test => sender_test_debug(rx).await,
+        }
     }
 }
 
@@ -98,7 +127,7 @@ async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<EMail>) {
                     // Only try to recreate the connection if we use XOAUTH2, because it uses
                     // expiring tokens for authentication. Normal SMTP connections should handle
                     // reconnects automatically under the hood.
-                    if vars.auth_xoauth2 {
+                    if vars.smtp_conn_mode == SmtpConnMode::XOauth2 {
                         mailer = create_mailer(smtp_url).await;
                     }
 
@@ -178,11 +207,12 @@ async fn connect_test_smtp(
         .to_string();
 
     let mut mechanisms = Vec::with_capacity(2);
-    let creds = if vars.auth_xoauth2 {
+    let creds = if vars.smtp_conn_mode == SmtpConnMode::XOauth2 {
         mechanisms.push(Mechanism::Xoauth2);
 
-        // TODO maybe expect here?
-        let token = SmtpOauthToken::get().await?;
+        let token = SmtpOauthToken::get()
+            .await
+            .expect("Could not retrieve a `client_credntials` token for SMTP XOAUTH2");
         authentication::Credentials::new(username, token.access_token)
     } else {
         mechanisms.push(Mechanism::Plain);
@@ -194,7 +224,6 @@ async fn connect_test_smtp(
             .expect("SMTP_PASSWORD is not set")
             .trim()
             .to_string();
-
         authentication::Credentials::new(username, password)
     };
 

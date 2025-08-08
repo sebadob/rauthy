@@ -1,5 +1,5 @@
 use crate::ListenScheme;
-use crate::email::mailer::EMail;
+use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use crate::vault_config::VaultConfig;
@@ -370,7 +370,7 @@ impl Default for Vars {
                 smtp_password: None,
                 smtp_from: "Rauthy <rauthy@localhost>".into(),
                 connect_retries: 3,
-                auth_xoauth2: false,
+                smtp_conn_mode: SmtpConnMode::Default,
                 xoauth_url: None,
                 xoauth_client_id: None,
                 xoauth_client_secret: None,
@@ -1219,10 +1219,10 @@ impl Vars {
         ) {
             self.email.connect_retries = v;
         }
-
-        if let Some(v) = t_bool(&mut table, "email", "auth_xoauth2", "SMTP_AUTH_XOAUTH2") {
-            self.email.auth_xoauth2 = v;
+        if let Some(v) = t_str(&mut table, "email", "smtp_conn_mode", "SMTP_CONN_MODE") {
+            self.email.smtp_conn_mode = SmtpConnMode::from(v.as_str());
         }
+
         if let Some(v) = t_str(&mut table, "email", "xoauth_url", "SMTP_XOAUTH2_URL") {
             self.email.xoauth_url = Some(v);
         }
@@ -2385,18 +2385,20 @@ impl Vars {
             );
         }
 
-        if self.email.auth_xoauth2 {
+        if self.email.smtp_conn_mode == SmtpConnMode::XOauth2
+            || self.email.smtp_conn_mode == SmtpConnMode::MicrosoftGraph
+        {
             if self.email.xoauth_url.is_none() {
-                panic!("'auth_xoauth2' = true but 'xoauth_url' not set");
+                panic!("'xoauth_url' not set");
             }
             if self.email.xoauth_client_id.is_none() {
-                panic!("'auth_xoauth2' = true but 'xoauth_client_id' not set");
+                panic!("'xoauth_client_id' not set");
             }
             if self.email.xoauth_client_secret.is_none() {
-                panic!("'auth_xoauth2' = true but 'xoauth_client_secret' not set");
+                panic!("'xoauth_client_secret' not set");
             }
             if self.email.xoauth_scope.is_none() {
-                panic!("'auth_xoauth2' = true but 'xoauth_scope' not set");
+                panic!("'xoauth_scope' not set");
             }
         }
 
@@ -2557,7 +2559,7 @@ pub struct VarsEmail {
     pub smtp_password: Option<String>,
     pub smtp_from: Cow<'static, str>,
     pub connect_retries: u16,
-    pub auth_xoauth2: bool,
+    pub smtp_conn_mode: SmtpConnMode,
     pub xoauth_url: Option<String>,
     pub xoauth_client_id: Option<String>,
     pub xoauth_client_secret: Option<String>,
