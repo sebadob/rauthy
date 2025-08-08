@@ -964,7 +964,7 @@ smtp_url = 'localhost'
 # Format: "Rauthy <rauthy@localhost>"
 # default: "Rauthy <rauthy@localhost>"
 # overwritten by: SMTP_FROM
-#smtp_from = 'Rauthy <rauthy@localhost>'
+smtp_from = 'Rauthy <rauthy@localhost>'
 
 # You usually do not need to change this value. The 'default'
 # will connect via SMTP PLAIN or LOGIN, which works in almost
@@ -980,7 +980,7 @@ smtp_url = 'localhost'
 # possible values: 'default', 'xoauth2', 'microsoft_graph'
 # default: 'default'
 # overwritten by: SMTP_CONN_MODE
-smtp_conn_mode = 'default'
+#smtp_conn_mode = 'default'
 
 # These values must be given if `auth_xoauth2 = true`.
 # They will be used for a `client_credentials` request
@@ -995,6 +995,12 @@ smtp_conn_mode = 'default'
 #xoauth_client_secret = ''
 # overwritten by: SMTP_XOAUTH2_SCOPE
 #xoauth_scope = ''
+
+# Only needed if `smtp_conn_mode = 'microsoft_graph'`.
+#
+# default: not set
+# overwritten by: SMTP_MICROSOFT_GRAPH_URI
+#microsoft_graph_uri = ''
 
 # The number of retries that should be done for connecting to
 # the given SMTP_URL.
@@ -1011,7 +1017,7 @@ connect_retries = 3
 #
 # default: false
 # overwritten by: SMTP_STARTTLS_ONLY
-starttls_only = true
+#starttls_only = true
 
 # You can set this to `true` to allow an unencrypted and
 # unauthenticated SMTP connection to an SMTP relay on your localhost

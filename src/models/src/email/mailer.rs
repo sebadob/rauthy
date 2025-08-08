@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::email::mailer_microsoft_graph::sender_microsoft_graph;
 use crate::email::smtp_oauth_token::SmtpOauthToken;
 use crate::rauthy_config::RauthyConfig;
 use lettre::message::{MultiPart, SinglePart};
@@ -43,20 +44,16 @@ impl From<&str> for SmtpConnMode {
 pub async fn sender(rx: mpsc::Receiver<EMail>) {
     debug!("E-Mail sender started");
 
-    // to make the integration tests not panic, results are taken and just thrown away
-    // not the nicest approach for now, but it works
     let vars = &RauthyConfig::get().vars.email;
     let url = &vars.smtp_url;
-    if url.is_none() {
+    if url.is_none() && vars.smtp_conn_mode != SmtpConnMode::MicrosoftGraph {
         sender_test_debug(rx).await;
     } else {
         match vars.smtp_conn_mode {
             SmtpConnMode::Default | SmtpConnMode::XOauth2 => {
                 sender_default_smtp(url.as_deref().unwrap(), rx).await
             }
-            SmtpConnMode::MicrosoftGraph => {
-                todo!("SmtpConnMode::MicrosoftGraph")
-            }
+            SmtpConnMode::MicrosoftGraph => sender_microsoft_graph(rx).await,
             SmtpConnMode::Test => sender_test_debug(rx).await,
         }
     }

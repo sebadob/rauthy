@@ -5,6 +5,7 @@ pub mod email_change_info;
 pub mod i18n;
 pub mod login_location;
 pub mod mailer;
+mod mailer_microsoft_graph;
 pub mod notification;
 pub mod password_reset;
 pub mod password_reset_info;

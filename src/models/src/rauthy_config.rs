@@ -375,6 +375,7 @@ impl Default for Vars {
                 xoauth_client_id: None,
                 xoauth_client_secret: None,
                 xoauth_scope: None,
+                microsoft_graph_uri: None,
                 starttls_only: false,
                 danger_insecure: false,
             },
@@ -1244,6 +1245,15 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut table, "email", "xoauth_scope", "SMTP_XOAUTH2_SCOPE") {
             self.email.xoauth_scope = Some(v);
+        }
+
+        if let Some(v) = t_str(
+            &mut table,
+            "email",
+            "microsoft_graph_uri",
+            "SMTP_MICROSOFT_GRAPH_URI",
+        ) {
+            self.email.microsoft_graph_uri = Some(v);
         }
 
         if let Some(v) = t_bool(&mut table, "email", "starttls_only", "SMTP_STARTTLS_ONLY") {
@@ -2401,6 +2411,11 @@ impl Vars {
                 panic!("'xoauth_scope' not set");
             }
         }
+        if self.email.smtp_conn_mode == SmtpConnMode::MicrosoftGraph
+            && self.email.microsoft_graph_uri.is_none()
+        {
+            panic!("'microsoft_graph_uri' not set");
+        }
 
         if self.encryption.keys.is_empty() || self.encryption.key_active.is_empty() {
             panic!("Missing `encryption.keys` / `encryption.key_active`");
@@ -2564,6 +2579,7 @@ pub struct VarsEmail {
     pub xoauth_client_id: Option<String>,
     pub xoauth_client_secret: Option<String>,
     pub xoauth_scope: Option<String>,
+    pub microsoft_graph_uri: Option<String>,
     pub starttls_only: bool,
     pub danger_insecure: bool,
 }
