@@ -1,7 +1,7 @@
+use crate::email::i18n::confirm_change::I18nEmailConfirmChange;
 use crate::email::mailer::EMail;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
-use crate::i18n_email::confirm_change::I18nEmailConfirmChange;
 use crate::rauthy_config::RauthyConfig;
 use askama::Template;
 use std::time::Duration;

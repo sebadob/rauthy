@@ -2,6 +2,7 @@ use chrono::DateTime;
 
 pub mod email_change_confirm;
 pub mod email_change_info;
+pub mod i18n;
 pub mod login_location;
 pub mod mailer;
 pub mod notification;

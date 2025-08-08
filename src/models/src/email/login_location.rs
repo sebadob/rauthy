@@ -1,7 +1,7 @@
+use crate::email::i18n::login_location::I18nEmailLoginLocation;
 use crate::email::mailer::EMail;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
-use crate::i18n_email::login_location::I18nEmailLoginLocation;
 use crate::rauthy_config::RauthyConfig;
 use askama::Template;
 use std::time::Duration;

@@ -1,9 +1,9 @@
 use crate::email::email_ts_prettify;
+use crate::email::i18n::change_info_new::I18nEmailChangeInfoNew;
 use crate::email::mailer::EMail;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
-use crate::i18n_email::change_info_new::I18nEmailChangeInfoNew;
 use crate::rauthy_config::RauthyConfig;
 use askama::Template;
 use std::time::Duration;

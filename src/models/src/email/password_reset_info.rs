@@ -1,8 +1,8 @@
 use crate::email::email_ts_prettify;
+use crate::email::i18n::reset_info::I18nEmailResetInfo;
 use crate::email::mailer::EMail;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
-use crate::i18n_email::reset_info::I18nEmailResetInfo;
 use crate::rauthy_config::RauthyConfig;
 use askama::Template;
 use std::time::Duration;

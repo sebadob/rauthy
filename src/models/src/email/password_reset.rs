@@ -1,10 +1,10 @@
 use crate::email::email_ts_prettify;
+use crate::email::i18n::password_new::I18nEmailPasswordNew;
+use crate::email::i18n::reset::I18nEmailReset;
 use crate::email::mailer::EMail;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
-use crate::i18n_email::password_new::I18nEmailPasswordNew;
-use crate::i18n_email::reset::I18nEmailReset;
 use crate::rauthy_config::RauthyConfig;
 use askama::Template;
 use std::time::Duration;
