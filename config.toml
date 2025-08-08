@@ -964,7 +964,43 @@ smtp_url = 'localhost'
 # Format: "Rauthy <rauthy@localhost>"
 # default: "Rauthy <rauthy@localhost>"
 # overwritten by: SMTP_FROM
-#smtp_from = 'Rauthy <rauthy@localhost>'
+smtp_from = 'Rauthy <rauthy@localhost>'
+
+# You usually do not need to change this value. The 'default'
+# will connect via SMTP PLAIN or LOGIN, which works in almost
+# all scenarios. However, you can change it to `xoauth2` to
+# connect via XOAUTH2. In addition, there is also `microsoft_graph`.
+# It is a custom implementaion that does not use SMTP anymore,
+# but instead the Microsoft Azure Graph API. You should not use
+# it, unless you have no other choice or a very good reason.
+#
+# If you specify another value than ´default`, you must provide
+# all the additional `x_oauth_*` values bwloe.
+#
+# possible values: 'default', 'xoauth2', 'microsoft_graph'
+# default: 'default'
+# overwritten by: SMTP_CONN_MODE
+#smtp_conn_mode = 'default'
+
+# These values must be given if `auth_xoauth2 = true`.
+# They will be used for a `client_credentials` request
+# to the `xoauth_url` to retrieve a token, that then
+# will be used for authentication via SMTP XOAUTH2.
+#
+# overwritten by: SMTP_XOAUTH2_URL
+#xoauth_url = ''
+# overwritten by: SMTP_XOAUTH2_CLIENT_ID
+#xoauth_client_id = ''
+# overwritten by: SMTP_XOAUTH2_CLIENT_SECRET
+#xoauth_client_secret = ''
+# overwritten by: SMTP_XOAUTH2_SCOPE
+#xoauth_scope = ''
+
+# Only needed if `smtp_conn_mode = 'microsoft_graph'`.
+#
+# default: not set
+# overwritten by: SMTP_MICROSOFT_GRAPH_URI
+#microsoft_graph_uri = ''
 
 # The number of retries that should be done for connecting to
 # the given SMTP_URL.
@@ -975,6 +1011,13 @@ smtp_url = 'localhost'
 # default: 3
 # overwritten by: SMTP_CONNECT_RETRIES
 connect_retries = 3
+
+# Can be set to `true` to skip trying a real TLS connection
+# via SMTP and use STARTTLS directly.
+#
+# default: false
+# overwritten by: SMTP_STARTTLS_ONLY
+#starttls_only = true
 
 # You can set this to `true` to allow an unencrypted and
 # unauthenticated SMTP connection to an SMTP relay on your localhost

@@ -6,8 +6,7 @@ use rauthy_common::password_hasher;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::swagger_ui::{OPENAPI_CONFIG, OPENAPI_JSON};
 use rauthy_models::database::{Cache, DB};
-use rauthy_models::email;
-use rauthy_models::email::EMail;
+use rauthy_models::email::mailer;
 use rauthy_models::entity::atproto;
 use rauthy_models::entity::auth_providers::AuthProvider;
 use rauthy_models::entity::pictures::UserPicture;
@@ -55,7 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     };
 
-    let (tx_email, rx_email) = mpsc::channel::<EMail>(16);
+    let (tx_email, rx_email) = mpsc::channel::<mailer::EMail>(16);
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
 
@@ -107,7 +106,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .expect("Error starting the database / cache layer");
 
     debug!("Starting E-Mail handler");
-    tokio::spawn(email::sender(rx_email, test_mode));
+    tokio::spawn(mailer::sender(rx_email));
 
     debug!("Applying database migrations");
     DB::migrate().await.expect("Database migration error");

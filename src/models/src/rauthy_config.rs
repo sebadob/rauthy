@@ -1,5 +1,5 @@
 use crate::ListenScheme;
-use crate::email::EMail;
+use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use crate::vault_config::VaultConfig;
@@ -370,6 +370,13 @@ impl Default for Vars {
                 smtp_password: None,
                 smtp_from: "Rauthy <rauthy@localhost>".into(),
                 connect_retries: 3,
+                smtp_conn_mode: SmtpConnMode::Default,
+                xoauth_url: None,
+                xoauth_client_id: None,
+                xoauth_client_secret: None,
+                xoauth_scope: None,
+                microsoft_graph_uri: None,
+                starttls_only: false,
                 danger_insecure: false,
             },
             encryption: VarsEncryption {
@@ -1212,6 +1219,45 @@ impl Vars {
             "SMTP_CONNECT_RETRIES",
         ) {
             self.email.connect_retries = v;
+        }
+        if let Some(v) = t_str(&mut table, "email", "smtp_conn_mode", "SMTP_CONN_MODE") {
+            self.email.smtp_conn_mode = SmtpConnMode::from(v.as_str());
+        }
+
+        if let Some(v) = t_str(&mut table, "email", "xoauth_url", "SMTP_XOAUTH2_URL") {
+            self.email.xoauth_url = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "email",
+            "xoauth_client_id",
+            "SMTP_XOAUTH2_CLIENT_ID",
+        ) {
+            self.email.xoauth_client_id = Some(v);
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "email",
+            "xoauth_client_secret",
+            "SMTP_XOAUTH2_CLIENT_SECRET",
+        ) {
+            self.email.xoauth_client_secret = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "email", "xoauth_scope", "SMTP_XOAUTH2_SCOPE") {
+            self.email.xoauth_scope = Some(v);
+        }
+
+        if let Some(v) = t_str(
+            &mut table,
+            "email",
+            "microsoft_graph_uri",
+            "SMTP_MICROSOFT_GRAPH_URI",
+        ) {
+            self.email.microsoft_graph_uri = Some(v);
+        }
+
+        if let Some(v) = t_bool(&mut table, "email", "starttls_only", "SMTP_STARTTLS_ONLY") {
+            self.email.starttls_only = v;
         }
         if let Some(v) = t_bool(
             &mut table,
@@ -2349,6 +2395,28 @@ impl Vars {
             );
         }
 
+        if self.email.smtp_conn_mode == SmtpConnMode::XOauth2
+            || self.email.smtp_conn_mode == SmtpConnMode::MicrosoftGraph
+        {
+            if self.email.xoauth_url.is_none() {
+                panic!("'xoauth_url' not set");
+            }
+            if self.email.xoauth_client_id.is_none() {
+                panic!("'xoauth_client_id' not set");
+            }
+            if self.email.xoauth_client_secret.is_none() {
+                panic!("'xoauth_client_secret' not set");
+            }
+            if self.email.xoauth_scope.is_none() {
+                panic!("'xoauth_scope' not set");
+            }
+        }
+        if self.email.smtp_conn_mode == SmtpConnMode::MicrosoftGraph
+            && self.email.microsoft_graph_uri.is_none()
+        {
+            panic!("'microsoft_graph_uri' not set");
+        }
+
         if self.encryption.keys.is_empty() || self.encryption.key_active.is_empty() {
             panic!("Missing `encryption.keys` / `encryption.key_active`");
         }
@@ -2506,6 +2574,13 @@ pub struct VarsEmail {
     pub smtp_password: Option<String>,
     pub smtp_from: Cow<'static, str>,
     pub connect_retries: u16,
+    pub smtp_conn_mode: SmtpConnMode,
+    pub xoauth_url: Option<String>,
+    pub xoauth_client_id: Option<String>,
+    pub xoauth_client_secret: Option<String>,
+    pub xoauth_scope: Option<String>,
+    pub microsoft_graph_uri: Option<String>,
+    pub starttls_only: bool,
     pub danger_insecure: bool,
 }
 
