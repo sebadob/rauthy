@@ -135,7 +135,12 @@ pub async fn post_authorize(
     );
     code.save().await?;
 
-    let mut loc = format!("{}?code={}", req_data.redirect_uri, code.id);
+    let append_char = if req_data.redirect_uri.contains('?') {
+        '&'
+    } else {
+        '?'
+    };
+    let mut loc = format!("{}{}code={}", req_data.redirect_uri, append_char, code.id);
     if let Some(state) = req_data.state {
         write!(loc, "&state={state}")?;
     };
