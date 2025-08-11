@@ -28,8 +28,8 @@ strip = false
 [patch.crates-io]
 #cryptr = { git = "https://github.com/sebadob/cryptr.git" }
 #hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
-#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
-#hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
+hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
 
 [workspace.dependencies]
 accept-language = "3"
@@ -54,7 +54,7 @@ chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 cidr = "0.3.0"
 cron = "0.15"
-cryptr = { version = "0.7", features = ["s3", "streaming"] }
+cryptr = { version = "0.8", features = ["s3", "streaming"] }
 css-color = "0.2"
 deadpool = { version = "0.12", features = ["rt_tokio_1", "serde"] }
 deadpool-postgres = "0.14"
@@ -102,17 +102,17 @@ rsa = { version = "0.9.3", features = ["serde", "sha2"] }
 ruma = { version = "0.12.0", features = [
     "client-api-c", "client-ext-client-api", "client-reqwest", "markdown", "rand"
 ] }
-rusqlite = "0.36"
+rusqlite = "0.37"
 rust-embed = "8.5.0"
 rustls = { version = "0.23", default-features = false, features = ["logging", "std", "tls12", "ring"] }
 rustls-pki-types = "1.4.1"
 rustls-pemfile = "2.1.2"
-s3-simple = "0.4.1"
+s3-simple = "0.5"
 semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_json_path = "0.7.1"
-serde_rusqlite = "0.39"
+serde_rusqlite = "0.40"
 serde_urlencoded = "0.7.1"
 spow = { version = "0.6", features = ["server"] }
 strum = { version = "0.27", features = ["derive"] }
@@ -121,7 +121,7 @@ tar = "0.4.44"
 tikv-jemallocator = { version = "0.6", features = ["unprefixed_malloc_on_supported_platforms"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tls-hot-reload = "0.1"
-toml = "0.8.22"
+toml = "0.9"
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "tracing"] }
 tokio = { version = "1", features = ["full"] }
