@@ -78,6 +78,11 @@
             // we will get a forbidden if for instance the user already exists but without
             // any upstream provider link (or the wrong one)
             error = res.error?.message || 'HTTP 403 Forbidden';
+        } else if (res.status === 404) {
+            error = "User not found";
+            setTimeout(() => {
+                window.location.replace('/auth/v1');
+            }, 5000);
         } else if (res.status === 406) {
             // 406 -> client forces MFA while the user has none
             error = t.authorize.clientForceMfa;
