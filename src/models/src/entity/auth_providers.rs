@@ -700,6 +700,8 @@ impl TryFrom<AuthProvider> for ProviderResponse {
             use_pkce: value.use_pkce,
             client_secret_basic: value.client_secret_basic,
             client_secret_post: value.client_secret_post,
+            auto_onboarding: value.auto_onboarding,
+            auto_link: value.auto_link,
         })
     }
 }
