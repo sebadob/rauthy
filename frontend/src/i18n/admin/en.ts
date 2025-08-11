@@ -311,6 +311,12 @@ export let I18nAdminEn: I18nAdmin = {
     providers: {
         config: {
             allowInsecureTls: "Allow insecure TLS",
+            autoLink: "Auto-Link User",
+            autoLinkDesc1: `If Auto-Link User is activated, the login via this provider will automatically link a
+                possibly existing, non-linked user to this provider.`,
+            autoLinkDesc2: `CAUTION: This option can be very dangerous and lead to account takeover if the provider
+                does not fully validate E-Mail addresses for users and therefore makes it possible to add a foreign
+                address for a user! MUST NEVER be used in such a case!`,
             clientName: "Client Name",
             custRootCa: "Custom Root CA PEM",
             descAuthMethod: `The authentication method to use on the <code>/token</code> endpoint.<br>

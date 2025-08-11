@@ -996,7 +996,8 @@ smtp_from = 'Rauthy <rauthy@localhost>'
 # overwritten by: SMTP_XOAUTH2_SCOPE
 #xoauth_scope = ''
 
-# Only needed if `smtp_conn_mode = 'microsoft_graph'`.
+# Only needed if `smtp_conn_mode = 'microsoft_graph'`:
+# https://learn.microsoft.com/en-us/graph/api/user-sendmail?view=graph-rest-1.0&tabs=http
 #
 # default: not set
 # overwritten by: SMTP_MICROSOFT_GRAPH_URI

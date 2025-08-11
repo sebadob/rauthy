@@ -13,6 +13,7 @@
     import {genKey} from "$utils/helpers";
     import ProviderConfigURLs from "$lib/admin/providers/blocks/ProviderConfigURLs.svelte";
     import ProviderConfigClientInfo from "$lib/admin/providers/blocks/ProviderConfigClientInfo.svelte";
+    import {slide} from "svelte/transition";
 
     let {
         provider = $bindable(),
@@ -73,6 +74,8 @@
             use_pkce: provider.use_pkce,
             client_secret_basic: provider.client_secret_basic,
             client_secret_post: provider.client_secret_post,
+            auto_onboarding: provider.auto_onboarding,
+            auto_link: provider.auto_link,
 
             client_id: provider.client_id,
             client_secret: provider.client_secret || undefined,
@@ -108,6 +111,22 @@
             <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={provider.enabled}>
                 {ta.common.enabled}
             </InputCheckbox>
+        </div>
+        <div class="checkbox">
+            <InputCheckbox ariaLabel="Auto-Onboarding" bind:checked={provider.auto_onboarding}>
+                Auto-Onboarding
+            </InputCheckbox>
+        </div>
+        <div class="checkbox">
+            <InputCheckbox ariaLabel={ta.providers.config.autoLink} bind:checked={provider.auto_link}>
+                {ta.providers.config.autoLink}
+            </InputCheckbox>
+            {#if provider.auto_link}
+                <div transition:slide={{ duration: 150 }}>
+                    <p>{ta.providers.config.autoLinkDesc1}</p>
+                    <p class="err">{ta.providers.config.autoLinkDesc2}</p>
+                </div>
+            {/if}
         </div>
 
         <ProviderConfigURLs

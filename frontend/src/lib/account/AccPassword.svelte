@@ -14,6 +14,7 @@
     import type {PasskeyResponse} from "$api/types/webauthn.ts";
     import {onMount} from "svelte";
     import type {RequestResetRequest} from "$api/types/authorize.ts";
+    import {fetchSolvePow} from "$utils/pow";
 
     let {
         user = $bindable(),
@@ -140,8 +141,10 @@
     }
 
     async function requestPasswordReset() {
+        let pow = await fetchSolvePow() || '';
         let payload: RequestResetRequest = {
-            email: user.email,
+            pow,
+            email: user.email
         };
         let res = await fetchPost('/auth/v1/users/request_reset', payload);
         if (res.error) {

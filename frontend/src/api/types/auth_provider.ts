@@ -20,6 +20,8 @@ export interface ProviderRequest {
     use_pkce: boolean,
     client_secret_basic: boolean,
     client_secret_post: boolean,
+    auto_onboarding: boolean,
+    auto_link: boolean,
 
     /// Validation: PATTERN_URI
     client_id: string,
@@ -75,7 +77,7 @@ export interface ProviderLoginRequest {
     provider_id: string,
     /// Validation: PATTERN_URI
     pkce_challenge: string,
-    
+
     pow: string,
 
     /// Validation: PATTERN_ATPROTO_ID
@@ -108,6 +110,8 @@ export interface ProviderResponse {
     use_pkce: boolean,
     client_secret_basic: boolean,
     client_secret_post: boolean,
+    auto_onboarding: boolean,
+    auto_link: boolean,
 }
 
 export interface ProviderLinkedUserResponse {

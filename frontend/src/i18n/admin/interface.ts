@@ -258,6 +258,9 @@ export interface I18nAdmin {
     providers: {
         config: {
             allowInsecureTls: string,
+            autoLink: string,
+            autoLinkDesc1: string,
+            autoLinkDesc2: string,
             clientName: string,
             custRootCa: string,
             // inserted as html

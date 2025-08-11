@@ -193,6 +193,8 @@ pub struct AuthProvider {
     pub use_pkce: bool,
     pub client_secret_basic: bool,
     pub client_secret_post: bool,
+    pub auto_onboarding: bool,
+    pub auto_link: bool,
 }
 
 impl<'r> From<hiqlite::Row<'r>> for AuthProvider {
@@ -220,6 +222,8 @@ impl<'r> From<hiqlite::Row<'r>> for AuthProvider {
             use_pkce: row.get("use_pkce"),
             client_secret_basic: row.get("client_secret_basic"),
             client_secret_post: row.get("client_secret_post"),
+            auto_onboarding: row.get("auto_onboarding"),
+            auto_link: row.get("auto_link"),
         }
     }
 }
@@ -249,6 +253,8 @@ impl From<tokio_postgres::Row> for AuthProvider {
             use_pkce: row.get("use_pkce"),
             client_secret_basic: row.get("client_secret_basic"),
             client_secret_post: row.get("client_secret_post"),
+            auto_onboarding: row.get("auto_onboarding"),
+            auto_link: row.get("auto_link"),
         }
     }
 }
@@ -262,9 +268,10 @@ impl AuthProvider {
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, jwks_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
-mfa_claim_path, mfa_claim_value, use_pkce, client_secret_basic, client_secret_post)
+mfa_claim_path, mfa_claim_value, use_pkce, client_secret_basic, client_secret_post, auto_onboarding,
+auto_link)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#;
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -289,7 +296,9 @@ VALUES
                         &slf.mfa_claim_value,
                         slf.use_pkce,
                         slf.client_secret_basic,
-                        slf.client_secret_post
+                        slf.client_secret_post,
+                        slf.auto_onboarding,
+                        slf.auto_link
                     ),
                 )
                 .await?;
@@ -316,6 +325,8 @@ VALUES
                     &slf.use_pkce,
                     &slf.client_secret_basic,
                     &slf.client_secret_post,
+                    &slf.auto_onboarding,
+                    &slf.auto_link,
                 ],
             )
             .await?;
@@ -426,8 +437,9 @@ UPDATE auth_providers
 SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
 token_endpoint = $6, userinfo_endpoint = $7, jwks_endpoint = $8, client_id = $9, secret = $10,
 scope = $11, admin_claim_path = $12, admin_claim_value = $13, mfa_claim_path = $14,
-mfa_claim_value = $15, use_pkce = $16, client_secret_basic = $17, client_secret_post = $18
-WHERE id = $19"#;
+mfa_claim_value = $15, use_pkce = $16, client_secret_basic = $17, client_secret_post = $18,
+auto_onboarding = $19, auto_link = $20
+WHERE id = $21"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -452,6 +464,8 @@ WHERE id = $19"#;
                         self.use_pkce,
                         self.client_secret_basic,
                         self.client_secret_post,
+                        self.auto_onboarding,
+                        self.auto_link,
                         self.id.clone()
                     ),
                 )
@@ -478,6 +492,8 @@ WHERE id = $19"#;
                     &self.use_pkce,
                     &self.client_secret_basic,
                     &self.client_secret_post,
+                    &self.auto_onboarding,
+                    &self.auto_link,
                     &self.id,
                 ],
             )
@@ -535,6 +551,8 @@ impl AuthProvider {
             use_pkce: req.use_pkce,
             client_secret_basic: req.client_secret_basic,
             client_secret_post: req.client_secret_post,
+            auto_onboarding: req.auto_onboarding,
+            auto_link: req.auto_link,
         })
     }
 
@@ -682,6 +700,8 @@ impl TryFrom<AuthProvider> for ProviderResponse {
             use_pkce: value.use_pkce,
             client_secret_basic: value.client_secret_basic,
             client_secret_post: value.client_secret_post,
+            auto_onboarding: value.auto_onboarding,
+            auto_link: value.auto_link,
         })
     }
 }
@@ -1377,18 +1397,10 @@ impl AuthProviderIdClaims<'_> {
                 Some(user)
             }
             Err(_) => {
-                debug!(
-                    "did not find already existing user by federation lookup - making sure email does not exist"
-                );
-                // If a federated user with this information does not exist, we will create
-                // a new one in the following code, but we should make sure, that the email,
-                // which is a key value for Rauthy, does not yet exist for another user.
-                // On conflict, the DB would return an error anyway, but the error message is
-                // rather cryptic for a normal user.
+                debug!("did not find already existing user by federation lookup");
                 if let Ok(mut user) =
                     User::find_by_email(self.email.as_ref().unwrap().to_string()).await
                 {
-                    // TODO check if creating a new link for an existing user is allowed
                     if let Some(link) = link_cookie {
                         if link.provider_id != provider.id {
                             return Err(ErrorResponse::new(
@@ -1421,6 +1433,14 @@ impl AuthProviderIdClaims<'_> {
                         user.federation_uid = Some(claims_user_id.clone());
 
                         Some(user)
+                    } else if provider.auto_link
+                        && user.federation_uid.is_none()
+                        && user.auth_provider_id.is_none()
+                    {
+                        user.auth_provider_id = Some(provider.id.clone());
+                        user.federation_uid = Some(claims_user_id.clone());
+
+                        Some(user)
                     } else {
                         return Err(ErrorResponse::new(
                             ErrorResponseType::Forbidden,
@@ -1430,7 +1450,13 @@ impl AuthProviderIdClaims<'_> {
                             ),
                         ));
                     }
+                } else if !provider.auto_onboarding {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::NotFound,
+                        "User not found",
+                    ));
                 } else {
+                    // a new user will be created further down
                     None
                 }
             }
