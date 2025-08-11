@@ -50,6 +50,8 @@
         use_pkce: true,
         client_secret_basic: true,
         client_secret_post: false,
+        auto_onboarding: false,
+        auto_link: false,
 
         // user defined values
         name: '',
@@ -97,6 +99,8 @@
                         token_endpoint: 'https://github.com/login/oauth/access_token',
                         client_secret_basic: true,
                         client_secret_post: true,
+                        auto_onboarding: false,
+                        auto_link: false,
                         userinfo_endpoint: 'https://api.github.com/user',
                         use_pkce: false,
 
@@ -135,6 +139,8 @@
                         token_endpoint: '',
                         client_secret_basic: true,
                         client_secret_post: false,
+                        auto_onboarding: false,
+                        auto_link: false,
                         userinfo_endpoint: '',
                         use_pkce: true,
 
@@ -201,6 +207,8 @@
             use_pkce: config.use_pkce,
             client_secret_basic: config.client_secret_basic,
             client_secret_post: config.client_secret_post,
+            auto_onboarding: config.auto_onboarding,
+            auto_link: config.auto_link,
 
             client_id: config.client_id,
             client_secret: config.client_secret,
@@ -281,6 +289,8 @@
             client_id: '',
             client_secret_basic: true,
             client_secret_post: false,
+            auto_onboarding: false,
+            auto_link: false,
             scope: '',
             admin_claim_path: '',
             admin_claim_value: '',

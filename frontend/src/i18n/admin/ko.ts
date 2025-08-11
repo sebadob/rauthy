@@ -299,6 +299,12 @@ export let I18nAdminKo: I18nAdmin = {
     providers: {
         config: {
             allowInsecureTls: "안전하지 않은 TLS 허용",
+            autoLink: "Auto-Link User",
+            autoLinkDesc1: `If Auto-Link User is activated, the login via this provider will automatically link a
+                possibly existing, non-linked user to this provider.`,
+            autoLinkDesc2: `CAUTION: This option can be very dangerous and lead to account takeover if the provider
+                does not fully validate E-Mail addresses for users and therefore makes it possible to add a foreign
+                address for a user! MUST NEVER be used in such a case!`,
             clientName: "클라이언트 이름",
             custRootCa: "사용자 지정 Root CA PEM 사용",
             descAuthMethod: `<code>/token</code> 엔드포인트에서 사용할 인증 방법입니다.<br>
