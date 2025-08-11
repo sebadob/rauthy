@@ -43,6 +43,8 @@ pub struct ProviderRequest {
     pub use_pkce: bool,
     pub client_secret_basic: bool,
     pub client_secret_post: bool,
+    pub auto_onboarding: bool,
+    pub auto_link: bool,
 
     // This validation is pretty loose, but if we make it too strict,
     // we will most probably get into compatibility issues.

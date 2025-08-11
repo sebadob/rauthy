@@ -149,6 +149,8 @@ impl Client {
             use_pkce: true,
             client_secret_basic: false,
             client_secret_post: false,
+            auto_onboarding: false,
+            auto_link: false,
             client_id: "rauthy".to_owned(),
             client_secret: None,
             scope: String::new(),

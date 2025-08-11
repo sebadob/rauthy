@@ -2332,9 +2332,9 @@ checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
 name = "glob"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8d1add55171497b4705a648c6b583acafb01d58050a51727785f0b2c8e0a2b2"
+checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
 name = "group"
@@ -2500,7 +2500,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.9.1"
-source = "git+https://github.com/sebadob/hiqlite.git#b5b7994892a4ef09a0d97341be7d91e856478069"
+source = "git+https://github.com/sebadob/hiqlite.git#95eff44cdc7e530742388f7e0e5c5728b9d99060"
 dependencies = [
  "argon2",
  "axum",
@@ -2549,12 +2549,13 @@ dependencies = [
  "tower-service",
  "tracing",
  "uuid",
+ "webpki-roots",
 ]
 
 [[package]]
 name = "hiqlite-macros"
 version = "0.9.0"
-source = "git+https://github.com/sebadob/hiqlite.git#b5b7994892a4ef09a0d97341be7d91e856478069"
+source = "git+https://github.com/sebadob/hiqlite.git#95eff44cdc7e530742388f7e0e5c5728b9d99060"
 dependencies = [
  "hiqlite",
  "rust-embed",
@@ -2563,7 +2564,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-wal"
 version = "0.9.0"
-source = "git+https://github.com/sebadob/hiqlite.git#b5b7994892a4ef09a0d97341be7d91e856478069"
+source = "git+https://github.com/sebadob/hiqlite.git#95eff44cdc7e530742388f7e0e5c5728b9d99060"
 dependencies = [
  "bincode",
  "byteorder",
@@ -6677,9 +6678,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.17.0"
+version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cf4199d1e5d15ddd86a694e4d0dffa9c323ce759fea589f00fef9d81cc1931d"
+checksum = "f33196643e165781c20a5ead5582283a7dacbb87855d867fbc2df3f81eddc1be"
 dependencies = [
  "getrandom 0.3.3",
  "js-sys",

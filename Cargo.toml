@@ -68,7 +68,7 @@ gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 hickory-resolver = "0.25.2"
 hiqlite = { version = "0.9.1", features = [
-    "cache", "counters", "dashboard", "listen_notify_local"
+    "cache", "counters", "dashboard", "listen_notify_local", "webpki-roots"
 ] }
 hiqlite-macros = { version = "0.9" }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
