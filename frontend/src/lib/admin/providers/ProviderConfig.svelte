@@ -118,8 +118,8 @@
             </InputCheckbox>
         </div>
         <div class="checkbox">
-            <InputCheckbox ariaLabel="Auto-Link User" bind:checked={provider.auto_link}>
-                Auto-Link User
+            <InputCheckbox ariaLabel={ta.providers.config.autoLink} bind:checked={provider.auto_link}>
+                {ta.providers.config.autoLink}
             </InputCheckbox>
             {#if provider.auto_link}
                 <div transition:slide={{ duration: 150 }}>
