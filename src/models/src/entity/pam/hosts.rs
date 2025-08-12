@@ -19,7 +19,7 @@ pub struct PamHost {
     pub id: String,
     pub hostname: String,
     pub gid: u32,
-    pub secret: String,
+    pub secret: Vec<u8>,
     pub force_mfa: bool,
     pub local_password_only: bool,
     pub notes: Option<String>,
@@ -29,15 +29,11 @@ pub struct PamHost {
 
 impl From<hiqlite::Row<'_>> for PamHost {
     fn from(mut row: hiqlite::Row<'_>) -> Self {
-        let bytes = row.get::<Vec<u8>>("secret");
-        let dec = EncValue::try_from_bytes(bytes).unwrap().decrypt().unwrap();
-        let secret = String::from_utf8_lossy(dec.as_ref()).to_string();
-
         Self {
             id: row.get("id"),
             hostname: row.get("hostname"),
             gid: row.get::<i64>("gid") as u32,
-            secret,
+            secret: row.get("secret"),
             force_mfa: row.get("force_mfa"),
             local_password_only: row.get("local_password_only"),
             notes: row.get("notes"),
@@ -49,15 +45,11 @@ impl From<hiqlite::Row<'_>> for PamHost {
 
 impl From<tokio_postgres::Row> for PamHost {
     fn from(row: tokio_postgres::Row) -> Self {
-        let bytes = row.get::<_, Vec<u8>>("secret");
-        let dec = EncValue::try_from_bytes(bytes).unwrap().decrypt().unwrap();
-        let secret = String::from_utf8_lossy(dec.as_ref()).to_string();
-
         Self {
             id: row.get("id"),
             hostname: row.get("hostname"),
             gid: row.get::<_, i64>("gid") as u32,
-            secret,
+            secret: row.get("secret"),
             force_mfa: row.get("force_mfa"),
             local_password_only: row.get("local_password_only"),
             notes: row.get("notes"),
@@ -547,8 +539,18 @@ WHERE pu.gid = $1 AND pu.wheel = $2
     }
 
     #[inline]
-    pub fn validate_secret(&self, secret: String) -> Result<(), ErrorResponse> {
-        if self.secret == secret {
+    pub fn secret(&self) -> String {
+        let dec = EncValue::try_from_bytes(self.secret.clone())
+            .unwrap()
+            .decrypt()
+            .unwrap();
+        String::from_utf8_lossy(dec.as_ref()).to_string()
+    }
+
+    #[inline]
+    pub fn validate_secret(&self, secret: &[u8]) -> Result<(), ErrorResponse> {
+        let dec = EncValue::try_from_bytes(self.secret.clone())?.decrypt()?;
+        if dec.as_ref() == secret {
             Ok(())
         } else {
             Err(ErrorResponse::new(

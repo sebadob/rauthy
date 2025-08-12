@@ -29,7 +29,7 @@ impl From<&str> for PamGroupType {
 }
 
 impl PamGroupType {
-    fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Immutable => "immutable",
             Self::Host => "host",

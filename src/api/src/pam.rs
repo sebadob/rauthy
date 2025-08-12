@@ -49,7 +49,7 @@ pub async fn post_getent(
     payload.validate()?;
 
     let host = PamHost::find_simple(payload.host_id).await?;
-    host.validate_secret(payload.host_secret)?;
+    host.validate_secret(payload.host_secret.as_bytes())?;
 
     let resp = match payload.getent {
         Getent::Users => {
@@ -296,9 +296,10 @@ pub async fn post_host_secret(
 
     let host = PamHost::find_simple(id.into_inner()).await?;
 
+    let secret = host.secret();
     Ok(HttpResponse::Ok().json(PamHostSecretResponse {
         id: host.id,
-        secret: host.secret,
+        secret,
     }))
 }
 
@@ -349,7 +350,7 @@ pub async fn post_host_whoami(
     payload.validate()?;
 
     let host = PamHost::find_by_id_full(id.into_inner()).await?;
-    host.validate_secret(payload.host_secret)?;
+    host.validate_secret(payload.host_secret.as_bytes())?;
     Ok(HttpResponse::Ok().json(PamHostDetailsResponse::from(host)))
 }
 
@@ -369,7 +370,7 @@ pub async fn post_login(
     }
 
     let host = PamHost::find_simple(payload.host_id).await?;
-    host.validate_secret(payload.host_secret)?;
+    host.validate_secret(payload.host_secret.as_bytes())?;
 
     let pam_user = PamUser::find_by_name(payload.username).await?;
     if !host.is_user_in_group(&pam_user).await {
@@ -499,7 +500,7 @@ pub async fn post_preflight(
     payload.validate()?;
 
     let host = PamHost::find_simple(payload.host_id).await?;
-    host.validate_secret(payload.host_secret)?;
+    host.validate_secret(payload.host_secret.as_bytes())?;
 
     let pam_user = PamUser::find_by_name(payload.username).await?;
     if !host.is_user_in_group(&pam_user).await {

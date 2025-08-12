@@ -13,6 +13,9 @@ use crate::entity::jwk::Jwk;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
+use crate::entity::pam::groups::PamGroup;
+use crate::entity::pam::hosts::PamHost;
+use crate::entity::pam::users::PamUser;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pictures::UserPicture;
 use crate::entity::refresh_tokens::RefreshToken;
@@ -33,6 +36,7 @@ use cryptr::EncValue;
 use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
+use std::cmp::max;
 
 pub async fn api_keys(data_before: Vec<ApiKeyEntity>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM api_keys";
@@ -115,8 +119,11 @@ pub async fn auth_providers(data_before: Vec<AuthProvider>) -> Result<(), ErrorR
 INSERT INTO
 auth_providers (id, enabled, name, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value, mfa_claim_path,
-mfa_claim_value, use_pkce, client_secret_basic, client_secret_post, jwks_endpoint)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#;
+mfa_claim_value, use_pkce, client_secret_basic, client_secret_post, jwks_endpoint, auto_onboarding,
+auto_link)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+)"#;
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -143,7 +150,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
                         b.use_pkce,
                         b.client_secret_basic,
                         b.client_secret_post,
-                        b.jwks_endpoint
+                        b.jwks_endpoint,
+                        b.auto_onboarding,
+                        b.auto_link
                     ),
                 )
                 .await?;
@@ -173,6 +182,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
                     &b.client_secret_basic,
                     &b.client_secret_post,
                     &b.jwks_endpoint,
+                    &b.auto_onboarding,
+                    &b.auto_link,
                 ],
             )
             .await?;
@@ -672,6 +683,225 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
                 ],
             )
             .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn pam_groups(data_before: Vec<PamGroup>) -> Result<(), ErrorResponse> {
+    // To resolve FK issues, we will delete all pam tables here, since this will be the
+    // first inserts that will be done.
+
+    let sql_1 = "DELETE FROM pam_rel_groups_users";
+    let sql_2 = "DELETE FROM pam_users";
+    let sql_3 = "DELETE FROM pam_hosts_ips";
+    let sql_4 = "DELETE FROM pam_hosts_aliases";
+    let sql_5 = "DELETE FROM pam_hosts";
+    let sql_6 = "DELETE FROM pam_groups";
+
+    let sql_7 = r#"
+INSERT INTO pam_groups (id, name, typ)
+VALUES ($1, $2, $3)"#;
+
+    let mut highest_id = 0;
+    for group in &data_before {
+        highest_id = max(highest_id, group.id);
+    }
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        DB::hql().execute(sql_2, params!()).await?;
+        DB::hql().execute(sql_3, params!()).await?;
+        DB::hql().execute(sql_4, params!()).await?;
+        DB::hql().execute(sql_5, params!()).await?;
+        DB::hql().execute(sql_6, params!()).await?;
+
+        DB::hql()
+            .execute(
+                "DELETE FROM sqlite_sequence WHERE name = $1",
+                params!("pam_groups"),
+            )
+            .await?;
+
+        for b in data_before {
+            DB::hql()
+                .execute(sql_7, params!(b.id, b.name, b.typ.as_str()))
+                .await?;
+        }
+
+        highest_id = max(highest_id, 99999);
+        // in any other case, SQLite tracks the correct id on manual insert anyway
+        if highest_id == 99999 {
+            DB::hql()
+                .execute(
+                    r#"
+        INSERT INTO sqlite_sequence (name, seq)
+        VALUES ($1, $2)
+        "#,
+                    params!("pam_groups", highest_id),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        DB::pg_execute(sql_2, &[]).await?;
+        DB::pg_execute(sql_3, &[]).await?;
+        DB::pg_execute(sql_4, &[]).await?;
+        DB::pg_execute(sql_5, &[]).await?;
+        DB::pg_execute(sql_6, &[]).await?;
+
+        for b in data_before {
+            DB::pg_execute(sql_7, &[&(b.id as i64), &b.name, &b.typ.as_str()]).await?;
+        }
+
+        highest_id = max(highest_id + 1, 100000);
+        let stmt = format!("ALTER SEQUENCE pam_groups_id_seq RESTART WITH {highest_id}");
+        DB::pg_execute(&stmt, &[]).await?;
+    }
+    Ok(())
+}
+
+pub async fn pam_hosts(data_before: Vec<PamHost>) -> Result<(), ErrorResponse> {
+    let sql_1 = r#"
+INSERT INTO pam_hosts (id, hostname, gid, secret, force_mfa, local_password_only, notes)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+
+    if is_hiqlite() {
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_1,
+                    params!(
+                        b.id,
+                        b.hostname,
+                        b.gid,
+                        b.secret,
+                        b.force_mfa,
+                        b.local_password_only,
+                        b.notes
+                    ),
+                )
+                .await?;
+        }
+    } else {
+        for b in data_before {
+            DB::pg_execute(
+                sql_1,
+                &[
+                    &b.id,
+                    &b.hostname,
+                    &(b.gid as i64),
+                    &b.secret,
+                    &b.force_mfa,
+                    &b.local_password_only,
+                    &b.notes,
+                ],
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn pam_hosts_aliases(data_before: Vec<(String, String)>) -> Result<(), ErrorResponse> {
+    let sql_1 = r#"
+INSERT INTO pam_hosts_aliases (host_id, alias)
+VALUES ($1, $2)"#;
+
+    if is_hiqlite() {
+        for b in data_before {
+            DB::hql().execute(sql_1, params!(b.0, b.1)).await?;
+        }
+    } else {
+        for b in data_before {
+            DB::pg_execute(sql_1, &[&b.0, &b.1]).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn pam_hosts_ips(data_before: Vec<(String, String)>) -> Result<(), ErrorResponse> {
+    let sql_1 = r#"
+INSERT INTO pam_hosts_ips (host_id, ip)
+VALUES ($1, $2)"#;
+
+    if is_hiqlite() {
+        for b in data_before {
+            DB::hql().execute(sql_1, params!(b.0, b.1)).await?;
+        }
+    } else {
+        for b in data_before {
+            DB::pg_execute(sql_1, &[&b.0, &b.1]).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn pam_users(data_before: Vec<PamUser>) -> Result<(), ErrorResponse> {
+    let sql_1 = r#"
+INSERT INTO pam_users (id, name, gid, email, shell)
+VALUES ($1, $2, $3, $4, $5)"#;
+
+    let mut highest_id = 0;
+    for user in &data_before {
+        highest_id = max(highest_id, user.id);
+    }
+
+    if is_hiqlite() {
+        DB::hql()
+            .execute(
+                "DELETE FROM sqlite_sequence WHERE name = $1",
+                params!("pam_users"),
+            )
+            .await?;
+
+        for b in data_before {
+            DB::hql()
+                .execute(sql_1, params!(b.id, b.name, b.gid, b.email, b.shell))
+                .await?;
+        }
+
+        highest_id = max(highest_id, 99999);
+        // in any other case, SQLite tracks the correct id on manual insert anyway
+        if highest_id == 99999 {
+            DB::hql()
+                .execute(
+                    r#"
+    INSERT INTO sqlite_sequence (name, seq)
+    VALUES ($1, $2)
+    "#,
+                    params!("pam_users", highest_id),
+                )
+                .await?;
+        }
+    } else {
+        for b in data_before {
+            DB::pg_execute(
+                sql_1,
+                &[&(b.id as i64), &b.name, &(b.gid as i64), &b.email, &b.shell],
+            )
+            .await?;
+        }
+
+        highest_id = max(highest_id + 1, 100000);
+        let stmt = format!("ALTER SEQUENCE pam_users_id_seq RESTART WITH {highest_id}");
+        DB::pg_execute(&stmt, &[]).await?;
+    }
+    Ok(())
+}
+
+pub async fn pam_rel_groups_users(data_before: Vec<(i64, i64, bool)>) -> Result<(), ErrorResponse> {
+    let sql_1 = r#"
+INSERT INTO pam_rel_groups_users (gid, uid, wheel)
+VALUES ($1, $2, $3)"#;
+
+    if is_hiqlite() {
+        for b in data_before {
+            DB::hql().execute(sql_1, params!(b.0, b.1, b.2)).await?;
+        }
+    } else {
+        for b in data_before {
+            DB::pg_execute(sql_1, &[&b.0, &b.1, &b.2]).await?;
         }
     }
     Ok(())
