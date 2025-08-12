@@ -14,6 +14,9 @@ use crate::entity::jwk::Jwk;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
+use crate::entity::pam::groups::{PamGroup, PamGroupType};
+use crate::entity::pam::hosts::PamHost;
+use crate::entity::pam::users::PamUser;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pictures::UserPicture;
 use crate::entity::refresh_tokens::RefreshToken;
@@ -359,6 +362,99 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     let before = query_sqlite::<WebId>(&conn, "SELECT * FROM webids").await?;
     inserts::webids(before).await?;
 
+    // PAM GROUPS
+    debug!("Migrating table: pam_groups");
+    let mut stmt = conn.prepare("SELECT * FROM pam_groups")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(PamGroup {
+                id: row.get::<_, i64>("id")? as u32,
+                name: row.get("name")?,
+                typ: PamGroupType::from(row.get::<_, String>("typ")?.as_str()),
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::pam_groups(before).await?;
+
+    // PAM HOSTS
+    debug!("Migrating table: pam_hosts");
+    let mut stmt = conn.prepare("SELECT * FROM pam_hosts")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(PamHost {
+                id: row.get("id")?,
+                hostname: row.get("hostname")?,
+                gid: row.get::<_, i64>("gid")? as u32,
+                secret: row.get("secret")?,
+                force_mfa: row.get("force_mfa")?,
+                local_password_only: row.get("local_password_only")?,
+                notes: row.get("notes")?,
+                ips: Vec::default(),
+                aliases: Vec::default(),
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::pam_hosts(before).await?;
+
+    // PAM HOSTS ALIASES
+    debug!("Migrating table: pam_hosts_aliases");
+    let mut stmt = conn.prepare("SELECT * FROM pam_hosts_aliases")?;
+    let before = stmt
+        .query_map([], |row| {
+            let id: String = row.get("host_id")?;
+            let alias: String = row.get("alias")?;
+            Ok((id, alias))
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::pam_hosts_aliases(before).await?;
+
+    // PAM HOSTS IPS
+    debug!("Migrating table: pam_hosts_ips");
+    let mut stmt = conn.prepare("SELECT * FROM pam_hosts_ips")?;
+    let before = stmt
+        .query_map([], |row| {
+            let id: String = row.get("host_id")?;
+            let ip: String = row.get("ip")?;
+            Ok((id, ip))
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::pam_hosts_ips(before).await?;
+
+    // PAM USERS
+    debug!("Migrating table: pam_users");
+    let mut stmt = conn.prepare("SELECT * FROM pam_users")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(PamUser {
+                id: row.get::<_, i64>("id")? as u32,
+                name: row.get("name")?,
+                gid: row.get::<_, i64>("gid")? as u32,
+                email: row.get("email")?,
+                shell: row.get("shell")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::pam_users(before).await?;
+
+    // PAM REL GROUPS USERS
+    debug!("Migrating table: pam_rel_groups_users");
+    let mut stmt = conn.prepare("SELECT * FROM pam_rel_groups_users")?;
+    let before = stmt
+        .query_map([], |row| {
+            let gid: i64 = row.get("gid")?;
+            let uid: i64 = row.get("uid")?;
+            let wheel: bool = row.get("wheel")?;
+            Ok((gid, uid, wheel))
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::pam_rel_groups_users(before).await?;
+
     Ok(())
 }
 
@@ -595,6 +691,61 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: webids");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM webids", &[], 0).await?;
     inserts::webids(before).await?;
+
+    // PAM GROUPS
+    debug!("Migrating table: pam_groups");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM pam_groups", &[], 0).await?;
+    inserts::pam_groups(before).await?;
+
+    // PAM HOSTS
+    debug!("Migrating table: pam_hosts");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM pam_hosts", &[], 0).await?;
+    inserts::pam_hosts(before).await?;
+
+    // PAM HOSTS ALIASES
+    debug!("Migrating table: pam_hosts_aliases");
+    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM pam_hosts_aliases", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| {
+            let id: String = row.get("host_id");
+            let alias: String = row.get("alias");
+            (id, alias)
+        })
+        .collect::<Vec<_>>();
+    inserts::pam_hosts_aliases(before).await?;
+
+    // PAM HOSTS IPS
+    debug!("Migrating table: pam_hosts_ips");
+    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM pam_hosts_ips", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| {
+            let id: String = row.get("host_id");
+            let ip: String = row.get("ip");
+            (id, ip)
+        })
+        .collect::<Vec<_>>();
+    inserts::pam_hosts_ips(before).await?;
+
+    // PAM USERS
+    debug!("Migrating table: pam_users");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM pam_users", &[], 0).await?;
+    inserts::pam_users(before).await?;
+
+    // PAM REL GROUPS USERS
+    debug!("Migrating table: pam_rel_groups_users");
+    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM pam_rel_groups_users", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| {
+            let gid: i64 = row.get("gid");
+            let uid: i64 = row.get("uid");
+            let wheel: bool = row.get("wheel");
+            (gid, uid, wheel)
+        })
+        .collect::<Vec<_>>();
+    inserts::pam_rel_groups_users(before).await?;
 
     Ok(())
 }
