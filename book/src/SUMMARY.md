@@ -37,6 +37,10 @@
     - [User Logout](work/logout.md)
     - [SCIM](work/scim.md)
     - [Forward Authentication](work/forward_auth.md)
+    - [PAM](work/pam.md)
+        - [PAM Groups](work/pam_groups.md)
+        - [PAM Hosts](work/pam_hosts.md)
+        - [PAM Users](work/pam_users.md)
 
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)
