@@ -38,9 +38,10 @@
     - [SCIM](work/scim.md)
     - [Forward Authentication](work/forward_auth.md)
     - [PAM](work/pam.md)
-        - [PAM Groups](work/pam_groups.md)
-        - [PAM Hosts](work/pam_hosts.md)
-        - [PAM Users](work/pam_users.md)
+        - [Groups](work/pam_groups.md)
+        - [Hosts](work/pam_hosts.md)
+        - [Users](work/pam_users.md)
+        - [Modules](work/pam_nss_modules.md)
 
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)

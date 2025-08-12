@@ -10,7 +10,7 @@ NFS shares and things like that. The only value you can change for a user after 
 will just stay the default `/bin/bash` in probably almost all cases anyway.
 
 The more important section for a user is the groups membership. Groups are separated by type, and these types are
-explained in the PAM Groups doc. At this point, there should be not open questions about them.
+explained in the [PAM Groups](pam_groups.md#types) doc. At this point, there should be not open questions about them.
 
 PAM Users are pretty simple. The most important thing about them is their additional `username`, which must follow
 Linux username regexes. Technically, in most situations, providing your email address from Rauthy should work, but there
