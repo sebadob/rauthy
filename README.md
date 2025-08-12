@@ -102,6 +102,24 @@ run on a Raspberry Pi and all headless devices can be authenticated via the `dev
 has everything built-in and ready, if you want to use Rust on the IoT devices as well. It has not been checked in a
 `no_std` environment yet, but the client implementation is pretty simple.
 
+### PAM Logins
+
+OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes with `forward_auth`
+support. To not need an additional LDAP / AD / something similar for your backend and workstations, Rauthy comes with
+its own custom PAM module. It does not just use JWT Tokens for logging in, but you can actually manage all your Linux
+hosts, groups and users in different ways. You have the option to secure local logins to workstations via Yubikey
+(only USB Passkeys supported, no QR-code / software keys), and all SSH logins can be done with ephemeral, auto-expiring
+passwords, that you can generate via your Account dashboard, if an Admin has created a PAM user for you.
+This means you basically have MFA-secured SSH logins without the need for any modifications or additional software on
+your local SSH client, and you can use any SSH client from any machine securely, even if it's not your own.
+
+In addition to the PAM module, you get an NSS module and an NSS proxy that runs on each machine. You can dynamically
+log in to any machine an Admin has given you access to. Users and groups are not added to local files, but will be
+resolved via the network.
+
+This module is published in a separate repo to avoid licensing issues, since it relies on some GPLv3 dependencies. You
+can take a look at it here: [rauthy-pam-nss](https://github.com/sebadob/rauthy-pam-nss).
+
 ### Scales to millions of users
 
 Rauthy has no issue handling even millions of users. Everything keeps being fast and responsive, apart from the search
@@ -113,7 +131,8 @@ at the exact same time you need to support.
 
 ### Features List
 
-- [x] Fully working OIDC provider
+- [x] Fully working OIDC / OAuth 2.0 provider
+- [x] PAM logins via custom PAM + NSS modules
 - [x] [Hiqlite](https://github.com/sebadob/hiqlite) or Postgres as database
 - [x] Fast and efficient with low footprint
 - [x] Secure default values
