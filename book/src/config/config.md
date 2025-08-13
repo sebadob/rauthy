@@ -959,6 +959,43 @@ smtp_url = 'localhost'
 # overwritten by: SMTP_FROM
 #smtp_from = 'Rauthy <rauthy@localhost>'
 
+# You usually do not need to change this value. The 'default'
+# will connect via SMTP PLAIN or LOGIN, which works in almost
+# all scenarios. However, you can change it to `xoauth2` to
+# connect via XOAUTH2. In addition, there is also `microsoft_graph`.
+# It is a custom implementaion that does not use SMTP anymore,
+# but instead the Microsoft Azure Graph API. You should not use
+# it, unless you have no other choice or a very good reason.
+#
+# If you specify another value than ´default`, you must provide
+# all the additional `x_oauth_*` values bwloe.
+#
+# possible values: 'default', 'xoauth2', 'microsoft_graph'
+# default: 'default'
+# overwritten by: SMTP_CONN_MODE
+#smtp_conn_mode = 'default'
+
+# These values must be given if `auth_xoauth2 = true`.
+# They will be used for a `client_credentials` request
+# to the `xoauth_url` to retrieve a token, that then
+# will be used for authentication via SMTP XOAUTH2.
+#
+# overwritten by: SMTP_XOAUTH2_URL
+#xoauth_url = ''
+# overwritten by: SMTP_XOAUTH2_CLIENT_ID
+#xoauth_client_id = ''
+# overwritten by: SMTP_XOAUTH2_CLIENT_SECRET
+#xoauth_client_secret = ''
+# overwritten by: SMTP_XOAUTH2_SCOPE
+#xoauth_scope = ''
+
+# Only needed if `smtp_conn_mode = 'microsoft_graph'`:
+# https://learn.microsoft.com/en-us/graph/api/user-sendmail?view=graph-rest-1.0&tabs=http
+#
+# default: not set
+# overwritten by: SMTP_MICROSOFT_GRAPH_URI
+#microsoft_graph_uri = ''
+
 # The number of retries that should be done for connecting to
 # the given SMTP_URL.
 # When these retries are exceeded without success, Rauthy will
@@ -986,7 +1023,7 @@ smtp_url = 'localhost'
 # encryption cookies, and so on.
 #
 # The first part until the first `/` is the key ID.
-# The ID must match '[a-zA-Z0-9]{2,20}'
+# The ID must match '^[a-zA-Z0-9:_-]{2,20}$'
 #
 # The key itself begins after the first `/` has been found.
 # The key must be exactly 32 bytes long, encoded as base64.
@@ -1688,6 +1725,26 @@ level_access = 'modifying'
 # default: true
 # overwritten by: ADMIN_FORCE_MFA
 admin_force_mfa = true
+
+[pam]
+# The length of newly generated PAM remote passwords via the
+# account dashboard. The default is fine as long as you can copy
+# & paste them. You may want to reduce the length here if you e.g.
+# occasionally generate them on mobile and need to type them
+# manually into some terminal.
+#
+# default: 24
+# overwritten by: PAM_REMOTE_PASSWORD_LEN
+#remote_password_len = 24
+
+# The TTL for newly generated PAM remote passwords in seconds.
+# The default gives you plenty of time to open a few sessions in
+# some terminals and maybe switch to `root` on some remote machines,
+# while still expiring quick enough to be secure.
+#
+# default: 120
+# overwritten by: PAM_REMOTE_PASSWORD_TTL
+#remote_password_ttl = 120
 
 [pow]
 # The difficulty for a Proof-of-Work (PoW).

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Minimal Production Config - Rauthy Documentation</title>
+        <title>Groups - Rauthy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -167,174 +167,31 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="minimal-production-config"><a class="header" href="#minimal-production-config">Minimal Production Config</a></h1>
-<p>This section gives you a template for probably the most minimal config you could do when going into production.</p>
-<p>You can either copy &amp; paste this (with adjustments of course) and expand it when necessary, or take a look at the
-complete <a href="config.html">Reference Config</a> and check each existing value.</p>
-<pre><code class="language-toml">[bootstrap]
-# If set, the email of the default admin will be changed during
-# the initialization of an empty production database.
-#
-# default: 'admin@localhost'
-# overwritten by: BOOTSTRAP_ADMIN_EMAIL
-admin_email = "admin@localhost"
-
-[cluster]
-# Can be set to 'k8s' to try to split off the node id from the hostname
-# when Hiqlite is running as a StatefulSet inside Kubernetes.
-#
-# default: unset
-# overwritten by: HQL_NODE_ID_FROM
-#node_id_from = "k8s"
-
-# The node id must exist in the nodes and there must always be
-# at least a node with ID 1
-# Will be ignored if `node_id_from = k8s`
-#
-# At least `node_id_from` or `node_id` are required.
-#
-# default: 0 (invalid)
-# overwritten by: HQL_NODE_ID
-node_id = 1
-
-# All cluster member nodes. For a single instance deployment, 
-# `"1 localhost:8100 localhost:8200"` will work just fine.
-# Each array value must have the following format:
-# `id addr_raft addr_api`
-#
-# default: ["1 localhost:8100 localhost:8200"]
-# overwritten by: HQL_NODES
-nodes = [
-    "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
-]
-
-# Secrets for Raft internal authentication as well as for the API.
-# These must be at least 16 characters long and you should provide
-# different ones for both variables.
-#
-# default: not set - required
-# overwritten by: HQL_SECRET_RAFT
-secret_raft = "SuperSecureSecret1337"
-# default: not set - required
-# overwritten by: HQL_SECRET_API
-secret_api = "SuperSecureSecret1337"
-
-[email]
-# Rauthy will force TLS and try a downgrade to STARTTLS, if
-# TLS fails. It will never allow an unencrypted connection.
-# You might want to set `SMTP_DANGER_INSECURE=true` if you
-# need this for local dev.
-#
-# overwritten by: SMTP_URL
-smtp_url = "localhost"
-# optional, default will be used depending on TLS / STARTTLS
-# overwritten by: SMTP_PORT
-#smtp_port = 
-# overwritten by: SMTP_USERNAME
-smtp_username = "username"
-# overwritten by: SMTP_PASSWORD
-smtp_password = "password"
-# Format: "Rauthy &lt;rauthy@localhost&gt;"
-# default: "Rauthy &lt;rauthy@localhost&gt;"
-# overwritten by: SMTP_FROM
-smtp_from = "Rauthy &lt;rauthy@localhost&gt;"
-
-[encryption]
-# You need to define at least one valid encryption key.
-# These keys are used in various places, like for instance
-# encrypting confidential client secrets in the database, or
-# encryption cookies, and so on.
-#
-# The first part until the first `/` is the key ID.
-# The ID must match '^[a-zA-Z0-9:_-]{2,20}$'
-#
-# The key itself begins after the first `/` has been found.
-# The key must be exactly 32 bytes long, encoded as base64.
-#
-# You can find a more detailed explanation on how to generate
-# keys in the documentation:
-# 1. https://sebadob.github.io/rauthy/getting_started/k8s.html#create-and-apply-secrets
-# 2. https://sebadob.github.io/rauthy/config/encryption.html
-#
-# You can provide multiple keys to make things like key
-# rotation work. Be careful with removing old keys. Make sure
-# that all secrets have been migrated beforehand.
-# You can find a utility in the Admin UI to do this for you.
-#
-# overwritten by: ENC_KEYS - single String, \n separated values
-keys = ["q6u26/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E="]
-
-# This identifies the key ID from the `ENC_KEYS` list, that
-# should actively be used for new encryptions.
-#
-# overwritten by: ENC_KEY_ACTIVE
-key_active = "q6u26"
-
-[events]
-# The E-Mail address event notifications should be sent to.
-#
-# overwritten by: EVENT_EMAIL
-email = "admin@localhost"
-
-[server]
-# The scheme to use locally, valid values:
-# http | https | http_https | unix_http | unix_https
-# For more details about the UNIX domain socket, check out its
-# documentation page.
-#
-# default: http_https
-# overwritten by: LISTEN_SCHEME
-scheme = "http"
-
-# The Public URL of the whole deployment
-# The LISTEN_SCHEME + PUB_URL must match the HTTP ORIGIN HEADER
-# later on, which is especially important when running Rauthy
-# behind a reverse proxy. In case of a non-standard port (80/443),
-# you need to add the port to the PUB_URL
-#
-# default: not set - mandatory
-# overwritten by: PUB_URL
-pub_url = "localhost:8080"
-
-# When rauthy is running behind a reverse proxy, set to true
-#
-# default: false
-# overwritten by: PROXY_MODE
-proxy_mode = false
-
-# A list of trusted proxy CIDRs. When `proxy_mode = true`
-# or `peer_ip_header_name` is set, these are mandatory to
-# be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
-# different source will be blocked.
-#
-# default: []
-# overwritten by: TRUSTED_PROXIES - single String, \n separated values
-#trusted_proxies = ['192.168.14.0/24']
-
-[webauthn]
-# The 'Relaying Party (RP) ID' - effective domain name.
-#
-# CAUTION: When this changes, already registered devices will
-# stop working and users cannot log in anymore!
-#
-# default: 'localhost'
-# overwritten by: RP_ID
-rp_id = "localhost"
-
-# Url containing the effective domain name.
-#
-# DEV: If you want to test Webauthn via the Svelte DEV UI,
-# change the port number to :5173.
-#
-# !!! CAUTION: Must ALWAYS include the port number !!!
-#
-# default: 'http://localhost:8080'
-# overwritten by: RP_ORIGIN
-rp_origin = "http://localhost:5173"
-</code></pre>
+                        <h1 id="pam-groups"><a class="header" href="#pam-groups">PAM Groups</a></h1>
+<p>PAM Groups are independent of the general OIDC groups. This is the case for all PAM resources, because Linux regexes for
+validation are much stricter. PAM groups can also do different things, depending on their type.</p>
+<p>PAM Groups are the first resource you need for a new setup, because they are the glue between hosts and users and
+manage general access.</p>
+<h2 id="wheel-rauthy"><a class="header" href="#wheel-rauthy"><code>wheel-rauthy</code></a></h2>
+<p>This group is special. It will always exist, it will always have <code>gid</code> 100_000 and it cannot be deleted. Membership
+for this group can also not be configured directly. Instead, it will be calculated dynamically for each user / host
+combination depending on if the user is allowed to <code>wheel</code> in that particular host group. More on that later.</p>
+<p>The idea of <code>wheel-rauthy</code> is that it should serve the same purpose as <code>wheel</code> on hosts, like e.g. allowing all members
+in <code>wheel-rauthy</code> to use <code>sudo</code>. Theoretically, it could be merged with <code>wheel</code> on all hosts locally, but having a
+distinct name provides more flexibility for configuration when you e.g. want to handle local users a bit differently
+from Rauthy-managed ones.</p>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<p>You can create groups of 4 different types. Each type serves a specific purpose.</p>
+<h3 id="host-groups"><a class="header" href="#host-groups"><code>host</code> groups</a></h3>
+<p><code>host</code> groups manage access to hosts. Each PAM Host must be assigned to exactly a single host group. When you assign
+a PAM User as a member in a host group, this user will be allowed to log in to all hosts in this specific group, and it
+will be rejected when the user is not a member. In addition, when you also allow <code>wheel</code> for a user in a host group,
+this user will be dynamically assigned to the <code>wheel-rauthy</code> group mentioned above, and can therefore be used for things
+like access to <code>sudo</code> and such.</p>
+<p>You might be used to manage hosts by domain. Rauthy does not care about in which domain a host is and instead has the
+host groups. The reason is that host groups provide a more fine-grained way of managing access and are therefore more
+flexible. You can have multiple host groups in the same domain, and e.g. name your groups after teams or projects, while
+the hosts are maybe technically in the same domain.</p>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
 <div class="admonition-title">
 <div id="admonition-hint-title">
@@ -343,20 +200,51 @@ rp_origin = "http://localhost:5173"
 <a class="admonition-anchor-link" href="#admonition-hint"></a>
 </div>
 <div>
-<p>TL;DR for generating a <code>encryption.keys</code>:</p>
-<pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"</code></pre>
+<p>If you want to delete a host group, you can only do this, if there is not a single host left that is assigned to this
+group, to prevent invalid setups. You will only see the delete button, if the host group has no host assigned. If users
+are still assigned, the relation will simply be deleted.</p>
 </div>
 </div>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
+</div>
+<div>
+<p>You will not see <code>host</code> groups in NSS lookups, like when you do <code>getent group</code>. They only exist for managing access
+to hosts. All other group types will be resolved on hosts like you would expect it.</p>
+</div>
+</div>
+<h3 id="generic-groups"><a class="header" href="#generic-groups"><code>generic</code> groups</a></h3>
+<p><code>generic</code> groups can be seen as a counterpart to your groups from <code>/etc/group</code>. The exception is, that they don't exist
+locally and will be resolved via the NSS module. The important thing about them is, that their <code>gid</code> is globally unique,
+not just on a host or inside a host group. This means if you e.g. have an NFS share and manage permissions via <code>gid</code> of
+a generic group, it will be the exact same value with the exact same access on each host where you mount it.</p>
+<h3 id="local-groups"><a class="header" href="#local-groups"><code>local</code> groups</a></h3>
+<p><code>generic</code> groups are almost the same, but when your <code>/etc/nsswitch.conf</code> is configured correctly, the <code>rauthy-nss</code> proxy
+will merge them with groups that might exist locally in <code>/etc/group</code> on the hosts. This is for instance important for
+situations like giving a user access to <code>docker</code>, which typically requires them to be a member of the <code>docker</code> group.
+To achieve this, create a <code>local</code> group with the name <code>docker</code>, and the results will be merged and access granted.
+Their <code>gid</code> is globally unique on Rauthy, but the NSS proxy will overwrite it on each host individually with the local
+<code>gid</code> from the <code>/etc/group</code> entry.</p>
+<h3 id="user-groups"><a class="header" href="#user-groups"><code>user</code> groups</a></h3>
+<p>You cannot create these groups manually. When a new user is created, a <code>user</code> group with the same name as the username
+will be created, just like you know if from any Linux system. You can assign other users to existing user groups, e.g.
+when users want to be able to share certain files on hosts, but apart from that, they are managed automatically. Their
+lifetime is bound to the users' lifetime. They provide the same guarantees as <code>generic</code> groups. Their <code>gid</code> will be
+globally unique everywhere.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../config/production_config.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../work/pam.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../config/argon2.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../work/pam_hosts.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -366,11 +254,11 @@ rp_origin = "http://localhost:5173"
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../config/production_config.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../work/pam.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../config/argon2.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../work/pam_hosts.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

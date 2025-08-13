@@ -1,0 +1,378 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Modules - Rauthy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href=".././mdbook-admonish.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Rauthy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="pam--nss-modules"><a class="header" href="#pam--nss-modules">PAM + NSS Modules</a></h1>
+<p>This is a documentation for the separately managed project <a href="https://github.com/sebadob/rauthy-pam-nss">rauthy-pam-nss</a>.
+It's a separate project to avoid licensing issues because of some dependencies the PAM and NSS bindings rely on.</p>
+<p>These modules are basically the "client part" for all the PAM configuration you did on Rauthys side. You need to install
+3 things:</p>
+<ul>
+<li>NSS module</li>
+<li>NSS Proxy</li>
+<li>PAM module</li>
+</ul>
+<p>The NSS module + proxy are there to dynamically resolve users, groups and hosts via Rauthy without the need to add them
+to any of the local files like <code>/etc/passwd</code> or <code>/etc/group</code>. The NSS module will be called from all different sorts of
+applications, that need to resolve some names. The NSS module exposes the <code>C</code> bindings and then execute the logic in
+Rust. This module is pretty simple, as it only connects to a local Unix Domain Socket, where the NSS Proxy will be
+listening. This proxy is the one doing the actual requests to Rauthy, as well as cache results for faster subsequent
+lookups.</p>
+<p>The reason why there is a proxy in between is not only to be able to cache results, but also to be more efficient and
+more importantly, to only give the NSS proxy access to the actual host ID and secret, which are needed to do requests
+against Rauthys API. These should have the least possible amount of exposure, because with these credentials, you could
+technically find out which usernames exist on Rauthy and which do not. This is not a security issue right away, but not
+leaking anything is always preferred.</p>
+<p>The main configuration file for NSS lookups is <code>/etc/nsswitch.conf</code>, but no worries, it's not only pretty simple to
+understand, but will also be automatically managed by the install script. The only important part about it is, if you
+want to be able to use the <code>local</code> PAM groups feature, that you add <code>[SUCCESS=merge]</code> in between entries for <code>group</code>
+lookups.</p>
+<p>You can test very easily if NSS lookups are working with e.g. <code>getent groups</code> or <code>getent users</code>, and you should see
+the Rauthy-managed resources included in the output. If at the beginning or at the end depends on your <code>nsswitch.conf</code>,
+and you of course can only see users if there are any configured on Rauthy. Only if NSS lookups are working fine, you
+should install the PAM module.</p>
+<p>The PAM module exposes the <code>C</code> bindings for, surprise, PAM. Configuring PAM is its own, very big topic and I will not
+go into detail here. There is lots of documentation and guides in the internet. For simple setups, like if you did not
+do any customizations to your hosts anyway, the provided default templates should work out of the box (hopefully). If
+you have done customizations, you probably know about how it's done anyway and maybe don't even want to use the provided
+templates. That's up to you of course. The same for NSS, as long as you add Rauthys modules to your setup correctly, it
+should work.</p>
+<p>For standard scenarios, you will get an install script. It currently should upport RHEL and Debian based distros. Other
+ones (suse, arch, gentoo) may need contributions to include them in the script.</p>
+<h2 id="install-tldr"><a class="header" href="#install-tldr">Install TL;DR</a></h2>
+<p>The PAM project is in a very early phase and there are no distro-packaged versions available. Here is the gist how to
+install:</p>
+<pre><code class="language-bash">curl -LO https://raw.githubusercontent.com/sebadob/rauthy-pam-nss/refs/heads/main/install/rauthy-pam-nss-install.tar.gz \
+  &amp;&amp; tar -xzf rauthy-pam-nss-install.tar.gz \
+  &amp;&amp; cd rauthy-pam-nss-install
+</code></pre>
+<p>Then, since you should never blindly execute a random bash script from the internet, especially with <code>sudo</code>, inspect
+<code>install.sh</code> and afterward install config files, NSS Proxy and (depending on availability) SELinux policy:</p>
+<pre><code class="language-bash">sudo ./install.sh nss
+</code></pre>
+<p>Then check via e.g. <code>getent hosts</code> or <code>getent groups</code> that you get data from Rauthy. However, the script does it as well
+and you should see an error message about exceeded retries it you e.g. have given invalid credentials. When NSS lookups
+are working fine, proceed with the PAM module installation:</p>
+<pre><code class="language-bash">sudo ./install.sh pam
+</code></pre>
+<p>If your OS is managed by <code>authselect</code>, you need to activate the new custom profile afterward with
+<code>authselect select custom/rauthy</code>, just like mentioned in the output. On other OSes like Debian, the script will create
+backups of config files and then copy the Rauthy configs in place directly.</p>
+<p><strong>CAUTION:</strong> Make sure to test all the logins and things that should work at this point BEFORE logging out. Keep a
+backup session open, just in case something broke. Incorrectly configured PAM modules can lock you out of your machine!</p>
+<div id="admonition-danger" class="admonition admonish-danger" role="note" aria-labelledby="admonition-danger-title">
+<div class="admonition-title">
+<div id="admonition-danger-title">
+<p>Danger</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-danger"></a>
+</div>
+<div>
+<p>Before you install anything, make sure that you have at least a backup session / terminal somewhere in the background
+that you don't use for installation / testing. If you mess up your PAM setup, you can easily lock yourself out of your
+machine and it could be very hard, or sometimes impossible, to recover it. Keep the backup session open and don't do
+anything with it, until you verified after the installation that everything is working as expected. If this should not
+be the case, you should revert your PAM config. The install script will copy the old files and appends <code>.bak-non-rauthy</code>
+to them.</p>
+<p>If you are not experienced with NSS / PAM yet, you should not try it on any important or production machine. The best
+thing would be to spin up an empty VM for testing, or at least create a new snapshot before you start. The default PAM
+configs are safe, but if you do anything custom, it is very easy to make your whole system insecure if done incorrectly.</p>
+</div>
+</div>
+<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+<div class="admonition-title">
+<div id="admonition-hint-title">
+<p>Hint</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-hint"></a>
+</div>
+<div>
+<p>The install script detects <code>authselect</code>-managed environments automatically and creates a <code>custom/rauthy</code> profile in this
+case, which you need to activate manually. However, it does NOT work with other management systems yet and if it does
+not find <code>authselect</code>, it will create backup copies of <code>/etc/nsswitch.conf</code> and the ones in <code>/etc/pam.d/</code> before copying
+its own files in place. If you manage PAM via other systems, feel welcome to provide a PR to include it in the script.</p>
+</div>
+</div>
+<h2 id="where-to-find-everything"><a class="header" href="#where-to-find-everything">Where to find everything</a></h2>
+<p>The install script will take care of everything to get it up and running for standard scenarios. However, if you need to
+debug, do custom configuration, or anything else, here is some more information:</p>
+<ul>
+<li>The config file can be found here: <code>/etc/rauthy/rauthy-pam-nss.toml</code></li>
+<li><code>/etc/skel_rauthy</code> contains the template for home dir creation.</li>
+<li>The PAM and NSS modules will go "somewhere" into <code>/lib/</code>, depending on your distro.</li>
+<li>The NSS socket, which should be carefully protected, so a normal user cannot spoof it, can be found under
+<code>/run/rauthy/rauthy_proxy.sock</code>. This is wrapped inside a sub-dir on purpose for 2 reasons: Additional protection via
+access rights, because it needs to be world-accessible for a lot of services, and to be able to mount the dir into
+a container, just in case someone maybe wants to run the NSS proxy as a quadlet. You cannot mount a socket file into
+a container directly (as listener at least) and need to mount the parent directory instead.</li>
+<li><code>/var/lib/pam_rauthy/</code> contains the optional session start and close scripts (enabled via the config above) and all
+the PAM tokens for users that are created during login.</li>
+</ul>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-caution"></a>
+</div>
+<div>
+<p>It is VERY important that you never mess up the access rights for all of these files and dirs. Most importantly for the
+UDS so it can never be spoofed. Everything should run as <code>root</code> for the highest level of protection. In case of the
+session open and close scripts, their access rights will be checked by the PAM module before each execution and if they
+don't match <code>0700</code> or are not owned by <code>root</code>, they will not be executed.</p>
+</div>
+</div>
+<div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">
+<div class="admonition-title">
+<div id="admonition-caution-1-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-caution-1"></a>
+</div>
+<div>
+<p>If you change any of the paths like e.g. the <code>data_dir</code> and you have SELinux running, you must make sure that the
+correct types are added via the file context.</p>
+</div>
+</div>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
+</div>
+<div>
+<p>All of these locations and executables have dedicated SELinux types and a policy to provide additional protection. This
+will of course only work on systems where SELinux is available. An AppArmor equivalent does NOT exist yet, but the
+generic Linux access rules provide proper protection, at least as long a not another <code>root</code> application is malicious.</p>
+</div>
+</div>
+<h2 id="selinux"><a class="header" href="#selinux">SELinux</a></h2>
+<p>An SELinux policy with quite a lot of apps and services is already included and will be installed automatically, if
+SELinux exists on your system. However, I am pretty sure that depending on the type of apps you have installed, you
+might get warnings for apps about access the <code>rauthy_var_run_t</code> with <code>write</code> or <code>connectto</code>. This is generally fine to
+allow for anything, as long as you don't allow anything else. <code>write</code> and <code>connectto</code> are necessary to do NSS lookups
+via the NSS module.</p>
+<p>If you stumble about warnings and missing types that should be added to the policy, please open an issue or directly a
+PR about it. I can of course only validate for types that I come across on a daily basis. Apart from writing and
+connecting to the UDS, you should not see any warnings (hopefully), but if you do, again, please open an issue / PR.</p>
+<h2 id="apparmor"><a class="header" href="#apparmor">AppArmor</a></h2>
+<p>I am working with RHEL based distros and SELinux exclusively and therefore don't use AppArmor and I have no experience
+with it. No rules have been added to the repo or install script. If you use AppArmor, please feel free to provide a PR.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../work/pam_users.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../config/config.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../work/pam_users.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../config/config.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
