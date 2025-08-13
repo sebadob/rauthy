@@ -1,5 +1,158 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### PAM + NSS Modules
+
+OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes with `forward_auth`
+support. To not need an additional LDAP / AD / something similar for your backend and workstations, Rauthy now has its
+own custom PAM module. It does not just use JWT Tokens for logging in, but you can actually manage all your Linux
+hosts, groups and users in different ways. You have the option to secure local logins to workstations via Yubikey
+(only USB Passkeys supported, no QR-code / software keys), and all SSH logins can be done with ephemeral, auto-expiring
+passwords, that you can generate via your Account dashboard, if an Admin has created a PAM user for you. This means you
+get MFA-secured SSH logins without the need for any modifications or additional software on your local SSH client, and
+you can use any SSH client from any machine securely, even if it's not your own.
+
+In addition to the PAM module, you there is an NSS module and an NSS proxy that run on each machine. You can
+dynamically log in to any machine an Admin has given you access to. Users and groups are not added to local files, but
+will be resolved via the network.
+
+This module is published in a separate repo to avoid licensing issues, since it relies on some GPLv3 dependencies. You
+can take a look at it here: [rauthy-pam-nss](https://github.com/sebadob/rauthy-pam-nss). It has been tested with local
+terminal and window manager logins, as well es via SSH, but it should work basically anywhere where you can authenticate
+via PAM.
+
+```toml
+[pam]
+# The length of newly generated PAM remote passwords via the
+# account dashboard. The default is fine as long as you can copy
+# & paste them. You may want to reduce the length here if you e.g.
+# occasionally generate them on mobile and need to type them
+# manually into some terminal.
+#
+# default: 24
+# overwritten by: PAM_REMOTE_PASSWORD_LEN
+remote_password_len = 24
+
+# The TTL for newly generated PAM remote passwords in seconds.
+# The default gives you plenty of time to open a few sessions in
+# some terminals and maybe switch to `root` on some remote machines,
+# while still expiring quick enough to be secure.
+#
+# default: 120
+# overwritten by: PAM_REMOTE_PASSWORD_TTL
+remote_password_ttl = 120
+```
+
+> Even though a lot of testing was done, I am pretty sure there are still some issues or maybe SELinux warnings that
+> need to be fixed, but it should be absolutely usable. Everything is secured, but it may still lack a good UX here and
+> there.
+
+[#1101](https://github.com/sebadob/rauthy/pull/1101)
+[#1132](https://github.com/sebadob/rauthy/pull/1132)
+[#1134](https://github.com/sebadob/rauthy/pull/1134)
+[#1142](https://github.com/sebadob/rauthy/pull/1142)
+
+#### SMTP: XOAUTH2 + Microsoft Graph
+
+Because Microsoft does really stupid things, and they disable SMTP basic auth in september, you can now also connect via
+SMTP XOAUTH2, or if even that is an issue for you, you can use the Microsoft 365 native Graph API. Both options require
+you to provide all necessary values to fetch an OAuth token via `client_credentials` flow and the SMTP connection may be
+re-opened when the token expires.
+
+Both of these options are worse than the default. Against all misleading blog posts about it, they provide absolutely no
+advantages in security, and you should not use them, if you can stick with the default. Both options have an overhead
+of fetching, storing and refreshing the token, and re-opening the connections over and over. Especially the Graph API is
+pretty slow and it should be your last resort.
+
+There are some new config options available in the `email` section:
+
+```toml
+[email]
+# You usually do not need to change this value. The 'default'
+# will connect via SMTP PLAIN or LOGIN, which works in almost
+# all scenarios. However, you can change it to `xoauth2` to
+# connect via XOAUTH2. In addition, there is also `microsoft_graph`.
+# It is a custom implementaion that does not use SMTP anymore,
+# but instead the Microsoft Azure Graph API. You should not use
+# it, unless you have no other choice or a very good reason.
+#
+# If you specify another value than ´default`, you must provide
+# all the additional `x_oauth_*` values bwloe.
+#
+# possible values: 'default', 'xoauth2', 'microsoft_graph'
+# default: 'default'
+# overwritten by: SMTP_CONN_MODE
+smtp_conn_mode = 'default'
+
+# These values must be given if `auth_xoauth2 = true`.
+# They will be used for a `client_credentials` request
+# to the `xoauth_url` to retrieve a token, that then
+# will be used for authentication via SMTP XOAUTH2.
+#
+# overwritten by: SMTP_XOAUTH2_URL
+xoauth_url = ''
+# overwritten by: SMTP_XOAUTH2_CLIENT_ID
+xoauth_client_id = ''
+# overwritten by: SMTP_XOAUTH2_CLIENT_SECRET
+xoauth_client_secret = ''
+# overwritten by: SMTP_XOAUTH2_SCOPE
+xoauth_scope = ''
+
+# Only needed if `smtp_conn_mode = 'microsoft_graph'`:
+# https://learn.microsoft.com/en-us/graph/api/user-sendmail?view=graph-rest-1.0&tabs=http
+#
+# default: not set
+# overwritten by: SMTP_MICROSOFT_GRAPH_URI
+microsoft_graph_uri = ''
+```
+
+[#1136](https://github.com/sebadob/rauthy/pull/1136)
+
+#### Auth Providers Onboarding + Link
+
+Upstream Auth Providers have 2 new options:
+
+- auto-onboarding
+- auto-link user
+
+The `auto-onboarding` should be self-explanatory. If a user does not exist yet inside Rauthys DB after a successful
+auth provider login, it will automatically be created. This was the default up until now. However, this allows anyone
+with an account on the upstream provider to log in, and even though such a user would not have any access rights, this
+may be unwanted. To "fix" this, you can now decide to disable auto-onboarding.
+
+To still provide a good UX for new users, the additional `auto-link user` option will allow an Admin to create an fresh
+account, that has no password or anything else set. A user can decide to not create a password for Rauthy, but log in
+via the upstream provider directly and if this option is set and the user is not linked to any other provider yet, it
+will auto-link this user to the upstream provider on login.
+
+> **CAUTION:** This option will show you a warning in the Admin UI as well. If you set `auto-link user` and your
+> upstream provider does NOT VALIDATE E-Mail addresses 100% correctly, and allows a user to set an address that belongs
+> to someone else, this option can lead to account takeover! Do NOT use it if you cannot fully trust the validation
+> process of the upstream provider!
+
+[#1153](https://github.com/sebadob/rauthy/pull/1153)
+
+#### EncKeyID Validation
+
+The validation regex for EncKeyIDs has been relaxed a tiny bit. It was changed from `^[a-zA-Z0-9]{2,20}$` to
+`^[a-zA-Z0-9:_-]{2,20}$`.
+
+### Bugfix
+
+- The default value for `rp_origin` during `LOCAL_TEST=true` was set to a value that would not work out of the box.
+  [#1138](https://github.com/sebadob/rauthy/pull/1138)
+- Overwriting ENV vars would not be parsed, if the underlying section did not exist at all in the config file. This was
+  not an issue on its own, because there was nothing to "overwrite" in the first place, but probably unexpected
+  behavior.
+  [#1147](https://github.com/sebadob/rauthy/pull/1147)
+- If a given `redirect_uri` for a client already contained query params, the final URI was not built correctly.
+  [#1148](https://github.com/sebadob/rauthy/pull/1148)
+- `session.validate_ip` was not respected during `/forward_auth`.
+  [#1149](https://github.com/sebadob/rauthy/pull/1149)
+
 ## v0.31.3
 
 ### Bugfix
