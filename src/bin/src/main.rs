@@ -167,11 +167,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         server::server_without_metrics().await?;
     }
 
-    if RauthyConfig::get().is_ha_cluster {
-        // this short sleep smoothes out K8s rolling releases and makes sure there is enough
-        // time for in-memory cache replication before the next node is shutting down
-        time::sleep(Duration::from_secs(7)).await;
-    }
     DB::hql().shutdown().await.unwrap();
 
     Ok(())
