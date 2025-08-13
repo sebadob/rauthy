@@ -168,7 +168,7 @@ ON CONFLICT DO NOTHING"#;
                     &jwk.jwk,
                 ],
             )
-                .await?;
+            .await?;
         }
     }
 
@@ -216,7 +216,7 @@ ON CONFLICT DO NOTHING"#;
                 &ml.usage,
             ],
         )
-            .await?;
+        .await?;
     }
 
     // make sure `init_client` has `profile` as default scope to make user picture integration
