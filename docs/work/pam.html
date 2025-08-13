@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Minimal Production Config - Rauthy Documentation</title>
+        <title>PAM - Rauthy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -167,184 +167,34 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="minimal-production-config"><a class="header" href="#minimal-production-config">Minimal Production Config</a></h1>
-<p>This section gives you a template for probably the most minimal config you could do when going into production.</p>
-<p>You can either copy &amp; paste this (with adjustments of course) and expand it when necessary, or take a look at the
-complete <a href="config.html">Reference Config</a> and check each existing value.</p>
-<pre><code class="language-toml">[bootstrap]
-# If set, the email of the default admin will be changed during
-# the initialization of an empty production database.
-#
-# default: 'admin@localhost'
-# overwritten by: BOOTSTRAP_ADMIN_EMAIL
-admin_email = "admin@localhost"
-
-[cluster]
-# Can be set to 'k8s' to try to split off the node id from the hostname
-# when Hiqlite is running as a StatefulSet inside Kubernetes.
-#
-# default: unset
-# overwritten by: HQL_NODE_ID_FROM
-#node_id_from = "k8s"
-
-# The node id must exist in the nodes and there must always be
-# at least a node with ID 1
-# Will be ignored if `node_id_from = k8s`
-#
-# At least `node_id_from` or `node_id` are required.
-#
-# default: 0 (invalid)
-# overwritten by: HQL_NODE_ID
-node_id = 1
-
-# All cluster member nodes. For a single instance deployment, 
-# `"1 localhost:8100 localhost:8200"` will work just fine.
-# Each array value must have the following format:
-# `id addr_raft addr_api`
-#
-# default: ["1 localhost:8100 localhost:8200"]
-# overwritten by: HQL_NODES
-nodes = [
-    "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
-]
-
-# Secrets for Raft internal authentication as well as for the API.
-# These must be at least 16 characters long and you should provide
-# different ones for both variables.
-#
-# default: not set - required
-# overwritten by: HQL_SECRET_RAFT
-secret_raft = "SuperSecureSecret1337"
-# default: not set - required
-# overwritten by: HQL_SECRET_API
-secret_api = "SuperSecureSecret1337"
-
-[email]
-# Rauthy will force TLS and try a downgrade to STARTTLS, if
-# TLS fails. It will never allow an unencrypted connection.
-# You might want to set `SMTP_DANGER_INSECURE=true` if you
-# need this for local dev.
-#
-# overwritten by: SMTP_URL
-smtp_url = "localhost"
-# optional, default will be used depending on TLS / STARTTLS
-# overwritten by: SMTP_PORT
-#smtp_port = 
-# overwritten by: SMTP_USERNAME
-smtp_username = "username"
-# overwritten by: SMTP_PASSWORD
-smtp_password = "password"
-# Format: "Rauthy &lt;rauthy@localhost&gt;"
-# default: "Rauthy &lt;rauthy@localhost&gt;"
-# overwritten by: SMTP_FROM
-smtp_from = "Rauthy &lt;rauthy@localhost&gt;"
-
-[encryption]
-# You need to define at least one valid encryption key.
-# These keys are used in various places, like for instance
-# encrypting confidential client secrets in the database, or
-# encryption cookies, and so on.
-#
-# The first part until the first `/` is the key ID.
-# The ID must match '^[a-zA-Z0-9:_-]{2,20}$'
-#
-# The key itself begins after the first `/` has been found.
-# The key must be exactly 32 bytes long, encoded as base64.
-#
-# You can find a more detailed explanation on how to generate
-# keys in the documentation:
-# 1. https://sebadob.github.io/rauthy/getting_started/k8s.html#create-and-apply-secrets
-# 2. https://sebadob.github.io/rauthy/config/encryption.html
-#
-# You can provide multiple keys to make things like key
-# rotation work. Be careful with removing old keys. Make sure
-# that all secrets have been migrated beforehand.
-# You can find a utility in the Admin UI to do this for you.
-#
-# overwritten by: ENC_KEYS - single String, \n separated values
-keys = ["q6u26/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E="]
-
-# This identifies the key ID from the `ENC_KEYS` list, that
-# should actively be used for new encryptions.
-#
-# overwritten by: ENC_KEY_ACTIVE
-key_active = "q6u26"
-
-[events]
-# The E-Mail address event notifications should be sent to.
-#
-# overwritten by: EVENT_EMAIL
-email = "admin@localhost"
-
-[server]
-# The scheme to use locally, valid values:
-# http | https | http_https | unix_http | unix_https
-# For more details about the UNIX domain socket, check out its
-# documentation page.
-#
-# default: http_https
-# overwritten by: LISTEN_SCHEME
-scheme = "http"
-
-# The Public URL of the whole deployment
-# The LISTEN_SCHEME + PUB_URL must match the HTTP ORIGIN HEADER
-# later on, which is especially important when running Rauthy
-# behind a reverse proxy. In case of a non-standard port (80/443),
-# you need to add the port to the PUB_URL
-#
-# default: not set - mandatory
-# overwritten by: PUB_URL
-pub_url = "localhost:8080"
-
-# When rauthy is running behind a reverse proxy, set to true
-#
-# default: false
-# overwritten by: PROXY_MODE
-proxy_mode = false
-
-# A list of trusted proxy CIDRs. When `proxy_mode = true`
-# or `peer_ip_header_name` is set, these are mandatory to
-# be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
-# different source will be blocked.
-#
-# default: []
-# overwritten by: TRUSTED_PROXIES - single String, \n separated values
-#trusted_proxies = ['192.168.14.0/24']
-
-[webauthn]
-# The 'Relaying Party (RP) ID' - effective domain name.
-#
-# CAUTION: When this changes, already registered devices will
-# stop working and users cannot log in anymore!
-#
-# default: 'localhost'
-# overwritten by: RP_ID
-rp_id = "localhost"
-
-# Url containing the effective domain name.
-#
-# DEV: If you want to test Webauthn via the Svelte DEV UI,
-# change the port number to :5173.
-#
-# !!! CAUTION: Must ALWAYS include the port number !!!
-#
-# default: 'http://localhost:8080'
-# overwritten by: RP_ORIGIN
-rp_origin = "http://localhost:5173"
-</code></pre>
-<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+                        <h1 id="pam"><a class="header" href="#pam">PAM</a></h1>
+<p>OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes with <code>forward_auth</code>
+support. To not need an additional LDAP / AD / something similar for your backend and workstations, Rauthy comes with
+its own custom PAM module. It does not just use JWT Tokens for logging in, but you can actually manage all your Linux
+hosts, groups and users in different ways. You have the option to secure local logins to workstations via Yubikey
+(only USB Passkeys supported, no QR-code / software keys), and all SSH logins can be done with ephemeral, auto-expiring
+passwords, that you can generate via your Account dashboard, if an Admin has created a PAM user for you.
+This means you basically have MFA-secured SSH logins without the need for any modifications or additional software on
+your local SSH client, and you can use any SSH client from any machine securely, even if it's not your own.</p>
+<p>Pam hosts, groups and users are managed via Rauthys Admin UI in the <code>PAM</code> section.</p>
+<p>In addition to a PAM module, you get an NSS module and an NSS proxy that runs on each machine. You can dynamically
+log in to any machine an Admin has given you access to. Users and groups are not added to local files, but will be
+resolved via the network.</p>
+<p>This module is published in a separate repo to avoid licensing issues, since it relies on some GPLv3 dependencies. You
+can take a look at it here: <a href="https://github.com/sebadob/rauthy-pam-nss">rauthy-pam-nss</a>.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
-<div id="admonition-hint-title">
-<p>Hint</p>
+<div id="admonition-note-title">
+<p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-hint"></a>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
-<p>TL;DR for generating a <code>encryption.keys</code>:</p>
-<pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"</code></pre>
+<p>You will notice on the following pages and when testing the PAM setup via the Admin UI, that quite a few resources and
+values are immutable after their initial creation. The reason is simply to avoid things like accidentially leaking
+left-over user data, when for instance a user was deleted and a new one with the exact same name was created, but maybe
+some files are left on some hosts, and so on. The same is true for instance for group names and types, just to avoid
+confusion for admins.</p>
 </div>
 </div>
 
@@ -352,11 +202,11 @@ rp_origin = "http://localhost:5173"
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../config/production_config.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../work/forward_auth.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../config/argon2.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../work/pam_groups.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -366,11 +216,11 @@ rp_origin = "http://localhost:5173"
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../config/production_config.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../work/forward_auth.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../config/argon2.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../work/pam_groups.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

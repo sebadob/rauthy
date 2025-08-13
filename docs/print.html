@@ -1064,7 +1064,7 @@ smtp_from = "Rauthy &lt;rauthy@localhost&gt;"
 # encryption cookies, and so on.
 #
 # The first part until the first `/` is the key ID.
-# The ID must match '[a-zA-Z0-9]{2,20}'
+# The ID must match '^[a-zA-Z0-9:_-]{2,20}$'
 #
 # The key itself begins after the first `/` has been found.
 # The key must be exactly 32 bytes long, encoded as base64.
@@ -4581,6 +4581,352 @@ spec:
     }
 }
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="pam"><a class="header" href="#pam">PAM</a></h1>
+<p>OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes with <code>forward_auth</code>
+support. To not need an additional LDAP / AD / something similar for your backend and workstations, Rauthy comes with
+its own custom PAM module. It does not just use JWT Tokens for logging in, but you can actually manage all your Linux
+hosts, groups and users in different ways. You have the option to secure local logins to workstations via Yubikey
+(only USB Passkeys supported, no QR-code / software keys), and all SSH logins can be done with ephemeral, auto-expiring
+passwords, that you can generate via your Account dashboard, if an Admin has created a PAM user for you.
+This means you basically have MFA-secured SSH logins without the need for any modifications or additional software on
+your local SSH client, and you can use any SSH client from any machine securely, even if it's not your own.</p>
+<p>Pam hosts, groups and users are managed via Rauthys Admin UI in the <code>PAM</code> section.</p>
+<p>In addition to a PAM module, you get an NSS module and an NSS proxy that runs on each machine. You can dynamically
+log in to any machine an Admin has given you access to. Users and groups are not added to local files, but will be
+resolved via the network.</p>
+<p>This module is published in a separate repo to avoid licensing issues, since it relies on some GPLv3 dependencies. You
+can take a look at it here: <a href="https://github.com/sebadob/rauthy-pam-nss">rauthy-pam-nss</a>.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="work/pam.html#admonition-note"></a>
+</div>
+<div>
+<p>You will notice on the following pages and when testing the PAM setup via the Admin UI, that quite a few resources and
+values are immutable after their initial creation. The reason is simply to avoid things like accidentially leaking
+left-over user data, when for instance a user was deleted and a new one with the exact same name was created, but maybe
+some files are left on some hosts, and so on. The same is true for instance for group names and types, just to avoid
+confusion for admins.</p>
+</div>
+</div>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="pam-groups"><a class="header" href="#pam-groups">PAM Groups</a></h1>
+<p>PAM Groups are independent of the general OIDC groups. This is the case for all PAM resources, because Linux regexes for
+validation are much stricter. PAM groups can also do different things, depending on their type.</p>
+<p>PAM Groups are the first resource you need for a new setup, because they are the glue between hosts and users and
+manage general access.</p>
+<h2 id="wheel-rauthy"><a class="header" href="#wheel-rauthy"><code>wheel-rauthy</code></a></h2>
+<p>This group is special. It will always exist, it will always have <code>gid</code> 100_000 and it cannot be deleted. Membership
+for this group can also not be configured directly. Instead, it will be calculated dynamically for each user / host
+combination depending on if the user is allowed to <code>wheel</code> in that particular host group. More on that later.</p>
+<p>The idea of <code>wheel-rauthy</code> is that it should serve the same purpose as <code>wheel</code> on hosts, like e.g. allowing all members
+in <code>wheel-rauthy</code> to use <code>sudo</code>. Theoretically, it could be merged with <code>wheel</code> on all hosts locally, but having a
+distinct name provides more flexibility for configuration when you e.g. want to handle local users a bit differently
+from Rauthy-managed ones.</p>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<p>You can create groups of 4 different types. Each type serves a specific purpose.</p>
+<h3 id="host-groups"><a class="header" href="#host-groups"><code>host</code> groups</a></h3>
+<p><code>host</code> groups manage access to hosts. Each PAM Host must be assigned to exactly a single host group. When you assign
+a PAM User as a member in a host group, this user will be allowed to log in to all hosts in this specific group, and it
+will be rejected when the user is not a member. In addition, when you also allow <code>wheel</code> for a user in a host group,
+this user will be dynamically assigned to the <code>wheel-rauthy</code> group mentioned above, and can therefore be used for things
+like access to <code>sudo</code> and such.</p>
+<p>You might be used to manage hosts by domain. Rauthy does not care about in which domain a host is and instead has the
+host groups. The reason is that host groups provide a more fine-grained way of managing access and are therefore more
+flexible. You can have multiple host groups in the same domain, and e.g. name your groups after teams or projects, while
+the hosts are maybe technically in the same domain.</p>
+<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+<div class="admonition-title">
+<div id="admonition-hint-title">
+<p>Hint</p>
+</div>
+<a class="admonition-anchor-link" href="work/pam_groups.html#admonition-hint"></a>
+</div>
+<div>
+<p>If you want to delete a host group, you can only do this, if there is not a single host left that is assigned to this
+group, to prevent invalid setups. You will only see the delete button, if the host group has no host assigned. If users
+are still assigned, the relation will simply be deleted.</p>
+</div>
+</div>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="work/pam_groups.html#admonition-note"></a>
+</div>
+<div>
+<p>You will not see <code>host</code> groups in NSS lookups, like when you do <code>getent group</code>. They only exist for managing access
+to hosts. All other group types will be resolved on hosts like you would expect it.</p>
+</div>
+</div>
+<h3 id="generic-groups"><a class="header" href="#generic-groups"><code>generic</code> groups</a></h3>
+<p><code>generic</code> groups can be seen as a counterpart to your groups from <code>/etc/group</code>. The exception is, that they don't exist
+locally and will be resolved via the NSS module. The important thing about them is, that their <code>gid</code> is globally unique,
+not just on a host or inside a host group. This means if you e.g. have an NFS share and manage permissions via <code>gid</code> of
+a generic group, it will be the exact same value with the exact same access on each host where you mount it.</p>
+<h3 id="local-groups"><a class="header" href="#local-groups"><code>local</code> groups</a></h3>
+<p><code>generic</code> groups are almost the same, but when your <code>/etc/nsswitch.conf</code> is configured correctly, the <code>rauthy-nss</code> proxy
+will merge them with groups that might exist locally in <code>/etc/group</code> on the hosts. This is for instance important for
+situations like giving a user access to <code>docker</code>, which typically requires them to be a member of the <code>docker</code> group.
+To achieve this, create a <code>local</code> group with the name <code>docker</code>, and the results will be merged and access granted.
+Their <code>gid</code> is globally unique on Rauthy, but the NSS proxy will overwrite it on each host individually with the local
+<code>gid</code> from the <code>/etc/group</code> entry.</p>
+<h3 id="user-groups"><a class="header" href="#user-groups"><code>user</code> groups</a></h3>
+<p>You cannot create these groups manually. When a new user is created, a <code>user</code> group with the same name as the username
+will be created, just like you know if from any Linux system. You can assign other users to existing user groups, e.g.
+when users want to be able to share certain files on hosts, but apart from that, they are managed automatically. Their
+lifetime is bound to the users' lifetime. They provide the same guarantees as <code>generic</code> groups. Their <code>gid</code> will be
+globally unique everywhere.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="pam-hosts"><a class="header" href="#pam-hosts">PAM Hosts</a></h1>
+<p>PAM Hosts are usually the 2nd resource you need, when creating a fresh setup. A default installation of Rauthy will
+automatically come with a <code>host</code> group named <code>default</code> to get you started, but you can delete it and create your own,
+and of course additional ones to group your hosts properly. However, at least a single host group must exist, before
+you can create your first PAM Host. The hostname you provide must follow the Linux rules for hostnames.</p>
+<p>PAM Hosts should be pretty much self-explanatory. Each one must have a unique hostname and only a single host group
+assignment to manage access for users. You can set multiple IPs and aliases for a host, and they will show up in NSS
+lookups, like e.g. <code>getent hosts</code>. They are basically an extension to your <code>/etc/hosts</code> file and (if configured
+correctly), they will overwrite DNS resolutions, or provide a Hostname -&gt; IP resolve even if no DNS exists, just like
+your <code>/etc/hosts</code> file.</p>
+<h2 id="force-mfa"><a class="header" href="#force-mfa">Force MFA</a></h2>
+<p>This setting can be used to further lock down access to a host, in addition to membership in a host group. If set, only
+accounts that are MFA secured are allowed to log in to this host. A local login would request a Passkey. For logins via
+ssh, you need to generate a Remote PAM Password in your account dashboard and only when generated from a user session
+that is MFA-secured, you can log in.</p>
+<h2 id="local-password-login"><a class="header" href="#local-password-login">Local Password Login</a></h2>
+<p>This option is a bit special to solve a niche issue. If you have users that should be allowed to log in locally to
+workstations, and they don't have USB Passkeys (which are the only ones that actually make sense), but instead something
+that generates a QR code via smartphone, or Passkeys stored in a password manager (seriously, don't do that...), you can
+set this option.</p>
+<p>If this is set, a local login will NEVER request a passkey, even if the account is MFA secured. Instead, it will only
+request the users' password. The reason is, that most software passkeys will simply not work for local logins,
+especially when you log in to a workstation with a window manager, where you cannot even show a QR code easily. USB
+Passkeys will still be fine and you will get a prompt like <code>Passkey PIN</code> instead of the usual <code>Password</code> and you should
+leave this option disabled, if all your users that need local access have USB Passkeys.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="work/pam_hosts.html#admonition-note"></a>
+</div>
+<div>
+<p>If you log in to a window manager locally and have a MFA secured account, and Local Password Login is NOT set, you
+usually see <code>Passkey PIN</code>. This is however not the case for all window managers. For instance, <code>sddm</code> ignores this
+prompt from the PAM module and overwrites it with <code>Password</code>. If this is the case and you have a Passkey linked to your
+account, you need to enter your PIN at that point and touch your key. Sometimes, they don't forward the prompt properly.</p>
+</div>
+</div>
+<h2 id="ips-and-aliases"><a class="header" href="#ips-and-aliases">IPs and Aliases</a></h2>
+<p>Whatever you provide as values here can be reverse-resolved on hosts via NSS lookups. E.g. when you have a host with the
+name <code>tux</code>, add an IP <code>192.168.1.100</code> and an alias of <code>host1.example.local</code>, you can directly do things like
+<code>ping tux</code> or <code>curl host1.example.local</code>, and as long as everything is configured correctly, these requests can resolve
+to the IP <code>192.168.1.100</code> without any additional DNS servers.</p>
+<h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
+<p>The notes field is just for cases when you want to write some notes for all users that can log in to this hosts, like
+e.g. mention some special directory or things like that.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="pam-users"><a class="header" href="#pam-users">PAM Users</a></h1>
+<p>A PAM User is always linked to a "real" user and after it was created, it is immutable and automatically bound to the
+lifetime of the "real" user. You cannot change the <code>username</code> afterward or even delete it and create a new one easily.
+The reason is the same as for the immutable group names, to never accidentally leak some left-over files. There is also
+typically no need to ever change these names, as it would just be confusing anyway.</p>
+<p>A <code>uid</code> is globally unique over all hosts, just as <code>gid</code>s for groups. This means you can rely on it even for managing
+NFS shares and things like that. The only value you can change for a user after the creation is the <code>shell</code>, but this
+will just stay the default <code>/bin/bash</code> in probably almost all cases anyway.</p>
+<p>The more important section for a user is the groups membership. Groups are separated by type, and these types are
+explained in the <a href="work/pam_groups.html#types">PAM Groups</a> doc. At this point, there should be not open questions about them.</p>
+<p>PAM Users are pretty simple. The most important thing about them is their additional <code>username</code>, which must follow
+Linux username regexes. Technically, in most situations, providing your email address from Rauthy should work, but there
+are drawbacks and in some cases, such usernames lead to errors and not working commands. If Rauthy had chosen emails as
+Linux usernames, you would also do very confusing stuff like <code>ssh my.user@example.com@host</code>, which is not only hard to
+read, but does not even work on some systems.</p>
+<p>Users are not allowed to choose their Linux username themselves. This must be done by a Rauthy admin to avoid users
+trying things like <code>root</code>, <code>postgres</code> or <code>systemd</code>, which would be very bad of course. An admin needs to configure
+access to hosts anyway, so there is no real drawback, that users cannot choose on their own. Maintaining a blacklist
+with all possibly problematic usernames across all distros and systems is actually impossible, as Rauthy cannot even
+know which names might already be special in some companies and situations.</p>
+<p>As soon as an Admin has configured a Linux user for a "real" user, this user can log in to the account dashboard and a
+PAM section will pop up in the tab bar. Here you can generate the auto-expiring Remote PAM Passwords that are used for
+basically all actions via SSH like logging in and <code>sudo</code>, and you will see a list of all hosts you have access to. For
+these PAM passwords, you have 2 static config varibales:</p>
+<pre><code class="language-toml">[pam]
+# The length of newly generated PAM remote passwords via the
+# account dashboard. The default is fine as long as you can copy
+# &amp; paste them. You may want to reduce the length here if you e.g.
+# occasionally generate them on mobile and need to type them
+# manually into some terminal.
+#
+# default: 24
+# overwritten by: PAM_REMOTE_PASSWORD_LEN
+remote_password_len = 24
+
+# The TTL for newly generated PAM remote passwords in seconds.
+# The default gives you plenty of time to open a few sessions in
+# some terminals and maybe switch to `root` on some remote machines,
+# while still expiring quick enough to be secure.
+#
+# default: 120
+# overwritten by: PAM_REMOTE_PASSWORD_TTL
+remote_password_ttl = 120
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="pam--nss-modules"><a class="header" href="#pam--nss-modules">PAM + NSS Modules</a></h1>
+<p>This is a documentation for the separately managed project <a href="https://github.com/sebadob/rauthy-pam-nss">rauthy-pam-nss</a>.
+It's a separate project to avoid licensing issues because of some dependencies the PAM and NSS bindings rely on.</p>
+<p>These modules are basically the "client part" for all the PAM configuration you did on Rauthys side. You need to install
+3 things:</p>
+<ul>
+<li>NSS module</li>
+<li>NSS Proxy</li>
+<li>PAM module</li>
+</ul>
+<p>The NSS module + proxy are there to dynamically resolve users, groups and hosts via Rauthy without the need to add them
+to any of the local files like <code>/etc/passwd</code> or <code>/etc/group</code>. The NSS module will be called from all different sorts of
+applications, that need to resolve some names. The NSS module exposes the <code>C</code> bindings and then execute the logic in
+Rust. This module is pretty simple, as it only connects to a local Unix Domain Socket, where the NSS Proxy will be
+listening. This proxy is the one doing the actual requests to Rauthy, as well as cache results for faster subsequent
+lookups.</p>
+<p>The reason why there is a proxy in between is not only to be able to cache results, but also to be more efficient and
+more importantly, to only give the NSS proxy access to the actual host ID and secret, which are needed to do requests
+against Rauthys API. These should have the least possible amount of exposure, because with these credentials, you could
+technically find out which usernames exist on Rauthy and which do not. This is not a security issue right away, but not
+leaking anything is always preferred.</p>
+<p>The main configuration file for NSS lookups is <code>/etc/nsswitch.conf</code>, but no worries, it's not only pretty simple to
+understand, but will also be automatically managed by the install script. The only important part about it is, if you
+want to be able to use the <code>local</code> PAM groups feature, that you add <code>[SUCCESS=merge]</code> in between entries for <code>group</code>
+lookups.</p>
+<p>You can test very easily if NSS lookups are working with e.g. <code>getent groups</code> or <code>getent users</code>, and you should see
+the Rauthy-managed resources included in the output. If at the beginning or at the end depends on your <code>nsswitch.conf</code>,
+and you of course can only see users if there are any configured on Rauthy. Only if NSS lookups are working fine, you
+should install the PAM module.</p>
+<p>The PAM module exposes the <code>C</code> bindings for, surprise, PAM. Configuring PAM is its own, very big topic and I will not
+go into detail here. There is lots of documentation and guides in the internet. For simple setups, like if you did not
+do any customizations to your hosts anyway, the provided default templates should work out of the box (hopefully). If
+you have done customizations, you probably know about how it's done anyway and maybe don't even want to use the provided
+templates. That's up to you of course. The same for NSS, as long as you add Rauthys modules to your setup correctly, it
+should work.</p>
+<p>For standard scenarios, you will get an install script. It currently should upport RHEL and Debian based distros. Other
+ones (suse, arch, gentoo) may need contributions to include them in the script.</p>
+<h2 id="install-tldr"><a class="header" href="#install-tldr">Install TL;DR</a></h2>
+<p>The PAM project is in a very early phase and there are no distro-packaged versions available. Here is the gist how to
+install:</p>
+<pre><code class="language-bash">curl -LO https://raw.githubusercontent.com/sebadob/rauthy-pam-nss/refs/heads/main/install/rauthy-pam-nss-install.tar.gz \
+  &amp;&amp; tar -xzf rauthy-pam-nss-install.tar.gz \
+  &amp;&amp; cd rauthy-pam-nss-install
+</code></pre>
+<p>Then, since you should never blindly execute a random bash script from the internet, especially with <code>sudo</code>, inspect
+<code>install.sh</code> and afterward install config files, NSS Proxy and (depending on availability) SELinux policy:</p>
+<pre><code class="language-bash">sudo ./install.sh nss
+</code></pre>
+<p>Then check via e.g. <code>getent hosts</code> or <code>getent groups</code> that you get data from Rauthy. However, the script does it as well
+and you should see an error message about exceeded retries it you e.g. have given invalid credentials. When NSS lookups
+are working fine, proceed with the PAM module installation:</p>
+<pre><code class="language-bash">sudo ./install.sh pam
+</code></pre>
+<p>If your OS is managed by <code>authselect</code>, you need to activate the new custom profile afterward with
+<code>authselect select custom/rauthy</code>, just like mentioned in the output. On other OSes like Debian, the script will create
+backups of config files and then copy the Rauthy configs in place directly.</p>
+<p><strong>CAUTION:</strong> Make sure to test all the logins and things that should work at this point BEFORE logging out. Keep a
+backup session open, just in case something broke. Incorrectly configured PAM modules can lock you out of your machine!</p>
+<div id="admonition-danger" class="admonition admonish-danger" role="note" aria-labelledby="admonition-danger-title">
+<div class="admonition-title">
+<div id="admonition-danger-title">
+<p>Danger</p>
+</div>
+<a class="admonition-anchor-link" href="work/pam_nss_modules.html#admonition-danger"></a>
+</div>
+<div>
+<p>Before you install anything, make sure that you have at least a backup session / terminal somewhere in the background
+that you don't use for installation / testing. If you mess up your PAM setup, you can easily lock yourself out of your
+machine and it could be very hard, or sometimes impossible, to recover it. Keep the backup session open and don't do
+anything with it, until you verified after the installation that everything is working as expected. If this should not
+be the case, you should revert your PAM config. The install script will copy the old files and appends <code>.bak-non-rauthy</code>
+to them.</p>
+<p>If you are not experienced with NSS / PAM yet, you should not try it on any important or production machine. The best
+thing would be to spin up an empty VM for testing, or at least create a new snapshot before you start. The default PAM
+configs are safe, but if you do anything custom, it is very easy to make your whole system insecure if done incorrectly.</p>
+</div>
+</div>
+<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+<div class="admonition-title">
+<div id="admonition-hint-title">
+<p>Hint</p>
+</div>
+<a class="admonition-anchor-link" href="work/pam_nss_modules.html#admonition-hint"></a>
+</div>
+<div>
+<p>The install script detects <code>authselect</code>-managed environments automatically and creates a <code>custom/rauthy</code> profile in this
+case, which you need to activate manually. However, it does NOT work with other management systems yet and if it does
+not find <code>authselect</code>, it will create backup copies of <code>/etc/nsswitch.conf</code> and the ones in <code>/etc/pam.d/</code> before copying
+its own files in place. If you manage PAM via other systems, feel welcome to provide a PR to include it in the script.</p>
+</div>
+</div>
+<h2 id="where-to-find-everything"><a class="header" href="#where-to-find-everything">Where to find everything</a></h2>
+<p>The install script will take care of everything to get it up and running for standard scenarios. However, if you need to
+debug, do custom configuration, or anything else, here is some more information:</p>
+<ul>
+<li>The config file can be found here: <code>/etc/rauthy/rauthy-pam-nss.toml</code></li>
+<li><code>/etc/skel_rauthy</code> contains the template for home dir creation.</li>
+<li>The PAM and NSS modules will go "somewhere" into <code>/lib/</code>, depending on your distro.</li>
+<li>The NSS socket, which should be carefully protected, so a normal user cannot spoof it, can be found under
+<code>/run/rauthy/rauthy_proxy.sock</code>. This is wrapped inside a sub-dir on purpose for 2 reasons: Additional protection via
+access rights, because it needs to be world-accessible for a lot of services, and to be able to mount the dir into
+a container, just in case someone maybe wants to run the NSS proxy as a quadlet. You cannot mount a socket file into
+a container directly (as listener at least) and need to mount the parent directory instead.</li>
+<li><code>/var/lib/pam_rauthy/</code> contains the optional session start and close scripts (enabled via the config above) and all
+the PAM tokens for users that are created during login.</li>
+</ul>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="work/pam_nss_modules.html#admonition-caution"></a>
+</div>
+<div>
+<p>It is VERY important that you never mess up the access rights for all of these files and dirs. Most importantly for the
+UDS so it can never be spoofed. Everything should run as <code>root</code> for the highest level of protection. In case of the
+session open and close scripts, their access rights will be checked by the PAM module before each execution and if they
+don't match <code>0700</code> or are not owned by <code>root</code>, they will not be executed.</p>
+</div>
+</div>
+<div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">
+<div class="admonition-title">
+<div id="admonition-caution-1-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="work/pam_nss_modules.html#admonition-caution-1"></a>
+</div>
+<div>
+<p>If you change any of the paths like e.g. the <code>data_dir</code> and you have SELinux running, you must make sure that the
+correct types are added via the file context.</p>
+</div>
+</div>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="work/pam_nss_modules.html#admonition-note"></a>
+</div>
+<div>
+<p>All of these locations and executables have dedicated SELinux types and a policy to provide additional protection. This
+will of course only work on systems where SELinux is available. An AppArmor equivalent does NOT exist yet, but the
+generic Linux access rules provide proper protection, at least as long a not another <code>root</code> application is malicious.</p>
+</div>
+</div>
+<h2 id="selinux"><a class="header" href="#selinux">SELinux</a></h2>
+<p>An SELinux policy with quite a lot of apps and services is already included and will be installed automatically, if
+SELinux exists on your system. However, I am pretty sure that depending on the type of apps you have installed, you
+might get warnings for apps about access the <code>rauthy_var_run_t</code> with <code>write</code> or <code>connectto</code>. This is generally fine to
+allow for anything, as long as you don't allow anything else. <code>write</code> and <code>connectto</code> are necessary to do NSS lookups
+via the NSS module.</p>
+<p>If you stumble about warnings and missing types that should be added to the policy, please open an issue or directly a
+PR about it. I can of course only validate for types that I come across on a daily basis. Apart from writing and
+connecting to the UDS, you should not see any warnings (hopefully), but if you do, again, please open an issue / PR.</p>
+<h2 id="apparmor"><a class="header" href="#apparmor">AppArmor</a></h2>
+<p>I am working with RHEL based distros and SELinux exclusively and therefore don't use AppArmor and I have no experience
+with it. No rules have been added to the repo or install script. If you use AppArmor, please feel free to provide a PR.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="reference-config"><a class="header" href="#reference-config">Reference Config</a></h1>
 <p>This shows a full example config with (hopefully) every value nicely described.</p>
 <p>You can configure a lot here, but the most important variables you most-likely want to change when going into production
@@ -5546,6 +5892,43 @@ smtp_url = 'localhost'
 # overwritten by: SMTP_FROM
 #smtp_from = 'Rauthy &lt;rauthy@localhost&gt;'
 
+# You usually do not need to change this value. The 'default'
+# will connect via SMTP PLAIN or LOGIN, which works in almost
+# all scenarios. However, you can change it to `xoauth2` to
+# connect via XOAUTH2. In addition, there is also `microsoft_graph`.
+# It is a custom implementaion that does not use SMTP anymore,
+# but instead the Microsoft Azure Graph API. You should not use
+# it, unless you have no other choice or a very good reason.
+#
+# If you specify another value than ´default`, you must provide
+# all the additional `x_oauth_*` values bwloe.
+#
+# possible values: 'default', 'xoauth2', 'microsoft_graph'
+# default: 'default'
+# overwritten by: SMTP_CONN_MODE
+#smtp_conn_mode = 'default'
+
+# These values must be given if `auth_xoauth2 = true`.
+# They will be used for a `client_credentials` request
+# to the `xoauth_url` to retrieve a token, that then
+# will be used for authentication via SMTP XOAUTH2.
+#
+# overwritten by: SMTP_XOAUTH2_URL
+#xoauth_url = ''
+# overwritten by: SMTP_XOAUTH2_CLIENT_ID
+#xoauth_client_id = ''
+# overwritten by: SMTP_XOAUTH2_CLIENT_SECRET
+#xoauth_client_secret = ''
+# overwritten by: SMTP_XOAUTH2_SCOPE
+#xoauth_scope = ''
+
+# Only needed if `smtp_conn_mode = 'microsoft_graph'`:
+# https://learn.microsoft.com/en-us/graph/api/user-sendmail?view=graph-rest-1.0&amp;tabs=http
+#
+# default: not set
+# overwritten by: SMTP_MICROSOFT_GRAPH_URI
+#microsoft_graph_uri = ''
+
 # The number of retries that should be done for connecting to
 # the given SMTP_URL.
 # When these retries are exceeded without success, Rauthy will
@@ -5573,7 +5956,7 @@ smtp_url = 'localhost'
 # encryption cookies, and so on.
 #
 # The first part until the first `/` is the key ID.
-# The ID must match '[a-zA-Z0-9]{2,20}'
+# The ID must match '^[a-zA-Z0-9:_-]{2,20}$'
 #
 # The key itself begins after the first `/` has been found.
 # The key must be exactly 32 bytes long, encoded as base64.
@@ -6275,6 +6658,26 @@ level_access = 'modifying'
 # default: true
 # overwritten by: ADMIN_FORCE_MFA
 admin_force_mfa = true
+
+[pam]
+# The length of newly generated PAM remote passwords via the
+# account dashboard. The default is fine as long as you can copy
+# &amp; paste them. You may want to reduce the length here if you e.g.
+# occasionally generate them on mobile and need to type them
+# manually into some terminal.
+#
+# default: 24
+# overwritten by: PAM_REMOTE_PASSWORD_LEN
+#remote_password_len = 24
+
+# The TTL for newly generated PAM remote passwords in seconds.
+# The default gives you plenty of time to open a few sessions in
+# some terminals and maybe switch to `root` on some remote machines,
+# while still expiring quick enough to be secure.
+#
+# default: 120
+# overwritten by: PAM_REMOTE_PASSWORD_TTL
+#remote_password_ttl = 120
 
 [pow]
 # The difficulty for a Proof-of-Work (PoW).
