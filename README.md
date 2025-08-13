@@ -6,11 +6,11 @@ Rauthy - OpenID Connect Single Sign-On Identity & Access Management
 
 ## What it is
 
-Rauthy is a lightweight and easy to use OpenID Connect Identity Provider. It aims to be simple to both set up and
-operate, with very secure defaults and lots of config options, if you need the flexibility. It puts heavy emphasis on
-Passkeys and a very strong security in general. The project is written in Rust to be as memory efficient, secure and
-fast as possible, and it can run on basically any hardware. If you need Single Sign-On support for IoT or headless
-CLI tools, it's got you covered as well.  
+Rauthy is a lightweight and easy to use Identity Provider supporting OpenID Connect, OAuth 2.0 and PAM. It aims to be
+simple to both set up and operate, with very secure defaults and lots of config options, if you need the flexibility. It
+puts heavy emphasis on Passkeys and a very strong security in general. The project is written in Rust to be as memory
+efficient, secure and fast as possible, and it can run on basically any hardware. If you need Single Sign-On support for
+IoT or headless CLI tools, it's got you covered as well.  
 You get High-Availability, client branding, UI translation, a nice Admin UI, Events and Auditing, and many more
 features. By default, it runs on top of [Hiqlite](https://github.com/sebadob/hiqlite) and does not depend on an external
 database (Postgres as an alternative) to make it even simpler to operate, while scaling up to millions of users easily.
