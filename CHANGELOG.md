@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.32.0
 
 ### Changes
 
@@ -23,6 +23,8 @@ This module is published in a separate repo to avoid licensing issues, since it 
 can take a look at it here: [rauthy-pam-nss](https://github.com/sebadob/rauthy-pam-nss). It has been tested with local
 terminal and window manager logins, as well es via SSH, but it should work basically anywhere where you can authenticate
 via PAM.
+
+A more detailed documentation was added to [The Book](https://sebadob.github.io/rauthy/work/pam.html) already.
 
 ```toml
 [pam]

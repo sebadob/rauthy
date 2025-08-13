@@ -111,6 +111,7 @@ debug, do custom configuration, or anything else, here is some more information:
   a container directly (as listener at least) and need to mount the parent directory instead.
 - `/var/lib/pam_rauthy/` contains the optional session start and close scripts (enabled via the config above) and all
   the PAM tokens for users that are created during login.
+- By default, the NSS proxy logs into `/var/run/rauthy/`.
 
 ```admonish caution
 It is VERY important that you never mess up the access rights for all of these files and dirs. Most importantly for the

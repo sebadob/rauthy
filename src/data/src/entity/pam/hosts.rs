@@ -454,6 +454,7 @@ WHERE id = $6
                     &payload.hostname,
                     &(payload.gid as i64),
                     &payload.force_mfa,
+                    &payload.local_password_only,
                     &payload.notes,
                     &host_id,
                 ],
