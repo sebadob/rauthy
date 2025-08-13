@@ -8,7 +8,7 @@ license.workspace = true
 [dependencies]
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
-rauthy-models = { path = "../models" }
+rauthy-data = { path = "../data" }
 rauthy-service = { path = "../service" }
 
 actix-web = { workspace = true }

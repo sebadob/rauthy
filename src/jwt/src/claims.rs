@@ -1,7 +1,7 @@
 use rauthy_api_types::oidc::JktClaim;
+use rauthy_data::entity::users::User;
+use rauthy_data::entity::users_values::UserValues;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::users::User;
-use rauthy_models::entity::users_values::UserValues;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;

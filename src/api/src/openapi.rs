@@ -9,11 +9,11 @@ use rauthy_api_types::{
     users::*,
 };
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
+use rauthy_data::ListenScheme;
+use rauthy_data::entity;
+use rauthy_data::entity::auth_providers::AuthProviderTemplate;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::ListenScheme;
-use rauthy_models::entity;
-use rauthy_models::entity::auth_providers::AuthProviderTemplate;
-use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::token_set;
 use utoipa::openapi::{ExternalDocs, Server};
 use utoipa::{OpenApi, openapi};

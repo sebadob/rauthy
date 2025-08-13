@@ -5,11 +5,11 @@ use actix_web::{
 use chrono::Utc;
 use futures::future::LocalBoxFuture;
 use rauthy_common::utils::real_ip_from_svc_req;
+use rauthy_data::entity::ip_blacklist::IpBlacklist;
+use rauthy_data::html::templates::{BlockedHtml, TooManyRequestsHtml};
+use rauthy_data::ipgeo;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::ip_blacklist::IpBlacklist;
-use rauthy_models::html::templates::{BlockedHtml, TooManyRequestsHtml};
-use rauthy_models::ipgeo;
-use rauthy_models::rauthy_config::RauthyConfig;
 use std::future::{Ready, ready};
 use std::rc::Rc;
 use tracing::info;

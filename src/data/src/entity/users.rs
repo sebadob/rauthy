@@ -1971,7 +1971,7 @@ mod tests {
 
     #[test]
     fn test_user_impl() -> Result<(), ErrorResponse> {
-        let mut user =  User {
+        let mut user = User {
             id: "123".to_string(),
             email: "admin@localhost".to_string(),
             given_name: "Admin".to_string(),

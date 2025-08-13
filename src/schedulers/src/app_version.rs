@@ -1,8 +1,8 @@
 use rauthy_common::constants::RAUTHY_VERSION;
-use rauthy_models::database::DB;
-use rauthy_models::entity::app_version::LatestAppVersion;
-use rauthy_models::events::event::Event;
-use rauthy_models::rauthy_config::RauthyConfig;
+use rauthy_data::database::DB;
+use rauthy_data::entity::app_version::LatestAppVersion;
+use rauthy_data::events::event::Event;
+use rauthy_data::rauthy_config::RauthyConfig;
 use semver::Version;
 use std::time::Duration;
 use tokio::time;

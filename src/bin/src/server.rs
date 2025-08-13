@@ -5,6 +5,8 @@ use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::UseDummyAddress;
+use rauthy_data::ListenScheme;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_handlers::{
     api_keys, atproto, auth_providers, backup, blacklist, clients, dev_only, events, fed_cm,
     generic, groups, html, oidc, pam, roles, scopes, sessions, swagger_ui, themes, users,
@@ -13,8 +15,6 @@ use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
-use rauthy_models::ListenScheme;
-use rauthy_models::rauthy_config::RauthyConfig;
 use std::cmp::max;
 use std::net::Ipv4Addr;
 use std::str::FromStr;

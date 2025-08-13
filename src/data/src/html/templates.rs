@@ -190,7 +190,7 @@ impl HtmlTemplate {
                     RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
                     usage,
                 )
-                .await?;
+                    .await?;
                 let cookie_val = get_rand(48);
                 ml.cookie = Some(cookie_val);
                 ml.save().await?;
@@ -1073,8 +1073,8 @@ impl UserEmailChangeConfirmHtml<'_> {
             theme_ts,
             templates,
         }
-        .render()
-        .expect("rendering email_confirm.html")
+            .render()
+            .expect("rendering email_confirm.html")
     }
 }
 
@@ -1102,8 +1102,8 @@ impl UserRegisterHtml<'_> {
                     .unwrap_or_default(),
             )],
         }
-        .render()
-        .expect("rendering register.html")
+            .render()
+            .expect("rendering register.html")
     }
 }
 
@@ -1124,8 +1124,8 @@ impl UserRevokeHtml<'_> {
             theme_ts,
             templates: &[],
         }
-        .render()
-        .expect("rendering revoke.html")
+            .render()
+            .expect("rendering revoke.html")
     }
 }
 
@@ -1146,7 +1146,7 @@ impl UserPasswordResetHtml<'_> {
             theme_ts,
             templates: &[HtmlTemplate::ClientLogoUpdated(logo_updated)],
         }
-        .render()
-        .expect("rendering password_reset.html")
+            .render()
+            .expect("rendering password_reset.html")
     }
 }

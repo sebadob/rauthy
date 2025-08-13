@@ -102,7 +102,7 @@ VALUES ($1, $2, $3, $4)"#,
                     &new_scope.attr_include_id,
                 ],
             )
-            .await?;
+                .await?;
         }
 
         scopes.push(new_scope.clone());
@@ -322,7 +322,7 @@ WHERE id = $4"#,
                     &new_scope.id,
                 ],
             )
-            .await?;
+                .await?;
 
             txn.commit().await?;
         }
@@ -372,7 +372,7 @@ WHERE id = $4"#,
     WHERE id = $3"#,
             &[&attr_include_access, &attr_include_id, &id],
         )
-        .await?;
+            .await?;
         Ok(())
     }
 

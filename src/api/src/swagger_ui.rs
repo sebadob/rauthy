@@ -3,8 +3,8 @@ use actix_web::http::header::{CONTENT_SECURITY_POLICY, HeaderValue};
 use actix_web::web::Path;
 use actix_web::{HttpResponse, get};
 use rauthy_common::constants::APPLICATION_JSON;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
-use rauthy_models::rauthy_config::RauthyConfig;
 use std::sync::{Arc, LazyLock, OnceLock};
 use tracing::warn;
 

@@ -6,19 +6,19 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
+use rauthy_data::api_cookie::ApiCookie;
+use rauthy_data::entity::magic_links::{MagicLink, MagicLinkUsage};
+use rauthy_data::entity::password::PasswordPolicy;
+use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::theme::ThemeCssFull;
+use rauthy_data::entity::users::User;
+use rauthy_data::entity::webauthn;
+use rauthy_data::entity::webauthn::WebauthnServiceReq;
+use rauthy_data::events::event::Event;
+use rauthy_data::html::templates::{PwdResetHtml, TplPasswordReset};
+use rauthy_data::language::Language;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::entity::magic_links::{MagicLink, MagicLinkUsage};
-use rauthy_models::entity::password::PasswordPolicy;
-use rauthy_models::entity::sessions::Session;
-use rauthy_models::entity::theme::ThemeCssFull;
-use rauthy_models::entity::users::User;
-use rauthy_models::entity::webauthn;
-use rauthy_models::entity::webauthn::WebauthnServiceReq;
-use rauthy_models::events::event::Event;
-use rauthy_models::html::templates::{PwdResetHtml, TplPasswordReset};
-use rauthy_models::language::Language;
-use rauthy_models::rauthy_config::RauthyConfig;
 use tracing::{debug, error};
 
 /// Returns `(response body, set-cookie)`

@@ -99,7 +99,7 @@ SET custom_triples = $2, expose_email = $3"#;
                     &web_id.expose_email,
                 ],
             )
-            .await?;
+                .await?;
         }
 
         DB::hql()
@@ -335,8 +335,8 @@ mod tests {
                 true,
                 "localhost:8081",
             )
-            .expect("Invalid custom triples in test case")
-            .into(),
+                .expect("Invalid custom triples in test case")
+                .into(),
             issuer: "http://localhost:8080/auth/v1".to_string(),
             email: "mail@example.com".to_string(),
             given_name: "Given".to_string(),

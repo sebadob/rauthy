@@ -7,17 +7,17 @@ use rauthy_api_types::clients::EphemeralClientRequest;
 use rauthy_api_types::fed_cm::{FedCMAssertionRequest, FedCMClientMetadataRequest};
 use rauthy_common::constants::{COOKIE_SESSION_FED_CM, HEADER_ALLOW_ALL_ORIGINS, HEADER_JSON};
 use rauthy_common::utils::real_ip_from_req;
-use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::ListenScheme;
-use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::fed_cm::{
+use rauthy_data::ListenScheme;
+use rauthy_data::api_cookie::ApiCookie;
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::fed_cm::{
     FedCMAccount, FedCMAccounts, FedCMClientMetadata, FedCMIdPConfig, FedCMLoginStatus,
     FedCMTokenResponse, WebIdentity,
 };
-use rauthy_models::entity::sessions::Session;
-use rauthy_models::entity::users::User;
-use rauthy_models::rauthy_config::RauthyConfig;
+use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::users::User;
+use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenSet};
 use tracing::{debug, error, warn};
 use validator::Validate;

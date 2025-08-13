@@ -2,14 +2,14 @@ use crate::oidc::helpers;
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use rauthy_api_types::users::Userinfo;
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::devices::DeviceEntity;
+use rauthy_data::entity::users::User;
+use rauthy_data::entity::users_values::UserValues;
+use rauthy_data::entity::webids::WebId;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{AddressClaim, JwtCommonClaims, JwtTokenType};
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::devices::DeviceEntity;
-use rauthy_models::entity::users::User;
-use rauthy_models::entity::users_values::UserValues;
-use rauthy_models::entity::webids::WebId;
-use rauthy_models::rauthy_config::RauthyConfig;
 use std::borrow::Cow;
 
 pub async fn get_userinfo(

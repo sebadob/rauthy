@@ -1,21 +1,21 @@
 use chrono::Utc;
 use rauthy_api_types::oidc::JktClaim;
 use rauthy_common::utils::base64_url_no_pad_encode;
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
+use rauthy_data::entity::refresh_tokens::RefreshToken;
+use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
+use rauthy_data::entity::scopes::Scope;
+use rauthy_data::entity::user_attr::UserAttrValueEntity;
+use rauthy_data::entity::users::User;
+use rauthy_data::entity::users_values::UserValues;
+use rauthy_data::entity::webids::WebId;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{
     JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
 };
 use rauthy_jwt::token::JwtToken;
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
-use rauthy_models::entity::refresh_tokens::RefreshToken;
-use rauthy_models::entity::refresh_tokens_devices::RefreshTokenDevice;
-use rauthy_models::entity::scopes::Scope;
-use rauthy_models::entity::user_attr::UserAttrValueEntity;
-use rauthy_models::entity::users::User;
-use rauthy_models::entity::users_values::UserValues;
-use rauthy_models::entity::webids::WebId;
-use rauthy_models::rauthy_config::RauthyConfig;
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;

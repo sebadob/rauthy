@@ -9,7 +9,7 @@ rauthy-client/examples/*/.idea
 .lapce
 .env
 .test_pid
-data
+/data
 frontend/.next
 frontend/node_modules
 frontend/out

@@ -5,11 +5,11 @@ use actix_web_lab::sse;
 use chrono::Utc;
 use rauthy_api_types::events::{EventResponse, EventsListenParams, EventsRequest};
 use rauthy_common::utils::real_ip_from_req;
+use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::events::event::Event;
+use rauthy_data::events::listener::EventRouterMsg;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_models::events::event::Event;
-use rauthy_models::events::listener::EventRouterMsg;
-use rauthy_models::rauthy_config::RauthyConfig;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use validator::Validate;
@@ -122,7 +122,7 @@ pub async fn post_event_test(
 
     #[cfg(debug_assertions)]
     if RauthyConfig::get().vars.dev.dev_mode {
-        use rauthy_models::entity::failed_scim_tasks::ScimAction;
+        use rauthy_data::entity::failed_scim_tasks::ScimAction;
         use std::net::IpAddr;
 
         // in debug + dev mode, we want to generate one event of each type

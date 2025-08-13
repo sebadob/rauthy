@@ -1,8 +1,8 @@
 use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
-use rauthy_models::database::DB;
-use rauthy_models::rauthy_config::RauthyConfig;
+use rauthy_data::database::DB;
+use rauthy_data::rauthy_config::RauthyConfig;
 use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error};

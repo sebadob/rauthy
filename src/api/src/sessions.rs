@@ -3,15 +3,15 @@ use actix_web::web::Query;
 use actix_web::{HttpResponse, delete, get, web};
 use rauthy_api_types::generic::PaginationParams;
 use rauthy_api_types::sessions::SessionResponse;
+use rauthy_data::entity;
+use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::continuation_token::ContinuationToken;
+use rauthy_data::entity::refresh_tokens::RefreshToken;
+use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::users::User;
+use rauthy_data::events::event::Event;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
-use rauthy_models::entity;
-use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_models::entity::continuation_token::ContinuationToken;
-use rauthy_models::entity::refresh_tokens::RefreshToken;
-use rauthy_models::entity::sessions::Session;
-use rauthy_models::entity::users::User;
-use rauthy_models::events::event::Event;
-use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::logout;
 use tokio::task;
 use tracing::error;
@@ -90,7 +90,7 @@ pub async fn get_sessions(
                 is_mfa: s.is_mfa,
                 state: rauthy_api_types::sessions::SessionState::from(
                     s.state()
-                        .unwrap_or(rauthy_models::entity::sessions::SessionState::Unknown),
+                        .unwrap_or(rauthy_data::entity::sessions::SessionState::Unknown),
                 ),
                 exp: s.exp,
                 last_seen: s.last_seen,

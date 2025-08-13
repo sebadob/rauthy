@@ -2,9 +2,9 @@ use crate::ReqPrincipal;
 use actix_web::web::Json;
 use actix_web::{HttpResponse, delete, get, post, put, web};
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
+use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::scopes::Scope;
 use rauthy_error::ErrorResponse;
-use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_models::entity::scopes::Scope;
 use validator::Validate;
 
 /// Returns all existing scopes

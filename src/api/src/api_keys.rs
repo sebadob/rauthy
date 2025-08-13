@@ -3,8 +3,8 @@ use actix_web::web::Json;
 use actix_web::{HttpResponse, delete, get, post, put, web};
 use mime_guess::mime::TEXT_PLAIN_UTF_8;
 use rauthy_api_types::api_keys::{ApiKeyRequest, ApiKeyResponse, ApiKeysResponse};
+use rauthy_data::entity::api_keys::ApiKeyEntity;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::api_keys::ApiKeyEntity;
 use validator::Validate;
 
 /// Returns all API Keys

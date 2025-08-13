@@ -1,10 +1,10 @@
 use rauthy_common::utils::get_rand_between;
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::failed_backchannel_logout::FailedBackchannelLogout;
+use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
+use rauthy_data::events::event::Event;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::failed_backchannel_logout::FailedBackchannelLogout;
-use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
-use rauthy_models::events::event::Event;
-use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::logout;
 use std::str::FromStr;
 use std::time::Duration;

@@ -7,8 +7,8 @@ use rauthy_api_types::users::{
     UserAttrValuesUpdateRequest,
 };
 use rauthy_common::utils::base64_url_no_pad_decode;
+use rauthy_data::entity::user_attr::UserAttrConfigEntity;
 use rauthy_jwt::claims::JwtAccessClaims;
-use rauthy_models::entity::user_attr::UserAttrConfigEntity;
 use serde_json::Value;
 use std::error::Error;
 

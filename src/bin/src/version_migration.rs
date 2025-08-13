@@ -1,5 +1,5 @@
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
-use rauthy_models::rauthy_config::RauthyConfig;
 
 /// If it's necessary to apply manual migrations between major versions, which are
 /// not handled automatically by database migrations, put them here. This function
@@ -10,7 +10,7 @@ pub async fn manual_version_migrations() -> Result<(), ErrorResponse> {
         return Ok(());
     }
 
-    rauthy_models::temp_migrations::apply_temp_migrations().await?;
+    rauthy_data::temp_migrations::apply_temp_migrations().await?;
 
     Ok(())
 }

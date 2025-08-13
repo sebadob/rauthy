@@ -8,14 +8,14 @@ use actix_web::http::header::{
 use actix_web::{HttpRequest, HttpResponse, web};
 use rauthy_api_types::users::WebauthnLoginResponse;
 use rauthy_common::constants::COOKIE_MFA;
+use rauthy_data::AuthStep;
+use rauthy_data::api_cookie::ApiCookie;
+use rauthy_data::entity::api_keys::ApiKey;
+use rauthy_data::entity::fed_cm::FedCMLoginStatus;
+use rauthy_data::entity::principal::Principal;
+use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::webauthn::WebauthnCookie;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::AuthStep;
-use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::entity::api_keys::ApiKey;
-use rauthy_models::entity::fed_cm::FedCMLoginStatus;
-use rauthy_models::entity::principal::Principal;
-use rauthy_models::entity::sessions::Session;
-use rauthy_models::entity::webauthn::WebauthnCookie;
 use rust_embed::Embed;
 use tracing::error;
 

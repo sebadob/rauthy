@@ -1,5 +1,5 @@
 [package]
-name = "rauthy-models"
+name = "rauthy-data"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

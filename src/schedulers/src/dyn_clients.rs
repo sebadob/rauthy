@@ -1,10 +1,10 @@
 use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
-use rauthy_models::database::DB;
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::clients_dyn::ClientDyn;
-use rauthy_models::rauthy_config::RauthyConfig;
+use rauthy_data::database::DB;
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::clients_dyn::ClientDyn;
+use rauthy_data::rauthy_config::RauthyConfig;
 use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info};

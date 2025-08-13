@@ -1,7 +1,7 @@
 use rauthy_api_types::clients::{ClientSecretResponse, UpdateClientRequest};
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::clients_scim::ClientScim;
 
 /// Returns `true` inside `Option<(ClientScim, bool)>` if `ClientScim`
 /// has been updated and therefore needs a full sync.

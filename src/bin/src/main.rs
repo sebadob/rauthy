@@ -3,17 +3,17 @@
 use crate::logging::setup_logging;
 use rauthy_common::constants::{BUILD_TIME, IDX_AUTH_PROVIDER_TEMPLATE, RAUTHY_VERSION};
 use rauthy_common::password_hasher;
+use rauthy_data::database::{Cache, DB};
+use rauthy_data::email::mailer;
+use rauthy_data::entity::atproto;
+use rauthy_data::entity::auth_providers::AuthProvider;
+use rauthy_data::entity::pictures::UserPicture;
+use rauthy_data::events::health_watch::watch_health;
+use rauthy_data::events::listener::EventListener;
+use rauthy_data::events::notifier::EventNotifier;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::swagger_ui::{OPENAPI_CONFIG, OPENAPI_JSON};
-use rauthy_models::database::{Cache, DB};
-use rauthy_models::email::mailer;
-use rauthy_models::entity::atproto;
-use rauthy_models::entity::auth_providers::AuthProvider;
-use rauthy_models::entity::pictures::UserPicture;
-use rauthy_models::events::health_watch::watch_health;
-use rauthy_models::events::listener::EventListener;
-use rauthy_models::events::notifier::EventNotifier;
-use rauthy_models::rauthy_config::RauthyConfig;
 use std::env;
 use std::error::Error;
 use std::time::Duration;
@@ -99,7 +99,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     RauthyConfig::debug_logs();
 
     // init BEFORE Hiqlite to avoid issues in case of mis-config
-    rauthy_models::ipgeo::init_geo().await;
+    rauthy_data::ipgeo::init_geo().await;
 
     DB::init(node_config)
         .await

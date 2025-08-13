@@ -1,8 +1,8 @@
 use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
+use rauthy_data::database::DB;
 use rauthy_error::ErrorResponse;
-use rauthy_models::database::DB;
 use std::ops::Sub;
 use std::time::Duration;
 use tokio::time;

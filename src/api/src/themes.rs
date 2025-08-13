@@ -5,10 +5,10 @@ use actix_web::http::header::{CACHE_CONTROL, CONTENT_ENCODING, CONTENT_TYPE};
 use actix_web::web::Json;
 use actix_web::{HttpRequest, HttpResponse, delete, get, post, put, web};
 use rauthy_api_types::themes::ThemeRequestResponse;
+use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::theme::ThemeCssFull;
 
 /// Get the theme for the given `client_id`.
 ///

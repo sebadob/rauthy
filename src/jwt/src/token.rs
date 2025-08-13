@@ -1,9 +1,9 @@
 use crate::claims::JwtTokenType;
 use chrono::Utc;
 use rauthy_common::utils::{base64_url_no_pad_decode_buf, base64_url_no_pad_encode_buf};
+use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
-use rauthy_models::rauthy_config::RauthyConfig;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use tracing::warn;

@@ -1,12 +1,12 @@
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
 use rauthy_common::utils::{base64_url_no_pad_decode, base64_url_no_pad_decode_buf};
+use rauthy_data::entity::auth_providers::AuthProvider;
+use rauthy_data::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg};
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use rauthy_error::ErrorResponseType;
 use rauthy_jwt::claims::{JwtCommonClaims, JwtLogoutClaims, JwtTokenType};
-use rauthy_models::entity::auth_providers::AuthProvider;
-use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg};
-use rauthy_models::rauthy_config::RauthyConfig;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::str::FromStr;

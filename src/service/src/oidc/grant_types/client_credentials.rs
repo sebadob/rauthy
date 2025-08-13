@@ -3,10 +3,10 @@ use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::clients_dyn::ClientDyn;
+use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::clients_dyn::ClientDyn;
-use rauthy_models::entity::dpop_proof::DPoPProof;
 use std::str::FromStr;
 
 #[tracing::instrument(skip_all, fields(client_id = req_data.client_id, username = req_data.username))]

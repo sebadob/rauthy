@@ -2,9 +2,9 @@ use crate::ReqPrincipal;
 use actix_web::web::Json;
 use actix_web::{HttpResponse, delete, get, post, put, web};
 use rauthy_api_types::roles::RoleRequest;
+use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::roles::Role;
 use rauthy_error::ErrorResponse;
-use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_models::entity::roles::Role;
 use validator::Validate;
 
 /// Returns all existing roles
