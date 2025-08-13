@@ -83,7 +83,7 @@ smtp_from = "Rauthy <rauthy@localhost>"
 # encryption cookies, and so on.
 #
 # The first part until the first `/` is the key ID.
-# The ID must match '[a-zA-Z0-9]{2,20}'
+# The ID must match '^[a-zA-Z0-9:_-]{2,20}$'
 #
 # The key itself begins after the first `/` has been found.
 # The key must be exactly 32 bytes long, encoded as base64.
