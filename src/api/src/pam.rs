@@ -12,7 +12,7 @@ use rauthy_api_types::pam::{
     PamPasswordResponse, PamPreflightRequest, PamPreflightResponse, PamUnlinkedEmailsResponse,
     PamUserCreateRequest, PamUserDetailsResponse, PamUserResponse, PamUserUpdateRequest,
 };
-use rauthy_api_types::users::MfaPurpose;
+use rauthy_api_types::users::{MfaPurpose, WebauthnAuthStartResponse};
 use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
 use rauthy_data::entity::pam::group_user_links::PamGroupUserLink;
 use rauthy_data::entity::pam::groups::{PamGroup, PamGroupType};
@@ -22,7 +22,7 @@ use rauthy_data::entity::pam::tokens::PamToken;
 use rauthy_data::entity::pam::users::PamUser;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::webauthn;
-use rauthy_data::entity::webauthn::WebauthnServiceReq;
+use rauthy_data::entity::webauthn::{WebauthnAdditionalData, WebauthnServiceReq};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::cmp::max;
 use std::collections::{BTreeMap, BTreeSet};
@@ -30,17 +30,46 @@ use std::time::Duration;
 use tracing::{debug, info, warn};
 use validator::Validate;
 
+/// GET all user emails that are not yet linked to a PAM account
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/pam/emails_unlinked",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = PamUnlinkedEmailsResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[get("/pam/emails_unlinked")]
 pub async fn get_pam_emails_unlinked(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
+    principal.validate_admin_session()?;
 
     let emails = PamUser::find_emails_unlinked().await?;
 
     Ok(HttpResponse::Ok().json(PamUnlinkedEmailsResponse { emails }))
 }
 
+/// `getent` request from PAM hosts
+///
+/// **Permissions**
+/// - validated PAM host
+#[utoipa::path(
+    post,
+    path = "/pam/getent",
+    tag = "pam",
+    request_body = PamGetentRequest,
+    responses(
+        (status = 200, description = "Ok", body = PamGetentResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[post("/pam/getent")]
 pub async fn post_getent(
     Json(payload): Json<PamGetentRequest>,
@@ -165,6 +194,20 @@ pub async fn post_getent(
     Ok(HttpResponse::Ok().json(resp))
 }
 
+/// GET PAM groups
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    post,
+    path = "/pam/groups",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = [PamGroupResponse]),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[get("/pam/groups")]
 pub async fn get_pam_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
@@ -178,6 +221,21 @@ pub async fn get_pam_groups(principal: ReqPrincipal) -> Result<HttpResponse, Err
     Ok(HttpResponse::Ok().json(groups))
 }
 
+/// Create a new PAM group
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    post,
+    path = "/pam/groups",
+    tag = "pam",
+    request_body = PamGroupCreateRequest,
+    responses(
+        (status = 200, description = "Ok", body = PamGroupResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[post("/pam/groups")]
 pub async fn post_pam_groups(
     principal: ReqPrincipal,
@@ -188,9 +246,23 @@ pub async fn post_pam_groups(
 
     let group = PamGroup::insert(payload.name, payload.typ.into()).await?;
 
-    Ok(HttpResponse::Ok().json(group))
+    Ok(HttpResponse::Ok().json(PamGroupResponse::from(group)))
 }
 
+/// GET linked hosts count in group
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/pam/groups/{id}/hosts_count",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = PamGroupHostsCountResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[get("/pam/groups/{id}/hosts_count")]
 pub async fn get_pam_group_hosts_count(
     id: Path<u32>,
@@ -204,6 +276,20 @@ pub async fn get_pam_group_hosts_count(
     Ok(HttpResponse::Ok().json(PamGroupHostsCountResponse { gid, count }))
 }
 
+/// DELETE a PAM group
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    delete,
+    path = "/pam/groups/{id}",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[delete("/pam/groups/{id}")]
 pub async fn delete_pam_group(
     id: Path<u32>,
@@ -216,6 +302,20 @@ pub async fn delete_pam_group(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// GET PAM all hosts
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/pam/hosts",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = [PamHostSimpleResponse]),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[get("/pam/hosts")]
 pub async fn get_hosts(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
@@ -229,6 +329,21 @@ pub async fn get_hosts(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRes
     Ok(HttpResponse::Ok().json(hosts))
 }
 
+/// Create a new PAM host
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/pam/hosts",
+    tag = "pam",
+    request_body = PamHostCreateRequest,
+    responses(
+        (status = 200, description = "Ok", body = PamHostSimpleResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[post("/pam/hosts")]
 pub async fn post_hosts(
     principal: ReqPrincipal,
@@ -248,6 +363,19 @@ pub async fn post_hosts(
     Ok(HttpResponse::Ok().json(PamHostSimpleResponse::from(host)))
 }
 
+/// GET all PAM hosts "this" sessios has access to
+///
+/// **Permissions**
+/// - any authenticated session
+#[utoipa::path(
+    get,
+    path = "/pam/hosts/user_access",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = [PamHostAccessResponse]),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
 #[get("/pam/hosts/user_access")]
 pub async fn get_hosts_user_access(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
@@ -275,6 +403,20 @@ pub async fn get_hosts_user_access(principal: ReqPrincipal) -> Result<HttpRespon
     Ok(HttpResponse::Ok().json(hosts))
 }
 
+/// GET detailed information for a PAM host
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/pam/hosts/{id}",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = PamHostDetailsResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[get("/pam/hosts/{id}")]
 pub async fn get_host_details(
     id: Path<String>,
@@ -287,6 +429,20 @@ pub async fn get_host_details(
     Ok(HttpResponse::Ok().json(PamHostDetailsResponse::from(host)))
 }
 
+/// Retrieve the secret for a PAM host
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    post,
+    path = "/pam/hosts/{id}/secret",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = PamHostSecretResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[post("/pam/hosts/{id}/secret")]
 pub async fn post_host_secret(
     id: Path<String>,
@@ -303,6 +459,20 @@ pub async fn post_host_secret(
     }))
 }
 
+/// Create a new random secret for a PAM host
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    put,
+    path = "/pam/hosts/{id}/secret",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = PamHostSecretResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[put("/pam/hosts/{id}/secret")]
 pub async fn put_host_secret(
     id: Path<String>,
@@ -316,6 +486,21 @@ pub async fn put_host_secret(
     Ok(HttpResponse::Ok().json(PamHostSecretResponse { id, secret }))
 }
 
+/// Update a PAM host
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    put,
+    path = "/pam/hosts/{id}",
+    tag = "pam",
+    request_body = PamHostUpdateRequest,
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[put("/pam/hosts/{id}")]
 pub async fn put_host(
     id: Path<String>,
@@ -330,6 +515,20 @@ pub async fn put_host(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// DELETE a PAM host
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    delete,
+    path = "/pam/hosts/{id}",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[delete("/pam/hosts/{id}")]
 pub async fn delete_host(
     id: Path<String>,
@@ -342,6 +541,20 @@ pub async fn delete_host(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// whoami request for a PAM host
+///
+/// **Permissions**
+/// - any authenticated PAM host
+#[utoipa::path(
+    post,
+    path = "/pam/hosts/{id}/whoami",
+    tag = "pam",
+    request_body = PamHostWhoamiRequest,
+    responses(
+        (status = 200, description = "Ok", body = PamHostDetailsResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
 #[post("/pam/hosts/{id}/whoami")]
 pub async fn post_host_whoami(
     id: Path<String>,
@@ -354,6 +567,20 @@ pub async fn post_host_whoami(
     Ok(HttpResponse::Ok().json(PamHostDetailsResponse::from(host)))
 }
 
+/// Login via a PAM host
+///
+/// **Permissions**
+/// - any authenticated PAM host
+#[utoipa::path(
+    post,
+    path = "/pam/login",
+    tag = "pam",
+    request_body = PamLoginRequest,
+    responses(
+        (status = 200, description = "Ok", body = PamToken),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
 #[post("/pam/login")]
 pub async fn post_login(
     Json(payload): Json<PamLoginRequest>,
@@ -455,6 +682,20 @@ pub async fn post_login(
     Ok(HttpResponse::Ok().json(token))
 }
 
+/// Start a Passkey authentication ceremony for a PAM host
+///
+/// **Permissions**
+/// - any authenticated PAM host
+#[utoipa::path(
+    post,
+    path = "/pam/mfa/start",
+    tag = "pam",
+    request_body = PamMfaStartRequest,
+    responses(
+        (status = 200, description = "Ok", body = WebauthnAuthStartResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
 #[post("/pam/mfa/start")]
 pub async fn post_mfa_start(
     Json(payload): Json<PamMfaStartRequest>,
@@ -468,6 +709,20 @@ pub async fn post_mfa_start(
     Ok(HttpResponse::Ok().json(resp))
 }
 
+/// Finish a Passkey authentication ceremony for a PAM host
+///
+/// **Permissions**
+/// - any authenticated PAM host
+#[utoipa::path(
+    post,
+    path = "/pam/mfa/finish",
+    tag = "pam",
+    request_body = PamMfaFinishRequest,
+    responses(
+        (status = 200, description = "Ok", body = WebauthnAdditionalData),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
 #[post("/pam/mfa/finish")]
 pub async fn post_mfa_finish(
     req: HttpRequest,
@@ -479,6 +734,19 @@ pub async fn post_mfa_finish(
     Ok(resp.into_response())
 }
 
+/// Create a new random Remote PAM Password for "this" session
+///
+/// **Permissions**
+/// - any authenticated session with a PAM user
+#[utoipa::path(
+    post,
+    path = "/pam/password",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = PamPasswordResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
 #[post("/pam/password")]
 pub async fn post_pam_password(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
@@ -493,6 +761,20 @@ pub async fn post_pam_password(principal: ReqPrincipal) -> Result<HttpResponse, 
     }))
 }
 
+/// Preflight request for a PAM host
+///
+/// **Permissions**
+/// - any authenticated PAM host
+#[utoipa::path(
+    post,
+    path = "/pam/preflight",
+    tag = "pam",
+    request_body = PamPreflightRequest,
+    responses(
+        (status = 200, description = "Ok", body = PamPreflightResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
 #[post("/pam/preflight")]
 pub async fn post_preflight(
     Json(payload): Json<PamPreflightRequest>,
@@ -530,6 +812,19 @@ pub async fn post_preflight(
     }))
 }
 
+/// GET all PAM users
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/pam/users",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = [PamUserResponse]),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
 #[get("/pam/users")]
 pub async fn get_pam_users(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
@@ -543,6 +838,20 @@ pub async fn get_pam_users(principal: ReqPrincipal) -> Result<HttpResponse, Erro
     Ok(HttpResponse::Ok().json(users))
 }
 
+/// Create a new PAM user
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    post,
+    path = "/pam/users",
+    tag = "pam",
+    request_body = PamUserCreateRequest,
+    responses(
+        (status = 200, description = "Ok", body = PamUserResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
 #[post("/pam/users")]
 pub async fn post_pam_users(
     principal: ReqPrincipal,
@@ -557,6 +866,19 @@ pub async fn post_pam_users(
     Ok(HttpResponse::Ok().json(PamUserResponse::from(pam_user)))
 }
 
+/// GET the PAM user for "this" session
+///
+/// **Permissions**
+/// - any authenticated session
+#[utoipa::path(
+    get,
+    path = "/pam/users/self",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = PamUserResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
 #[get("/pam/users/self")]
 pub async fn get_pam_user_self(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
@@ -566,6 +888,20 @@ pub async fn get_pam_user_self(principal: ReqPrincipal) -> Result<HttpResponse, 
     Ok(HttpResponse::Ok().json(PamUserResponse::from(pam_user)))
 }
 
+/// GET detailed information for a PAM user
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/pam/users/{uid}",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok", body = PamUserDetailsResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[get("/pam/users/{uid}")]
 pub async fn get_pam_user(
     uid: Path<u32>,
@@ -592,6 +928,21 @@ pub async fn get_pam_user(
     Ok(HttpResponse::Ok().json(resp))
 }
 
+/// Update a PAM user
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    put,
+    path = "/pam/users/{uid}",
+    tag = "pam",
+    request_body = PamUserUpdateRequest,
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[put("/pam/users/{uid}")]
 pub async fn put_pam_user(
     uid: Path<u32>,
@@ -611,6 +962,20 @@ pub async fn put_pam_user(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// Validation endpoint for PAM tokens from a PAM host
+///
+/// **Permissions**
+/// - any authenticated PAM host
+#[utoipa::path(
+    get,
+    path = "/pam/validate/{user_id}",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
 #[get("/pam/validate/{user_id}")]
 pub async fn get_validate_user(
     user_id: Path<String>,
