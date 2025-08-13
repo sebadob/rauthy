@@ -296,8 +296,10 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
     {{ test_env_vars }} ./target/debug/rauthy test &
     echo $! > {{ file_test_pid }}
 
-    # Wait for the fresh Raft
-    sleep 5
+    while ! curl -s localhost:8081/auth/v1/ping; do
+      sleep 1
+      echo 'Waiting for test-backend to be up and running'
+    done
 
     if cargo test {{ test }}; then
       echo "All SQLite tests successful"
@@ -318,8 +320,10 @@ test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlit
     {{ test_env_vars }} {{ postgres }} HQL_CACHE_STORAGE_DISK=false ./target/debug/rauthy test &
     echo $! > {{ file_test_pid }}
 
-    # Wait for the fresh Raft
-    sleep 5
+    while ! curl -s localhost:8081/auth/v1/ping; do
+      sleep 1
+      echo 'Waiting for test-backend to be up and running'
+    done
 
     if {{ postgres }} cargo test {{ test }}; then
       echo "All Postgres tests successful"
