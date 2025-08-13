@@ -69,9 +69,9 @@ are working fine, proceed with the PAM module installation:
 sudo ./install.sh pam
 ```
 
-If your OS is managed by `authselect`, you need to activate the new custom profile afterward, just like mentioned in the
-output. On other OSes like Debian, the script will create backups of config files and then copy the Rauthy configs in
-place directly.
+If your OS is managed by `authselect`, you need to activate the new custom profile afterward with
+`authselect select custom/rauthy`, just like mentioned in the output. On other OSes like Debian, the script will create
+backups of config files and then copy the Rauthy configs in place directly.
 
 **CAUTION:** Make sure to test all the logins and things that should work at this point BEFORE logging out. Keep a
 backup session open, just in case something broke. Incorrectly configured PAM modules can lock you out of your machine!
