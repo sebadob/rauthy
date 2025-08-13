@@ -7,8 +7,8 @@ use actix_web::{
 use futures::future::LocalBoxFuture;
 use rauthy_common::logging::LogLevelAccess;
 use rauthy_common::utils::real_ip_from_svc_req;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
-use rauthy_models::rauthy_config::RauthyConfig;
 use std::future::{Ready, ready};
 use std::rc::Rc;
 use tracing::{debug, info};

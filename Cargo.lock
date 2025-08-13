@@ -4464,11 +4464,11 @@ dependencies = [
  "prometheus",
  "rauthy-api-types",
  "rauthy-common",
+ "rauthy-data",
  "rauthy-error",
  "rauthy-handlers",
  "rauthy-jwt",
  "rauthy-middlewares",
- "rauthy-models",
  "rauthy-schedulers",
  "rauthy-service",
  "regex",
@@ -4534,113 +4534,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rauthy-error"
-version = "0.32.0-20250805"
-dependencies = [
- "actix-multipart",
- "actix-web",
- "argon2",
- "chacha20poly1305",
- "chrono",
- "cryptr",
- "css-color",
- "deadpool",
- "ed25519-compact",
- "hiqlite",
- "image",
- "openssl",
- "openssl-sys",
- "oxiri",
- "reqwest",
- "ring",
- "rio_turtle",
- "rsa",
- "ruma",
- "rusqlite",
- "s3-simple",
- "serde",
- "serde_json",
- "serde_json_path",
- "serde_urlencoded",
- "spow",
- "svg-hush",
- "time",
- "tokio-postgres",
- "tracing",
- "utoipa",
- "validator",
-]
-
-[[package]]
-name = "rauthy-handlers"
-version = "0.32.0-20250805"
-dependencies = [
- "actix-multipart",
- "actix-web",
- "actix-web-lab",
- "bytes",
- "chrono",
- "cryptr",
- "futures",
- "mime_guess",
- "num_cpus",
- "openssl",
- "openssl-sys",
- "rauthy-api-types",
- "rauthy-common",
- "rauthy-error",
- "rauthy-jwt",
- "rauthy-models",
- "rauthy-service",
- "rust-embed",
- "semver",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "spow",
- "time",
- "tokio",
- "tracing",
- "utoipa",
- "utoipa-swagger-ui",
- "validator",
-]
-
-[[package]]
-name = "rauthy-jwt"
-version = "0.32.0-20250805"
-dependencies = [
- "chrono",
- "openssl",
- "openssl-sys",
- "rauthy-api-types",
- "rauthy-common",
- "rauthy-error",
- "rauthy-models",
- "serde",
- "serde_json",
- "tracing",
- "utoipa",
-]
-
-[[package]]
-name = "rauthy-middlewares"
-version = "0.32.0-20250805"
-dependencies = [
- "actix-web",
- "chrono",
- "futures",
- "openssl",
- "openssl-sys",
- "rauthy-common",
- "rauthy-error",
- "rauthy-models",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "rauthy-models"
+name = "rauthy-data"
 version = "0.32.0-20250805"
 dependencies = [
  "accept-language",
@@ -4721,6 +4615,112 @@ dependencies = [
 ]
 
 [[package]]
+name = "rauthy-error"
+version = "0.32.0-20250805"
+dependencies = [
+ "actix-multipart",
+ "actix-web",
+ "argon2",
+ "chacha20poly1305",
+ "chrono",
+ "cryptr",
+ "css-color",
+ "deadpool",
+ "ed25519-compact",
+ "hiqlite",
+ "image",
+ "openssl",
+ "openssl-sys",
+ "oxiri",
+ "reqwest",
+ "ring",
+ "rio_turtle",
+ "rsa",
+ "ruma",
+ "rusqlite",
+ "s3-simple",
+ "serde",
+ "serde_json",
+ "serde_json_path",
+ "serde_urlencoded",
+ "spow",
+ "svg-hush",
+ "time",
+ "tokio-postgres",
+ "tracing",
+ "utoipa",
+ "validator",
+]
+
+[[package]]
+name = "rauthy-handlers"
+version = "0.32.0-20250805"
+dependencies = [
+ "actix-multipart",
+ "actix-web",
+ "actix-web-lab",
+ "bytes",
+ "chrono",
+ "cryptr",
+ "futures",
+ "mime_guess",
+ "num_cpus",
+ "openssl",
+ "openssl-sys",
+ "rauthy-api-types",
+ "rauthy-common",
+ "rauthy-data",
+ "rauthy-error",
+ "rauthy-jwt",
+ "rauthy-service",
+ "rust-embed",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "spow",
+ "time",
+ "tokio",
+ "tracing",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "validator",
+]
+
+[[package]]
+name = "rauthy-jwt"
+version = "0.32.0-20250805"
+dependencies = [
+ "chrono",
+ "openssl",
+ "openssl-sys",
+ "rauthy-api-types",
+ "rauthy-common",
+ "rauthy-data",
+ "rauthy-error",
+ "serde",
+ "serde_json",
+ "tracing",
+ "utoipa",
+]
+
+[[package]]
+name = "rauthy-middlewares"
+version = "0.32.0-20250805"
+dependencies = [
+ "actix-web",
+ "chrono",
+ "futures",
+ "openssl",
+ "openssl-sys",
+ "rauthy-common",
+ "rauthy-data",
+ "rauthy-error",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "rauthy-notify"
 version = "0.32.0-20250805"
 dependencies = [
@@ -4748,8 +4748,8 @@ dependencies = [
  "openssl",
  "openssl-sys",
  "rauthy-common",
+ "rauthy-data",
  "rauthy-error",
- "rauthy-models",
  "rauthy-service",
  "semver",
  "tokio",
@@ -4767,9 +4767,9 @@ dependencies = [
  "openssl-sys",
  "rauthy-api-types",
  "rauthy-common",
+ "rauthy-data",
  "rauthy-error",
  "rauthy-jwt",
- "rauthy-models",
  "reqwest",
  "ring",
  "serde",

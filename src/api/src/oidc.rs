@@ -22,27 +22,27 @@ use rauthy_common::constants::{
     PROVIDER_ATPROTO,
 };
 use rauthy_common::utils::real_ip_from_req;
-use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::api_cookie::ApiCookie;
-use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_models::entity::auth_providers::{AuthProvider, AuthProviderTemplate};
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::devices::DeviceAuthCode;
-use rauthy_models::entity::fed_cm::FedCMLoginStatus;
-use rauthy_models::entity::ip_rate_limit::DeviceIpRateLimit;
-use rauthy_models::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPair};
-use rauthy_models::entity::logos::{Logo, LogoType};
-use rauthy_models::entity::pow::PowEntity;
-use rauthy_models::entity::sessions::Session;
-use rauthy_models::entity::theme::ThemeCssFull;
-use rauthy_models::entity::users::User;
-use rauthy_models::entity::webauthn::WebauthnCookie;
-use rauthy_models::entity::well_known::WellKnown;
-use rauthy_models::html::templates::{
+use rauthy_data::api_cookie::ApiCookie;
+use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::auth_providers::{AuthProvider, AuthProviderTemplate};
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::devices::DeviceAuthCode;
+use rauthy_data::entity::fed_cm::FedCMLoginStatus;
+use rauthy_data::entity::ip_rate_limit::DeviceIpRateLimit;
+use rauthy_data::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPair};
+use rauthy_data::entity::logos::{Logo, LogoType};
+use rauthy_data::entity::pow::PowEntity;
+use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::theme::ThemeCssFull;
+use rauthy_data::entity::users::User;
+use rauthy_data::entity::webauthn::WebauthnCookie;
+use rauthy_data::entity::well_known::WellKnown;
+use rauthy_data::html::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
 };
-use rauthy_models::language::Language;
-use rauthy_models::rauthy_config::RauthyConfig;
+use rauthy_data::language::Language;
+use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::oidc::{authorize, logout, token_info, userinfo, validation};
 use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
@@ -835,7 +835,7 @@ pub async fn get_session_info(principal: ReqPrincipal) -> HttpResponse {
         state: SessionState::from(
             session
                 .state()
-                .unwrap_or(rauthy_models::entity::sessions::SessionState::Unknown),
+                .unwrap_or(rauthy_data::entity::sessions::SessionState::Unknown),
         ),
     };
 

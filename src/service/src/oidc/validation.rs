@@ -4,15 +4,15 @@ use crate::token_set::{
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::dpop_proof::DPoPProof;
+use rauthy_data::entity::refresh_tokens::RefreshToken;
+use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
+use rauthy_data::entity::users::User;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtRefreshClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::dpop_proof::DPoPProof;
-use rauthy_models::entity::refresh_tokens::RefreshToken;
-use rauthy_models::entity::refresh_tokens_devices::RefreshTokenDevice;
-use rauthy_models::entity::users::User;
-use rauthy_models::rauthy_config::RauthyConfig;
 use tracing::debug;
 
 /// Validates request parameters for the authorization and refresh endpoints

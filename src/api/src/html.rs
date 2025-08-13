@@ -1,9 +1,9 @@
 use crate::Assets;
 use actix_web::http::header;
 use actix_web::{HttpRequest, HttpResponse, get, web};
+use rauthy_data::entity::theme::ThemeCssFull;
+use rauthy_data::html::HtmlCached;
 use rauthy_error::ErrorResponse;
-use rauthy_models::entity::theme::ThemeCssFull;
-use rauthy_models::html::HtmlCached;
 use std::borrow::Cow;
 
 #[get("/{_:.*}")]

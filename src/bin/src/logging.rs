@@ -1,4 +1,4 @@
-use rauthy_models::rauthy_config::RauthyConfig;
+use rauthy_data::rauthy_config::RauthyConfig;
 use std::env;
 use tracing::Level;
 

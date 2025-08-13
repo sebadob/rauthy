@@ -2,11 +2,11 @@ use actix_web::HttpRequest;
 use actix_web::http::header::{AUTHORIZATION, HeaderName, HeaderValue};
 use rauthy_api_types::oidc::TokenInfo;
 use rauthy_common::utils::base64_decode_buf;
+use rauthy_data::entity::clients::Client;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtAccessClaims, JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
-use rauthy_models::entity::clients::Client;
-use rauthy_models::rauthy_config::RauthyConfig;
 use tracing::error;
 
 pub async fn get_token_info(

@@ -11,14 +11,14 @@ use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse}
 use rauthy_api_types::generic::LogoParams;
 use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
 use rauthy_common::constants::{HEADER_JSON, PROVIDER_ATPROTO};
-use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::auth_providers::{
+use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, AuthProviderTemplate,
 };
-use rauthy_models::entity::logos::{Logo, LogoType};
-use rauthy_models::entity::theme::ThemeCssFull;
-use rauthy_models::entity::users::User;
-use rauthy_models::html::HtmlCached;
+use rauthy_data::entity::logos::{Logo, LogoType};
+use rauthy_data::entity::theme::ThemeCssFull;
+use rauthy_data::entity::users::User;
+use rauthy_data::html::HtmlCached;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use spow::pow::Pow;
 use tracing::debug;
 use validator::Validate;

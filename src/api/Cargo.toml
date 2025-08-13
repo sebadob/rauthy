@@ -10,7 +10,7 @@ rauthy-api-types = { path = "../api_types" }
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 rauthy-jwt = { path = "../jwt" }
-rauthy-models = { path = "../models" }
+rauthy-data = { path = "../data" }
 rauthy-service = { path = "../service" }
 
 actix-multipart = { workspace = true }

@@ -15,7 +15,7 @@ rauthy-error = { path = "../error" }
 rauthy-handlers = { path = "../api" }
 rauthy-jwt = { path = "../jwt" }
 rauthy-middlewares = { path = "../middlewares" }
-rauthy-models = { path = "../models" }
+rauthy-data = { path = "../data" }
 rauthy-schedulers = { path = "../schedulers" }
 rauthy-service = { path = "../service" }
 

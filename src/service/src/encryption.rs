@@ -1,9 +1,9 @@
 use cryptr::{EncKeys, EncValue};
+use rauthy_data::entity::api_keys::ApiKeyEntity;
+use rauthy_data::entity::auth_providers::AuthProvider;
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::jwk::JWKS;
 use rauthy_error::ErrorResponse;
-use rauthy_models::entity::api_keys::ApiKeyEntity;
-use rauthy_models::entity::auth_providers::AuthProvider;
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::jwk::JWKS;
 use tracing::{error, info};
 
 /// Migrates encrypted data in the backend to a new key.

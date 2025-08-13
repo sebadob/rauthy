@@ -2,11 +2,11 @@ use actix_web::{
     HttpResponse, get,
     http::header::{self, HeaderValue},
 };
-use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::{
+use rauthy_data::{
     entity::atproto::{self},
     rauthy_config::RauthyConfig,
 };
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 
 /// ATProto public client metadata
 ///

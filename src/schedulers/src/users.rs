@@ -1,11 +1,11 @@
 use chrono::Utc;
+use rauthy_data::database::DB;
+use rauthy_data::entity::clients_scim::ClientScim;
+use rauthy_data::entity::refresh_tokens::RefreshToken;
+use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::users::User;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
-use rauthy_models::database::DB;
-use rauthy_models::entity::clients_scim::ClientScim;
-use rauthy_models::entity::refresh_tokens::RefreshToken;
-use rauthy_models::entity::sessions::Session;
-use rauthy_models::entity::users::User;
-use rauthy_models::rauthy_config::RauthyConfig;
 use rauthy_service::oidc::logout;
 use std::time::Duration;
 use tokio::time;

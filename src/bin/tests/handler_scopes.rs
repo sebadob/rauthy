@@ -2,7 +2,7 @@ use crate::common::{get_auth_headers, get_backend_url, init_client_bcl_uri};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{ClientResponse, UpdateClientRequest};
 use rauthy_api_types::scopes::ScopeRequest;
-use rauthy_models::entity::scopes::Scope;
+use rauthy_data::entity::scopes::Scope;
 use std::error::Error;
 
 mod common;

@@ -9,7 +9,7 @@ license.workspace = true
 rauthy-api-types = { path = "../api_types" }
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
-rauthy-models = { path = "../models" }
+rauthy-data = { path = "../data" }
 
 chrono = { workspace = true }
 openssl = { workspace = true }

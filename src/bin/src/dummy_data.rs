@@ -1,6 +1,6 @@
 use rauthy_common::utils::get_rand;
+use rauthy_data::{entity::users::User, language::Language};
 use rauthy_error::ErrorResponse;
-use rauthy_models::{entity::users::User, language::Language};
 use std::time::Duration;
 use tracing::info;
 

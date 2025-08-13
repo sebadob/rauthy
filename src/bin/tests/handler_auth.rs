@@ -18,10 +18,10 @@ use rauthy_common::constants::{
 use rauthy_common::utils::{
     base64_encode, base64_url_encode, base64_url_no_pad_decode, base64_url_no_pad_encode, get_rand,
 };
+use rauthy_data::entity::dpop_proof::{DPoPClaims, DPoPHeader};
+use rauthy_data::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPairType};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::JwtTokenType;
-use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
-use rauthy_models::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPairType};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::AUTHORIZATION;
 use ring::digest;
@@ -615,7 +615,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
 
     let header = DPoPHeader {
         typ: "dpop+jwt".to_string(),
-        alg: rauthy_models::entity::jwk::JwkKeyPairAlg::EdDSA,
+        alg: rauthy_data::entity::jwk::JwkKeyPairAlg::EdDSA,
         jwk: JWKSPublicKey {
             kty: JwkKeyPairType::OKP,
             // DPoP request will not have the 'alg' here but one level higher

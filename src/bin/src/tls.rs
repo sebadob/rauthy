@@ -1,4 +1,4 @@
-use rauthy_models::rauthy_config::RauthyConfig;
+use rauthy_data::rauthy_config::RauthyConfig;
 
 /// Loads TLS key and cert file from disk and returns a `rustls::ServerConfig`
 pub async fn load_tls() -> rustls::ServerConfig {

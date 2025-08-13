@@ -3,9 +3,9 @@ use actix_web::web::Json;
 use actix_web::{HttpResponse, delete, get, post, web};
 use chrono::Utc;
 use rauthy_api_types::blacklist::{BlacklistResponse, BlacklistedIp, IpBlacklistRequest};
+use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::ip_blacklist::IpBlacklist;
 use rauthy_error::ErrorResponse;
-use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_models::entity::ip_blacklist::IpBlacklist;
 use validator::Validate;
 
 /// Returns all blacklisted IP's

@@ -1,6 +1,6 @@
 use crate::sleep_schedule_next;
-use rauthy_models::ipgeo::maxmind;
-use rauthy_models::rauthy_config::RauthyConfig;
+use rauthy_data::ipgeo::maxmind;
+use rauthy_data::rauthy_config::RauthyConfig;
 use std::str::FromStr;
 use tracing::{error, info};
 
