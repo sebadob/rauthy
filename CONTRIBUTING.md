@@ -17,7 +17,7 @@ This document should help you to contribute to Rauthy and setting up your local 
   have
   a general idea what a function does if you just read its name.
 - Simple and readable code is way better than making everything generic without a good reason just because you can.
-- Any function that returns a `Result<_>` should return Rauthy's custom `ErrorResponse` from `rauthy-common` as the
+- Any function that returns a `Result<_>` should return Rauthys custom `ErrorResponse` from `rauthy-common` as the
   error type. This decision was made instead of just simple `anyhow` error Strings for instance to actually make
   errors understandable by external code by using the `error` field and by humans by using the `message` field.
 
@@ -29,7 +29,7 @@ To work with this project, you need to have the following tools available on you
 
 - a BASH shell
 - [just](https://github.com/casey/just)
-- at least Rust v1.85
+- at least Rust v1.88
 - `npm`
 - `docker` / `podman`
 
@@ -76,8 +76,6 @@ either need to roll back and apply an older DB backup, or undo the unstable migr
 
 ### Initial Development Setup
 
-A lot of work has been put into simplifying the development setup lately.
-
 If you start inside a freshly cloned project, you first need to execute
 
 ```
@@ -106,16 +104,17 @@ templating related errors from `askama`, you most like just need to rebuild the 
 
 ### Config
 
-The default config file is the `rauthy.cfg`. This has reasonable defaults for local dev and should work out of the box
+The default config file is the `config.toml`. This has reasonable defaults for local dev and should work out of the box
 in most scenarios. If you want to modify any values to adjust to your setup, you should create a `./.env` file and
 only configure here. You can even safely put secrets into it. It has been added to the `.gitignore` and cannot be
 (automatically) checked into version control by accident.
 
 Any values specified inside `.env` or via inline env vars will always have the highest priority and overwrite defaults
-or values that are specified in `rauthy.cfg`.
+or values that are specified in `config.toml`.
 
 Just as an example, let's say you want to develop against a remote Postgres database. To do so, create your `.env` file,
-paste and adjust all the `PG_*` values from the `DATABASE` section in the `rauthy.cfg`.
+paste and adjust all the `PG_*` values from the `[database]` section in the `config.toml`. Most values can be
+overwritten by env vars, and the corresponding var name is always mentioned.
 
 > The default config is set up in a way that local development with a UI served on port `5173` will work properly. If
 > you want to work with pre-built HTML from the backend only, you probably need to adjust:
@@ -154,8 +153,8 @@ Once prerequisites are met, the rest should be really simple:
 just run
 ```
 
-will start Rauthy with a Hiqlite backend serving the statically built HTML UI, all on port `8080` by default.
-The default config expects you to work with the development UI though, so in another terminal, execute
+will start Rauthy with a Hiqlite backend serving the statically built HTML UI, all on port `8080` by default. The
+default config expects you to work with the development UI though, so in another terminal, execute
 
 ```
 just run ui
@@ -190,15 +189,15 @@ admin@localhost
 ### Dev Env Containers
 
 If you want to stop the dev containers, `just dev-env-stop` will take care of this, to remove the containers use
-`just dev-env-rm`. If you are working on DB migrations
-and are still changing your new migration, you probably need to clean upt he DB while tuning, because of hash
-mismatches. For Postgres, `just postgres-rm` and `just postgres-start`. For Hiqlite, `just delete-hiqlite`.
+`just dev-env-rm`. If you are working on DB migrations and are still changing your new migration, you probably need to
+clean upt he DB while tuning, because of hash mismatches. For Postgres, `just postgres-rm` and `just postgres-start`.
+For Hiqlite, `just delete-hiqlite`.
 
 Your local email test server [mailcrab](https://github.com/tweedegolf/mailcrab) will be available on `localhost:1080`.
 It will intercept and grab any outgoing emails in the default configuration. Even addresses that don't exist will be
 grabbed successfully.
 
-If you want to connect to the Postgres during development, the default user and password are `rauthy / 123SuperSafe`.
+If you want to connect to the Postgres during development, the default user and password are `rauthy : 123SuperSafe`.
 To connect to Hiqlite, you can ignore the Raft log and use any SQLite client to open `data/state_machine/db/hiqlite.db`.
 
 ### Rebuilding the UI
@@ -222,7 +221,7 @@ rebuilt the UI, you will have the static HTML files updates, and you see the lat
 
 ### DEV vs PROD mode
 
-Rauthy's architecture in production is really simple, but in local development, it's a bit more involved.
+Rauthys architecture in production is really simple, but in local development, it's a bit more involved.
 
 During **local development**, you have the Rust backend, which basically is "Rauthy". It serves the whole API. In
 addition, you typically want to run the UI in dev mode as well, which is done via `just run ui`, like explained above.
@@ -277,11 +276,9 @@ let ta = useI18nAdmin();
 
 #### E-Mail
 
-E-Mails are rendered in the backend. Translations are being handled in `src/models/src/i18n_email`. Most of these have
+E-Mails are rendered in the backend. Translations are being handled in `src/data/src/email/i18n/`. Most of these have
 fixed presets. But for the "New Password" and "Password Reset" E-Mail, some custom `TPL_*` env vars can be set to
-overwrite the defaults and customize these mails a bit more. The corresponding files, which require a bit more work
-when adding a whole new language, are `src/models/src/i18n_email/password_new.rs` and
-`[reset.rs](src/models/src/i18n_email/reset.rs)`.
+overwrite the defaults and customize these mails a bit more.
 
 ### CSS
 
@@ -325,9 +322,9 @@ requirements mentioned above.
 
 If you are adding a new test and want to debug it, it depends on the type of test how to do that best.
 
-If it's a unit test, it's pretty straight forward, `just test your_unit_test`.
-If it's an integration test however, you may not always want to execute the whole range of tests with
-`just test-hiqlite` or `just test-posgtres`, because it takes quite some time.
+If it's a unit test, it's pretty straight forward, `just test your_unit_test`. If it's an integration test however, you
+may not always want to execute the whole range of tests with `just test-hiqlite` or `just test-posgtres`, because it
+takes quite some time.
 
 In such a case, you can `just test-backend`, which will start the test backend with `hiqlite`. If you then
 `just test your_unit_test`, it will only run the single integration test without starting the backend automatically.
