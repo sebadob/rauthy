@@ -1193,8 +1193,8 @@ impl Client {
             Ok(())
         } else {
             debug!(
-                "Invalid `redirect_uri`: {redirect_uri} / expected on of: {}",
-                self.redirect_uris
+                "Invalid `redirect_uri`: {} / expected one of: {}",
+                redirect_uri, self.redirect_uris
             );
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
