@@ -48,6 +48,7 @@ pub struct LogoParams {
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]
 pub struct PaginationParams {
+    #[validate(range(min = 1))]
     pub page_size: Option<u16>,
     pub offset: Option<u16>,
     pub backwards: Option<bool>,

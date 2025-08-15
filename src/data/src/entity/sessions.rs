@@ -240,7 +240,7 @@ impl Session {
         #[allow(unused_assignments)]
         let mut res = None;
         let mut latest_ts = 0;
-        let size_hint = max(page_size as usize, 1);
+        let size_hint = page_size as usize;
 
         if let Some(token) = continuation_token {
             if backwards {
