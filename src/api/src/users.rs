@@ -59,6 +59,7 @@ use rauthy_service::oidc::helpers::get_bearer_token_from_header;
 use rauthy_service::oidc::logout;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
+use std::cmp::max;
 use std::collections::HashMap;
 use std::net::IpAddr;
 use tokio::task;
@@ -95,8 +96,9 @@ pub async fn get_users(
     params.validate()?;
 
     let user_count = User::count().await?;
-    if user_count >= RauthyConfig::get().vars.server.ssp_threshold as i64 {
-        let page_size = params.page_size.unwrap_or(20) as i64;
+    let ssp_threshold = RauthyConfig::get().vars.server.ssp_threshold;
+    if user_count >= ssp_threshold as i64 {
+        let page_size = max(params.page_size.unwrap_or(20), ssp_threshold) as i64;
         let offset = params.offset.unwrap_or(0) as i64;
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {

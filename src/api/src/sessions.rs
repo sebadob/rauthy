@@ -13,6 +13,7 @@ use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use rauthy_service::oidc::logout;
+use std::cmp::max;
 use tokio::task;
 use tracing::error;
 use validator::Validate;
@@ -48,10 +49,9 @@ pub async fn get_sessions(
 
     // sessions will be dynamically paginated based on the same setting as users
     let user_count = User::count().await?;
-    if user_count >= RauthyConfig::get().vars.server.ssp_threshold as i64 {
-        // TODO outsource the setup stuff here or keep it duplicated for better readability?
-        // currently used here and in GET /users
-        let page_size = params.page_size.unwrap_or(20) as i64;
+    let ssp_threshold = RauthyConfig::get().vars.server.ssp_threshold;
+    if user_count >= ssp_threshold as i64 {
+        let page_size = max(params.page_size.unwrap_or(20), ssp_threshold) as i64;
         let offset = params.offset.unwrap_or(0) as i64;
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {
