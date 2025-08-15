@@ -214,7 +214,7 @@ impl UserPicture {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
                                 "invalid content_type, expected one of: image/svg+xml, \
-                                image/jpeg, image/png",
+                                image/jpeg, image/png, image/webp",
                             ));
                         }
                     }
@@ -250,8 +250,7 @@ impl UserPicture {
             .await?
             .await?
         } else {
-            Logo::sanitize_svg(&mut buf)?;
-            buf
+            Logo::sanitize_svg(&mut buf)?
         };
 
         // save img to db + storage

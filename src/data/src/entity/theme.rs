@@ -105,6 +105,7 @@ impl From<ThemeCssFull> for ThemeRequestResponse {
 impl ThemeCssFull {
     /// Returns either the custom theme for a client, if it exists, and the default on any error.
     pub async fn find_with_default(client_id: String) -> Result<Self, ErrorResponse> {
+        // TODO cache these - they are fetched for each HTML Cached Get
         let sql = "SELECT * FROM themes WHERE client_id = $1";
         let slf: Self = if is_hiqlite() {
             DB::hql()
