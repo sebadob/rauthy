@@ -17,7 +17,9 @@ use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest, ScimClientRequestResponse,
 };
-use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP};
+use rauthy_common::constants::{
+    APPLICATION_JSON, CACHE_TTL_APP, CLIENT_SECRET_CONSTANT_TIME_MICROS,
+};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -29,6 +31,8 @@ use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 use std::str::FromStr;
+use std::time::Duration;
+use tokio::time::Instant;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
 
@@ -1332,6 +1336,7 @@ impl Client {
         })?;
         let cleartext = EncValue::try_from(secret_enc.clone())?.decrypt()?;
 
+        let start = Instant::now();
         if cleartext.as_ref() == secret.as_bytes()
             || Client::validate_cached_secret(&self.id, secret)
                 .await
@@ -1339,7 +1344,20 @@ impl Client {
         {
             return Ok(());
         }
-        // TODO we could possibly `zeroize` here with additional implementations
+
+        // make sure the comparison is constant time
+        // downcasting to u64 is fine, as it will usually be in the single digit range
+        let micros = start.elapsed().as_micros() as u64;
+        if micros < CLIENT_SECRET_CONSTANT_TIME_MICROS {
+            tokio::time::sleep(Duration::from_micros(
+                CLIENT_SECRET_CONSTANT_TIME_MICROS - micros,
+            ))
+            .await;
+        } else {
+            warn!(
+                "`client_secret` comparison took more than {CLIENT_SECRET_CONSTANT_TIME_MICROS}µs"
+            );
+        }
 
         warn!(
             "Invalid login for client '{}' from '{}'",
@@ -1725,7 +1743,9 @@ mod tests {
     use super::*;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
+    use cryptr::utils::secure_random_alnum;
     use pretty_assertions::assert_eq;
+    use tokio::time::Instant;
 
     #[test]
     fn test_client_impl() {
@@ -1978,6 +1998,22 @@ mod tests {
     //         })
     //     })
     // }
+
+    // Only used to find out how long a simple string comparison takes.
+    #[ignore]
+    #[test]
+    fn test_secret_comparison_time() {
+        let len = 2048;
+        let secret = secure_random_alnum(len);
+        let start = Instant::now();
+        if secret == secret {
+            // only print to make sure the compiler does not optimize it away
+            println!("is match");
+        }
+        let elapsed = start.elapsed().as_micros();
+        println!("String comparison for {len} chars: {elapsed}µs");
+        assert_eq!(1, 2);
+    }
 
     #[test]
     fn test_delete_client_custom_scope() {
