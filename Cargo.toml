@@ -51,6 +51,7 @@ bytes = "1.10"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 cidr = "0.3.0"
+constant_time_eq = "0.4.2"
 cron = "0.15"
 cryptr = { version = "0.8", features = ["s3", "streaming"] }
 css-color = "0.2"

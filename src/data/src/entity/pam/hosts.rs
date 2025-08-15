@@ -7,7 +7,7 @@ use rauthy_api_types::pam::{
     PamGroupMembersResponse, PamGroupType, PamHostAccessResponse, PamHostDetailsResponse,
     PamHostSimpleResponse, PamHostUpdateRequest,
 };
-use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
+use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME, SECRET_LEN_CLIENTS};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -67,7 +67,7 @@ impl PamHost {
         local_password_only: bool,
     ) -> Result<Self, ErrorResponse> {
         let id = secure_random_alnum(24);
-        let secret = secure_random_alnum(64);
+        let secret = secure_random_alnum(SECRET_LEN_CLIENTS);
         let enc = EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec();
 
         let sql = r#"
@@ -477,7 +477,7 @@ WHERE id = $6
     }
 
     pub async fn rotate_secret(host_id: String) -> Result<String, ErrorResponse> {
-        let secret = secure_random_alnum(64);
+        let secret = secure_random_alnum(SECRET_LEN_CLIENTS);
         let enc = EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec();
 
         let sql = "UPDATE pam_hosts SET secret = $1 WHERE id = $2";
@@ -550,8 +550,13 @@ WHERE pu.gid = $1 AND pu.wheel = $2
 
     #[inline]
     pub fn validate_secret(&self, secret: &[u8]) -> Result<(), ErrorResponse> {
+        // make sure this function is updated if the secret length ever changes
+        debug_assert_eq!(SECRET_LEN_CLIENTS, 64);
+
         let dec = EncValue::try_from_bytes(self.secret.clone())?.decrypt()?;
-        if dec.as_ref() == secret {
+        let a = <&[u8; 64]>::try_from(dec.as_ref()).unwrap();
+        let b = <&[u8; 64]>::try_from(secret).unwrap();
+        if constant_time_eq::constant_time_eq_64(a, b) {
             Ok(())
         } else {
             Err(ErrorResponse::new(

@@ -28,6 +28,7 @@ atrium-common = { workspace = true }
 atrium-identity = { workspace = true }
 atrium-oauth = { workspace = true }
 chrono = { workspace = true }
+constant_time_eq = { workspace = true }
 cryptr = { workspace = true }
 dotenvy = { workspace = true }
 ed25519-compact = { workspace = true }
@@ -89,5 +90,5 @@ webpki-roots = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1"
-rstest = "0.18.2"
+rstest = "0.26"
 tokio-test = "*"

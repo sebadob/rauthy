@@ -17,9 +17,7 @@ use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest, ScimClientRequestResponse,
 };
-use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_TTL_APP, CLIENT_SECRET_CONSTANT_TIME_MICROS,
-};
+use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP, SECRET_LEN_CLIENTS};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -31,8 +29,6 @@ use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 use std::str::FromStr;
-use std::time::Duration;
-use tokio::time::Instant;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
 
@@ -877,13 +873,17 @@ impl Client {
         self.force_mfa || self.id == "rauthy" && RauthyConfig::get().vars.mfa.admin_force_mfa
     }
 
-    // Generates a new random 64 character long client secret and returns the cleartext and
+    /// Generates a new random 64 character long client secret and returns the cleartext and
     /// encrypted version
     /// # Panics
     /// The decryption depends on correctly set up `ENC_KEYS` and `ENC_KEY_ACTIVE` environment
     /// variables and panics, if this is not the case.
     pub fn generate_new_secret() -> Result<(String, Vec<u8>), ErrorResponse> {
-        let rnd = utils::secure_random_alnum(64);
+        // CAUTION: DO NOT change the length of the `client_secret` here.
+        // If you need to at some point, make sure to update `Self::validate_secret()` as well,
+        // because it expects exactly 64 chars long secrets.
+        let rnd = utils::secure_random_alnum(SECRET_LEN_CLIENTS);
+        debug_assert_eq!(rnd.len(), SECRET_LEN_CLIENTS);
         let enc = EncValue::encrypt(rnd.as_bytes())?.into_bytes().to_vec();
         Ok((rnd, enc))
     }
@@ -1327,6 +1327,13 @@ impl Client {
                 "Cannot validate 'client_secret' for public client",
             ));
         }
+        if secret.len() != SECRET_LEN_CLIENTS {
+            error!("Invalid / too short secret given as `client_secret`");
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Invalid 'client_secret'",
+            ));
+        }
 
         let secret_enc = self.secret.as_ref().ok_or_else(|| {
             ErrorResponse::new(
@@ -1336,27 +1343,17 @@ impl Client {
         })?;
         let cleartext = EncValue::try_from(secret_enc.clone())?.decrypt()?;
 
-        let start = Instant::now();
-        if cleartext.as_ref() == secret.as_bytes()
+        // make sure this function is updated if the secret length ever changes
+        debug_assert_eq!(cleartext.len(), SECRET_LEN_CLIENTS);
+
+        let a = <&[u8; 64]>::try_from(cleartext.as_ref()).unwrap();
+        let b = <&[u8; 64]>::try_from(secret.as_bytes()).unwrap();
+        if constant_time_eq::constant_time_eq_64(a, b)
             || Client::validate_cached_secret(&self.id, secret)
                 .await
                 .is_ok()
         {
             return Ok(());
-        }
-
-        // make sure the comparison is constant time
-        // downcasting to u64 is fine, as it will usually be in the single digit range
-        let micros = start.elapsed().as_micros() as u64;
-        if micros < CLIENT_SECRET_CONSTANT_TIME_MICROS {
-            tokio::time::sleep(Duration::from_micros(
-                CLIENT_SECRET_CONSTANT_TIME_MICROS - micros,
-            ))
-            .await;
-        } else {
-            warn!(
-                "`client_secret` comparison took more than {CLIENT_SECRET_CONSTANT_TIME_MICROS}µs"
-            );
         }
 
         warn!(
@@ -1743,9 +1740,7 @@ mod tests {
     use super::*;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
-    use cryptr::utils::secure_random_alnum;
     use pretty_assertions::assert_eq;
-    use tokio::time::Instant;
 
     #[test]
     fn test_client_impl() {
@@ -1998,22 +1993,6 @@ mod tests {
     //         })
     //     })
     // }
-
-    // Only used to find out how long a simple string comparison takes.
-    #[ignore]
-    #[test]
-    fn test_secret_comparison_time() {
-        let len = 2048;
-        let secret = secure_random_alnum(len);
-        let start = Instant::now();
-        if secret == secret {
-            // only print to make sure the compiler does not optimize it away
-            println!("is match");
-        }
-        let elapsed = start.elapsed().as_micros();
-        println!("String comparison for {len} chars: {elapsed}µs");
-        assert_eq!(1, 2);
-    }
 
     #[test]
     fn test_delete_client_custom_scope() {
