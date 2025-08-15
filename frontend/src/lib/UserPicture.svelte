@@ -25,7 +25,7 @@
     } = $props();
 
     const id = genKey();
-    const accept = 'image/png, image/jpeg, image/webp';
+    const accept = 'image/png, image/jpeg, image/webp, image/svg+xml';
 
     let t = useI18n();
 
@@ -148,7 +148,7 @@
 
         for (let file of list) {
             if (!accept.includes(file.type)) {
-                err = 'Invalid File Format, allowed: ' + accept;
+                err = 'Invalid File Format, allowed: ' + accept + ', found: ' + file.type;
                 break;
             }
             if (file.size > config.content_len_limit) {
