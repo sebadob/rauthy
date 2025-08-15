@@ -474,7 +474,7 @@ ORDER BY created_at ASC"#;
         offset: i64,
         backwards: bool,
     ) -> Result<(Vec<UserResponseSimple>, Option<ContinuationToken>), ErrorResponse> {
-        let size_hint = max(page_size, 1) as usize;
+        let size_hint = page_size as usize;
 
         let res = if let Some(token) = continuation_token {
             if backwards {
