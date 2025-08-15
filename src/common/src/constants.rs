@@ -81,7 +81,7 @@ pub const DEVICE_KEY_LENGTH: u8 = 64;
 pub const EVENTS_LATEST_LIMIT: u16 = 100;
 pub const GRANT_TYPE_DEVICE_CODE: &str = "urn:ietf:params:oauth:grant-type:device_code";
 pub const UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS: u16 = 300;
-
+pub const CLIENT_SECRET_CONSTANT_TIME_MICROS: u64 = 100;
 pub const CACHE_TTL_APP: Option<i64> = Some(43200);
 pub const CACHE_TTL_AUTH_PROVIDER_CALLBACK: Option<i64> =
     Some(UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64);

@@ -17,7 +17,9 @@ use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest, ScimClientRequestResponse,
 };
-use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP};
+use rauthy_common::constants::{
+    APPLICATION_JSON, CACHE_TTL_APP, CLIENT_SECRET_CONSTANT_TIME_MICROS,
+};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -1342,11 +1344,19 @@ impl Client {
         {
             return Ok(());
         }
-        let micros = start.elapsed().as_micros();
-        if micros < 100 {
-            tokio::time::sleep(Duration::from_micros(100 - micros as u64)).await;
+
+        // make sure the comparison is constant time
+        // downcasting to u64 is fine, as it will usually be in the single digit range
+        let micros = start.elapsed().as_micros() as u64;
+        if micros < CLIENT_SECRET_CONSTANT_TIME_MICROS {
+            tokio::time::sleep(Duration::from_micros(
+                CLIENT_SECRET_CONSTANT_TIME_MICROS - micros,
+            ))
+            .await;
         } else {
-            warn!("`client_secret` comparison took more than 100µs");
+            warn!(
+                "`client_secret` comparison took more than {CLIENT_SECRET_CONSTANT_TIME_MICROS}µs"
+            );
         }
 
         warn!(
@@ -1990,7 +2000,7 @@ mod tests {
     // }
 
     // Only used to find out how long a simple string comparison takes.
-    // #[ignore]
+    #[ignore]
     #[test]
     fn test_secret_comparison_time() {
         let len = 2048;
