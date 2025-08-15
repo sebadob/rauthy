@@ -2007,7 +2007,8 @@ mod tests {
         let secret = secure_random_alnum(len);
         let start = Instant::now();
         if secret == secret {
-            // noop
+            // only print to make sure the compiler does not optimize it away
+            println!("is match");
         }
         let elapsed = start.elapsed().as_micros();
         println!("String comparison for {len} chars: {elapsed}µs");
