@@ -534,7 +534,7 @@ pub async fn post_device_auth(
         let iter = scopes.split(' ').collect::<Vec<&str>>();
         for scope in iter {
             if !client.scopes.contains(scope) {
-                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
                     error: OAuth2ErrorTypeResponse::InvalidScope,
                     error_description: Some(Cow::from(format!(
                         "Allowed scopes: {}",
@@ -548,13 +548,19 @@ pub async fn post_device_auth(
         None
     };
 
-    if let Ok(secret) = client.get_secret_cleartext()
-        && secret != payload.client_secret
-    {
-        return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
-            error: OAuth2ErrorTypeResponse::UnauthorizedClient,
-            error_description: Some(Cow::from("Invalid `client_secret`")),
-        });
+    if client.confidential {
+        let Some(secret) = &payload.client_secret else {
+            return HttpResponse::Unauthorized().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+                error_description: Some(Cow::from("Missing `client_secret`")),
+            });
+        };
+        if client.validate_secret(secret, &req).await.is_err() {
+            return HttpResponse::Unauthorized().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+                error_description: Some(Cow::from("Invalid `client_secret`")),
+            });
+        }
     }
 
     // we are good - create the code
