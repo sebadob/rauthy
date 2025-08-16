@@ -3,7 +3,9 @@ use crate::entity::logos::Logo;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::http::StatusCode;
-use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, HeaderName, HeaderValue};
+use actix_web::http::header::{
+    CACHE_CONTROL, CONTENT_SECURITY_POLICY, CONTENT_TYPE, HeaderName, HeaderValue,
+};
 use actix_web::{HttpResponse, HttpResponseBuilder, web};
 use futures_util::StreamExt;
 use hiqlite_macros::params;
@@ -340,6 +342,10 @@ impl UserPicture {
 
         let mut resp = HttpResponseBuilder::new(StatusCode::OK);
         resp.insert_header((CONTENT_TYPE, HeaderValue::from_str(&slf.content_type)?));
+        resp.insert_header((
+            CONTENT_SECURITY_POLICY,
+            "connect-src 'none'; script-src 'none';",
+        ));
         resp.insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE));
         if let Some((n, v)) = cors_origin {
             resp.insert_header((n, v));

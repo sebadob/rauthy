@@ -1,6 +1,7 @@
 use crate::{ReqPrincipal, content_len_limit};
 use actix_web::http::header::{
-    ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, WWW_AUTHENTICATE,
+    ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_SECURITY_POLICY, CONTENT_TYPE,
+    WWW_AUTHENTICATE,
 };
 use actix_web::web::{Json, Query};
 use actix_web::{HttpRequest, HttpResponse, delete, get, post, put, web};
@@ -329,9 +330,11 @@ pub async fn get_client_logo(
 
     // we only cache the response if the client properly used the updated param
     // to never run into issues otherwise
+    let csp = "connect-src 'none'; script-src 'none'; frame-ancestors 'none'; object-src 'none';";
     if params.updated.is_some() {
         Ok(HttpResponse::Ok()
             .insert_header((CONTENT_TYPE, logo.content_type))
+            .insert_header((CONTENT_SECURITY_POLICY, csp))
             .insert_header((
                 CACHE_CONTROL,
                 "max-age=31104000, stale-while-revalidate=2592000, public",
@@ -340,6 +343,7 @@ pub async fn get_client_logo(
     } else {
         Ok(HttpResponse::Ok()
             .insert_header((CONTENT_TYPE, logo.content_type))
+            .insert_header((CONTENT_SECURITY_POLICY, csp))
             .body(logo.data))
     }
 }
