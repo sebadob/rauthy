@@ -53,52 +53,6 @@ setup:
     echo "Trying to cleanup orphaned containers"
     {{ docker }} rm container rauthy || echo ">>> No orphaned 'rauthy' container found"
 
-# Creates a new Root + Intermediate CA for development and testing TLS certificates
-create-root-ca:
-    # Password for both root and intermediate dev CA is always: 123SuperMegaSafe
-
-    # The nioca container runs with 10001:10001 uid:gid
-    #chmod 0766 tls/ca
-
-    # Root CA
-    {{ docker }} run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
-          ghcr.io/sebadob/nioca \
-          x509 \
-          --stage root \
-          --clean
-
-    # Intermediate CA
-    {{ docker }} run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
-          ghcr.io/sebadob/nioca \
-          x509 \
-          --stage intermediate
-
-    cp tls/ca/x509/intermediate/ca-chain.pem tls/ca-chain.pem
-
-# Create a new End Entity TLS certificate for development and testing
-
-# Intermediate CA DEV password: 123SuperMegaSafe
-create-end-entity-tls:
-    # create the new certificate
-    {{ docker }} run --rm -it -v ./tls/ca:/ca {{ map_docker_user }} \
-          ghcr.io/sebadob/nioca \
-          x509 \
-          --cn 'localhost' \
-          --alt-name-dns 'localhost' \
-          --alt-name-dns 'redhac.local' \
-          --alt-name-dns 'rauthy.local' \
-          --alt-name-ip '127.0.0.1' \
-          --alt-name-uri 'localhost:8080' \
-          --alt-name-uri 'localhost:8443' \
-          --usages-ext server-auth \
-          --usages-ext client-auth \
-          --o 'Rauthy OIDC' \
-          --stage end-entity
-
-    # copy it in the correct place
-    cp tls/ca/x509/end_entity/$(cat tls/ca/x509/end_entity/serial)/cert-chain.pem tls/cert-chain.pem
-    cp tls/ca/x509/end_entity/$(cat tls/ca/x509/end_entity/serial)/key.pem tls/key.pem
-
 # This may be executed if you don't have a local `docker buildx` setup and want to create a release container build
 docker-buildx-setup:
     #!/usr/bin/env bash

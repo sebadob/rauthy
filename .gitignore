@@ -1,5 +1,6 @@
 /assets/nginx/access.log
 target
+/tls
 rauthy-client/target
 rauthy-client/examples/*/target
 .idea

@@ -53,6 +53,7 @@ openssl-sys = { workspace = true }
 # 0.8 is necessary to provide a proper `thread_rng` for `rsa`
 rand_08 = { package = "rand", version = "0.8" }
 rand_core = { workspace = true }
+rcgen = { workspace = true }
 reqwest = { workspace = true }
 ring = { workspace = true }
 rio_api = { workspace = true }

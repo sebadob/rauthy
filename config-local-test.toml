@@ -50,8 +50,7 @@ metrics_enable = false
 swagger_ui_enable = true
 
 [tls]
-cert_path = 'tls/cert-chain.pem'
-key_path = 'tls/key.pem'
+generate_self_signed = true
 
 [user_registration]
 enable = true

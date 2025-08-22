@@ -2033,6 +2033,20 @@ cert_path = 'tls/cert-chain.pem'
 # overwritten by: TLS_KEY
 key_path = 'tls/key.pem'
 
+# If set to `true`, Rauthy will generate self-signed TLS certs and copy
+# them into `tls/self_signed_cert.pem` and `tls/self_signed_key.pem`.
+# It will also IGNORE and `cert_path` / `key_path`.
+#
+# CAUTION: If set to `true`, it will delete existing files:
+# - `tls/self_signed_cert.pem`
+# - `tls/self_signed_key.pem`
+#
+# This should only be used for testing and never in production!
+#
+# default: false
+# overwritten by: TLS_GENERATE_SELF_SIGNED
+generate_self_signed = true
+
 [user_pictures]
 # The storage type for user pictures.
 # By default, they are saved inside the Database, which is not ideal.
