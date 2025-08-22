@@ -1,2 +1,0 @@
-127.0.0.1 - - [18/Jun/2025:21:26:15 +0000] "GET /whoami HTTP/1.1" 200 1167 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0" "-"
-127.0.0.1 - - [18/Jun/2025:21:26:16 +0000] "GET /favicon.ico HTTP/1.1" 404 153 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0" "-"
