@@ -91,6 +91,7 @@ postgres-types = { version = "0.2.6", features = ["derive"] }
 prometheus = "0.14"
 rand = "0.9"
 rand_core = { version = "0.9", features = ["std"] }
+rcgen = "0.14.3"
 refinery = { version = "0.8.14", features = ["tokio-postgres"] }
 regex = "1"
 reqwest = { version = "0.12.3", default-features = false, features = ["json", "rustls-tls"] }

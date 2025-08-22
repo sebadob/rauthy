@@ -8,6 +8,7 @@ pub mod atproto;
 pub mod auth_codes;
 mod auth_provider_cust_impl;
 pub mod auth_providers;
+pub mod ca_self_signed;
 pub mod clients;
 pub mod clients_dyn;
 pub mod clients_scim;
