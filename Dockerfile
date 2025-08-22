@@ -12,11 +12,11 @@ USER $TARGET_USER
 WORKDIR /app
 
 COPY --chown=$TARGET_USER ./out/rauthy_$TARGETARCH ./rauthy
-COPY --chown=$TARGET_USER ./out/empty/ ./data
-
-COPY --chown=$TARGET_USER ./tls/cert-chain.pem ./tls/cert-chain.pem
-COPY --chown=$TARGET_USER ./tls/key.pem ./tls/key.pem
-
 COPY --chown=$TARGET_USER ./config-local-test.toml ./config-local-test.toml
+
+# we are copying the empty dirs for proper access rights upfront
+COPY --chown=$TARGET_USER ./out/empty/ ./data
+COPY --chown=$TARGET_USER ./out/empty/ ./tls
+
 
 CMD ["/app/rauthy"]
