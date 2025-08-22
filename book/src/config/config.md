@@ -1999,7 +1999,7 @@ key_path = 'tls/key.pem'
 
 # If set to `true`, Rauthy will generate self-signed TLS certs and copy
 # them into `tls/self_signed_cert.pem` and `tls/self_signed_key.pem`.
-# It will also IGNORE and `cert_path` / `key_path`.
+# It will also IGNORE any `cert_path` / `key_path`.
 #
 # CAUTION: If set to `true`, it will delete existing files:
 # - `tls/self_signed_cert.pem`
