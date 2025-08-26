@@ -2,6 +2,57 @@
 
 ## v0.32.1
 
+### Security
+
+- Make sure a `page_size` of `0` will not be accepted when doing server-side searches for users or sessions to prevent
+  a possible division by `0`. This did not lead to a `panic` because of a conversion into `f64`, but definitely to an
+  unexpected answer to the client from the calculation for the next page.
+  [#1165](https://github.com/sebadob/rauthy/pull/1165)
+- Make the secret comparison for OIDC clients and PAM hosts constant time.
+  [#1167](https://github.com/sebadob/rauthy/pull/1167)
+- Fix logic bug in SVG sanitization for user pictures and allow direct SVG upload via the Account Dashboard. Also add
+  a specially hardened CSP to the client and user picture endpoints.
+  [#1168](https://github.com/sebadob/rauthy/pull/1168)
+  [#1169](https://github.com/sebadob/rauthy/pull/1169)
+- Remove a reachable `unwrap()` in the Cache GET handler, which was possible if a request is being cancelled before
+  awaiting the answer from the cache. This was fixed in `hiqlite-0.10.1` as a dependency.
+  [#1177](https://github.com/sebadob/rauthy/pull/1177)
+
+### Changes
+
+#### User Name validation
+
+`'` is now an allowed character in user `user.given_name` and `user.family_name`.
+
+[#1171](https://github.com/sebadob/rauthy/pull/1171)
+
+#### Self-Signed TLS certificates
+
+As part of the repo cleanup before an upcoming `v1.0.0`, the static DEV TLS certificates were removed from the repo.
+Rauthy can now generate self-signed certificates (with a proper CA for more in-depth testing) on its own. A CA with a
+lifetime of 10 years will be generated and saved (encrypted) into the database. This CA will be used to create
+self-signed TLS certificates for the HTTPS server, and all nodes of an HA cluster will make use of it.
+
+```toml
+[tls]
+# If set to `true`, Rauthy will generate self-signed TLS certs and copy
+# them into `tls/self_signed_cert.pem` and `tls/self_signed_key.pem`.
+# It will also IGNORE any `cert_path` / `key_path`.
+#
+# CAUTION: If set to `true`, it will delete existing files:
+# - `tls/self_signed_cert.pem`
+# - `tls/self_signed_key.pem`
+#
+# This should only be used for testing and never in production!
+#
+# default: false
+# overwritten by: TLS_GENERATE_SELF_SIGNED
+generate_self_signed = true
+```
+
+[#1173](https://github.com/sebadob/rauthy/pull/1173)
+[#1174](https://github.com/sebadob/rauthy/pull/1174)
+
 ## v0.32.0
 
 ### Changes
