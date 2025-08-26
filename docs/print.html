@@ -1989,6 +1989,19 @@ self-signed certificates. Rauthys self-signed ones should only be used for testi
 securely. Rauthy will create it's own CA and save it do the database, with the private key being encrypted with the
 configured <code>encryption.key_active</code>. The CA will be valid for 10 years and re-used for signing the server certs in all
 instances, even you do an HA deployment.</p>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="config/tls.html#admonition-caution"></a>
+</div>
+<div>
+<p>Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS certificates. To be able
+to do this during testing, you would need to add the generated CA certificate to your trust store.</p>
+<p>In such a case, you will probably see an error like <code>Invalid Key</code> during registration. This happens in insecure contexts.</p>
+</div>
+</div>
 <h3 id="automatic-self-signed-certificates"><a class="header" href="#automatic-self-signed-certificates">Automatic self-signed certificates</a></h3>
 <p>Generating self-signed TLS certificates for the Rauthy HTTPS server is pretty straight forward. Keep in mind, that these
 will only be generated for the HTTPS server and NOT for hiqlite internal cluster traffic, if you have an HA deployment.</p>
