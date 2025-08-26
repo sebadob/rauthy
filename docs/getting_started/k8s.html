@@ -348,7 +348,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.32.0
+          image: ghcr.io/sebadob/rauthy:0.32.1
           securityContext:
             # User ID 10001 is actually built into the container 
             # at the creation for better security
@@ -465,8 +465,8 @@ spec:
 <h3 id="config"><a class="header" href="#config">Config</a></h3>
 <p>Going to production does not need too many additional steps.</p>
 <h4 id="tls-certificates"><a class="header" href="#tls-certificates">TLS Certificates</a></h4>
-<p>The thing you need will be valid TLS certificates, of course. To get these, there are a lot of existing mechanisms.<br />
-If you use an internal Certificate Authority (CA), you do have you own tools to work with this anyway. If, however, you
+<p>The thing you need will be valid TLS certificates, of course. To get these, there are a lot of existing mechanisms. If
+you use an internal Certificate Authority (CA), you do have you own tools to work with this anyway. If, however, you
 want to use something like <a href="https://letsencrypt.org/de/">Let's Encrypt</a>, I suggest to use the
 <a href="https://cert-manager.io/">cert-manager</a>, which is easy and straight forward to use.</p>
 <p>An example, how to add a certificate for the Traefik IngressRoute from above:</p>

@@ -170,12 +170,39 @@
                         <h1 id="tls"><a class="header" href="#tls">TLS</a></h1>
 <p>If you do have TLS certificates from another source already, skip directly to <a href="#config">Config</a>.</p>
 <h2 id="generating-certificates"><a class="header" href="#generating-certificates">Generating Certificates</a></h2>
-<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+<p>You can either generate TLS certificates yourself and manage your own CA, or (for testing purposes) let Rauthy generate
+self-signed certificates. Rauthys self-signed ones should only be used for testing, but they are generated somewhat
+securely. Rauthy will create it's own CA and save it do the database, with the private key being encrypted with the
+configured <code>encryption.key_active</code>. The CA will be valid for 10 years and re-used for signing the server certs in all
+instances, even you do an HA deployment.</p>
+<h3 id="automatic-self-signed-certificates"><a class="header" href="#automatic-self-signed-certificates">Automatic self-signed certificates</a></h3>
+<p>Generating self-signed TLS certificates for the Rauthy HTTPS server is pretty straight forward. Keep in mind, that these
+will only be generated for the HTTPS server and NOT for hiqlite internal cluster traffic, if you have an HA deployment.</p>
+<p>To generate TLS certificates on startup, you only need to set <code>tls.generate_self_signed = true</code>:</p>
+<pre><code class="language-toml">[tls]
+# If set to `true`, Rauthy will generate self-signed TLS certs and copy
+# them into `tls/self_signed_cert.pem` and `tls/self_signed_key.pem`.
+# It will also IGNORE any `cert_path` / `key_path`.
+#
+# CAUTION: If set to `true`, it will delete existing files:
+# - `tls/self_signed_cert.pem`
+# - `tls/self_signed_key.pem`
+#
+# This should only be used for testing and never in production!
+#
+# default: false
+# overwritten by: TLS_GENERATE_SELF_SIGNED
+generate_self_signed = true
+</code></pre>
+<p>If you only care about testing certificates for the HTTPS server, you don't need to configure anything else at this
+point.</p>
+<h3 id="manually-managed-certificates"><a class="header" href="#manually-managed-certificates">Manually managed certificates</a></h3>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
-<div id="admonition-hint-title">
-<p>Hint</p>
+<div id="admonition-note-title">
+<p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-hint"></a>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
 <p>We are using another project of mine called <a href="https://github.com/sebadob/nioca">Nioca</a> for an easy creation of a
@@ -186,13 +213,13 @@ fully functioning and production ready private Root Certificate Authority (CA).<
 If you want a permanent way of generating certificates for yourself, take a look at Rauthys <code>justfile</code> and copy
 and adjust the recipes <code>create-root-ca</code> and <code>create-end-entity-tls</code> to your liking.<br />
 If you just want to get everything started quickly, follow these steps:</p>
-<h3 id="create-an-alias-for-the-docker-command"><a class="header" href="#create-an-alias-for-the-docker-command">Create an alias for the <code>docker</code> command</a></h3>
+<h4 id="create-an-alias-for-the-docker-command"><a class="header" href="#create-an-alias-for-the-docker-command">Create an alias for the <code>docker</code> command</a></h4>
 <pre><code>alias nioca='docker run --rm -it -v ./:/ca -u $(id -u ${USER}):$(id -g ${USER}) ghcr.io/sebadob/nioca'
 </code></pre>
 <p>To see the full feature set for more customization than mentioned below:</p>
 <pre><code>nioca x509 -h
 </code></pre>
-<h3 id="generate-full-certificate-chain"><a class="header" href="#generate-full-certificate-chain">Generate full certificate chain</a></h3>
+<h4 id="generate-full-certificate-chain"><a class="header" href="#generate-full-certificate-chain">Generate full certificate chain</a></h4>
 <p>To make your browser happy, your need to have at least one <code>--alt-name-dns</code> for the URL of your application.
 You can define as many of them as you like.</p>
 <pre><code>nioca x509 \
@@ -252,12 +279,12 @@ tls_api_cert = "tls/tls.crt"
 </code></pre>
 <p>There is no problem using the same certificates for both networks, but you can optionally even separate them if you need
 to. You could even re-use the Server TLS, if your DNS setup allows for this.</p>
-<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
 <div class="admonition-title">
-<div id="admonition-note-title">
+<div id="admonition-note-1-title">
 <p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-note"></a>
+<a class="admonition-anchor-link" href="#admonition-note-1"></a>
 </div>
 <div>
 <p>At the time of writing, it does not accept a custom Root CA yet. In this case you have to set the
@@ -295,12 +322,12 @@ following command, to create the Kubernetes secrets.</p>
 <p><strong>Secrets - <code>hiqlite</code> cache</strong></p>
 <pre><code>kubectl -n rauthy create secret tls hiqlite-tls --key="key.pem" --cert="cert-chain.pem"
 </code></pre>
-<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div id="admonition-note-2" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-2-title">
 <div class="admonition-title">
-<div id="admonition-note-1-title">
+<div id="admonition-note-2-title">
 <p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-note-1"></a>
+<a class="admonition-anchor-link" href="#admonition-note-2"></a>
 </div>
 <div>
 <p>We create the <code>hiqlite-tls</code> here with the exact same values. You could of course either use different certificates, or
