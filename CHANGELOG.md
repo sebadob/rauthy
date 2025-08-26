@@ -6,7 +6,8 @@
 
 - Make sure a `page_size` of `0` will not be accepted when doing server-side searches for users or sessions to prevent
   a possible division by `0`. This did not lead to a `panic` because of a conversion into `f64`, but definitely to an
-  unexpected answer to the client from the calculation for the next page.
+  unexpected answer to the client from the calculation for the next page. The max value for it is now also limited and
+  instead of `u16::MAX`, the max is `server.ssp_threshold`.
   [#1165](https://github.com/sebadob/rauthy/pull/1165)
 - Make the secret comparison for OIDC clients and PAM hosts constant time.
   [#1167](https://github.com/sebadob/rauthy/pull/1167)
