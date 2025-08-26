@@ -10,6 +10,13 @@ securely. Rauthy will create it's own CA and save it do the database, with the p
 configured `encryption.key_active`. The CA will be valid for 10 years and re-used for signing the server certs in all
 instances, even you do an HA deployment.
 
+```admonish caution
+Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS certificates. To be able 
+to do this during testing, you would need to add the generated CA certificate to your trust store.
+
+In such a case, you will probably see an error like `Invalid Key` during registration. This happens in insecure contexts.
+```
+
 ### Automatic self-signed certificates
 
 Generating self-signed TLS certificates for the Rauthy HTTPS server is pretty straight forward. Keep in mind, that these

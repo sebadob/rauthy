@@ -207,6 +207,10 @@ testing and taking a first look. By setting `LOCAL_TEST=true`, a demo config is 
 docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.32.1
 ```
 
+> [!CAUTION]
+> Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS certificates. To be
+> able to do this during testing, you would need to add the generated CA certificate to your trust store.
+
 > [!IMPORTANT]
 > This command starts an HTTPS server with self-signed certificates.  
 > Make sure to add the `https://` scheme if you open the URL manually.
