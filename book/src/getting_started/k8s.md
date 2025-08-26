@@ -339,8 +339,8 @@ Going to production does not need too many additional steps.
 
 #### TLS Certificates
 
-The thing you need will be valid TLS certificates, of course. To get these, there are a lot of existing mechanisms.  
-If you use an internal Certificate Authority (CA), you do have you own tools to work with this anyway. If, however, you
+The thing you need will be valid TLS certificates, of course. To get these, there are a lot of existing mechanisms. If
+you use an internal Certificate Authority (CA), you do have you own tools to work with this anyway. If, however, you
 want to use something like [Let's Encrypt](https://letsencrypt.org/de/), I suggest to use the
 [cert-manager](https://cert-manager.io/), which is easy and straight forward to use.
 
