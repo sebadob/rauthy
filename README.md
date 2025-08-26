@@ -2,7 +2,7 @@
 
 # Rauthy
 
-Rauthy - OpenID Connect Single Sign-On Identity & Access Management
+Rauthy - Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2.0 and PAM
 
 ## What it is
 
@@ -198,7 +198,7 @@ the application yourself with docker on your localhost. Rauthy comes with a sett
 testing and taking a first look. By setting `LOCAL_TEST=true`, a demo config is being loaded at startup.
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.32.0
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.32.1
 ```
 
 > This command starts an HTTPS server with self-signed certificates.  

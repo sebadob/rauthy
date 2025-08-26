@@ -1,5 +1,7 @@
 # Changelog
 
+## v0.32.1
+
 ## v0.32.0
 
 ### Changes
