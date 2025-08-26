@@ -4,7 +4,42 @@ If you do have TLS certificates from another source already, skip directly to [C
 
 ## Generating Certificates
 
-```admonish hint
+You can either generate TLS certificates yourself and manage your own CA, or (for testing purposes) let Rauthy generate
+self-signed certificates. Rauthys self-signed ones should only be used for testing, but they are generated somewhat
+securely. Rauthy will create it's own CA and save it do the database, with the private key being encrypted with the
+configured `encryption.key_active`. The CA will be valid for 10 years and re-used for signing the server certs in all
+instances, even you do an HA deployment.
+
+### Automatic self-signed certificates
+
+Generating self-signed TLS certificates for the Rauthy HTTPS server is pretty straight forward. Keep in mind, that these
+will only be generated for the HTTPS server and NOT for hiqlite internal cluster traffic, if you have an HA deployment.
+
+To generate TLS certificates on startup, you only need to set `tls.generate_self_signed = true`:
+
+```toml
+[tls]
+# If set to `true`, Rauthy will generate self-signed TLS certs and copy
+# them into `tls/self_signed_cert.pem` and `tls/self_signed_key.pem`.
+# It will also IGNORE any `cert_path` / `key_path`.
+#
+# CAUTION: If set to `true`, it will delete existing files:
+# - `tls/self_signed_cert.pem`
+# - `tls/self_signed_key.pem`
+#
+# This should only be used for testing and never in production!
+#
+# default: false
+# overwritten by: TLS_GENERATE_SELF_SIGNED
+generate_self_signed = true
+```
+
+If you only care about testing certificates for the HTTPS server, you don't need to configure anything else at this
+point.
+
+### Manually managed certificates
+
+```admonish note
 We are using another project of mine called [Nioca](https://github.com/sebadob/nioca) for an easy creation of a
 fully functioning and production ready private Root Certificate Authority (CA).
 ```
@@ -14,7 +49,7 @@ If you want a permanent way of generating certificates for yourself, take a look
 and adjust the recipes `create-root-ca` and `create-end-entity-tls` to your liking.  
 If you just want to get everything started quickly, follow these steps:
 
-### Create an alias for the `docker` command
+#### Create an alias for the `docker` command
 
 ```
 alias nioca='docker run --rm -it -v ./:/ca -u $(id -u ${USER}):$(id -g ${USER}) ghcr.io/sebadob/nioca'
@@ -26,7 +61,7 @@ To see the full feature set for more customization than mentioned below:
 nioca x509 -h
 ```
 
-### Generate full certificate chain
+#### Generate full certificate chain
 
 To make your browser happy, your need to have at least one `--alt-name-dns` for the URL of your application.
 You can define as many of them as you like.
