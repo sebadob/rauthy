@@ -10,24 +10,26 @@ use tracing::debug;
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, strum::EnumIter)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
-    En,
     De,
-    ZhHans,
+    En,
     Ko,
+    Nb,
+    ZhHans,
 }
 
 impl Language {
-    fn all_available<'a>() -> [&'a str; 7] {
-        ["en", "en-US", "de", "de-DE", "zh", "zh-Hans", "ko"]
+    fn all_available<'a>() -> [&'a str; 10] {
+        ["en", "en-US", "de", "de-DE", "ko", "nb", "nb-NO", "no-NO", "zh", "zh-Hans"]
     }
 
     pub fn as_str(&self) -> &str {
         // must return results that work with serde::Deserialize from lowercase
         match self {
-            Language::En => "en",
             Language::De => "de",
-            Language::ZhHans => "zhhans",
+            Language::En => "en",
             Language::Ko => "ko",
+            Language::Nb => "nb",
+            Language::ZhHans => "zhhans",
         }
     }
 }
@@ -59,10 +61,11 @@ impl From<String> for Language {
 impl From<&str> for Language {
     fn from(value: &str) -> Self {
         match value {
-            "de" | "de-DE" => Self::De,
             "en" | "en-US" => Self::En,
-            "zh" | "zhhans" | "zh-hans" | "zh-Hans" => Self::ZhHans,
+            "de" | "de-DE" => Self::De,
             "ko" | "ko-KR" => Self::Ko,
+            "nb" | "nb-NO" | "no-NO" => Self::Nb,
+            "zh" | "zhhans" | "zh-hans" | "zh-Hans" => Self::ZhHans,
             _ => Self::default(),
         }
     }
@@ -99,10 +102,11 @@ impl TryFrom<&HttpRequest> for Language {
 impl From<rauthy_api_types::generic::Language> for Language {
     fn from(value: rauthy_api_types::generic::Language) -> Self {
         match value {
-            rauthy_api_types::generic::Language::En => Self::En,
             rauthy_api_types::generic::Language::De => Self::De,
-            rauthy_api_types::generic::Language::ZhHans => Self::ZhHans,
+            rauthy_api_types::generic::Language::En => Self::En,
             rauthy_api_types::generic::Language::Ko => Self::Ko,
+            rauthy_api_types::generic::Language::Nb => Self::Nb,
+            rauthy_api_types::generic::Language::ZhHans => Self::ZhHans,
         }
     }
 }
@@ -110,10 +114,11 @@ impl From<rauthy_api_types::generic::Language> for Language {
 impl From<Language> for rauthy_api_types::generic::Language {
     fn from(value: Language) -> Self {
         match value {
-            Language::En => Self::En,
             Language::De => Self::De,
-            Language::ZhHans => Self::ZhHans,
+            Language::En => Self::En,
             Language::Ko => Self::Ko,
+            Language::Nb => Self::Nb,
+            Language::ZhHans => Self::ZhHans,
         }
     }
 }

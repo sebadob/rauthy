@@ -35,10 +35,11 @@ pub enum I18nContent {
 #[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
-    En,
     De,
-    ZhHans,
+    En,
     Ko,
+    Nb,
+    ZhHans,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]

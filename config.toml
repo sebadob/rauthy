@@ -1622,11 +1622,11 @@ MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
 # Languages for all user-facing pages.
 # Available Options: en de zhhans ko
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'zhhans', 'ko']
+filter_lang_common = ['de', 'en', 'ko', 'nb', 'zhhans']
 # Languages for the Admin UI.
 # Available Options: en de ko
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'ko']
+filter_lang_admin = ['de', 'en', 'ko', 'nb']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh

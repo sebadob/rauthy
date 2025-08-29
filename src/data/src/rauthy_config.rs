@@ -528,6 +528,20 @@ impl Default for Vars {
                 log: false,
             },
             templates: VarsTemplates {
+                password_new_de: VarsTemplate {
+                    subject: "Neues Passwort".into(),
+                    header: "Neues Passwort für".into(),
+                    text: None,
+                    click_link:
+                    "Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen."
+                        .into(),
+                    validity: "Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
+                        .into(),
+                    expires: "Link gültig bis:".into(),
+                    button: "Passwort Setzen".into(),
+                    footer: None,
+                    button_text_request_new: None,
+                },
                 password_new_en: VarsTemplate {
                     subject: "New Password".into(),
                     header: "New password for".into(),
@@ -542,20 +556,6 @@ impl Default for Vars {
                     footer: None,
                     button_text_request_new: None,
                 },
-                password_new_de: VarsTemplate {
-                    subject: "Neues Passwort".into(),
-                    header: "Neues Passwort für".into(),
-                    text: None,
-                    click_link:
-                        "Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen."
-                            .into(),
-                    validity: "Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
-                        .into(),
-                    expires: "Link gültig bis:".into(),
-                    button: "Passwort Setzen".into(),
-                    footer: None,
-                    button_text_request_new: None,
-                },
                 password_new_ko: VarsTemplate {
                     subject: "新密码".into(),
                     header: "新密码".into(),
@@ -564,6 +564,20 @@ impl Default for Vars {
                     validity: "出于安全考虑，此链接仅在短时间内有效。".into(),
                     expires: "链接过期时间：".into(),
                     button: "设置密码".into(),
+                    footer: None,
+                    button_text_request_new: None,
+                },
+                password_new_nb: VarsTemplate {
+                    subject: "Ny passord".into(),
+                    header: "Ny passord for".into(),
+                    text: None,
+                    click_link:
+                    "Klikk på lenken under for å sette et nytt passord."
+                        .into(),
+                    validity: "Denne lenken er kun gyldig i en kort periode av sikkerhetsgrunner."
+                        .into(),
+                    expires: "Lenken gyldig til:".into(),
+                    button: "Sett passord".into(),
                     footer: None,
                     button_text_request_new: None,
                 },
@@ -578,20 +592,6 @@ impl Default for Vars {
                     button: "비밀번호 설정".into(),
                     footer: None,
                     button_text_request_new: None,
-                },
-                password_reset_en: VarsTemplate {
-                    subject: "Password Reset Request".into(),
-                    header: "Password reset request for".into(),
-                    text: None,
-                    click_link:
-                        "Click the link below to get forwarded to the password request form.".into(),
-                    validity:
-                        "This link is only valid for a short period of time for security reasons."
-                            .into(),
-                    expires: "Link expires:".into(),
-                    button: "Reset Password".into(),
-                    footer: Some("If this link has expired, you can request a new one.".into()),
-                    button_text_request_new: Some("Request New Link".into()),
                 },
                 password_reset_de: VarsTemplate {
                     subject: "Passwort Reset angefordert".into(),
@@ -609,6 +609,20 @@ impl Default for Vars {
                     ),
                     button_text_request_new: Some("Neuen Link Anfordern".into()),
                 },
+                password_reset_en: VarsTemplate {
+                    subject: "Password Reset Request".into(),
+                    header: "Password reset request for".into(),
+                    text: None,
+                    click_link:
+                        "Click the link below to get forwarded to the password request form.".into(),
+                    validity:
+                        "This link is only valid for a short period of time for security reasons."
+                            .into(),
+                    expires: "Link expires:".into(),
+                    button: "Reset Password".into(),
+                    footer: Some("If this link has expired, you can request a new one.".into()),
+                    button_text_request_new: Some("Request New Link".into()),
+                },
                 password_reset_ko: VarsTemplate {
                     subject: "密码重置请求".into(),
                     header: "密码重置请求：".into(),
@@ -619,6 +633,18 @@ impl Default for Vars {
                     button: "重置密码".into(),
                     footer: Some("If this link has expired, you can request a new one.".into()),
                     button_text_request_new: Some("Request New Link".into()),
+                },
+                password_reset_nb: VarsTemplate {
+                    subject: "Passordtilbakestilling etterspurt".into(),
+                    header: "Passordtilbakestilling etterspurt for".into(),
+                    text: None,
+                    click_link: "Klikk på lenken under for å tilbakestille passordet.".into(),
+                    validity: "Denne lenken er kun gyldig i en kort periode av sikkerhetsgrunner."
+                        .into(),
+                    expires: "Lenken utløper:".into(),
+                    button: "Tilbakestill passord".into(),
+                    footer: Some("Hvis lenken har utløpt, kan du be om en ny.".into()),
+                    button_text_request_new: Some("Be om ny lenke".into()),
                 },
                 password_reset_zhhans: VarsTemplate {
                     subject: "비밀번호 초기화 요청".into(),
@@ -2777,14 +2803,16 @@ pub struct VarsSuspiciousRequests {
 
 #[derive(Debug)]
 pub struct VarsTemplates {
-    pub password_new_en: VarsTemplate,
     pub password_new_de: VarsTemplate,
+    pub password_new_en: VarsTemplate,
     pub password_new_ko: VarsTemplate,
+    pub password_new_nb: VarsTemplate,
     pub password_new_zhhans: VarsTemplate,
 
-    pub password_reset_en: VarsTemplate,
     pub password_reset_de: VarsTemplate,
+    pub password_reset_en: VarsTemplate,
     pub password_reset_ko: VarsTemplate,
+    pub password_reset_nb: VarsTemplate,
     pub password_reset_zhhans: VarsTemplate,
 }
 
