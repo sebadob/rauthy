@@ -27,8 +27,8 @@ export function useI18n(): I18n {
 }
 
 const i18nMap: Record<string, I18n> = {
-    en: I18nEn,
-    de: I18nDe,
+		de: I18nDe,
+		en: I18nEn,
     ko: I18nKo,
     nb: I18nNb,
     zh: I18nZh,

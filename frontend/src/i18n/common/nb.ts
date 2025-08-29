@@ -61,7 +61,7 @@ export const I18nNb: I18n = {
         account: "Brukerkonto",
         accType: "Kontotype",
         accTypePasskeyText1: "Dette er en 'Passkey-Only' konto. Det betyr at denne kontoen ikke har passord og heller ikke trenger det.",
-        accTypePasskeyTekst2: "Du kan endre kontoen til en passord-konto. Men husk at dette innebærer at du må verifisere hver nye enhet med passord i tillegg. Du kan da ikke bare logge inn på en hvilken som helst enhet hvor du ikke har skrevet inn passordet minst én gang før.",
+        accTypePasskeyText2: "Du kan endre kontoen til en passord-konto. Men husk at dette innebærer at du må verifisere hver nye enhet med passord i tillegg. Du kan da ikke bare logge inn på en hvilken som helst enhet hvor du ikke har skrevet inn passordet minst én gang før.",
         accTypePasskeyText3: "Vil du endre denne kontoen og legge til et passord?",
         accessExp: "Tilgang utløper",
         accessRenew: "Tilgang kan fornyes til",

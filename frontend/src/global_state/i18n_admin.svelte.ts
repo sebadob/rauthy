@@ -26,8 +26,8 @@ export function useI18nAdmin(): I18nAdmin {
 }
 
 const i18nMap: Record<string, I18nAdmin> = {
-    en: I18nAdminEn,
-    de: I18nAdminDe,
+		de: I18nAdminDe,
+		en: I18nAdminEn,
     ko: I18nAdminKo,
     nb: I18nAdminNb,
 };

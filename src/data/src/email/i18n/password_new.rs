@@ -33,10 +33,11 @@ impl I18nEmailPasswordNew<'_> {
     pub fn build(lang: &Language) -> Self {
         let tpls = &RauthyConfig::get().vars.templates;
         match lang {
-            Language::En => Self::from(&tpls.password_new_en),
             Language::De => Self::from(&tpls.password_new_de),
-            Language::ZhHans => Self::from(&tpls.password_new_zhhans),
+            Language::En => Self::from(&tpls.password_new_en),
             Language::Ko => Self::from(&tpls.password_new_ko),
+            Language::Nb => Self::from(&tpls.password_new_nb),
+            Language::ZhHans => Self::from(&tpls.password_new_zhhans),
         }
     }
 }

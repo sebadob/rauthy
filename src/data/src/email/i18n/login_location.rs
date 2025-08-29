@@ -13,26 +13,16 @@ pub struct I18nEmailLoginLocation<'a> {
 impl I18nEmailLoginLocation<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
-            Language::En => Self::build_en(),
             Language::De => Self::build_de(),
-            Language::ZhHans => Self::build_zh_hans(),
+            Language::En => Self::build_en(),
             Language::Ko => Self::build_ko(),
+            Language::Nb => Self::build_nb(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 }
 
 impl I18nEmailLoginLocation<'_> {
-    fn build_en() -> Self {
-        Self {
-            subject: "Security Warning",
-            unknown_location: "Login from unknown location",
-            if_invalid: "If this is an invalid login, you should revoke it immediately and update \
-                your credentials!",
-            revoke_link: "Revoke Access",
-            account_link: "Account Dashboard",
-        }
-    }
-
     fn build_de() -> Self {
         Self {
             subject: "Sicherheitswarnung",
@@ -44,7 +34,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_zh_hans() -> Self {
+    fn build_en() -> Self {
         Self {
             subject: "Security Warning",
             unknown_location: "Login from unknown location",
@@ -56,6 +46,28 @@ impl I18nEmailLoginLocation<'_> {
     }
 
     fn build_ko() -> Self {
+        Self {
+            subject: "Security Warning",
+            unknown_location: "Login from unknown location",
+            if_invalid: "If this is an invalid login, you should revoke it immediately and update \
+                your credentials!",
+            revoke_link: "Revoke Access",
+            account_link: "Account Dashboard",
+        }
+    }
+
+    fn build_nb() -> Self {
+        Self {
+            subject: "Sikkerhetsvarsel",
+            unknown_location: "Innlogging fra ukjent adresse",
+            if_invalid: "Hvis dette er en ugyldig innlogging, bør du tilbakekalle den umiddelbart og \
+                oppdatere dine påloggingsopplysninger!",
+            revoke_link: "Tilbakekall tilgang",
+            account_link: "Kontodashboard",
+        }
+    }
+
+    fn build_zh_hans() -> Self {
         Self {
             subject: "Security Warning",
             unknown_location: "Login from unknown location",

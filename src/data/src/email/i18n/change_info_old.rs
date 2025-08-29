@@ -15,10 +15,11 @@ pub struct I18nEmailChangeInfoOld<'a> {
 impl I18nEmailChangeInfoOld<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
-            Language::En => Self::build_en(),
             Language::De => Self::build_de(),
-            Language::ZhHans => Self::build_zh_hans(),
+            Language::En => Self::build_en(),
             Language::Ko => Self::build_ko(),
+            Language::Nb => Self::build_en(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 }
