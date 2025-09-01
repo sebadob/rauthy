@@ -1,4 +1,4 @@
-export type Language = 'en' | 'de' | 'zh' | 'ko';
+export type Language = 'en' | 'de' | 'ko' | 'nb' | 'zh';
 
 export interface I18nConfigResponse {
     common: Language[],

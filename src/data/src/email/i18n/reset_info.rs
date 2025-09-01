@@ -13,25 +13,16 @@ pub struct I18nEmailResetInfo<'a> {
 impl I18nEmailResetInfo<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
-            Language::En => Self::build_en(),
             Language::De => Self::build_de(),
-            Language::ZhHans => Self::build_zh_hans(),
+            Language::En => Self::build_en(),
             Language::Ko => Self::build_ko(),
+            Language::Nb => Self::build_nb(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 }
 
 impl I18nEmailResetInfo<'_> {
-    fn build_en() -> Self {
-        Self {
-            subject: "Password is about to expire",
-            expires_1: "Your password for",
-            expires_2: "is about to expire:",
-            update: "You can update it here:",
-            button_text: "Update Password",
-        }
-    }
-
     fn build_de() -> Self {
         Self {
             subject: "Passwort läuft demnächst ab",
@@ -42,13 +33,13 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_zh_hans() -> Self {
+    fn build_en() -> Self {
         Self {
-            subject: "您的密码即将过期",
-            expires_1: "",
-            expires_2: "的密码即将过期：",
-            update: "您可以在此处更新密码：",
-            button_text: "更新密码",
+            subject: "Password is about to expire",
+            expires_1: "Your password for",
+            expires_2: "is about to expire:",
+            update: "You can update it here:",
+            button_text: "Update Password",
         }
     }
 
@@ -59,6 +50,25 @@ impl I18nEmailResetInfo<'_> {
             expires_2: "의 비밀번호가 곧 만료됩니다:",
             update: "다음에서 변경할 수 있습니다:",
             button_text: "비밀번호 변경",
+        }
+    }
+    fn build_nb() -> Self {
+        Self {
+            subject: "Passordet ditt utløper snart",
+            expires_1: "Passordet ditt for",
+            expires_2: "utløper snart:",
+            update: "Du kan oppdatere det her:",
+            button_text: "Oppdater passord",
+        }
+    }
+
+    fn build_zh_hans() -> Self {
+        Self {
+            subject: "您的密码即将过期",
+            expires_1: "",
+            expires_2: "的密码即将过期：",
+            update: "您可以在此处更新密码：",
+            button_text: "更新密码",
         }
     }
 }
