@@ -14,6 +14,7 @@ use rauthy_api_types::pam::{
 };
 use rauthy_api_types::users::{MfaPurpose, WebauthnAuthStartResponse};
 use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
+use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::pam::group_user_links::PamGroupUserLink;
 use rauthy_data::entity::pam::groups::{PamGroup, PamGroupType};
 use rauthy_data::entity::pam::hosts::PamHost;
@@ -48,7 +49,7 @@ use validator::Validate;
 pub async fn get_pam_emails_unlinked(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Read)?;
 
     let emails = PamUser::find_emails_unlinked().await?;
 
@@ -210,7 +211,7 @@ pub async fn post_getent(
 )]
 #[get("/pam/groups")]
 pub async fn get_pam_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Read)?;
 
     let groups = PamGroup::find_all()
         .await?
@@ -241,7 +242,7 @@ pub async fn post_pam_groups(
     principal: ReqPrincipal,
     Json(payload): Json<PamGroupCreateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Create)?;
     payload.validate()?;
 
     let group = PamGroup::insert(payload.name, payload.typ.into()).await?;
@@ -268,7 +269,7 @@ pub async fn get_pam_group_hosts_count(
     id: Path<u32>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Read)?;
 
     let gid = id.into_inner();
     let count = PamHost::count_with_group(gid).await? as u32;
@@ -295,7 +296,7 @@ pub async fn delete_pam_group(
     id: Path<u32>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Delete)?;
 
     PamGroup::delete(id.into_inner()).await?;
 
@@ -318,7 +319,7 @@ pub async fn delete_pam_group(
 )]
 #[get("/pam/hosts")]
 pub async fn get_hosts(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Read)?;
 
     let hosts = PamHost::find_all_simple()
         .await?
@@ -349,7 +350,7 @@ pub async fn post_hosts(
     principal: ReqPrincipal,
     Json(payload): Json<PamHostCreateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Create)?;
     payload.validate()?;
 
     let host = PamHost::insert(
@@ -363,7 +364,7 @@ pub async fn post_hosts(
     Ok(HttpResponse::Ok().json(PamHostSimpleResponse::from(host)))
 }
 
-/// GET all PAM hosts "this" sessios has access to
+/// GET all PAM hosts "this" session has access to
 ///
 /// **Permissions**
 /// - any authenticated session
@@ -422,7 +423,7 @@ pub async fn get_host_details(
     id: Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Read)?;
 
     let host = PamHost::find_by_id_full(id.into_inner()).await?;
 
@@ -448,7 +449,7 @@ pub async fn post_host_secret(
     id: Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Read)?;
 
     let host = PamHost::find_simple(id.into_inner()).await?;
 
@@ -478,7 +479,7 @@ pub async fn put_host_secret(
     id: Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Update)?;
 
     let id = id.into_inner();
     let secret = PamHost::rotate_secret(id.clone()).await?;
@@ -507,7 +508,7 @@ pub async fn put_host(
     principal: ReqPrincipal,
     Json(payload): Json<PamHostUpdateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Update)?;
     payload.validate()?;
 
     PamHost::update(id.into_inner(), payload).await?;
@@ -534,7 +535,7 @@ pub async fn delete_host(
     id: Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Delete)?;
 
     PamHost::delete(id.into_inner()).await?;
 
@@ -827,7 +828,7 @@ pub async fn post_preflight(
 )]
 #[get("/pam/users")]
 pub async fn get_pam_users(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Read)?;
 
     let users = PamUser::find_all()
         .await?
@@ -857,7 +858,7 @@ pub async fn post_pam_users(
     principal: ReqPrincipal,
     Json(payload): Json<PamUserCreateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Create)?;
     payload.validate()?;
 
     let user = User::find_by_email(payload.email).await?;
@@ -907,7 +908,7 @@ pub async fn get_pam_user(
     uid: Path<u32>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Read)?;
 
     let pam_user = PamUser::find_by_id(uid.into_inner()).await?;
     let groups = PamGroupUserLink::find_for_user(pam_user.id)
@@ -949,7 +950,7 @@ pub async fn put_pam_user(
     principal: ReqPrincipal,
     Json(payload): Json<PamUserUpdateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Update)?;
     payload.validate()?;
 
     let uid = uid.into_inner();
