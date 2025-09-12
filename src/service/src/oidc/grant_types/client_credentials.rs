@@ -6,6 +6,8 @@ use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_dyn::ClientDyn;
 use rauthy_data::entity::dpop_proof::DPoPProof;
+use rauthy_data::events::event::Event;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::str::FromStr;
 
@@ -59,5 +61,12 @@ pub async fn grant_type_credentials(
     }
 
     let ts = TokenSet::for_client_credentials(&client, dpop_fingerprint).await?;
+
+    if RauthyConfig::get().vars.events.generate_token_issued {
+        Event::token_issued("client_credentials", &client.id, None)
+            .send()
+            .await?;
+    }
+
     Ok((ts, headers))
 }

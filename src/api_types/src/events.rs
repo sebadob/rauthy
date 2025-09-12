@@ -33,6 +33,8 @@ pub enum EventType {
     ForcedLogout,
     UserLoginRevoke,
     SuspiciousApiScan,
+    LoginNewLocation,
+    TokenIssued,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]

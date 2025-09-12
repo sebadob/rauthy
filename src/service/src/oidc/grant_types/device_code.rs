@@ -6,6 +6,7 @@ use rauthy_common::utils::new_store_id;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::devices::{DeviceAuthCode, DeviceEntity};
 use rauthy_data::entity::users::User;
+use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
 use std::borrow::Cow;
 use std::net::IpAddr;
@@ -176,6 +177,14 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
                 });
             }
         };
+
+        if RauthyConfig::get().vars.events.generate_token_issued
+            && let Err(err) = Event::token_issued("device_code", &client.id, Some(&user.email))
+                .send()
+                .await
+        {
+            error!(?err, "Cannot create device_code token issued event");
+        }
 
         return HttpResponse::Ok().json(ts);
     }

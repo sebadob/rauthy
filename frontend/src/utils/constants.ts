@@ -14,33 +14,30 @@ export const REDIRECT_URI_SUCCESS = '/auth/v1/admin/users';
 export const REDIRECT_URI_SUCCESS_ACC = '/auth/v1/account';
 export const POST_LOGOUT_REDIRECT_URI = '/auth/v1/';
 
-export const EVENT_LEVELS = [
-    'info',
-    'notice',
-    'warning',
-    'critical'
-]
+export const EVENT_LEVELS = ['info', 'notice', 'warning', 'critical'];
 export const EVENT_TYPES = [
-    '-',
-    'ForcedLogout',
-    'InvalidLogins',
-    'IpBlacklisted',
-    'IpBlacklistRemoved',
-    'JwksRotated',
-    'NewUserRegistered',
-    'NewRauthyAdmin',
-    'NewRauthyVersion',
-    'PossibleBruteForce',
-    'RauthyStarted',
-    'RauthyHealthy',
-    'RauthyUnhealthy',
-    'SecretsMigrated',
-    'SuspiciousApiScan',
-    'UserEmailChange',
-    'UserLoginRevoke',
-    'UserPasswordReset',
-    'Test',
-]
+	'-',
+	'ForcedLogout',
+	'InvalidLogins',
+	'IpBlacklisted',
+	'IpBlacklistRemoved',
+	'JwksRotated',
+	'LoginNewLocation',
+	'NewUserRegistered',
+	'NewRauthyAdmin',
+	'NewRauthyVersion',
+	'PossibleBruteForce',
+	'RauthyStarted',
+	'RauthyHealthy',
+	'RauthyUnhealthy',
+	'SecretsMigrated',
+	'SuspiciousApiScan',
+	'TokenIssued',
+	'UserEmailChange',
+	'UserLoginRevoke',
+	'UserPasswordReset',
+	'Test'
+];
 
 // All TPL_* values match a possibly existing `<template>` id
 // -> src/data/src/html/templates.rs -> HtmlTemplate

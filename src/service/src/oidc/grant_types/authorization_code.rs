@@ -17,6 +17,8 @@ use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::sessions::{Session, SessionState};
 use rauthy_data::entity::user_login_states::UserLoginState;
 use rauthy_data::entity::users::User;
+use rauthy_data::events::event::Event;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use ring::digest;
 use std::str::FromStr;
@@ -186,6 +188,12 @@ pub async fn grant_type_authorization_code(
 
     if client.is_dynamic() {
         ClientDyn::update_used(&client.id).await?;
+    }
+
+    if RauthyConfig::get().vars.events.generate_token_issued {
+        Event::token_issued("authorization_code", &client.id, Some(&user.email))
+            .send()
+            .await?;
     }
 
     // backchannel logout and login state tracking is not supported for ephemeral clients

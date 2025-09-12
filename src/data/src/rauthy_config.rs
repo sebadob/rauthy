@@ -413,6 +413,7 @@ impl Default for Vars {
                 notify_level_slack: EventLevel::Notice,
                 persist_level: EventLevel::Info,
                 cleanup_days: 31,
+                generate_token_issued: true,
                 level_new_user: EventLevel::Info,
                 level_user_email_change: EventLevel::Notice,
                 level_user_password_reset: EventLevel::Notice,
@@ -429,6 +430,8 @@ impl Default for Vars {
                 level_user_login_revoke: EventLevel::Warning,
                 level_scim_task_failed: EventLevel::Critical,
                 level_suspicious_request: EventLevel::Notice,
+                level_new_login_location: EventLevel::Notice,
+                level_token_issued: EventLevel::Info,
                 level_failed_logins_25: EventLevel::Critical,
                 level_failed_logins_20: EventLevel::Critical,
                 level_failed_logins_15: EventLevel::Warning,
@@ -533,8 +536,8 @@ impl Default for Vars {
                     header: "Neues Passwort für".into(),
                     text: None,
                     click_link:
-                    "Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen."
-                        .into(),
+                        "Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen."
+                            .into(),
                     validity: "Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
                         .into(),
                     expires: "Link gültig bis:".into(),
@@ -571,9 +574,7 @@ impl Default for Vars {
                     subject: "Ny passord".into(),
                     header: "Ny passord for".into(),
                     text: None,
-                    click_link:
-                    "Klikk på lenken under for å sette et nytt passord."
-                        .into(),
+                    click_link: "Klikk på lenken under for å sette et nytt passord.".into(),
                     validity: "Denne lenken er kun gyldig i en kort periode av sikkerhetsgrunner."
                         .into(),
                     expires: "Lenken gyldig til:".into(),
@@ -1482,6 +1483,14 @@ impl Vars {
         if let Some(v) = t_u32(&mut table, "events", "cleanup_days", "EVENT_CLEANUP_DAYS") {
             self.events.cleanup_days = v;
         }
+        if let Some(v) = t_bool(
+            &mut table,
+            "events",
+            "generate_token_issued",
+            "EVENT_GENERATE_TOKEN_ISSUED",
+        ) {
+            self.events.generate_token_issued = v;
+        }
 
         if let Some(v) = t_str(
             &mut table,
@@ -1536,6 +1545,15 @@ impl Vars {
         ) {
             self.events.level_jwks_rotate =
                 EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_jwks_rotate");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_new_login_location",
+            "EVENT_LEVEL_NEW_LOGIN_LOCATION",
+        ) {
+            self.events.level_new_login_location = EventLevel::from_str(&v)
+                .expect("Cannot parse EventLevel for level_new_login_location");
         }
         if let Some(v) = t_str(
             &mut table,
@@ -1626,6 +1644,15 @@ impl Vars {
         ) {
             self.events.level_suspicious_request =
                 EventLevel::from_str(&v).expect("Cannot parse EventLevel for suspicious_request");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_token_issued",
+            "EVENT_LEVEL_TOKEN_ISSUED",
+        ) {
+            self.events.level_token_issued =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_token_issued");
         }
 
         if let Some(v) = t_str(
@@ -2657,6 +2684,7 @@ pub struct VarsEvents {
     pub notify_level_slack: EventLevel,
     pub persist_level: EventLevel,
     pub cleanup_days: u32,
+    pub generate_token_issued: bool,
 
     pub level_new_user: EventLevel,
     pub level_user_email_change: EventLevel,
@@ -2674,6 +2702,8 @@ pub struct VarsEvents {
     pub level_user_login_revoke: EventLevel,
     pub level_scim_task_failed: EventLevel,
     pub level_suspicious_request: EventLevel,
+    pub level_new_login_location: EventLevel,
+    pub level_token_issued: EventLevel,
 
     pub level_failed_logins_25: EventLevel,
     pub level_failed_logins_20: EventLevel,
