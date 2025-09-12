@@ -19,7 +19,9 @@ pub enum Language {
 
 impl Language {
     fn all_available<'a>() -> [&'a str; 10] {
-        ["en", "en-US", "de", "de-DE", "ko", "nb", "nb-NO", "no-NO", "zh", "zh-Hans"]
+        [
+            "en", "en-US", "de", "de-DE", "ko", "nb", "nb-NO", "no-NO", "zh", "zh-Hans",
+        ]
     }
 
     pub fn as_str(&self) -> &str {
