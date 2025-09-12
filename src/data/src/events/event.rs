@@ -1,5 +1,7 @@
 use crate::database::DB;
 use crate::entity::failed_scim_tasks::ScimAction;
+use crate::entity::login_locations::LoginLocation;
+use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use chrono::{DateTime, Timelike, Utc};
 use hiqlite::Row;
@@ -162,6 +164,8 @@ pub enum EventType {
     ForcedLogout,
     UserLoginRevoke,
     SuspiciousApiScan,
+    LoginNewLocation,
+    TokenIssued,
 }
 
 impl Default for EventType {
@@ -194,6 +198,8 @@ impl Display for EventType {
             Self::ForcedLogout => write!(f, "Forced user logout"),
             Self::UserLoginRevoke => write!(f, "User revoked illegal login"),
             Self::SuspiciousApiScan => write!(f, "Suspicous API scan"),
+            Self::LoginNewLocation => write!(f, "Login from new location"),
+            Self::TokenIssued => write!(f, "JWT Token issued"),
         }
     }
 }
@@ -223,6 +229,8 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             rauthy_api_types::events::EventType::ForcedLogout => Self::ForcedLogout,
             rauthy_api_types::events::EventType::UserLoginRevoke => Self::UserLoginRevoke,
             rauthy_api_types::events::EventType::SuspiciousApiScan => Self::SuspiciousApiScan,
+            rauthy_api_types::events::EventType::LoginNewLocation => Self::LoginNewLocation,
+            rauthy_api_types::events::EventType::TokenIssued => Self::TokenIssued,
         }
     }
 }
@@ -250,6 +258,8 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::ForcedLogout => Self::ForcedLogout,
             EventType::UserLoginRevoke => Self::UserLoginRevoke,
             EventType::SuspiciousApiScan => Self::SuspiciousApiScan,
+            EventType::LoginNewLocation => Self::LoginNewLocation,
+            EventType::TokenIssued => Self::TokenIssued,
         }
     }
 }
@@ -277,6 +287,8 @@ impl EventType {
             Self::ForcedLogout => "ForcedLogout",
             Self::UserLoginRevoke => "UserLoginRevoke",
             Self::SuspiciousApiScan => "SuspiciousApiScan",
+            Self::LoginNewLocation => "LoginNewLocation",
+            Self::TokenIssued => "TokenIssued",
         }
     }
 
@@ -305,6 +317,8 @@ impl EventType {
             EventType::ForcedLogout => 17,
             EventType::UserLoginRevoke => 18,
             EventType::SuspiciousApiScan => 19,
+            EventType::LoginNewLocation => 20,
+            EventType::TokenIssued => 21,
         }
     }
 }
@@ -332,6 +346,8 @@ impl From<String> for EventType {
             "ForcedLogout" => Self::ForcedLogout,
             "UserLoginRevoke" => Self::UserLoginRevoke,
             "SuspiciousApiScan" => Self::SuspiciousApiScan,
+            "LoginNewLocation" => Self::LoginNewLocation,
+            "TokenIssued" => Self::TokenIssued,
             // just return test to never panic
             s => {
                 error!("EventType::from() for invalid String: {s}");
@@ -370,6 +386,8 @@ impl From<i64> for EventType {
             17 => EventType::ForcedLogout,
             18 => EventType::UserLoginRevoke,
             19 => EventType::SuspiciousApiScan,
+            20 => EventType::LoginNewLocation,
+            21 => EventType::TokenIssued,
             _ => EventType::Test,
         }
     }
@@ -486,6 +504,8 @@ impl From<&Event> for Notification {
             )),
             EventType::UserLoginRevoke => value.text.clone(),
             EventType::SuspiciousApiScan => value.text.clone(),
+            EventType::LoginNewLocation => value.text.clone(),
+            EventType::TokenIssued => value.text.clone(),
         };
 
         Self {
@@ -716,6 +736,26 @@ impl Event {
         )
     }
 
+    pub fn new_login_location(user: &User, loc: &LoginLocation) -> Self {
+        let text = if let Some(location) = &loc.location {
+            format!("{} / {} / {}", user.email, loc.user_agent, location)
+        } else {
+            format!("{} / {}", user.email, loc.user_agent)
+        };
+
+        Self::new(
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_new_login_location
+                .clone(),
+            EventType::LoginNewLocation,
+            Some(loc.ip.clone()),
+            None,
+            Some(text),
+        )
+    }
+
     pub fn new_user(email: String, ip: String) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_new_user.clone(),
@@ -886,6 +926,21 @@ impl Event {
         )
     }
 
+    pub fn token_issued(flow: &str, client_id: &str, email: Option<&str>) -> Self {
+        Self::new(
+            RauthyConfig::get().vars.events.level_token_issued.clone(),
+            EventType::TokenIssued,
+            None,
+            None,
+            Some(format!(
+                "{} ({}) {}",
+                client_id,
+                flow,
+                email.unwrap_or_default()
+            )),
+        )
+    }
+
     pub fn user_email_change(text: String, ip: Option<IpAddr>) -> Self {
         Self::new(
             RauthyConfig::get()
@@ -976,6 +1031,8 @@ impl Event {
             }
             EventType::UserLoginRevoke => self.text.clone().unwrap_or_default(),
             EventType::SuspiciousApiScan => self.text.clone().unwrap_or_default(),
+            EventType::LoginNewLocation => self.text.clone().unwrap_or_default(),
+            EventType::TokenIssued => self.text.clone().unwrap_or_default(),
         }
     }
 
