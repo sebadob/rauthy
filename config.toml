@@ -1641,11 +1641,11 @@ MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de zhhans ko
+# Available Options: en de zhhans ko nb
 # overwritten by: FILTER_LANG_COMMON
 filter_lang_common = ['de', 'en', 'ko', 'nb', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de ko
+# Available Options: en de ko nb
 # overwritten by: FILTER_LANG_ADMIN
 filter_lang_admin = ['de', 'en', 'ko', 'nb']
 

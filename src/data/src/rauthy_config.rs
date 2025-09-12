@@ -473,8 +473,14 @@ impl Default for Vars {
                 root_ca_bundle: None,
             },
             i18n: VarsI18n {
-                filter_lang_common: vec!["en".into(), "de".into(), "zhhans".into(), "ko".into()],
-                filter_lang_admin: vec!["en".into(), "de".into(), "ko".into()],
+                filter_lang_common: vec![
+                    "en".into(),
+                    "de".into(),
+                    "ko".into(),
+                    "nb".into(),
+                    "zhhans".into(),
+                ],
+                filter_lang_admin: vec!["en".into(), "de".into(), "ko".into(), "nb".into()],
             },
             lifetimes: VarsLifetimes {
                 refresh_token_grace_time: 5,
@@ -2237,6 +2243,13 @@ impl Vars {
                         self.templates.password_reset_ko.clone()
                     }
                 }
+                "nb" => {
+                    if is_password_new {
+                        self.templates.password_new_nb.clone()
+                    } else {
+                        self.templates.password_reset_nb.clone()
+                    }
+                }
                 "zh_hans" => {
                     if is_password_new {
                         self.templates.password_new_zhhans.clone()
@@ -2304,7 +2317,7 @@ impl Vars {
                     }
                 }
                 _ => {
-                    panic!("Invalid value for `templates.lang`, allowed are: en de ko zh_hans")
+                    panic!("Invalid value for `templates.lang`, allowed are: en de ko nb zh_hans")
                 }
             }
         }

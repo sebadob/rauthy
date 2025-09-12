@@ -1,5 +1,62 @@
 # Changelog
 
+## v0.32.2
+
+### Security
+
+Some external dependencies have been bumped because of security issues. However, these either only affected development
+servers, or were false-positives, because the fixed versions were being used already, just not set in the lock files.
+
+### Changes
+
+#### Additional Events
+
+For improved auditing, Rauthy now emits the additional event types `LoginNewLocation` and `TokenIssued`.
+
+The `LoginNewLocation` will be emitted when ever a user does a login from a new / unknown location. The `TokenIssued`
+even will be triggered after each JWT token creation. Especially the `TokenIssued`  can become spammy, if you have
+a huge amount of users. Because of this, you can disable the generation of these events. You get some new config
+variables:
+
+```toml
+[events]
+# Can be set to `false` to disable events being generated
+# when a new token was issued. These events improve your
+# auditing, but they can also be considered spam if you
+# have a huge amount of users and logins.
+#
+# default: true
+# overwritten_by: EVENT_GENERATE_TOKEN_ISSUED
+generate_token_issued = true
+
+# The level for the generated Event after a login from
+# a new location for a user.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_NEW_LOGIN_LOCATION
+level_new_login_location = 'notice'
+
+# The level for the generated Event after a new JWT
+# Token was issued.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_TOKEN_ISSUED
+level_token_issued = 'info'
+```
+
+#### Translations for Norwegian Bokmål
+
+Rauthy now has Norwegian Bokmål (nb) for Admin and User UI translations.
+
+[#1180](https://github.com/sebadob/rauthy/pull/1180)
+
+### Bugfix
+
+- It was possible to get into a race condition during client deletion under some conditions.
+  [#1190](https://github.com/sebadob/rauthy/pull/1190)
+- API Keys were missing `PAM` access a rights group.
+  [#1191](https://github.com/sebadob/rauthy/pull/1191)
+
 ## v0.32.1
 
 ### Security
