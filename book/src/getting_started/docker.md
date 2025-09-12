@@ -7,7 +7,7 @@ The image contains a basic default config which is sufficient for local testing 
 contains hardcoded secrets).
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.32.1
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.32.2
 ```
 
 To proceed, go to **[First Start](first_start.md)**, or do the production setup below to have persistence.
@@ -36,7 +36,7 @@ services:
       
   rauthy:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.32.1
+    image: ghcr.io/sebadob/rauthy:0.32.2
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -150,7 +150,7 @@ docker run -d \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.32.1
+    ghcr.io/sebadob/rauthy:0.32.2
 ```
 
 - `-v $(pwd)/rauthy/config.toml:/app/config.toml` mounts the config in the correct place
