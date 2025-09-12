@@ -1379,6 +1379,15 @@ notify_level_slack = 'notice'
 # overwritten by: EVENT_CLEANUP_DAYS
 #cleanup_days = 30
 
+# Can be set to `false` to disable events being generated
+# when a new token was issued. These events improve your
+# auditing, but they can also be considered spam if you
+# have a huge amount of users and logins.
+#
+# default: true
+# overwritten_by: EVENT_GENERATE_TOKEN_ISSUED
+#generate_token_issued = true
+
 # The level for the generated Event after a backchannel
 # logout has failed after exceeding all retries.
 #
@@ -1403,6 +1412,12 @@ level_ip_blacklisted = 'warning'
 # default: notice
 # overwritten by: EVENT_LEVEL_JWKS_ROTATE
 level_jwks_rotate = 'notice'
+# The level for the generated Event after a login from
+# a new location for a user.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_NEW_LOGIN_LOCATION
+level_new_login_location = 'notice'
 # The level for the generated Event after a new user has
 # been registered.
 #
@@ -1477,6 +1492,12 @@ level_scim_task_failed = 'critical'
 # default: notice
 # overwritten by: EVENT_LEVEL_SUSPICIOUS_REQUEST
 level_suspicious_request = 'notice'
+# The level for the generated Event after a new JWT
+# Token was issued.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_TOKEN_ISSUED
+level_token_issued = 'info'
 
 # The level for the generated Event after certain
 # amounts of false logins from an IP
@@ -1759,13 +1780,13 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de zhhans ko
+# Available Options: en de ko nb zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'zhhans', 'ko']
+filter_lang_common = ['en', 'de', 'ko', 'nb', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de ko
+# Available Options: en de ko nb
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'ko']
+filter_lang_admin = ['en', 'de', 'ko', 'nb']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
