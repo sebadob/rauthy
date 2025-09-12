@@ -1,12 +1,11 @@
 // Copyright 2025 Sebastian Dobe <sebastiandobe@mailbox.org>
 
 use crate::logging::setup_logging;
-use rauthy_common::constants::{BUILD_TIME, IDX_AUTH_PROVIDER_TEMPLATE, RAUTHY_VERSION};
+use rauthy_common::constants::{BUILD_TIME, RAUTHY_VERSION};
 use rauthy_common::password_hasher;
 use rauthy_data::database::{Cache, DB};
 use rauthy_data::email::mailer;
 use rauthy_data::entity::atproto;
-use rauthy_data::entity::auth_providers::AuthProvider;
 use rauthy_data::entity::pictures::UserPicture;
 use rauthy_data::events::health_watch::watch_health;
 use rauthy_data::events::listener::EventListener;
@@ -135,14 +134,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // We need to clear some caches
     DB::hql().clear_cache(Cache::Html).await.unwrap();
-    DB::hql()
-        .delete(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE)
-        .await
-        .unwrap();
-    DB::hql()
-        .delete(Cache::App, AuthProvider::cache_idx("all"))
-        .await
-        .unwrap();
+    // whole App cache to make sure config changes are always updated
+    DB::hql().clear_cache(Cache::App).await.unwrap();
 
     {
         let cfg = &RauthyConfig::get().vars.server;
