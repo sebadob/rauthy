@@ -20,6 +20,7 @@
         ['Events', false, false, false, false],
         ['Generic', false, false, false, false],
         ['Groups', false, false, false, false],
+        ['Pam', false, false, false, false],
         ['Roles', false, false, false, false],
         ['Secrets', false, false, false, false],
         ['Sessions', false, false, false, false],
@@ -50,23 +51,26 @@
                     case 'Groups':
                         idx = 4;
                         break;
-                    case 'Roles':
+                    case 'Pam':
                         idx = 5;
                         break;
-                    case 'Secrets':
+                    case 'Roles':
                         idx = 6;
                         break;
-                    case 'Sessions':
+                    case 'Secrets':
                         idx = 7;
                         break;
-                    case 'Scopes':
+                    case 'Sessions':
                         idx = 8;
                         break;
-                    case 'UserAttributes':
+                    case 'Scopes':
                         idx = 9;
                         break;
-                    case 'Users':
+                    case 'UserAttributes':
                         idx = 10;
+                        break;
+                    case 'Users':
+                        idx = 11;
                         break;
                 }
                 if (idx === undefined) {
