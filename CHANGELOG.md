@@ -54,7 +54,7 @@ Rauthy now has Norwegian Bokmål (nb) for Admin and User UI translations.
 
 - It was possible to get into a race condition during client deletion under some conditions.
   [#1190](https://github.com/sebadob/rauthy/pull/1190)
-- API Keys were missing `PAM` access rights group
+- API Keys were missing `PAM` access a rights group.
   [#1191](https://github.com/sebadob/rauthy/pull/1191)
 
 ## v0.32.1
