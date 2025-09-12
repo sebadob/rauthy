@@ -16,12 +16,16 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
+    let isLoading = $state(false);
     let err = $state('');
 
     async function onSubmit() {
         err = '';
+        isLoading = true;
 
         let res = await fetchDelete(`/auth/v1/clients/${client.id}`);
+        isLoading = false;
+
         if (res.error) {
             err = res.error.message;
         } else {
@@ -32,7 +36,7 @@
 
 <p>{ta.clients.delete1}</p>
 
-<Button level={-1} onclick={onSubmit}>
+<Button level={-1} onclick={onSubmit} {isLoading}>
     {t.common.delete}
 </Button>
 
