@@ -1220,6 +1220,15 @@ persist_level = 'info'
 # overwritten by: EVENT_CLEANUP_DAYS
 cleanup_days = 30
 
+# Can be set to `false` to disable events being generated
+# when a new token was issued. These events improve your
+# auditing, but they can also be considered spam if you
+# have a huge amount of users and logins.
+#
+# default: true
+# overwritten_by: EVENT_GENERATE_TOKEN_ISSUED
+generate_token_issued = true
+
 # The level for the generated Event after a backchannel
 # logout has failed after exceeding all retries.
 #
@@ -1244,6 +1253,12 @@ level_ip_blacklisted = 'warning'
 # default: notice
 # overwritten by: EVENT_LEVEL_JWKS_ROTATE
 level_jwks_rotate = 'notice'
+# The level for the generated Event after a login from
+# a new location for a user.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_NEW_LOGIN_LOCATION
+level_new_login_location = 'notice'
 # The level for the generated Event after a new user has
 # been registered.
 #
@@ -1318,6 +1333,12 @@ level_scim_task_failed = 'critical'
 # default: notice
 # overwritten by: EVENT_LEVEL_SUSPICIOUS_REQUEST
 level_suspicious_request = 'notice'
+# The level for the generated Event after a new JWT
+# Token was issued.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_TOKEN_ISSUED
+level_token_issued = 'info'
 
 # The level for the generated Event after certain
 # amounts of false logins from an IP

@@ -9,6 +9,7 @@ use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_data::entity::users::User;
+use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtRefreshClaims, JwtTokenType};
@@ -58,7 +59,7 @@ pub async fn validate_auth_req_param(
     Ok((client, header))
 }
 
-pub async fn validate_refresh_token(
+pub async fn validate_and_refresh_token(
     // when this is some, it will be checked against the 'azp' claim, otherwise skipped and a client
     // will be fetched inside this function
     client_opt: Option<Client>,
@@ -167,6 +168,12 @@ pub async fn validate_refresh_token(
         DeviceCodeFlow::No,
     )
     .await?;
+
+    if RauthyConfig::get().vars.events.generate_token_issued {
+        Event::token_issued("refresh", &client.id, Some(&user.email))
+            .send()
+            .await?;
+    }
 
     Ok((ts, dpop_nonce))
 }

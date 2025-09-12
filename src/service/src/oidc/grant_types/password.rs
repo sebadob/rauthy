@@ -14,6 +14,7 @@ use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::user_login_states::UserLoginState;
 use rauthy_data::entity::users::User;
+use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::str::FromStr;
@@ -117,6 +118,12 @@ pub async fn grant_type_password(
                 DeviceCodeFlow::No,
             )
             .await?;
+
+            if RauthyConfig::get().vars.events.generate_token_issued {
+                Event::token_issued("password", &client.id, Some(&user.email))
+                    .send()
+                    .await?;
+            }
 
             UserLoginState::insert(user.id.clone(), client.id, None).await?;
 

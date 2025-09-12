@@ -2,6 +2,7 @@ use crate::database::DB;
 use crate::email::login_location;
 use crate::entity::user_revoke::UserRevoke;
 use crate::entity::users::User;
+use crate::events::event::Event;
 use crate::ipgeo::get_location;
 use actix_web::HttpRequest;
 use actix_web::http::header::USER_AGENT;
@@ -174,6 +175,10 @@ impl LoginLocation {
         );
 
         let slf = Self::insert(user.id.clone(), ip, user_agent, location).await?;
+        if let Err(err) = Event::new_login_location(&user, &slf).send().await {
+            error!(?err, "Error generating event for NewLoginLocation");
+        }
+
         let revoke = UserRevoke::find_or_upsert(user.id.clone()).await?;
         login_location::send_login_location(
             &user,

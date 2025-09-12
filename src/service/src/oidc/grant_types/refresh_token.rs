@@ -40,7 +40,7 @@ pub async fn grant_type_refresh(
 
     // validate common refresh token claims first and get the payload
     let (ts, dpop_none) =
-        validation::validate_refresh_token(Some(client), &refresh_token, &req).await?;
+        validation::validate_and_refresh_token(Some(client), &refresh_token, &req).await?;
 
     let mut headers = Vec::new();
     if let Some(h) = header_origin {
