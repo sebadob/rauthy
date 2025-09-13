@@ -29,7 +29,7 @@ relies on an Admin to reset the MFA devices, if no backup exists or all are lost
 ```
 
 ```admonish note
-Unfortunately, passkeys have one big drawback when you use the discoverable credentials / redident keys feature.
+Unfortunately, passkeys have one big drawback when you use the discoverable credentials / resident keys feature.
 This is really cool and the best possible UX at first glance, because the user does not need to provide even a 
 username / email manually, but has one very big drawback.
 
