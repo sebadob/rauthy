@@ -3,7 +3,7 @@
 You can migrate easily between Hiqlite and Postgres, or just between different instances of the same database.
 
 Let's say you started out by evaluating Rauthy with the default Hiqlite and a single instance deployment. Later on, you
-want to migrate to Postgres for whatever reason. Or you started with Postgres and yuo want to reduce your memory
+want to migrate to Postgres for whatever reason. Or you started with Postgres and you want to reduce your memory
 footprint by switching to Hiqlite. All of this is easily possible.
 
 **Solution:** `MIGRATE_DB_FROM`
