@@ -19,6 +19,7 @@ use rauthy_data::entity::clients_dyn::ClientDyn;
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_data::entity::logos::{Logo, LogoType};
+use rauthy_data::entity::user_login_states::UserLoginState;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::oidc::{helpers, logout};
@@ -509,14 +510,15 @@ pub async fn delete_client(
 
     let client = Client::find(id).await?;
 
-    // We do NOT want to just the potentially long-running backchannel logout in the background this
-    // time. Before the backchannel logout is not finished, we will not be able to delete the client
-    // because of foreign key constraints.
+    // We do NOT want to execute the potentially long-running backchannel logout in the background
+    // this time. Before the backchannel logout is not finished, we will not be able to delete the
+    // client because of foreign key constraints.
     if let Err(err) = logout::execute_backchannel_logout_by_client(&client).await {
         error!(
             "Error during async backchannel logout after client delete: {:?}",
             err
         );
+        UserLoginState::delete_all_by_cid(client.id.clone()).await?;
     }
     // If we had some failed backchannel logouts, we will not retry them.
     // They would fail anyway, because the client is deleted from this point on.
