@@ -359,10 +359,10 @@ pub async fn execute_backchannel_logout_for_everything() -> Result<(), ErrorResp
 
 #[tracing::instrument(level = "debug")]
 pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(), ErrorResponse> {
-    if client.backchannel_logout_uri.is_none() {
+    let Some(uri) = &client.backchannel_logout_uri else {
+        UserLoginState::delete_all_by_cid(client.id.clone()).await?;
         return Ok(());
-    }
-    let uri = client.backchannel_logout_uri.as_ref().unwrap();
+    };
 
     info!(
         "Executing full backchannel logout for client '{}' via '{uri}'",
