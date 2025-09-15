@@ -44,6 +44,8 @@ level_new_login_location = 'notice'
 level_token_issued = 'info'
 ```
 
+[#1192](https://github.com/sebadob/rauthy/pull/1192)
+
 #### Translations for Norwegian Bokmål
 
 Rauthy now has Norwegian Bokmål (nb) for Admin and User UI translations.
