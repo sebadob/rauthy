@@ -53,6 +53,12 @@ However, at the time of writing (2024/06/05), PIN / biometric UV via NFC keys li
 Sadly, Google just decided to not implement this feature for other keys than their own implementation of it.
 ```
 
+```admonish note
+On macOS, when your browser tries to create a passkey, it will default to using the built-in Passwords app. If you wish to use a different password manager such as 1Password, Vaultwarden, etc., you'll need to disable the setting "Autofill Passwords and Passkeys".
+
+![the setting Autofill Passwords and Passkeys is under a section called AutoFill and Passwords](img/macos_autofill.png)
+```
+
 ```admonish hint
 If you want to register an Android device for a Passkey only account, but you are using for instance Yubikeys
 with PIN UV, you can do the following trick to get it done (works only with the latest Play store version):

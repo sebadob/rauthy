@@ -169,6 +169,8 @@ export interface I18n {
     mfa: {
         p1: string,
         p2: string,
+        p3: string,
+        docLinkText: string,
 
         errorReg: string,
         lastUsed: string,
