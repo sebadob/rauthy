@@ -404,7 +404,7 @@ additionally. A dedicated <em>Going into production</em> guide will be written i
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on your localhost.
 The image contains a basic default config which is sufficient for local testing (don't use it in production, it
 contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.32.2
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.32.3
 </code></pre>
 <p>To proceed, go to <strong><a href="getting_started/first_start.html">First Start</a></strong>, or do the production setup below to have persistence.</p>
 <h2 id="testing--evaluation-with-e-mail"><a class="header" href="#testing--evaluation-with-e-mail">Testing / Evaluation with E-Mail</a></h2>
@@ -427,7 +427,7 @@ services:
       
   rauthy:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.32.2
+    image: ghcr.io/sebadob/rauthy:0.32.3
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -522,7 +522,7 @@ section.</p>
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.32.2
+    ghcr.io/sebadob/rauthy:0.32.3
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
@@ -713,7 +713,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.32.2
+          image: ghcr.io/sebadob/rauthy:0.32.3
           securityContext:
             # User ID 10001 is actually built into the container 
             # at the creation for better security
@@ -1227,7 +1227,7 @@ relies on an Admin to reset the MFA devices, if no backup exists or all are lost
 <a class="admonition-anchor-link" href="config/passkeys.html#admonition-note"></a>
 </div>
 <div>
-<p>Unfortunately, passkeys have one big drawback when you use the discoverable credentials / redident keys feature.
+<p>Unfortunately, passkeys have one big drawback when you use the discoverable credentials / resident keys feature.
 This is really cool and the best possible UX at first glance, because the user does not need to provide even a
 username / email manually, but has one very big drawback.</p>
 <p><strong>The amount of resident keys a passkey can store is always limited.</strong></p>
@@ -1251,6 +1251,20 @@ UX in the end that you would get with discoverable credentials but without the d
 This has made is possible to implement this feature into Rauthy without sacrificing security.</p>
 <p>However, at the time of writing (2024/06/05), PIN / biometric UV via NFC keys like Yubikeys does still not work.</p>
 <p>Sadly, Google just decided to not implement this feature for other keys than their own implementation of it.</p>
+</div>
+</div>
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div class="admonition-title">
+<div id="admonition-note-1-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="config/passkeys.html#admonition-note-1"></a>
+</div>
+<div>
+<p>On macOS, when your browser tries to create a passkey, it will default to using the built-in Passwords app. If you wish
+to use a different password manager such as 1Password, Vaultwarden, etc., you'll need to disable the setting "Autofill
+Passwords and Passkeys".</p>
+<p><img src="config/img/macos_autofill.png" alt="the setting Autofill Passwords and Passkeys is under a section called AutoFill and Passwords" /></p>
 </div>
 </div>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
@@ -2921,7 +2935,7 @@ with each request in the following format:</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="database-migrations"><a class="header" href="#database-migrations">Database Migrations</a></h1>
 <p>You can migrate easily between Hiqlite and Postgres, or just between different instances of the same database.</p>
 <p>Let's say you started out by evaluating Rauthy with the default Hiqlite and a single instance deployment. Later on, you
-want to migrate to Postgres for whatever reason. Or you started with Postgres and yuo want to reduce your memory
+want to migrate to Postgres for whatever reason. Or you started with Postgres and you want to reduce your memory
 footprint by switching to Hiqlite. All of this is easily possible.</p>
 <p><strong>Solution:</strong> <code>MIGRATE_DB_FROM</code></p>
 <p>If you set the <code>MIGRATE_DB_FROM</code> ENV var, it will perform a migration at the next restart.<br />

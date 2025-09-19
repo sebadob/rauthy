@@ -207,7 +207,7 @@ relies on an Admin to reset the MFA devices, if no backup exists or all are lost
 <a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
-<p>Unfortunately, passkeys have one big drawback when you use the discoverable credentials / redident keys feature.
+<p>Unfortunately, passkeys have one big drawback when you use the discoverable credentials / resident keys feature.
 This is really cool and the best possible UX at first glance, because the user does not need to provide even a
 username / email manually, but has one very big drawback.</p>
 <p><strong>The amount of resident keys a passkey can store is always limited.</strong></p>
@@ -231,6 +231,20 @@ UX in the end that you would get with discoverable credentials but without the d
 This has made is possible to implement this feature into Rauthy without sacrificing security.</p>
 <p>However, at the time of writing (2024/06/05), PIN / biometric UV via NFC keys like Yubikeys does still not work.</p>
 <p>Sadly, Google just decided to not implement this feature for other keys than their own implementation of it.</p>
+</div>
+</div>
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div class="admonition-title">
+<div id="admonition-note-1-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note-1"></a>
+</div>
+<div>
+<p>On macOS, when your browser tries to create a passkey, it will default to using the built-in Passwords app. If you wish
+to use a different password manager such as 1Password, Vaultwarden, etc., you'll need to disable the setting "Autofill
+Passwords and Passkeys".</p>
+<p><img src="img/macos_autofill.png" alt="the setting Autofill Passwords and Passkeys is under a section called AutoFill and Passwords" /></p>
 </div>
 </div>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">

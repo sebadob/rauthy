@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.32.3
+
+### Bugfix
+
+- When deleting a client,there was a last case that could make the deletion fail under specific circumstances.
+  [#1198](https://github.com/sebadob/rauthy/pull/1198)
+
 ## v0.32.2
 
 ### Security
