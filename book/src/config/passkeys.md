@@ -54,7 +54,9 @@ Sadly, Google just decided to not implement this feature for other keys than the
 ```
 
 ```admonish note
-On macOS, when your browser tries to create a passkey, it will default to using the built-in Passwords app. If you wish to use a different password manager such as 1Password, Vaultwarden, etc., you'll need to disable the setting "Autofill Passwords and Passkeys".
+On macOS, when your browser tries to create a passkey, it will default to using the built-in Passwords app. If you wish 
+to use a different password manager such as 1Password, Vaultwarden, etc., you'll need to disable the setting "Autofill 
+Passwords and Passkeys".
 
 ![the setting Autofill Passwords and Passkeys is under a section called AutoFill and Passwords](img/macos_autofill.png)
 ```
