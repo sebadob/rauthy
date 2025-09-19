@@ -253,6 +253,8 @@
             {t.mfa.p1}
             <br><br>
             {t.mfa.p2}
+            <br><br>
+            {t.mfa.p3} <a href="https://sebadob.github.io/rauthy/config/passkeys.html">{t.mfa.docLinkText}</a>.
         </p>
 
         {#if mfaModSecs && mfaModSecs > 0}
