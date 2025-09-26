@@ -170,12 +170,21 @@ tolerations: []
 
 affinity: {}
 
+topologySpreadConstraints: []
+
 # This allows for mounting config.toml.
 # If left unset, a new Secret will be generated using this values.yaml.
 # The generated config.toml is enough to get you experimenting.
 # It is in your own interest, to set this to a known secret, so that
 # you can retain your configuration and keys across redeployments.
 externalSecret: ""
+
+# Extra environment variables to pass to the container.
+# This is mostly for backwards compatibility. New installations should
+# prefer using the config.toml via the externalSecret option.
+env: []
+# - name: FOO
+#   value: "BAR"
 
 # Persistence configuration for the volumeClaimTemplate.
 # Emptydir will be used if disabled
@@ -190,6 +199,8 @@ persistence:
 serviceMonitor:
   # Enable or disable the ServiceMonitor resource.
   enabled: false
+  # Namespace override for the ServiceMonitor resource.
+  namespaceOverride: ""
   # The port exposed by the service to scrape metrics from.
   port: metrics
   # The interval at which Prometheus will scrape metrics.
