@@ -1,0 +1,36 @@
+apiVersion: v2
+name: rauthy
+description: A Helm chart for Rauthy
+type: application
+version: 0.32.3
+appVersion: "0.32.3"
+
+# Chart metadata
+home: https://github.com/sebadob/rauthy
+icon: https://sebadob.github.io/rauthy/rauthy_grey_small.png
+sources:
+  - https://github.com/sebadob/rauthy
+
+# Keywords for chart discovery
+keywords:
+  - authentication
+  - authorization
+  - oidc
+  - openid-connect
+  - sso
+  - single-sign-on
+  - identity
+  - rust
+
+# Maintainer information
+maintainers:
+  - name: Reversing0148
+    url: https://github.com/Reversing0148
+
+# Minimum Kubernetes version requirement
+kubeVersion: ">=1.19.0-0"
+
+# Annotations for additional metadata
+annotations:
+  category: Authentication
+  licenses: Apache-2.0

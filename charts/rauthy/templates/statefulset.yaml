@@ -1,0 +1,127 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "rauthy.fullname" . }}
+  labels:
+    {{- include "rauthy.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  serviceName: {{ include "rauthy.fullname" . }}-headless
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    {{- toYaml .Values.updateStrategy | nindent 4 }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      {{- include "rauthy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "rauthy.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: default
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            {{- if .Values.ports.http }}
+            - name: http
+              containerPort: {{ .Values.ports.http }}
+              protocol: TCP
+            {{- end }}
+            {{- if .Values.ports.https }}
+            - name: https
+              containerPort: {{ .Values.ports.https }}
+              protocol: TCP
+            {{- end }}
+            - name: raft
+              containerPort: {{ .Values.ports.raft }}
+              protocol: TCP
+            - name: api
+              containerPort: {{ .Values.ports.api }}
+              protocol: TCP
+            {{- if and .Values.ports.metrics .Values.serviceMonitor.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.ports.metrics }}
+              protocol: TCP
+            {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: {{ include "rauthy.fullname" . }}-data
+              mountPath: /app/data
+              readOnly: false
+            - name: rauthy-config
+              mountPath: /app/config.toml
+              readOnly: true
+              subPath: config.toml
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: rauthy-config
+          secret:
+            secretName: {{ include "rauthy.fullname" . }}-config
+        {{- if not .Values.persistence.enabled }}
+        - name: {{ include "rauthy.fullname" . }}-data
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ include "rauthy.fullname" . }}-data
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+        {{- if .Values.persistence.storageClassName }}
+        storageClassName: {{ .Values.persistence.storageClassName | quote }}
+        {{- end }}
+  {{- end }}

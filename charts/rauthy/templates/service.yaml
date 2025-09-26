@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rauthy.fullname" . }}
+  labels:
+    {{- include "rauthy.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "rauthy.selectorLabels" . | nindent 4 }}
+  ports:
+  {{- if .Values.ports.http }}
+    - name: http
+      port: {{ .Values.ports.http }}
+      targetPort: http
+      protocol: TCP
+  {{- end }}
+  {{- if .Values.ports.https }}
+    - name: https
+      port: {{ .Values.ports.https }}
+      targetPort: https
+      protocol: TCP
+  {{- end }}
+  {{- if and .Values.ports.metrics .Values.serviceMonitor.enabled }}
+    - name: metrics
+      port: {{ .Values.ports.metrics }}
+      targetPort: metrics
+      protocol: TCP
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rauthy.fullname" . }}-headless
+  labels:
+    {{- include "rauthy.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  sessionAffinity: None
+  selector:
+    {{- include "rauthy.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: raft
+      protocol: TCP
+      port: {{ .Values.ports.raft }}
+      targetPort: raft
+    - name: api
+      protocol: TCP
+      port: {{ .Values.ports.api }}
+      targetPort: api
