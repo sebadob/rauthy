@@ -48,25 +48,18 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           ports:
-            {{- if .Values.ports.http }}
-            - name: http
-              containerPort: {{ .Values.ports.http }}
+            - name: {{ .Values.service.scheme }}
+              containerPort: {{ .Values.service.port }}
               protocol: TCP
-            {{- end }}
-            {{- if .Values.ports.https }}
-            - name: https
-              containerPort: {{ .Values.ports.https }}
-              protocol: TCP
-            {{- end }}
             - name: raft
-              containerPort: {{ .Values.ports.raft }}
+              containerPort: {{ .Values.headlessService.ports.raft }}
               protocol: TCP
             - name: api
-              containerPort: {{ .Values.ports.api }}
+              containerPort: {{ .Values.headlessService.ports.api }}
               protocol: TCP
-            {{- if and .Values.ports.metrics .Values.serviceMonitor.enabled }}
+            {{- if .Values.metrics.enabled }}
             - name: metrics
-              containerPort: {{ .Values.ports.metrics }}
+              containerPort: {{ .Values.metrics.port }}
               protocol: TCP
             {{- end }}
           {{- with .Values.livenessProbe }}

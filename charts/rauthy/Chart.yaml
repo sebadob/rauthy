@@ -2,7 +2,7 @@ apiVersion: v2
 name: rauthy
 description: A Helm chart for Rauthy
 type: application
-version: 0.32.3
+version: 0.32.3-rc10
 appVersion: "0.32.3"
 
 # Chart metadata
@@ -10,6 +10,7 @@ home: https://github.com/sebadob/rauthy
 icon: https://sebadob.github.io/rauthy/rauthy_grey_small.png
 sources:
   - https://github.com/sebadob/rauthy
+  - https://github.com/Reversing0148/rauthy-helm
 
 # Keywords for chart discovery
 keywords:

@@ -23,7 +23,6 @@ image:
 updateStrategy:
   type: RollingUpdate
   rollingUpdate:
-    # For clustered applications, you might want to set the partition to (replicaCount - 1) to update one pod at a time.
     partition: 0
 
 # This helps ensure minimum availability during voluntary disruptions more information can be found here: https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
@@ -63,12 +62,28 @@ securityContext:
   seccompProfile:
     type: RuntimeDefault
 
-ports:
-  http: 8080
-  # https: 8443
-  raft: 8100
-  api: 8200
-  metrics: 9090
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # Additional annotations on the service resource.
+  annotations: {}
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  port: 8080
+  # Indicate the scheme used by the Rauthy server. Eg.: "http" or "https"
+  scheme: "http"
+
+# This is for setting up a headless service to enable pod-to-pod communication for clustered workloads
+headlessService:
+  ports:
+    raft: 8100
+    api: 8200
+
+# This is for setting up Rauthy metrics
+metrics:
+  enabled: true
+  port: 9090
 
 # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:
@@ -192,7 +207,7 @@ persistence:
   enabled: false
   size: 128Mi
   accessMode: ReadWriteOnce
-  storageClassName: "longhorn"
+  storageClassName: ""
 
 # Configuration for enabling and customizing the ServiceMonitor resource.
 # This is used to integrate with Prometheus for monitoring purposes.

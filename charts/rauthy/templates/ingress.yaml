@@ -37,11 +37,7 @@ spec:
               service:
                 name: {{ include "rauthy.fullname" $ }}
                 port:
-                  {{- if $.Values.ports.https }}
-                  number: {{ $.Values.ports.https }}
-                  {{- else }}
-                  number: {{ $.Values.ports.http }}
-                  {{- end }}
+                  number: {{ $.Values.service.port }}
           {{- end }}
     {{- end }}
 {{- end }}

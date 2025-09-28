@@ -52,32 +52,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 
 {{/*
-Check if TLS is enabled through either ingress or httpRoute
-*/}}
-{{- define "rauthy.isTLSEnabled" -}}
-{{- if and .Values.ingress.enabled .Values.ingress.tls -}}
-true
-{{- else if and .Values.httpRoute.enabled .Values.httpRoute.rules -}}
-{{- range .Values.httpRoute.rules -}}
-{{- if .filters -}}
-{{- range .filters -}}
-{{- if and (eq .type "RequestHeaderModifier") .requestHeaderModifier.set -}}
-{{- range .requestHeaderModifier.set -}}
-{{- if and (eq .name "X-Forwarded-Proto") (eq .value "https") -}}
-true
-{{- end -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-{{- else -}}
-false
-{{- end -}}
-{{- end }}
-
-{{/*
-Get the domain name by checking ingress hosts first, then httpRoute hosts, falling back to rauthy.local
+Get a domain name by checking ingress hosts first, then httpRoute hosts, falling back to rauthy.local
 */}}
 {{- define "rauthy.domainName" -}}
 {{- if and .Values.ingress.enabled .Values.ingress.hosts }}
@@ -90,13 +65,25 @@ rauthy.local
 {{- end }}
 
 {{/*
-Get the external scheme based on TLS configuration
+Assume the external scheme based on service, ingress and httproute configurations
+Since there is no way of telling the tls configuration of the gateway, this assumes httpRoute is behind tls
 */}}
 {{- define "rauthy.externalScheme" -}}
-{{- if eq (include "rauthy.isTLSEnabled" .) "true" -}}
+{{- if or (and .Values.ingress.enabled (gt (len .Values.ingress.tls) 0)) (.Values.httpRoute.enabled) (and (not (eq .Values.service.type "ClusterIP")) (eq .Values.service.scheme "https")) -}}
 https
 {{- else -}}
 http
+{{- end -}}
+{{- end }}
+
+{{/*
+Assume the external port based on service, ingress and httproute configurations
+*/}}
+{{- define "rauthy.externalPort" -}}
+{{- if or (and .Values.ingress.enabled (gt (len .Values.ingress.tls) 0)) (.Values.httpRoute.enabled)  -}}
+443
+{{- else -}}
+{{ .Values.service.port}}
 {{- end -}}
 {{- end }}
 
@@ -108,23 +95,9 @@ Generate the public URL based on the external scheme and domain name
 {{- end }}
 
 {{/*
-Generate the rp_origin based on the external scheme and domain name with appropriate port
+Generate rp_origin configuration based on the pubUrl and external port 
 */}}
 {{- define "rauthy.rpOrigin" -}}
-{{- if eq (include "rauthy.isTLSEnabled" .) "true" -}}
-{{- printf "%s://%s:443" (include "rauthy.externalScheme" .) (include "rauthy.domainName" .) -}}
-{{- else -}}
-{{- printf "%s://%s:%d" (include "rauthy.externalScheme" .) (include "rauthy.domainName" .) (int .Values.ports.http) -}}
-{{- end -}}
+{{- printf "%s:%s" (include "rauthy.pubUrl" .) (include "rauthy.externalPort" .) -}}
 {{- end }}
 
-{{/*
-Get the server scheme based on port configuration
-*/}}
-{{- define "rauthy.apiScheme" -}}
-{{- if .Values.ports.https -}}
-https
-{{- else -}}
-http
-{{- end -}}
-{{- end }}
