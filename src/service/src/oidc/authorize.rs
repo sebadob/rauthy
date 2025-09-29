@@ -200,6 +200,7 @@ pub async fn post_authorize_refresh(
     user.check_expired()?;
 
     client.validate_mfa(&user)?;
+    client.validate_user_groups(&user)?;
 
     let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
     let webauthn_req_exp = RauthyConfig::get().vars.webauthn.req_exp;
