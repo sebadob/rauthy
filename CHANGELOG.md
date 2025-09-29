@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.32.4
+
+### Bugfix / Security
+
+Under certain config conditions and client / user setup, and if you were using the Login Group Prefix limitation for a
+client, it was possible that this restriction was ignored during session refreshes, when logging in to a restricted
+client. The additional check was missing during refreshes, like when you still had a valid session on Rauthy, because
+you logged into something else beforehand, and you then wanted to log in to this restricted client within the session
+timeout window.
+
+[#1208](https://github.com/sebadob/rauthy/pull/1208)
+
 ## v0.32.3
 
 ### Bugfix
