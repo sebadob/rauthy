@@ -404,7 +404,7 @@ additionally. A dedicated <em>Going into production</em> guide will be written i
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on your localhost.
 The image contains a basic default config which is sufficient for local testing (don't use it in production, it
 contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.32.3
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.32.4
 </code></pre>
 <p>To proceed, go to <strong><a href="getting_started/first_start.html">First Start</a></strong>, or do the production setup below to have persistence.</p>
 <h2 id="testing--evaluation-with-e-mail"><a class="header" href="#testing--evaluation-with-e-mail">Testing / Evaluation with E-Mail</a></h2>
@@ -427,7 +427,7 @@ services:
       
   rauthy:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.32.3
+    image: ghcr.io/sebadob/rauthy:0.32.4
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -522,7 +522,7 @@ section.</p>
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.32.3
+    ghcr.io/sebadob/rauthy:0.32.4
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
@@ -713,7 +713,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.32.3
+          image: ghcr.io/sebadob/rauthy:0.32.4
           securityContext:
             # User ID 10001 is actually built into the container 
             # at the creation for better security
