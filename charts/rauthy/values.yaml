@@ -19,6 +19,9 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
+# This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+
 # Configuration for the update strategy of the StatefulSet more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
 updateStrategy:
   type: RollingUpdate
@@ -30,13 +33,10 @@ podDisruptionBudget:
   enabled: false
   # Additional annotations for the PodDisruptionBudget
   annotations: {}
-  # Either minAvailable or maxUnavailable should be specified, not both
+  # Either minAvailable or maxUnavailable should be specified, not both.
   # For clustered applications, setting minAvailable to (replicaCount - 1) is a good practice.
   minAvailable: 2
   # maxUnavailable: 1
-
-# This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-imagePullSecrets: []
 
 # This is for setting Kubernetes Annotations to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
@@ -82,7 +82,7 @@ headlessService:
 
 # This is for setting up Rauthy metrics
 metrics:
-  enabled: true
+  enabled: false
   port: 9090
 
 # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
@@ -187,11 +187,12 @@ affinity: {}
 
 topologySpreadConstraints: []
 
-# This allows for mounting config.toml.
-# If left unset, a new Secret will be generated using this values.yaml.
-# The generated config.toml is enough to get you experimenting.
-# It is in your own interest, to set this to a known secret, so that
-# you can retain your configuration and keys across redeployments.
+# This allows for mounting config.toml. If left unset, a new Secret will
+# be generated using this values.yaml. The generated config.toml is enough
+# to get you experimenting. It is in your own interest, to set a secret
+# that is not managed by helm so that you can retain your configuration
+# and keys across redeployments. The generated secret will not be removed
+# with the helm release to prevent data loss.
 externalSecret: ""
 
 # Extra environment variables to pass to the container.
