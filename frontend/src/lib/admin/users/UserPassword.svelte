@@ -3,7 +3,7 @@
     import {onMount} from "svelte";
     import Button from "$lib5/button/Button.svelte";
     import {generatePassword} from "$utils/helpers";
-    import type {UpdateUserRequest, UserResponse} from "$api/types/user.ts";
+    import type {UserResponse} from "$api/types/user.ts";
     import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
@@ -13,6 +13,7 @@
     import {useI18n} from "$state/i18n.svelte";
     import {useI18nAdmin} from "$state/i18n_admin.svelte";
     import type {PatchOp} from "$api/types/generic";
+    import {fetchSolvePow} from "$utils/pow";
 
     let {
         user,
@@ -63,7 +64,9 @@
         err = '';
         isLoading = true;
 
+        let pow = await fetchSolvePow() || '';
         let payload: RequestResetRequest = {
+            pow,
             email: user.email,
         };
 
