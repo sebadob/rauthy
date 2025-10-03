@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rauthy.fullname" . }}-headless
+  labels:
+    {{- include "rauthy.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  sessionAffinity: None
+  selector:
+    {{- include "rauthy.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: raft
+      protocol: TCP
+      port: {{ .Values.headlessService.ports.raft }}
+      targetPort: raft
+    - name: api
+      protocol: TCP
+      port: {{ .Values.headlessService.ports.api }}
+      targetPort: api

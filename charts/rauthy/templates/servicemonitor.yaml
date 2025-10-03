@@ -1,0 +1,20 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "rauthy.fullname" . }}-servicemonitor
+  namespace: {{ .Values.serviceMonitor.namespaceOverride | default .Release.Namespace }}
+  labels:
+    {{- include "rauthy.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "rauthy.selectorLabels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+  - port: {{ .Values.serviceMonitor.port }}
+    interval: {{ .Values.serviceMonitor.interval }}
+    path: /metrics
+{{- end }}
