@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.32.5
+
+### Bugfix
+
+- It was not possible to send out an additional `Password Reset E-Mail` for users via the Admin UI because of a missing
+  value from the frontend. The loading spinner would run forever and the E-Mail would not be sent.
+  [#1213](https://github.com/sebadob/rauthy/pull/1213)
+
 ## v0.32.4
 
 ### Bugfix / Security
