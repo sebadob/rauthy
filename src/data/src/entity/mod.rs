@@ -43,6 +43,7 @@ pub mod scim_types;
 pub mod scopes;
 pub mod sessions;
 pub mod theme;
+pub mod tos;
 pub mod user_attr;
 pub mod user_login_states;
 pub mod user_revoke;
