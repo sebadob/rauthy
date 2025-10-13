@@ -39,6 +39,7 @@ pub mod scopes;
 pub mod sessions;
 pub mod swagger_ui;
 pub mod themes;
+pub mod tos;
 pub mod users;
 
 pub type ReqApiKey = web::ReqData<Option<ApiKey>>;

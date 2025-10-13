@@ -9,7 +9,7 @@ use rauthy_data::ListenScheme;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_handlers::{
     api_keys, atproto, auth_providers, backup, blacklist, clients, dev_only, events, fed_cm,
-    generic, groups, html, oidc, pam, roles, scopes, sessions, swagger_ui, themes, users,
+    generic, groups, html, oidc, pam, roles, scopes, sessions, swagger_ui, themes, tos, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -413,6 +413,10 @@ fn api_services() -> actix_web::Scope {
                 .service(sessions::delete_sessions)
                 .service(sessions::delete_session_by_id)
                 .service(sessions::delete_sessions_for_user)
+                .service(tos::get_tos)
+                .service(tos::post_tos)
+                .service(tos::get_tos_latest)
+                .service(tos::post_tos_accept)
                 .service(users::get_user_password_reset)
                 .service(users::put_user_password_reset)
                 .service(users::get_user_by_email)

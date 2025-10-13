@@ -1,6 +1,7 @@
 use crate::database::{Cache, DB};
 use chrono::Utc;
 use hiqlite_macros::params;
+use rauthy_api_types::tos::{ToSLatestResponse, ToSResponse};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
@@ -81,5 +82,26 @@ VALUES ($1, $2, $3, $4)"#;
         DB::hql().put(Cache::App, "tos", &slf, None).await?;
 
         Ok(slf)
+    }
+}
+
+impl From<ToS> for ToSResponse {
+    fn from(tos: ToS) -> Self {
+        Self {
+            ts: tos.ts,
+            author: tos.author,
+            is_html: tos.is_html,
+            content: tos.content,
+        }
+    }
+}
+
+impl From<ToS> for ToSLatestResponse {
+    fn from(tos: ToS) -> Self {
+        Self {
+            ts: tos.ts,
+            is_html: tos.is_html,
+            content: tos.content,
+        }
     }
 }
