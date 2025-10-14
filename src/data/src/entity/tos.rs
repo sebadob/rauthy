@@ -51,7 +51,7 @@ VALUES ($1, $2, $3, $4)"#;
             is_html,
             content,
         };
-        DB::hql().put(Cache::App, "tos", &slf, None).await?;
+        DB::hql().put(Cache::App, "tos", &Some(&slf), None).await?;
 
         Ok(())
     }
@@ -72,7 +72,7 @@ VALUES ($1, $2, $3, $4)"#;
             return Ok(slf);
         }
 
-        let sql = "SELECT * FROM tos LIMIT 1 ORDER BY ts";
+        let sql = "SELECT * FROM tos ORDER BY ts DESC LIMIT 1";
         let slf: Option<Self> = if is_hiqlite() {
             DB::hql().query_as_optional(sql, params!()).await?
         } else {
