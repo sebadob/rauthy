@@ -85,7 +85,7 @@ pub async fn get_tos_latest() -> Result<HttpResponse, ErrorResponse> {
     }
 }
 
-/// Accept a ToS
+/// Accept an updated ToS for existing accounts
 ///
 /// **Permissions**
 /// - valid session
