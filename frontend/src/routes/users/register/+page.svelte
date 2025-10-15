@@ -88,6 +88,7 @@
     }
 
     async function acceptToS() {
+        closeModal?.();
         await submitRegistration();
     }
 
@@ -106,7 +107,7 @@
         if (res.error) {
             let error = res.error.message || 'Error';
             if (error.includes("UNIQUE constraint")) {
-                err = 'E-Mail is already registered';
+                err = t.register.alreadyRegistered;
             } else {
                 err = error;
             }
