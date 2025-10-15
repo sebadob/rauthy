@@ -12,9 +12,17 @@
     import Form from "$lib5/form/Form.svelte";
     import {PATTERN_USER_NAME} from "$utils/patterns";
     import type {NewUserRegistrationRequest} from "$api/types/register.ts";
-    import {fetchPost} from "$api/fetch";
+    import {fetchGet, fetchPost} from "$api/fetch";
+    import type {ToSLatestResponse} from "$api/types/tos";
+    import Modal from "$lib/Modal.svelte";
+    import {onMount} from "svelte";
+    import {fetchSolvePow} from "$utils/pow";
 
     let t = useI18n();
+
+    let refToS: undefined | HTMLParagraphElement = $state();
+    let showModal = $state(false);
+    let closeModal: undefined | (() => void) = $state();
 
     let restrictedDomain = $state('');
     let redirectUri = useParam('redirect_uri');
@@ -22,17 +30,41 @@
     let err = $state('');
     let success = $state(false);
 
+    let tos: undefined | ToSLatestResponse = $state();
+    let tosRead = $state(false);
+    let noTosExists = $state(false);
+
+    let email = $state('');
+    let givenName = $state('');
+    let familyName = $state('');
+
     let action = $derived(IS_DEV ? '/auth/v1/dev/register' : '/auth/v1/users/register');
+
+    async function fetchTos() {
+        let res = await fetchGet<ToSLatestResponse>('/auth/v1/tos/latest');
+        if (res.body) {
+            tos = res.body;
+        } else if (res.status === 204) {
+            noTosExists = true;
+        }
+    }
+
+    function onScrollEndToS() {
+        if (!refToS) {
+            return false;
+        }
+
+        // allow 50px diff for better UX
+        if (!tosRead && refToS.scrollHeight <= refToS.scrollTop + refToS.offsetHeight + 50) {
+            tosRead = true;
+        }
+    }
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         success = false;
         err = '';
 
-        let email = params.get('email');
-        let given_name = params.get('given_name');
-        let pow = params.get('pow');
-
-        if (!email || !given_name || !pow) {
+        if (!email || !givenName) {
             console.error('email, given_name, pow missing');
             return;
         }
@@ -42,18 +74,35 @@
             return;
         }
 
+        if (!tos) {
+            await fetchTos();
+        }
+
+        if (tos) {
+            showModal = true;
+        } else if (noTosExists) {
+            await submitRegistration();
+        } else {
+            console.error('logic error in ToS fetch / accept');
+        }
+    }
+
+    async function acceptToS() {
+        await submitRegistration();
+    }
+
+    async function submitRegistration() {
+        isLoading = true;
+
         let payload: NewUserRegistrationRequest = {
             email,
-            given_name,
-            family_name: params.get('family_name') || undefined,
-            pow,
-            redirect_uri: params.get('redirect_uri') || undefined,
+            given_name: givenName,
+            family_name: familyName || undefined,
+            pow: await fetchSolvePow() || '',
+            redirect_uri: redirectUri.get(),
         };
 
-        isLoading = true;
-        // await tick();
-
-        const res = await fetchPost(form.action, payload);
+        const res = await fetchPost(action, payload);
         if (res.error) {
             let error = res.error.message || 'Error';
             if (error.includes("UNIQUE constraint")) {
@@ -92,16 +141,14 @@
                 {/if}
             </div>
 
-            <Form {action} {onSubmit} withPowAs="pow">
-                {#if redirectUri.get()}
-                    <input type="hidden" name="redirect_uri" value={redirectUri.get()}/>
-                {/if}
+            <Form {action} {onSubmit}>
                 <Input
                         typ="email"
                         name="email"
                         autocomplete="email"
                         label={t.common.email}
                         placeholder={t.common.email}
+                        bind:value={email}
                         required
                 />
                 <Input
@@ -109,6 +156,7 @@
                         autocomplete="given-name"
                         label={t.account.givenName}
                         placeholder={t.account.givenName}
+                        bind:value={givenName}
                         pattern={PATTERN_USER_NAME}
                         required
                 />
@@ -117,6 +165,7 @@
                         autocomplete="family-name"
                         label={t.account.familyName}
                         placeholder={t.account.familyName}
+                        bind:value={familyName}
                         pattern={PATTERN_USER_NAME}
                 />
 
@@ -136,6 +185,35 @@
 
             </Form>
         </div>
+
+        {#if tos}
+            <Modal bind:showModal bind:closeModal>
+                <h1>{t.tos.tos}</h1>
+                <p bind:this={refToS} class="tosContent" onscrollend={onScrollEndToS}>
+                    {#if tos.is_html}
+                        {@html tos.content}
+                    {:else}
+                        {tos.content}
+                    {/if}
+                </p>
+                <Button
+                        ariaLabel={t.common.accept}
+                        onclick={acceptToS}
+                        isDisabled={!tosRead}
+                        {isLoading}
+                >
+                    {t.common.accept}
+                </Button>
+                <Button
+                        level={-2}
+                        ariaLabel={t.common.cancel}
+                        onclick={() => closeModal?.()}
+                        {isLoading}
+                >
+                    {t.common.cancel}
+                </Button>
+            </Modal>
+        {/if}
 
         <ThemeSwitch absolute/>
         <LangSelector absolute/>
@@ -166,5 +244,12 @@
 
     .domainTxt {
         margin: .5rem 0;
+    }
+
+    .tosContent {
+        max-height: min(75dvh, 40rem);
+        margin-bottom: 1rem;
+        padding-right: 1rem;
+        overflow-y: auto;
     }
 </style>

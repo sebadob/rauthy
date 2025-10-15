@@ -16,17 +16,17 @@
 
     let error = $state('');
     let noneExist = $state(false);
-    let tos = $state('');
+    let tos: undefined | ToSLatestResponse = $state();
     let newToSContent = $state('');
 
     onMount(() => {
-        fetchTos();
+        getTos();
     });
 
-    async function fetchTos() {
+    async function getTos() {
         let res = await fetchGet<ToSLatestResponse>('/auth/v1/tos/latest');
         if (res.body) {
-            tos = res.body.content;
+            tos = res.body;
         } else if (res.status === 204) {
             noneExist = true;
         }
@@ -49,7 +49,7 @@
             error = res.error.message;
         } else {
             closeModal?.();
-            await fetchTos();
+            await getTos();
         }
     }
 
@@ -61,7 +61,7 @@
     {#if noneExist}
         {ta.tos.noneExist}
     {:else if tos}
-        {tos}
+        {tos.content}
     {/if}
 </p>
 
