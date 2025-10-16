@@ -1,9 +1,10 @@
-use crate::database::DB;
+use crate::database::{Cache, DB};
 use chrono::Utc;
 use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
+use std::net::IpAddr;
 use tokio_postgres::Row;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,26 +30,52 @@ impl ToSUserAccept {
     pub async fn create(
         user_id: String,
         tos_ts: i64,
-        location: String,
+        ip: IpAddr,
+        location: Option<String>,
     ) -> Result<(), ErrorResponse> {
-        let now = Utc::now().timestamp();
+        let accept_ts = Utc::now().timestamp();
+        let location = format!("{} {}", ip, location.unwrap_or_default());
 
         let sql = r#"
 INSERT INTO tos_user_accept (user_id, tos_ts, accept_ts, location)
 VALUES ($1, $2, $3, $4)"#;
         if is_hiqlite() {
             DB::hql()
-                .execute(sql, params!(user_id, tos_ts, now, location))
+                .execute(sql, params!(&user_id, tos_ts, accept_ts, &location))
                 .await?;
         } else {
-            DB::pg_execute(sql, &[&user_id, &tos_ts, &now, &location]).await?;
+            DB::pg_execute(sql, &[&user_id, &tos_ts, &accept_ts, &location]).await?;
         }
+
+        DB::hql()
+            .put(
+                Cache::ToS,
+                Self::cache_idx(&user_id),
+                &Self {
+                    user_id,
+                    tos_ts,
+                    accept_ts,
+                    location,
+                },
+                Some(600),
+            )
+            .await?;
 
         Ok(())
     }
 
     pub async fn find(user_id: String) -> Result<Option<Self>, ErrorResponse> {
-        let sql = "SELECT * FROM tos_user_accept WHERE user_id = $1";
+        if let Some(slf) = DB::hql().get(Cache::ToS, Self::cache_idx(&user_id)).await? {
+            return Ok(slf);
+        }
+
+        let cache_idx = Self::cache_idx(&user_id);
+        let sql = r#"
+SELECT * FROM tos_user_accept
+WHERE user_id = $1
+ORDER BY tos_ts
+LIMIT 1
+"#;
 
         let slf = if is_hiqlite() {
             DB::hql().query_as_optional(sql, params!(user_id)).await?
@@ -56,6 +83,17 @@ VALUES ($1, $2, $3, $4)"#;
             DB::pg_query_opt(sql, &[&user_id]).await?
         };
 
+        DB::hql()
+            .put(Cache::ToS, cache_idx, &slf, Some(600))
+            .await?;
+
         Ok(slf)
+    }
+}
+
+impl ToSUserAccept {
+    #[inline]
+    fn cache_idx(user_id: &str) -> String {
+        format!("uid_{user_id}")
     }
 }

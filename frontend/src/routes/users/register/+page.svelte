@@ -40,6 +40,15 @@
 
     let action = $derived(IS_DEV ? '/auth/v1/dev/register' : '/auth/v1/users/register');
 
+    $effect(() => {
+        if (refToS) {
+            setTimeout(() => {
+                onScrollEndToS();
+            }, 1000);
+        }
+
+    });
+
     async function fetchTos() {
         let res = await fetchGet<ToSLatestResponse>('/auth/v1/tos/latest');
         if (res.body) {

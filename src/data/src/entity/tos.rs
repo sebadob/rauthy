@@ -6,6 +6,8 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 
+static CACHE_IDX: &str = "tos_latest";
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ToS {
     pub ts: i64,
@@ -51,7 +53,9 @@ VALUES ($1, $2, $3, $4)"#;
             is_html,
             content,
         };
-        DB::hql().put(Cache::App, "tos", &Some(&slf), None).await?;
+        DB::hql()
+            .put(Cache::ToS, CACHE_IDX, &Some(&slf), None)
+            .await?;
 
         Ok(())
     }
@@ -68,7 +72,7 @@ VALUES ($1, $2, $3, $4)"#;
     }
 
     pub async fn find_latest() -> Result<Option<Self>, ErrorResponse> {
-        if let Some(slf) = DB::hql().get(Cache::App, "tos").await? {
+        if let Some(slf) = DB::hql().get(Cache::ToS, CACHE_IDX).await? {
             return Ok(slf);
         }
 
@@ -79,7 +83,7 @@ VALUES ($1, $2, $3, $4)"#;
             DB::pg_query_opt(sql, &[]).await?
         };
 
-        DB::hql().put(Cache::App, "tos", &slf, None).await?;
+        DB::hql().put(Cache::ToS, CACHE_IDX, &slf, None).await?;
 
         Ok(slf)
     }

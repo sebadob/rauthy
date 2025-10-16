@@ -30,6 +30,10 @@ mod migrations_postgres {
 struct MigrationsHiqlite;
 
 /// Cache Index for the `hiqlite` cache layer
+///
+/// CAUTION: DO NOT change the order when adding new entries to now have false-positive
+/// during updates for already existing environments. Caches are not indexed via String / Name,
+/// but via u32 internally.
 #[derive(Debug, strum::EnumIter)]
 pub enum Cache {
     Atproto,
@@ -51,6 +55,7 @@ pub enum Cache {
     User,
     Webauthn,
     PAM,
+    ToS,
 }
 
 impl CacheIndex for Cache {
