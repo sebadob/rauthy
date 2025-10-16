@@ -92,7 +92,7 @@
             idx = 'id';
         }
 
-        let res = await fetchSearchServer<UserResponse[]>({ty: 'user', idx, q});
+        let res = await fetchSearchServer<UserResponseSimple[]>({ty: 'user', idx, q});
         if (res.body) {
             users = res.body;
         } else {

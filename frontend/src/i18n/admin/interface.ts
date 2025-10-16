@@ -329,6 +329,7 @@ export interface I18nAdmin {
 	};
 	tos: {
 		addNewToS: string;
+		checkStatus: string;
 		immutable: string;
 		noneExist: string;
 		tos: string;

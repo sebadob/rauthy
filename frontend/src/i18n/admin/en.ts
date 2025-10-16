@@ -388,6 +388,7 @@ export let I18nAdminEn: I18nAdmin = {
 	},
 	tos: {
 		addNewToS: 'Add new ToS',
+		checkStatus: 'Check user status',
 		immutable: `CAUTION: After adding new Terms of Service, they are immutable and cannot be 
 			deleted!`,
 		noneExist: 'No Terms of Service have been added yet.',

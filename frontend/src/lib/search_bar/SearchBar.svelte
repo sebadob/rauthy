@@ -12,7 +12,7 @@
 
     let {
         id = genKey(),
-        ariaLabel,
+        ariaLabel = t.common.search,
         value = $bindable(''),
         placeholder = t.common.search,
         datalist,

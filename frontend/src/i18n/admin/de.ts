@@ -406,6 +406,7 @@ export let I18nAdminDe: I18nAdmin = {
 	},
 	tos: {
 		addNewToS: 'Neue AGB hinzufügen',
+		checkStatus: 'Benutzer Status prüfen',
 		immutable: `ACHTUNG: Nach dem Hinzufügen sind AGB unveränderlich und können auch nicht wieder 
 			gelöscht werden!`,
 		noneExist: 'Es wurden noch keine Allgemeinen Geschäftsbedingungen hinzugefügt.',

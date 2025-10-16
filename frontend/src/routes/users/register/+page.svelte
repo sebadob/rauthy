@@ -197,7 +197,7 @@
         </div>
 
         {#if tos}
-            <Modal bind:showModal bind:closeModal>
+            <Modal bind:showModal bind:closeModal strict>
                 <h1>{t.tos.tos}</h1>
                 <p bind:this={refToS} class="tosContent" onscrollend={onScrollEndToS}>
                     {#if tos.is_html}
