@@ -13,10 +13,10 @@ CREATE UNIQUE INDEX tos_ts_uindex
 
 CREATE TABLE tos_user_accept
 (
-    user_id  TEXT    NOT NULL,
-    tos_ts   INTEGER NOT NULL,
-    ts       INTEGER NOT NULL,
-    location TEXT    NOT NULL,
+    user_id   TEXT    NOT NULL,
+    tos_ts    INTEGER NOT NULL,
+    accept_ts INTEGER NOT NULL,
+    location  TEXT    NOT NULL,
     CONSTRAINT tos_user_accept_pk
         PRIMARY KEY (user_id, tos_ts)
 ) STRICT;
