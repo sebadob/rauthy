@@ -1,385 +1,218 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import { IS_DEV, TPL_RESTRICTED_EMAIL_DOMAIN, TPL_USER_VALUES_CONFIG } from '$utils/constants';
-    import Input from '$lib5/form/Input.svelte';
-    import LangSelector from '$lib5/LangSelector.svelte';
-    import Main from '$lib5/Main.svelte';
-    import ContentCenter from '$lib5/ContentCenter.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Template from '$lib5/Template.svelte';
-    import { useParam } from '$state/param.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import Form from '$lib5/form/Form.svelte';
-    import {
-        PATTERN_ALNUM,
-        PATTERN_CITY,
-        PATTERN_PHONE,
-        PATTERN_STREET,
-        PATTERN_USER_NAME,
-    } from '$utils/patterns';
-    import type { NewUserRegistrationRequest } from '$api/types/register.ts';
-    import { fetchGet, fetchPost } from '$api/fetch';
-    import type { ToSLatestResponse } from '$api/types/tos';
-    import { fetchSolvePow } from '$utils/pow';
-    import TosAccept from '$lib/TosAccept.svelte';
-    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
-    import InputDateTimeCombo from '$lib/form/InputDateTimeCombo.svelte';
-    import TZSelect from '$lib/TZSelect.svelte';
-    import type { UserValuesRequest } from '$api/types/user';
+	import Button from '$lib5/button/Button.svelte';
+	import {
+		IS_DEV,
+		TPL_RESTRICTED_EMAIL_DOMAIN,
+		TPL_CLIENT_LOGO_UPDATED,
+		TPL_CLIENT_NAME,
+		TPL_CLIENT_URL
+	} from '$utils/constants';
+	import Input from '$lib5/form/Input.svelte';
+	import LangSelector from '$lib5/LangSelector.svelte';
+	import Main from '$lib5/Main.svelte';
+	import ContentCenter from '$lib5/ContentCenter.svelte';
+	import { useI18n } from '$state/i18n.svelte';
+	import Template from '$lib5/Template.svelte';
+	import { useParam } from '$state/param.svelte';
+	import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
+	import Form from '$lib5/form/Form.svelte';
+	import { PATTERN_USER_NAME } from '$utils/patterns';
+	import type { NewUserRegistrationRequest } from '$api/types/register.ts';
+	import { fetchPost } from '$api/fetch';
+	import ClientLogo from '$lib5/ClientLogo.svelte';
+	import IconHome from '$icons/IconHome.svelte';
 
-    let t = useI18n();
+	let clientId = useParam('client_id').get();
+	let clientName = $state('');
+	// we can't use undefined to avoid a JSON error in the Template component
+	let clientLogoUpdated = $state(-1);
+	let clientUri = $state(IS_DEV ? '/auth/v1' : '');
 
-    let refEmail: undefined | HTMLInputElement = $state();
+	let t = useI18n();
 
-    let restrictedDomain = $state('');
-    let config: undefined | UserValuesConfig = $state();
-    let redirectUri = useParam('redirect_uri');
-    let isLoading = $state(false);
-    let err = $state('');
-    let success = $state(false);
+	let restrictedDomain = $state('');
+	let redirectUri = useParam('redirect_uri');
+	let isLoading = $state(false);
+	let err = $state('');
+	let success = $state(false);
 
-    let tos: undefined | ToSLatestResponse = $state();
-    let noTosExists = $state(false);
-    let usernameExists = $state(false);
+	let action = $derived(IS_DEV ? '/auth/v1/dev/register' : '/auth/v1/users/register');
 
-    let values: NewUserRegistrationRequest = $state({
-        email: '',
-        pow: '',
-    });
-    let valuesActive = $state(1);
+	async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
+		success = false;
+		err = '';
 
-    let action = $derived(IS_DEV ? '/auth/v1/dev/register' : '/auth/v1/users/register');
+		let email = params.get('email');
+		let given_name = params.get('given_name');
+		let pow = params.get('pow');
 
-    $effect(() => {
-        refEmail?.focus();
-    });
+		if (!email || !given_name || !pow) {
+			console.error('email, given_name, pow missing');
+			return;
+		}
 
-    $effect(() => {
-        if (config) {
-            let active = 1;
+		if (restrictedDomain && !email.endsWith(restrictedDomain)) {
+			err = t.register.domainErr;
+			return;
+		}
 
-            if (config.preferred_username.preferred_username === 'required') {
-                values.preferred_username = '';
-                active += 1;
-            }
-            if (config.given_name === 'required') {
-                values.given_name = '';
-                active += 1;
-            }
-            if (config.family_name === 'required') {
-                values.family_name = '';
-                active += 1;
-            }
+		let payload: NewUserRegistrationRequest = {
+			email,
+			given_name,
+			family_name: params.get('family_name') || undefined,
+			pow,
+			redirect_uri: params.get('redirect_uri') || undefined
+		};
 
-            let uv: UserValuesRequest = {};
-            if (config.birthdate === 'required') {
-                uv.birthdate = '';
-                active += 1;
-            }
-            if (config.tz === 'required') {
-                uv.tz = 'UTC';
-                active += 1;
-            }
-            if (config.street === 'required') {
-                uv.street = '';
-                active += 1;
-            }
-            if (config.zip === 'required') {
-                uv.zip = '';
-                active += 1;
-            }
-            if (config.city === 'required') {
-                uv.city = '';
-                active += 1;
-            }
-            if (config.country === 'required') {
-                uv.country = '';
-                active += 1;
-            }
-            if (config.phone === 'required') {
-                uv.phone = '';
-                active += 1;
-            }
+		isLoading = true;
+		// await tick();
 
-            for (let v of Object.keys(uv)) {
-                if (v !== undefined) {
-                    values.user_values = uv;
-                    break;
-                }
-            }
+		const res = await fetchPost(form.action, payload);
+		if (res.error) {
+			let error = res.error.message || 'Error';
+			if (error.includes('UNIQUE constraint')) {
+				err = 'E-Mail is already registered';
+			} else {
+				err = error;
+			}
+		} else {
+			err = '';
+			success = true;
+			if (redirectUri) {
+				setTimeout(() => {
+					window.location.replace(payload.redirect_uri || '/auth/v1/account');
+				}, 3000);
+			}
+		}
 
-            valuesActive = active;
-        }
-    });
-
-    async function fetchTos() {
-        tos = undefined;
-        noTosExists = false;
-
-        let res = await fetchGet<ToSLatestResponse>('/auth/v1/tos/latest');
-        if (res.body) {
-            tos = res.body;
-        } else if (res.status === 204) {
-            noTosExists = true;
-        }
-    }
-
-    async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
-        success = false;
-        err = '';
-
-        if (!values.email) {
-            return;
-        }
-
-        if (restrictedDomain && !values.email.endsWith(restrictedDomain)) {
-            err = t.register.domainErr;
-            return;
-        }
-
-        await fetchTos();
-
-        if (tos) {
-            // noop
-        } else if (noTosExists) {
-            await submitRegistration();
-        } else {
-            console.error('logic error in ToS fetch / accept');
-        }
-    }
-
-    async function submitRegistration() {
-        isLoading = true;
-
-        values.pow = (await fetchSolvePow()) || '';
-        values.redirect_uri = redirectUri.get();
-
-        const res = await fetchPost(action, values);
-        if (res.error) {
-            let error = res.error.message || 'Error';
-            if (error.includes('UNIQUE constraint')) {
-                err = t.register.alreadyRegistered;
-            } else {
-                err = error;
-            }
-        } else {
-            err = '';
-            success = true;
-            if (redirectUri) {
-                setTimeout(() => {
-                    window.location.replace(values.redirect_uri || '/auth/v1/account');
-                }, 3000);
-            }
-        }
-
-        isLoading = false;
-    }
+		isLoading = false;
+	}
 </script>
 
 <svelte:head>
-    <title>{t?.register.register || 'Register'}</title>
+	<title>{t?.register.register || 'Register'}</title>
 </svelte:head>
 
 <Template id={TPL_RESTRICTED_EMAIL_DOMAIN} bind:value={restrictedDomain} />
-<Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
+<Template id={TPL_CLIENT_NAME} bind:value={clientName} />
+<Template id={TPL_CLIENT_URL} bind:value={clientUri} />
+<Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated} />
 
 <Main>
-    <ContentCenter>
-        <div class="container">
-            <div class="domainTxt">
-                <h1>{t.register.userReg}</h1>
-                {#if restrictedDomain}
-                    {t.register.domainRestricted}<br />
-                    {t.register.domainAllowed} <code>@{restrictedDomain}</code>
-                {/if}
-            </div>
+	<div class="outer">
+		<ContentCenter>
+			<div class="container">
+				<div class="head">
+					<ClientLogo
+						clientId={clientId || 'rauthy'}
+						updated={clientLogoUpdated > -1 ? clientLogoUpdated : undefined}
+					/>
+					{#if clientUri}
+						<a class="home" href={clientUri} aria-label="Client Home Page">
+							<IconHome color="hsla(var(--text) / .9)" />
+						</a>
+					{/if}
+				</div>
+				<div class="domainTxt">
+					<h1>{t.register.userReg}</h1>
+					{#if restrictedDomain}
+						{t.register.domainRestricted}<br />
+						{t.register.domainAllowed} <code>@{restrictedDomain}</code>
+					{/if}
+				</div>
 
-            <Form {action} {onSubmit}>
-                <div class={valuesActive > 5 ? 'valuesMany' : ''}>
-                    <Input
-                        bind:ref={refEmail}
-                        typ="email"
-                        name="email"
-                        autocomplete="email"
-                        label={t.common.email}
-                        placeholder={t.common.email}
-                        bind:value={values.email}
-                        required
-                    />
-                    {#if values.preferred_username !== undefined}
-                        <Input
-                            name="preferred_username"
-                            autocomplete="off"
-                            label={t.account.preferredUsername.preferredUsername}
-                            placeholder={t.account.preferredUsername.preferredUsername}
-                            bind:value={values.preferred_username}
-                            required
-                            isError={usernameExists}
-                            errMsg={usernameExists ? t.account.preferredUsername.notAvailable : ''}
-                            pattern={config?.preferred_username.pattern_html}
-                            onInput={() => (usernameExists = false)}
-                        />
-                    {/if}
-                    {#if values.given_name !== undefined}
-                        <Input
-                            name="given_name"
-                            autocomplete="given-name"
-                            label={t.account.givenName}
-                            placeholder={t.account.givenName}
-                            bind:value={values.given_name}
-                            pattern={PATTERN_USER_NAME}
-                            required
-                        />
-                    {/if}
-                    {#if values.family_name !== undefined}
-                        <Input
-                            name="family_name"
-                            autocomplete="family-name"
-                            label={t.account.familyName}
-                            placeholder={t.account.familyName}
-                            bind:value={values.family_name}
-                            pattern={PATTERN_USER_NAME}
-                            required
-                        />
-                    {/if}
-                    {#if values.user_values?.birthdate !== undefined}
-                        <InputDateTimeCombo
-                            name="birthdate"
-                            label={t.account.birthdate}
-                            bind:value={values.user_values.birthdate}
-                            required
-                            withDelete
-                        />
-                    {/if}
-                    {#if values.user_values?.tz !== undefined}
-                        <TZSelect bind:value={values.user_values.tz} />
-                    {/if}
+				<Form {action} {onSubmit} withPowAs="pow">
+					{#if redirectUri.get()}
+						<input type="hidden" name="redirect_uri" value={redirectUri.get()} />
+					{/if}
+					<Input
+						typ="email"
+						name="email"
+						autocomplete="email"
+						label={t.common.email}
+						placeholder={t.common.email}
+						required
+					/>
+					<Input
+						name="given_name"
+						autocomplete="given-name"
+						label={t.account.givenName}
+						placeholder={t.account.givenName}
+						pattern={PATTERN_USER_NAME}
+						required
+					/>
+					<Input
+						name="family_name"
+						autocomplete="family-name"
+						label={t.account.familyName}
+						placeholder={t.account.familyName}
+						pattern={PATTERN_USER_NAME}
+					/>
 
-                    {#if values.user_values?.street !== undefined}
-                        <Input
-                            name="street"
-                            autocomplete="street-address"
-                            label={t.account.street}
-                            placeholder={t.account.street}
-                            bind:value={values.user_values.street}
-                            required
-                            maxLength={48}
-                            pattern={PATTERN_STREET}
-                        />
-                    {/if}
-                    {#if values.user_values?.zip !== undefined}
-                        <Input
-                            name="zip"
-                            autocomplete="postal-code"
-                            label={t.account.zip}
-                            placeholder={t.account.zip}
-                            bind:value={values.user_values.zip}
-                            required
-                            maxLength={24}
-                            pattern={PATTERN_ALNUM}
-                        />
-                    {/if}
-                    {#if values.user_values?.city !== undefined}
-                        <Input
-                            name="city"
-                            autocomplete="address-level2"
-                            label={t.account.city}
-                            placeholder={t.account.city}
-                            bind:value={values.user_values.city}
-                            required
-                            maxLength={48}
-                            pattern={PATTERN_CITY}
-                        />
-                    {/if}
-                    {#if values.user_values?.country !== undefined}
-                        <Input
-                            name="country"
-                            autocomplete="country"
-                            label={t.account.country}
-                            placeholder={t.account.country}
-                            bind:value={values.user_values.country}
-                            required
-                            maxLength={48}
-                            pattern={PATTERN_CITY}
-                        />
-                    {/if}
-                    {#if values.user_values?.phone !== undefined}
-                        <Input
-                            name="phone"
-                            autocomplete="tel"
-                            label={t.account.phone}
-                            placeholder={t.account.phone}
-                            bind:value={values.user_values.phone}
-                            required
-                            maxLength={32}
-                            pattern={PATTERN_PHONE}
-                        />
-                    {/if}
-                </div>
+					<div class="submit">
+						<Button type="submit" {isLoading}>{t.register.register}</Button>
+					</div>
+					{#if success}
+						<div class="success">
+							{t.register.success}<br />
+							{t.register.emailCheck}
+						</div>
+					{:else if err}
+						<div class="err">
+							{err}
+						</div>
+					{/if}
+				</Form>
+			</div>
 
-                <div class="submit">
-                    <Button type="submit" {isLoading}>{t.register.register}</Button>
-                </div>
-                {#if success}
-                    <div class="success">
-                        {t.register.success}<br />
-                        {t.register.emailCheck}
-                    </div>
-                {:else if err}
-                    <div class="err">
-                        {err}
-                    </div>
-                {/if}
-            </Form>
-        </div>
-
-        {#if tos}
-            <TosAccept
-                {tos}
-                forceAccept
-                onToSAccept={submitRegistration}
-                onToSCancel={() => (tos = undefined)}
-                skipRequest
-            />
-        {/if}
-
-        <ThemeSwitch absolute />
-        <LangSelector absolute />
-    </ContentCenter>
+			<ThemeSwitch absolute />
+			<LangSelector absolute />
+		</ContentCenter>
+	</div>
 </Main>
 
 <style>
-    .submit {
-        margin-top: 0.66rem;
-    }
+	.submit {
+		margin-top: 0.66rem;
+	}
 
-    .container {
-        padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        border-radius: var(--border-radius);
-        background: hsla(var(--bg-high) / 0.25);
-    }
+	.outer {
+		width: 100dvw;
+		height: 100dvh;
+		background: hsla(var(--bg-high) / 0.25);
+	}
 
-    .err {
-        max-width: 16rem;
-    }
+	.container {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		max-width: 21rem;
+		padding: 20px;
+		border-radius: 5px;
+		border: 1px solid hsl(var(--bg-high));
+		background: hsl(var(--bg));
+	}
 
-    .err,
-    .success {
-        margin-top: 0.5rem;
-    }
+	.err {
+		max-width: 16rem;
+	}
 
-    .domainTxt {
-        margin: 0.5rem 0;
-    }
+	.err,
+	.success {
+		margin: 0.5rem 0;
+	}
 
-    @media (min-width: 35rem) {
-        .valuesMany {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            column-gap: 1.5rem;
-        }
-    }
+	.domainTxt {
+		margin: 0 0.5rem;
+	}
+
+	.head {
+		display: flex;
+		justify-content: space-between;
+	}
+
+	.home {
+		margin-right: 5px;
+		cursor: pointer;
+	}
 </style>

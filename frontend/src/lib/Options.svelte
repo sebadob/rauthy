@@ -1,8 +1,8 @@
 <script lang="ts">
-    import Popover from '$lib5/Popover.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import SearchBar from '$lib5/search_bar/SearchBar.svelte';
-    import IconChevronDown from '$icons/IconChevronDown.svelte';
+    import Popover from "$lib5/Popover.svelte";
+    import Button from "$lib5/button/Button.svelte";
+    import SearchBar from "$lib5/search_bar/SearchBar.svelte";
+    import IconChevronDown from "$icons/IconChevronDown.svelte";
 
     let {
         ref = $bindable(),
@@ -10,7 +10,7 @@
         options = [],
         name,
         value = $bindable(),
-        maxHeight = '20rem',
+        maxHeight,
         offsetTop,
         offsetLeft,
         borderless = false,
@@ -21,21 +21,21 @@
         onUp,
         onDown,
     }: {
-        ref?: undefined | HTMLButtonElement;
-        ariaLabel: string;
-        options: string[] | number[];
-        name?: string;
-        value?: string | number;
-        maxHeight?: string;
-        offsetTop?: string;
-        offsetLeft?: string;
-        borderless?: boolean;
-        withSearch?: boolean;
-        onChange?: (value: string | number | undefined) => void;
-        onLeft?: () => void;
-        onRight?: () => void;
-        onUp?: () => void;
-        onDown?: () => void;
+        ref?: undefined | HTMLButtonElement,
+        ariaLabel: string,
+        options: string[] | number[],
+        name?: string,
+        value?: string | number,
+        maxHeight?: string,
+        offsetTop?: string,
+        offsetLeft?: string,
+        borderless?: boolean,
+        withSearch?: boolean,
+        onChange?: (value: string | number | undefined) => void,
+        onLeft?: () => void,
+        onRight?: () => void,
+        onUp?: () => void,
+        onDown?: () => void,
     } = $props();
 
     $inspect(options).with(() => {
@@ -57,9 +57,7 @@
         }
 
         if (typeof value === 'string') {
-            return options.filter(opt =>
-                (opt as string).toLowerCase().includes(searchValue.toLowerCase()),
-            );
+            return options.filter(opt => (opt as string).toLowerCase().includes(searchValue.toLowerCase()));
         }
 
         let searchInt = Number.parseInt(searchValue) || value;
@@ -80,7 +78,7 @@
         if (selected === -1) {
             refOptions?.scrollTo({
                 top: 0,
-                behavior: 'smooth',
+                behavior: "smooth",
             });
         }
 
@@ -103,7 +101,7 @@
     function focusCurrElem() {
         if (refOptions) {
             let button = refOptions.getElementsByTagName('button')[selected];
-            button?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            button?.scrollIntoView({behavior: 'smooth', block: 'center'});
             button?.focus();
         } else {
             console.error('refOptions is undefined');
@@ -164,34 +162,34 @@
 </script>
 
 <Popover
-    bind:ref
-    ariaLabel={ariaLabel || value?.toString() || 'Options'}
-    roleButton="combobox"
-    btnInvisible
-    bind:close
-    {offsetTop}
-    {offsetLeft}
-    {onToggle}
-    {onLeft}
-    {onRight}
-    {onUp}
-    {onDown}
+        bind:ref
+        ariaLabel={ariaLabel || value?.toString() || 'Options'}
+        roleButton="combobox"
+        btnInvisible
+        bind:close
+        {offsetTop}
+        {offsetLeft}
+        {onToggle}
+        {onLeft}
+        {onRight}
+        {onUp}
+        {onDown}
 >
     {#snippet button()}
         <div class="btn" data-border={!borderless}>
             <div class="btnText" title={ariaLabel}>
                 {value}
             </div>
-            <IconChevronDown width=".8rem" />
+            <IconChevronDown width=".8rem"/>
         </div>
     {/snippet}
 
-    <div role="listbox" tabindex="0" class="popover" style:max-height={maxHeight} {onkeydown}>
+    <div role="listbox" tabindex="0" class="popover 1234" style:max-height={maxHeight} {onkeydown}>
         {#if withSearch}
             <SearchBar
-                bind:value={searchValue}
-                bind:focus={focusSearch}
-                onFocus={() => (selected = -1)}
+                    bind:value={searchValue}
+                    bind:focus={focusSearch}
+                    onFocus={() => selected = -1}
             />
         {/if}
 
@@ -199,9 +197,9 @@
             {#each optionsFiltered as option, i}
                 <Button invisible invisibleOutline onclick={ev => select(ev, option)}>
                     <div
-                        class="optPopover"
-                        aria-selected={value === option}
-                        data-focus={selected === i}
+                            class="optPopover"
+                            aria-selected={value === option}
+                            data-focus={selected === i}
                     >
                         {option}
                     </div>
@@ -209,27 +207,27 @@
             {/each}
         </div>
     </div>
-    <input type="hidden" {name} aria-hidden="true" bind:value />
+    <input type="hidden" {name} aria-hidden="true" bind:value/>
 </Popover>
 
 <style>
     .btn {
-        padding: 0.15rem;
+        padding: .15rem;
         display: inline-flex;
         color: hsl(var(--text));
         border-radius: var(--border-radius);
         font-weight: normal;
-        font-size: 0.9rem;
+        font-size: .9rem;
         transition: all 150ms;
     }
 
-    .btn[data-border='true'] {
-        padding: 0.15rem 0.33rem 0.3rem 0.5rem;
+    .btn[data-border="true"] {
+        padding: .15rem .33rem .3rem .5rem;
         border: 1px solid hsl(var(--bg-high));
     }
 
     .btnText {
-        margin: 0 0.25rem;
+        margin: 0 .25rem;
         text-wrap: nowrap;
     }
 
@@ -239,7 +237,7 @@
 
     .optPopover {
         text-align: left;
-        padding: 0.25rem 0.5rem;
+        padding: .25rem 0.7rem;
         color: hsl(var(--text));
         font-weight: normal;
         border-radius: var(--border-radius);
@@ -247,7 +245,7 @@
         transition: all 150ms;
     }
 
-    .optPopover[aria-selected='true'] {
+    .optPopover[aria-selected="true"] {
         color: hsl(var(--text-high));
     }
 
@@ -255,7 +253,7 @@
         color: hsl(var(--action));
     }
 
-    .optPopover[data-focus='true'] {
+    .optPopover[data-focus="true"] {
         color: hsl(var(--action));
         background: hsl(var(--bg-high));
     }
