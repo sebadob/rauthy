@@ -15,3 +15,10 @@ export interface ToSLatestResponse {
 	is_html: boolean;
 	content: string;
 }
+
+export interface ToSUserAcceptResponse {
+	user_id: string;
+	tos_ts: number;
+	accept_ts: number;
+	location: string;
+}

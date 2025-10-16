@@ -1,8 +1,9 @@
 use crate::ReqPrincipal;
-use actix_web::web::Json;
+use actix_web::web::{Json, Path};
 use actix_web::{HttpResponse, get, post};
-use rauthy_api_types::tos::{ToSLatestResponse, ToSRequest, ToSResponse};
+use rauthy_api_types::tos::{ToSLatestResponse, ToSRequest, ToSResponse, ToSUserAcceptResponse};
 use rauthy_data::entity::tos::ToS;
+use rauthy_data::entity::tos_user_accept::ToSUserAccept;
 use rauthy_data::entity::users::User;
 use rauthy_error::ErrorResponse;
 
@@ -83,6 +84,37 @@ pub async fn get_tos_latest() -> Result<HttpResponse, ErrorResponse> {
     } else {
         Ok(HttpResponse::NoContent().finish())
     }
+}
+
+/// GET user accept status for all existing ToS
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/tos/user/{id}",
+    tag = "tos",
+    responses(
+        (status = 200, description = "Ok", body = [ToSUserAcceptResponse]),
+        (status = 204, description = "NoContent"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[get("/tos/user/{id}")]
+pub async fn get_tos_user_status(
+    principal: ReqPrincipal,
+    uid: Path<String>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let res = ToSUserAccept::find_all(uid.into_inner())
+        .await?
+        .into_iter()
+        .map(ToSUserAcceptResponse::from)
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(res))
 }
 
 /// Accept an updated ToS for existing accounts

@@ -1,6 +1,7 @@
 use crate::database::{Cache, DB};
 use chrono::Utc;
 use hiqlite_macros::params;
+use rauthy_api_types::tos::ToSUserAcceptResponse;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
@@ -64,7 +65,21 @@ VALUES ($1, $2, $3, $4)"#;
         Ok(())
     }
 
-    pub async fn find(user_id: String) -> Result<Option<Self>, ErrorResponse> {
+    pub async fn find_all(user_id: String) -> Result<Vec<Self>, ErrorResponse> {
+        let sql = r#"
+SELECT * FROM tos_user_accept
+WHERE user_id = $1"#;
+
+        let res = if is_hiqlite() {
+            DB::hql().query_as(sql, params!(user_id)).await?
+        } else {
+            DB::pg_query(sql, &[&user_id], 0).await?
+        };
+
+        Ok(res)
+    }
+
+    pub async fn find_latest(user_id: String) -> Result<Option<Self>, ErrorResponse> {
         if let Some(slf) = DB::hql().get(Cache::ToS, Self::cache_idx(&user_id)).await? {
             return Ok(slf);
         }
@@ -95,5 +110,16 @@ impl ToSUserAccept {
     #[inline]
     fn cache_idx(user_id: &str) -> String {
         format!("uid_{user_id}")
+    }
+}
+
+impl From<ToSUserAccept> for ToSUserAcceptResponse {
+    fn from(value: ToSUserAccept) -> Self {
+        Self {
+            user_id: value.user_id,
+            tos_ts: value.tos_ts,
+            accept_ts: value.accept_ts,
+            location: value.location,
+        }
     }
 }

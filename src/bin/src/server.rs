@@ -416,6 +416,7 @@ fn api_services() -> actix_web::Scope {
                 .service(tos::get_tos)
                 .service(tos::post_tos)
                 .service(tos::get_tos_latest)
+                .service(tos::get_tos_user_status)
                 .service(tos::post_tos_accept)
                 .service(users::get_user_password_reset)
                 .service(users::put_user_password_reset)
