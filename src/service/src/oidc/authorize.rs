@@ -97,6 +97,16 @@ pub async fn post_authorize(
         user.last_failed_login = None;
         user.failed_login_attempts = None;
         user.save(None).await?;
+
+        // TODO Update ToS check here for non-webauthn accounts?
+        //  If we do it here, the user has all the time necessary for reading and accepting it, and
+        //  no auth code will expire in the background. The only thing we need to consider here, is
+        //  the the UI should re-send the same login data after an "accept" and the password hash
+        //  and compare will happen twice. This will use a bit more resources on the server side
+        //  after a ToS update, but will probably have the best UX.
+        //
+        // TODO Is is possible to find a similar spot for Webauthn logins without issuing an
+        //  expiring auth code upfront?
     }
     // If the password was correct, we don't want a login delay anymore.
     // It should only prevent username enumeration and brute force, not degrade the UX.
@@ -123,6 +133,19 @@ pub async fn post_authorize(
         client.auth_code_lifetime
     };
     let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
+
+    // TODO If the user has webauthn enabled and needs to accept a ToS update, we run into an issue
+    //  here. The AuthCode will start to expire from this moment on, and we cannot request a ToS
+    //  accept at this point, because we are BEFORE the actual Webauthn auth. We must only show and
+    //  possibly accept it after a successful Webauthn Auth, but with the current code logic, the
+    //  Auth Code will already be expiring at this point, while the user needs to read and accept
+    //  the ToS first.
+    //  We probably need some data in between. Maybe something like AuthCodeToSAwait, which will
+    //  expire way slower (like 30 minutes), and can be used as an additional step in between AFTER
+    //  the user has accepted an updated ToS. From this code, after ToS accept, the actual AuthCode
+    //  could be generated with the original expiry without sacrificing security.
+    //  However, this in-between AuthCde would require quite a bit of code restructure in different
+    //  places and more work.
     let code = AuthCode::new(
         user.id.clone(),
         client.id,

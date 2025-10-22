@@ -39,6 +39,8 @@ use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
+use rauthy_data::entity::tos::ToS;
+use rauthy_data::entity::tos_user_accept::ToSUserAccept;
 use rauthy_data::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use rauthy_data::entity::user_revoke::UserRevoke;
 use rauthy_data::entity::users::User;
@@ -50,6 +52,7 @@ use rauthy_data::events::event::Event;
 use rauthy_data::html::HtmlCached;
 use rauthy_data::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
 use rauthy_data::ipgeo;
+use rauthy_data::ipgeo::get_location;
 use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -404,7 +407,7 @@ pub async fn post_users_register_handle(
     if !RauthyConfig::get().vars.user_registration.enable {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
-            "Open User Registration is not allowed".to_string(),
+            "Open User Registration is not allowed",
         ));
     }
     payload.validate()?;
@@ -461,6 +464,12 @@ pub async fn post_users_register_handle(
         ))
         .await
         .unwrap();
+
+    if let Some(tos) = ToS::find_latest().await? {
+        let ip = real_ip_from_req(&req)?;
+        let loc = get_location(&req, ip)?;
+        ToSUserAccept::create(user.id.clone(), tos.ts, ip, loc).await?;
+    }
 
     task::spawn(async move {
         let email = user.email.clone();

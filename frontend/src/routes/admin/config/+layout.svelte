@@ -38,6 +38,9 @@
     <NavLinkSub href="/auth/v1/admin/config/backups">
         Backups
     </NavLinkSub>
+    <NavLinkSub href="/auth/v1/admin/config/tos">
+        {ta.tos.tos}
+    </NavLinkSub>
 </NavSub>
 
 <ContentAdmin>
