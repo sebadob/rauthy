@@ -19,6 +19,7 @@ pub mod vault_config;
 
 pub enum AuthStep {
     LoggedIn(AuthStepLoggedIn),
+    AwaitToSAccept(AwaitToSAccept),
     AwaitWebauthn(AuthStepAwaitWebauthn),
     ProviderLink,
 }
@@ -29,6 +30,14 @@ pub struct AuthStepLoggedIn {
     pub header_loc: (HeaderName, HeaderValue),
     pub header_csrf: (HeaderName, HeaderValue),
     pub header_origin: Option<(HeaderName, HeaderValue)>,
+}
+
+pub struct AwaitToSAccept {
+    pub code: String,
+    pub header_csrf: (HeaderName, HeaderValue),
+    pub header_origin: Option<(HeaderName, HeaderValue)>,
+    pub user_id: String,
+    pub session: Session,
 }
 
 pub struct AuthStepAwaitWebauthn {

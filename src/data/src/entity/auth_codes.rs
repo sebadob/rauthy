@@ -1,11 +1,11 @@
 use crate::database::{Cache, DB};
 use crate::rauthy_config::RauthyConfig;
+use chrono::Utc;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
-use time::OffsetDateTime;
 
 #[derive(Deserialize, Serialize)]
 pub struct AuthCode {
@@ -48,10 +48,9 @@ impl AuthCode {
     }
 
     // Saves an Authorization Code
-    pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = (300 + RauthyConfig::get().vars.webauthn.req_exp) as i64;
+    pub async fn save(&self, ttl: i32) -> Result<(), ErrorResponse> {
         DB::hql()
-            .put(Cache::AuthCode, self.id.clone(), self, Some(ttl))
+            .put(Cache::AuthCode, self.id.clone(), self, Some(ttl as i64))
             .await?;
         Ok(())
     }
@@ -70,9 +69,9 @@ impl AuthCode {
         lifetime_secs: i32,
     ) -> Self {
         let id = get_rand(64);
-        let exp = OffsetDateTime::now_utc()
-            .add(time::Duration::seconds(lifetime_secs as i64))
-            .unix_timestamp();
+        let exp = Utc::now()
+            .add(chrono::Duration::seconds(lifetime_secs as i64))
+            .timestamp();
         Self {
             id,
             exp,
@@ -85,77 +84,61 @@ impl AuthCode {
             scopes,
         }
     }
+
+    /// CAUTION: DO NOT use this reset in any other case than after accepting updated ToS!
+    pub fn reset_exp(&mut self, auth_code_lifetime: i32) -> Result<(), ErrorResponse> {
+        self.exp = Utc::now()
+            .add(chrono::Duration::seconds(auth_code_lifetime as i64))
+            .timestamp();
+
+        Ok(())
+    }
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct AuthCodeToSAwait {
-    pub id: String,
-    pub exp: i64,
-    pub client_id: String,
-    pub user_id: String,
-    pub session_id: Option<String>,
-    pub challenge: Option<String>,
-    pub challenge_method: Option<String>,
-    pub nonce: Option<String>,
-    pub scopes: Vec<String>,
+    pub auth_code: String,
+    pub await_code: String,
+    pub auth_code_lifetime: i32,
+    pub email: Option<String>,
+    pub header_loc: Option<String>,
+    pub header_origin: Option<String>,
 }
 
 // CRUD
 impl AuthCodeToSAwait {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
         DB::hql()
-            .delete(Cache::AuthCode, Self::cache_idx(&self.id))
+            .delete(Cache::AuthCode, Self::cache_idx(&self.await_code))
             .await?;
         Ok(())
     }
 
-    pub async fn find(id: &str) -> Result<Option<Self>, ErrorResponse> {
-        Ok(DB::hql().get(Cache::AuthCode, Self::cache_idx(id)).await?)
+    pub async fn find(code: &str) -> Result<Option<Self>, ErrorResponse> {
+        Ok(DB::hql()
+            .get(Cache::AuthCode, Self::cache_idx(code))
+            .await?)
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = (300 + RauthyConfig::get().vars.webauthn.req_exp) as i64;
         DB::hql()
-            .put(Cache::AuthCode, Self::cache_idx(&self.id), self, Some(ttl))
+            .put(
+                Cache::AuthCode,
+                Self::cache_idx(&self.await_code),
+                &self,
+                Some(RauthyConfig::get().vars.tos.accept_timeout as i64),
+            )
             .await?;
+
         Ok(())
     }
 }
 
 impl AuthCodeToSAwait {
     #[inline]
-    fn cache_idx(id: &str) -> String {
+    fn cache_idx(await_code: &str) -> String {
         // Note: We don't want to simply index the await
         // codes by id to never have an accidental misuse.
-        format!("await_{id}")
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub async fn new(
-        user_id: String,
-        client_id: String,
-        session_id: Option<String>,
-        challenge: Option<String>,
-        challenge_method: Option<String>,
-        nonce: Option<String>,
-        scopes: Vec<String>,
-        lifetime_secs: i32,
-    ) -> Self {
-        let id = get_rand(64);
-        let exp = OffsetDateTime::now_utc()
-            .add(time::Duration::seconds(lifetime_secs as i64))
-            .unix_timestamp();
-
-        Self {
-            id,
-            exp,
-            client_id,
-            user_id,
-            session_id,
-            challenge,
-            challenge_method,
-            nonce,
-            scopes,
-        }
+        format!("tos_aw_{await_code}")
     }
 }

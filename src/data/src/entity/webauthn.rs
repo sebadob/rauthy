@@ -1,5 +1,6 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
+use crate::entity::auth_codes::AuthCode;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::users::{AccountType, User};
@@ -17,7 +18,7 @@ use rauthy_api_types::users::{
     MfaPurpose, PasskeyResponse, WebauthnAuthFinishRequest, WebauthnAuthStartResponse,
     WebauthnLoginFinishResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
-use rauthy_common::constants::{COOKIE_MFA, IDX_WEBAUTHN};
+use rauthy_common::constants::{CACHE_TTL_AUTH_CODE, COOKIE_MFA, IDX_WEBAUTHN};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{base64_decode, deserialize, serialize};
 use rauthy_common::utils::{base64_encode, get_rand};
@@ -617,6 +618,9 @@ impl WebauthnAdditionalData {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct WebauthnLoginReq {
     pub code: String,
+    // MUST NOT be set if this is a regular login. Only set to `Some(_)`
+    // if the user needs to accept updated ToS.
+    pub auth_code: Option<String>,
     pub user_id: String,
     pub header_loc: String,
     pub header_origin: Option<String>,
@@ -847,7 +851,21 @@ pub async fn auth_finish(
 
             info!(user.id = uid, "Webauthn Authentication successful");
 
-            Ok(auth_data.data)
+            if let WebauthnAdditionalData::Login(data) = auth_data.data {
+                if data.is_tos_await {
+                    // TODO the easiest solution would be to have a very high TTL for ToD
+                    //  await and re-save the auth_code at this point with the default value.
+                    //  However, this means we have an additional cache lookup + save.
+                    if let Some(code) = AuthCode::find(data.code).await? {
+                        todo!();
+                        code.save(CACHE_TTL_AUTH_CODE).await?;
+                    }
+                }
+
+                todo!("return reduced data set and omit the `code` in the response")
+            } else {
+                Ok(auth_data.data)
+            }
         }
         Err(err) => {
             error!(?err, "Webauthn Auth Finish");

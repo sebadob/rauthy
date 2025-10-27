@@ -7,6 +7,12 @@ pub struct ToSRequest {
     pub content: String,
 }
 
+#[derive(Deserialize, ToSchema)]
+pub struct ToSAcceptRequest {
+    pub tos_ts: i64,
+    pub accept_code: String,
+}
+
 #[derive(Serialize, ToSchema)]
 pub struct ToSResponse {
     pub ts: i64,

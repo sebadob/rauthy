@@ -1,11 +1,14 @@
 use crate::ReqPrincipal;
 use actix_web::web::{Json, Path};
 use actix_web::{HttpResponse, get, post};
-use rauthy_api_types::tos::{ToSLatestResponse, ToSRequest, ToSResponse, ToSUserAcceptResponse};
+use rauthy_api_types::tos::{
+    ToSAcceptRequest, ToSLatestResponse, ToSRequest, ToSResponse, ToSUserAcceptResponse,
+};
+use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use rauthy_data::entity::tos::ToS;
 use rauthy_data::entity::tos_user_accept::ToSUserAccept;
 use rauthy_data::entity::users::User;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 
 /// Returns all ToS
 ///
@@ -132,12 +135,40 @@ pub async fn get_tos_user_status(
     ),
 )]
 #[post("/tos/accept/{ts}")]
-pub async fn post_tos_accept(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    // TODO we may run into an issue here if the user needs to accept updated ToS during the login.
-    //  In the ideal moment for this, the session may not be in auth state yet, but in between.
-    principal.validate_session_auth()?;
+pub async fn post_tos_accept(
+    principal: ReqPrincipal,
+    payload: Json<ToSAcceptRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth_or_init()?;
 
-    // let user = User::find(principal.user_id()?.to_string()).await?;
+    // TODO This endpoint should only be called directly after a successful login after a ToS
+    //  update. This means we need to handle AuthCode lifetime and re-insert with reduced TTL
+    //  most probably.
+
+    let Some(code_await) = AuthCodeToSAwait::find(&payload.accept_code).await? else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotFound,
+            "Invalid ToS accept code",
+        ));
+    };
+
+    let Some(auth_code) = AuthCode::find(code_await.auth_code).await? else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotFound,
+            "AuthCode does not exist anymore",
+        ));
+    };
+
+    let user_id = principal.user_id()?.to_string();
+    if user_id != auth_code.user_id {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "Mismatch in UserID",
+        ));
+    }
+    let user = User::find(principal.user_id()?.to_string()).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
 
     todo!()
 }
