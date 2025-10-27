@@ -304,6 +304,10 @@ label[data-required='true']:after {
 	color: hsla(var(--error) / 0.9);
 }
 
+.info {
+    overflow: auto;
+}
+
 input,
 .input {
 	margin: 0.33rem 0;
