@@ -241,13 +241,13 @@
 
     .l2 {
         color: hsl(var(--action));
-        border: 1px solid hsl(var(--action));
+        //border: 1px solid hsl(var(--action));
         background: transparent;
     }
 
     .l3 {
         color: hsla(var(--action) / .9);
-        border: none;
+        //border: none;
         background: transparent;
     }
 
