@@ -18,6 +18,7 @@ pub mod roles;
 pub mod scopes;
 pub mod sessions;
 pub mod themes;
+pub mod tos;
 pub mod users;
 
 #[derive(Deserialize, ToSchema)]

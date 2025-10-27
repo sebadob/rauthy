@@ -3,17 +3,20 @@ use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
 use rauthy_api_types::oidc::{LoginRefreshRequest, LoginRequest};
-use rauthy_common::constants::COOKIE_MFA;
+use rauthy_api_types::tos::ToSLatestResponse;
+use rauthy_common::constants::{CACHE_TTL_AUTH_CODE, COOKIE_MFA};
 use rauthy_common::utils::get_rand;
 use rauthy_data::api_cookie::ApiCookie;
-use rauthy_data::entity::auth_codes::AuthCode;
+use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::tos::ToS;
+use rauthy_data::entity::tos_user_accept::ToSUserAccept;
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
 use rauthy_data::rauthy_config::RauthyConfig;
-use rauthy_data::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
+use rauthy_data::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::fmt::Write;
 use tracing::trace;
@@ -102,6 +105,8 @@ pub async fn post_authorize(
     // It should only prevent username enumeration and brute force, not degrade the UX.
     *add_login_delay = false;
 
+    let need_tos_accept = user.needs_tos_update().await?;
+
     // client validations
     let client = Client::find_maybe_ephemeral(req_data.client_id).await?;
     client.validate_enabled()?;
@@ -116,13 +121,16 @@ pub async fn post_authorize(
     let header_origin = client.get_validated_origin_header(req)?;
 
     // build authorization code
-    let webauthn_req_exp = RauthyConfig::get().vars.webauthn.req_exp;
-    let code_lifetime = if user.has_webauthn_enabled() {
-        client.auth_code_lifetime + webauthn_req_exp as i32
-    } else {
-        client.auth_code_lifetime
-    };
+    let config = RauthyConfig::get();
+    let mut code_lifetime = client.auth_code_lifetime;
+    if user.has_webauthn_enabled() {
+        code_lifetime += config.vars.webauthn.req_exp as i32;
+    }
+    if need_tos_accept {
+        code_lifetime += config.vars.tos.accept_timeout as i32;
+    }
     let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
+
     let code = AuthCode::new(
         user.id.clone(),
         client.id,
@@ -133,7 +141,7 @@ pub async fn post_authorize(
         scopes,
         code_lifetime,
     );
-    code.save().await?;
+    code.save(code_lifetime).await?;
 
     let append_char = if req_data.redirect_uri.contains('?') {
         '&'
@@ -145,8 +153,9 @@ pub async fn post_authorize(
         write!(loc, "&state={state}")?;
     };
 
-    // check if we need to validate the 2nd factor
     if user.has_webauthn_enabled() {
+        // Webauthn-enabled account
+
         session.set_mfa(true).await?;
 
         let step = AuthStepAwaitWebauthn {
@@ -155,12 +164,18 @@ pub async fn post_authorize(
             header_origin,
             user_id: user.id.clone(),
             email: user.email,
-            exp: webauthn_req_exp as u64,
+            exp: config.vars.webauthn.req_exp as u64,
             session,
         };
 
+        if need_tos_accept {
+            todo!(
+                "when password flow works, probably save an enum here with a possible AuthCodeToSAwait"
+            );
+        }
         WebauthnLoginReq {
             code: step.code.clone(),
+            auth_code: if need_tos_accept { Some(code.id) } else { None },
             user_id: user.id,
             header_loc: loc,
             header_origin: step
@@ -173,13 +188,37 @@ pub async fn post_authorize(
 
         Ok(AuthStep::AwaitWebauthn(step))
     } else {
-        Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
-            user_id: user.id,
-            email: user.email,
-            header_loc: (header::LOCATION, HeaderValue::from_str(&loc)?),
-            header_csrf: Session::get_csrf_header(&session.csrf_token),
-            header_origin,
-        }))
+        // password only account
+
+        if need_tos_accept {
+            let code_await = AuthCodeToSAwait {
+                auth_code: code.id,
+                await_code: get_rand(64),
+                auth_code_lifetime: client.auth_code_lifetime,
+                email: Some(user.email),
+                header_loc: Some(loc),
+                header_origin: header_origin
+                    .as_ref()
+                    .map(|(_, v)| v.to_str().unwrap().to_string()),
+            };
+            code_await.save().await?;
+
+            Ok(AuthStep::AwaitToSAccept(AwaitToSAccept {
+                code: code_await.await_code,
+                user_id: user.id,
+                header_csrf: Session::get_csrf_header(&session.csrf_token),
+                header_origin,
+                session,
+            }))
+        } else {
+            Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
+                user_id: user.id,
+                email: user.email,
+                header_loc: (header::LOCATION, HeaderValue::from_str(&loc)?),
+                header_csrf: Session::get_csrf_header(&session.csrf_token),
+                header_origin,
+            }))
+        }
     }
 }
 
@@ -203,12 +242,18 @@ pub async fn post_authorize_refresh(
     client.validate_user_groups(&user)?;
 
     let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
-    let webauthn_req_exp = RauthyConfig::get().vars.webauthn.req_exp;
-    let code_lifetime = if user.has_webauthn_enabled() {
-        client.auth_code_lifetime + webauthn_req_exp as i32
-    } else {
-        client.auth_code_lifetime
-    };
+
+    let config = RauthyConfig::get();
+    let mut code_lifetime = client.auth_code_lifetime;
+    if user.has_webauthn_enabled() {
+        code_lifetime += config.vars.webauthn.req_exp as i32
+    }
+    let need_tos_accept = user.needs_tos_update().await?;
+    if need_tos_accept {
+        code_lifetime += config.vars.tos.accept_timeout as i32;
+    }
+
+    todo!("check need_tos_accept return result down below");
 
     let code = AuthCode::new(
         user.id.clone(),
@@ -220,7 +265,7 @@ pub async fn post_authorize_refresh(
         scopes,
         code_lifetime,
     );
-    code.save().await?;
+    code.save(code_lifetime).await?;
 
     // We don't need another location check - we can only get here with an already authenticated
     // session and no auth-check is being performed.
@@ -252,6 +297,7 @@ pub async fn post_authorize_refresh(
                 .header_origin
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
+            is_tos_await: need_tos_accept,
         };
         login_req.save().await?;
 

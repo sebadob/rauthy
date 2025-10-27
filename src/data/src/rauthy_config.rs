@@ -269,6 +269,7 @@ pub struct Vars {
     pub suspicious_requests: VarsSuspiciousRequests,
     pub templates: VarsTemplates,
     pub tls: VarsTls,
+    pub tos: VarsToS,
     pub user_pictures: VarsUserPictures,
     pub user_registration: VarsUserRegistration,
     pub webauthn: VarsWebauthn,
@@ -672,6 +673,9 @@ impl Default for Vars {
                 key_path: None,
                 generate_self_signed: false,
             },
+            tos: VarsToS {
+                accept_timeout: 900,
+            },
             user_pictures: VarsUserPictures {
                 storage_type: "db".into(),
                 path: "./pictures".into(),
@@ -771,6 +775,7 @@ impl Vars {
         slf.parse_suspicious_requests(&mut table);
         slf.parse_templates(&mut table);
         slf.parse_tls(&mut table);
+        slf.parse_tos(&mut table);
         slf.parse_user_pictures(&mut table);
         slf.parse_user_registration(&mut table);
         slf.parse_webauthn(&mut table);
@@ -2343,6 +2348,14 @@ impl Vars {
         }
     }
 
+    fn parse_tos(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "tos");
+
+        if let Some(v) = t_u16(&mut table, "tos", "accept_timeout", "TOS_ACCEPT_TIMEOUT") {
+            self.tos.accept_timeout = v;
+        }
+    }
+
     fn parse_user_pictures(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "user_pictures");
 
@@ -2877,6 +2890,11 @@ pub struct VarsTls {
     pub cert_path: Option<String>,
     pub key_path: Option<String>,
     pub generate_self_signed: bool,
+}
+
+#[derive(Debug)]
+pub struct VarsToS {
+    pub accept_timeout: u16,
 }
 
 #[derive(Debug)]
