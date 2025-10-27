@@ -123,10 +123,10 @@ pub async fn get_tos_user_status(
 /// Accept an updated ToS for existing accounts
 ///
 /// **Permissions**
-/// - valid session
+/// - session in init or auth state
 #[utoipa::path(
     post,
-    path = "/tos/accept/{ts}",
+    path = "/tos/accept",
     tag = "tos",
     responses(
         (status = 200, description = "Ok"),
@@ -134,7 +134,7 @@ pub async fn get_tos_user_status(
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
 )]
-#[post("/tos/accept/{ts}")]
+#[post("/tos/accept")]
 pub async fn post_tos_accept(
     principal: ReqPrincipal,
     payload: Json<ToSAcceptRequest>,
@@ -169,6 +169,8 @@ pub async fn post_tos_accept(
     let user = User::find(principal.user_id()?.to_string()).await?;
     user.check_enabled()?;
     user.check_expired()?;
+
+    let tos = ToS::find(payload.tos_ts).await?;
 
     todo!()
 }

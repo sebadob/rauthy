@@ -1,6 +1,6 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
-use crate::entity::auth_codes::AuthCode;
+use crate::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::users::{AccountType, User};
@@ -618,12 +618,10 @@ impl WebauthnAdditionalData {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct WebauthnLoginReq {
     pub code: String,
-    // MUST NOT be set if this is a regular login. Only set to `Some(_)`
-    // if the user needs to accept updated ToS.
-    pub auth_code: Option<String>,
     pub user_id: String,
     pub header_loc: String,
     pub header_origin: Option<String>,
+    pub is_tos_await: bool,
 }
 
 // CRUD
@@ -856,9 +854,19 @@ pub async fn auth_finish(
                     // TODO the easiest solution would be to have a very high TTL for ToD
                     //  await and re-save the auth_code at this point with the default value.
                     //  However, this means we have an additional cache lookup + save.
-                    if let Some(code) = AuthCode::find(data.code).await? {
+                    if let Some(await_code) = AuthCodeToSAwait::find(&data.code).await? {
+                        await_code.delete().await?;
+
+                        let Some(mut auth_code) = AuthCode::find(await_code.auth_code).await?
+                        else {
+                            return Err(ErrorResponse::new(
+                                ErrorResponseType::SessionTimeout,
+                                "Authentication timeout, please try a new login",
+                            ));
+                        };
+                        auth_code.reset_exp(await_code.auth_code_lifetime).await?;
+
                         todo!();
-                        code.save(CACHE_TTL_AUTH_CODE).await?;
                     }
                 }
 

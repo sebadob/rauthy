@@ -60,6 +60,16 @@ VALUES ($1, $2, $3, $4)"#;
         Ok(())
     }
 
+    pub async fn find(ts: i64) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM tos WHERE ts = $1";
+        let res = if is_hiqlite() {
+            DB::hql().query_as_one(sql, params!(ts)).await?
+        } else {
+            DB::pg_query_one(sql, &[&ts]).await?
+        };
+        Ok(res)
+    }
+
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let sql = "SELECT * FROM tos";
         let res: Vec<Self> = if is_hiqlite() {

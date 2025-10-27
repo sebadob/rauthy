@@ -86,12 +86,12 @@ impl AuthCode {
     }
 
     /// CAUTION: DO NOT use this reset in any other case than after accepting updated ToS!
-    pub fn reset_exp(&mut self, auth_code_lifetime: i32) -> Result<(), ErrorResponse> {
+    pub async fn reset_exp(&mut self, auth_code_lifetime: i32) -> Result<(), ErrorResponse> {
         self.exp = Utc::now()
             .add(chrono::Duration::seconds(auth_code_lifetime as i64))
             .timestamp();
 
-        Ok(())
+        self.save(auth_code_lifetime).await
     }
 }
 

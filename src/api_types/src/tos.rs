@@ -1,15 +1,18 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use validator::Validate;
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, Validate)]
 pub struct ToSRequest {
     pub is_html: bool,
+    #[validate(length(min = 1, max = 8192))]
     pub content: String,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, Validate)]
 pub struct ToSAcceptRequest {
     pub tos_ts: i64,
+    #[validate(length(min = 64, max = 64))]
     pub accept_code: String,
 }
 
