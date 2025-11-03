@@ -29,7 +29,7 @@
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import {fetchPost, type IResponse} from "$api/fetch";
+    import {fetchGet, fetchPost, type IResponse} from "$api/fetch";
     import type {
         CodeChallengeMethod,
         LoginRefreshRequest,
@@ -46,7 +46,8 @@
     import {fetchSolvePow} from "$utils/pow";
     import {generatePKCE} from "$utils/pkce";
     import {PATTERN_ATPROTO_ID} from "$utils/patterns";
-    import type {ToSAwaitLoginResponse} from "$api/types/tos";
+    import type {ToSAwaitLoginResponse, ToSLatestResponse} from "$api/types/tos";
+    import Modal from "$lib/Modal.svelte";
 
     const inputWidth = "18rem";
 
@@ -97,6 +98,13 @@
     let password = $state('');
     let userId = $state('');
     let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset && !isAtproto);
+
+    let refToS: undefined | HTMLParagraphElement = $state();
+    let showModal = $state(false);
+    let closeModal: undefined | (() => void) = $state();
+    let tos: undefined | ToSLatestResponse = $state();
+    let tosRead = $state(false);
+    let tosAcceptCode = $state('');
 
     onMount(() => {
         if (!needsPassword) {
@@ -152,6 +160,18 @@
         } else {
             console.error(res.error);
         }
+    }
+
+    async function fetchTos() {
+        if (!tos) {
+            let res = await fetchGet<ToSLatestResponse>('/auth/v1/tos/latest');
+            if (res.body) {
+                tos = res.body;
+            } else if (res.status === 204) {
+                console.error('No ToS exists when the user should update');
+            }
+        }
+        showModal = true;
     }
 
     function handleShowReset() {
@@ -248,8 +268,6 @@
     async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse>) {
         isLoading = false;
 
-        console.log(res);
-
         if (res.status === 202) {
             // -> all good
             let loc = res.headers.get('location');
@@ -269,9 +287,11 @@
                 console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
             }
         } else if (res.status === 206) {
-            // TODO in this case the user needs to accept updates ToS
+            // login successful, but the user needs to accept updated ToS
             let body = res.body as ToSAwaitLoginResponse;
-            console.error('TODO accept updated ToS', body);
+            userId = body.user_id;
+            tosAcceptCode = body.code;
+            await fetchTos();
         } else if (res.status === 400) {
             err = res.error?.message || '';
         } else if (res.status === 403) {
@@ -343,6 +363,34 @@
                 providerLoginPkce(id, pkce.challenge);
             }
         });
+    }
+
+    function onScrollEndToS() {
+        if (!refToS) {
+            return false;
+        }
+
+        // allow 50px diff for better UX
+        if (!tosRead && refToS.scrollHeight <= refToS.scrollTop + refToS.offsetHeight + 50) {
+            tosRead = true;
+        }
+    }
+
+    async function onToSAccept() {
+        closeModal?.();
+        console.log('TODO onTosAccept');
+    }
+
+    async function onToSCancel() {
+        password = '';
+        userId = '';
+        tosAcceptCode = '';
+        tosRead = false;
+        isLoading = false;
+        mfaPurpose = undefined;
+        closeModal?.();
+        // TODO probably add a `grace_time` feature for better UX?
+        // TODO we could add a deny endpoint in the backend to cleanup left-over data early
     }
 
     async function providerLoginPkce(id: string, pkce_challenge: string) {
@@ -596,6 +644,35 @@
                             Account
                         </Button>
                     </div>
+                {/if}
+
+                {#if tos}
+                    <Modal bind:showModal bind:closeModal strict>
+                        <h1>{t.tos.tos}</h1>
+                        <p bind:this={refToS} class="tosContent" onscrollend={onScrollEndToS}>
+                            {#if tos.is_html}
+                                {@html tos.content}
+                            {:else}
+                                {tos.content}
+                            {/if}
+                        </p>
+                        <Button
+                                ariaLabel={t.common.accept}
+                                onclick={onToSAccept}
+                                isDisabled={!tosRead}
+                                {isLoading}
+                        >
+                            {t.common.accept}
+                        </Button>
+                        <Button
+                                level={-2}
+                                ariaLabel={t.common.cancel}
+                                onclick={onToSCancel}
+                                {isLoading}
+                        >
+                            {t.common.cancel}
+                        </Button>
+                    </Modal>
                 {/if}
 
                 {#if !clientMfaForce && providers.length > 0 && !isAtproto}
