@@ -46,6 +46,7 @@
     import {fetchSolvePow} from "$utils/pow";
     import {generatePKCE} from "$utils/pkce";
     import {PATTERN_ATPROTO_ID} from "$utils/patterns";
+    import type {ToSAwaitLoginResponse} from "$api/types/tos";
 
     const inputWidth = "18rem";
 
@@ -265,6 +266,10 @@
             } else {
                 console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
             }
+        } else if (res.status === 205) {
+            // TODO in this case the user needs to accept updates ToS
+            let body = res.body as ToSAwaitLoginResponse;
+            console.error('TODO accept updated ToS', body);
         } else if (res.status === 400) {
             err = res.error?.message || '';
         } else if (res.status === 403) {

@@ -3,16 +3,13 @@ use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
 use rauthy_api_types::oidc::{LoginRefreshRequest, LoginRequest};
-use rauthy_api_types::tos::ToSLatestResponse;
-use rauthy_common::constants::{CACHE_TTL_AUTH_CODE, COOKIE_MFA};
+use rauthy_common::constants::COOKIE_MFA;
 use rauthy_common::utils::get_rand;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::sessions::Session;
-use rauthy_data::entity::tos::ToS;
-use rauthy_data::entity::tos_user_accept::ToSUserAccept;
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -168,20 +165,16 @@ pub async fn post_authorize(
             session,
         };
 
-        if need_tos_accept {
-            todo!(
-                "when password flow works, probably save an enum here with a possible AuthCodeToSAwait"
-            );
-        }
+        let tos_await_data = if need_tos_accept { todo!() } else { None };
         WebauthnLoginReq {
             code: step.code.clone(),
-            auth_code: if need_tos_accept { Some(code.id) } else { None },
             user_id: user.id,
             header_loc: loc,
             header_origin: step
                 .header_origin
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
+            tos_await_data,
         }
         .save()
         .await?;
@@ -193,7 +186,7 @@ pub async fn post_authorize(
         if need_tos_accept {
             let code_await = AuthCodeToSAwait {
                 auth_code: code.id,
-                await_code: get_rand(64),
+                await_code: AuthCodeToSAwait::generate_code(),
                 auth_code_lifetime: client.auth_code_lifetime,
                 email: Some(user.email),
                 header_loc: Some(loc),
@@ -255,60 +248,60 @@ pub async fn post_authorize_refresh(
 
     todo!("check need_tos_accept return result down below");
 
-    let code = AuthCode::new(
-        user.id.clone(),
-        client.id,
-        Some(session.id.clone()),
-        req_data.code_challenge,
-        req_data.code_challenge_method,
-        req_data.nonce,
-        scopes,
-        code_lifetime,
-    );
-    code.save(code_lifetime).await?;
-
-    // We don't need another location check - we can only get here with an already authenticated
-    // session and no auth-check is being performed.
-
-    // build location header
-    let header_loc = if let Some(s) = req_data.state {
-        format!("{}?code={}&state={s}", req_data.redirect_uri, code.id)
-    } else {
-        format!("{}?code={}", req_data.redirect_uri, code.id)
-    };
-
-    // check if we need to validate the 2nd factor
-    if user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa {
-        let step = AuthStepAwaitWebauthn {
-            code: get_rand(48),
-            header_csrf: Session::get_csrf_header(&session.csrf_token),
-            header_origin,
-            user_id: user.id.clone(),
-            email: user.email,
-            exp: webauthn_req_exp as u64,
-            session: session.clone(),
-        };
-
-        let login_req = WebauthnLoginReq {
-            code: step.code.clone(),
-            user_id: user.id,
-            header_loc,
-            header_origin: step
-                .header_origin
-                .as_ref()
-                .map(|h| h.1.to_str().unwrap().to_string()),
-            is_tos_await: need_tos_accept,
-        };
-        login_req.save().await?;
-
-        Ok(AuthStep::AwaitWebauthn(step))
-    } else {
-        Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
-            user_id: user.id,
-            email: user.email,
-            header_loc: (header::LOCATION, HeaderValue::from_str(&header_loc)?),
-            header_csrf: Session::get_csrf_header(&session.csrf_token),
-            header_origin,
-        }))
-    }
+    // let code = AuthCode::new(
+    //     user.id.clone(),
+    //     client.id,
+    //     Some(session.id.clone()),
+    //     req_data.code_challenge,
+    //     req_data.code_challenge_method,
+    //     req_data.nonce,
+    //     scopes,
+    //     code_lifetime,
+    // );
+    // code.save(code_lifetime).await?;
+    //
+    // // We don't need another location check - we can only get here with an already authenticated
+    // // session and no auth-check is being performed.
+    //
+    // // build location header
+    // let header_loc = if let Some(s) = req_data.state {
+    //     format!("{}?code={}&state={s}", req_data.redirect_uri, code.id)
+    // } else {
+    //     format!("{}?code={}", req_data.redirect_uri, code.id)
+    // };
+    //
+    // // check if we need to validate the 2nd factor
+    // if user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa {
+    //     let step = AuthStepAwaitWebauthn {
+    //         code: get_rand(48),
+    //         header_csrf: Session::get_csrf_header(&session.csrf_token),
+    //         header_origin,
+    //         user_id: user.id.clone(),
+    //         email: user.email,
+    //         exp: webauthn_req_exp as u64,
+    //         session: session.clone(),
+    //     };
+    //
+    //     let login_req = WebauthnLoginReq {
+    //         code: step.code.clone(),
+    //         user_id: user.id,
+    //         header_loc,
+    //         header_origin: step
+    //             .header_origin
+    //             .as_ref()
+    //             .map(|h| h.1.to_str().unwrap().to_string()),
+    //         is_tos_await: need_tos_accept,
+    //     };
+    //     login_req.save().await?;
+    //
+    //     Ok(AuthStep::AwaitWebauthn(step))
+    // } else {
+    //     Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
+    //         user_id: user.id,
+    //         email: user.email,
+    //         header_loc: (header::LOCATION, HeaderValue::from_str(&header_loc)?),
+    //         header_csrf: Session::get_csrf_header(&session.csrf_token),
+    //         header_origin,
+    //     }))
+    // }
 }

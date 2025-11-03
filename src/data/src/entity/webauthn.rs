@@ -1,6 +1,6 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
-use crate::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
+use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::users::{AccountType, User};
@@ -18,10 +18,9 @@ use rauthy_api_types::users::{
     MfaPurpose, PasskeyResponse, WebauthnAuthFinishRequest, WebauthnAuthStartResponse,
     WebauthnLoginFinishResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
-use rauthy_common::constants::{CACHE_TTL_AUTH_CODE, COOKIE_MFA, IDX_WEBAUTHN};
+use rauthy_common::constants::{COOKIE_MFA, IDX_WEBAUTHN};
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::{base64_decode, deserialize, serialize};
-use rauthy_common::utils::{base64_encode, get_rand};
+use rauthy_common::utils::{base64_decode, base64_encode, deserialize, get_rand, serialize};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
@@ -621,7 +620,7 @@ pub struct WebauthnLoginReq {
     pub user_id: String,
     pub header_loc: String,
     pub header_origin: Option<String>,
-    pub is_tos_await: bool,
+    pub tos_await_data: Option<AuthCodeToSAwait>,
 }
 
 // CRUD
@@ -809,6 +808,15 @@ pub async fn auth_finish(
                 ));
             }
             let uid = user.id.clone();
+            // Having the addition if check here is less overhead than always cloning the email
+            // when we don't need it almost all the time.
+            let email = if let WebauthnAdditionalData::Login(data) = &auth_data.data
+                && data.tos_await_data.is_some()
+            {
+                Some(user.email.clone())
+            } else {
+                None
+            };
 
             LoginLocation::spawn_background_check(user.clone(), req)?;
 
@@ -850,24 +858,20 @@ pub async fn auth_finish(
             info!(user.id = uid, "Webauthn Authentication successful");
 
             if let WebauthnAdditionalData::Login(data) = auth_data.data {
-                if data.is_tos_await {
-                    // TODO the easiest solution would be to have a very high TTL for ToD
-                    //  await and re-save the auth_code at this point with the default value.
-                    //  However, this means we have an additional cache lookup + save.
-                    if let Some(await_code) = AuthCodeToSAwait::find(&data.code).await? {
-                        await_code.delete().await?;
+                if let Some(tos_data) = data.tos_await_data {
+                    let code_await = AuthCodeToSAwait {
+                        auth_code: data.code,
+                        await_code: AuthCodeToSAwait::generate_code(),
+                        auth_code_lifetime: tos_data.auth_code_lifetime,
+                        email: Some(
+                            email.expect("email to always be cloned during Webauthn ToS await"),
+                        ),
+                        header_loc: tos_data.header_loc,
+                        header_origin: tos_data.header_origin,
+                    };
+                    code_await.save().await?;
 
-                        let Some(mut auth_code) = AuthCode::find(await_code.auth_code).await?
-                        else {
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::SessionTimeout,
-                                "Authentication timeout, please try a new login",
-                            ));
-                        };
-                        auth_code.reset_exp(await_code.auth_code_lifetime).await?;
-
-                        todo!();
-                    }
+                    todo!()
                 }
 
                 todo!("return reduced data set and omit the `code` in the response")

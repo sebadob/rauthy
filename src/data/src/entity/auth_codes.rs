@@ -6,6 +6,7 @@ use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
+use utoipa::ToSchema;
 
 #[derive(Deserialize, Serialize)]
 pub struct AuthCode {
@@ -95,7 +96,7 @@ impl AuthCode {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct AuthCodeToSAwait {
     pub auth_code: String,
     pub await_code: String,
@@ -140,5 +141,10 @@ impl AuthCodeToSAwait {
         // Note: We don't want to simply index the await
         // codes by id to never have an accidental misuse.
         format!("tos_aw_{await_code}")
+    }
+
+    #[inline]
+    pub fn generate_code() -> String {
+        get_rand(64)
     }
 }

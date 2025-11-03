@@ -1138,12 +1138,17 @@ impl AuthProviderCallback {
         // all good, we can generate an auth code
 
         // authorization code
-        let webauthn_req_exp = RauthyConfig::get().vars.webauthn.req_exp;
-        let code_lifetime = if force_mfa && user.has_webauthn_enabled() {
-            client.auth_code_lifetime + webauthn_req_exp as i32
-        } else {
-            client.auth_code_lifetime
-        };
+        let config = RauthyConfig::get();
+
+        let mut code_lifetime = client.auth_code_lifetime;
+        if user.has_webauthn_enabled() {
+            code_lifetime += config.vars.webauthn.req_exp as i32;
+        }
+        let need_tos_accept = user.needs_tos_update().await?;
+        if need_tos_accept {
+            code_lifetime += config.vars.tos.accept_timeout as i32;
+        }
+
         let scopes = client.sanitize_login_scopes(&slf.req_scopes)?;
         let code = AuthCode::new(
             user.id.clone(),
@@ -1155,7 +1160,7 @@ impl AuthProviderCallback {
             scopes,
             code_lifetime,
         );
-        code.save().await?;
+        code.save(code_lifetime).await?;
 
         // location header
         let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
@@ -1170,10 +1175,11 @@ impl AuthProviderCallback {
                 header_origin,
                 user_id: user.id.clone(),
                 email: user.email,
-                exp: webauthn_req_exp as u64,
+                exp: config.vars.webauthn.req_exp as u64,
                 session,
             };
 
+            let tos_await_data = if need_tos_accept { todo!() } else { None };
             WebauthnLoginReq {
                 code: step.code.clone(),
                 user_id: user.id,
@@ -1182,12 +1188,17 @@ impl AuthProviderCallback {
                     .header_origin
                     .as_ref()
                     .map(|h| h.1.to_str().unwrap().to_string()),
+                tos_await_data,
             }
             .save()
             .await?;
 
             AuthStep::AwaitWebauthn(step)
         } else {
+            if need_tos_accept {
+                todo!()
+            }
+
             AuthStep::LoggedIn(AuthStepLoggedIn {
                 user_id: user.id,
                 email: user.email,

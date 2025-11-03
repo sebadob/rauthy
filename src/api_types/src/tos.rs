@@ -1,3 +1,4 @@
+use crate::sessions::SessionResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -22,6 +23,12 @@ pub struct ToSResponse {
     pub author: String,
     pub is_html: bool,
     pub content: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct ToSAwaitLoginResponse {
+    pub code: String,
+    pub user_id: String,
 }
 
 #[derive(Serialize, ToSchema)]

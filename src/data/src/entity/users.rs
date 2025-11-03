@@ -1757,15 +1757,18 @@ impl User {
     /// Checks if this user needs to accept a updated ToS
     #[inline(always)]
     pub async fn needs_tos_update(&self) -> Result<bool, ErrorResponse> {
-        if let Some(latest) = ToS::find_latest().await? {
+        let needs_update = if let Some(latest) = ToS::find_latest().await? {
             if let Some(accepted) = ToSUserAccept::find_latest(self.id.clone()).await? {
-                Ok(accepted.accept_ts != latest.ts)
+                accepted.accept_ts != latest.ts
             } else {
-                Ok(true)
+                true
             }
         } else {
-            Ok(false)
-        }
+            false
+        };
+
+        debug!(needs_update, "User needs to accept updated ToS");
+        Ok(needs_update)
     }
 
     pub fn picture_uri(&self) -> Option<String> {

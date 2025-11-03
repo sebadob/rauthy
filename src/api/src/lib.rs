@@ -2,10 +2,12 @@
 
 #![forbid(unsafe_code)]
 
+use actix_web::http::StatusCode;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderMap, HeaderValue,
 };
-use actix_web::{HttpRequest, HttpResponse, web};
+use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, web};
+use rauthy_api_types::tos::ToSAwaitLoginResponse;
 use rauthy_api_types::users::WebauthnLoginResponse;
 use rauthy_common::constants::COOKIE_MFA;
 use rauthy_data::AuthStep;
@@ -17,6 +19,7 @@ use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::webauthn::WebauthnCookie;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rust_embed::Embed;
+use std::num::NonZeroU16;
 use tracing::error;
 
 pub mod api_keys;
@@ -104,6 +107,29 @@ pub async fn map_auth_step(
                 .insert_header(res.header_loc)
                 .insert_header(res.header_csrf)
                 .finish();
+            if let Some((name, value)) = res.header_origin {
+                resp.headers_mut().insert(name, value);
+                resp.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_METHODS,
+                    HeaderValue::from_static("POST"),
+                );
+                resp.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    HeaderValue::from_static("true"),
+                );
+            }
+            Ok(resp)
+        }
+
+        AuthStep::AwaitToSAccept(res) => {
+            let mut resp = HttpResponseBuilder::new(StatusCode::from_u16(205).unwrap())
+                .insert_header(fed_cm_header)
+                .insert_header(res.header_csrf)
+                .json(&ToSAwaitLoginResponse {
+                    code: res.code,
+                    user_id: res.user_id,
+                    // TODO do we actually need the session object at this point?
+                });
             if let Some((name, value)) = res.header_origin {
                 resp.headers_mut().insert(name, value);
                 resp.headers_mut().insert(

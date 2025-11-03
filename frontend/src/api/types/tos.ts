@@ -10,6 +10,11 @@ export interface ToSResponse {
 	content: string;
 }
 
+export interface ToSAwaitLoginResponse {
+	code: string;
+	user_id: string;
+}
+
 export interface ToSLatestResponse {
 	ts: number;
 	is_html: boolean;
