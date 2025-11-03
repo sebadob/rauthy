@@ -46,7 +46,12 @@
     import {fetchSolvePow} from "$utils/pow";
     import {generatePKCE} from "$utils/pkce";
     import {PATTERN_ATPROTO_ID} from "$utils/patterns";
-    import type {ToSAwaitLoginResponse, ToSLatestResponse} from "$api/types/tos";
+    import type {
+        ToSAwaitLoginResponse,
+        ToSLatestResponse,
+        ToSUserAcceptRequest,
+        ToSUserAcceptResponse
+    } from "$api/types/tos";
     import Modal from "$lib/Modal.svelte";
 
     const inputWidth = "18rem";
@@ -377,8 +382,30 @@
     }
 
     async function onToSAccept() {
+        if (!tos) {
+            return;
+        }
+
+        isLoading = true;
         closeModal?.();
-        console.log('TODO onTosAccept');
+
+        let payload: ToSUserAcceptRequest = {
+            accept_code: tosAcceptCode,
+            tos_ts: tos.ts,
+        };
+        let res = await fetchPost('/auth/v1/tos/accept', payload);
+        if (res.status === 202) {
+            let loc = res.headers.get('location');
+            if (loc) {
+                window.location.replace(loc);
+            } else {
+                console.error('location header missing');
+            }
+        } else {
+            console.error(res.error);
+        }
+
+        isLoading = false;
     }
 
     async function onToSCancel() {

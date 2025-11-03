@@ -3,6 +3,12 @@ export interface ToSRequest {
 	content: string;
 }
 
+export interface ToSUserAcceptRequest {
+	tos_ts: number;
+	// 65 char code
+	accept_code: string;
+}
+
 export interface ToSResponse {
 	ts: number;
 	author: string;
