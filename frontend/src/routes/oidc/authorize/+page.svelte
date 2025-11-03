@@ -248,6 +248,8 @@
     async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse>) {
         isLoading = false;
 
+        console.log(res);
+
         if (res.status === 202) {
             // -> all good
             let loc = res.headers.get('location');
@@ -266,7 +268,7 @@
             } else {
                 console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
             }
-        } else if (res.status === 205) {
+        } else if (res.status === 206) {
             // TODO in this case the user needs to accept updates ToS
             let body = res.body as ToSAwaitLoginResponse;
             console.error('TODO accept updated ToS', body);
