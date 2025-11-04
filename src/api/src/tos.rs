@@ -1,13 +1,18 @@
 use crate::ReqPrincipal;
+use actix_web::http::header::{
+    ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderValue, LOCATION, ORIGIN,
+};
 use actix_web::web::{Json, Path};
-use actix_web::{HttpResponse, get, post};
+use actix_web::{HttpRequest, HttpResponse, get, post};
 use rauthy_api_types::tos::{
     ToSAcceptRequest, ToSLatestResponse, ToSRequest, ToSResponse, ToSUserAcceptResponse,
 };
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use rauthy_data::entity::tos::ToS;
 use rauthy_data::entity::tos_user_accept::ToSUserAccept;
 use rauthy_data::entity::users::User;
+use rauthy_data::ipgeo::get_location;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 
 /// Returns all ToS
@@ -137,13 +142,10 @@ pub async fn get_tos_user_status(
 #[post("/tos/accept")]
 pub async fn post_tos_accept(
     principal: ReqPrincipal,
+    req: HttpRequest,
     payload: Json<ToSAcceptRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
-
-    // TODO This endpoint should only be called directly after a successful login after a ToS
-    //  update. This means we need to handle AuthCode lifetime and re-insert with reduced TTL
-    //  most probably.
 
     let Some(code_await) = AuthCodeToSAwait::find(&payload.accept_code).await? else {
         return Err(ErrorResponse::new(
@@ -152,25 +154,39 @@ pub async fn post_tos_accept(
         ));
     };
 
-    let Some(auth_code) = AuthCode::find(code_await.auth_code).await? else {
+    let Some(mut auth_code) = AuthCode::find(code_await.auth_code.clone()).await? else {
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
             "AuthCode does not exist anymore",
         ));
     };
 
-    let user_id = principal.user_id()?.to_string();
-    if user_id != auth_code.user_id {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            "Mismatch in UserID",
-        ));
-    }
-    let user = User::find(principal.user_id()?.to_string()).await?;
+    let user = User::find(auth_code.user_id.clone()).await?;
     user.check_enabled()?;
     user.check_expired()?;
 
     let tos = ToS::find(payload.tos_ts).await?;
+    let ip = real_ip_from_req(&req)?;
+    let loc = get_location(&req, ip.clone())?;
+    ToSUserAccept::create(user.id, tos.ts, ip, loc).await?;
 
-    todo!()
+    auth_code.reset_exp(code_await.auth_code_lifetime).await?;
+    code_await.delete().await?;
+
+    let mut resp = HttpResponse::Accepted()
+        .insert_header((LOCATION, code_await.header_loc))
+        .finish();
+    if let Some(value) = code_await.header_origin {
+        resp.headers_mut()
+            .insert(ORIGIN, HeaderValue::from_str(&value)?);
+        resp.headers_mut().insert(
+            ACCESS_CONTROL_ALLOW_METHODS,
+            HeaderValue::from_static("POST"),
+        );
+        resp.headers_mut().insert(
+            ACCESS_CONTROL_ALLOW_CREDENTIALS,
+            HeaderValue::from_static("true"),
+        );
+    }
+    Ok(resp)
 }

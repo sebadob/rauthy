@@ -149,6 +149,14 @@
     });
 
     $effect(() => {
+        if (refToS) {
+            setTimeout(() => {
+                onScrollEndToS();
+            }, 1000);
+        }
+    });
+
+    $effect(() => {
         if (IS_DEV) {
             // Make sure to create a session manually during dev.
             // In prod, it will be handled automatically during the GET already.
@@ -393,19 +401,8 @@
             accept_code: tosAcceptCode,
             tos_ts: tos.ts,
         };
-        let res = await fetchPost('/auth/v1/tos/accept', payload);
-        if (res.status === 202) {
-            let loc = res.headers.get('location');
-            if (loc) {
-                window.location.replace(loc);
-            } else {
-                console.error('location header missing');
-            }
-        } else {
-            console.error(res.error);
-        }
-
-        isLoading = false;
+        let res = await fetchPost<undefined>('/auth/v1/tos/accept', payload);
+        await handleAuthRes(res);
     }
 
     async function onToSCancel() {

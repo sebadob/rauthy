@@ -45,7 +45,7 @@ use std::cmp::max;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 
 static SQL_SAVE: &str = r#"
 UPDATE USERS SET
@@ -1759,7 +1759,7 @@ impl User {
     pub async fn needs_tos_update(&self) -> Result<bool, ErrorResponse> {
         let needs_update = if let Some(latest) = ToS::find_latest().await? {
             if let Some(accepted) = ToSUserAccept::find_latest(self.id.clone()).await? {
-                accepted.accept_ts != latest.ts
+                accepted.tos_ts != latest.ts
             } else {
                 true
             }

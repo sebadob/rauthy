@@ -101,8 +101,7 @@ pub struct AuthCodeToSAwait {
     pub auth_code: String,
     pub await_code: String,
     pub auth_code_lifetime: i32,
-    pub email: Option<String>,
-    pub header_loc: Option<String>,
+    pub header_loc: String,
     pub header_origin: Option<String>,
 }
 

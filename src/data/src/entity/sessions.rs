@@ -678,6 +678,7 @@ impl Session {
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
                     "/auth/v1/dev/providers_callback",
+                    "/auth/v1/tos/accept",
                 ];
                 #[cfg(not(debug_assertions))]
                 let exceptions = [
@@ -687,6 +688,7 @@ impl Session {
                     "/auth/v1/oidc/token",
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
+                    "/auth/v1/tos/accept",
                 ];
                 if exceptions.contains(&req_path) || req_path.contains("/webauthn/auth/") {
                     return true;
@@ -762,6 +764,7 @@ impl Session {
         if self.csrf_token.eq(csrf?) {
             return Ok(());
         }
+
         Err(ErrorResponse::new(
             ErrorResponseType::CSRFTokenError,
             "CSRF Token is not correct",

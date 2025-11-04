@@ -3,6 +3,7 @@ use crate::database::{Cache, DB};
 use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::password::PasswordPolicy;
+use crate::entity::sessions::Session;
 use crate::entity::users::{AccountType, User};
 use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::Cookie;
@@ -808,15 +809,6 @@ pub async fn auth_finish(
                 ));
             }
             let uid = user.id.clone();
-            // Having the addition if check here is less overhead than always cloning the email
-            // when we don't need it almost all the time.
-            let email = if let WebauthnAdditionalData::Login(data) = &auth_data.data
-                && data.tos_await_data.is_some()
-            {
-                Some(user.email.clone())
-            } else {
-                None
-            };
 
             LoginLocation::spawn_background_check(user.clone(), req)?;
 
@@ -863,9 +855,6 @@ pub async fn auth_finish(
                         auth_code: data.code,
                         await_code: AuthCodeToSAwait::generate_code(),
                         auth_code_lifetime: tos_data.auth_code_lifetime,
-                        email: Some(
-                            email.expect("email to always be cloned during Webauthn ToS await"),
-                        ),
                         header_loc: tos_data.header_loc,
                         header_origin: tos_data.header_origin,
                     };

@@ -16,7 +16,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::fmt::Write;
-use tracing::trace;
+use tracing::{trace, warn};
 
 pub async fn post_authorize(
     req: &HttpRequest,
@@ -188,8 +188,7 @@ pub async fn post_authorize(
                 auth_code: code.id,
                 await_code: AuthCodeToSAwait::generate_code(),
                 auth_code_lifetime: client.auth_code_lifetime,
-                email: Some(user.email),
-                header_loc: Some(loc),
+                header_loc: loc,
                 header_origin: header_origin
                     .as_ref()
                     .map(|(_, v)| v.to_str().unwrap().to_string()),
