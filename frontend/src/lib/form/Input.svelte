@@ -199,7 +199,7 @@
 	.error {
 		color: hsl(var(--error));
 		margin-top: -0.4rem;
-		padding-left: 0.3rem;
+		padding-left: 0.1rem;
 		font-size: 0.8rem;
 	}
 </style>
