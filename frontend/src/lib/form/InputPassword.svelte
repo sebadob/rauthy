@@ -112,9 +112,11 @@
 </script>
 
 <div style:width>
-	<label for={id} class="font-label noselect" data-required={required}>
-		{label}
-	</label>
+	<div aria-live="assertive" class="label">
+		<label for={id} class="font-label noselect" data-required={required}>
+			{label}
+		</label>
+	</div>
 	<div class="input-row">
 		<input
 			bind:this={ref}
@@ -166,9 +168,6 @@
 			</div>
 		</div>
 	</div>
-</div>
-
-<div class="label">
 	{#if isError}
 		<div class="error" transition:slide={{ duration: 150 }}>
 			{#if !label}
@@ -199,9 +198,8 @@
 
 	.error {
 		color: hsl(var(--error));
-		margin-top: -1rem;
-		padding-bottom: 0.5rem;
-		padding-left: 0.3rem;
+		margin-top: -0.4rem;
+		padding-left: 0.1rem;
 		font-size: 0.8rem;
 	}
 
