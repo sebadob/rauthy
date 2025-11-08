@@ -134,6 +134,7 @@
 			aria-required={required || false}
 			maxlength={maxLength || undefined}
 			pattern={pattern || undefined}
+			class:invalid={isError}
 			{oninput}
 			{oninvalid}
 			{onblur}
