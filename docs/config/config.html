@@ -286,7 +286,7 @@ one secret (my preferred approach).</p>
 #session_validate_ip = true
 
 # By default, Rauthy will log a warning into the logs, if an active
-# password reset form is being access multiple times from different
+# password reset form is being accessed multiple times from different
 # hosts. You can set this to `true` to actually block any following
 # request after the initial one. This hardens the security of the
 # password reset form a bit more, but will create problems with
@@ -380,7 +380,7 @@ one secret (my preferred approach).</p>
 #
 # default: false
 # overwritten by: AUTH_HEADERS_ENABLE
-#enable = true
+#enable = false
 
 # Configure the header names being used for the different values. You
 # can change them to your needs, if you cannot easily change your
@@ -566,7 +566,7 @@ node_id = 1
 nodes = ["1 localhost:8100 localhost:8200"]
 
 # You can set the listen addresses for both the API and Raft servers.
-# These need to somewaht match the definition for the `nodes` above,
+# These need to somewhat match the definition for the `nodes` above,
 # with the difference, that a `node` address can be resolved via DNS,
 # while the listen addresses must be IP addresses.
 #
@@ -1026,7 +1026,7 @@ pg_password = '123SuperSafe'
 #
 # default: false
 # overwritten by: ENABLE_DYN_CLIENT_REG
-#enable = true
+#enable = false
 
 # If specified, this secret token will be expected during
 # dynamic client registrations to be given as a
@@ -1910,7 +1910,7 @@ level_access = 'modifying'
 #
 # default: text
 # overwritten by: LOG_FMT
-#log_fmt = 'json'
+#log_fmt = 'text'
 
 [mfa]
 # If 'true', MFA for an account must be enabled to access the
@@ -2014,7 +2014,7 @@ port_https = 8443
 #
 # default: http_https
 # overwritten by: LISTEN_SCHEME
-scheme = 'http'
+scheme = 'http_https'
 
 # The Public URL of the whole deployment
 # The LISTEN_SCHEME + PUB_URL must match the HTTP ORIGIN HEADER
@@ -2389,7 +2389,7 @@ rp_origin = 'http://localhost:8080'
 #
 # default: false
 # overwritten by: WEBAUTHN_FORCE_UV
-#force_uv = true
+#force_uv = false
 
 # Can be set to 'true' to disable password expiry for users that
 # have at least one active passkey. When set to 'false', the same
