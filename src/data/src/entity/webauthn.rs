@@ -621,7 +621,12 @@ pub struct WebauthnLoginReq {
     pub user_id: String,
     pub header_loc: String,
     pub header_origin: Option<String>,
-    pub tos_await_data: Option<AuthCodeToSAwait>,
+    pub tos_await_data: Option<WebauthnToSAwaitData>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct WebauthnToSAwaitData {
+    pub auth_code_lifetime: i32,
 }
 
 // CRUD
@@ -850,20 +855,20 @@ pub async fn auth_finish(
             info!(user.id = uid, "Webauthn Authentication successful");
 
             if let WebauthnAdditionalData::Login(data) = auth_data.data {
-                if let Some(tos_data) = data.tos_await_data {
+                if let Some(tos_data) = data.tos_await_data.clone() {
                     let code_await = AuthCodeToSAwait {
-                        auth_code: data.code,
+                        auth_code: data.code.clone(),
                         await_code: AuthCodeToSAwait::generate_code(),
                         auth_code_lifetime: tos_data.auth_code_lifetime,
-                        header_loc: tos_data.header_loc,
-                        header_origin: tos_data.header_origin,
+                        header_loc: data.header_loc.clone(),
+                        header_origin: data.header_origin.clone(),
                     };
                     code_await.save().await?;
 
                     todo!()
                 }
 
-                todo!("return reduced data set and omit the `code` in the response")
+                Ok(data)
             } else {
                 Ok(auth_data.data)
             }

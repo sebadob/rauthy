@@ -11,7 +11,7 @@ use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::{AccountType, User};
-use rauthy_data::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
+use rauthy_data::entity::webauthn::{WebauthnCookie, WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -165,7 +165,6 @@ pub async fn post_authorize(
             session,
         };
 
-        let tos_await_data = if need_tos_accept { todo!() } else { None };
         WebauthnLoginReq {
             code: step.code.clone(),
             user_id: user.id,
@@ -174,7 +173,9 @@ pub async fn post_authorize(
                 .header_origin
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
-            tos_await_data,
+            tos_await_data: need_tos_accept.then_some(WebauthnToSAwaitData {
+                auth_code_lifetime: client.auth_code_lifetime,
+            }),
         }
         .save()
         .await?;

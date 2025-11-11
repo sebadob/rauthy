@@ -1757,8 +1757,11 @@ impl User {
     /// Checks if this user needs to accept a updated ToS
     #[inline(always)]
     pub async fn needs_tos_update(&self) -> Result<bool, ErrorResponse> {
-        let needs_update = if let Some(latest) = ToS::find_latest().await? {
-            if let Some(accepted) = ToSUserAccept::find_latest(self.id.clone()).await? {
+        let needs_update = if let Some(latest) = ToS::find_latest().await.expect("TosLatest") {
+            if let Some(accepted) = ToSUserAccept::find_latest(self.id.clone())
+                .await
+                .expect("TosUserAccept")
+            {
                 accepted.tos_ts != latest.ts
             } else {
                 true
