@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.32.6
+
+### Bugfix
+
+- In `hiqlite` as an external dependency, it was possible to get into a situation where the WAL cleanup of not anymore
+  needed logs / files was not working as expected. This could lead to an endlessly filling up volume. This version
+  bumps `hiqlite` to the latest, fixed version. With the next snapshot creation (by default every 10k logs), all old
+  WAL files will be cleaned up.
+  []()
+
 ## v0.32.5
 
 ### Bugfix
