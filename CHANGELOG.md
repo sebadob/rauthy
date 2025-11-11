@@ -6,9 +6,9 @@
 
 - In `hiqlite` as an external dependency, it was possible to get into a situation where the WAL cleanup of not anymore
   needed logs / files was not working as expected. This could lead to an endlessly filling up volume. This version
-  bumps `hiqlite` to the latest, fixed version. With the next snapshot creation (by default every 10k logs), all old
-  WAL files will be cleaned up.
-  []()
+  bumps `hiqlite` to the latest, fixed version. With the next snapshot creation for existing instances (every 10k Raft
+  logs), all old WAL files will be cleaned up.
+  [#1233](https://github.com/sebadob/rauthy/pull/1233)
 
 ## v0.32.5
 
