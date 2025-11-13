@@ -19,7 +19,6 @@ use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::webauthn::WebauthnCookie;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rust_embed::Embed;
-use std::num::NonZeroU16;
 use tracing::error;
 
 pub mod api_keys;

@@ -167,7 +167,7 @@ pub async fn post_tos_accept(
 
     let tos = ToS::find(payload.tos_ts).await?;
     let ip = real_ip_from_req(&req)?;
-    let loc = get_location(&req, ip.clone())?;
+    let loc = get_location(&req, ip)?;
     ToSUserAccept::create(user.id, tos.ts, ip, loc).await?;
 
     auth_code.reset_exp(code_await.auth_code_lifetime).await?;

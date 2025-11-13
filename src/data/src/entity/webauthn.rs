@@ -3,18 +3,20 @@ use crate::database::{Cache, DB};
 use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::password::PasswordPolicy;
-use crate::entity::sessions::Session;
 use crate::entity::users::{AccountType, User};
 use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::Cookie;
-use actix_web::http::header;
-use actix_web::http::header::HeaderValue;
-use actix_web::{HttpRequest, HttpResponse};
+use actix_web::http::header::{
+    ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderValue,
+};
+use actix_web::http::{StatusCode, header};
+use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use chrono::Utc;
 use cryptr::EncValue;
 use deadpool_postgres::GenericClient;
 use hiqlite::Params;
 use hiqlite_macros::params;
+use rauthy_api_types::tos::ToSAwaitLoginResponse;
 use rauthy_api_types::users::{
     MfaPurpose, PasskeyResponse, WebauthnAuthFinishRequest, WebauthnAuthStartResponse,
     WebauthnLoginFinishResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,
@@ -575,14 +577,16 @@ pub enum WebauthnAdditionalData {
     Login(WebauthnLoginReq),
     Service(WebauthnServiceReq),
     Test,
+    LoginToSAwait(WebauthnLoginToSAwaitCode),
 }
 
 impl WebauthnAdditionalData {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
         match self {
             Self::Login(d) => d.delete().await,
-            Self::Service(_uid) => Ok(()),
+            Self::Service(s) => s.delete().await,
             Self::Test => Ok(()),
+            Self::LoginToSAwait(_) => Ok(()),
         }
     }
 
@@ -611,6 +615,28 @@ impl WebauthnAdditionalData {
             Self::Service(svc_req) => HttpResponse::Accepted().json(svc_req),
 
             Self::Test => HttpResponse::Accepted().finish(),
+
+            Self::LoginToSAwait(tos_req) => {
+                let mut resp = HttpResponseBuilder::new(StatusCode::from_u16(206).unwrap()).json(
+                    &ToSAwaitLoginResponse {
+                        code: tos_req.await_code,
+                        user_id: tos_req.user_id,
+                    },
+                );
+                if let Some(origin) = tos_req.header_origin {
+                    resp.headers_mut()
+                        .insert(header::ORIGIN, HeaderValue::from_str(&origin).unwrap());
+                    resp.headers_mut().insert(
+                        ACCESS_CONTROL_ALLOW_METHODS,
+                        HeaderValue::from_static("POST"),
+                    );
+                    resp.headers_mut().insert(
+                        ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        HeaderValue::from_static("true"),
+                    );
+                }
+                resp
+            }
         }
     }
 }
@@ -694,6 +720,13 @@ impl WebauthnServiceReq {
             .await?;
         Ok(())
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct WebauthnLoginToSAwaitCode {
+    await_code: String,
+    user_id: String,
+    header_origin: Option<String>,
 }
 
 pub async fn auth_start(
@@ -790,6 +823,8 @@ pub async fn auth_finish(
     payload: WebauthnAuthFinishRequest,
 ) -> Result<WebauthnAdditionalData, ErrorResponse> {
     let auth_data = WebauthnData::find(payload.code).await?;
+    auth_data.data.delete().await?;
+    auth_data.delete().await?;
     let auth_state = serde_json::from_str(&auth_data.auth_state_json)?;
 
     let mut user = User::find(user_id).await?;
@@ -855,20 +890,26 @@ pub async fn auth_finish(
             info!(user.id = uid, "Webauthn Authentication successful");
 
             if let WebauthnAdditionalData::Login(data) = auth_data.data {
-                if let Some(tos_data) = data.tos_await_data.clone() {
+                if let Some(tos_data) = data.tos_await_data {
                     let code_await = AuthCodeToSAwait {
-                        auth_code: data.code.clone(),
+                        auth_code: data.code,
                         await_code: AuthCodeToSAwait::generate_code(),
                         auth_code_lifetime: tos_data.auth_code_lifetime,
-                        header_loc: data.header_loc.clone(),
+                        header_loc: data.header_loc,
                         header_origin: data.header_origin.clone(),
                     };
                     code_await.save().await?;
 
-                    todo!()
+                    Ok(WebauthnAdditionalData::LoginToSAwait(
+                        WebauthnLoginToSAwaitCode {
+                            await_code: code_await.await_code,
+                            user_id: uid,
+                            header_origin: data.header_origin,
+                        },
+                    ))
+                } else {
+                    Ok(WebauthnAdditionalData::Login(data))
                 }
-
-                Ok(data)
             } else {
                 Ok(auth_data.data)
             }
@@ -877,7 +918,7 @@ pub async fn auth_finish(
             error!(?err, "Webauthn Auth Finish");
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                format!("{err}"),
+                err.to_string(),
             ))
         }
     }
