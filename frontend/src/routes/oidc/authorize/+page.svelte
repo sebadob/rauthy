@@ -473,8 +473,17 @@
     }
 
     function onWebauthnSuccess(data?: WebauthnAdditionalData) {
-        if (data && 'loc' in data) {
+        if (!data) {
+            return;
+        }
+
+        if ('loc' in data) {
             window.location.replace(data.loc as string);
+        } else if ('tos_await_code' in data) {
+            // login successful, but the user needs to accept updated ToS
+            tosAcceptCode = data.tos_await_code as string;
+            mfaPurpose = undefined;
+            fetchTos();
         }
     }
 

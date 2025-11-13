@@ -52,12 +52,12 @@ VALUES ($1, $2, $3, $4)"#;
             .put(
                 Cache::ToS,
                 Self::cache_idx(&user_id),
-                &Self {
+                &Some(Self {
                     user_id,
                     tos_ts,
                     accept_ts,
                     location,
-                },
+                }),
                 Some(600),
             )
             .await?;
@@ -88,7 +88,7 @@ WHERE user_id = $1"#;
         let sql = r#"
 SELECT * FROM tos_user_accept
 WHERE user_id = $1
-ORDER BY tos_ts
+ORDER BY tos_ts DESC
 LIMIT 1
 "#;
 

@@ -174,6 +174,7 @@ pub async fn post_authorize(
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
             tos_await_data: need_tos_accept.then_some(WebauthnToSAwaitData {
+                auth_code: code.id,
                 auth_code_lifetime: client.auth_code_lifetime,
             }),
         }

@@ -27,8 +27,8 @@ pub struct ToSResponse {
 
 #[derive(Serialize, ToSchema)]
 pub struct ToSAwaitLoginResponse {
-    pub code: String,
-    pub user_id: String,
+    pub tos_await_code: String,
+    pub user_id: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]

@@ -155,6 +155,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         DB::hql().clear_cache(Cache::IpRateLimit).await.unwrap();
         DB::hql().clear_cache(Cache::Session).await.unwrap();
         DB::hql().clear_cache(Cache::PoW).await.unwrap();
+        DB::hql().clear_cache(Cache::ToS).await.unwrap();
         DB::hql().clear_cache(Cache::User).await.unwrap();
         DB::hql().clear_cache(Cache::Webauthn).await.unwrap();
         DB::hql().clear_cache(Cache::PAM).await.unwrap();

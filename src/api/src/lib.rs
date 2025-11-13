@@ -129,8 +129,8 @@ pub async fn map_auth_step(
                 .insert_header(fed_cm_header)
                 .insert_header(res.header_csrf)
                 .json(&ToSAwaitLoginResponse {
-                    code: res.code,
-                    user_id: res.user_id,
+                    tos_await_code: res.code,
+                    user_id: Some(res.user_id),
                     // TODO do we actually need the session object at this point?
                 });
             if let Some((name, value)) = res.header_origin {

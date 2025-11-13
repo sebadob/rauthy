@@ -584,7 +584,9 @@ impl WebauthnAdditionalData {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
         match self {
             Self::Login(d) => d.delete().await,
-            Self::Service(s) => s.delete().await,
+            // The service req data is not deleted here, but actually further down the road
+            // after the service req has been made.
+            Self::Service(_) => Ok(()),
             Self::Test => Ok(()),
             Self::LoginToSAwait(_) => Ok(()),
         }
@@ -619,8 +621,8 @@ impl WebauthnAdditionalData {
             Self::LoginToSAwait(tos_req) => {
                 let mut resp = HttpResponseBuilder::new(StatusCode::from_u16(206).unwrap()).json(
                     &ToSAwaitLoginResponse {
-                        code: tos_req.await_code,
-                        user_id: tos_req.user_id,
+                        tos_await_code: tos_req.await_code,
+                        user_id: None,
                     },
                 );
                 if let Some(origin) = tos_req.header_origin {
@@ -652,6 +654,7 @@ pub struct WebauthnLoginReq {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct WebauthnToSAwaitData {
+    pub auth_code: String,
     pub auth_code_lifetime: i32,
 }
 
@@ -823,7 +826,6 @@ pub async fn auth_finish(
     payload: WebauthnAuthFinishRequest,
 ) -> Result<WebauthnAdditionalData, ErrorResponse> {
     let auth_data = WebauthnData::find(payload.code).await?;
-    auth_data.data.delete().await?;
     auth_data.delete().await?;
     let auth_state = serde_json::from_str(&auth_data.auth_state_json)?;
 
@@ -890,9 +892,11 @@ pub async fn auth_finish(
             info!(user.id = uid, "Webauthn Authentication successful");
 
             if let WebauthnAdditionalData::Login(data) = auth_data.data {
+                data.delete().await?;
+
                 if let Some(tos_data) = data.tos_await_data {
                     let code_await = AuthCodeToSAwait {
-                        auth_code: data.code,
+                        auth_code: tos_data.auth_code,
                         await_code: AuthCodeToSAwait::generate_code(),
                         auth_code_lifetime: tos_data.auth_code_lifetime,
                         header_loc: data.header_loc,
