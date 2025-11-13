@@ -1,4 +1,3 @@
-use crate::sessions::SessionResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;

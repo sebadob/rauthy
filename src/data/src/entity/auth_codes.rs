@@ -4,6 +4,7 @@ use chrono::Utc;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use utoipa::ToSchema;
@@ -58,6 +59,20 @@ impl AuthCode {
 }
 
 impl AuthCode {
+    #[inline]
+    pub fn build_location_header(
+        &self,
+        redirect_uri: &str,
+        state: Option<&str>,
+    ) -> Result<String, ErrorResponse> {
+        let append_char = if redirect_uri.contains('?') { '&' } else { '?' };
+        let mut loc = format!("{}{}code={}", redirect_uri, append_char, self.id);
+        if let Some(state) = state {
+            write!(loc, "&state={state}")?;
+        };
+        Ok(loc)
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         user_id: String,

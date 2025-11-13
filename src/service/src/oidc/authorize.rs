@@ -15,8 +15,7 @@ use rauthy_data::entity::webauthn::{WebauthnCookie, WebauthnLoginReq, WebauthnTo
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use std::fmt::Write;
-use tracing::{trace, warn};
+use tracing::trace;
 
 pub async fn post_authorize(
     req: &HttpRequest,
@@ -102,73 +101,151 @@ pub async fn post_authorize(
     // It should only prevent username enumeration and brute force, not degrade the UX.
     *add_login_delay = false;
 
-    let need_tos_accept = user.needs_tos_update().await?;
-
     // client validations
     let client = Client::find_maybe_ephemeral(req_data.client_id).await?;
+    let header_origin = client.get_validated_origin_header(req)?;
+
+    let require_webauthn = user.has_webauthn_enabled();
+    if require_webauthn {
+        session.set_mfa(true).await?;
+    }
+
+    finish_authorize(
+        user,
+        client,
+        &session,
+        AuthorizeData {
+            redirect_uri: req_data.redirect_uri,
+            scopes: req_data.scopes,
+            state: req_data.state,
+            nonce: req_data.nonce,
+            code_challenge: req_data.code_challenge,
+            code_challenge_method: req_data.code_challenge_method,
+            header_origin,
+            require_webauthn,
+        },
+        Some(user_needs_mfa),
+    )
+    .await
+}
+
+pub async fn post_authorize_refresh(
+    session: &Session,
+    client: Client,
+    header_origin: Option<(HeaderName, HeaderValue)>,
+    req_data: LoginRefreshRequest,
+) -> Result<AuthStep, ErrorResponse> {
+    let user_id = session.user_id.as_ref().ok_or_else(|| {
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            "No linked user_id for already validated session",
+        )
+    })?;
+    let user = User::find(user_id.clone()).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
+
+    let require_webauthn =
+        user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa;
+
+    finish_authorize(
+        user,
+        client,
+        session,
+        AuthorizeData {
+            redirect_uri: req_data.redirect_uri,
+            scopes: req_data.scopes,
+            state: req_data.state,
+            nonce: req_data.nonce,
+            code_challenge: req_data.code_challenge,
+            code_challenge_method: req_data.code_challenge_method,
+            header_origin,
+            require_webauthn,
+        },
+        None,
+    )
+    .await
+}
+
+struct AuthorizeData {
+    redirect_uri: String,
+    scopes: Option<Vec<String>>,
+    state: Option<String>,
+    nonce: Option<String>,
+    code_challenge: Option<String>,
+    code_challenge_method: Option<String>,
+    header_origin: Option<(HeaderName, HeaderValue)>,
+    require_webauthn: bool,
+}
+
+/// Expects the user checks already been done, but does all the necessary client validations.
+async fn finish_authorize(
+    user: User,
+    client: Client,
+    session: &Session,
+    data: AuthorizeData,
+    user_needs_mfa: Option<&mut bool>,
+) -> Result<AuthStep, ErrorResponse> {
     client.validate_enabled()?;
     client.validate_mfa(&user).inspect_err(|_| {
         // in this case, we do not want to add a login delay
         // the user password was correct, we only need a passkey being added to the account
-        *user_needs_mfa = true;
+        if let Some(needs_mfa) = user_needs_mfa {
+            *needs_mfa = true;
+        }
     })?;
     client.validate_user_groups(&user)?;
-    client.validate_redirect_uri(&req_data.redirect_uri)?;
-    client.validate_code_challenge(&req_data.code_challenge, &req_data.code_challenge_method)?;
-    let header_origin = client.get_validated_origin_header(req)?;
+    client.validate_redirect_uri(&data.redirect_uri)?;
+    client.validate_code_challenge(&data.code_challenge, &data.code_challenge_method)?;
 
-    // build authorization code
+    let scopes = client.sanitize_login_scopes(&data.scopes)?;
+
     let config = RauthyConfig::get();
     let mut code_lifetime = client.auth_code_lifetime;
-    if user.has_webauthn_enabled() {
-        code_lifetime += config.vars.webauthn.req_exp as i32;
+    if data.require_webauthn {
+        code_lifetime += config.vars.webauthn.req_exp as i32
     }
+    let need_tos_accept = user.needs_tos_update().await?;
     if need_tos_accept {
         code_lifetime += config.vars.tos.accept_timeout as i32;
     }
-    let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
 
     let code = AuthCode::new(
         user.id.clone(),
         client.id,
         Some(session.id.clone()),
-        req_data.code_challenge,
-        req_data.code_challenge_method,
-        req_data.nonce,
+        data.code_challenge,
+        data.code_challenge_method,
+        data.nonce,
         scopes,
         code_lifetime,
     );
     code.save(code_lifetime).await?;
 
-    let append_char = if req_data.redirect_uri.contains('?') {
-        '&'
-    } else {
-        '?'
-    };
-    let mut loc = format!("{}{}code={}", req_data.redirect_uri, append_char, code.id);
-    if let Some(state) = req_data.state {
-        write!(loc, "&state={state}")?;
-    };
+    // We don't need another location check - we can only get here with an already authenticated
+    // session and no auth-check is being performed.
 
-    if user.has_webauthn_enabled() {
+    let header_loc = code.build_location_header(&data.redirect_uri, data.state.as_deref())?;
+
+    // check if we need to validate the 2nd factor
+    // if user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa {
+    if data.require_webauthn {
         // Webauthn-enabled account
-
-        session.set_mfa(true).await?;
 
         let step = AuthStepAwaitWebauthn {
             code: get_rand(48),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
-            header_origin,
+            header_origin: data.header_origin,
             user_id: user.id.clone(),
             email: user.email,
             exp: config.vars.webauthn.req_exp as u64,
-            session,
+            session: session.clone(),
         };
 
         WebauthnLoginReq {
             code: step.code.clone(),
             user_id: user.id,
-            header_loc: loc,
+            header_loc,
             header_origin: step
                 .header_origin
                 .as_ref()
@@ -190,8 +267,9 @@ pub async fn post_authorize(
                 auth_code: code.id,
                 await_code: AuthCodeToSAwait::generate_code(),
                 auth_code_lifetime: client.auth_code_lifetime,
-                header_loc: loc,
-                header_origin: header_origin
+                header_loc,
+                header_origin: data
+                    .header_origin
                     .as_ref()
                     .map(|(_, v)| v.to_str().unwrap().to_string()),
             };
@@ -201,108 +279,16 @@ pub async fn post_authorize(
                 code: code_await.await_code,
                 user_id: user.id,
                 header_csrf: Session::get_csrf_header(&session.csrf_token),
-                header_origin,
-                session,
+                header_origin: data.header_origin,
             }))
         } else {
             Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
                 user_id: user.id,
                 email: user.email,
-                header_loc: (header::LOCATION, HeaderValue::from_str(&loc)?),
+                header_loc: (header::LOCATION, HeaderValue::from_str(&header_loc)?),
                 header_csrf: Session::get_csrf_header(&session.csrf_token),
-                header_origin,
+                header_origin: data.header_origin,
             }))
         }
     }
-}
-
-pub async fn post_authorize_refresh(
-    session: &Session,
-    client: Client,
-    header_origin: Option<(HeaderName, HeaderValue)>,
-    req_data: LoginRefreshRequest,
-) -> Result<AuthStep, ErrorResponse> {
-    let user_id = session.user_id.as_ref().ok_or_else(|| {
-        ErrorResponse::new(
-            ErrorResponseType::Internal,
-            "No linked user_id for already validated session",
-        )
-    })?;
-    let user = User::find(user_id.clone()).await?;
-    user.check_enabled()?;
-    user.check_expired()?;
-
-    client.validate_mfa(&user)?;
-    client.validate_user_groups(&user)?;
-
-    let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
-
-    let config = RauthyConfig::get();
-    let mut code_lifetime = client.auth_code_lifetime;
-    if user.has_webauthn_enabled() {
-        code_lifetime += config.vars.webauthn.req_exp as i32
-    }
-    let need_tos_accept = user.needs_tos_update().await?;
-    if need_tos_accept {
-        code_lifetime += config.vars.tos.accept_timeout as i32;
-    }
-
-    todo!("check need_tos_accept return result down below");
-
-    // let code = AuthCode::new(
-    //     user.id.clone(),
-    //     client.id,
-    //     Some(session.id.clone()),
-    //     req_data.code_challenge,
-    //     req_data.code_challenge_method,
-    //     req_data.nonce,
-    //     scopes,
-    //     code_lifetime,
-    // );
-    // code.save(code_lifetime).await?;
-    //
-    // // We don't need another location check - we can only get here with an already authenticated
-    // // session and no auth-check is being performed.
-    //
-    // // build location header
-    // let header_loc = if let Some(s) = req_data.state {
-    //     format!("{}?code={}&state={s}", req_data.redirect_uri, code.id)
-    // } else {
-    //     format!("{}?code={}", req_data.redirect_uri, code.id)
-    // };
-    //
-    // // check if we need to validate the 2nd factor
-    // if user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa {
-    //     let step = AuthStepAwaitWebauthn {
-    //         code: get_rand(48),
-    //         header_csrf: Session::get_csrf_header(&session.csrf_token),
-    //         header_origin,
-    //         user_id: user.id.clone(),
-    //         email: user.email,
-    //         exp: webauthn_req_exp as u64,
-    //         session: session.clone(),
-    //     };
-    //
-    //     let login_req = WebauthnLoginReq {
-    //         code: step.code.clone(),
-    //         user_id: user.id,
-    //         header_loc,
-    //         header_origin: step
-    //             .header_origin
-    //             .as_ref()
-    //             .map(|h| h.1.to_str().unwrap().to_string()),
-    //         is_tos_await: need_tos_accept,
-    //     };
-    //     login_req.save().await?;
-    //
-    //     Ok(AuthStep::AwaitWebauthn(step))
-    // } else {
-    //     Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
-    //         user_id: user.id,
-    //         email: user.email,
-    //         header_loc: (header::LOCATION, HeaderValue::from_str(&header_loc)?),
-    //         header_csrf: Session::get_csrf_header(&session.csrf_token),
-    //         header_origin,
-    //     }))
-    // }
 }
