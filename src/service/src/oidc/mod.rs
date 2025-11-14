@@ -10,6 +10,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 
 pub use grant_types::device_code::grant_type_device_code;
 
+pub mod auth_providers;
 pub mod authorize;
 pub mod bcl_logout_token;
 mod grant_types;

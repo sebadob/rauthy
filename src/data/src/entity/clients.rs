@@ -868,6 +868,7 @@ impl Client {
         }
     }
 
+    // TODO check all uses and possibly remove / consolidate with `validate_mfa()`
     #[inline(always)]
     pub fn force_mfa(&self) -> bool {
         self.force_mfa || self.id == "rauthy" && RauthyConfig::get().vars.mfa.admin_force_mfa

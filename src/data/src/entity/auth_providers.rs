@@ -1,54 +1,34 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
-use crate::entity::auth_codes::AuthCode;
-use crate::entity::clients::Client;
 use crate::entity::logos::{Logo, LogoType};
-use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
-use crate::entity::webauthn::WebauthnLoginReq;
-use crate::entity::{atproto, auth_provider_cust_impl};
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
-use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
-use actix_web::HttpRequest;
 use actix_web::cookie::Cookie;
-use actix_web::http::header;
-use actix_web::http::header::HeaderValue;
-use atrium_api::agent::Agent;
-use atrium_common::store::Store;
-use atrium_oauth::{AuthorizeOptions, CallbackParams, KnownScope, Scope};
 use chrono::Utc;
 use cryptr::EncValue;
-use cryptr::utils::secure_random_alnum;
 use hiqlite::Row;
 use hiqlite_macros::params;
-use image::EncodableLayout;
 use itertools::Itertools;
-use rauthy_api_types::auth_providers::{
-    ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
-};
 use rauthy_api_types::auth_providers::{
     ProviderLinkedUserResponse, ProviderLookupResponse, ProviderResponse,
 };
+use rauthy_api_types::auth_providers::{ProviderLookupRequest, ProviderRequest};
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
-    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_ATPROTO, PROVIDER_LINK_COOKIE,
-    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
+    CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE,
+    PROVIDER_ATPROTO, PROVIDER_LINK_COOKIE,
 };
 use rauthy_common::utils::{
-    base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, deserialize,
-    get_rand, new_store_id, serialize,
+    base64_decode, base64_encode, base64_url_no_pad_decode, deserialize, new_store_id, serialize,
 };
-use rauthy_common::{http_client, is_hiqlite, sha256};
+use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use reqwest::header::{ACCEPT, AUTHORIZATION};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, value};
 use serde_json_path::JsonPath;
 use std::borrow::Cow;
-use std::fmt::Write;
 use std::str::FromStr;
 use tracing::{debug, error};
 use utoipa::ToSchema;
@@ -664,7 +644,7 @@ impl AuthProvider {
         }
     }
 
-    pub fn get_secret_cleartext(secret: &Option<Vec<u8>>) -> Result<Option<String>, ErrorResponse> {
+    pub fn secret_cleartext(secret: &Option<Vec<u8>>) -> Result<Option<String>, ErrorResponse> {
         if let Some(secret) = &secret {
             let bytes = EncValue::try_from(secret.clone())?.decrypt()?;
             let cleartext = String::from_utf8_lossy(bytes.as_ref()).to_string();
@@ -679,7 +659,7 @@ impl TryFrom<AuthProvider> for ProviderResponse {
     type Error = ErrorResponse;
 
     fn try_from(value: AuthProvider) -> Result<Self, Self::Error> {
-        let secret = AuthProvider::get_secret_cleartext(&value.secret)?;
+        let secret = AuthProvider::secret_cleartext(&value.secret)?;
         Ok(Self {
             id: value.id,
             name: value.name,
@@ -737,7 +717,7 @@ impl AuthProviderCallback {
         Ok(())
     }
 
-    async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
         let opt: Option<Self> = DB::hql()
             .get(Cache::AuthProviderCallback, callback_id)
             .await?;
@@ -751,7 +731,7 @@ impl AuthProviderCallback {
         }
     }
 
-    async fn save(&self) -> Result<(), ErrorResponse> {
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
         DB::hql()
             .put(
                 Cache::AuthProviderCallback,
@@ -762,455 +742,6 @@ impl AuthProviderCallback {
             .await?;
 
         Ok(())
-    }
-}
-
-impl AuthProviderCallback {
-    /// returns (encrypted cookie, xsrf token, location header, optional allowed origins)
-    pub async fn login_start<'a>(
-        payload: ProviderLoginRequest,
-    ) -> Result<(Cookie<'a>, String, HeaderValue), ErrorResponse> {
-        let provider = AuthProvider::find(&payload.provider_id).await?;
-
-        if !RauthyConfig::get().vars.atproto.enable && provider.issuer == PROVIDER_ATPROTO {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "atproto is disabled",
-            ));
-        }
-
-        let client = Client::find(payload.client_id).await?;
-
-        let slf = Self {
-            callback_id: secure_random_alnum(32),
-            xsrf_token: secure_random_alnum(32),
-            typ: provider.typ,
-
-            req_client_id: client.id,
-            req_scopes: payload.scopes,
-            req_redirect_uri: payload.redirect_uri,
-            req_state: payload.state,
-            req_nonce: payload.nonce,
-            req_code_challenge: payload.code_challenge,
-            req_code_challenge_method: payload.code_challenge_method,
-
-            provider_id: provider.id,
-
-            pkce_challenge: payload.pkce_challenge,
-        };
-
-        let mut location = format!(
-            "{}{}client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
-            provider.authorization_endpoint,
-            // append parameters if there are already some parameters
-            if provider.authorization_endpoint.contains('?') {
-                '&'
-            } else {
-                '?'
-            },
-            provider.client_id,
-            RauthyConfig::get().provider_callback_uri_encoded,
-            provider.scope,
-            slf.callback_id
-        );
-        if provider.use_pkce {
-            write!(
-                location,
-                "&code_challenge={}&code_challenge_method=S256",
-                slf.pkce_challenge
-            )
-            .expect("write to always succeed");
-        }
-
-        if let Some(input) = payload
-            .handle
-            .filter(|_| provider.issuer == PROVIDER_ATPROTO)
-        {
-            let atproto = atproto::Client::get();
-
-            let options = AuthorizeOptions {
-                state: Some(slf.callback_id.clone()),
-                redirect_uri: Some(RauthyConfig::get().provider_callback_uri.clone()),
-                scopes: vec![
-                    Scope::Unknown("transition:email".to_owned()),
-                    Scope::Known(KnownScope::Atproto),
-                    Scope::Known(KnownScope::TransitionGeneric),
-                ],
-                ..Default::default()
-            };
-
-            location = atproto
-                .authorize(input, options)
-                .await
-                .map_err(|error| {
-                    error!(%error, "failed to start authorization for ATProto");
-                })
-                .unwrap();
-        }
-
-        let cookie = ApiCookie::build(
-            COOKIE_UPSTREAM_CALLBACK,
-            &slf.callback_id,
-            UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64,
-        );
-
-        slf.save().await?;
-
-        Ok((
-            cookie,
-            slf.xsrf_token,
-            HeaderValue::from_str(&location).expect("Location HeaderValue to be correct"),
-        ))
-    }
-
-    /// In case of any error, the callback code will be fully deleted for security reasons.
-    pub async fn login_finish<'a>(
-        req: &'a HttpRequest,
-        payload: &'a ProviderCallbackRequest,
-        mut session: Session,
-    ) -> Result<(AuthStep, Cookie<'a>), ErrorResponse> {
-        // the callback id for the cache should be inside the encrypted cookie
-        let callback_id = ApiCookie::from_req(req, COOKIE_UPSTREAM_CALLBACK).ok_or_else(|| {
-            ErrorResponse::new(
-                ErrorResponseType::Forbidden,
-                "Missing encrypted callback cookie",
-            )
-        })?;
-
-        // validate state
-        if payload.iss_atproto.is_none() && callback_id != payload.state {
-            Self::delete(callback_id).await?;
-
-            error!("`state` does not match");
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "`state` does not match",
-            ));
-        }
-        debug!("callback state is valid");
-
-        // validate csrf token
-        let slf = Self::find(callback_id).await?;
-        if slf.xsrf_token != payload.xsrf_token {
-            Self::delete(slf.callback_id).await?;
-
-            error!("invalid CSRF token");
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "invalid CSRF token",
-            ));
-        }
-        debug!("callback csrf token is valid");
-
-        // validate PKCE verifier
-        let hash_base64 = base64_url_encode(sha256!(payload.pkce_verifier.as_bytes()));
-        if slf.pkce_challenge != hash_base64 {
-            Self::delete(slf.callback_id).await?;
-
-            error!("invalid PKCE verifier");
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "invalid PKCE verifier",
-            ));
-        }
-        debug!("callback pkce verifier is valid");
-
-        // request is valid -> fetch token for the user
-        let provider = AuthProvider::find(&slf.provider_id).await?;
-
-        // extract a possibly existing provider link cookie for
-        // linking an existing account to a provider
-        let link_cookie = ApiCookie::from_req(req, PROVIDER_LINK_COOKIE)
-            .and_then(|value| AuthProviderLinkCookie::try_from(value.as_str()).ok());
-
-        // deserialize payload and validate the information
-        let (user, provider_mfa_login) = if provider.issuer == PROVIDER_ATPROTO {
-            let atproto = atproto::Client::get();
-
-            let params = CallbackParams {
-                code: payload.code.clone(),
-                state: Some(payload.state.clone()),
-                iss: payload.iss_atproto.clone(),
-            };
-            // return early if we got any error
-            let (session_manager, app_state) = atproto.callback(params).await.map_err(|error| {
-                error!(%error, "failed to complete authorization callback for ATProto");
-
-                ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "failed to complete authorization callback for ATProto",
-                )
-            })?;
-
-            let Some(app_state) = app_state else {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Forbidden,
-                    "missing callback state for ATProto",
-                ));
-            };
-
-            if app_state != slf.callback_id {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Forbidden,
-                    "callback state mismatch for ATProto",
-                ));
-            }
-
-            let agent = Agent::new(session_manager);
-
-            let Some(did) = agent.did().await else {
-                panic!("missing DID for ATProto session");
-            };
-
-            let Some(session) = DB.get(&did).await.map_err(|error| {
-                error!(%error, "failed to get session for ATProto callback");
-
-                ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "failed to get session for ATProto callback",
-                )
-            })?
-            else {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "failed to complete authorization callback for atproto",
-                ));
-            };
-
-            let data = match agent.api.com.atproto.server.get_session().await {
-                Ok(atrium_api::types::Object { data, .. }) => data,
-                Err(error) => {
-                    error!(%error, "failed to get session for ATProto callback");
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::Internal,
-                        "failed to get session for ATProto callback",
-                    ));
-                }
-            };
-
-            let claims = AuthProviderIdClaims {
-                sub: Some(Value::String(session.token_set.sub.to_string())),
-                email: data.email.map(Cow::from),
-                email_verified: data.email_confirmed,
-                ..Default::default()
-            };
-
-            claims.validate_update_user(&provider, &link_cookie).await?
-        } else {
-            let mut payload = OidcCodeRequestParams {
-                // a client MAY add the `client_id`, but it MUST add it when it's public
-                client_id: &provider.client_id,
-                client_secret: None,
-                code: &payload.code,
-                code_verifier: provider.use_pkce.then_some(&payload.pkce_verifier),
-                grant_type: "authorization_code",
-                redirect_uri: &RauthyConfig::get().provider_callback_uri,
-            };
-            if provider.client_secret_post {
-                payload.client_secret = AuthProvider::get_secret_cleartext(&provider.secret)?;
-            }
-
-            let res = {
-                let mut builder = http_client()
-                    .post(&provider.token_endpoint)
-                    .header(ACCEPT, APPLICATION_JSON);
-
-                if provider.client_secret_basic {
-                    builder = builder.basic_auth(
-                        &provider.client_id,
-                        AuthProvider::get_secret_cleartext(&provider.secret)?,
-                    )
-                }
-
-                builder
-            }
-            .form(&payload)
-            .send()
-            .await?;
-
-            let status = res.status().as_u16();
-            debug!("POST /token auth provider status: {status}");
-
-            // return early if we got any error
-            if !res.status().is_success() {
-                let err = match res.text().await {
-                    Ok(body) => format!(
-                        "HTTP {status} during POST {} for upstream auth provider '{}'\n{body}",
-                        provider.token_endpoint, provider.client_id
-                    ),
-                    Err(_) => format!(
-                        "HTTP {status} during POST {} for upstream auth provider '{}' without any body",
-                        provider.token_endpoint, provider.client_id
-                    ),
-                };
-                error!("{}", err);
-                return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
-            }
-
-            let ts = match res.json::<AuthProviderTokenSet>().await {
-                Ok(ts) => ts,
-                Err(err) => {
-                    let err = format!(
-                        "Deserializing /token response from auth provider {}: {err}",
-                        provider.client_id
-                    );
-                    error!("{err}");
-                    return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
-                }
-            };
-
-            if let Some(err) = ts.error {
-                let msg = format!(
-                    "/token request error: {err}: {}",
-                    ts.error_description.unwrap_or_default()
-                );
-                error!("{msg}");
-                return Err(ErrorResponse::new(ErrorResponseType::Internal, msg));
-            }
-
-            // in case of a standard OIDC provider, we only care about the ID token
-            if let Some(id_token) = ts.id_token {
-                let claims_bytes = AuthProviderIdClaims::self_as_bytes_from_token(&id_token)?;
-                let claims = AuthProviderIdClaims::try_from(claims_bytes.as_slice())?;
-
-                claims.validate_update_user(&provider, &link_cookie).await?
-            } else if let Some(access_token) = ts.access_token {
-                // the id_token only exists, if we actually have an OIDC provider.
-                // If we only get an access token, we need to do another request to the
-                // userinfo endpoint
-                let res = http_client()
-                    .get(&provider.userinfo_endpoint)
-                    .header(AUTHORIZATION, format!("Bearer {access_token}"))
-                    .header(ACCEPT, APPLICATION_JSON)
-                    .send()
-                    .await?;
-
-                let status = res.status().as_u16();
-                debug!("GET /userinfo auth provider status: {status}");
-
-                let res_bytes = res.bytes().await?;
-                let mut claims = AuthProviderIdClaims::try_from(res_bytes.as_bytes())?;
-
-                if claims.email.is_none() && provider.typ == AuthProviderType::Github {
-                    auth_provider_cust_impl::get_github_private_email(&access_token, &mut claims)
-                        .await?;
-                }
-
-                claims.validate_update_user(&provider, &link_cookie).await?
-            } else {
-                let err = "Neither `access_token` nor `id_token` existed";
-                error!("{err}");
-                return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
-            }
-        };
-
-        user.check_enabled()?;
-        user.check_expired()?;
-
-        if link_cookie.is_some() {
-            // If this is the case, we don't need to validate any further client values.
-            // We will not generate a new auth code at all -> this is just a request to federate
-            // an existing account. The federation has been done in the step above already.
-            return Ok((
-                AuthStep::ProviderLink,
-                AuthProviderLinkCookie::deletion_cookie(),
-            ));
-        }
-
-        // validate client values
-        let client = Client::find_maybe_ephemeral(slf.req_client_id).await?;
-        let force_mfa = client.force_mfa();
-        if force_mfa {
-            if provider_mfa_login == ProviderMfaLogin::No && !user.has_webauthn_enabled() {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::MfaRequired,
-                    "MFA is required for this client",
-                ));
-            }
-            session.set_mfa(true).await?;
-        }
-        client.validate_redirect_uri(&slf.req_redirect_uri)?;
-        client.validate_code_challenge(&slf.req_code_challenge, &slf.req_code_challenge_method)?;
-        let header_origin = client.get_validated_origin_header(req)?;
-
-        // ######################################
-        // all good, we can generate an auth code
-
-        // authorization code
-        let config = RauthyConfig::get();
-
-        let mut code_lifetime = client.auth_code_lifetime;
-        if user.has_webauthn_enabled() {
-            code_lifetime += config.vars.webauthn.req_exp as i32;
-        }
-        let need_tos_accept = user.needs_tos_update().await?;
-        if need_tos_accept {
-            code_lifetime += config.vars.tos.accept_timeout as i32;
-        }
-
-        let scopes = client.sanitize_login_scopes(&slf.req_scopes)?;
-        let code = AuthCode::new(
-            user.id.clone(),
-            client.id,
-            Some(session.id.clone()),
-            slf.req_code_challenge,
-            slf.req_code_challenge_method,
-            slf.req_nonce,
-            scopes,
-            code_lifetime,
-        );
-        code.save(code_lifetime).await?;
-
-        // location header
-        let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
-        if let Some(state) = slf.req_state {
-            write!(loc, "&state={state}")?;
-        };
-
-        let auth_step = if user.has_webauthn_enabled() {
-            let step = AuthStepAwaitWebauthn {
-                code: get_rand(48),
-                header_csrf: Session::get_csrf_header(&session.csrf_token),
-                header_origin,
-                user_id: user.id.clone(),
-                email: user.email,
-                exp: config.vars.webauthn.req_exp as u64,
-                session,
-            };
-
-            let tos_await_data = if need_tos_accept { todo!() } else { None };
-            WebauthnLoginReq {
-                code: step.code.clone(),
-                user_id: user.id,
-                header_loc: loc,
-                header_origin: step
-                    .header_origin
-                    .as_ref()
-                    .map(|h| h.1.to_str().unwrap().to_string()),
-                tos_await_data,
-            }
-            .save()
-            .await?;
-
-            AuthStep::AwaitWebauthn(step)
-        } else {
-            if need_tos_accept {
-                todo!()
-            }
-
-            AuthStep::LoggedIn(AuthStepLoggedIn {
-                user_id: user.id,
-                email: user.email,
-                header_loc: (header::LOCATION, HeaderValue::from_str(&loc)?),
-                header_csrf: Session::get_csrf_header(&session.csrf_token),
-                header_origin,
-            })
-        };
-
-        // callback data deletion cookie
-        let cookie = ApiCookie::build(COOKIE_UPSTREAM_CALLBACK, "", 0);
-        Ok((auth_step, cookie))
     }
 }
 
@@ -1277,7 +808,7 @@ pub struct AuthProviderAddressClaims<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-enum ProviderMfaLogin {
+pub enum ProviderMfaLogin {
     Yes,
     No,
 }
@@ -1347,7 +878,7 @@ impl AuthProviderIdClaims<'_> {
         }
     }
 
-    fn self_as_bytes_from_token(token: &str) -> Result<Vec<u8>, ErrorResponse> {
+    pub fn self_as_bytes_from_token(token: &str) -> Result<Vec<u8>, ErrorResponse> {
         let mut parts = token.split('.');
         let _header = parts.next().ok_or_else(|| {
             ErrorResponse::new(
@@ -1363,7 +894,7 @@ impl AuthProviderIdClaims<'_> {
         Ok(json_bytes)
     }
 
-    async fn validate_update_user(
+    pub async fn validate_update_user(
         &self,
         provider: &AuthProvider,
         link_cookie: &Option<AuthProviderLinkCookie>,
@@ -1712,25 +1243,6 @@ impl AuthProviderIdClaims<'_> {
 
         Ok((user, provider_mfa_login))
     }
-}
-
-#[derive(Debug, Deserialize)]
-struct AuthProviderTokenSet {
-    pub access_token: Option<String>,
-    // pub token_type: Option<String>,
-    pub id_token: Option<String>,
-    pub error: Option<String>,
-    pub error_description: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-struct OidcCodeRequestParams<'a> {
-    client_id: &'a str,
-    client_secret: Option<String>,
-    code: &'a str,
-    code_verifier: Option<&'a str>,
-    grant_type: &'static str,
-    redirect_uri: &'a str,
 }
 
 #[cfg(test)]

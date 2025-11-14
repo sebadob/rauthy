@@ -13,6 +13,9 @@ rauthy-jwt = { path = "../jwt" }
 rauthy-data = { path = "../data" }
 
 actix-web = { workspace = true }
+atrium-api = { workspace = true }
+atrium-common = { workspace = true }
+atrium-oauth = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }
 openssl = { workspace = true }
