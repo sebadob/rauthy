@@ -1,34 +1,31 @@
+use crate::oidc;
 use crate::oidc::auth_providers::cust_impls;
+use crate::oidc::authorize::AuthorizeData;
 use actix_web::HttpRequest;
 use actix_web::cookie::Cookie;
-use actix_web::http::header;
-use actix_web::http::header::HeaderValue;
 use atrium_common::store::Store;
 use rauthy_api_types::auth_providers::ProviderCallbackRequest;
 use rauthy_common::constants::{
     APPLICATION_JSON, COOKIE_UPSTREAM_CALLBACK, PROVIDER_ATPROTO, PROVIDER_LINK_COOKIE,
 };
-use rauthy_common::utils::{base64_url_encode, get_rand};
+use rauthy_common::utils::base64_url_encode;
 use rauthy_common::{http_client, sha256};
+use rauthy_data::AuthStep;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::database::DB;
 use rauthy_data::entity::atproto;
-use rauthy_data::entity::auth_codes::AuthCode;
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderIdClaims, AuthProviderLinkCookie,
     AuthProviderType, ProviderMfaLogin,
 };
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::sessions::Session;
-use rauthy_data::entity::webauthn::WebauthnLoginReq;
 use rauthy_data::rauthy_config::RauthyConfig;
-use rauthy_data::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::borrow::Cow;
-use std::fmt::Write;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -301,100 +298,37 @@ pub async fn login_finish<'a>(
         ));
     }
 
-    // validate client values
-    let client = Client::find_maybe_ephemeral(slf.req_client_id).await?;
-    let force_mfa = client.force_mfa();
-    if force_mfa {
-        if provider_mfa_login == ProviderMfaLogin::No && !user.has_webauthn_enabled() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::MfaRequired,
-                "MFA is required for this client",
-            ));
-        }
-        session.set_mfa(true).await?;
-    }
-    let header_origin = client.get_validated_origin_header(req)?;
+    // From here on, we deal with a normal login instead of just an account federation.
 
-    // let auth_step = rauthy_ser
-
-    client.validate_redirect_uri(&slf.req_redirect_uri)?;
-    client.validate_code_challenge(&slf.req_code_challenge, &slf.req_code_challenge_method)?;
-
-    // ######################################
-    // all good, we can generate an auth code
-
-    // authorization code
-    let config = RauthyConfig::get();
-
-    let mut code_lifetime = client.auth_code_lifetime;
-    if user.has_webauthn_enabled() {
-        code_lifetime += config.vars.webauthn.req_exp as i32;
-    }
-    let need_tos_accept = user.needs_tos_update().await?;
-    if need_tos_accept {
-        code_lifetime += config.vars.tos.accept_timeout as i32;
-    }
-
-    let scopes = client.sanitize_login_scopes(&slf.req_scopes)?;
-    let code = AuthCode::new(
-        user.id.clone(),
-        client.id,
-        Some(session.id.clone()),
-        slf.req_code_challenge,
-        slf.req_code_challenge_method,
-        slf.req_nonce,
-        scopes,
-        code_lifetime,
-    );
-    code.save(code_lifetime).await?;
-
-    // location header
-    let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
-    if let Some(state) = slf.req_state {
-        write!(loc, "&state={state}")?;
-    };
-
-    let auth_step = if user.has_webauthn_enabled() {
-        let step = AuthStepAwaitWebauthn {
-            code: get_rand(48),
-            header_csrf: Session::get_csrf_header(&session.csrf_token),
-            header_origin,
-            user_id: user.id.clone(),
-            email: user.email,
-            exp: config.vars.webauthn.req_exp as u64,
-            session,
-        };
-
-        let tos_await_data = if need_tos_accept { todo!() } else { None };
-        WebauthnLoginReq {
-            code: step.code.clone(),
-            user_id: user.id,
-            header_loc: loc,
-            header_origin: step
-                .header_origin
-                .as_ref()
-                .map(|h| h.1.to_str().unwrap().to_string()),
-            tos_await_data,
-        }
-        .save()
+    let require_webauthn = user.has_webauthn_enabled();
+    session
+        .set_mfa(provider_mfa_login == ProviderMfaLogin::Yes || require_webauthn)
         .await?;
 
-        AuthStep::AwaitWebauthn(step)
-    } else {
-        if need_tos_accept {
-            todo!()
-        }
+    let client = Client::find_maybe_ephemeral(slf.req_client_id).await?;
+    let header_origin = client.get_validated_origin_header(req)?;
 
-        AuthStep::LoggedIn(AuthStepLoggedIn {
-            user_id: user.id,
-            email: user.email,
-            header_loc: (header::LOCATION, HeaderValue::from_str(&loc)?),
-            header_csrf: Session::get_csrf_header(&session.csrf_token),
+    let auth_step = oidc::authorize::finish_authorize(
+        user,
+        client,
+        &session,
+        AuthorizeData {
+            redirect_uri: slf.req_redirect_uri,
+            scopes: slf.req_scopes,
+            state: slf.req_state,
+            nonce: slf.req_nonce,
+            code_challenge: slf.req_code_challenge,
+            code_challenge_method: slf.req_code_challenge_method,
             header_origin,
-        })
-    };
+            require_webauthn,
+        },
+        None,
+        Some(provider_mfa_login),
+    )
+    .await?;
 
     // callback data deletion cookie
     let cookie = ApiCookie::build(COOKIE_UPSTREAM_CALLBACK, "", 0);
+
     Ok((auth_step, cookie))
 }

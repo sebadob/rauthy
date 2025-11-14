@@ -7,6 +7,7 @@ use rauthy_common::constants::COOKIE_MFA;
 use rauthy_common::utils::get_rand;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
+use rauthy_data::entity::auth_providers::ProviderMfaLogin;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::sessions::Session;
@@ -125,6 +126,7 @@ pub async fn post_authorize(
             require_webauthn,
         },
         Some(user_needs_mfa),
+        None,
     )
     .await
 }
@@ -163,37 +165,43 @@ pub async fn post_authorize_refresh(
             require_webauthn,
         },
         None,
+        None,
     )
     .await
 }
 
-struct AuthorizeData {
-    redirect_uri: String,
-    scopes: Option<Vec<String>>,
-    state: Option<String>,
-    nonce: Option<String>,
-    code_challenge: Option<String>,
-    code_challenge_method: Option<String>,
-    header_origin: Option<(HeaderName, HeaderValue)>,
-    require_webauthn: bool,
+pub(crate) struct AuthorizeData {
+    pub redirect_uri: String,
+    pub scopes: Option<Vec<String>>,
+    pub state: Option<String>,
+    pub nonce: Option<String>,
+    pub code_challenge: Option<String>,
+    pub code_challenge_method: Option<String>,
+    pub header_origin: Option<(HeaderName, HeaderValue)>,
+    pub require_webauthn: bool,
 }
 
 /// Expects the user checks already been done, but does all the necessary client validations.
-async fn finish_authorize(
+/// `user_needs_mfa` is used to add a login delay during `POST /authorize` and not necessary
+/// otherwise.
+pub(crate) async fn finish_authorize(
     user: User,
     client: Client,
     session: &Session,
     data: AuthorizeData,
     user_needs_mfa: Option<&mut bool>,
+    provider_mfa_login: Option<ProviderMfaLogin>,
 ) -> Result<AuthStep, ErrorResponse> {
     client.validate_enabled()?;
-    client.validate_mfa(&user).inspect_err(|_| {
-        // in this case, we do not want to add a login delay
-        // the user password was correct, we only need a passkey being added to the account
-        if let Some(needs_mfa) = user_needs_mfa {
-            *needs_mfa = true;
-        }
-    })?;
+    client
+        .validate_mfa(&user, provider_mfa_login)
+        .inspect_err(|_| {
+            // in this case, we do not want to add a login delay
+            // the user password was correct, we only need a passkey being added to the account
+            if let Some(needs_mfa) = user_needs_mfa {
+                *needs_mfa = true;
+            }
+        })?;
     client.validate_user_groups(&user)?;
     client.validate_redirect_uri(&data.redirect_uri)?;
     client.validate_code_challenge(&data.code_challenge, &data.code_challenge_method)?;
