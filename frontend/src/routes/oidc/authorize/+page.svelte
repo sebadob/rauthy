@@ -53,6 +53,7 @@
         ToSUserAcceptResponse
     } from "$api/types/tos";
     import Modal from "$lib/Modal.svelte";
+    import TosAccept from "$lib/TosAccept.svelte";
 
     const inputWidth = "18rem";
 
@@ -81,7 +82,6 @@
     let mfaPurpose: undefined | MfaPurpose = $state();
 
     let isLoading = $state(false);
-    // let err = $state('some error message that it longer over multiple lines');
     let err = $state('');
     let loginAction = $state('');
     let csrfToken = $state('');
@@ -104,12 +104,10 @@
     let userId = $state('');
     let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset && !isAtproto);
 
-    let refToS: undefined | HTMLParagraphElement = $state();
-    let showModal = $state(false);
-    let closeModal: undefined | (() => void) = $state();
     let tos: undefined | ToSLatestResponse = $state();
-    let tosRead = $state(false);
     let tosAcceptCode = $state('');
+
+    $inspect(tosAcceptCode, 'tosAcceptCode');
 
     onMount(() => {
         if (!needsPassword) {
@@ -149,14 +147,6 @@
     });
 
     $effect(() => {
-        if (refToS) {
-            setTimeout(() => {
-                onScrollEndToS();
-            }, 1000);
-        }
-    });
-
-    $effect(() => {
         if (IS_DEV) {
             // Make sure to create a session manually during dev.
             // In prod, it will be handled automatically during the GET already.
@@ -184,7 +174,6 @@
                 console.error('No ToS exists when the user should update');
             }
         }
-        showModal = true;
     }
 
     function handleShowReset() {
@@ -274,11 +263,11 @@
             url = '/auth/v1/dev/authorize';
         }
 
-        let res = await fetchPost<undefined | WebauthnLoginResponse>(url, payload, 'json', 'noRedirect');
+        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(url, payload, 'json', 'noRedirect');
         await handleAuthRes(res);
     }
 
-    async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse>) {
+    async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>) {
         isLoading = false;
 
         if (res.status === 202) {
@@ -302,8 +291,9 @@
         } else if (res.status === 206) {
             // login successful, but the user needs to accept updated ToS
             let body = res.body as ToSAwaitLoginResponse;
+            console.log(body);
             userId = body.user_id;
-            tosAcceptCode = body.code;
+            tosAcceptCode = body.tos_await_code;
             await fetchTos();
         } else if (res.status === 400) {
             err = res.error?.message || '';
@@ -378,43 +368,12 @@
         });
     }
 
-    function onScrollEndToS() {
-        if (!refToS) {
-            return false;
-        }
-
-        // allow 50px diff for better UX
-        if (!tosRead && refToS.scrollHeight <= refToS.scrollTop + refToS.offsetHeight + 50) {
-            tosRead = true;
-        }
-    }
-
-    async function onToSAccept() {
-        if (!tos) {
-            return;
-        }
-
-        isLoading = true;
-        closeModal?.();
-
-        let payload: ToSUserAcceptRequest = {
-            accept_code: tosAcceptCode,
-            tos_ts: tos.ts,
-        };
-        let res = await fetchPost<undefined>('/auth/v1/tos/accept', payload);
-        await handleAuthRes(res);
-    }
-
     async function onToSCancel() {
         password = '';
         userId = '';
         tosAcceptCode = '';
-        tosRead = false;
         isLoading = false;
         mfaPurpose = undefined;
-        closeModal?.();
-        // TODO probably add a `grace_time` feature for better UX?
-        // TODO we could add a deny endpoint in the backend to cleanup left-over data early
     }
 
     async function providerLoginPkce(id: string, pkce_challenge: string) {
@@ -680,32 +639,12 @@
                 {/if}
 
                 {#if tos}
-                    <Modal bind:showModal bind:closeModal strict>
-                        <h1>{t.tos.tos}</h1>
-                        <p bind:this={refToS} class="tosContent" onscrollend={onScrollEndToS}>
-                            {#if tos.is_html}
-                                {@html tos.content}
-                            {:else}
-                                {tos.content}
-                            {/if}
-                        </p>
-                        <Button
-                                ariaLabel={t.common.accept}
-                                onclick={onToSAccept}
-                                isDisabled={!tosRead}
-                                {isLoading}
-                        >
-                            {t.common.accept}
-                        </Button>
-                        <Button
-                                level={-2}
-                                ariaLabel={t.common.cancel}
-                                onclick={onToSCancel}
-                                {isLoading}
-                        >
-                            {t.common.cancel}
-                        </Button>
-                    </Modal>
+                    <TosAccept
+                            {tos}
+                            {tosAcceptCode}
+                            onToSAccept={handleAuthRes}
+                            {onToSCancel}
+                    />
                 {/if}
 
                 {#if !clientMfaForce && providers.length > 0 && !isAtproto}

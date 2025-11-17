@@ -14,15 +14,10 @@
     import type {NewUserRegistrationRequest} from "$api/types/register.ts";
     import {fetchGet, fetchPost} from "$api/fetch";
     import type {ToSLatestResponse} from "$api/types/tos";
-    import Modal from "$lib/Modal.svelte";
-    import {onMount} from "svelte";
     import {fetchSolvePow} from "$utils/pow";
+    import TosAccept from "$lib/TosAccept.svelte";
 
     let t = useI18n();
-
-    let refToS: undefined | HTMLParagraphElement = $state();
-    let showModal = $state(false);
-    let closeModal: undefined | (() => void) = $state();
 
     let restrictedDomain = $state('');
     let redirectUri = useParam('redirect_uri');
@@ -31,7 +26,6 @@
     let success = $state(false);
 
     let tos: undefined | ToSLatestResponse = $state();
-    let tosRead = $state(false);
     let noTosExists = $state(false);
 
     let email = $state('');
@@ -40,31 +34,12 @@
 
     let action = $derived(IS_DEV ? '/auth/v1/dev/register' : '/auth/v1/users/register');
 
-    $effect(() => {
-        if (refToS) {
-            setTimeout(() => {
-                onScrollEndToS();
-            }, 1000);
-        }
-    });
-
     async function fetchTos() {
         let res = await fetchGet<ToSLatestResponse>('/auth/v1/tos/latest');
         if (res.body) {
             tos = res.body;
         } else if (res.status === 204) {
             noTosExists = true;
-        }
-    }
-
-    function onScrollEndToS() {
-        if (!refToS) {
-            return false;
-        }
-
-        // allow 50px diff for better UX
-        if (!tosRead && refToS.scrollHeight <= refToS.scrollTop + refToS.offsetHeight + 50) {
-            tosRead = true;
         }
     }
 
@@ -82,22 +57,15 @@
             return;
         }
 
-        if (!tos) {
-            await fetchTos();
-        }
+        await fetchTos();
 
         if (tos) {
-            showModal = true;
+            // noop
         } else if (noTosExists) {
             await submitRegistration();
         } else {
             console.error('logic error in ToS fetch / accept');
         }
-    }
-
-    async function acceptToS() {
-        closeModal?.();
-        await submitRegistration();
     }
 
     async function submitRegistration() {
@@ -196,32 +164,12 @@
         </div>
 
         {#if tos}
-            <Modal bind:showModal bind:closeModal strict>
-                <h1>{t.tos.tos}</h1>
-                <p bind:this={refToS} class="tosContent" onscrollend={onScrollEndToS}>
-                    {#if tos.is_html}
-                        {@html tos.content}
-                    {:else}
-                        {tos.content}
-                    {/if}
-                </p>
-                <Button
-                        ariaLabel={t.common.accept}
-                        onclick={acceptToS}
-                        isDisabled={!tosRead}
-                        {isLoading}
-                >
-                    {t.common.accept}
-                </Button>
-                <Button
-                        level={-2}
-                        ariaLabel={t.common.cancel}
-                        onclick={() => closeModal?.()}
-                        {isLoading}
-                >
-                    {t.common.cancel}
-                </Button>
-            </Modal>
+            <TosAccept
+                    {tos}
+                    forceAccept
+                    onToSAccept={submitRegistration}
+                    onToSCancel={() => tos = undefined}
+            />
         {/if}
 
         <ThemeSwitch absolute/>
@@ -253,12 +201,5 @@
 
     .domainTxt {
         margin: .5rem 0;
-    }
-
-    .tosContent {
-        max-height: min(75dvh, 40rem);
-        margin-bottom: 1rem;
-        padding-right: 1rem;
-        overflow-y: auto;
     }
 </style>

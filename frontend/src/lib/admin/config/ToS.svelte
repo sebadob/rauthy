@@ -16,7 +16,6 @@
     import {fmtDateInput, fmtTimeInput} from "$utils/form";
     import {formatDateFromTs, formatUtcTsFromDateInput} from "$utils/helpers";
     import LabeledValue from "$lib/LabeledValue.svelte";
-    import IconStop from "$icons/IconStop.svelte";
     import Options from "$lib/Options.svelte";
 
     let t = useI18n();
@@ -307,9 +306,10 @@
                         <div>
                             {#if stat}
                                 {formatDateFromTs(stat.accept_ts)}
+                                -
                                 {stat.location}
                             {:else}
-                                <IconStop/>
+                                -
                             {/if}
                         </div>
                     </div>
@@ -352,6 +352,10 @@
     .stat {
         display: grid;
         grid-template-columns: 11rem 1fr;
+    }
+
+    .status {
+        margin-bottom: 1rem;
     }
 
     .statLabel {

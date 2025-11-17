@@ -19,7 +19,7 @@ export interface ToSResponse {
 }
 
 export interface ToSAwaitLoginResponse {
-	code: string;
+	tos_await_code: string;
 	user_id: string;
 }
 
