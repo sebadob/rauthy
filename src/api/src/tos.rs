@@ -4,6 +4,7 @@ use actix_web::http::header::{
 };
 use actix_web::web::{Json, Path};
 use actix_web::{HttpRequest, HttpResponse, get, post};
+use chrono::Utc;
 use rauthy_api_types::tos::{
     ToSAcceptRequest, ToSLatestResponse, ToSRequest, ToSResponse, ToSUserAcceptResponse,
 };
@@ -141,6 +142,7 @@ pub async fn get_tos_user_status(
     tag = "tos",
     responses(
         (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -150,6 +152,39 @@ pub async fn post_tos_accept(
     principal: ReqPrincipal,
     req: HttpRequest,
     payload: Json<ToSAcceptRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    handle_tos_accept_deny(principal, req, payload.into_inner(), true).await
+}
+
+/// Deny update ToS as long as they are within the transition time window. Will error afterward.
+///
+/// **Permissions**
+/// - session in init or auth state
+#[utoipa::path(
+    post,
+    path = "/tos/deny",
+    tag = "tos",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/tos/deny")]
+pub async fn post_tos_deny(
+    principal: ReqPrincipal,
+    req: HttpRequest,
+    payload: Json<ToSAcceptRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    handle_tos_accept_deny(principal, req, payload.into_inner(), false).await
+}
+
+async fn handle_tos_accept_deny(
+    principal: ReqPrincipal,
+    req: HttpRequest,
+    payload: ToSAcceptRequest,
+    is_accept: bool,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
 
@@ -172,9 +207,24 @@ pub async fn post_tos_accept(
     user.check_expired()?;
 
     let tos = ToS::find(payload.tos_ts).await?;
-    let ip = real_ip_from_req(&req)?;
-    let loc = get_location(&req, ip)?;
-    ToSUserAccept::create(user.id, tos.ts, ip, loc).await?;
+
+    if is_accept {
+        let ip = real_ip_from_req(&req)?;
+        let loc = get_location(&req, ip)?;
+        ToSUserAccept::create(user.id, tos.ts, ip, loc).await?;
+    } else if let Some(ts) = tos.opt_until {
+        if ts <= Utc::now().timestamp() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "ToS transition time is over",
+            ));
+        }
+    } else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "ToS accept is mandatory",
+        ));
+    }
 
     auth_code.reset_exp(code_await.auth_code_lifetime).await?;
     code_await.delete().await?;

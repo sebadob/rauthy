@@ -8,7 +8,7 @@ pub struct ToSRequest {
     /// Unix timestamp in seconds
     #[validate(range(min = 1761951600))]
     pub opt_until: Option<i64>,
-    #[validate(length(min = 1, max = 8192))]
+    #[validate(length(min = 1, max = 100000))]
     pub content: String,
 }
 
