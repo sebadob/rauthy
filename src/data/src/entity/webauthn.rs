@@ -623,6 +623,7 @@ impl WebauthnAdditionalData {
                     &ToSAwaitLoginResponse {
                         tos_await_code: tos_req.await_code,
                         user_id: None,
+                        force_accept: None,
                     },
                 );
                 if let Some(origin) = tos_req.header_origin {

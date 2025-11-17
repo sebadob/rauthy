@@ -208,14 +208,15 @@ pub async fn post_provider_callback_handle(
     payload.validate()?;
 
     let session = principal.get_session()?;
-    let (auth_step, cookie) = rauthy_service::oidc::auth_providers::login_finish::login_finish(
-        &req,
-        &payload,
-        session.clone(),
-    )
-    .await?;
+    let (auth_step, cookie, new_user_created) =
+        rauthy_service::oidc::auth_providers::login_finish::login_finish(
+            &req,
+            &payload,
+            session.clone(),
+        )
+        .await?;
 
-    let mut resp = map_auth_step(auth_step, &req).await?;
+    let mut resp = map_auth_step(auth_step, &req, new_user_created).await?;
     resp.add_cookie(&cookie).map_err(|err| {
         ErrorResponse::new(
             ErrorResponseType::Internal,

@@ -11,10 +11,12 @@
     import {useParam} from "$state/param.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import {fetchPost} from "$api/fetch";
+    import {fetchGet, fetchPost, type IResponse} from "$api/fetch";
     import type {WebauthnLoginResponse} from "$api/types/authorize.ts";
     import type {ProviderCallbackRequest} from "$api/types/auth_provider.ts";
     import {IS_DEV} from "$utils/constants";
+    import type {ToSAwaitLoginResponse, ToSLatestResponse} from "$api/types/tos";
+    import TosAccept from "$lib/TosAccept.svelte";
 
     let t = useI18n();
     let clientMfaForce = $state(false);
@@ -22,6 +24,10 @@
 
     let userId: undefined | string = $state();
     let mfaPurpose: undefined | MfaPurpose = $state();
+
+    let tos: undefined | ToSLatestResponse = $state();
+    let tosAcceptCode = $state('');
+    let tosForceAccept = $state(false);
 
     onMount(async () => {
         let pErr = useParam('error').get();
@@ -56,8 +62,12 @@
         if (IS_DEV) {
             url = '/auth/v1/dev/providers_callback';
         }
-        let res = await fetchPost<undefined | WebauthnLoginResponse>(url, payload);
+        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(url, payload);
 
+        await handleAuthRes(res);
+    });
+
+    async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>) {
         if (res.status === 202) {
             // -> all good
             window.location.replace(res.headers.get('location') || '/auth/v1/account');
@@ -74,6 +84,13 @@
         } else if (res.status === 204) {
             // in case of a 204, we have done a user federation on an existing account -> just redirect
             window.location.replace('/auth/v1/account');
+        } else if (res.status === 206) {
+            // login successful, but the user needs to accept updated ToS
+            let body = res.body as ToSAwaitLoginResponse;
+            userId = body.user_id;
+            tosAcceptCode = body.tos_await_code;
+            tosForceAccept = body.force_accept;
+            await fetchTos();
         } else if (res.status === 403) {
             // we will get a forbidden if for instance the user already exists but without
             // any upstream provider link (or the wrong one)
@@ -90,7 +107,24 @@
         } else {
             error = `HTTP ${res.status}: ${res.error?.message}`;
         }
-    });
+    }
+
+    async function fetchTos() {
+        if (!tos) {
+            let res = await fetchGet<ToSLatestResponse>('/auth/v1/tos/latest');
+            if (res.body) {
+                tos = res.body;
+            } else if (res.status === 204) {
+                console.error('No ToS exists when the user should update');
+            }
+        }
+    }
+
+    function onToSCancel() {
+        setTimeout(() => {
+            window.location.replace('/auth/v1');
+        }, 1000);
+    }
 
     function onWebauthnError(err: string) {
         error = err;
@@ -122,6 +156,14 @@
             Account
         </Button>
     </div>
+{:else if tos}
+    <TosAccept
+            {tos}
+            forceAccept={tosForceAccept}
+            {tosAcceptCode}
+            onToSAccept={handleAuthRes}
+            {onToSCancel}
+    />
 {:else if error}
     <div class="err">
         {error}

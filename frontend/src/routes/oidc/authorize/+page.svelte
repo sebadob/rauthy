@@ -291,7 +291,6 @@
         } else if (res.status === 206) {
             // login successful, but the user needs to accept updated ToS
             let body = res.body as ToSAwaitLoginResponse;
-            console.log(body);
             userId = body.user_id;
             tosAcceptCode = body.tos_await_code;
             await fetchTos();

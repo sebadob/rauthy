@@ -16,7 +16,7 @@ use rauthy_data::database::DB;
 use rauthy_data::entity::atproto;
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderIdClaims, AuthProviderLinkCookie,
-    AuthProviderType, ProviderMfaLogin,
+    AuthProviderType, NewFederatedUserCreated, ProviderMfaLogin,
 };
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::sessions::Session;
@@ -52,7 +52,7 @@ pub async fn login_finish<'a>(
     req: &'a HttpRequest,
     payload: &'a ProviderCallbackRequest,
     mut session: Session,
-) -> Result<(AuthStep, Cookie<'a>), ErrorResponse> {
+) -> Result<(AuthStep, Cookie<'a>, NewFederatedUserCreated), ErrorResponse> {
     // the callback id for the cache should be inside the encrypted cookie
     let callback_id = ApiCookie::from_req(req, COOKIE_UPSTREAM_CALLBACK).ok_or_else(|| {
         ErrorResponse::new(
@@ -105,7 +105,7 @@ pub async fn login_finish<'a>(
         .and_then(|value| AuthProviderLinkCookie::try_from(value.as_str()).ok());
 
     // deserialize payload and validate the information
-    let (user, provider_mfa_login) = if provider.issuer == PROVIDER_ATPROTO {
+    let (user, provider_mfa_login, is_new_user) = if provider.issuer == PROVIDER_ATPROTO {
         let atproto = atproto::Client::get();
 
         let params = atrium_oauth::CallbackParams {
@@ -295,6 +295,7 @@ pub async fn login_finish<'a>(
         return Ok((
             AuthStep::ProviderLink,
             AuthProviderLinkCookie::deletion_cookie(),
+            is_new_user,
         ));
     }
 
@@ -330,5 +331,5 @@ pub async fn login_finish<'a>(
     // callback data deletion cookie
     let cookie = ApiCookie::build(COOKIE_UPSTREAM_CALLBACK, "", 0);
 
-    Ok((auth_step, cookie))
+    Ok((auth_step, cookie, is_new_user))
 }

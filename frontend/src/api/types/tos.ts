@@ -21,6 +21,7 @@ export interface ToSResponse {
 export interface ToSAwaitLoginResponse {
 	tos_await_code: string;
 	user_id: string;
+	force_accept?: boolean;
 }
 
 export interface ToSLatestResponse {

@@ -13,6 +13,7 @@ use rauthy_common::constants::COOKIE_MFA;
 use rauthy_data::AuthStep;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::api_keys::ApiKey;
+use rauthy_data::entity::auth_providers::NewFederatedUserCreated;
 use rauthy_data::entity::fed_cm::FedCMLoginStatus;
 use rauthy_data::entity::principal::Principal;
 use rauthy_data::entity::sessions::Session;
@@ -93,6 +94,7 @@ struct Assets;
 pub async fn map_auth_step(
     auth_step: AuthStep,
     req: &HttpRequest,
+    new_user_created: NewFederatedUserCreated,
     // the bool for Ok() is true is the password has been hashed
     // the bool for Err() means if we need to add a login delay (and none otherwise for better UX)
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -131,7 +133,8 @@ pub async fn map_auth_step(
                 .json(&ToSAwaitLoginResponse {
                     tos_await_code: res.code,
                     user_id: Some(res.user_id),
-                    // TODO do we actually need the session object at this point?
+                    force_accept: (new_user_created == NewFederatedUserCreated::Yes)
+                        .then_some(true),
                 });
             if let Some((name, value)) = res.header_origin {
                 resp.headers_mut().insert(name, value);

@@ -32,6 +32,7 @@ pub struct ToSResponse {
 pub struct ToSAwaitLoginResponse {
     pub tos_await_code: String,
     pub user_id: Option<String>,
+    pub force_accept: Option<bool>,
 }
 
 #[derive(Serialize, ToSchema)]

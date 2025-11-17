@@ -813,6 +813,12 @@ pub enum ProviderMfaLogin {
     No,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum NewFederatedUserCreated {
+    Yes,
+    No,
+}
+
 #[derive(Debug, Default, Deserialize)]
 pub struct AuthProviderIdClaims<'a> {
     // pub iss: &'a str,
@@ -898,7 +904,7 @@ impl AuthProviderIdClaims<'_> {
         &self,
         provider: &AuthProvider,
         link_cookie: &Option<AuthProviderLinkCookie>,
-    ) -> Result<(User, ProviderMfaLogin), ErrorResponse> {
+    ) -> Result<(User, ProviderMfaLogin, NewFederatedUserCreated), ErrorResponse> {
         if self.email.is_none() {
             let err = "No `email` in ID token claims. This is a mandatory claim";
             error!("{err}");
@@ -933,10 +939,15 @@ impl AuthProviderIdClaims<'_> {
             }
         };
 
-        let user_opt = match User::find_by_federation(&provider.id, &claims_user_id).await {
+        let (user_opt, new_federated_user) = match User::find_by_federation(
+            &provider.id,
+            &claims_user_id,
+        )
+        .await
+        {
             Ok(user) => {
                 debug!("found already existing user by federation lookup: {user:?}");
-                Some(user)
+                (Some(user), NewFederatedUserCreated::No)
             }
             Err(_) => {
                 debug!("did not find already existing user by federation lookup");
@@ -974,7 +985,7 @@ impl AuthProviderIdClaims<'_> {
                         user.auth_provider_id = Some(provider.id.clone());
                         user.federation_uid = Some(claims_user_id.clone());
 
-                        Some(user)
+                        (Some(user), NewFederatedUserCreated::No)
                     } else if provider.auto_link
                         && user.federation_uid.is_none()
                         && user.auth_provider_id.is_none()
@@ -982,7 +993,7 @@ impl AuthProviderIdClaims<'_> {
                         user.auth_provider_id = Some(provider.id.clone());
                         user.federation_uid = Some(claims_user_id.clone());
 
-                        Some(user)
+                        (Some(user), NewFederatedUserCreated::No)
                     } else {
                         return Err(ErrorResponse::new(
                             ErrorResponseType::Forbidden,
@@ -999,7 +1010,7 @@ impl AuthProviderIdClaims<'_> {
                     ));
                 } else {
                     // a new user will be created further down
-                    None
+                    (None, NewFederatedUserCreated::Yes)
                 }
             }
         };
@@ -1241,7 +1252,7 @@ impl AuthProviderIdClaims<'_> {
             UserValues::upsert(user.id.clone(), user_values).await?;
         }
 
-        Ok((user, provider_mfa_login))
+        Ok((user, provider_mfa_login, new_federated_user))
     }
 }
 
@@ -1303,6 +1314,6 @@ mod tests {
         // this raw token contains unicode encoded chars
         let raw = "eyJhbGciOiJSUzI1NiIsImtpZCI6InlPeXYtWG1tUVYtUTNrUUVCbkRHVlFGb2hoVTNyaTFiRkY0VEg4VGZYTFUiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOlsiaHR0cHM6Ly9vcGVuaWRjb25uZWN0Lm5ldCJdLCJlbWFpbCI6InRlc3RcdTAwMjZAYXBpdG1hbi5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZXhwIjoxNzE4MjAwNjc2LCJpYXQiOjE3MTgxMTQyNzYsImlzcyI6Imh0dHBzOi8vbGFzdGxvZ2luLmlvIiwibmFtZSI6InRlc3RcdTAwMjYiLCJub25jZSI6IiIsInN1YiI6InRlc3RcdTAwMjZAYXBpdG1hbi5jb20ifQ.IchRsMNdE4isQ9ug8GqFtc_TRkZ3wA1KQw4dqnwqqVgNMcbY3qTuufwRHW-zoLDxQZkNOCl0niJolrLGmSfeSAo0fRtRMrkq41b7hhcnfE2MLBTZbI3E8m2mbxdgGlBJxeOBFdIwhN3meuioxiqnoAdCh1aw8p2dj7TuBaHpNXdREUcB76U1ZXHqSmYFWZDVROzMgVb7PjL2ikPcjksWf-jlFIRrEdbRXm9DygL9LAUFI10IjCZePFv8wjmr0aJS1pXAXYn31hoSWaH0xxoDCmO4t4aBafL392zX6is0i3uRYSu-3L0GJRCT7qmbm_FiGvEqfFQoILslKRvzWG74Ww";
         let claims_bytes = AuthProviderIdClaims::self_as_bytes_from_token(raw).unwrap();
-        assert!(AuthProviderIdClaims::try_from(claims_bytes.as_bytes()).is_ok());
+        assert!(AuthProviderIdClaims::try_from(claims_bytes.as_ref()).is_ok());
     }
 }
