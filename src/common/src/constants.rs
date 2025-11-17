@@ -3,9 +3,10 @@ use serde::Deserialize;
 use std::env;
 use std::sync::{LazyLock, OnceLock};
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, Default, PartialEq, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum CookieMode {
+    #[default]
     Host,
     Secure,
     DangerInsecure,
@@ -31,12 +32,6 @@ impl CookieMode {
             CookieMode::Secure => "secure",
             CookieMode::DangerInsecure => "danger-insecure",
         }
-    }
-}
-
-impl Default for CookieMode {
-    fn default() -> Self {
-        Self::Host
     }
 }
 

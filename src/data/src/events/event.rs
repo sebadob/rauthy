@@ -18,9 +18,10 @@ use std::net::IpAddr;
 use std::str::FromStr;
 use tracing::error;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EventLevel {
+    #[default]
     Info,
     Notice,
     Warning,
@@ -57,12 +58,6 @@ impl From<EventLevel> for rauthy_api_types::events::EventLevel {
             EventLevel::Warning => Self::Warning,
             EventLevel::Critical => Self::Critical,
         }
-    }
-}
-
-impl Default for EventLevel {
-    fn default() -> Self {
-        Self::Info
     }
 }
 
@@ -142,8 +137,10 @@ impl EventLevel {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub enum EventType {
+    // InvalidLogins is always the lowest int value -> needed for DB queries
+    #[default]
     InvalidLogins,
     IpBlacklisted,
     IpBlacklistRemoved,
@@ -166,13 +163,6 @@ pub enum EventType {
     SuspiciousApiScan,
     LoginNewLocation,
     TokenIssued,
-}
-
-impl Default for EventType {
-    fn default() -> Self {
-        // InvalidLogins is always the lowest int value -> needed for DB queries
-        Self::InvalidLogins
-    }
 }
 
 impl Display for EventType {

@@ -318,19 +318,14 @@ pub struct JktClaim<'a> {
     pub jkt: &'a str,
 }
 
-#[derive(PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Default, PartialEq, Serialize, Deserialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum JwkKeyPairAlg {
     RS256,
     RS384,
     RS512,
+    #[default]
     EdDSA,
-}
-
-impl Default for JwkKeyPairAlg {
-    fn default() -> Self {
-        Self::EdDSA
-    }
 }
 
 impl Display for JwkKeyPairAlg {
@@ -345,16 +340,11 @@ impl Display for JwkKeyPairAlg {
     }
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Default, Serialize, Deserialize, ToSchema)]
 pub enum JwkKeyPairType {
     RSA,
+    #[default]
     OKP,
-}
-
-impl Default for JwkKeyPairType {
-    fn default() -> Self {
-        Self::OKP
-    }
 }
 
 #[derive(Serialize, ToSchema)]

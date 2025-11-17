@@ -7,10 +7,11 @@ use std::fmt::{Display, Formatter};
 use tracing::debug;
 
 // Note: Updating this enum will require an update on the LANGUAGES constant for the frontend too
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, strum::EnumIter)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize, strum::EnumIter)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
     De,
+    #[default]
     En,
     Ko,
     Nb,
@@ -33,12 +34,6 @@ impl Language {
             Language::Nb => "nb",
             Language::ZhHans => "zhhans",
         }
-    }
-}
-
-impl Default for Language {
-    fn default() -> Self {
-        Self::En
     }
 }
 

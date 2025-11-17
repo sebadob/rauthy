@@ -842,16 +842,11 @@ impl JwkKeyPair {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub enum JwkKeyPairType {
     RSA,
+    #[default]
     OKP,
-}
-
-impl Default for JwkKeyPairType {
-    fn default() -> Self {
-        Self::OKP
-    }
 }
 
 impl JwkKeyPairType {
@@ -864,11 +859,12 @@ impl JwkKeyPairType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JwkKeyPairAlg {
     RS256,
     RS384,
     RS512,
+    #[default]
     EdDSA,
 }
 
@@ -876,12 +872,6 @@ impl<'r> From<hiqlite::Row<'r>> for JwkKeyPairAlg {
     fn from(mut row: hiqlite::Row<'r>) -> Self {
         let sig: String = row.get("signature");
         JwkKeyPairAlg::from_str(&sig).expect("corrupted signature in database")
-    }
-}
-
-impl Default for JwkKeyPairAlg {
-    fn default() -> Self {
-        Self::EdDSA
     }
 }
 
