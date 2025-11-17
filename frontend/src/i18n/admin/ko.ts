@@ -377,6 +377,7 @@ export let I18nAdminKo: I18nAdmin = {
 		delete: '삭제'
 	},
 	tos: {
+		accepted: 'Accepted',
 		addNewToS: 'Add new ToS',
 		added: 'Added',
 		checkStatus: 'Check user status',

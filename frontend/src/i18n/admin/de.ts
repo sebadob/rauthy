@@ -405,6 +405,7 @@ export let I18nAdminDe: I18nAdmin = {
 		delete: 'Löschen'
 	},
 	tos: {
+		accepted: 'Akzeptiert',
 		addNewToS: 'Neue AGB hinzufügen',
 		added: 'Hinzugefügt',
 		checkStatus: 'Benutzer Status prüfen',

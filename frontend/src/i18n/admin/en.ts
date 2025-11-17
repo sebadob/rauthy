@@ -387,6 +387,7 @@ export let I18nAdminEn: I18nAdmin = {
 		delete: 'Delete'
 	},
 	tos: {
+		accepted: 'Accepted',
 		addNewToS: 'Add new ToS',
 		added: 'Added',
 		checkStatus: 'Check user status',

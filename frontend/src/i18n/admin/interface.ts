@@ -328,6 +328,7 @@ export interface I18nAdmin {
 		delete: string;
 	};
 	tos: {
+		accepted: string;
 		addNewToS: string;
 		added: string;
 		checkStatus: string;

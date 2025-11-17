@@ -6,7 +6,7 @@
     import Modal from "$lib/Modal.svelte";
     import EditorText from "$lib/text_edit/EditorText.svelte";
     import {useI18n} from "$state/i18n.svelte";
-    import type {ToSLatestResponse, ToSRequest, ToSUserAcceptResponse} from "$api/types/tos";
+    import type {ToSRequest, ToSResponse, ToSUserAcceptResponse} from "$api/types/tos";
     import SearchBar from "$lib/search_bar/SearchBar.svelte";
     import {fetchSearchServer} from "$utils/search";
     import type {UserResponseSimple} from "$api/types/user";
@@ -16,6 +16,8 @@
     import {fmtDateInput, fmtTimeInput} from "$utils/form";
     import {formatDateFromTs, formatUtcTsFromDateInput} from "$utils/helpers";
     import LabeledValue from "$lib/LabeledValue.svelte";
+    import IconStop from "$icons/IconStop.svelte";
+    import Options from "$lib/Options.svelte";
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -28,11 +30,15 @@
 
     let error = $state('');
     let noneExist = $state(false);
-    let tos: undefined | ToSLatestResponse = $state();
+    let tos: ToSResponse[] = $state([]);
     let newToSContent = $state('');
     let optUntil = $state(false);
     let optUntilDate = $state(fmtDateInput());
     let optUntilTime = $state(fmtTimeInput());
+
+    let selectOpts: string[] = $state([]);
+    let selectedTsLabel = $state('');
+    let selectedIdx = $state(-1);
 
     let searchValue = $state('');
     let searchOptions: UserResponseSimple[] = $state([]);
@@ -50,6 +56,27 @@
 
     $effect(() => {
         searchUser();
+    });
+
+    $effect(() => {
+        if (tos.length > 0) {
+            let opts = tos.map(tos => formatDateFromTs(tos.ts));
+            opts[0] = `${opts[0]} (Latest)`;
+
+            selectOpts = opts;
+            selectedTsLabel = opts[0];
+        } else {
+            selectOpts = [];
+            selectedTsLabel = '';
+        }
+    });
+
+    $effect(() => {
+        if (selectedTsLabel) {
+            selectedIdx = selectOpts.findIndex(o => o === selectedTsLabel);
+        } else {
+            selectedIdx = -1;
+        }
     });
 
     async function searchUser() {
@@ -81,11 +108,14 @@
     }
 
     async function getTos() {
-        let res = await fetchGet<ToSLatestResponse>('/auth/v1/tos/latest');
+        let res = await fetchGet<ToSResponse[]>('/auth/v1/tos');
         if (res.body) {
+            // Always have the latest ToS at the top. The backend sends them ASC.
+            res.body.reverse();
             tos = res.body;
         } else if (res.status === 204) {
             noneExist = true;
+            selectedIdx = -1;
         }
     }
 
@@ -130,26 +160,36 @@
 <div>
     {#if noneExist}
         <p>{ta.tos.noneExist}</p>
-    {:else if tos}
-        <div class="tosBtm">
+    {:else if tos.length > 0 && selectedIdx > -1}
+        {@const optUntil = tos[selectedIdx].opt_until}
+
+        <div>
+            {#if selectedTsLabel && selectOpts.length > 1}
+                <Options
+                        ariaLabel="Select ToS"
+                        options={selectOpts}
+                        bind:value={selectedTsLabel}
+                />
+            {/if}
+
             <LabeledValue
                     label={ta.tos.added}
                     title={ta.tos.added}
             >
-                {formatDateFromTs(tos.ts)}
+                {formatDateFromTs(tos[selectedIdx].ts)}
             </LabeledValue>
 
-            {#if tos.opt_until}
+            {#if optUntil}
                 <LabeledValue
                         label={ta.tos.optUntil.label}
                         title={ta.tos.optUntil.label}
                 >
-                    {formatDateFromTs(tos.opt_until)}
+                    {formatDateFromTs(optUntil)}
                 </LabeledValue>
             {/if}
         </div>
 
-        <p>{tos.content}</p>
+        <p>{tos[selectedIdx].content}</p>
     {/if}
 </div>
 
@@ -230,7 +270,7 @@
     </div>
 </Modal>
 
-{#if tos}
+{#if tos.length > 0}
     <Modal bind:showModal={showModalStatus} bind:closeModal={closeModalStatus}>
         <h3>{ta.tos.checkStatus}</h3>
 
@@ -239,20 +279,39 @@
             <div class="searchOpts">
                 {#each searchOptions as opt}
                     <Button level={3} onclick={() => selectOpt(opt)}>
+                        <span class={selectedId === opt.id ? 'selected' : ''}>
                         {`${opt.given_name} ${opt.family_name || ''} <${opt.email}>`}
+                            </span>
                     </Button>
                 {/each}
             </div>
         </div>
 
-        {#if userStatus && userStatus.length > 0}
+        {#if userStatus}
             <div class="status">
                 <h4>{selectedEmail}</h4>
 
-                {#each userStatus as stat}
+                <div class="font-label stat statLabel">
+                    <div>{t.tos.tos}</div>
+                    <div>{ta.tos.accepted}</div>
+                </div>
+
+                {#each tos as t}
+                    {@const stat = userStatus.find(s => s.tos_ts === t.ts)}
+
                     <div class="stat">
-                        {stat.tos_ts}
-                        {stat.location}
+                        <div>
+                            {formatDateFromTs(t.ts)}
+                        </div>
+
+                        <div>
+                            {#if stat}
+                                {formatDateFromTs(stat.accept_ts)}
+                                {stat.location}
+                            {:else}
+                                <IconStop/>
+                            {/if}
+                        </div>
                     </div>
                 {/each}
             </div>
@@ -286,7 +345,17 @@
         align-items: flex-start;
     }
 
-    .tosBtm {
-        border-top: 1px solid var(--bg-high);
+    .selected {
+        color: hsl(var(--accent));
+    }
+
+    .stat {
+        display: grid;
+        grid-template-columns: 11rem 1fr;
+    }
+
+    .statLabel {
+        font-size: .9rem;
+        color: hsl(var(--text) / .7);
     }
 </style>
