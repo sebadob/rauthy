@@ -329,9 +329,15 @@ export interface I18nAdmin {
 	};
 	tos: {
 		addNewToS: string;
+		added: string;
 		checkStatus: string;
 		immutable: string;
 		noneExist: string;
+		optUntil: {
+			desc: string;
+			enable: string;
+			label: string;
+		};
 		tos: string;
 	};
 	users: {

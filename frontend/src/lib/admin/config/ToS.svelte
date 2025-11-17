@@ -10,6 +10,12 @@
     import SearchBar from "$lib/search_bar/SearchBar.svelte";
     import {fetchSearchServer} from "$utils/search";
     import type {UserResponseSimple} from "$api/types/user";
+    import InputCheckbox from "$lib/form/InputCheckbox.svelte";
+    import {slide} from "svelte/transition";
+    import InputDateTimeCombo from "$lib/form/InputDateTimeCombo.svelte";
+    import {fmtDateInput, fmtTimeInput} from "$utils/form";
+    import {formatDateFromTs, formatUtcTsFromDateInput} from "$utils/helpers";
+    import LabeledValue from "$lib/LabeledValue.svelte";
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -24,6 +30,9 @@
     let noneExist = $state(false);
     let tos: undefined | ToSLatestResponse = $state();
     let newToSContent = $state('');
+    let optUntil = $state(false);
+    let optUntilDate = $state(fmtDateInput());
+    let optUntilTime = $state(fmtTimeInput());
 
     let searchValue = $state('');
     let searchOptions: UserResponseSimple[] = $state([]);
@@ -92,12 +101,20 @@
             is_html: false, // TODO add HTML editor
             content,
         };
+        if (optUntil) {
+            payload.opt_until = formatUtcTsFromDateInput(optUntilDate, optUntilTime);
+        }
+
         let res = await fetchPost('/auth/v1/tos', payload);
         if (res.error) {
             error = res.error.message;
         } else {
             closeModalAddNew?.();
-            await getTos();
+            // we need a short timeout for the very first ToS
+            setTimeout(() => {
+                getTos();
+
+            }, 500)
         }
     }
 
@@ -110,15 +127,33 @@
 
 <h2>{ta.tos.tos}</h2>
 
-<p>
+<div>
     {#if noneExist}
-        {ta.tos.noneExist}
+        <p>{ta.tos.noneExist}</p>
     {:else if tos}
-        {tos.content}
-    {/if}
-</p>
+        <div class="tosBtm">
+            <LabeledValue
+                    label={ta.tos.added}
+                    title={ta.tos.added}
+            >
+                {formatDateFromTs(tos.ts)}
+            </LabeledValue>
 
-<div class="flex gap-05 flex-wrap">
+            {#if tos.opt_until}
+                <LabeledValue
+                        label={ta.tos.optUntil.label}
+                        title={ta.tos.optUntil.label}
+                >
+                    {formatDateFromTs(tos.opt_until)}
+                </LabeledValue>
+            {/if}
+        </div>
+
+        <p>{tos.content}</p>
+    {/if}
+</div>
+
+<div class="flex gap-05 flex-wrap mh-10">
     <Button
             ariaLabel={ta.tos.addNewToS}
             level={isModalOpen ? 2 : 1}
@@ -141,10 +176,33 @@
     <div class="modal">
         <h3>{ta.tos.addNewToS}</h3>
 
+        <div class="optUntil">
+            <InputCheckbox
+                    ariaLabel={ta.tos.optUntil.enable}
+                    bind:checked={optUntil}
+            >
+                {ta.tos.optUntil.enable}
+            </InputCheckbox>
+
+            {#if optUntil}
+                <div transition:slide={{ duration: 150 }}>
+                    <InputDateTimeCombo
+                            min={fmtDateInput()}
+                            timeMin={fmtTimeInput()}
+                            withTime
+                            bind:value={optUntilDate}
+                            bind:timeValue={optUntilTime}
+                    />
+
+                    {ta.tos.optUntil.desc}
+                </div>
+            {/if}
+        </div>
+
         <div class="editor">
             <EditorText
                     bind:content={newToSContent}
-                    height="min(80dvh, 40rem)"
+                    height="min(60dvh, 40rem)"
                     hideButtons
             />
         </div>
@@ -215,6 +273,10 @@
         width: min(90dvw, 40rem);
     }
 
+    .optUntil {
+        margin: .75rem 0;
+    }
+
     .searchOpts {
         min-height: 10rem;
         width: min(30rem, 90dvw);
@@ -222,5 +284,9 @@
         display: flex;
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .tosBtm {
+        border-top: 1px solid var(--bg-high);
     }
 </style>

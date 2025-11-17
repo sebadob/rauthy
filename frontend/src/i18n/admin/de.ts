@@ -406,10 +406,17 @@ export let I18nAdminDe: I18nAdmin = {
 	},
 	tos: {
 		addNewToS: 'Neue AGB hinzufügen',
+		added: 'Hinzugefügt',
 		checkStatus: 'Benutzer Status prüfen',
 		immutable: `ACHTUNG: Nach dem Hinzufügen sind AGB unveränderlich und können auch nicht wieder 
 			gelöscht werden!`,
 		noneExist: 'Es wurden noch keine Allgemeinen Geschäftsbedingungen hinzugefügt.',
+		optUntil: {
+			desc: `Während der Übergangsphase ist das Akzeptieren neuer AGB optional und wird erst danch 
+				Pflicht.`,
+			enable: 'Übergangsphase Aktivieren',
+			label: 'Ende Übergangsphase'
+		},
 		tos: 'AGB'
 	},
 	users: {

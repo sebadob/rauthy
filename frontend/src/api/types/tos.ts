@@ -1,6 +1,6 @@
 export interface ToSRequest {
 	is_html: boolean;
-	opt_until: number;
+	opt_until?: number;
 	content: string;
 }
 
@@ -14,7 +14,7 @@ export interface ToSResponse {
 	ts: number;
 	author: string;
 	is_html: boolean;
-	opt_until: number;
+	opt_until?: number;
 	content: string;
 }
 
@@ -26,7 +26,7 @@ export interface ToSAwaitLoginResponse {
 export interface ToSLatestResponse {
 	ts: number;
 	is_html: boolean;
-	opt_until: number;
+	opt_until?: number;
 	content: string;
 }
 

@@ -378,10 +378,17 @@ export let I18nAdminKo: I18nAdmin = {
 	},
 	tos: {
 		addNewToS: 'Add new ToS',
+		added: 'Added',
 		checkStatus: 'Check user status',
 		immutable: `CAUTION: After adding new Terms of Service, they are immutable and cannot be 
 			deleted!`,
 		noneExist: 'No Terms of Service have been added yet.',
+		optUntil: {
+			desc: `During the transition time, accepting updated ToS is optional. It only becomes 
+				mandatory afterward.`,
+			enable: 'Enable Transition Time',
+			label: 'End of Transition Time'
+		},
 		tos: 'ToS'
 	},
 	users: {
