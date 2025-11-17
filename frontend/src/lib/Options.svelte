@@ -184,7 +184,7 @@
         </div>
     {/snippet}
 
-    <div role="listbox" tabindex="0" class="popover" style:max-height={maxHeight} {onkeydown}>
+    <div role="listbox" tabindex="0" class="popover 1234" style:max-height={maxHeight} {onkeydown}>
         {#if withSearch}
             <SearchBar
                     bind:value={searchValue}
@@ -237,7 +237,7 @@
 
     .optPopover {
         text-align: left;
-        padding: .25rem .5rem;
+        padding: .25rem 0.7rem;
         color: hsl(var(--text));
         font-weight: normal;
         border-radius: var(--border-radius);
