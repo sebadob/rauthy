@@ -1,11 +1,12 @@
 CREATE TABLE tos
 (
-    ts      BIGINT  NOT NULL
+    ts        BIGINT  NOT NULL
         CONSTRAINT tos_pk
             PRIMARY KEY,
-    author  VARCHAR NOT NULL,
-    is_html BOOLEAN NOT NULL,
-    content VARCHAR NOT NULL
+    author    VARCHAR NOT NULL,
+    is_html   BOOLEAN NOT NULL,
+    opt_until BIGINT,
+    content   VARCHAR NOT NULL
 );
 
 CREATE UNIQUE INDEX tos_ts_uindex

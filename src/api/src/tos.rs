@@ -68,7 +68,13 @@ pub async fn post_tos(
 
     // Note: We do not use an FK here on purpose. We still want to be able to know the email even
     // if this user gets deleted at some point in the future.
-    ToS::create(user.email, payload.is_html, payload.content).await?;
+    ToS::create(
+        user.email,
+        payload.is_html,
+        payload.opt_until,
+        payload.content,
+    )
+    .await?;
 
     Ok(HttpResponse::Created().finish())
 }

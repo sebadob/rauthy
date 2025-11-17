@@ -13,6 +13,7 @@ pub struct ToS {
     pub ts: i64,
     pub author: String,
     pub is_html: bool,
+    pub opt_until: Option<i64>,
     pub content: String,
 }
 
@@ -22,6 +23,7 @@ impl From<tokio_postgres::Row> for ToS {
             ts: row.get("ts"),
             author: row.get("author"),
             is_html: row.get("is_html"),
+            opt_until: row.get("opt_until"),
             content: row.get("content"),
         }
     }
@@ -31,26 +33,28 @@ impl ToS {
     pub async fn create(
         author: String,
         is_html: bool,
+        opt_until: Option<i64>,
         content: String,
     ) -> Result<(), ErrorResponse> {
         let ts = Utc::now().timestamp();
 
         let sql = r#"
-INSERT INTO tos (ts, author, is_html, content)
-VALUES ($1, $2, $3, $4)"#;
+INSERT INTO tos (ts, author, is_html, opt_until, content)
+VALUES ($1, $2, $3, $4, $5)"#;
 
         if is_hiqlite() {
             DB::hql()
-                .execute(sql, params!(ts, &author, is_html, &content))
+                .execute(sql, params!(ts, &author, is_html, opt_until, &content))
                 .await?;
         } else {
-            DB::pg_execute(sql, &[&ts, &author, &is_html, &content]).await?;
+            DB::pg_execute(sql, &[&ts, &author, &is_html, &opt_until, &content]).await?;
         }
 
         let slf = Self {
             ts,
             author,
             is_html,
+            opt_until,
             content,
         };
         DB::hql()
@@ -105,6 +109,7 @@ impl From<ToS> for ToSResponse {
             ts: tos.ts,
             author: tos.author,
             is_html: tos.is_html,
+            opt_until: tos.opt_until,
             content: tos.content,
         }
     }
@@ -115,6 +120,7 @@ impl From<ToS> for ToSLatestResponse {
         Self {
             ts: tos.ts,
             is_html: tos.is_html,
+            opt_until: tos.opt_until,
             content: tos.content,
         }
     }

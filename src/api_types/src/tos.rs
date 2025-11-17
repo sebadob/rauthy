@@ -5,6 +5,9 @@ use validator::Validate;
 #[derive(Deserialize, ToSchema, Validate)]
 pub struct ToSRequest {
     pub is_html: bool,
+    /// Unix timestamp in seconds
+    #[validate(range(min = 1761951600))]
+    pub opt_until: Option<i64>,
     #[validate(length(min = 1, max = 8192))]
     pub content: String,
 }
@@ -21,6 +24,7 @@ pub struct ToSResponse {
     pub ts: i64,
     pub author: String,
     pub is_html: bool,
+    pub opt_until: Option<i64>,
     pub content: String,
 }
 
@@ -34,6 +38,7 @@ pub struct ToSAwaitLoginResponse {
 pub struct ToSLatestResponse {
     pub ts: i64,
     pub is_html: bool,
+    pub opt_until: Option<i64>,
     pub content: String,
 }
 
