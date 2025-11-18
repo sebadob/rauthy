@@ -369,6 +369,7 @@
         password = '';
         userId = '';
         tosAcceptCode = '';
+        tos = undefined;
         isLoading = false;
         mfaPurpose = undefined;
     }
