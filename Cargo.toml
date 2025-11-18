@@ -36,6 +36,7 @@ actix-multipart = "0.7.2"
 actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-lab = "0.24"
 actix-web-prom = "0.10"
+ammonia = "4.1"
 arc-swap = "1.7"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
 askama = "0.14"
@@ -89,6 +90,7 @@ openssl-sys = { version = "0.9.105", features = ["vendored"] }
 oxiri = "0.2.2"
 postgres-types = { version = "0.2.6", features = ["derive"] }
 prometheus = "0.14"
+pulldown-cmark = "0.13"
 rand = "0.9"
 rand_core = { version = "0.9", features = ["std"] }
 rcgen = "0.14.3"
@@ -130,6 +132,8 @@ tokio-postgres-rustls = { version = "0.13", features = [] }
 utoipa = { version = "5", features = ["actix_extras", "chrono", "openapi_extensions"] }
 utoipa-swagger-ui = { version = "9.0.0", features = ["actix-web", "vendored"] }
 validator = { version = "0.20.0", features = ["derive"] }
+wasm-bindgen = "0.2.105"
+wasm-bindgen-futures = "0.4.55"
 webauthn-rs = { version = "0.5", features = [
     "danger-allow-state-serialisation", "danger-credential-internals"
 ] }
