@@ -267,6 +267,8 @@ export const I18nNb: I18n = {
 		userReg: 'Brukerregistrering'
 	},
 	tos: {
+		acceptOptUntil: 'Accept is optional until:',
+		deny: 'Deny',
 		tos: 'Terms of Service'
 	},
 	userRevoke: {

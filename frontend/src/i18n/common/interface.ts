@@ -243,6 +243,8 @@ export interface I18n {
 		userReg: string;
 	};
 	tos: {
+		acceptOptUntil: string;
+		deny: string;
 		tos: string;
 	};
 	userRevoke: {

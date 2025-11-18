@@ -32,6 +32,7 @@
     let i = setInterval(() => {
         now = new Date().getTime() / 1000;
     }, 1000);
+    let acceptOptional = $derived(!(forceAccept || tos.opt_until === undefined || tos.opt_until <= now - 3));
 
     let tosRead = $state(false);
 
@@ -113,35 +114,49 @@
             {/if}
         </p>
 
-        <Button
-                ariaLabel={t.common.accept}
-                onclick={onAccept}
-                isDisabled={!tosRead}
-        >
-            {t.common.accept}
-        </Button>
-        {#if forceAccept || tos.opt_until === undefined || tos.opt_until >= now - 3}
+        <div class="flex gap-05">
             <Button
-                    level={-2}
-                    ariaLabel={t.common.cancel}
-                    onclick={onCancel}
+                    ariaLabel={t.common.accept}
+                    onclick={onAccept}
+                    isDisabled={!tosRead}
             >
-                {t.common.cancel}
+                {t.common.accept}
             </Button>
-        {:else}
-            <Button
-                    level={-2}
-                    ariaLabel="Deny"
-                    onclick={onDeny}
-            >
-                Deny
-            </Button>
-            Deny possible until: {formatDateFromTs(tos.opt_until)}
-        {/if}
+
+            {#if acceptOptional}
+                <Button
+                        level={-2}
+                        ariaLabel={t.tos.deny}
+                        onclick={onDeny}
+                >
+                    {t.tos.deny}
+                </Button>
+
+                {#if tos.opt_until}
+                    <div class="acceptOpt">
+                        {t.tos.acceptOptUntil}
+                        {formatDateFromTs(tos.opt_until)}
+                    </div>
+                {/if}
+            {:else}
+                <Button
+                        level={-2}
+                        ariaLabel={t.common.cancel}
+                        onclick={onCancel}
+                >
+                    {t.common.cancel}
+                </Button>
+            {/if}
+        </div>
     </Modal>
 {/if}
 
 <style>
+    .acceptOpt {
+        font-size: .9rem;
+        color: hsl(var(--text) / .8);
+    }
+
     .tosContent {
         width: min(90dvw, 467pt);
         max-height: min(75dvh, 40rem);

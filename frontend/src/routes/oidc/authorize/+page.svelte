@@ -107,8 +107,6 @@
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
 
-    $inspect(tosAcceptCode, 'tosAcceptCode');
-
     onMount(() => {
         if (!needsPassword) {
             refEmail?.focus();

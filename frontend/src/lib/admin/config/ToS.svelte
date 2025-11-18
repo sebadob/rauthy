@@ -21,6 +21,8 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
+    let refSearch: undefined | HTMLInputElement = $state();
+
     let showModalAddNew = $state(false);
     let closeModalAddNew: undefined | (() => void) = $state();
     let showModalStatus = $state(false);
@@ -75,6 +77,20 @@
             selectedIdx = selectOpts.findIndex(o => o === selectedTsLabel);
         } else {
             selectedIdx = -1;
+        }
+    });
+
+    $effect(() => {
+        if (refSearch) {
+            requestAnimationFrame(() => {
+                refSearch?.focus();
+            });
+        }
+    });
+
+    $effect(() => {
+        if (searchOptions.length === 1) {
+            selectOpt(searchOptions[0]);
         }
     });
 
@@ -142,7 +158,6 @@
             // we need a short timeout for the very first ToS
             setTimeout(() => {
                 getTos();
-
             }, 500)
         }
     }
@@ -274,7 +289,7 @@
         <h3>{ta.tos.checkStatus}</h3>
 
         <div class="userSearch">
-            <SearchBar placeholder="E-Mail" bind:value={searchValue}/>
+            <SearchBar bind:ref={refSearch} placeholder="E-Mail" bind:value={searchValue}/>
             <div class="searchOpts">
                 {#each searchOptions as opt}
                     <Button level={3} onclick={() => selectOpt(opt)}>

@@ -258,6 +258,8 @@ export const I18nKo: I18n = {
 		userReg: '사용자 가입'
 	},
 	tos: {
+		acceptOptUntil: 'Accept is optional until:',
+		deny: 'Deny',
 		tos: 'Terms of Service'
 	},
 	userRevoke: {

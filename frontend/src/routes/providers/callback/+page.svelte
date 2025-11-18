@@ -89,7 +89,7 @@
             let body = res.body as ToSAwaitLoginResponse;
             userId = body.user_id;
             tosAcceptCode = body.tos_await_code;
-            tosForceAccept = body.force_accept;
+            tosForceAccept = body.force_accept || false;
             await fetchTos();
         } else if (res.status === 403) {
             // we will get a forbidden if for instance the user already exists but without

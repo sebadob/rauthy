@@ -271,6 +271,8 @@ export const I18nDe: I18n = {
 		userReg: 'Benutzer Registrierung'
 	},
 	tos: {
+		acceptOptUntil: 'Akzeptieren ist optional bis:',
+		deny: 'Verweigern',
 		tos: 'Allgemeine Geschäftsbedingungen'
 	},
 	userRevoke: {

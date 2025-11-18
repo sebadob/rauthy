@@ -388,9 +388,11 @@ export let I18nAdminEn: I18nAdmin = {
 	},
 	tos: {
 		accepted: 'Accepted',
+		acceptOptUntil: 'Accept is optional until:',
 		addNewToS: 'Add new ToS',
 		added: 'Added',
 		checkStatus: 'Check user status',
+		deny: 'Deny',
 		immutable: `CAUTION: After adding new Terms of Service, they are immutable and cannot be 
 			deleted!`,
 		noneExist: 'No Terms of Service have been added yet.',

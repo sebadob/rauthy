@@ -679,6 +679,7 @@ impl Session {
                     "/auth/v1/providers/callback",
                     "/auth/v1/dev/providers_callback",
                     "/auth/v1/tos/accept",
+                    "/auth/v1/tos/deny",
                 ];
                 #[cfg(not(debug_assertions))]
                 let exceptions = [
@@ -689,6 +690,7 @@ impl Session {
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
                     "/auth/v1/tos/accept",
+                    "/auth/v1/tos/deny",
                 ];
                 if exceptions.contains(&req_path) || req_path.contains("/webauthn/auth/") {
                     return true;

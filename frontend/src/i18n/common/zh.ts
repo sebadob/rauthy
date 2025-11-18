@@ -268,6 +268,8 @@ export const I18nZh: I18n = {
 		userReg: '用户注册'
 	},
 	tos: {
+		acceptOptUntil: 'Accept is optional until:',
+		deny: 'Deny',
 		tos: 'Terms of Service'
 	},
 	userRevoke: {
