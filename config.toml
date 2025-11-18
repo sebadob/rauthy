@@ -2089,7 +2089,7 @@ generate_self_signed = true
 #
 # default: 900
 # overwritten by: TOS_ACCEPT_TIMEOUT
-accept_timeout = 900
+#accept_timeout = 900
 
 [user_pictures]
 # The storage type for user pictures.
