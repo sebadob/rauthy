@@ -133,6 +133,7 @@ export let I18nAdminEn: I18nAdmin = {
 		nameExistsAlready: 'Name exists already',
 		note: 'Note',
 		noEntries: 'No Entries',
+		preview: 'Preview',
 		reset: 'Reset',
 		searchOptions: 'Search Options',
 		until: 'Until'
@@ -219,6 +220,23 @@ export let I18nAdminEn: I18nAdmin = {
             It is however by default available via the internal metrics HTTP server to not expose any 
             information.`,
 		source: 'The source code can be found here'
+	},
+	editor: {
+		bold: 'Bold',
+		code: 'Code',
+		heading1: 'Heading 1',
+		heading2: 'Heading 2',
+		heading3: 'Heading 3',
+		italic: 'Italic',
+		link: 'Link',
+		listBullet: 'List',
+		listTasks: 'Tasks',
+		listNumbered: 'Numbered List',
+		paragraph: 'Paragraph',
+		quote: 'Quote',
+		removeFmt: 'Remove Formatting',
+		strikeThrough: 'Strikethrough',
+		textArea: 'Edit Text'
 	},
 	error: {
 		needsAdminRole: `You are not assigned to the <b>rauthy_admin</b> role.<br/>
@@ -388,11 +406,9 @@ export let I18nAdminEn: I18nAdmin = {
 	},
 	tos: {
 		accepted: 'Accepted',
-		acceptOptUntil: 'Accept is optional until:',
 		addNewToS: 'Add new ToS',
 		added: 'Added',
 		checkStatus: 'Check user status',
-		deny: 'Deny',
 		immutable: `CAUTION: After adding new Terms of Service, they are immutable and cannot be 
 			deleted!`,
 		noneExist: 'No Terms of Service have been added yet.',

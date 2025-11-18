@@ -8,6 +8,10 @@ export async function fetchSolvePow(): Promise<string | undefined> {
 	if (res.text) {
 		let challenge = res.text;
 		return await new Promise((resolve) => {
+			if (!worker) {
+				worker = new Worker(new URL('../workers/pow.ts', import.meta.url));
+			}
+
 			worker.onmessage = (ev) => {
 				resolve(ev.data as string);
 			};

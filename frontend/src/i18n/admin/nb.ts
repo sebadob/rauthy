@@ -137,6 +137,7 @@ export let I18nAdminNb: I18nAdmin = {
 		nameExistsAlready: 'Navnet finnes allerede',
 		note: 'Notat',
 		noEntries: 'Ingen oppføringer',
+		preview: 'Preview',
 		reset: 'Tilbakestill',
 		searchOptions: 'Søkealternativer',
 		until: 'Til'
@@ -219,6 +220,23 @@ export let I18nAdminNb: I18nAdmin = {
 		openapiNote: `Avhengig av konfigurasjonen er Swagger UI kanskje ikke offentlig tilgjengelig via lenken over.
             Den er imidlertid (som standard) tilgjengelig via den interne metrics-serveren for å redusere angrepsflaten.`,
 		source: 'Kildekoden finnes her'
+	},
+	editor: {
+		bold: 'Bold',
+		code: 'Code',
+		heading1: 'Heading 1',
+		heading2: 'Heading 2',
+		heading3: 'Heading 3',
+		italic: 'Italic',
+		link: 'Link',
+		listBullet: 'List',
+		listTasks: 'Tasks',
+		listNumbered: 'Numbered List',
+		paragraph: 'Paragraph',
+		quote: 'Quote',
+		removeFmt: 'Remove Formatting',
+		strikeThrough: 'Strikethrough',
+		textArea: 'Edit Text'
 	},
 	error: {
 		needsAdminRole: 'For å få tilgang må du ha rollen <b>rauthy_admin</b>.',

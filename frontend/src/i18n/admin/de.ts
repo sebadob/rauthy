@@ -141,6 +141,7 @@ export let I18nAdminDe: I18nAdmin = {
 		nameExistsAlready: 'Name existiert bereits',
 		note: 'Notiz',
 		noEntries: 'Keine Einträge',
+		preview: 'Vorschau',
 		reset: 'Zurücksetzen',
 		searchOptions: 'Suchoptionen',
 		until: 'Bis'
@@ -234,6 +235,23 @@ export let I18nAdminDe: I18nAdmin = {
             oben genannten Link. Es ist allerdings (standardmäßig) über den internen metrics server verfügbar zur
             Reduzierung der Angriffsfläche.`,
 		source: 'Der source code kann hier gefunden werden'
+	},
+	editor: {
+		bold: 'Fett',
+		code: 'Code',
+		heading1: 'Überschrift 1',
+		heading2: 'Überschrift 2',
+		heading3: 'Überschrift 3',
+		italic: 'Kursiv',
+		link: 'Link',
+		listBullet: 'Liste',
+		listTasks: 'Aufgaben',
+		listNumbered: 'Nummerierte Liste',
+		paragraph: 'Absatz',
+		quote: 'Zitat',
+		removeFmt: 'Formatierung entfernen',
+		strikeThrough: 'Durchgestrichen',
+		textArea: 'Text Bearbeiten'
 	},
 	error: {
 		needsAdminRole: 'Um Zugriff zu erhalten ist die Rolle <b>rauthy_admin</b> notwendig.',

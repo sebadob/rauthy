@@ -299,6 +299,10 @@ input:disabled {
     cursor: not-allowed;
 }
 
+pre {
+    background: hsl(var(--bg-high));
+}
+
 .fade-in {
     animation: fadeIn 200ms;
 }
