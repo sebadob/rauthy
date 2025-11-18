@@ -2,15 +2,18 @@
 
 #![forbid(unsafe_code)]
 
+use actix_web::http::StatusCode;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderMap, HeaderValue,
 };
-use actix_web::{HttpRequest, HttpResponse, web};
+use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, web};
+use rauthy_api_types::tos::ToSAwaitLoginResponse;
 use rauthy_api_types::users::WebauthnLoginResponse;
 use rauthy_common::constants::COOKIE_MFA;
 use rauthy_data::AuthStep;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::api_keys::ApiKey;
+use rauthy_data::entity::auth_providers::NewFederatedUserCreated;
 use rauthy_data::entity::fed_cm::FedCMLoginStatus;
 use rauthy_data::entity::principal::Principal;
 use rauthy_data::entity::sessions::Session;
@@ -39,6 +42,7 @@ pub mod scopes;
 pub mod sessions;
 pub mod swagger_ui;
 pub mod themes;
+pub mod tos;
 pub mod users;
 
 pub type ReqApiKey = web::ReqData<Option<ApiKey>>;
@@ -90,6 +94,7 @@ struct Assets;
 pub async fn map_auth_step(
     auth_step: AuthStep,
     req: &HttpRequest,
+    new_user_created: NewFederatedUserCreated,
     // the bool for Ok() is true is the password has been hashed
     // the bool for Err() means if we need to add a login delay (and none otherwise for better UX)
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -103,6 +108,34 @@ pub async fn map_auth_step(
                 .insert_header(res.header_loc)
                 .insert_header(res.header_csrf)
                 .finish();
+            if let Some((name, value)) = res.header_origin {
+                resp.headers_mut().insert(name, value);
+                resp.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_METHODS,
+                    HeaderValue::from_static("POST"),
+                );
+                resp.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    HeaderValue::from_static("true"),
+                );
+            }
+            Ok(resp)
+        }
+
+        AuthStep::AwaitToSAccept(res) => {
+            // Partial Content as return code is technically probably not "correct", as you
+            // would expect it during downloads, but it makes the checks in the UI a lot more
+            // resilient, when we have a dedicated code for each possible situation we need to
+            // handle.
+            let mut resp = HttpResponseBuilder::new(StatusCode::from_u16(206).unwrap())
+                .insert_header(fed_cm_header)
+                .insert_header(res.header_csrf)
+                .json(&ToSAwaitLoginResponse {
+                    tos_await_code: res.code,
+                    user_id: Some(res.user_id),
+                    force_accept: (new_user_created == NewFederatedUserCreated::Yes)
+                        .then_some(true),
+                });
             if let Some((name, value)) = res.header_origin {
                 resp.headers_mut().insert(name, value);
                 resp.headers_mut().insert(

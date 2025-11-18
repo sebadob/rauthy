@@ -29,7 +29,7 @@
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import {fetchPost, type IResponse} from "$api/fetch";
+    import {fetchGet, fetchPost, type IResponse} from "$api/fetch";
     import type {
         CodeChallengeMethod,
         LoginRefreshRequest,
@@ -46,6 +46,14 @@
     import {fetchSolvePow} from "$utils/pow";
     import {generatePKCE} from "$utils/pkce";
     import {PATTERN_ATPROTO_ID} from "$utils/patterns";
+    import type {
+        ToSAwaitLoginResponse,
+        ToSLatestResponse,
+        ToSUserAcceptRequest,
+        ToSUserAcceptResponse
+    } from "$api/types/tos";
+    import Modal from "$lib/Modal.svelte";
+    import TosAccept from "$lib/TosAccept.svelte";
 
     const inputWidth = "18rem";
 
@@ -74,7 +82,6 @@
     let mfaPurpose: undefined | MfaPurpose = $state();
 
     let isLoading = $state(false);
-    // let err = $state('some error message that it longer over multiple lines');
     let err = $state('');
     let loginAction = $state('');
     let csrfToken = $state('');
@@ -96,6 +103,9 @@
     let password = $state('');
     let userId = $state('');
     let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset && !isAtproto);
+
+    let tos: undefined | ToSLatestResponse = $state();
+    let tosAcceptCode = $state('');
 
     onMount(() => {
         if (!needsPassword) {
@@ -150,6 +160,17 @@
             saveCsrfToken(res.body.csrf_token)
         } else {
             console.error(res.error);
+        }
+    }
+
+    async function fetchTos() {
+        if (!tos) {
+            let res = await fetchGet<ToSLatestResponse>('/auth/v1/tos/latest');
+            if (res.body) {
+                tos = res.body;
+            } else if (res.status === 204) {
+                console.error('No ToS exists when the user should update');
+            }
         }
     }
 
@@ -240,11 +261,11 @@
             url = '/auth/v1/dev/authorize';
         }
 
-        let res = await fetchPost<undefined | WebauthnLoginResponse>(url, payload, 'json', 'noRedirect');
+        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(url, payload, 'json', 'noRedirect');
         await handleAuthRes(res);
     }
 
-    async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse>) {
+    async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>) {
         isLoading = false;
 
         if (res.status === 202) {
@@ -265,6 +286,12 @@
             } else {
                 console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
             }
+        } else if (res.status === 206) {
+            // login successful, but the user needs to accept updated ToS
+            let body = res.body as ToSAwaitLoginResponse;
+            userId = body.user_id;
+            tosAcceptCode = body.tos_await_code;
+            await fetchTos();
         } else if (res.status === 400) {
             err = res.error?.message || '';
         } else if (res.status === 403) {
@@ -338,6 +365,15 @@
         });
     }
 
+    async function onToSCancel() {
+        password = '';
+        userId = '';
+        tosAcceptCode = '';
+        tos = undefined;
+        isLoading = false;
+        mfaPurpose = undefined;
+    }
+
     async function providerLoginPkce(id: string, pkce_challenge: string) {
         // make sure to reset input fields to not trigger a failing validation
         email = '';
@@ -394,8 +430,17 @@
     }
 
     function onWebauthnSuccess(data?: WebauthnAdditionalData) {
-        if (data && 'loc' in data) {
+        if (!data) {
+            return;
+        }
+
+        if ('loc' in data) {
             window.location.replace(data.loc as string);
+        } else if ('tos_await_code' in data) {
+            // login successful, but the user needs to accept updated ToS
+            tosAcceptCode = data.tos_await_code as string;
+            mfaPurpose = undefined;
+            fetchTos();
         }
     }
 
@@ -589,6 +634,15 @@
                             Account
                         </Button>
                     </div>
+                {/if}
+
+                {#if tos}
+                    <TosAccept
+                            {tos}
+                            {tosAcceptCode}
+                            onToSAccept={handleAuthRes}
+                            {onToSCancel}
+                    />
                 {/if}
 
                 {#if !clientMfaForce && providers.length > 0 && !isAtproto}

@@ -1,5 +1,58 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Terms of Service
+
+It is now possible to add Terms of Service (ToS) to Rauthy. These can be found in the Admin UI under `Config` -> `ToS`.
+I am not a lawyer, but I would say the implementation is legally "safe". If you have an open registration, the latest
+existing ToS is being shown to the user and the registration can only be completed after an accept. The other situation
+is an update to the ToS for existing users. To have it legally correct, a user must accept in the middle of a login
+flow.
+
+After ToS have been added, they are immutable in every regard, which is another important thing for legal reasons. But,
+you can always add a new version, which users then have to accept. It is also possible to enable an optional transition
+time for new ToS. For instance, if you have Rauthy in front of an application that contains user data, you can make it
+possible for users to at least get their data and download it or whatever, even if they don't want to accept the new
+ToS. Only after the transition time is over, it becomes mandatory to accept updated ToS.
+
+It is also possible to check the accept status for each user via the same page on the Admin UI.
+
+While working in this feature, some major refactoring has been made for the code logic of the login flow. The goal was
+to simplify everything and also make it easier to maintain in the future, because the ToS added some addition
+complexity.
+
+You can do most things via the Admin UI, but there is a single new config value:
+
+```toml
+[tos]
+
+# The timeout in seconds for a user to accept update ToS during the
+# login flow.
+# The initial lifetime of an AuthCode after a successful authentication
+# will be extended by the `accept_timeout`. This gives the user a bit
+# more time to read through updates ToS and avoids an AuthCode expiry
+# if it takes a bit longer. This is mainly a UX improvement. After the
+# ToS have been accepted, the original AuthCode will be re-saved with
+# the actual lifetime to not weaken the security in these cases.
+#
+# CAUTION: Even though you can extend the lifetime on Rauthys side, you
+# can run into issues with logins on the client side. For legal reasons,
+# accepting updated ToS must happen after a successful login but before
+# providing any access. Login flows are not only time-limited on Rauthys
+# side, but most often also on the client side. This means if it takes
+# too long to read and accept update ToS, the user may run into an auth
+# error and do the login again.
+#
+# default: 900
+# overwritten by: TOS_ACCEPT_TIMEOUT
+accept_timeout = 900
+```
+
+[#1221](https://github.com/sebadob/rauthy/pull/1221)
+
 ## v0.32.6
 
 ### Bugfix

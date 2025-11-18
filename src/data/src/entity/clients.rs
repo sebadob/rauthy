@@ -1,4 +1,5 @@
 use crate::database::{Cache, DB};
+use crate::entity::auth_providers::ProviderMfaLogin;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::jwk::JwkKeyPairAlg;
@@ -868,11 +869,6 @@ impl Client {
         }
     }
 
-    #[inline(always)]
-    pub fn force_mfa(&self) -> bool {
-        self.force_mfa || self.id == "rauthy" && RauthyConfig::get().vars.mfa.admin_force_mfa
-    }
-
     /// Generates a new random 64 character long client secret and returns the cleartext and
     /// encrypted version
     /// # Panics
@@ -1102,8 +1098,16 @@ impl Client {
     /// possible without MFA. The force MFA for the Rauthy admin UI is done in
     /// Principal::validate_admin_session() depending on the `ADMIN_FORCE_MFA` config variable.
     #[inline]
-    pub fn validate_mfa(&self, user: &User) -> Result<(), ErrorResponse> {
-        if &self.id != "rauthy" && self.force_mfa && !user.has_webauthn_enabled() {
+    pub fn validate_mfa(
+        &self,
+        user: &User,
+        provider_mfa_login: Option<ProviderMfaLogin>,
+    ) -> Result<(), ErrorResponse> {
+        let force_mfa = self.id != "rauthy" && self.force_mfa;
+        let has_mfa =
+            user.has_webauthn_enabled() || provider_mfa_login == Some(ProviderMfaLogin::Yes);
+
+        if force_mfa && !has_mfa {
             trace!("MFA required for this client but the user has none");
             Err(ErrorResponse::new(
                 ErrorResponseType::MfaRequired,

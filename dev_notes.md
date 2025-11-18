@@ -2,6 +2,12 @@
 
 ## CURRENT WORK
 
+ToS TODO
+
+- handle updates during immediate login refresh
+- handle updates during AuthProvider logins
+- find a clean way to handle updates during Webauthn logins
+
 ## Stage 1 - essentials
 
 [x] finished

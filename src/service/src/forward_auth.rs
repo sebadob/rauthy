@@ -144,7 +144,7 @@ pub async fn get_forward_auth_client(
     user.check_enabled()?;
     user.check_expired()?;
     client.validate_user_groups(&user)?;
-    client.validate_mfa(&user)?;
+    client.validate_mfa(&user, None)?;
 
     let headers = &RauthyConfig::get().vars.auth_headers;
     if headers.enable {
@@ -248,7 +248,7 @@ pub async fn get_forward_auth_client_callback(
     user.check_enabled()?;
     user.check_expired()?;
     client.validate_user_groups(&user)?;
-    client.validate_mfa(&user)?;
+    client.validate_mfa(&user, None)?;
 
     // all good
 

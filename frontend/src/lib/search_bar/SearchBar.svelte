@@ -11,8 +11,9 @@
     let ta = useI18nAdmin();
 
     let {
+        ref = $bindable(),
         id = genKey(),
-        ariaLabel,
+        ariaLabel = t.common.search,
         value = $bindable(''),
         placeholder = t.common.search,
         datalist,
@@ -28,6 +29,7 @@
         onDown,
         onFocus,
     }: {
+        ref?: undefined | HTMLElement,
         id?: string;
         ariaLabel?: string;
         value?: string;
@@ -48,7 +50,6 @@
 
     const idDatalist = genKey();
 
-    let ref: undefined | HTMLElement = $state();
     let list = $derived(datalist && datalist.length > 0 ? idDatalist : undefined);
 
     $effect(() => {

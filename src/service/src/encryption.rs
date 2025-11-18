@@ -76,7 +76,7 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
     // migrate auth providers
     let providers = AuthProvider::find_all().await?;
     for mut provider in providers {
-        match AuthProvider::get_secret_cleartext(&provider.secret) {
+        match AuthProvider::secret_cleartext(&provider.secret) {
             Ok(plaintext_opt) => {
                 if let Some(plaintext) = plaintext_opt {
                     provider.secret = Some(

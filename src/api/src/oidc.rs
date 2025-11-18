@@ -24,7 +24,9 @@ use rauthy_common::constants::{
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_data::entity::auth_providers::{AuthProvider, AuthProviderTemplate};
+use rauthy_data::entity::auth_providers::{
+    AuthProvider, AuthProviderTemplate, NewFederatedUserCreated,
+};
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::devices::DeviceAuthCode;
 use rauthy_data::entity::fed_cm::FedCMLoginStatus;
@@ -317,7 +319,7 @@ pub async fn post_authorize_handle(
     )
     .await
     {
-        Ok(auth_step) => map_auth_step(auth_step, &req).await,
+        Ok(auth_step) => map_auth_step(auth_step, &req, NewFederatedUserCreated::No).await,
         Err(err) => {
             warn!("POST /authorize Error: {:?}", err);
             // We always must return the exact same error type, no matter what the actual error is,
@@ -387,7 +389,7 @@ pub async fn post_authorize_refresh(
 
     let auth_step =
         authorize::post_authorize_refresh(session, client, header_origin, payload).await?;
-    map_auth_step(auth_step, &req).await
+    map_auth_step(auth_step, &req, NewFederatedUserCreated::No).await
 }
 
 #[get("/oidc/callback")]

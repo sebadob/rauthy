@@ -4800,6 +4800,9 @@ name = "rauthy-service"
 version = "0.32.6"
 dependencies = [
  "actix-web",
+ "atrium-api",
+ "atrium-common",
+ "atrium-oauth",
  "chrono",
  "cryptr",
  "openssl",

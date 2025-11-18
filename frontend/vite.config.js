@@ -59,6 +59,7 @@ const config = {
 			'/auth/v1/sessions': backend,
 			'/auth/v1/template': backend,
 			'/auth/v1/theme': backend,
+			'/auth/v1/tos': backend,
 			'/auth/v1/update_language': backend,
 			'/auth/v1/version': backend,
 			'/docs/v1/': backend

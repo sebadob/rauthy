@@ -12,7 +12,7 @@ use rauthy_api_types::generic::LogoParams;
 use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
 use rauthy_common::constants::{HEADER_JSON, PROVIDER_ATPROTO};
 use rauthy_data::entity::auth_providers::{
-    AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, AuthProviderTemplate,
+    AuthProvider, AuthProviderLinkCookie, AuthProviderTemplate,
 };
 use rauthy_data::entity::logos::{Logo, LogoType};
 use rauthy_data::entity::theme::ThemeCssFull;
@@ -151,7 +151,8 @@ pub async fn post_provider_login(
 
     Pow::validate(&payload.pow)?;
 
-    let (cookie, xsrf_token, location) = AuthProviderCallback::login_start(payload).await?;
+    let (cookie, xsrf_token, location) =
+        rauthy_service::oidc::auth_providers::login_start::login_start(payload).await?;
 
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))
@@ -207,10 +208,15 @@ pub async fn post_provider_callback_handle(
     payload.validate()?;
 
     let session = principal.get_session()?;
-    let (auth_step, cookie) =
-        AuthProviderCallback::login_finish(&req, &payload, session.clone()).await?;
+    let (auth_step, cookie, new_user_created) =
+        rauthy_service::oidc::auth_providers::login_finish::login_finish(
+            &req,
+            &payload,
+            session.clone(),
+        )
+        .await?;
 
-    let mut resp = map_auth_step(auth_step, &req).await?;
+    let mut resp = map_auth_step(auth_step, &req, new_user_created).await?;
     resp.add_cookie(&cookie).map_err(|err| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
@@ -504,7 +510,8 @@ pub async fn post_provider_link(
     };
 
     // directly redirect to the provider login page
-    let (login_cookie, xsrf_token, location) = AuthProviderCallback::login_start(payload).await?;
+    let (login_cookie, xsrf_token, location) =
+        rauthy_service::oidc::auth_providers::login_start::login_start(payload).await?;
 
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))

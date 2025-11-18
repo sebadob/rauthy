@@ -1,12 +1,12 @@
 use crate::{
     api_keys, atproto, auth_providers, backup, blacklist, clients, events, fed_cm, generic, groups,
-    oidc, pam, roles, scopes, sessions, themes, users,
+    oidc, pam, roles, scopes, sessions, themes, tos, users,
 };
 use rauthy_api_types::*;
 use rauthy_api_types::{
     api_keys::*, auth_providers::*, backup::*, blacklist::*, clients::*, events::*, fed_cm::*,
     forward_auth::*, generic::*, groups::*, oidc::*, pam::*, roles::*, scopes::*, sessions::*,
-    themes::*, users::*,
+    themes::*, tos::*, users::*,
 };
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_data::ListenScheme;
@@ -159,6 +159,13 @@ use utoipa::{OpenApi, openapi};
         themes::get_theme,
         themes::put_theme,
         themes::delete_theme,
+
+        tos::get_tos,
+        tos::post_tos,
+        tos::get_tos_latest,
+        tos::get_tos_user_status,
+        tos::post_tos_accept,
+        tos::post_tos_deny,
 
         users::get_users,
         users::post_users,
@@ -349,6 +356,12 @@ use utoipa::{OpenApi, openapi};
             ThemeCss,
             ThemeRequestResponse,
             TokenInfo,
+            ToSRequest,
+            ToSAcceptRequest,
+            ToSResponse,
+            ToSAwaitLoginResponse,
+            ToSLatestResponse,
+            ToSUserAcceptResponse,
             UserPictureConfig,
             UserAttrConfigResponse,
             UserAttrConfigValueResponse,
@@ -386,10 +399,10 @@ use utoipa::{OpenApi, openapi};
         (name = "api_keys", description = "API Keys endpoints"),
         (name = "backup", description = "Backup endpoints"),
         (name = "generic", description = "Generic endpoints"),
+        (name = "tos", description = "Terms of Service endpoints"),
         (name = "webid", description = "WebID endpoints"),
         (name = "fed_cm", description = "Experimental FedCM endpoints"),
         (name = "atproto", description = "ATProto endpoints"),
-        (name = "deprecated", description = "Deprecated endpoints - will be removed in a future version"),
     ),
 )]
 pub struct ApiDoc;

@@ -137,6 +137,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // whole App cache to make sure config changes are always updated
     DB::hql().clear_cache(Cache::App).await.unwrap();
 
+    #[cfg(debug_assertions)]
+    {
+        DB::hql().clear_cache(Cache::Atproto).await.unwrap();
+        DB::hql().clear_cache(Cache::DeviceCode).await.unwrap();
+        DB::hql()
+            .clear_cache(Cache::AuthProviderCallback)
+            .await
+            .unwrap();
+        DB::hql().clear_cache(Cache::ClientDynamic).await.unwrap();
+        DB::hql().clear_cache(Cache::ClientEphemeral).await.unwrap();
+        DB::hql().clear_cache(Cache::ClientSecret).await.unwrap();
+        DB::hql().clear_cache(Cache::DPoPNonce).await.unwrap();
+        DB::hql().clear_cache(Cache::JwksRemote).await.unwrap();
+        DB::hql().clear_cache(Cache::ThemeTs).await.unwrap();
+        DB::hql().clear_cache(Cache::IpBlacklist).await.unwrap();
+        DB::hql().clear_cache(Cache::IpRateLimit).await.unwrap();
+        DB::hql().clear_cache(Cache::Session).await.unwrap();
+        DB::hql().clear_cache(Cache::PoW).await.unwrap();
+        DB::hql().clear_cache(Cache::ToS).await.unwrap();
+        DB::hql().clear_cache(Cache::User).await.unwrap();
+        DB::hql().clear_cache(Cache::Webauthn).await.unwrap();
+        DB::hql().clear_cache(Cache::PAM).await.unwrap();
+    }
+
     {
         let cfg = &RauthyConfig::get().vars.server;
         if cfg.swagger_ui_enable {

@@ -12,6 +12,8 @@ use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
 use crate::entity::theme::ThemeCssFull;
+use crate::entity::tos::ToS;
+use crate::entity::tos_user_accept::ToSUserAccept;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
@@ -1750,6 +1752,26 @@ impl User {
         }
         let hash = self.password.as_ref().unwrap().to_owned();
         ComparePasswords::is_match(plain, hash).await
+    }
+
+    /// Checks if this user needs to accept a updated ToS
+    #[inline(always)]
+    pub async fn needs_tos_update(&self) -> Result<bool, ErrorResponse> {
+        let needs_update = if let Some(latest) = ToS::find_latest().await.expect("TosLatest") {
+            if let Some(accepted) = ToSUserAccept::find_latest(self.id.clone())
+                .await
+                .expect("TosUserAccept")
+            {
+                accepted.tos_ts != latest.ts
+            } else {
+                true
+            }
+        } else {
+            false
+        };
+
+        debug!(needs_update, "User needs to accept updated ToS");
+        Ok(needs_update)
     }
 
     pub fn picture_uri(&self) -> Option<String> {
