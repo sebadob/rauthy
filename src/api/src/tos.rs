@@ -8,6 +8,7 @@ use chrono::Utc;
 use rauthy_api_types::tos::{
     ToSAcceptRequest, ToSLatestResponse, ToSRequest, ToSResponse, ToSUserAcceptResponse,
 };
+use rauthy_common::sanitize_html::sanitize_html;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use rauthy_data::entity::tos::ToS;
@@ -67,15 +68,17 @@ pub async fn post_tos(
     let payload = payload.into_inner();
     let user = User::find(principal.user_id()?.to_string()).await?;
 
+    let content = if payload.is_html {
+        sanitize_html(&payload.content)
+    } else {
+        // Note: No need to skip sanitization in this case. The UI will only insert HTML
+        // data if this flag is explicitly set.
+        payload.content
+    };
+
     // Note: We do not use an FK here on purpose. We still want to be able to know the email even
     // if this user gets deleted at some point in the future.
-    ToS::create(
-        user.email,
-        payload.is_html,
-        payload.opt_until,
-        payload.content,
-    )
-    .await?;
+    ToS::create(user.email, payload.is_html, payload.opt_until, content).await?;
 
     Ok(HttpResponse::Created().finish())
 }

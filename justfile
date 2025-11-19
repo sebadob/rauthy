@@ -36,6 +36,12 @@ setup:
     {{ npm }} install
     cd ..
 
+    echo "Installing wasm-pack"
+    cargo install wasm-pack
+
+    echo "Building WASM modules"
+    just build-wasm
+
 # start the backend containers for local dev
 @dev-env-start:
     just mailcrab-start
@@ -370,6 +376,17 @@ build-profiling:
     #RUSTFLAGS=-g cargo build --profile profiling
     RUSTFLAGS=-g {{ jemalloc_conf }} cargo build --profile profiling --features jemalloc
     echo "You can analyze the application via: heaptrack ./target/profiling/rauthy"
+
+# build wasm frontend modules
+build-wasm:
+    #!/usr/bin/env bash
+
+    cd src/wasm-modules
+    rm -rf ../../frontend/src/wasm/*
+
+    wasm-pack build -d ../../frontend/src/wasm/spow --no-pack --out-name spow --features spow
+    #    wasm-pack build -d ../../frontend/src/wasm/spow --no-pack --out-name spow --features spow
+    wasm-pack build -d ../../frontend/src/wasm/md --no-pack --out-name md --features md
 
 # Build the final container image.
 build image="ghcr.io/sebadob/rauthy" push="push": build-ui

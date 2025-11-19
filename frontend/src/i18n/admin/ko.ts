@@ -129,6 +129,7 @@ export let I18nAdminKo: I18nAdmin = {
 		nameExistsAlready: '이미 존재하는 이름입니다.',
 		note: '참고',
 		noEntries: '비어 있음',
+		preview: 'Preview',
 		reset: '초기화',
 		searchOptions: '검색 옵션',
 		until: '까지'
@@ -208,6 +209,23 @@ export let I18nAdminKo: I18nAdmin = {
 		openapiNote: `백엔드 설정에 따라 Swagger UI가 외부에 노출되지 않을 수도 있습니다.
             하지만 기본적으로 내부에서는 Swagger UI를 통해 정보를 확인할 수 있습니다.`,
 		source: 'Rauthy의 소스코드'
+	},
+	editor: {
+		bold: 'Bold',
+		code: 'Code',
+		heading1: 'Heading 1',
+		heading2: 'Heading 2',
+		heading3: 'Heading 3',
+		italic: 'Italic',
+		link: 'Link',
+		listBullet: 'List',
+		listTasks: 'Tasks',
+		listNumbered: 'Numbered List',
+		paragraph: 'Paragraph',
+		quote: 'Quote',
+		removeFmt: 'Remove Formatting',
+		strikeThrough: 'Strikethrough',
+		textArea: 'Edit Text'
 	},
 	error: {
 		needsAdminRole: `<b>rauthy_admin</b> 역할이 부여되지 않았습니다.<br/>

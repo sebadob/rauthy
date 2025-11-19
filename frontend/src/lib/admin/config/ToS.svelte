@@ -4,7 +4,6 @@
     import {onMount} from "svelte";
     import Button from "$lib/button/Button.svelte";
     import Modal from "$lib/Modal.svelte";
-    import EditorText from "$lib/text_edit/EditorText.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import type {ToSRequest, ToSResponse, ToSUserAcceptResponse} from "$api/types/tos";
     import SearchBar from "$lib/search_bar/SearchBar.svelte";
@@ -17,6 +16,7 @@
     import {formatDateFromTs, formatUtcTsFromDateInput} from "$utils/helpers";
     import LabeledValue from "$lib/LabeledValue.svelte";
     import Options from "$lib/Options.svelte";
+    import EditorInteractive from "$lib/text_edit/EditorInteractive.svelte";
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -32,6 +32,7 @@
     let error = $state('');
     let noneExist = $state(false);
     let tos: ToSResponse[] = $state([]);
+    let editorMode: 'HTML' | 'Text' | 'Markdown' = $state('Markdown');
     let newToSContent = $state('');
     let optUntil = $state(false);
     let optUntilDate = $state(fmtDateInput());
@@ -143,7 +144,7 @@
         }
 
         let payload: ToSRequest = {
-            is_html: false, // TODO add HTML editor
+            is_html: editorMode !== 'Text',
             content,
         };
         if (optUntil) {
@@ -169,13 +170,32 @@
 
 </script>
 
-<h2>{ta.tos.tos}</h2>
+<h2>{t.tos.tos}</h2>
+
+<div class="flex gap-05 flex-wrap mh-10">
+    <Button
+            ariaLabel={ta.tos.addNewToS}
+            level={isModalOpen ? 2 : 1}
+            onclick={() => showModalAddNew = true}
+    >
+        {ta.tos.addNewToS}
+    </Button>
+    {#if tos.length > 0}
+        <Button
+                ariaLabel={ta.tos.checkStatus}
+                level={isModalOpen ? 3 : 2}
+                onclick={() => showModalStatus = true}
+        >
+            {ta.tos.checkStatus}
+        </Button>
+    {/if}
+</div>
 
 <div>
     {#if noneExist}
         <p>{ta.tos.noneExist}</p>
     {:else if tos.length > 0 && selectedIdx > -1}
-        {@const optUntil = tos[selectedIdx].opt_until}
+        {@const active = tos[selectedIdx]}
 
         <div>
             {#if selectedTsLabel && selectOpts.length > 1}
@@ -190,39 +210,26 @@
                     label={ta.tos.added}
                     title={ta.tos.added}
             >
-                {formatDateFromTs(tos[selectedIdx].ts)}
+                {formatDateFromTs(active.ts)}
             </LabeledValue>
 
-            {#if optUntil}
+            {#if active.opt_until}
                 <LabeledValue
                         label={ta.tos.optUntil.label}
                         title={ta.tos.optUntil.label}
                 >
-                    {formatDateFromTs(optUntil)}
+                    {formatDateFromTs(active.opt_until)}
                 </LabeledValue>
             {/if}
         </div>
 
-        <p>{tos[selectedIdx].content}</p>
-    {/if}
-</div>
-
-<div class="flex gap-05 flex-wrap mh-10">
-    <Button
-            ariaLabel={ta.tos.addNewToS}
-            level={isModalOpen ? 2 : 1}
-            onclick={() => showModalAddNew = true}
-    >
-        {ta.tos.addNewToS}
-    </Button>
-    {#if tos}
-        <Button
-                ariaLabel={ta.tos.checkStatus}
-                level={isModalOpen ? 3 : 2}
-                onclick={() => showModalStatus = true}
-        >
-            {ta.tos.checkStatus}
-        </Button>
+        <p>
+            {#if active.is_html}
+                {@html active.content}
+            {:else}
+                {active.content}
+            {/if}
+        </p>
     {/if}
 </div>
 
@@ -248,21 +255,23 @@
                             bind:timeValue={optUntilTime}
                     />
 
-                    {ta.tos.optUntil.desc}
+                    <p>
+                        {ta.tos.optUntil.desc}
+                    </p>
                 </div>
             {/if}
         </div>
 
         <div class="editor">
-            <EditorText
-                    bind:content={newToSContent}
+            <EditorInteractive
+                    bind:mode={editorMode}
+                    bind:sanitizedValue={newToSContent}
                     height="min(60dvh, 40rem)"
-                    hideButtons
             />
         </div>
 
         <div class="action" style:margin-bottom="1rem">
-            <b>{ta.tos.immutable}</b>
+            <p><b>{ta.tos.immutable}</b></p>
         </div>
 
         <Button
@@ -344,7 +353,7 @@
     }
 
     .modal {
-        width: min(90dvw, 40rem);
+        width: min(90dvw, 2 * 467pt);
     }
 
     .optUntil {

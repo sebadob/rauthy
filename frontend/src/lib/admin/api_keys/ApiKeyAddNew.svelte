@@ -62,8 +62,6 @@
         }
 
         if (doesExpire) {
-            console.log()
-
             if (!expDate || !expTime) {
                 err = 'Disable expiry or provide an valid date and time';
                 return;

@@ -7,6 +7,7 @@ pub mod constants;
 pub mod logging;
 pub mod password_hasher;
 pub mod regex;
+pub mod sanitize_html;
 pub mod utils;
 
 pub static DB_TYPE: OnceLock<DbType> = OnceLock::new();

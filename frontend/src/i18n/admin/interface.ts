@@ -118,6 +118,7 @@ export interface I18nAdmin {
 		nameExistsAlready: string;
 		note: string;
 		noEntries: string;
+		preview: string;
 		reset: string;
 		searchOptions: string;
 		until: string;
@@ -180,6 +181,23 @@ export interface I18nAdmin {
 		openapi: string;
 		openapiNote: string;
 		source: string;
+	};
+	editor: {
+		bold: string;
+		code: string;
+		heading1: string;
+		heading2: string;
+		heading3: string;
+		italic: string;
+		link: string;
+		listBullet: string;
+		listTasks: string;
+		listNumbered: string;
+		paragraph: string;
+		quote: string;
+		removeFmt: string;
+		strikeThrough: string;
+		textArea: string;
 	};
 	error: {
 		// inserted as html
