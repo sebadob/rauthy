@@ -21,6 +21,8 @@ pub fn render_markdown(markdown: String) -> String {
         .to_string()
 }
 
+/// Sanitizes HTML. Only leaves data that would fit into a `div` and gets rid of `head`, `body`,
+/// and so on. Keeps inline `style`s.
 #[wasm_bindgen]
 pub fn sanitize_html(input: String) -> String {
     ammonia::Builder::default()

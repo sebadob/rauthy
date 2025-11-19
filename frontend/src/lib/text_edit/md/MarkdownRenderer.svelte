@@ -3,10 +3,8 @@
 
     let {
         markdown,
-        show,
     }: {
         markdown: string,
-        show: boolean,
     } = $props();
 
     let worker = useMarkdownWorker();
@@ -16,16 +14,16 @@
     });
 </script>
 
-{#if show}
-    <div class="preview">
-        {@html worker.renderedMarkdown()}
-    </div>
-{/if}
+<div class="preview">
+    {@html worker.renderedMarkdown()}
+</div>
 
 <style>
     .preview {
+        /*max-width: 467pt;*/
         display: block;
-        flex: 1;
         padding: .5rem;
+        word-break: break-all;
+        overflow: auto;
     }
 </style>

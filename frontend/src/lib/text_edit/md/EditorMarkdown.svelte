@@ -177,7 +177,9 @@
         </div>
     </div>
 
-    {#if !preview}
+    {#if preview}
+        <MarkdownRenderer {markdown}/>
+    {:else}
         <div
                 role="textbox"
                 tabindex="0"
@@ -192,8 +194,6 @@
             <!--{onkeydown}-->
         </div>
     {/if}
-
-    <MarkdownRenderer {markdown} show={preview}/>
 </div>
 
 <style>
@@ -206,10 +206,6 @@
         outline: none;
         overflow-y: auto;
     }
-
-    /*.edit:focus-visible {*/
-    /*    outline: 1px solid hsl(var(--accent));*/
-    /*}*/
 
     .editor {
         display: flex;

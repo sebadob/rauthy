@@ -170,13 +170,13 @@
 
 </script>
 
-<h2>{ta.tos.tos}</h2>
+<h2>{t.tos.tos}</h2>
 
 <div>
     {#if noneExist}
         <p>{ta.tos.noneExist}</p>
     {:else if tos.length > 0 && selectedIdx > -1}
-        {@const optUntil = tos[selectedIdx].opt_until}
+        {@const active = tos[selectedIdx]}
 
         <div>
             {#if selectedTsLabel && selectOpts.length > 1}
@@ -191,20 +191,26 @@
                     label={ta.tos.added}
                     title={ta.tos.added}
             >
-                {formatDateFromTs(tos[selectedIdx].ts)}
+                {formatDateFromTs(active.ts)}
             </LabeledValue>
 
-            {#if optUntil}
+            {#if active.opt_until}
                 <LabeledValue
                         label={ta.tos.optUntil.label}
                         title={ta.tos.optUntil.label}
                 >
-                    {formatDateFromTs(optUntil)}
+                    {formatDateFromTs(active.opt_until)}
                 </LabeledValue>
             {/if}
         </div>
 
-        <p>{tos[selectedIdx].content}</p>
+        <p>
+            {#if active.is_html}
+                {@html active.content}
+            {:else}
+                {active.content}
+            {/if}
+        </p>
     {/if}
 </div>
 

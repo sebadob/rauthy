@@ -50,26 +50,30 @@ how does it look?
     $effect(() => {
         if (mode === 'Text') {
             sanitizedValue = content;
-        } else {
-            sanitizedValue = worker.sanitizedHTML();
+        } else if (mode === 'Markdown') {
+            sanitizedValue = worker.renderedMarkdown();
+            // } else if (mode === 'HTML') {
+            //     sanitizedValue = worker.sanitizedHTML();
         }
     });
 
 </script>
 
 <div class="mode">
-    <Tabs bind:selected={mode} tabs={['Text', 'Markdown', 'HTML']}/>
+    <Tabs bind:selected={mode} tabs={['Markdown', 'Text']} center/>
 </div>
 
 {#if mode === 'Markdown'}
-    <EditorMarkdownPreview bind:content hideButtons {height}/>
-{:else if mode === 'HTML'}
-    TODO HTML EDITOR
-    <!--    <EditorHtml-->
-    <!--            bind:content={emailNew.html}-->
-    <!--            height={editorHeight}-->
-    <!--            bind:getSanitizedHtml-->
-    <!--    />-->
+    <EditorMarkdownPreview bind:content {height}/>
+    <!--{:else if mode === 'HTML'}-->
+    <!--    <EditorHtml bind:content {height}/>-->
 {:else if mode === 'Text'}
     <EditorText bind:content {height} hideButtons/>
 {/if}
+
+<style>
+    .mode {
+        margin: .5rem 0;
+        width: 11rem;
+    }
+</style>
