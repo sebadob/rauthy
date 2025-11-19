@@ -172,6 +172,25 @@
 
 <h2>{t.tos.tos}</h2>
 
+<div class="flex gap-05 flex-wrap mh-10">
+    <Button
+            ariaLabel={ta.tos.addNewToS}
+            level={isModalOpen ? 2 : 1}
+            onclick={() => showModalAddNew = true}
+    >
+        {ta.tos.addNewToS}
+    </Button>
+    {#if tos.length > 0}
+        <Button
+                ariaLabel={ta.tos.checkStatus}
+                level={isModalOpen ? 3 : 2}
+                onclick={() => showModalStatus = true}
+        >
+            {ta.tos.checkStatus}
+        </Button>
+    {/if}
+</div>
+
 <div>
     {#if noneExist}
         <p>{ta.tos.noneExist}</p>
@@ -211,25 +230,6 @@
                 {active.content}
             {/if}
         </p>
-    {/if}
-</div>
-
-<div class="flex gap-05 flex-wrap mh-10">
-    <Button
-            ariaLabel={ta.tos.addNewToS}
-            level={isModalOpen ? 2 : 1}
-            onclick={() => showModalAddNew = true}
-    >
-        {ta.tos.addNewToS}
-    </Button>
-    {#if tos.length > 0}
-        <Button
-                ariaLabel={ta.tos.checkStatus}
-                level={isModalOpen ? 3 : 2}
-                onclick={() => showModalStatus = true}
-        >
-            {ta.tos.checkStatus}
-        </Button>
     {/if}
 </div>
 

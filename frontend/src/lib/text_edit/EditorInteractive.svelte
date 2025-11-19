@@ -15,37 +15,7 @@
     } = $props();
 
     let worker = useMarkdownWorker();
-
-    // let content = $state('');
-    let content = $state(`
-# head 1
-## head 2
-### head 3
-#### head 4
-##### head 5
-###### head 6
-
-- list 1
-- list 2
-- ...
-
-1. erstens
-2. zweitens
-3. ...
-
-with some \`code\` ?
-and so on...
-
-#### head 2
-
-Und Multiline code?
-
-\`\`\`
-multi line
-code block
-how does it look?
-\`\`\`
-    `);
+    let content = $state('');
 
     $effect(() => {
         if (mode === 'Text') {
