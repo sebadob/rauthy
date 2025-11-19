@@ -103,7 +103,7 @@
             }
         } else {
             let textBefore = range.toString();
-            console.log('textBefore', textBefore);
+            // console.log('textBefore', textBefore);
             const len = textBefore.length;
 
             let spaceBefore = 0;

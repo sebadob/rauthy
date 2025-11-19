@@ -4,7 +4,7 @@ export interface MDWorkerReq {
 }
 
 export interface MDWorkerResp {
-	typ: 'render' | 'sanitize';
+	typ: 'render' | 'sanitize' | 'closed';
 	data: string;
 }
 
@@ -30,11 +30,19 @@ onmessage = (ev) => {
 				postMessage(s);
 				break;
 			case 'close':
+				let c: MDWorkerResp = {
+					typ: 'closed',
+					data: ''
+				};
+				postMessage(c);
+				console.log('Closing Markdown Worker');
 				self.close();
 		}
 	});
 };
 
 onclose = () => {
-	console.log('MD WebWorker closed');
+	console.log('Closing Markdown Worker');
 };
+
+console.log('Markdown Worker started');

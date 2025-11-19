@@ -3,6 +3,7 @@
     import EditorMarkdownPreview from "$lib/text_edit/md/EditorMarkdownPreview.svelte";
     import EditorText from "$lib/text_edit/EditorText.svelte";
     import {useMarkdownWorker} from "$lib/text_edit/useWorker.svelte";
+    import {onDestroy} from "svelte";
 
     let {
         height = 'calc(90dvh - 5.5rem)',
@@ -16,6 +17,10 @@
 
     let worker = useMarkdownWorker();
     let content = $state('');
+
+    onDestroy(() => {
+        worker.closeWorker();
+    });
 
     $effect(() => {
         if (mode === 'Text') {

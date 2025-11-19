@@ -6,18 +6,18 @@ let sanitizedHTML = $state('');
 
 export function useMarkdownWorker() {
 	if (!worker) {
-		// console.log('initializing MD Worker');
 		worker = new Worker(new URL('../../workers/md.ts', import.meta.url));
 	}
 
 	worker.onmessage = (ev) => {
 		let res = ev.data as MDWorkerResp;
-		// console.log('md worker message', res);
 
 		if (res.typ === 'render') {
 			renderedMarkdown = res.data;
 		} else if (res.typ === 'sanitize') {
 			sanitizedHTML = res.data;
+		} else if (res.typ === 'closed') {
+			worker = undefined;
 		}
 	};
 
