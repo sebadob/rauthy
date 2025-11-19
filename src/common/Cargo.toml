@@ -9,6 +9,7 @@ license.workspace = true
 rauthy-error = { path = "../error" }
 
 actix-web = { workspace = true }
+ammonia = { workspace = true }
 argon2 = { workspace = true }
 base64 = { workspace = true }
 bincode = { workspace = true }

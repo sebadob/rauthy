@@ -4741,6 +4741,7 @@ name = "rauthy-common"
 version = "0.32.6"
 dependencies = [
  "actix-web",
+ "ammonia",
  "argon2",
  "base64 0.22.1",
  "bincode",
