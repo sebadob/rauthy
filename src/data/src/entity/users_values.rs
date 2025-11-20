@@ -15,6 +15,8 @@ pub struct UserValues {
     pub zip: Option<String>,
     pub city: Option<String>,
     pub country: Option<String>,
+    pub preferred_username: Option<String>,
+    pub tz: Option<String>,
 }
 
 impl From<tokio_postgres::Row> for UserValues {
@@ -27,6 +29,8 @@ impl From<tokio_postgres::Row> for UserValues {
             zip: row.get("zip"),
             city: row.get("city"),
             country: row.get("country"),
+            preferred_username: row.get("preferred_username"),
+            tz: row.get("tz"),
         }
     }
 }
@@ -64,10 +68,11 @@ impl UserValues {
     ) -> Result<Option<Self>, ErrorResponse> {
         let sql = r#"
 INSERT INTO
-users_values (id, birthdate, phone, street, zip, city, country)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+users_values (id, birthdate, phone, street, zip, city, country, preferred_username, tz)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT(id) DO UPDATE
-SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#;
+SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7
+    preferred_username = $8, tz = $9"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -80,7 +85,9 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#
                         &values.street,
                         &values.zip,
                         &values.city,
-                        &values.country
+                        &values.country,
+                        &values.preferred_username,
+                        &values.tz
                     ),
                 )
                 .await?;
@@ -95,6 +102,8 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#
                     &values.zip,
                     &values.city,
                     &values.country,
+                    &values.preferred_username,
+                    &values.tz,
                 ],
             )
             .await?;
@@ -109,6 +118,8 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#
             zip: values.zip,
             city: values.city,
             country: values.country,
+            preferred_username: values.preferred_username,
+            tz: values.tz,
         });
         DB::hql()
             .put(Cache::User, idx, &slf, CACHE_TTL_USER)
@@ -142,6 +153,8 @@ impl From<UserValues> for UserValuesResponse {
             zip: value.zip,
             city: value.city,
             country: value.country,
+            preferred_username: value.preferred_username,
+            tz: value.tz,
         }
     }
 }

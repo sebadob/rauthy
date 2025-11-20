@@ -3,7 +3,7 @@ use crate::generic::Language;
 use crate::oidc::AddressClaim;
 use rauthy_common::regex::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_NAME,
-    RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_STREET, RE_URI, RE_USER_NAME,
+    RE_DATE_STR, RE_LINUX_USERNAME, RE_MFA_CODE, RE_PHONE, RE_STREET, RE_URI, RE_USER_NAME,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -206,6 +206,12 @@ pub struct UserValuesRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-]{0,48}`
     #[validate(regex(path = "*RE_CITY", code = "[a-zA-Z0-9À-ÿ-]{0,48}"))]
     pub country: Option<String>,
+    //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
+    #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
+    pub preferred_username: Option<String>,
+    /// Validation: Valid Timezone in the format of `Europe/Berlin`
+    #[validate(length(max = 48))]
+    pub tz: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -550,6 +556,8 @@ pub struct UserValuesResponse {
     pub zip: Option<String>,
     pub city: Option<String>,
     pub country: Option<String>,
+    pub preferred_username: Option<String>,
+    pub tz: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]

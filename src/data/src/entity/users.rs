@@ -666,6 +666,8 @@ LIMIT $2"#;
                     zip: row.get("zip"),
                     city: row.get("city"),
                     country: row.get("country"),
+                    preferred_username: row.get("preferred_username"),
+                    tz: row.get("tz"),
                 };
                 res.push((user, values));
             }
@@ -703,6 +705,8 @@ LIMIT $2"#;
                     zip: row.get("zip"),
                     city: row.get("city"),
                     country: row.get("country"),
+                    preferred_username: row.get("preferred_username"),
+                    tz: row.get("tz"),
                 };
                 res.push((user, values));
             }
@@ -971,6 +975,8 @@ LIMIT $2"#;
             zip: uv.zip,
             city: uv.city,
             country: uv.country,
+            preferred_username: uv.preferred_username,
+            tz: uv.tz,
         });
 
         Ok(UpdateUserRequest {
