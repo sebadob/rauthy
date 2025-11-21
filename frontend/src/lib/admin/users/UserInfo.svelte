@@ -28,6 +28,7 @@
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider";
     import {useSession} from "$state/session.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
+    import TZSelect from "$lib/TZSelect.svelte";
 
     let {
         user = $bindable(),
@@ -60,6 +61,7 @@
     let language: Language = $state('en');
 
     let birthdate = $state('');
+    let tz = $state('Etc/UTC');
     let phone = $state('');
     let street = $state('');
     let zip = $state('');
@@ -113,6 +115,7 @@
                     zip: user.user_values?.zip,
                     city: user.user_values?.city || '',
                     country: user.user_values?.country || '',
+                    tz: user.user_values?.tz || 'Etc/UTC',
                 }
             }
 
@@ -127,6 +130,7 @@
             zip = user.user_values?.zip?.toString() || '';
             city = user.user_values?.city || '';
             country = user.user_values?.country || '';
+            tz = user.user_values?.tz || 'Etc/UTC';
 
             enabled = user.enabled;
             emailVerified = user.email_verified;
@@ -238,6 +242,13 @@
                 payload.put.push({key: 'user_values.birthdate', value: birthdate});
             } else {
                 payload.del.push('user_values.birthdate');
+            }
+        }
+        if (tz !== userOrig?.user_values?.tz) {
+            if (tz && tz !== 'Etc/UTC') {
+                payload.put.push({key: 'user_values.tz', value: tz});
+            } else {
+                payload.del.push('user_values.tz');
             }
         }
         if (phone !== userOrig?.user_values?.phone) {
@@ -389,6 +400,7 @@
                         bind:value={birthdate}
                         withDelete
                 />
+                <TZSelect bind:value={tz}/>
 
                 {#if languages}
                     <div style:padding=".25rem">

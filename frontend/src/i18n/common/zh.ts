@@ -47,6 +47,7 @@ export const I18nZh: I18n = {
 		selectI18n: '选择语言',
 		show: '显示',
 		summary: '概要',
+		timezone: 'Timezone',
 		weekDaysShort: ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
 		year: '年'
 	},

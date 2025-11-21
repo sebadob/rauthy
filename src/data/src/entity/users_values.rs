@@ -71,7 +71,7 @@ INSERT INTO
 users_values (id, birthdate, phone, street, zip, city, country, preferred_username, tz)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT(id) DO UPDATE
-SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7
+SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7,
     preferred_username = $8, tz = $9"#;
 
         if is_hiqlite() {

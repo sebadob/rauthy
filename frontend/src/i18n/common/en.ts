@@ -47,6 +47,7 @@ export const I18nEn: I18n = {
 		selectI18n: 'Select Language',
 		show: 'Show',
 		summary: 'Summary',
+		timezone: 'Timezone',
 		weekDaysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
 		year: 'Year'
 	},

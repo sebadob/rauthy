@@ -36,6 +36,7 @@ export interface I18n {
 		selectI18n: string;
 		show: string;
 		summary: string;
+		timezone: string;
 		weekDaysShort: string[];
 		year: string;
 	};

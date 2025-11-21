@@ -558,7 +558,7 @@ OFFSET $2"#;
     pub async fn insert(new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
         let sql = r#"
-INSERT INTO USERS
+INSERT INTO users
 (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
 last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
@@ -1056,6 +1056,7 @@ LIMIT $2"#;
 
                             "city" => uv.city = put.value.as_str().map(String::from),
                             "country" => uv.country = put.value.as_str().map(String::from),
+                            "tz" => uv.tz = put.value.as_str().map(String::from),
                             v => {
                                 return Err(ErrorResponse::new(
                                     ErrorResponseType::BadRequest,

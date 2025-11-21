@@ -18,6 +18,10 @@
     import type {UserValueConfigValue, UserValuesConfig} from "$api/templates/UserValuesConfig";
     import {TPL_USER_VALUES_CONFIG} from "$utils/constants";
     import Template from "$lib/Template.svelte";
+    import {onMount} from "svelte";
+    import {fetchTimezones} from "$utils/helpers";
+    import Options from "$lib/Options.svelte";
+    import TZSelect from "$lib/TZSelect.svelte";
 
     let {
         user = $bindable(),
@@ -27,8 +31,11 @@
         viewModePhone?: boolean,
     } = $props();
 
-    if (!user.user_values?.birthdate) {
+    if (!user.user_values.birthdate) {
         user.user_values.birthdate = '';
+    }
+    if (!user.user_values.tz) {
+        user.user_values.tz = 'Etc/UTC';
     }
 
     let t = useI18n();
@@ -49,22 +56,28 @@
         const zip = params.get('zip') || undefined;
         const city = params.get('city') || undefined;
         const country = params.get('country') || undefined;
+        let tz = user.user_values.tz;
+        if (tz === 'Etc/UTC') {
+            tz = undefined;
+        }
 
         let payload: UpdateUserSelfRequest = {
             email,
             family_name: familyName,
             given_name: givenName,
         };
-        if (birthdate || phone || street || zip || city || country) {
+        if (birthdate || phone || street || zip || city || country || tz) {
             payload.user_values = {
                 birthdate,
                 phone,
                 street,
                 zip,
                 city,
-                country
+                country,
+                tz,
             };
         }
+        console.log(payload);
 
         let res = await fetchPut<UserResponse>(`/auth/v1/users/${user.id}/self`, payload);
         if (res.body) {
@@ -131,6 +144,7 @@
                         required={userValuesConfig?.birthdate === 'required'}
                         withDelete
                 />
+                <TZSelect bind:value={user.user_values.tz}/>
             </div>
             <div>
                 <Input

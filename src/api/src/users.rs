@@ -65,6 +65,7 @@ use spow::pow::Pow;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::str::FromStr;
 use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
@@ -2091,6 +2092,15 @@ impl UserValuesValidator<'_> {
                 "'tz' is required",
             ));
         }
+        if let Some(tz) = self.tz
+            && chrono_tz::Tz::from_str(tz).is_err()
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'tz' cannot be parsed",
+            ));
+        }
+
         if config.preferred_username.preferred_username == UserValueConfigValue::Required
             && (self.preferred_username.is_none() || self.preferred_username == Some(""))
         {

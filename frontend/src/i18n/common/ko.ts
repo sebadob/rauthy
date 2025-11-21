@@ -34,6 +34,7 @@ export const I18nKo: I18n = {
 		selectI18n: '언어 선택',
 		show: '보이기',
 		summary: '요약',
+		timezone: 'Timezone',
 		weekDaysShort: ['일', '월', '화', '수', '목', '금', '토'],
 		year: '년'
 	},

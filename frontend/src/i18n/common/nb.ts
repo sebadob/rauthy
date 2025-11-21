@@ -47,6 +47,7 @@ export const I18nNb: I18n = {
 		selectI18n: 'Velg språk',
 		show: 'Vis',
 		summary: 'Sammendrag',
+		timezone: 'Timezone',
 		weekDaysShort: ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'],
 		year: 'År'
 	},
