@@ -7,7 +7,7 @@ use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
 use rauthy_common::logging::LogLevelAccess;
-use rauthy_common::regex::RE_PREFERRED_USERNAME;
+use rauthy_common::regex::{RE_LINUX_USERNAME, RE_PREFERRED_USERNAME};
 use regex::Regex;
 use serde::Serialize;
 use spow::pow::Pow;
@@ -2457,39 +2457,37 @@ impl Vars {
     }
 
     fn parse_user_values(&mut self, table: &mut toml::Table) {
-        {
-            let mut table = t_table(table, "user_values");
+        let mut table = t_table(table, "user_values");
 
-            if let Some(v) = t_str(&mut table, "user_values", "given_name", "") {
-                self.user_values.given_name = UserValueConfigValue::from(v.as_str());
-            }
-            if let Some(v) = t_str(&mut table, "user_values", "family_name", "") {
-                self.user_values.family_name = UserValueConfigValue::from(v.as_str());
-            }
-            if let Some(v) = t_str(&mut table, "user_values", "birthdate", "") {
-                self.user_values.birthdate = UserValueConfigValue::from(v.as_str());
-            }
-            if let Some(v) = t_str(&mut table, "user_values", "street", "") {
-                self.user_values.street = UserValueConfigValue::from(v.as_str());
-            }
-            if let Some(v) = t_str(&mut table, "user_values", "zip", "") {
-                self.user_values.zip = UserValueConfigValue::from(v.as_str());
-            }
-            if let Some(v) = t_str(&mut table, "user_values", "city", "") {
-                self.user_values.city = UserValueConfigValue::from(v.as_str());
-            }
-            if let Some(v) = t_str(&mut table, "user_values", "country", "") {
-                self.user_values.country = UserValueConfigValue::from(v.as_str());
-            }
-            if let Some(v) = t_str(&mut table, "user_values", "phone", "") {
-                self.user_values.phone = UserValueConfigValue::from(v.as_str());
-            }
-            if let Some(v) = t_str(&mut table, "user_values", "tz", "") {
-                self.user_values.tz = UserValueConfigValue::from(v.as_str());
-            }
+        if let Some(v) = t_str(&mut table, "user_values", "given_name", "") {
+            self.user_values.given_name = UserValueConfigValue::from(v.as_str());
+        }
+        if let Some(v) = t_str(&mut table, "user_values", "family_name", "") {
+            self.user_values.family_name = UserValueConfigValue::from(v.as_str());
+        }
+        if let Some(v) = t_str(&mut table, "user_values", "birthdate", "") {
+            self.user_values.birthdate = UserValueConfigValue::from(v.as_str());
+        }
+        if let Some(v) = t_str(&mut table, "user_values", "street", "") {
+            self.user_values.street = UserValueConfigValue::from(v.as_str());
+        }
+        if let Some(v) = t_str(&mut table, "user_values", "zip", "") {
+            self.user_values.zip = UserValueConfigValue::from(v.as_str());
+        }
+        if let Some(v) = t_str(&mut table, "user_values", "city", "") {
+            self.user_values.city = UserValueConfigValue::from(v.as_str());
+        }
+        if let Some(v) = t_str(&mut table, "user_values", "country", "") {
+            self.user_values.country = UserValueConfigValue::from(v.as_str());
+        }
+        if let Some(v) = t_str(&mut table, "user_values", "phone", "") {
+            self.user_values.phone = UserValueConfigValue::from(v.as_str());
+        }
+        if let Some(v) = t_str(&mut table, "user_values", "tz", "") {
+            self.user_values.tz = UserValueConfigValue::from(v.as_str());
         }
 
-        let mut table = t_table(table, "user_values.preferred_username");
+        let mut table = t_table(&mut table, "preferred_username");
 
         if let Some(v) = t_str(
             &mut table,
@@ -2529,6 +2527,9 @@ impl Vars {
         ) {
             self.user_values.preferred_username.pattern_html = v.into();
         }
+
+        // linux username regex as fallback
+        let _ = RE_PREFERRED_USERNAME.set(RE_LINUX_USERNAME.clone());
     }
 
     fn parse_webauthn(&mut self, table: &mut toml::Table) {

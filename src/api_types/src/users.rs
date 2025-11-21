@@ -206,8 +206,8 @@ pub struct UserValuesRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-]{0,48}`
     #[validate(regex(path = "*RE_CITY", code = "[a-zA-Z0-9À-ÿ-]{0,48}"))]
     pub country: Option<String>,
-    //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
-    #[validate(regex(path = "RE_PREFERRED_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
+    //// Validation: `[user_values.preferred_username] -> regex_rust`
+    #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
     pub preferred_username: Option<String>,
     /// Validation: Valid Timezone in the format of `Europe/Berlin`
     #[validate(length(max = 48))]

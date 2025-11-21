@@ -1960,6 +1960,39 @@ pub async fn post_user_self_convert_passkey(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// Allows modification of specific user values from the user himself
+///
+/// **Permissions**
+/// - authenticated user
+#[utoipa::path(
+    put,
+    path = "/users/{id}/self/preferred_username",
+    tag = "users",
+    request_body = UpdateUserSelfRequest,
+    responses(
+        (status = 200, description = "Ok", body = UserResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 406, description = "NotAccepted", body = ErrorResponse),
+    ),
+)]
+#[put("/users/{id}/self/preferred_username")]
+pub async fn post_user_self_preferred_username(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    // make sure the logged-in user can only update its own username
+    let id = id.into_inner();
+    principal.is_user(&id)?;
+
+    todo!();
+
+    Ok(HttpResponse::Ok().finish())
+}
+
 /// Deletes a user
 ///
 /// **Permissions**

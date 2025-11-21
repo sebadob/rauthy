@@ -41,14 +41,14 @@
         padding-top: .5rem;
     }
 
-    .tz > .label {
+    .label {
         margin-top: -.25rem;
         margin-left: .5rem;
         color: hsl(var(--text) / .8);
         font-size: .9rem;
     }
 
-    .tz > .opts {
+    .opts {
         border-bottom: 1px solid hsl(var(--bg-high));
     }
 </style>

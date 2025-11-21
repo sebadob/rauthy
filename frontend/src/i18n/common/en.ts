@@ -12,6 +12,7 @@ export const I18nEn: I18n = {
 		copyToClip: 'Copy value to clipboard',
 		delete: 'Delete',
 		details: 'Details',
+		edit: 'Edit',
 		email: 'E-Mail',
 		errTooShort: 'Input too short',
 		errTooLong: 'Input too long',
@@ -109,6 +110,10 @@ export const I18nEn: I18n = {
 		passwordPolicyFollow: 'You must follow the password policy',
 		passwordReset: 'Password Reset',
 		phone: 'Phone',
+		preferredUsername: 'Preferred Username',
+		preferredUsernameDesc: `Some applications will use this username. Which ones do cannot be
+			controlled.`,
+		preferredUsernameImmutable: 'CAUTION: The username can only be chosen once!',
 		providerLink: 'Federate Account',
 		providerLinkDesc:
 			'You can link this account to one of the following login providers.\nAfter activating this function, you will be redirected to the login page of the chosen one.\nAfter a successful login and if the email matches, your account will be linked.',

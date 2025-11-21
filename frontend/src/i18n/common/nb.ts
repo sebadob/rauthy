@@ -12,6 +12,7 @@ export const I18nNb: I18n = {
 		copyToClip: 'Kopiert til utklippstavle',
 		delete: 'Slett',
 		details: 'Detaljer',
+		edit: 'Edit',
 		email: 'E-post',
 		errTooShort: 'Inndata er for kort',
 		errTooLong: 'Inndata er for lang',
@@ -109,6 +110,10 @@ export const I18nNb: I18n = {
 		passwordPolicyFollow: 'Følg passordreglene',
 		passwordReset: 'Tilbakestill passord',
 		phone: 'Telefon',
+		preferredUsername: 'Preferred Username',
+		preferredUsernameDesc: `Some applications will use this username. Which ones do cannot be
+			controlled.`,
+		preferredUsernameImmutable: 'CAUTION: The username can only be chosen once!',
 		providerLink: 'Koble konto',
 		providerLinkDesc:
 			'Denne kontoen kan kobles til en av følgende innloggingsleverandører. Etter aktivering blir du videresendt til leverandørens innloggingsside. Ved vellykket innlogging og samsvarende e-postadresser kobles kontoen.',

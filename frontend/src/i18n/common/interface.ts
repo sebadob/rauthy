@@ -14,6 +14,7 @@ export interface I18n {
 		copyToClip: string;
 		delete: string;
 		details: string;
+		edit: string;
 		email: string;
 		errTooShort: string;
 		errTooLong: string;
@@ -92,6 +93,9 @@ export interface I18n {
 		passwordPolicyFollow: string;
 		passwordReset: string;
 		phone: string;
+		preferredUsername: string;
+		preferredUsernameDesc: string;
+		preferredUsernameImmutable: string;
 		providerLink: string;
 		providerLinkDesc: string;
 		providerUnlink: string;

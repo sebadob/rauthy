@@ -22,6 +22,7 @@
     import {fetchTimezones} from "$utils/helpers";
     import Options from "$lib/Options.svelte";
     import TZSelect from "$lib/TZSelect.svelte";
+    import PreferredUsername from "$lib/PreferredUsername.svelte";
 
     let {
         user = $bindable(),
@@ -33,6 +34,9 @@
 
     if (!user.user_values.birthdate) {
         user.user_values.birthdate = '';
+    }
+    if (!user.user_values.preferred_username) {
+        user.user_values.preferred_username = '';
     }
     if (!user.user_values.tz) {
         user.user_values.tz = 'Etc/UTC';
@@ -145,6 +149,12 @@
                         withDelete
                 />
                 <TZSelect bind:value={user.user_values.tz}/>
+                {#if userValuesConfig}
+                    <PreferredUsername
+                            bind:preferred_username={user.user_values.preferred_username}
+                            config={userValuesConfig.preferred_username}
+                    />
+                {/if}
             </div>
             <div>
                 <Input
