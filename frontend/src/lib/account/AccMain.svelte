@@ -41,8 +41,6 @@
             return providers.filter(p => p.id === user.auth_provider_id)[0];
         }
     });
-    let userValuesConfig: undefined | UserValuesConfig = $state();
-    $inspect('userValuesConfig', userValuesConfig);
 
     let viewModePhone = $derived(innerWidth && innerWidth < 560);
     let viewModeWideCompact = $derived(innerWidth && innerWidth < 1000);
@@ -107,7 +105,6 @@
 <svelte:window bind:innerWidth/>
 
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
-<Template id={TPL_USER_VALUES_CONFIG} bind:value={userValuesConfig}/>
 
 {#snippet header()}
     <h3>{`${user.given_name} ${user.family_name || ''}`}</h3>
