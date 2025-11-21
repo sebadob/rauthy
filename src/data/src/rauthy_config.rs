@@ -9,6 +9,7 @@ use rauthy_common::constants::CookieMode;
 use rauthy_common::logging::LogLevelAccess;
 use rauthy_common::regex::RE_PREFERRED_USERNAME;
 use regex::Regex;
+use serde::Serialize;
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::env;
@@ -275,7 +276,7 @@ pub struct Vars {
     pub tos: VarsToS,
     pub user_pictures: VarsUserPictures,
     pub user_registration: VarsUserRegistration,
-    pub user_values: VarsUserValues,
+    pub user_values: VarsUserValuesConfig,
     pub webauthn: VarsWebauthn,
 }
 
@@ -697,18 +698,18 @@ impl Default for Vars {
                 domain_blacklist: Vec::default(),
                 allow_open_redirect: false,
             },
-            user_values: VarsUserValues {
-                given_name: UserValueConfig::Required,
-                family_name: UserValueConfig::Optional,
-                birthdate: UserValueConfig::Optional,
-                street: UserValueConfig::Optional,
-                zip: UserValueConfig::Optional,
-                city: UserValueConfig::Optional,
-                country: UserValueConfig::Optional,
-                phone: UserValueConfig::Optional,
-                tz: UserValueConfig::Optional,
+            user_values: VarsUserValuesConfig {
+                given_name: UserValueConfigValue::Required,
+                family_name: UserValueConfigValue::Optional,
+                birthdate: UserValueConfigValue::Optional,
+                street: UserValueConfigValue::Optional,
+                zip: UserValueConfigValue::Optional,
+                city: UserValueConfigValue::Optional,
+                country: UserValueConfigValue::Optional,
+                phone: UserValueConfigValue::Optional,
+                tz: UserValueConfigValue::Optional,
                 preferred_username: VarsUserPreferredUsername {
-                    preferred_username: UserValueConfig::Optional,
+                    preferred_username: UserValueConfigValue::Optional,
                     immutable: true,
                     pattern_html: "^[a-z][a-z0-9_\\-]{1,61}$".into(),
                 },
@@ -2460,31 +2461,31 @@ impl Vars {
             let mut table = t_table(table, "user_values");
 
             if let Some(v) = t_str(&mut table, "user_values", "given_name", "") {
-                self.user_values.given_name = UserValueConfig::from(v.as_str());
+                self.user_values.given_name = UserValueConfigValue::from(v.as_str());
             }
             if let Some(v) = t_str(&mut table, "user_values", "family_name", "") {
-                self.user_values.family_name = UserValueConfig::from(v.as_str());
+                self.user_values.family_name = UserValueConfigValue::from(v.as_str());
             }
             if let Some(v) = t_str(&mut table, "user_values", "birthdate", "") {
-                self.user_values.birthdate = UserValueConfig::from(v.as_str());
+                self.user_values.birthdate = UserValueConfigValue::from(v.as_str());
             }
             if let Some(v) = t_str(&mut table, "user_values", "street", "") {
-                self.user_values.street = UserValueConfig::from(v.as_str());
+                self.user_values.street = UserValueConfigValue::from(v.as_str());
             }
             if let Some(v) = t_str(&mut table, "user_values", "zip", "") {
-                self.user_values.zip = UserValueConfig::from(v.as_str());
+                self.user_values.zip = UserValueConfigValue::from(v.as_str());
             }
             if let Some(v) = t_str(&mut table, "user_values", "city", "") {
-                self.user_values.city = UserValueConfig::from(v.as_str());
+                self.user_values.city = UserValueConfigValue::from(v.as_str());
             }
             if let Some(v) = t_str(&mut table, "user_values", "country", "") {
-                self.user_values.country = UserValueConfig::from(v.as_str());
+                self.user_values.country = UserValueConfigValue::from(v.as_str());
             }
             if let Some(v) = t_str(&mut table, "user_values", "phone", "") {
-                self.user_values.phone = UserValueConfig::from(v.as_str());
+                self.user_values.phone = UserValueConfigValue::from(v.as_str());
             }
             if let Some(v) = t_str(&mut table, "user_values", "tz", "") {
-                self.user_values.tz = UserValueConfig::from(v.as_str());
+                self.user_values.tz = UserValueConfigValue::from(v.as_str());
             }
         }
 
@@ -2497,7 +2498,7 @@ impl Vars {
             "",
         ) {
             self.user_values.preferred_username.preferred_username =
-                UserValueConfig::from(v.as_str());
+                UserValueConfigValue::from(v.as_str());
         }
         if let Some(v) = t_bool(
             &mut table,
@@ -3014,23 +3015,23 @@ pub struct VarsUserRegistration {
     pub allow_open_redirect: bool,
 }
 
-#[derive(Debug)]
-pub struct VarsUserValues {
-    pub given_name: UserValueConfig,
-    pub family_name: UserValueConfig,
-    pub birthdate: UserValueConfig,
-    pub street: UserValueConfig,
-    pub zip: UserValueConfig,
-    pub city: UserValueConfig,
-    pub country: UserValueConfig,
-    pub phone: UserValueConfig,
-    pub tz: UserValueConfig,
+#[derive(Debug, Serialize)]
+pub struct VarsUserValuesConfig {
+    pub given_name: UserValueConfigValue,
+    pub family_name: UserValueConfigValue,
+    pub birthdate: UserValueConfigValue,
+    pub street: UserValueConfigValue,
+    pub zip: UserValueConfigValue,
+    pub city: UserValueConfigValue,
+    pub country: UserValueConfigValue,
+    pub phone: UserValueConfigValue,
+    pub tz: UserValueConfigValue,
     pub preferred_username: VarsUserPreferredUsername,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct VarsUserPreferredUsername {
-    pub preferred_username: UserValueConfig,
+    pub preferred_username: UserValueConfigValue,
     pub immutable: bool,
     // The Rust regex will not be saved here, but as a dedicated static
     // value instead, so it can easily be used with the `validator` crate
@@ -3039,14 +3040,15 @@ pub struct VarsUserPreferredUsername {
     pub pattern_html: Cow<'static, str>,
 }
 
-#[derive(Debug)]
-pub enum UserValueConfig {
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum UserValueConfigValue {
     Required,
     Optional,
     Hidden,
 }
 
-impl From<&str> for UserValueConfig {
+impl From<&str> for UserValueConfigValue {
     fn from(s: &str) -> Self {
         match s {
             "required" => Self::Required,

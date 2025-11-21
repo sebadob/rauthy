@@ -8,7 +8,7 @@
     import AccDevices from "$lib5/account/AccDevices.svelte";
     import {useI18n} from "$state/i18n.svelte.js";
     import type {UserResponse} from "$api/types/user.ts";
-    import {TPL_AUTH_PROVIDERS} from "$utils/constants";
+    import {TPL_AUTH_PROVIDERS, TPL_USER_VALUES_CONFIG} from "$utils/constants";
     import Template from "$lib5/Template.svelte";
     import type {AuthProvidersTemplate} from "$api/templates/AuthProvider.ts";
     import {onMount} from "svelte";
@@ -22,6 +22,7 @@
     import AccPAM from "$lib/account/AccPAM.svelte";
     import type {PamUserResponse} from "$api/types/pam";
     import {fetchGet} from "$api/fetch";
+    import type {UserValuesConfig} from "$api/templates/UserValuesConfig";
 
     let {
         user = $bindable(),
@@ -40,6 +41,8 @@
             return providers.filter(p => p.id === user.auth_provider_id)[0];
         }
     });
+    let userValuesConfig: undefined | UserValuesConfig = $state();
+    $inspect('userValuesConfig', userValuesConfig);
 
     let viewModePhone = $derived(innerWidth && innerWidth < 560);
     let viewModeWideCompact = $derived(innerWidth && innerWidth < 1000);
@@ -104,6 +107,7 @@
 <svelte:window bind:innerWidth/>
 
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
+<Template id={TPL_USER_VALUES_CONFIG} bind:value={userValuesConfig}/>
 
 {#snippet header()}
     <h3>{`${user.given_name} ${user.family_name || ''}`}</h3>
