@@ -10,7 +10,7 @@
         options = [],
         name,
         value = $bindable(),
-        maxHeight,
+        maxHeight = '20rem',
         offsetTop,
         offsetLeft,
         borderless = false,

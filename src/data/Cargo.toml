@@ -88,6 +88,7 @@ refinery = { workspace = true }
 tokio-postgres = { workspace = true }
 tokio-postgres-rustls = { workspace = true }
 webpki-roots = { workspace = true }
+regex = "1.11.3"
 
 [dev-dependencies]
 pretty_assertions = "1"

@@ -54,7 +54,7 @@ use rauthy_data::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
 use rauthy_data::ipgeo;
 use rauthy_data::ipgeo::get_location;
 use rauthy_data::language::Language;
-use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_data::rauthy_config::{RauthyConfig, UserValueConfigValue};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
@@ -65,6 +65,7 @@ use spow::pow::Pow;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::str::FromStr;
 use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
@@ -159,6 +160,20 @@ pub async fn post_users(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Create)?;
     payload.validate()?;
+    UserValuesValidator {
+        given_name: Some(payload.given_name.as_str()),
+        family_name: payload.family_name.as_deref(),
+        // TODO add all missing values to reg req
+        birthdate: None,
+        street: None,
+        zip: None,
+        city: None,
+        country: None,
+        phone: None,
+        tz: None,
+        preferred_username: None,
+    }
+    .validate()?;
 
     let user = User::create_from_new(payload).await?;
 
@@ -411,6 +426,20 @@ pub async fn post_users_register_handle(
         ));
     }
     payload.validate()?;
+    UserValuesValidator {
+        given_name: Some(&payload.given_name),
+        family_name: payload.family_name.as_deref(),
+        // TODO add missing values
+        birthdate: None,
+        street: None,
+        zip: None,
+        city: None,
+        country: None,
+        phone: None,
+        tz: None,
+        preferred_username: None,
+    }
+    .validate()?;
 
     let reg = &RauthyConfig::get().vars.user_registration;
 
@@ -1801,6 +1830,32 @@ async fn handle_put_user_by_id(
     req: HttpRequest,
     payload: UpdateUserRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
+    {
+        let mut validator = UserValuesValidator {
+            given_name: Some(&payload.given_name),
+            family_name: payload.family_name.as_deref(),
+            birthdate: None,
+            street: None,
+            zip: None,
+            city: None,
+            country: None,
+            phone: None,
+            tz: None,
+            preferred_username: None,
+        };
+        if let Some(values) = &payload.user_values {
+            validator.birthdate = values.birthdate.as_deref();
+            validator.street = values.street.as_deref();
+            validator.zip = values.zip.as_deref();
+            validator.city = values.city.as_deref();
+            validator.country = values.country.as_deref();
+            validator.phone = values.phone.as_deref();
+            validator.tz = values.tz.as_deref();
+            validator.preferred_username = values.preferred_username.as_deref();
+        }
+        validator.validate()?;
+    }
+
     let (user, user_values, is_new_admin) = User::update(user_id, payload, None).await?;
 
     if is_new_admin {
@@ -1905,6 +1960,39 @@ pub async fn post_user_self_convert_passkey(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// Allows modification of specific user values from the user himself
+///
+/// **Permissions**
+/// - authenticated user
+#[utoipa::path(
+    put,
+    path = "/users/{id}/self/preferred_username",
+    tag = "users",
+    request_body = UpdateUserSelfRequest,
+    responses(
+        (status = 200, description = "Ok", body = UserResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 406, description = "NotAccepted", body = ErrorResponse),
+    ),
+)]
+#[put("/users/{id}/self/preferred_username")]
+pub async fn post_user_self_preferred_username(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    // make sure the logged-in user can only update its own username
+    let id = id.into_inner();
+    principal.is_user(&id)?;
+
+    todo!();
+
+    Ok(HttpResponse::Ok().finish())
+}
+
 /// Deletes a user
 ///
 /// **Permissions**
@@ -1945,4 +2033,116 @@ pub async fn delete_user_by_id(
     });
 
     Ok(HttpResponse::NoContent().finish())
+}
+
+pub struct UserValuesValidator<'a> {
+    given_name: Option<&'a str>,
+    family_name: Option<&'a str>,
+    birthdate: Option<&'a str>,
+    street: Option<&'a str>,
+    zip: Option<&'a str>,
+    city: Option<&'a str>,
+    country: Option<&'a str>,
+    phone: Option<&'a str>,
+    tz: Option<&'a str>,
+    preferred_username: Option<&'a str>,
+}
+
+impl UserValuesValidator<'_> {
+    pub fn validate(&self) -> Result<(), ErrorResponse> {
+        let config = &RauthyConfig::get().vars.user_values;
+
+        if config.given_name == UserValueConfigValue::Required
+            && (self.given_name.is_none() || self.given_name == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'given_name' is required",
+            ));
+        }
+        if config.family_name == UserValueConfigValue::Required
+            && (self.family_name.is_none() || self.family_name == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'family_name' is required",
+            ));
+        }
+
+        if config.birthdate == UserValueConfigValue::Required
+            && (self.birthdate.is_none() || self.birthdate == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'birthdate' is required",
+            ));
+        }
+        if config.street == UserValueConfigValue::Required
+            && (self.street.is_none() || self.street == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'street' is required",
+            ));
+        }
+        if config.zip == UserValueConfigValue::Required
+            && (self.zip.is_none() || self.zip == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'zip' is required",
+            ));
+        }
+        if config.city == UserValueConfigValue::Required
+            && (self.city.is_none() || self.city == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'city' is required",
+            ));
+        }
+        if config.country == UserValueConfigValue::Required
+            && (self.country.is_none() || self.country == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'country' is required",
+            ));
+        }
+        if config.phone == UserValueConfigValue::Required
+            && (self.phone.is_none() || self.phone == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'phone' is required",
+            ));
+        }
+
+        if config.tz == UserValueConfigValue::Required && (self.tz.is_none() || self.tz == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'tz' is required",
+            ));
+        }
+        if let Some(tz) = self.tz
+            && chrono_tz::Tz::from_str(tz).is_err()
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'tz' cannot be parsed",
+            ));
+        }
+
+        if config.preferred_username.preferred_username == UserValueConfigValue::Required
+            && (self.preferred_username.is_none() || self.preferred_username == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'preferred_username' is required",
+            ));
+        }
+
+        Ok(())
+    }
 }

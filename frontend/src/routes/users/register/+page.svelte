@@ -1,6 +1,6 @@
 <script lang="ts">
     import Button from "$lib5/button/Button.svelte";
-    import {IS_DEV, TPL_RESTRICTED_EMAIL_DOMAIN} from "$utils/constants";
+    import {IS_DEV, TPL_RESTRICTED_EMAIL_DOMAIN, TPL_USER_VALUES_CONFIG} from "$utils/constants";
     import Input from "$lib5/form/Input.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import Main from "$lib5/Main.svelte";
@@ -16,10 +16,12 @@
     import type {ToSLatestResponse} from "$api/types/tos";
     import {fetchSolvePow} from "$utils/pow";
     import TosAccept from "$lib/TosAccept.svelte";
+    import type {UserValuesConfig} from "$api/templates/UserValuesConfig";
 
     let t = useI18n();
 
     let restrictedDomain = $state('');
+    let userValuesConfig: undefined | UserValuesConfig = $state();
     let redirectUri = useParam('redirect_uri');
     let isLoading = $state(false);
     let err = $state('');
@@ -106,6 +108,7 @@
 </svelte:head>
 
 <Template id={TPL_RESTRICTED_EMAIL_DOMAIN} bind:value={restrictedDomain}/>
+<Template id={TPL_USER_VALUES_CONFIG} bind:value={userValuesConfig}/>
 
 <Main>
     <ContentCenter>

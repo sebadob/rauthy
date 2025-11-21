@@ -75,6 +75,7 @@ pub enum HtmlTemplate {
     PasswordReset(TplPasswordReset),
     RestrictedEmailDomain(String),
     StatusCode(StatusCode),
+    UserValues,
 }
 
 impl HtmlTemplate {
@@ -209,6 +210,7 @@ impl HtmlTemplate {
 
                 Ok((Self::PasswordReset(tpl), Some(cookie)))
             }
+            "tpl_user_values_config" => Ok((Self::UserValues, None)),
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
                 "invalid template id",
@@ -235,6 +237,7 @@ impl HtmlTemplate {
             Self::PasswordReset(_) => "tpl_password_reset",
             Self::RestrictedEmailDomain(_) => "tpl_restricted_email_domain",
             Self::StatusCode(_) => "tpl_status_code",
+            Self::UserValues => "tpl_user_values_config",
         }
     }
 
@@ -258,6 +261,9 @@ impl HtmlTemplate {
             Self::PasswordReset(i) => serde_json::to_string(i).unwrap(),
             Self::StatusCode(i) => i.to_string(),
             Self::RestrictedEmailDomain(i) => i.to_string(),
+            Self::UserValues => {
+                serde_json::to_string(&RauthyConfig::get().vars.user_values).unwrap()
+            }
         }
     }
 }
@@ -1093,14 +1099,17 @@ impl UserRegisterHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::RestrictedEmailDomain(
-                RauthyConfig::get()
-                    .vars
-                    .user_registration
-                    .domain_restriction
-                    .clone()
-                    .unwrap_or_default(),
-            )],
+            templates: &[
+                HtmlTemplate::RestrictedEmailDomain(
+                    RauthyConfig::get()
+                        .vars
+                        .user_registration
+                        .domain_restriction
+                        .clone()
+                        .unwrap_or_default(),
+                ),
+                HtmlTemplate::UserValues,
+            ],
         }
         .render()
         .expect("rendering register.html")

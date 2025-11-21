@@ -15,6 +15,14 @@
     import IconCheck from "$icons/IconCheck.svelte";
     import {fetchPut} from "$api/fetch";
     import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
+    import type {UserValueConfigValue, UserValuesConfig} from "$api/templates/UserValuesConfig";
+    import {TPL_USER_VALUES_CONFIG} from "$utils/constants";
+    import Template from "$lib/Template.svelte";
+    import {onMount} from "svelte";
+    import {fetchTimezones} from "$utils/helpers";
+    import Options from "$lib/Options.svelte";
+    import TZSelect from "$lib/TZSelect.svelte";
+    import PreferredUsername from "$lib/PreferredUsername.svelte";
 
     let {
         user = $bindable(),
@@ -24,8 +32,14 @@
         viewModePhone?: boolean,
     } = $props();
 
-    if (!user.user_values?.birthdate) {
+    if (!user.user_values.birthdate) {
         user.user_values.birthdate = '';
+    }
+    if (!user.user_values.preferred_username) {
+        user.user_values.preferred_username = '';
+    }
+    if (!user.user_values.tz) {
+        user.user_values.tz = 'Etc/UTC';
     }
 
     let t = useI18n();
@@ -33,6 +47,8 @@
     let err = $state('');
     let success = $state(false);
     let successEmailConfirm = $state(false);
+
+    let userValuesConfig: undefined | UserValuesConfig = $state();
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         const email = params.get('email');
@@ -44,22 +60,28 @@
         const zip = params.get('zip') || undefined;
         const city = params.get('city') || undefined;
         const country = params.get('country') || undefined;
+        let tz = user.user_values.tz;
+        if (tz === 'Etc/UTC') {
+            tz = undefined;
+        }
 
         let payload: UpdateUserSelfRequest = {
             email,
             family_name: familyName,
             given_name: givenName,
         };
-        if (birthdate || phone || street || zip || city || country) {
+        if (birthdate || phone || street || zip || city || country || tz) {
             payload.user_values = {
                 birthdate,
                 phone,
                 street,
                 zip,
                 city,
-                country
+                country,
+                tz,
             };
         }
+        console.log(payload);
 
         let res = await fetchPut<UserResponse>(`/auth/v1/users/${user.id}/self`, payload);
         if (res.body) {
@@ -85,6 +107,8 @@
     }
 </script>
 
+<Template id={TPL_USER_VALUES_CONFIG} bind:value={userValuesConfig}/>
+
 <div class="container">
     <Form action={`/auth/v1/users/${user.id}/self`} {onSubmit}>
         <div class="formInner">
@@ -103,7 +127,7 @@
                         label={t.account.givenName}
                         placeholder={t.account.givenName}
                         value={user.given_name}
-                        required
+                        required={userValuesConfig?.given_name === 'required'}
                         maxLength={32}
                         pattern={PATTERN_USER_NAME}
                 />
@@ -113,6 +137,7 @@
                         label={t.account.familyName}
                         placeholder={t.account.familyName}
                         value={user.family_name}
+                        required={userValuesConfig?.family_name === 'required'}
                         maxLength={32}
                         pattern={PATTERN_USER_NAME}
                 />
@@ -120,8 +145,16 @@
                         name="birthdate"
                         label={t.account.birthdate}
                         bind:value={user.user_values.birthdate}
+                        required={userValuesConfig?.birthdate === 'required'}
                         withDelete
                 />
+                <TZSelect bind:value={user.user_values.tz}/>
+                {#if userValuesConfig}
+                    <PreferredUsername
+                            bind:preferred_username={user.user_values.preferred_username}
+                            config={userValuesConfig.preferred_username}
+                    />
+                {/if}
             </div>
             <div>
                 <Input
@@ -130,6 +163,7 @@
                         label={t.account.street}
                         placeholder={t.account.street}
                         value={user.user_values.street}
+                        required={userValuesConfig?.street === 'required'}
                         maxLength={48}
                         pattern={PATTERN_STREET}
                 />
@@ -139,6 +173,7 @@
                         label={t.account.zip}
                         placeholder={t.account.zip}
                         value={user.user_values.zip}
+                        required={userValuesConfig?.zip === 'required'}
                         maxLength={24}
                         pattern={PATTERN_ALNUM}
                 />
@@ -148,6 +183,7 @@
                         label={t.account.city}
                         placeholder={t.account.city}
                         value={user.user_values.city}
+                        required={userValuesConfig?.city === 'required'}
                         maxLength={48}
                         pattern={PATTERN_CITY}
                 />
@@ -157,6 +193,7 @@
                         label={t.account.country}
                         placeholder={t.account.country}
                         value={user.user_values.country}
+                        required={userValuesConfig?.country === 'required'}
                         maxLength={48}
                         pattern={PATTERN_CITY}
                 />
@@ -167,6 +204,7 @@
                         label={t.account.phone}
                         placeholder={t.account.phone}
                         value={user.user_values.phone}
+                        required={userValuesConfig?.phone === 'required'}
                         maxLength={32}
                         pattern={PATTERN_PHONE}
                 />
