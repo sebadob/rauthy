@@ -371,6 +371,27 @@ pub async fn get_search(
     }
 }
 
+/// GET all known Timezones
+#[utoipa::path(
+    get,
+    path = "/timezones",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Ok"),
+    ),
+)]
+#[get("/timezones")]
+pub async fn get_timezones() -> HttpResponse {
+    let zones = chrono_tz::TZ_VARIANTS
+        .iter()
+        .map(|tz| tz.name())
+        .collect::<Vec<_>>();
+    HttpResponse::Ok()
+        // caches for 30 days - Timezones are almost never updated
+        .insert_header(("cache-control", "max-age=2592000; public"))
+        .json(zones)
+}
+
 /// Updates the language for the logged-in principal depending on the `locale` cookie
 #[utoipa::path(
     post,
