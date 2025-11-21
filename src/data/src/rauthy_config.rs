@@ -7,6 +7,8 @@ use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
 use rauthy_common::logging::LogLevelAccess;
+use rauthy_common::regex::RE_PREFERRED_USERNAME;
+use regex::Regex;
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::env;
@@ -244,6 +246,7 @@ pub struct Vars {
     pub dev: VarsDev,
     pub access: VarsAccess,
     pub auth_headers: VarsAuthHeaders,
+    pub atproto: VarsAtproto,
     pub backchannel_logout: VarsBackchannelLogout,
     pub bootstrap: VarsBootstrap,
     pub database: VarsDatabase,
@@ -272,8 +275,8 @@ pub struct Vars {
     pub tos: VarsToS,
     pub user_pictures: VarsUserPictures,
     pub user_registration: VarsUserRegistration,
+    pub user_values: VarsUserValues,
     pub webauthn: VarsWebauthn,
-    pub atproto: VarsAtproto,
 }
 
 impl Default for Vars {
@@ -694,6 +697,22 @@ impl Default for Vars {
                 domain_blacklist: Vec::default(),
                 allow_open_redirect: false,
             },
+            user_values: VarsUserValues {
+                given_name: UserValueConfig::Required,
+                family_name: UserValueConfig::Optional,
+                birthdate: UserValueConfig::Optional,
+                street: UserValueConfig::Optional,
+                zip: UserValueConfig::Optional,
+                city: UserValueConfig::Optional,
+                country: UserValueConfig::Optional,
+                phone: UserValueConfig::Optional,
+                tz: UserValueConfig::Optional,
+                preferred_username: VarsUserPreferredUsername {
+                    preferred_username: UserValueConfig::Optional,
+                    immutable: true,
+                    pattern_html: "^[a-z][a-z0-9_\\-]{1,61}$".into(),
+                },
+            },
             webauthn: VarsWebauthn {
                 rp_id: String::default(),
                 rp_origin: String::default(),
@@ -778,6 +797,7 @@ impl Vars {
         slf.parse_tos(&mut table);
         slf.parse_user_pictures(&mut table);
         slf.parse_user_registration(&mut table);
+        slf.parse_user_values(&mut table);
         slf.parse_webauthn(&mut table);
 
         let node_config = slf.parse_hiqlite_config(&mut table).await;
@@ -2435,6 +2455,81 @@ impl Vars {
         }
     }
 
+    fn parse_user_values(&mut self, table: &mut toml::Table) {
+        {
+            let mut table = t_table(table, "user_values");
+
+            if let Some(v) = t_str(&mut table, "user_values", "given_name", "") {
+                self.user_values.given_name = UserValueConfig::from(v.as_str());
+            }
+            if let Some(v) = t_str(&mut table, "user_values", "family_name", "") {
+                self.user_values.family_name = UserValueConfig::from(v.as_str());
+            }
+            if let Some(v) = t_str(&mut table, "user_values", "birthdate", "") {
+                self.user_values.birthdate = UserValueConfig::from(v.as_str());
+            }
+            if let Some(v) = t_str(&mut table, "user_values", "street", "") {
+                self.user_values.street = UserValueConfig::from(v.as_str());
+            }
+            if let Some(v) = t_str(&mut table, "user_values", "zip", "") {
+                self.user_values.zip = UserValueConfig::from(v.as_str());
+            }
+            if let Some(v) = t_str(&mut table, "user_values", "city", "") {
+                self.user_values.city = UserValueConfig::from(v.as_str());
+            }
+            if let Some(v) = t_str(&mut table, "user_values", "country", "") {
+                self.user_values.country = UserValueConfig::from(v.as_str());
+            }
+            if let Some(v) = t_str(&mut table, "user_values", "phone", "") {
+                self.user_values.phone = UserValueConfig::from(v.as_str());
+            }
+            if let Some(v) = t_str(&mut table, "user_values", "tz", "") {
+                self.user_values.tz = UserValueConfig::from(v.as_str());
+            }
+        }
+
+        let mut table = t_table(table, "user_values.preferred_username");
+
+        if let Some(v) = t_str(
+            &mut table,
+            "user_values.preferred_username",
+            "preferred_username",
+            "",
+        ) {
+            self.user_values.preferred_username.preferred_username =
+                UserValueConfig::from(v.as_str());
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_values.preferred_username",
+            "immutable",
+            "",
+        ) {
+            self.user_values.preferred_username.immutable = v;
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "user_values.preferred_username",
+            "regex_rust",
+            "",
+        ) {
+            RE_PREFERRED_USERNAME
+                .set(
+                    Regex::new(&v)
+                        .expect("Invalid value for user_values.preferred_username.regex_rust"),
+                )
+                .unwrap();
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "user_values.preferred_username",
+            "pattern_html",
+            "",
+        ) {
+            self.user_values.preferred_username.pattern_html = v.into();
+        }
+    }
+
     fn parse_webauthn(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "webauthn");
 
@@ -2917,6 +3012,49 @@ pub struct VarsUserRegistration {
     pub domain_restriction: Option<String>,
     pub domain_blacklist: Vec<String>,
     pub allow_open_redirect: bool,
+}
+
+#[derive(Debug)]
+pub struct VarsUserValues {
+    pub given_name: UserValueConfig,
+    pub family_name: UserValueConfig,
+    pub birthdate: UserValueConfig,
+    pub street: UserValueConfig,
+    pub zip: UserValueConfig,
+    pub city: UserValueConfig,
+    pub country: UserValueConfig,
+    pub phone: UserValueConfig,
+    pub tz: UserValueConfig,
+    pub preferred_username: VarsUserPreferredUsername,
+}
+
+#[derive(Debug)]
+pub struct VarsUserPreferredUsername {
+    pub preferred_username: UserValueConfig,
+    pub immutable: bool,
+    // The Rust regex will not be saved here, but as a dedicated static
+    // value instead, so it can easily be used with the `validator` crate
+    // in macros.
+    // pub regex_rust: String,
+    pub pattern_html: Cow<'static, str>,
+}
+
+#[derive(Debug)]
+pub enum UserValueConfig {
+    Required,
+    Optional,
+    Hidden,
+}
+
+impl From<&str> for UserValueConfig {
+    fn from(s: &str) -> Self {
+        match s {
+            "required" => Self::Required,
+            "optional" => Self::Optional,
+            "hidden" => Self::Hidden,
+            _ => panic!("Invalid value for `UserValueConfig` in `user_values`: {s}"),
+        }
+    }
 }
 
 #[derive(Debug)]

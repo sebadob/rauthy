@@ -4816,6 +4816,7 @@ dependencies = [
  "rauthy-notify",
  "rcgen",
  "refinery",
+ "regex",
  "reqwest",
  "ring",
  "rio_api",
