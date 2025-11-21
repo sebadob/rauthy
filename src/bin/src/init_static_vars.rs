@@ -5,7 +5,7 @@ use rauthy_common::regex::*;
 use rauthy_common::utils::build_trusted_proxies;
 use rauthy_common::{DB_TYPE, DbType, HTTP_CLIENT};
 use rauthy_data::rauthy_config::RauthyConfig;
-use rauthy_handlers::generic::I18N_CONFIG;
+use rauthy_handlers::generic::{I18N_CONFIG, TIMEZONES_BR};
 use regex::Regex;
 use reqwest::tls;
 use std::time::Duration;
@@ -171,4 +171,5 @@ pub fn trigger() {
     let _ = *BROTLI_PARAMS_DYN;
 
     let _ = *I18N_CONFIG;
+    let _ = *TIMEZONES_BR;
 }
