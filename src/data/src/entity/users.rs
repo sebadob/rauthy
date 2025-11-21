@@ -1091,6 +1091,7 @@ LIMIT $2"#;
                             "zip" => uv.zip = None,
                             "city" => uv.city = None,
                             "country" => uv.country = None,
+                            "tz" => uv.tz = None,
                             v => {
                                 return Err(ErrorResponse::new(
                                     ErrorResponseType::BadRequest,
