@@ -118,9 +118,11 @@ pub struct PasswordResetRequest {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct PreferredUsernameRequest {
-    //// Validation: `[user_values.preferred_username] -> regex_rust`
+    /// Validation: `[user_values.preferred_username] -> regex_rust`
     #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
     pub preferred_username: Option<String>,
+    /// Can only be set with an active `rauthy_admin` session
+    pub force_overwrite: Option<bool>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

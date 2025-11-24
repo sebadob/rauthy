@@ -93,10 +93,13 @@ export interface I18n {
 		passwordPolicyFollow: string;
 		passwordReset: string;
 		phone: string;
-		preferredUsername: string;
-		preferredUsernameDesc: string;
-		preferredUsernameImmutable: string;
-		preferredUsernameImmutableInfo: string;
+		preferredUsername: {
+			desc: string;
+			forceOverwrite: string;
+			immutable: string;
+			immutableInfo: string;
+			preferredUsername: string;
+		};
 		providerLink: string;
 		providerLinkDesc: string;
 		providerUnlink: string;

@@ -109,11 +109,14 @@ export const I18nZh: I18n = {
 		passwordPolicyFollow: '密码不符合要求。',
 		passwordReset: '重置密码',
 		phone: '手机',
-		preferredUsername: 'Preferred Username',
-		preferredUsernameDesc: `Some applications will use this username. Which ones do cannot be
-			controlled.`,
-		preferredUsernameImmutable: 'CAUTION: The username can only be chosen once!',
-		preferredUsernameImmutableInfo: 'The username is immutable.',
+		preferredUsername: {
+			desc: `Some applications will use this username. Which ones do cannot be
+				controlled.`,
+			forceOverwrite: 'Force Overwrite',
+			immutable: 'CAUTION: The username can only be chosen once!',
+			immutableInfo: 'The username is immutable.',
+			preferredUsername: 'Preferred Username'
+		},
 		providerLink: '联合账户',
 		providerLinkDesc:
 			'您可以将此账户连接到下列登陆提供者之一。\n激活此功能后，您将被重定向至所选提供者的登陆页面。在成功登陆后，如果电子邮件匹配，您的账户将被连接。',

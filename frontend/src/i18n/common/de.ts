@@ -110,11 +110,14 @@ export const I18nDe: I18n = {
 		passwordPolicyFollow: 'Befolgen Sie die Passwort Regeln',
 		passwordReset: 'Passwort Reset',
 		phone: 'Telefon',
-		preferredUsername: 'Bevorzugter Benutzername',
-		preferredUsernameDesc: `Manche Anwendungen greifen auf diesen Benutzernamen zurück. Welche 
-			Anwendung davon gebraucht macht, kann allerdings nicht kontrolliert werden.`,
-		preferredUsernameImmutable: 'ACHTUNG: Der Benutzername kann nur einmalig gesetzt werden!',
-		preferredUsernameImmutableInfo: 'Der Benutzername kann nicht geändert werden.',
+		preferredUsername: {
+			desc: `Manche Anwendungen greifen auf diesen Benutzernamen zurück. Welche 
+				Anwendung davon gebraucht macht, kann allerdings nicht kontrolliert werden.`,
+			forceOverwrite: 'Überschreiben Erzwingen',
+			immutable: 'ACHTUNG: Der Benutzername kann nur einmalig gesetzt werden!',
+			immutableInfo: 'Der Benutzername kann nicht geändert werden.',
+			preferredUsername: 'Bevorzugter Benutzername'
+		},
 		providerLink: 'Account Verbinden',
 		providerLinkDesc:
 			'Dieser Account kann mit einem der folgenden Login Provider\nverbunden werden. Nach der Aktivierung des Prozesses wird eine Weiterleitung auf die Login Seite\ndes gewählten Providers ausgelöst. Nach erfolgreichem Login und bei Übereinstimmung der E-Mail\nAdressen wird dieser Account verknüpft.',

@@ -54,7 +54,7 @@ use rauthy_data::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
 use rauthy_data::ipgeo;
 use rauthy_data::ipgeo::get_location;
 use rauthy_data::language::Language;
-use rauthy_data::rauthy_config::{RauthyConfig, UserValueConfigValue};
+use rauthy_data::rauthy_config::{RauthyConfig, UserValueConfigValue, VarsUserValuesConfig};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
@@ -1956,6 +1956,26 @@ pub async fn post_user_self_convert_passkey(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// Retrieve the UserValues config
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/users/values_config",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = VarsUserValuesConfig),
+    ),
+)]
+#[get("/users/values_config")]
+pub async fn get_user_values_config(
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+    Ok(HttpResponse::Ok().json(&RauthyConfig::get().vars.user_values))
+}
+
 /// Allows modification of specific user values from the user himself
 ///
 /// **Permissions**
@@ -1964,9 +1984,9 @@ pub async fn post_user_self_convert_passkey(
     put,
     path = "/users/{id}/self/preferred_username",
     tag = "users",
-    request_body = UpdateUserSelfRequest,
+    request_body = PreferredUsernameRequest,
     responses(
-        (status = 200, description = "Ok", body = UserResponse),
+        (status = 200, description = "Ok"),
         (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
@@ -1982,13 +2002,20 @@ pub async fn put_user_self_preferred_username(
     principal.validate_session_auth()?;
     payload.validate()?;
 
+    let payload = payload.into_inner();
+    let force_overwrite = payload.force_overwrite == Some(true);
+    if force_overwrite {
+        principal.validate_admin_session()?;
+    }
+
     // make sure the logged-in user can only update its own username
     let id = id.into_inner();
     principal.is_user(&id)?;
 
     let config = &RauthyConfig::get().vars.user_values.preferred_username;
 
-    if config.immutable
+    if !force_overwrite
+        && config.immutable
         && let Some(values) = UserValues::find(&id).await?
         && values.preferred_username.is_some()
     {
@@ -2010,8 +2037,7 @@ pub async fn put_user_self_preferred_username(
     if is_empty {
         UserValues::delete_preferred_username(id).await?;
     } else {
-        UserValues::upsert_preferred_username(id, payload.into_inner().preferred_username.unwrap())
-            .await?;
+        UserValues::upsert_preferred_username(id, payload.preferred_username.unwrap()).await?;
     }
 
     Ok(HttpResponse::Ok().finish())

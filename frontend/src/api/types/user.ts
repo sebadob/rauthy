@@ -25,6 +25,8 @@ export interface NewUserRequest {
 export interface PreferredUsernameRequest {
 	//// Validation: `[user_values.preferred_username] -> regex_rust`
 	preferred_username?: string;
+	/// Can only be set with an active `rauthy_admin` session
+	force_overwrite?: boolean;
 }
 
 export interface UserValuesRequest {

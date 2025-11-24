@@ -9,15 +9,18 @@
     import {untrack} from "svelte";
     import Tooltip from "$lib/Tooltip.svelte";
     import IconInfo from "$icons/IconInfo.svelte";
+    import InputCheckbox from "$lib/form/InputCheckbox.svelte";
 
     let {
         userId,
         preferred_username = $bindable(''),
         config,
+        isAdmin
     }: {
         userId: string,
         preferred_username: string | undefined,
         config: UserValuesPreferredUsername,
+        isAdmin?: boolean,
     } = $props();
 
     let t = useI18n();
@@ -27,6 +30,7 @@
     let closeModal: undefined | (() => void) = $state();
 
     let username = $state(untrack(() => preferred_username));
+    let forceOverwrite = $state(false);
     let required = $derived(config.preferred_username === 'required');
 
     $effect(() => {
@@ -40,6 +44,7 @@
     async function save() {
         let payload: PreferredUsernameRequest = {
             preferred_username: username || undefined,
+            force_overwrite: forceOverwrite || undefined,
         };
         let res = await fetchPut(`/auth/v1/users/${userId}/self/preferred_username`, payload);
         if (res.status === 200) {
@@ -60,48 +65,59 @@
             </div>
 
             <div class="btn">
-                {#if preferred_username.length === 0 || !config.immutable}
+                {#if isAdmin || preferred_username.length === 0 || !config.immutable}
                     <Button
                             ariaLabel={t.common.edit}
-                            level={required ? -1 : 3}
+                            level={required && !preferred_username ? -1 : 3}
                             onclick={() => showModal = true}
                     >
                         {t.common.edit}
                     </Button>
 
                     <Modal bind:showModal bind:closeModal>
-                        <h3>{t.account.preferredUsername}</h3>
+                        <h3>{t.account.preferredUsername.preferredUsername}</h3>
 
                         <Input
                                 bind:ref
                                 name="preferred_username"
                                 autocomplete="off"
-                                label={t.account.preferredUsername}
-                                placeholder={t.account.preferredUsername}
+                                label={t.account.preferredUsername.preferredUsername}
+                                placeholder={t.account.preferredUsername.preferredUsername}
                                 bind:value={username}
-                                required
+                                {required}
                                 pattern={config.pattern_html}
                                 width="15rem"
                         />
 
                         <div class="desc">
-                            <p>{t.account.preferredUsernameDesc}</p>
+                            <p>{t.account.preferredUsername.desc}</p>
                             {#if config.immutable}
-                                <p class="caution">{t.account.preferredUsernameImmutable}</p>
+                                <p class="caution">{t.account.preferredUsername.immutable}</p>
                             {/if}
                         </div>
 
-                        <div class="btnModal">
-                            <Button onclick={save}>
-                                {t.common.save}
-                            </Button>
-                            <Button level={-3} onclick={() => closeModal?.()}>
-                                {t.common.cancel}
-                            </Button>
-                        </div>
+                        {#if config.immutable && isAdmin}
+                            <InputCheckbox
+                                    ariaLabel={t.account.preferredUsername.forceOverwrite}
+                                    bind:checked={forceOverwrite}
+                            >
+                                {t.account.preferredUsername.forceOverwrite}
+                            </InputCheckbox>
+                        {/if}
+
+                        {#if !config.immutable || forceOverwrite || (config.immutable && !preferred_username)}
+                            <div class="btnModal">
+                                <Button onclick={save}>
+                                    {t.common.save}
+                                </Button>
+                                <Button level={-3} onclick={() => closeModal?.()}>
+                                    {t.common.cancel}
+                                </Button>
+                            </div>
+                        {/if}
                     </Modal>
                 {:else}
-                    <Tooltip text={t.account.preferredUsernameImmutableInfo}>
+                    <Tooltip text={t.account.preferredUsername.immutableInfo}>
                         <div class="immutableInfo">
                             <IconInfo width="1.2rem"/>
                         </div>
@@ -111,7 +127,7 @@
         </div>
 
         <div class="label" data-required={required}>
-            {t.account.preferredUsername}
+            {t.account.preferredUsername.preferredUsername}
         </div>
     </div>
 {/if}

@@ -20,6 +20,7 @@ use tokio::fs;
 use tokio::sync::mpsc;
 use toml::Value;
 use tracing::{debug, info, warn};
+use utoipa::ToSchema;
 use webauthn_rs::Webauthn;
 
 static CONFIG: OnceLock<RauthyConfig> = OnceLock::new();
@@ -3016,7 +3017,7 @@ pub struct VarsUserRegistration {
     pub allow_open_redirect: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct VarsUserValuesConfig {
     pub given_name: UserValueConfigValue,
     pub family_name: UserValueConfigValue,
@@ -3030,7 +3031,7 @@ pub struct VarsUserValuesConfig {
     pub preferred_username: VarsUserPreferredUsername,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct VarsUserPreferredUsername {
     pub preferred_username: UserValueConfigValue,
     pub immutable: bool,
@@ -3041,7 +3042,7 @@ pub struct VarsUserPreferredUsername {
     pub pattern_html: Cow<'static, str>,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum UserValueConfigValue {
     Required,

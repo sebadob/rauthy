@@ -29,15 +29,19 @@
     import {useSession} from "$state/session.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
     import TZSelect from "$lib/TZSelect.svelte";
+    import PreferredUsername from "$lib/PreferredUsername.svelte";
+    import type {UserValuesConfig} from "$api/templates/UserValuesConfig";
 
     let {
         user = $bindable(),
+        userValuesConfig,
         roles,
         groups,
         providers,
         onSave,
     }: {
         user: UserResponse,
+        userValuesConfig: UserValuesConfig,
         roles: RoleResponse[],
         groups: GroupResponse[],
         providers: AuthProviderTemplate[],
@@ -401,6 +405,12 @@
                         withDelete
                 />
                 <TZSelect bind:value={tz}/>
+                <PreferredUsername
+                        userId={user.id}
+                        bind:preferred_username={user.user_values.preferred_username}
+                        config={userValuesConfig.preferred_username}
+                        isAdmin
+                />
 
                 {#if languages}
                     <div style:padding=".25rem">

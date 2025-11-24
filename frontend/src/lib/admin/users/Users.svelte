@@ -19,6 +19,9 @@
     import UserPicture from "$lib/UserPicture.svelte";
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider";
     import {useTrigger} from "$state/callback.svelte";
+    import {TPL_USER_VALUES_CONFIG} from "$utils/constants";
+    import Template from "$lib/Template.svelte";
+    import type {UserValuesConfig} from "$api/templates/UserValuesConfig";
 
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
@@ -27,6 +30,7 @@
     let closeModal: undefined | (() => void) = $state();
     let err = $state('');
 
+    let userValuesConfig: undefined | UserValuesConfig = $state();
     let users: UserResponseSimple[] = $state([]);
     let usersFiltered: UserResponseSimple[] = $state([]);
     let usersPaginated: UserResponseSimple[] = $state([]);
@@ -49,6 +53,7 @@
 
     onMount(() => {
         fetchUsers('page_size=' + sspPageSize);
+        fetchUserValuesConfig();
         fetchAuthProviders();
         fetchRoles();
         fetchGroups();
@@ -97,6 +102,15 @@
             users = res.body;
         } else {
             console.error(res.error);
+        }
+    }
+
+    async function fetchUserValuesConfig() {
+        let res = await fetchGet<UserValuesConfig>('/auth/v1/users/values_config');
+        if (res.body) {
+            userValuesConfig = res.body;
+        } else {
+            console.error(res);
         }
     }
 
@@ -287,8 +301,8 @@
     {/if}
 
     <div id="users">
-        {#if userId}
-            <UserDetails {userId} {providers} {roles} {groups} {onSave}/>
+        {#if userId && userValuesConfig}
+            <UserDetails {userValuesConfig} {userId} {providers} {roles} {groups} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>
