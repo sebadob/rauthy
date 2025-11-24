@@ -153,14 +153,8 @@ pub async fn post_users(
     UserValuesValidator {
         given_name: Some(payload.given_name.as_str()),
         family_name: payload.family_name.as_deref(),
-        // TODO add all missing values to reg req
-        birthdate: None,
-        street: None,
-        zip: None,
-        city: None,
-        country: None,
-        phone: None,
-        tz: None,
+        preferred_username: None,
+        user_values: &None,
     }
     .validate()?;
 
@@ -416,23 +410,13 @@ pub async fn post_users_register_handle(
     }
 
     payload.validate()?;
-    {
-        let mut validator = UserValuesValidator {
-            given_name: payload.given_name.as_deref(),
-            family_name: payload.family_name.as_deref(),
-            ..Default::default()
-        };
-        if let Some(uv) = &payload.user_values {
-            validator.birthdate = uv.birthdate.as_deref();
-            validator.street = uv.street.as_deref();
-            validator.zip = uv.zip.as_deref();
-            validator.city = uv.city.as_deref();
-            validator.country = uv.country.as_deref();
-            validator.phone = uv.phone.as_deref();
-            validator.tz = uv.tz.as_deref();
-        }
-        validator.validate()?;
+    UserValuesValidator {
+        given_name: payload.given_name.as_deref(),
+        family_name: payload.family_name.as_deref(),
+        preferred_username: payload.preferred_username.as_deref(),
+        user_values: &payload.user_values,
     }
+    .validate()?;
 
     let reg = &RauthyConfig::get().vars.user_registration;
 
@@ -1827,29 +1811,14 @@ async fn handle_put_user_by_id(
     payload: UpdateUserRequest,
     preferred_username: Option<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    {
-        let mut validator = UserValuesValidator {
-            given_name: Some(&payload.given_name),
-            family_name: payload.family_name.as_deref(),
-            birthdate: None,
-            street: None,
-            zip: None,
-            city: None,
-            country: None,
-            phone: None,
-            tz: None,
-        };
-        if let Some(values) = &payload.user_values {
-            validator.birthdate = values.birthdate.as_deref();
-            validator.street = values.street.as_deref();
-            validator.zip = values.zip.as_deref();
-            validator.city = values.city.as_deref();
-            validator.country = values.country.as_deref();
-            validator.phone = values.phone.as_deref();
-            validator.tz = values.tz.as_deref();
-        }
-        validator.validate()?;
+    UserValuesValidator {
+        given_name: Some(&payload.given_name),
+        family_name: payload.family_name.as_deref(),
+        // has its own endpoint for updates
+        preferred_username: None,
+        user_values: &payload.user_values,
     }
+    .validate()?;
 
     let (user, user_values, is_new_admin) =
         User::update(user_id, payload, None, preferred_username).await?;
@@ -2105,17 +2074,11 @@ pub async fn delete_user_by_id(
     Ok(HttpResponse::NoContent().finish())
 }
 
-#[derive(Default)]
 pub struct UserValuesValidator<'a> {
     given_name: Option<&'a str>,
     family_name: Option<&'a str>,
-    birthdate: Option<&'a str>,
-    street: Option<&'a str>,
-    zip: Option<&'a str>,
-    city: Option<&'a str>,
-    country: Option<&'a str>,
-    phone: Option<&'a str>,
-    tz: Option<&'a str>,
+    preferred_username: Option<&'a str>,
+    user_values: &'a Option<UserValuesRequest>,
 }
 
 impl UserValuesValidator<'_> {
@@ -2138,70 +2101,82 @@ impl UserValuesValidator<'_> {
                 "'family_name' is required",
             ));
         }
-
-        if config.birthdate == UserValueConfigValue::Required
-            && (self.birthdate.is_none() || self.birthdate == Some(""))
+        if let Some(username) = self.preferred_username
+            && config.preferred_username.preferred_username == UserValueConfigValue::Required
+            && username.is_empty()
         {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "'birthdate' is required",
-            ));
-        }
-        if config.street == UserValueConfigValue::Required
-            && (self.street.is_none() || self.street == Some(""))
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "'street' is required",
-            ));
-        }
-        if config.zip == UserValueConfigValue::Required
-            && (self.zip.is_none() || self.zip == Some(""))
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "'zip' is required",
-            ));
-        }
-        if config.city == UserValueConfigValue::Required
-            && (self.city.is_none() || self.city == Some(""))
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "'city' is required",
-            ));
-        }
-        if config.country == UserValueConfigValue::Required
-            && (self.country.is_none() || self.country == Some(""))
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "'country' is required",
-            ));
-        }
-        if config.phone == UserValueConfigValue::Required
-            && (self.phone.is_none() || self.phone == Some(""))
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "'phone' is required",
+                "'preferred_username' is required",
             ));
         }
 
-        if config.tz == UserValueConfigValue::Required && (self.tz.is_none() || self.tz == Some(""))
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "'tz' is required",
-            ));
-        }
-        if let Some(tz) = self.tz
-            && chrono_tz::Tz::from_str(tz).is_err()
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "'tz' cannot be parsed",
-            ));
+        if let Some(uv) = self.user_values {
+            if config.birthdate == UserValueConfigValue::Required
+                && (uv.birthdate.is_none() || uv.birthdate.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'birthdate' is required",
+                ));
+            }
+            if config.street == UserValueConfigValue::Required
+                && (uv.street.is_none() || uv.street.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'street' is required",
+                ));
+            }
+            if config.zip == UserValueConfigValue::Required
+                && (uv.zip.is_none() || uv.zip.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'zip' is required",
+                ));
+            }
+            if config.city == UserValueConfigValue::Required
+                && (uv.city.is_none() || uv.city.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'city' is required",
+                ));
+            }
+            if config.country == UserValueConfigValue::Required
+                && (uv.country.is_none() || uv.country.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'country' is required",
+                ));
+            }
+            if config.phone == UserValueConfigValue::Required
+                && (uv.phone.is_none() || uv.phone.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'phone' is required",
+                ));
+            }
+
+            if config.tz == UserValueConfigValue::Required
+                && (uv.tz.is_none() || uv.tz.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'tz' is required",
+                ));
+            }
+            if let Some(tz) = &uv.tz
+                && chrono_tz::Tz::from_str(tz).is_err()
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'tz' cannot be parsed",
+                ));
+            }
         }
 
         Ok(())

@@ -19,6 +19,7 @@
     import type {UserValuesConfig} from "$api/templates/UserValuesConfig";
     import InputDateTimeCombo from "$lib/form/InputDateTimeCombo.svelte";
     import TZSelect from "$lib/TZSelect.svelte";
+    import type {UserValuesRequest} from "$api/types/user";
 
     let t = useI18n();
 
@@ -63,33 +64,42 @@
                 values.family_name = '';
                 active += 1;
             }
+
+            let uv: UserValuesRequest = {};
             if (config.birthdate === 'required') {
-                values.birthdate = '';
+                uv.birthdate = '';
                 active += 1;
             }
             if (config.tz === 'required') {
-                values.tz = 'UTC';
+                uv.tz = 'UTC';
                 active += 1;
             }
             if (config.street === 'required') {
-                values.street = '';
+                uv.street = '';
                 active += 1;
             }
             if (config.zip === 'required') {
-                values.zip = '';
+                uv.zip = '';
                 active += 1;
             }
             if (config.city === 'required') {
-                values.city = '';
+                uv.city = '';
                 active += 1;
             }
             if (config.country === 'required') {
-                values.country = '';
+                uv.country = '';
                 active += 1;
             }
             if (config.phone === 'required') {
-                values.phone = '';
+                uv.phone = '';
                 active += 1;
+            }
+
+            for (let v of Object.keys(uv)) {
+                if (v !== undefined) {
+                    values.user_values = uv;
+                    break;
+                }
             }
 
             valuesActive = active;
@@ -223,74 +233,74 @@
                                 required
                         />
                     {/if}
-                    {#if values.birthdate !== undefined}
+                    {#if values.user_values?.birthdate !== undefined}
                         <InputDateTimeCombo
                                 name="birthdate"
                                 label={t.account.birthdate}
-                                bind:value={values.birthdate}
+                                bind:value={values.user_values.birthdate}
                                 required
                                 withDelete
                         />
                     {/if}
-                    {#if values.tz !== undefined}
-                        <TZSelect bind:value={values.tz}/>
+                    {#if values.user_values?.tz !== undefined}
+                        <TZSelect bind:value={values.user_values.tz}/>
                     {/if}
 
-                    {#if values.street !== undefined}
+                    {#if values.user_values?.street !== undefined}
                         <Input
                                 name="street"
                                 autocomplete="street-address"
                                 label={t.account.street}
                                 placeholder={t.account.street}
-                                value={values.street}
+                                value={values.user_values.street}
                                 required
                                 maxLength={48}
                                 pattern={PATTERN_STREET}
                         />
                     {/if}
-                    {#if values.zip !== undefined}
+                    {#if values.user_values?.zip !== undefined}
                         <Input
                                 name="zip"
                                 autocomplete="postal-code"
                                 label={t.account.zip}
                                 placeholder={t.account.zip}
-                                value={values.zip}
+                                value={values.user_values.zip}
                                 required
                                 maxLength={24}
                                 pattern={PATTERN_ALNUM}
                         />
                     {/if}
-                    {#if values.city !== undefined}
+                    {#if values.user_values?.city !== undefined}
                         <Input
                                 name="city"
                                 autocomplete="address-level2"
                                 label={t.account.city}
                                 placeholder={t.account.city}
-                                value={values.city}
+                                value={values.user_values.city}
                                 required
                                 maxLength={48}
                                 pattern={PATTERN_CITY}
                         />
                     {/if}
-                    {#if values.country !== undefined}
+                    {#if values.user_values?.country !== undefined}
                         <Input
                                 name="country"
                                 autocomplete="country"
                                 label={t.account.country}
                                 placeholder={t.account.country}
-                                value={values.country}
+                                value={values.user_values.country}
                                 required
                                 maxLength={48}
                                 pattern={PATTERN_CITY}
                         />
                     {/if}
-                    {#if values.phone !== undefined}
+                    {#if values.user_values?.phone !== undefined}
                         <Input
                                 name="phone"
                                 autocomplete="tel"
                                 label={t.account.phone}
                                 placeholder={t.account.phone}
-                                value={values.phone}
+                                value={values.user_values.phone}
                                 required
                                 maxLength={32}
                                 pattern={PATTERN_PHONE}
