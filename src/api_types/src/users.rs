@@ -117,6 +117,14 @@ pub struct PasswordResetRequest {
 
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct PreferredUsernameRequest {
+    //// Validation: `[user_values.preferred_username] -> regex_rust`
+    #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
+    pub preferred_username: Option<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct RequestResetRequest {
     /// Validation: `email`
     #[validate(email)]
@@ -206,9 +214,6 @@ pub struct UserValuesRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-]{0,48}`
     #[validate(regex(path = "*RE_CITY", code = "[a-zA-Z0-9À-ÿ-]{0,48}"))]
     pub country: Option<String>,
-    //// Validation: `[user_values.preferred_username] -> regex_rust`
-    #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
-    pub preferred_username: Option<String>,
     /// Validation: Valid Timezone in the format of `Europe/Berlin`
     #[validate(length(max = 48))]
     pub tz: Option<String>,

@@ -19,6 +19,22 @@ pub struct UserValues {
     pub tz: Option<String>,
 }
 
+impl From<hiqlite::Row<'_>> for UserValues {
+    fn from(mut row: hiqlite::Row<'_>) -> Self {
+        Self {
+            id: row.get("id"),
+            birthdate: row.get("birthdate"),
+            phone: row.get("phone"),
+            street: row.get("street"),
+            zip: row.get("zip"),
+            city: row.get("city"),
+            country: row.get("country"),
+            preferred_username: row.get("preferred_username"),
+            tz: row.get("tz"),
+        }
+    }
+}
+
 impl From<tokio_postgres::Row> for UserValues {
     fn from(row: tokio_postgres::Row) -> Self {
         Self {
@@ -52,7 +68,7 @@ impl UserValues {
 
         let sql = "SELECT * FROM users_values WHERE id = $1";
         let slf = if is_hiqlite() {
-            client.query_as_optional(sql, params!(user_id)).await?
+            client.query_map_optional(sql, params!(user_id)).await?
         } else {
             DB::pg_query_opt(sql, &[&user_id]).await?
         };
@@ -62,37 +78,39 @@ impl UserValues {
         Ok(slf)
     }
 
+    /// CAUTION: Does NOT update the `preferred_username`, which has dedicated functions for
+    /// additional validation.
     pub async fn upsert(
         user_id: String,
         values: UserValuesRequest,
     ) -> Result<Option<Self>, ErrorResponse> {
+        let idx = Self::cache_idx(&user_id);
         let sql = r#"
 INSERT INTO
-users_values (id, birthdate, phone, street, zip, city, country, preferred_username, tz)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+users_values (id, birthdate, phone, street, zip, city, country, tz)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT(id) DO UPDATE
-SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7,
-    preferred_username = $8, tz = $9"#;
+SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7, tz = $8
+RETURNING *"#;
 
-        if is_hiqlite() {
+        let values: Self = if is_hiqlite() {
             DB::hql()
-                .execute(
+                .execute_returning_map_one(
                     sql,
                     params!(
-                        &user_id,
-                        &values.birthdate,
-                        &values.phone,
-                        &values.street,
-                        &values.zip,
-                        &values.city,
-                        &values.country,
-                        &values.preferred_username,
-                        &values.tz
+                        user_id,
+                        values.birthdate,
+                        values.phone,
+                        values.street,
+                        values.zip,
+                        values.city,
+                        values.country,
+                        values.tz
                     ),
                 )
-                .await?;
+                .await?
         } else {
-            DB::pg_execute(
+            DB::pg_query_one(
                 sql,
                 &[
                     &user_id,
@@ -102,25 +120,42 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7,
                     &values.zip,
                     &values.city,
                     &values.country,
-                    &values.preferred_username,
                     &values.tz,
                 ],
             )
-            .await?;
-        }
+            .await?
+        };
 
+        let slf = Some(values);
+        DB::hql()
+            .put(Cache::User, idx, &slf, CACHE_TTL_USER)
+            .await?;
+
+        Ok(slf)
+    }
+
+    pub async fn upsert_preferred_username(
+        user_id: String,
+        preferred_username: String,
+    ) -> Result<Option<Self>, ErrorResponse> {
         let idx = Self::cache_idx(&user_id);
-        let slf = Some(Self {
-            id: user_id,
-            birthdate: values.birthdate,
-            phone: values.phone,
-            street: values.street,
-            zip: values.zip,
-            city: values.city,
-            country: values.country,
-            preferred_username: values.preferred_username,
-            tz: values.tz,
-        });
+        let sql = r#"
+INSERT INTO
+users_values (id, preferred_username)
+VALUES ($1, $2)
+ON CONFLICT(id) DO UPDATE
+SET preferred_username = $2
+RETURNING *"#;
+
+        let values: Self = if is_hiqlite() {
+            DB::hql()
+                .execute_returning_map_one(sql, params!(user_id, preferred_username))
+                .await?
+        } else {
+            DB::pg_query_one(sql, &[&user_id, &preferred_username]).await?
+        };
+
+        let slf = Some(values);
         DB::hql()
             .put(Cache::User, idx, &slf, CACHE_TTL_USER)
             .await?;
@@ -139,6 +174,29 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7,
         }
 
         DB::hql().delete(Cache::User, cache_idx).await?;
+
+        Ok(())
+    }
+
+    pub async fn delete_preferred_username(user_id: String) -> Result<(), ErrorResponse> {
+        let idx = Self::cache_idx(&user_id);
+        let sql = r#"
+UPDATE users_values
+SET preferred_username = null
+WHERE id = $1
+RETURNING *"#;
+
+        let values: Self = if is_hiqlite() {
+            DB::hql()
+                .execute_returning_map_one(sql, params!(user_id))
+                .await?
+        } else {
+            DB::pg_query_one(sql, &[&user_id]).await?
+        };
+
+        DB::hql()
+            .put(Cache::User, idx, &Some(values), CACHE_TTL_USER)
+            .await?;
 
         Ok(())
     }

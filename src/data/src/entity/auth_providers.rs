@@ -1218,7 +1218,6 @@ impl AuthProviderIdClaims<'_> {
                 zip: values.zip,
                 city: values.city,
                 country: values.country,
-                preferred_username: values.preferred_username,
                 tz: values.tz,
             },
             None => UserValuesRequest {
@@ -1228,7 +1227,6 @@ impl AuthProviderIdClaims<'_> {
                 zip: None,
                 city: None,
                 country: None,
-                preferred_username: None,
                 tz: None,
             },
         };

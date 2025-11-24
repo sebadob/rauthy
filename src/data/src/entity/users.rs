@@ -975,7 +975,6 @@ LIMIT $2"#;
             zip: uv.zip,
             city: uv.city,
             country: uv.country,
-            preferred_username: uv.preferred_username,
             tz: uv.tz,
         });
 

@@ -11,11 +11,11 @@ use rauthy_api_types::oidc::PasswordResetResponse;
 use rauthy_api_types::users::{
     DeviceRequest, DeviceResponse, MfaModTokenRequest, MfaModTokenResponse, MfaPurpose,
     NewUserRegistrationRequest, NewUserRequest, PasskeyResponse, PasswordResetRequest,
-    RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAttrConfigRequest,
-    UserAttrConfigResponse, UserAttrConfigValueResponse, UserAttrValueResponse,
-    UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserEditableAttrResponse,
-    UserEditableAttrsResponse, UserPictureConfig, UserResponse, UserResponseSimple,
-    UserRevokeParams, WebIdRequest, WebIdResponse, WebauthnAuthFinishRequest,
+    PreferredUsernameRequest, RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest,
+    UserAttrConfigRequest, UserAttrConfigResponse, UserAttrConfigValueResponse,
+    UserAttrValueResponse, UserAttrValuesResponse, UserAttrValuesUpdateRequest,
+    UserEditableAttrResponse, UserEditableAttrsResponse, UserPictureConfig, UserResponse,
+    UserResponseSimple, UserRevokeParams, WebIdRequest, WebIdResponse, WebauthnAuthFinishRequest,
     WebauthnAuthStartRequest, WebauthnAuthStartResponse, WebauthnDeleteRequest,
     WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
@@ -171,7 +171,6 @@ pub async fn post_users(
         country: None,
         phone: None,
         tz: None,
-        preferred_username: None,
     }
     .validate()?;
 
@@ -437,7 +436,6 @@ pub async fn post_users_register_handle(
         country: None,
         phone: None,
         tz: None,
-        preferred_username: None,
     }
     .validate()?;
 
@@ -1841,7 +1839,6 @@ async fn handle_put_user_by_id(
             country: None,
             phone: None,
             tz: None,
-            preferred_username: None,
         };
         if let Some(values) = &payload.user_values {
             validator.birthdate = values.birthdate.as_deref();
@@ -1851,7 +1848,6 @@ async fn handle_put_user_by_id(
             validator.country = values.country.as_deref();
             validator.phone = values.phone.as_deref();
             validator.tz = values.tz.as_deref();
-            validator.preferred_username = values.preferred_username.as_deref();
         }
         validator.validate()?;
     }
@@ -1981,14 +1977,42 @@ pub async fn post_user_self_convert_passkey(
 pub async fn post_user_self_preferred_username(
     id: web::Path<String>,
     principal: ReqPrincipal,
+    payload: Json<PreferredUsernameRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
+    payload.validate()?;
 
     // make sure the logged-in user can only update its own username
     let id = id.into_inner();
     principal.is_user(&id)?;
 
-    todo!();
+    let config = &RauthyConfig::get().vars.user_values.preferred_username;
+
+    if config.immutable
+        && let Some(values) = UserValues::find(&id).await?
+        && values.preferred_username.is_some()
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "The 'preferred_username' is immutable",
+        ));
+    }
+
+    let is_empty =
+        payload.preferred_username.is_none() || payload.preferred_username.as_deref() == Some("");
+    if config.preferred_username == UserValueConfigValue::Required && is_empty {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "The 'preferred_username' is required and must not be empty",
+        ));
+    }
+
+    if is_empty {
+        UserValues::delete_preferred_username(id).await?;
+    } else {
+        UserValues::upsert_preferred_username(id, payload.into_inner().preferred_username.unwrap())
+            .await?;
+    }
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -2045,7 +2069,6 @@ pub struct UserValuesValidator<'a> {
     country: Option<&'a str>,
     phone: Option<&'a str>,
     tz: Option<&'a str>,
-    preferred_username: Option<&'a str>,
 }
 
 impl UserValuesValidator<'_> {
@@ -2131,15 +2154,6 @@ impl UserValuesValidator<'_> {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "'tz' cannot be parsed",
-            ));
-        }
-
-        if config.preferred_username.preferred_username == UserValueConfigValue::Required
-            && (self.preferred_username.is_none() || self.preferred_username == Some(""))
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "'preferred_username' is required",
             ));
         }
 
