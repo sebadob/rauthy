@@ -65,7 +65,7 @@
     let language: Language = $state('en');
 
     let birthdate = $state('');
-    let tz = $state('Etc/UTC');
+    let tz = $state('UTC');
     let phone = $state('');
     let street = $state('');
     let zip = $state('');
@@ -119,7 +119,7 @@
                     zip: user.user_values?.zip,
                     city: user.user_values?.city || '',
                     country: user.user_values?.country || '',
-                    tz: user.user_values?.tz || 'Etc/UTC',
+                    tz: user.user_values?.tz || 'UTC',
                 }
             }
 
@@ -134,7 +134,7 @@
             zip = user.user_values?.zip?.toString() || '';
             city = user.user_values?.city || '';
             country = user.user_values?.country || '';
-            tz = user.user_values?.tz || 'Etc/UTC';
+            tz = user.user_values?.tz || 'UTC';
 
             enabled = user.enabled;
             emailVerified = user.email_verified;
@@ -249,7 +249,7 @@
             }
         }
         if (tz !== userOrig?.user_values?.tz) {
-            if (tz && tz !== 'Etc/UTC') {
+            if (tz && tz !== 'Etc/UTC' && tz !== 'UTC') {
                 payload.put.push({key: 'user_values.tz', value: tz});
             } else {
                 payload.del.push('user_values.tz');

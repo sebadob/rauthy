@@ -33,6 +33,7 @@ pub enum ErrorResponseType {
     SessionTimeout,
     TooManyRequests(i64),
     Unauthorized,
+    NotAccepted,
     WWWAuthenticate(String),
 }
 

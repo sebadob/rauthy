@@ -320,7 +320,7 @@ export async function fetchTimezones() {
 		return res.body;
 	} else {
 		console.error(res.error);
-		return ['Etc/UTC'];
+		return ['UTC'];
 	}
 }
 

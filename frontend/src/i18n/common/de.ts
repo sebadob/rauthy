@@ -116,6 +116,7 @@ export const I18nDe: I18n = {
 			forceOverwrite: 'Überschreiben Erzwingen',
 			immutable: 'ACHTUNG: Der Benutzername kann nur einmalig gesetzt werden!',
 			immutableInfo: 'Der Benutzername kann nicht geändert werden.',
+			notAvailable: 'Dieser Name ist nicht verfügbar.',
 			preferredUsername: 'Bevorzugter Benutzername'
 		},
 		providerLink: 'Account Verbinden',

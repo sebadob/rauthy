@@ -5,16 +5,16 @@
     import {fetchTimezones} from "$utils/helpers";
 
     let {
-        value = $bindable('Etc/UTC'),
+        value = $bindable('UTC'),
     }: {
         value: string | undefined,
     } = $props();
 
     let t = useI18n();
-    let options: string[] = $state(['Etc/UTC'])
+    let options: string[] = $state(['UTC'])
 
     onMount(() => {
-        if (value && value !== 'Etc/UTC') {
+        if (value && value !== 'UTC') {
             options.push(value);
         }
         fetchTimezones().then(tz => options = tz);

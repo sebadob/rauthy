@@ -42,6 +42,7 @@ use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
+use std::default::Default;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
@@ -961,46 +962,61 @@ LIMIT $2"#;
     /// Builds an `UpdateUserRequest` solely from data inside the DB. This data can then be used
     /// for `PatchOp`s. Build `UpdateUserRequest` to be able to re-use all other existing
     /// functionality and checks.
-    pub async fn upd_req_from_db(user_id: String) -> Result<UpdateUserRequest, ErrorResponse> {
+    ///
+    /// Returns `(UpdateUserRequest, preferred_username)`
+    pub async fn upd_req_from_db(
+        user_id: String,
+    ) -> Result<(UpdateUserRequest, Option<String>), ErrorResponse> {
         let u = Self::find(user_id).await?;
 
         let roles = u.get_roles();
         let groups = Some(u.get_groups());
         let language = Some(rauthy_api_types::generic::Language::from(u.language));
 
-        let user_values = UserValues::find(&u.id).await?.map(|uv| UserValuesRequest {
-            birthdate: uv.birthdate,
-            phone: uv.phone,
-            street: uv.street,
-            zip: uv.zip,
-            city: uv.city,
-            country: uv.country,
-            tz: uv.tz,
-        });
+        let (user_values, preferred_username) = if let Some(uv) = UserValues::find(&u.id).await? {
+            (
+                Some(UserValuesRequest {
+                    birthdate: uv.birthdate,
+                    phone: uv.phone,
+                    street: uv.street,
+                    zip: uv.zip,
+                    city: uv.city,
+                    country: uv.country,
+                    tz: uv.tz,
+                }),
+                uv.preferred_username,
+            )
+        } else {
+            (None, None)
+        };
 
-        Ok(UpdateUserRequest {
-            email: u.email,
-            given_name: u.given_name,
-            family_name: u.family_name,
-            language,
-            // Must be None here to avoid triggering the "new password set" logic for each user
-            // update. This req is being used for `PatchOp`s and if the PatchOp contains a
-            // `password`, it will be updated later on.
-            password: None,
-            roles,
-            groups,
-            enabled: u.enabled,
-            email_verified: u.email_verified,
-            user_expires: u.user_expires,
-            user_values,
-        })
+        Ok((
+            UpdateUserRequest {
+                email: u.email,
+                given_name: u.given_name,
+                family_name: u.family_name,
+                language,
+                // Must be None here to avoid triggering the "new password set" logic for each user
+                // update. This req is being used for `PatchOp`s and if the PatchOp contains a
+                // `password`, it will be updated later on.
+                password: None,
+                roles,
+                groups,
+                enabled: u.enabled,
+                email_verified: u.email_verified,
+                user_expires: u.user_expires,
+                user_values,
+            },
+            preferred_username,
+        ))
     }
 
+    /// Returns `(UpdateUserRequest, preferred_username)`
     pub async fn patch(
         user_id: String,
         payload: PatchOp,
-    ) -> Result<UpdateUserRequest, ErrorResponse> {
-        let mut upd_req = User::upd_req_from_db(user_id).await?;
+    ) -> Result<(UpdateUserRequest, Option<String>), ErrorResponse> {
+        let (mut upd_req, preferred_username) = User::upd_req_from_db(user_id).await?;
         let mut uv = upd_req.user_values.unwrap_or_default();
 
         for put in payload.put {
@@ -1114,13 +1130,14 @@ LIMIT $2"#;
             upd_req.user_values = None;
         }
 
-        Ok(upd_req)
+        Ok((upd_req, preferred_username))
     }
 
     pub async fn update(
         id: String,
         mut upd_user: UpdateUserRequest,
         user: Option<User>,
+        preferred_username: Option<String>,
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(id).await?,
@@ -1188,6 +1205,12 @@ LIMIT $2"#;
         // finally, update the custom users values
         let user_values = if let Some(values) = upd_user.user_values {
             UserValues::upsert(user.id.clone(), values).await?
+        } else if let Some(preferred_username) = preferred_username {
+            Some(UserValues {
+                id: user.id.clone(),
+                preferred_username: Some(preferred_username),
+                ..Default::default()
+            })
         } else {
             UserValues::delete(user.id.clone()).await?;
             None
@@ -1283,8 +1306,12 @@ LIMIT $2"#;
             user_values: upd_user.user_values,
         };
 
+        let preferred_username = UserValues::find_preferred_username(&id).await?;
+
         // a user cannot become a new admin from a self-req
-        let (user, user_values, _is_new_admin) = User::update(id, req, Some(user)).await?;
+        let (user, user_values, _is_new_admin) =
+            User::update(id, req, Some(user), preferred_username).await?;
+
         Ok((user, user_values, email_updated))
     }
 

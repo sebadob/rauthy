@@ -712,6 +712,7 @@ impl Default for Vars {
                 preferred_username: VarsUserPreferredUsername {
                     preferred_username: UserValueConfigValue::Optional,
                     immutable: true,
+                    blacklist: vec!["admin".into(), "administrator".into(), "root".into()],
                     pattern_html: "^[a-z][a-z0-9_\\-]{1,61}$".into(),
                 },
             },
@@ -2507,6 +2508,15 @@ impl Vars {
         ) {
             self.user_values.preferred_username.immutable = v;
         }
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "user_values.preferred_username",
+            "blacklist",
+            "",
+        ) {
+            self.user_values.preferred_username.blacklist =
+                v.into_iter().map(Cow::from).collect::<Vec<_>>();
+        }
         if let Some(v) = t_str(
             &mut table,
             "user_values.preferred_username",
@@ -3035,6 +3045,7 @@ pub struct VarsUserValuesConfig {
 pub struct VarsUserPreferredUsername {
     pub preferred_username: UserValueConfigValue,
     pub immutable: bool,
+    pub blacklist: Vec<Cow<'static, str>>,
     // The Rust regex will not be saved here, but as a dedicated static
     // value instead, so it can easily be used with the `validator` crate
     // in macros.

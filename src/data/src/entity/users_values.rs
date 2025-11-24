@@ -3,10 +3,10 @@ use hiqlite_macros::params;
 use rauthy_api_types::users::{UserValuesRequest, UserValuesResponse};
 use rauthy_common::constants::{CACHE_TTL_USER, IDX_USERS_VALUES};
 use rauthy_common::is_hiqlite;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct UserValues {
     pub id: String,
     pub birthdate: Option<String>,
@@ -74,6 +74,30 @@ impl UserValues {
         };
 
         client.put(Cache::User, idx, &slf, CACHE_TTL_USER).await?;
+
+        Ok(slf)
+    }
+
+    pub async fn find_preferred_username(user_id: &str) -> Result<Option<String>, ErrorResponse> {
+        let idx = Self::cache_idx(user_id);
+        let client = DB::hql();
+
+        let opt: Option<Option<Self>> = client.get(Cache::User, &idx).await?;
+        if let Some(slf) = opt {
+            return Ok(slf.and_then(|s| s.preferred_username));
+        }
+
+        let sql = "SELECT preferred_username FROM users_values WHERE id = $1";
+        let slf = if is_hiqlite() {
+            client
+                .query_raw_one(sql, params!(user_id))
+                .await?
+                .get("preferred_username")
+        } else {
+            DB::pg_query_one_row(sql, &[&user_id])
+                .await?
+                .get("preferred_username")
+        };
 
         Ok(slf)
     }
@@ -150,9 +174,32 @@ RETURNING *"#;
         let values: Self = if is_hiqlite() {
             DB::hql()
                 .execute_returning_map_one(sql, params!(user_id, preferred_username))
-                .await?
+                .await
+                .map_err(|err| {
+                    let err = ErrorResponse::from(err);
+                    if err.message.contains("UNIQUE") {
+                        ErrorResponse::new(
+                            ErrorResponseType::NotAccepted,
+                            "'preferred_username' is not available",
+                        )
+                    } else {
+                        err
+                    }
+                })?
         } else {
-            DB::pg_query_one(sql, &[&user_id, &preferred_username]).await?
+            DB::pg_query_one(sql, &[&user_id, &preferred_username])
+                .await
+                .map_err(|err| {
+                    let err = ErrorResponse::from(err);
+                    if err.message.contains("UNIQUE") {
+                        ErrorResponse::new(
+                            ErrorResponseType::NotAccepted,
+                            "'preferred_username' is not available",
+                        )
+                    } else {
+                        err
+                    }
+                })?
         };
 
         let slf = Some(values);

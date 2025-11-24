@@ -1788,7 +1788,8 @@ pub async fn put_user_by_id(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
     payload.validate()?;
 
-    handle_put_user_by_id(id.into_inner(), req, payload).await
+    let preferred_username = UserValues::find_preferred_username(&id).await?;
+    handle_put_user_by_id(id.into_inner(), req, payload, preferred_username).await
 }
 
 /// Modifies a user via a patch operation
@@ -1816,10 +1817,10 @@ pub async fn patch_user(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
 
     let user_id = id.into_inner();
-    let upd_req = User::patch(user_id.clone(), payload).await?;
+    let (upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
     upd_req.validate()?;
 
-    handle_put_user_by_id(user_id, req, upd_req).await
+    handle_put_user_by_id(user_id, req, upd_req, has_preferred_username).await
 }
 
 #[inline]
@@ -1827,6 +1828,7 @@ async fn handle_put_user_by_id(
     user_id: String,
     req: HttpRequest,
     payload: UpdateUserRequest,
+    preferred_username: Option<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
     {
         let mut validator = UserValuesValidator {
@@ -1852,7 +1854,8 @@ async fn handle_put_user_by_id(
         validator.validate()?;
     }
 
-    let (user, user_values, is_new_admin) = User::update(user_id, payload, None).await?;
+    let (user, user_values, is_new_admin) =
+        User::update(user_id, payload, None, preferred_username).await?;
 
     if is_new_admin {
         RauthyConfig::get()
@@ -2010,9 +2013,35 @@ pub async fn put_user_self_preferred_username(
 
     // make sure the logged-in user can only update its own username
     let id = id.into_inner();
-    principal.is_user(&id)?;
+    if !force_overwrite {
+        principal.is_user(&id)?;
+    }
 
     let config = &RauthyConfig::get().vars.user_values.preferred_username;
+
+    let is_empty =
+        payload.preferred_username.is_none() || payload.preferred_username.as_deref() == Some("");
+
+    if is_empty {
+        if config.preferred_username == UserValueConfigValue::Required {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "The 'preferred_username' is required and must not be empty",
+            ));
+        }
+    } else if config.blacklist.contains(
+        &payload
+            .preferred_username
+            .as_ref()
+            .unwrap()
+            .to_lowercase()
+            .into(),
+    ) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotAccepted,
+            "This 'preferred_username' is blacklisted",
+        ));
+    }
 
     if !force_overwrite
         && config.immutable
@@ -2022,15 +2051,6 @@ pub async fn put_user_self_preferred_username(
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "The 'preferred_username' is immutable",
-        ));
-    }
-
-    let is_empty =
-        payload.preferred_username.is_none() || payload.preferred_username.as_deref() == Some("");
-    if config.preferred_username == UserValueConfigValue::Required && is_empty {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "The 'preferred_username' is required and must not be empty",
         ));
     }
 

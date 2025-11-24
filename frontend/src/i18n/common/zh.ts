@@ -115,6 +115,7 @@ export const I18nZh: I18n = {
 			forceOverwrite: 'Force Overwrite',
 			immutable: 'CAUTION: The username can only be chosen once!',
 			immutableInfo: 'The username is immutable.',
+			notAvailable: 'This name is not available.',
 			preferredUsername: 'Preferred Username'
 		},
 		providerLink: '联合账户',

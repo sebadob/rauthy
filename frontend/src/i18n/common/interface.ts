@@ -98,6 +98,7 @@ export interface I18n {
 			forceOverwrite: string;
 			immutable: string;
 			immutableInfo: string;
+			notAvailable: string;
 			preferredUsername: string;
 		};
 		providerLink: string;

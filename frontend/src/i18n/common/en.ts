@@ -116,6 +116,7 @@ export const I18nEn: I18n = {
 			forceOverwrite: 'Force Overwrite',
 			immutable: 'CAUTION: The username can only be chosen once!',
 			immutableInfo: 'The username is immutable.',
+			notAvailable: 'This name is not available.',
 			preferredUsername: 'Preferred Username'
 		},
 		providerLink: 'Federate Account',

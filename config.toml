@@ -2253,10 +2253,16 @@ preferred_username = 'required'
 # users can change them freely at any time.
 #
 # default: true
-immutable = true
+immutable = false
 
-# TODO a blacklist feature could be a nice addition after
-#  either a change or a user deletion with immutable names.
+# Provide an array of blacklisted names.
+#
+# CAUTION: Provide all these names as lowercase! The value
+#  submitted via API will be converted to lowercase and
+#  then compared to each entry in this list.
+#
+# default: ['admin', 'administrator', 'root']
+blacklist = ['admin', 'administrator', 'root']
 
 # You can define the validation regex / pattern.
 #
