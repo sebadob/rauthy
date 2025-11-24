@@ -1974,7 +1974,7 @@ pub async fn post_user_self_convert_passkey(
     ),
 )]
 #[put("/users/{id}/self/preferred_username")]
-pub async fn post_user_self_preferred_username(
+pub async fn put_user_self_preferred_username(
     id: web::Path<String>,
     principal: ReqPrincipal,
     payload: Json<PreferredUsernameRequest>,

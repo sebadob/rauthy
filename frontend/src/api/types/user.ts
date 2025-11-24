@@ -22,6 +22,11 @@ export interface NewUserRequest {
 	user_expires?: number;
 }
 
+export interface PreferredUsernameRequest {
+	//// Validation: `[user_values.preferred_username] -> regex_rust`
+	preferred_username?: string;
+}
+
 export interface UserValuesRequest {
 	// Validation: PATTERN_DATE_STR
 	birthdate?: string | null;

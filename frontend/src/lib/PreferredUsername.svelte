@@ -4,16 +4,19 @@
     import {useI18n} from "$state/i18n.svelte";
     import Button from "$lib/button/Button.svelte";
     import Modal from "$lib/Modal.svelte";
+    import {fetchPut} from "$api/fetch";
+    import type {PreferredUsernameRequest} from "$api/types/user";
+    import {untrack} from "svelte";
 
     let {
+        userId,
         preferred_username = $bindable(''),
         config,
     }: {
+        userId: string,
         preferred_username: string | undefined,
         config: UserValuesPreferredUsername,
     } = $props();
-
-    $inspect('config', config);
 
     let t = useI18n();
 
@@ -21,7 +24,8 @@
     let showModal = $state(false);
     let closeModal: undefined | (() => void) = $state();
 
-    let required = $derived(config.preferred_username === 'required');
+    let username = $state(untrack(() => preferred_username));
+    let required = $derived(config.preferred_username === 'required' && !preferred_username);
 
     $effect(() => {
         if (ref) {
@@ -32,7 +36,16 @@
     });
 
     async function save() {
-        console.log('TODO');
+        let payload: PreferredUsernameRequest = {
+            preferred_username: username || undefined,
+        };
+        let res = await fetchPut(`/auth/v1/users/${userId}/self/preferred_username`, payload);
+        if (res.status === 200) {
+            closeModal?.();
+            preferred_username = username;
+        } else {
+            console.error(res);
+        }
     }
 
 </script>
@@ -63,7 +76,7 @@
                                 autocomplete="off"
                                 label={t.account.preferredUsername}
                                 placeholder={t.account.preferredUsername}
-                                value={preferred_username}
+                                bind:value={username}
                                 required
                                 pattern={config.pattern_html}
                                 width="15rem"
@@ -109,7 +122,7 @@
     }
 
     .container {
-        margin: .5rem 0;
+        margin: .75rem 0;
     }
 
     .desc {

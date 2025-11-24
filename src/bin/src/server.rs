@@ -409,6 +409,7 @@ fn api_services() -> actix_web::Scope {
                 .service(users::put_user_webid_data)
                 .service(users::get_user_email_confirm)
                 .service(users::post_user_self_convert_passkey)
+                .service(users::put_user_self_preferred_username)
                 .service(generic::post_password_hash_times)
                 .service(sessions::get_sessions)
                 .service(sessions::delete_sessions)

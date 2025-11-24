@@ -81,7 +81,6 @@
                 tz,
             };
         }
-        console.log(payload);
 
         let res = await fetchPut<UserResponse>(`/auth/v1/users/${user.id}/self`, payload);
         if (res.body) {
@@ -151,6 +150,7 @@
                 <TZSelect bind:value={user.user_values.tz}/>
                 {#if userValuesConfig}
                     <PreferredUsername
+                            userId={user.id}
                             bind:preferred_username={user.user_values.preferred_username}
                             config={userValuesConfig.preferred_username}
                     />
