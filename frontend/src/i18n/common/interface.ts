@@ -96,6 +96,7 @@ export interface I18n {
 		preferredUsername: string;
 		preferredUsernameDesc: string;
 		preferredUsernameImmutable: string;
+		preferredUsernameImmutableInfo: string;
 		providerLink: string;
 		providerLinkDesc: string;
 		providerUnlink: string;

@@ -114,6 +114,7 @@ export const I18nDe: I18n = {
 		preferredUsernameDesc: `Manche Anwendungen greifen auf diesen Benutzernamen zurück. Welche 
 			Anwendung davon gebraucht macht, kann allerdings nicht kontrolliert werden.`,
 		preferredUsernameImmutable: 'ACHTUNG: Der Benutzername kann nur einmalig gesetzt werden!',
+		preferredUsernameImmutableInfo: 'Der Benutzername kann nicht geändert werden.',
 		providerLink: 'Account Verbinden',
 		providerLinkDesc:
 			'Dieser Account kann mit einem der folgenden Login Provider\nverbunden werden. Nach der Aktivierung des Prozesses wird eine Weiterleitung auf die Login Seite\ndes gewählten Providers ausgelöst. Nach erfolgreichem Login und bei Übereinstimmung der E-Mail\nAdressen wird dieser Account verknüpft.',

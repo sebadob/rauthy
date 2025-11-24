@@ -114,6 +114,7 @@ export const I18nEn: I18n = {
 		preferredUsernameDesc: `Some applications will use this username. Which ones do cannot be
 			controlled.`,
 		preferredUsernameImmutable: 'CAUTION: The username can only be chosen once!',
+		preferredUsernameImmutableInfo: 'The username is immutable.',
 		providerLink: 'Federate Account',
 		providerLinkDesc:
 			'You can link this account to one of the following login providers.\nAfter activating this function, you will be redirected to the login page of the chosen one.\nAfter a successful login and if the email matches, your account will be linked.',

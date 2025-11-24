@@ -101,6 +101,7 @@ export const I18nKo: I18n = {
 		preferredUsernameDesc: `Some applications will use this username. Which ones do cannot be
 			controlled.`,
 		preferredUsernameImmutable: 'CAUTION: The username can only be chosen once!',
+		preferredUsernameImmutableInfo: 'The username is immutable.',
 		providerLink: '계정 연결',
 		providerLinkDesc:
 			'이 계정은 다음 로그인 공급자 중 하나에 연결할 수 있습니다.\n 프로세스를 활성화하면 선택한 공급자의 로그인 페이지로 리디렉션이 트리거됩니다. 로그인에 성공하고 이메일 주소가 일치하면 이 계정이 연결됩니다.',

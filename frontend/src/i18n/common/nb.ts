@@ -114,6 +114,7 @@ export const I18nNb: I18n = {
 		preferredUsernameDesc: `Some applications will use this username. Which ones do cannot be
 			controlled.`,
 		preferredUsernameImmutable: 'CAUTION: The username can only be chosen once!',
+		preferredUsernameImmutableInfo: 'The username is immutable.',
 		providerLink: 'Koble konto',
 		providerLinkDesc:
 			'Denne kontoen kan kobles til en av følgende innloggingsleverandører. Etter aktivering blir du videresendt til leverandørens innloggingsside. Ved vellykket innlogging og samsvarende e-postadresser kobles kontoen.',

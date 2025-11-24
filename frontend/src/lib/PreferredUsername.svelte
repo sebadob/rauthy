@@ -7,6 +7,8 @@
     import {fetchPut} from "$api/fetch";
     import type {PreferredUsernameRequest} from "$api/types/user";
     import {untrack} from "svelte";
+    import Tooltip from "$lib/Tooltip.svelte";
+    import IconInfo from "$icons/IconInfo.svelte";
 
     let {
         userId,
@@ -25,7 +27,7 @@
     let closeModal: undefined | (() => void) = $state();
 
     let username = $state(untrack(() => preferred_username));
-    let required = $derived(config.preferred_username === 'required' && !preferred_username);
+    let required = $derived(config.preferred_username === 'required');
 
     $effect(() => {
         if (ref) {
@@ -52,7 +54,7 @@
 
 {#if config.preferred_username !== 'hidden'}
     <div class="container">
-        <div class="value" data-required={required}>
+        <div class="value" data-required={required && !preferred_username}>
             <div class="name">
                 {preferred_username || '-'}
             </div>
@@ -89,7 +91,6 @@
                             {/if}
                         </div>
 
-
                         <div class="btnModal">
                             <Button onclick={save}>
                                 {t.common.save}
@@ -99,6 +100,12 @@
                             </Button>
                         </div>
                     </Modal>
+                {:else}
+                    <Tooltip text={t.account.preferredUsernameImmutableInfo}>
+                        <div class="immutableInfo">
+                            <IconInfo width="1.2rem"/>
+                        </div>
+                    </Tooltip>
                 {/if}
             </div>
         </div>
@@ -127,6 +134,11 @@
 
     .desc {
         width: 15rem;
+    }
+
+    .immutableInfo {
+        color: hsla(var(--text) / .5);
+        transform: translateY(.25rem);
     }
 
     .label {
