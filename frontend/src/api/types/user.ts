@@ -23,7 +23,7 @@ export interface NewUserRequest {
 }
 
 export interface PreferredUsernameRequest {
-	//// Validation: `[user_values.preferred_username] -> regex_rust`
+	/// Validation: `[user_values.preferred_username] -> regex_rust`
 	preferred_username?: string;
 	/// Can only be set with an active `rauthy_admin` session
 	force_overwrite?: boolean;
@@ -42,8 +42,6 @@ export interface UserValuesRequest {
 	city?: string | null;
 	// Validation: PATTERN_CITY / 48
 	country?: string | null;
-	//// Validation: PATTERN_LINUX_USERNAME
-	preferred_username?: string | null;
 	/// Validation: Valid Timezone in the format of `Europe/Berlin`
 	tz?: string | null;
 }

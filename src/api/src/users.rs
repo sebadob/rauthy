@@ -8,17 +8,7 @@ use chrono::Utc;
 use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
 use rauthy_api_types::oidc::PasswordResetResponse;
-use rauthy_api_types::users::{
-    DeviceRequest, DeviceResponse, MfaModTokenRequest, MfaModTokenResponse, MfaPurpose,
-    NewUserRegistrationRequest, NewUserRequest, PasskeyResponse, PasswordResetRequest,
-    PreferredUsernameRequest, RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest,
-    UserAttrConfigRequest, UserAttrConfigResponse, UserAttrConfigValueResponse,
-    UserAttrValueResponse, UserAttrValuesResponse, UserAttrValuesUpdateRequest,
-    UserEditableAttrResponse, UserEditableAttrsResponse, UserPictureConfig, UserResponse,
-    UserResponseSimple, UserRevokeParams, WebIdRequest, WebIdResponse, WebauthnAuthFinishRequest,
-    WebauthnAuthStartRequest, WebauthnAuthStartResponse, WebauthnDeleteRequest,
-    WebauthnRegFinishRequest, WebauthnRegStartRequest,
-};
+use rauthy_api_types::users::*;
 use rauthy_common::constants::{
     COOKIE_MFA, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, PWD_CSRF_HEADER,
     PWD_RESET_COOKIE, TEXT_TURTLE,
@@ -421,23 +411,28 @@ pub async fn post_users_register_handle(
     if !RauthyConfig::get().vars.user_registration.enable {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
-            "Open User Registration is not allowed",
+            "Open User Registration is disabled",
         ));
     }
+
     payload.validate()?;
-    UserValuesValidator {
-        given_name: Some(&payload.given_name),
-        family_name: payload.family_name.as_deref(),
-        // TODO add missing values
-        birthdate: None,
-        street: None,
-        zip: None,
-        city: None,
-        country: None,
-        phone: None,
-        tz: None,
+    {
+        let mut validator = UserValuesValidator {
+            given_name: payload.given_name.as_deref(),
+            family_name: payload.family_name.as_deref(),
+            ..Default::default()
+        };
+        if let Some(uv) = &payload.user_values {
+            validator.birthdate = uv.birthdate.as_deref();
+            validator.street = uv.street.as_deref();
+            validator.zip = uv.zip.as_deref();
+            validator.city = uv.city.as_deref();
+            validator.country = uv.country.as_deref();
+            validator.phone = uv.phone.as_deref();
+            validator.tz = uv.tz.as_deref();
+        }
+        validator.validate()?;
     }
-    .validate()?;
 
     let reg = &RauthyConfig::get().vars.user_registration;
 
@@ -458,6 +453,11 @@ pub async fn post_users_register_handle(
             }
         }
     }
+
+    // Note: Always keep the PoW validation BEFORE any other expensive checks with DB access.
+    let challenge = Pow::validate(&payload.pow)?;
+    PowEntity::check_prevent_reuse(challenge.to_string()).await?;
+
     if let Some(redirect_uri) = &payload.redirect_uri
         && !reg.allow_open_redirect
     {
@@ -475,10 +475,6 @@ pub async fn post_users_register_handle(
             ));
         }
     }
-
-    // validate the PoW
-    let challenge = Pow::validate(&payload.pow)?;
-    PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
     let lang = Language::try_from(&req).unwrap_or_default();
     let user = User::create_from_reg(payload, lang).await?;
@@ -1722,7 +1718,8 @@ pub async fn post_user_password_request_reset(
         payload.email,
         real_ip_from_req(&req)?
     );
-    Pow::validate(&payload.pow)?;
+    let challenge = Pow::validate(&payload.pow)?;
+    PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
     match User::find_by_email(payload.email).await {
         Ok(user) => user
@@ -2039,7 +2036,10 @@ pub async fn put_user_self_preferred_username(
     ) {
         return Err(ErrorResponse::new(
             ErrorResponseType::NotAccepted,
-            "This 'preferred_username' is blacklisted",
+            format!(
+                "username '{}' is blacklisted",
+                payload.preferred_username.as_ref().unwrap()
+            ),
         ));
     }
 
@@ -2105,6 +2105,7 @@ pub async fn delete_user_by_id(
     Ok(HttpResponse::NoContent().finish())
 }
 
+#[derive(Default)]
 pub struct UserValuesValidator<'a> {
     given_name: Option<&'a str>,
     family_name: Option<&'a str>,

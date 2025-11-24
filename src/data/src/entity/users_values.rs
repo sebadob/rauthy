@@ -57,6 +57,78 @@ impl UserValues {
         format!("{IDX_USERS_VALUES}_{user_id}")
     }
 
+    /// CAUTION: Does also set the `preferred_username`. This should only be used with open
+    /// registration.
+    pub async fn insert(
+        user_id: String,
+        values: UserValuesRequest,
+        preferred_username: Option<String>,
+    ) -> Result<(), ErrorResponse> {
+        let sql = r#"
+INSERT INTO
+users_values (id, birthdate, phone, street, zip, city, country, preferred_username, tz)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
+                    params!(
+                        user_id,
+                        values.birthdate,
+                        values.phone,
+                        values.street,
+                        values.zip,
+                        values.city,
+                        values.country,
+                        preferred_username,
+                        values.tz
+                    ),
+                )
+                .await
+                .map_err(|err| {
+                    let err = ErrorResponse::from(err);
+                    if err.message.contains("UNIQUE") {
+                        ErrorResponse::new(
+                            ErrorResponseType::NotAccepted,
+                            "UNIQUE constraint on: 'preferred_username'",
+                        )
+                    } else {
+                        err
+                    }
+                })?
+        } else {
+            DB::pg_execute(
+                sql,
+                &[
+                    &user_id,
+                    &values.birthdate,
+                    &values.phone,
+                    &values.street,
+                    &values.zip,
+                    &values.city,
+                    &values.country,
+                    &preferred_username,
+                    &values.tz,
+                ],
+            )
+            .await
+            .map_err(|err| {
+                let err = ErrorResponse::from(err);
+                if err.message.contains("UNIQUE") {
+                    ErrorResponse::new(
+                        ErrorResponseType::NotAccepted,
+                        "UNIQUE constraint on: 'preferred_username'",
+                    )
+                } else {
+                    err
+                }
+            })?
+        };
+
+        Ok(())
+    }
+
     pub async fn find(user_id: &str) -> Result<Option<Self>, ErrorResponse> {
         let idx = Self::cache_idx(user_id);
         let client = DB::hql();
@@ -246,6 +318,32 @@ RETURNING *"#;
             .await?;
 
         Ok(())
+    }
+
+    pub async fn validate_preferred_username_free(
+        preferred_username: String,
+    ) -> Result<(), ErrorResponse> {
+        let sql = "SELECT 1 FROM users_values WHERE preferred_username = $1";
+
+        let is_free = if is_hiqlite() {
+            DB::hql()
+                .query_raw_one(sql, params!(preferred_username))
+                .await
+                .is_err()
+        } else {
+            DB::pg_query_one_row(sql, &[&preferred_username])
+                .await
+                .is_err()
+        };
+
+        if is_free {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::NotAccepted,
+                "UNIQUE constraint on: 'preferred_username'",
+            ))
+        }
     }
 }
 

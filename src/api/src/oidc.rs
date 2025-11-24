@@ -303,7 +303,8 @@ pub async fn post_authorize_handle(
 
     let session = principal.get_session()?;
 
-    Pow::validate(&payload.pow)?;
+    let challenge = Pow::validate(&payload.pow)?;
+    PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
     let mut has_password_been_hashed = false;
     let mut add_login_delay = true;

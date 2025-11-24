@@ -2214,7 +2214,7 @@ enable = true
 # default: 'required'
 given_name = 'required'
 # default: 'optional'
-family_name = 'optional'
+family_name = 'required'
 # default: 'optional'
 birthdate = 'optional'
 # default: 'optional'

@@ -79,13 +79,18 @@ pub struct NewUserRequest {
 pub struct NewUserRegistrationRequest {
     #[validate(email)]
     pub email: String,
+    /// Validation: `[user_values.preferred_username] -> regex_rust`
+    #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
+    pub preferred_username: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
     pub family_name: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
-    pub given_name: String,
+    pub given_name: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
+    #[validate(nested)]
+    pub user_values: Option<UserValuesRequest>,
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
     pub pow: String,
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`

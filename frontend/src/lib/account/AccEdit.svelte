@@ -48,10 +48,10 @@
     let success = $state(false);
     let successEmailConfirm = $state(false);
 
-    let userValuesConfig: undefined | UserValuesConfig = $state();
+    let config: undefined | UserValuesConfig = $state();
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
-        if (!userValuesConfig) {
+        if (!config) {
             return;
         }
 
@@ -106,10 +106,10 @@
     }
 </script>
 
-<Template id={TPL_USER_VALUES_CONFIG} bind:value={userValuesConfig}/>
+<Template id={TPL_USER_VALUES_CONFIG} bind:value={config}/>
 
 <div class="container">
-    {#if userValuesConfig}
+    {#if config}
         <Form action={`/auth/v1/users/${user.id}/self`} {onSubmit}>
             <div class="formInner">
                 <div>
@@ -121,105 +121,105 @@
                             value={user.email}
                             required
                     />
-                    {#if userValuesConfig.given_name !== 'hidden'}
+                    {#if config.given_name !== 'hidden'}
                         <Input
                                 name="given_name"
                                 autocomplete="given-name"
                                 label={t.account.givenName}
                                 placeholder={t.account.givenName}
                                 value={user.given_name}
-                                required={userValuesConfig.given_name === 'required'}
+                                required={config.given_name === 'required'}
                                 maxLength={32}
                                 pattern={PATTERN_USER_NAME}
                         />
                     {/if}
-                    {#if userValuesConfig.family_name !== 'hidden'}
+                    {#if config.family_name !== 'hidden'}
                         <Input
                                 name="family_name"
                                 autocomplete="family-name"
                                 label={t.account.familyName}
                                 placeholder={t.account.familyName}
                                 value={user.family_name}
-                                required={userValuesConfig.family_name === 'required'}
+                                required={config.family_name === 'required'}
                                 maxLength={32}
                                 pattern={PATTERN_USER_NAME}
                         />
                     {/if}
-                    {#if userValuesConfig.birthdate !== 'hidden'}
+                    {#if config.birthdate !== 'hidden'}
                         <InputDateTimeCombo
                                 name="birthdate"
                                 label={t.account.birthdate}
                                 bind:value={user.user_values.birthdate}
-                                required={userValuesConfig.birthdate === 'required'}
+                                required={config.birthdate === 'required'}
                                 withDelete
                         />
                     {/if}
-                    {#if userValuesConfig.tz !== 'hidden'}
+                    {#if config.tz !== 'hidden'}
                         <TZSelect bind:value={user.user_values.tz}/>
                     {/if}
                     <PreferredUsername
                             userId={user.id}
                             bind:preferred_username={user.user_values.preferred_username}
-                            config={userValuesConfig.preferred_username}
+                            config={config.preferred_username}
                     />
                 </div>
                 <div>
-                    {#if userValuesConfig.street !== 'hidden'}
+                    {#if config.street !== 'hidden'}
                         <Input
                                 name="street"
                                 autocomplete="street-address"
                                 label={t.account.street}
                                 placeholder={t.account.street}
                                 value={user.user_values.street}
-                                required={userValuesConfig.street === 'required'}
+                                required={config.street === 'required'}
                                 maxLength={48}
                                 pattern={PATTERN_STREET}
                         />
                     {/if}
-                    {#if userValuesConfig.zip !== 'hidden'}
+                    {#if config.zip !== 'hidden'}
                         <Input
                                 name="zip"
                                 autocomplete="postal-code"
                                 label={t.account.zip}
                                 placeholder={t.account.zip}
                                 value={user.user_values.zip}
-                                required={userValuesConfig.zip === 'required'}
+                                required={config.zip === 'required'}
                                 maxLength={24}
                                 pattern={PATTERN_ALNUM}
                         />
                     {/if}
-                    {#if userValuesConfig.city !== 'hidden'}
+                    {#if config.city !== 'hidden'}
                         <Input
                                 name="city"
                                 autocomplete="address-level2"
                                 label={t.account.city}
                                 placeholder={t.account.city}
                                 value={user.user_values.city}
-                                required={userValuesConfig.city === 'required'}
+                                required={config.city === 'required'}
                                 maxLength={48}
                                 pattern={PATTERN_CITY}
                         />
                     {/if}
-                    {#if userValuesConfig.country !== 'hidden'}
+                    {#if config.country !== 'hidden'}
                         <Input
                                 name="country"
                                 autocomplete="country"
                                 label={t.account.country}
                                 placeholder={t.account.country}
                                 value={user.user_values.country}
-                                required={userValuesConfig.country === 'required'}
+                                required={config.country === 'required'}
                                 maxLength={48}
                                 pattern={PATTERN_CITY}
                         />
                     {/if}
-                    {#if userValuesConfig.phone !== 'hidden'}
+                    {#if config.phone !== 'hidden'}
                         <Input
                                 name="phone"
                                 autocomplete="tel"
                                 label={t.account.phone}
                                 placeholder={t.account.phone}
                                 value={user.user_values.phone}
-                                required={userValuesConfig.phone === 'required'}
+                                required={config.phone === 'required'}
                                 maxLength={32}
                                 pattern={PATTERN_PHONE}
                         />

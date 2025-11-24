@@ -252,19 +252,29 @@ impl User {
         User::create(new_user, None).await
     }
 
-    /// Inserts a user from the open registration endpoint into the database
+    /// Inserts a user from the open registration endpoint into the database.
     pub async fn create_from_reg(
         req_data: NewUserRegistrationRequest,
         lang: Language,
     ) -> Result<User, ErrorResponse> {
+        // pre-uniqueness checks for better UX and error handling
+        User::validate_email_free(req_data.email.clone()).await?;
+        if let Some(preferred_username) = &req_data.preferred_username {
+            UserValues::validate_preferred_username_free(preferred_username.clone()).await?;
+        }
+
         let mut new_user = Self {
             email: req_data.email.to_lowercase(),
-            given_name: req_data.given_name,
+            given_name: req_data.given_name.unwrap_or_default(),
             family_name: req_data.family_name,
             ..Default::default()
         };
         new_user.language = lang;
         let new_user = User::create(new_user, req_data.redirect_uri).await?;
+
+        if let Some(uv) = req_data.user_values {
+            UserValues::insert(new_user.id.clone(), uv, req_data.preferred_username).await?;
+        }
 
         Ok(new_user)
     }
@@ -586,7 +596,18 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                         &new_user.picture_id
                     ),
                 )
-                .await?;
+                .await
+                .map_err(|err| {
+                    let err = ErrorResponse::from(err);
+                    if err.message.contains("UNIQUE") {
+                        ErrorResponse::new(
+                            ErrorResponseType::NotAccepted,
+                            "UNIQUE constraint on: 'email'",
+                        )
+                    } else {
+                        err
+                    }
+                })?;
         } else {
             DB::pg_execute(
                 sql,
@@ -608,7 +629,18 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                     &new_user.picture_id,
                 ],
             )
-            .await?;
+            .await
+            .map_err(|err| {
+                let err = ErrorResponse::from(err);
+                if err.message.contains("UNIQUE") {
+                    ErrorResponse::new(
+                        ErrorResponseType::NotAccepted,
+                        "UNIQUE constraint on: 'email'",
+                    )
+                } else {
+                    err
+                }
+            })?;
         }
 
         Self::count_inc().await?;
@@ -1347,6 +1379,25 @@ LIMIT $2"#;
 
         user.save(None).await?;
         Ok(())
+    }
+
+    pub async fn validate_email_free(email: String) -> Result<(), ErrorResponse> {
+        let sql = "SELECT 1 FROM users WHERE email = $1";
+
+        let is_free = if is_hiqlite() {
+            DB::hql().query_raw_one(sql, params!(email)).await.is_err()
+        } else {
+            DB::pg_query_one_row(sql, &[&email]).await.is_err()
+        };
+
+        if is_free {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::NotAccepted,
+                "UNIQUE constraint on: 'email'",
+            ))
+        }
     }
 }
 
