@@ -1769,6 +1769,15 @@ pub async fn put_user_by_id(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
     payload.validate()?;
 
+    UserValuesValidator {
+        given_name: Some(&payload.given_name),
+        family_name: payload.family_name.as_deref(),
+        // has its own endpoint for updates
+        preferred_username: None,
+        user_values: &payload.user_values,
+    }
+    .validate()?;
+
     let preferred_username = UserValues::find_preferred_username(&id).await?;
     handle_put_user_by_id(id.into_inner(), req, payload, preferred_username).await
 }
@@ -1811,15 +1820,6 @@ async fn handle_put_user_by_id(
     payload: UpdateUserRequest,
     preferred_username: Option<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    UserValuesValidator {
-        given_name: Some(&payload.given_name),
-        family_name: payload.family_name.as_deref(),
-        // has its own endpoint for updates
-        preferred_username: None,
-        user_values: &payload.user_values,
-    }
-    .validate()?;
-
     let (user, user_values, is_new_admin) =
         User::update(user_id, payload, None, preferred_username).await?;
 
