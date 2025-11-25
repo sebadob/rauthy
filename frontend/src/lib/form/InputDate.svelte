@@ -29,7 +29,7 @@
     }: PropsInputDate = $props();
 
     $inspect(value).with(() => {
-        if (value.includes('T')) {
+        if (value?.includes('T')) {
             console.warn('invalid date format for InputDate, expected dateStr only', value);
         }
     });
@@ -56,15 +56,15 @@
     let refYear: undefined | HTMLButtonElement = $state();
     let refMonthContainer: undefined | HTMLDivElement = $state();
 
-    let date = $derived(value ? parseDate(value) : today);
     let dayMin = $derived(parseDate(min));
     let dayMax = $derived(parseDate(max));
 
-    let month = $state(untrack(() => t.common.months[date.month - 1]));
+    let day = $state(today.day);
+    let month = $state(t.common.months[today.month - 1]);
     let monthIdx = $derived(t.common.months.findIndex(m => m === month) + 1)
-    let year = $state(untrack(() => date.year));
+    let year = $state(today.year);
     let yearOptions = $state([untrack(() => year)]);
-    let weeks = $derived(getWeeksInMonth(date, t.lang))
+    let weeks = $state(getWeeksInMonth(today, t.lang))
 
     $effect(() => {
         let yearMin = Number.parseInt(min.slice(0, 4));
@@ -79,18 +79,29 @@
 
     $effect(() => {
         if (value) {
-            let dt = untrack(() => parseDate(value));
-            dt = dt.set({year, month: monthIdx});
-            value = dt.toString();
+            let dt = parseDate(value);
+            day = dt.day;
+            month = t.common.months[dt.month - 1]
+            year = dt.year;
+            weeks = getWeeksInMonth(dt, t.lang)
         }
     });
 
     $effect(() => {
-        if (refMonthContainer && value) {
+        value = new CalendarDate(year, monthIdx, day).toString();
+    });
+
+    $effect(() => {
+        if (refMonthContainer) {
+            let dt = value ? parseDate(value) : today;
+            month = t.common.months[dt.month - 1];
+            year = dt.year;
+
             requestAnimationFrame(() => {
+                let selected = value ? value : todayStr;
                 let days = refMonthContainer?.getElementsByTagName('time') || [];
                 for (let day of days) {
-                    if (day.getAttribute('datetime') === value) {
+                    if (day.getAttribute('datetime') === selected) {
                         let button = day.parentElement?.parentElement;
                         button?.focus();
                         break;
@@ -109,7 +120,8 @@
     }
 
     function setToFirstOfMonth() {
-        value = new CalendarDate(year, monthIdx, 1).toString();
+        let dt = new CalendarDate(year, monthIdx, 1);
+        value = dt.toString();
     }
 
     function oninvalid(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
