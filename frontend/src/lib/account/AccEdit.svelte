@@ -78,7 +78,7 @@
             given_name: givenName,
             user_values: userValues,
         };
-
+        
         let res = await fetchPut<UserResponse>(`/auth/v1/users/${user.id}/self`, payload);
         if (res.body) {
             success = true;

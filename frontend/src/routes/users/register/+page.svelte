@@ -252,7 +252,7 @@
                                 autocomplete="street-address"
                                 label={t.account.street}
                                 placeholder={t.account.street}
-                                value={values.user_values.street}
+                                bind:value={values.user_values.street}
                                 required
                                 maxLength={48}
                                 pattern={PATTERN_STREET}
@@ -264,7 +264,7 @@
                                 autocomplete="postal-code"
                                 label={t.account.zip}
                                 placeholder={t.account.zip}
-                                value={values.user_values.zip}
+                                bind:value={values.user_values.zip}
                                 required
                                 maxLength={24}
                                 pattern={PATTERN_ALNUM}
@@ -276,7 +276,7 @@
                                 autocomplete="address-level2"
                                 label={t.account.city}
                                 placeholder={t.account.city}
-                                value={values.user_values.city}
+                                bind:value={values.user_values.city}
                                 required
                                 maxLength={48}
                                 pattern={PATTERN_CITY}
@@ -288,7 +288,7 @@
                                 autocomplete="country"
                                 label={t.account.country}
                                 placeholder={t.account.country}
-                                value={values.user_values.country}
+                                bind:value={values.user_values.country}
                                 required
                                 maxLength={48}
                                 pattern={PATTERN_CITY}
@@ -300,7 +300,7 @@
                                 autocomplete="tel"
                                 label={t.account.phone}
                                 placeholder={t.account.phone}
-                                value={values.user_values.phone}
+                                bind:value={values.user_values.phone}
                                 required
                                 maxLength={32}
                                 pattern={PATTERN_PHONE}
@@ -330,6 +330,7 @@
                     forceAccept
                     onToSAccept={submitRegistration}
                     onToSCancel={() => tos = undefined}
+                    skipRequest
             />
         {/if}
 

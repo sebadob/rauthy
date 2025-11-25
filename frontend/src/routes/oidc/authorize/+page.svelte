@@ -265,8 +265,13 @@
         await handleAuthRes(res);
     }
 
-    async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>) {
+    async function handleAuthRes(res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>) {
         isLoading = false;
+
+        if (!res) {
+            console.error('no result in handleAuthRes');
+            return;
+        }
 
         if (res.status === 202) {
             // -> all good
