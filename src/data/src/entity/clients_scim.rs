@@ -884,6 +884,8 @@ impl ClientScim {
             zip: None,
             city: None,
             country: None,
+            preferred_username: None,
+            tz: None,
         };
 
         for client_scim in clients_scim {

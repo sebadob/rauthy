@@ -19,6 +19,7 @@
     import UserPicture from "$lib/UserPicture.svelte";
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider";
     import {useTrigger} from "$state/callback.svelte";
+    import type {UserValuesConfig} from "$api/templates/UserValuesConfig";
 
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
@@ -27,6 +28,7 @@
     let closeModal: undefined | (() => void) = $state();
     let err = $state('');
 
+    let userValuesConfig: undefined | UserValuesConfig = $state();
     let users: UserResponseSimple[] = $state([]);
     let usersFiltered: UserResponseSimple[] = $state([]);
     let usersPaginated: UserResponseSimple[] = $state([]);
@@ -49,6 +51,7 @@
 
     onMount(() => {
         fetchUsers('page_size=' + sspPageSize);
+        fetchUserValuesConfig();
         fetchAuthProviders();
         fetchRoles();
         fetchGroups();
@@ -97,6 +100,15 @@
             users = res.body;
         } else {
             console.error(res.error);
+        }
+    }
+
+    async function fetchUserValuesConfig() {
+        let res = await fetchGet<UserValuesConfig>('/auth/v1/users/values_config');
+        if (res.body) {
+            userValuesConfig = res.body;
+        } else {
+            console.error(res);
         }
     }
 
@@ -151,7 +163,12 @@
     }
 
     function fallbackCharacters(user: UserResponseSimple) {
-        let chars = user.given_name[0];
+        let chars = '';
+        if (user.given_name) {
+            chars = user.given_name[0];
+        } else {
+            chars = user.email[0];
+        }
         if (user.family_name) {
             chars += user.family_name[0];
         }
@@ -233,7 +250,7 @@
         thresholdNavSub={700}
 >
     <ButtonAddModal bind:ref={refAddNew} level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
-        <UserAddNew onSave={onAddNew} {roles} {groups}/>
+        <UserAddNew config={userValuesConfig} onSave={onAddNew} {roles} {groups}/>
     </ButtonAddModal>
     <OrderSearchBar
             bind:value={searchValue}
@@ -287,8 +304,8 @@
     {/if}
 
     <div id="users">
-        {#if userId}
-            <UserDetails {userId} {providers} {roles} {groups} {onSave}/>
+        {#if userId && userValuesConfig}
+            <UserDetails {userValuesConfig} {userId} {providers} {roles} {groups} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>

@@ -14,12 +14,14 @@
         forceAccept,
         onToSAccept,
         onToSCancel,
+        skipRequest,
     }: {
         tos: ToSLatestResponse,
         tosAcceptCode?: string,
         forceAccept?: boolean,
-        onToSAccept: (res: IResponse<undefined | WebauthnLoginResponse>) => void,
+        onToSAccept: (res?: IResponse<undefined | WebauthnLoginResponse>) => void,
         onToSCancel?: () => void,
+        skipRequest?: boolean,
     } = $props();
 
     let t = useI18n();
@@ -64,15 +66,19 @@
             return;
         }
 
-        let payload: ToSUserAcceptRequest = {
-            accept_code: tosAcceptCode,
-            tos_ts: tos.ts,
-        };
-        let res = await fetchPost<undefined>('/auth/v1/tos/accept', payload);
-        // TODO handle accept code expiration
+        if (!skipRequest) {
+            let payload: ToSUserAcceptRequest = {
+                accept_code: tosAcceptCode,
+                tos_ts: tos.ts,
+            };
+            let res = await fetchPost<undefined>('/auth/v1/tos/accept', payload);
+            // TODO handle accept code expiration
+            onToSAccept(res);
+        } else {
+            onToSAccept();
+        }
 
         closeModal?.();
-        onToSAccept(res);
     }
 
     function onCancel() {

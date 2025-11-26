@@ -15,6 +15,7 @@ use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderLinkCookie, AuthProviderTemplate,
 };
 use rauthy_data::entity::logos::{Logo, LogoType};
+use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::users::User;
 use rauthy_data::html::HtmlCached;
@@ -149,7 +150,8 @@ pub async fn post_provider_login(
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
-    Pow::validate(&payload.pow)?;
+    let challenge = Pow::validate(&payload.pow)?;
+    PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
     let (cookie, xsrf_token, location) =
         rauthy_service::oidc::auth_providers::login_start::login_start(payload).await?;

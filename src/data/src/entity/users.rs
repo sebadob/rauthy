@@ -42,6 +42,7 @@ use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
+use std::default::Default;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
@@ -251,19 +252,29 @@ impl User {
         User::create(new_user, None).await
     }
 
-    /// Inserts a user from the open registration endpoint into the database
+    /// Inserts a user from the open registration endpoint into the database.
     pub async fn create_from_reg(
         req_data: NewUserRegistrationRequest,
         lang: Language,
     ) -> Result<User, ErrorResponse> {
+        // pre-uniqueness checks for better UX and error handling
+        User::validate_email_free(req_data.email.clone()).await?;
+        if let Some(preferred_username) = &req_data.preferred_username {
+            UserValues::validate_preferred_username_free(preferred_username.clone()).await?;
+        }
+
         let mut new_user = Self {
             email: req_data.email.to_lowercase(),
-            given_name: req_data.given_name,
+            given_name: req_data.given_name.unwrap_or_default(),
             family_name: req_data.family_name,
             ..Default::default()
         };
         new_user.language = lang;
         let new_user = User::create(new_user, req_data.redirect_uri).await?;
+
+        if let Some(uv) = req_data.user_values {
+            UserValues::insert(new_user.id.clone(), uv, req_data.preferred_username).await?;
+        }
 
         Ok(new_user)
     }
@@ -558,7 +569,7 @@ OFFSET $2"#;
     pub async fn insert(new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
         let sql = r#"
-INSERT INTO USERS
+INSERT INTO users
 (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
 last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
@@ -585,7 +596,18 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                         &new_user.picture_id
                     ),
                 )
-                .await?;
+                .await
+                .map_err(|err| {
+                    let err = ErrorResponse::from(err);
+                    if err.message.contains("UNIQUE") {
+                        ErrorResponse::new(
+                            ErrorResponseType::NotAccepted,
+                            "UNIQUE constraint on: 'email'",
+                        )
+                    } else {
+                        err
+                    }
+                })?;
         } else {
             DB::pg_execute(
                 sql,
@@ -607,7 +629,17 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                     &new_user.picture_id,
                 ],
             )
-            .await?;
+            .await
+            .map_err(|err| {
+                if err.message.contains("UNIQUE") {
+                    ErrorResponse::new(
+                        ErrorResponseType::NotAccepted,
+                        "UNIQUE constraint on: 'email'",
+                    )
+                } else {
+                    err
+                }
+            })?;
         }
 
         Self::count_inc().await?;
@@ -666,6 +698,8 @@ LIMIT $2"#;
                     zip: row.get("zip"),
                     city: row.get("city"),
                     country: row.get("country"),
+                    preferred_username: row.get("preferred_username"),
+                    tz: row.get("tz"),
                 };
                 res.push((user, values));
             }
@@ -703,6 +737,8 @@ LIMIT $2"#;
                     zip: row.get("zip"),
                     city: row.get("city"),
                     country: row.get("country"),
+                    preferred_username: row.get("preferred_username"),
+                    tz: row.get("tz"),
                 };
                 res.push((user, values));
             }
@@ -957,45 +993,65 @@ LIMIT $2"#;
     /// Builds an `UpdateUserRequest` solely from data inside the DB. This data can then be used
     /// for `PatchOp`s. Build `UpdateUserRequest` to be able to re-use all other existing
     /// functionality and checks.
-    pub async fn upd_req_from_db(user_id: String) -> Result<UpdateUserRequest, ErrorResponse> {
+    ///
+    /// Returns `(UpdateUserRequest, preferred_username)`
+    pub async fn upd_req_from_db(
+        user_id: String,
+    ) -> Result<(UpdateUserRequest, Option<String>), ErrorResponse> {
         let u = Self::find(user_id).await?;
 
         let roles = u.get_roles();
         let groups = Some(u.get_groups());
         let language = Some(rauthy_api_types::generic::Language::from(u.language));
 
-        let user_values = UserValues::find(&u.id).await?.map(|uv| UserValuesRequest {
-            birthdate: uv.birthdate,
-            phone: uv.phone,
-            street: uv.street,
-            zip: uv.zip,
-            city: uv.city,
-            country: uv.country,
-        });
+        let (user_values, preferred_username) = if let Some(uv) = UserValues::find(&u.id).await? {
+            (
+                Some(UserValuesRequest {
+                    birthdate: uv.birthdate,
+                    phone: uv.phone,
+                    street: uv.street,
+                    zip: uv.zip,
+                    city: uv.city,
+                    country: uv.country,
+                    tz: uv.tz,
+                }),
+                uv.preferred_username,
+            )
+        } else {
+            (None, None)
+        };
 
-        Ok(UpdateUserRequest {
-            email: u.email,
-            given_name: u.given_name,
-            family_name: u.family_name,
-            language,
-            // Must be None here to avoid triggering the "new password set" logic for each user
-            // update. This req is being used for `PatchOp`s and if the PatchOp contains a
-            // `password`, it will be updated later on.
-            password: None,
-            roles,
-            groups,
-            enabled: u.enabled,
-            email_verified: u.email_verified,
-            user_expires: u.user_expires,
-            user_values,
-        })
+        Ok((
+            UpdateUserRequest {
+                email: u.email,
+                given_name: if u.given_name.is_empty() {
+                    None
+                } else {
+                    Some(u.given_name)
+                },
+                family_name: u.family_name,
+                language,
+                // Must be None here to avoid triggering the "new password set" logic for each user
+                // update. This req is being used for `PatchOp`s and if the PatchOp contains a
+                // `password`, it will be updated later on.
+                password: None,
+                roles,
+                groups,
+                enabled: u.enabled,
+                email_verified: u.email_verified,
+                user_expires: u.user_expires,
+                user_values,
+            },
+            preferred_username,
+        ))
     }
 
+    /// Returns `(UpdateUserRequest, preferred_username)`
     pub async fn patch(
         user_id: String,
         payload: PatchOp,
-    ) -> Result<UpdateUserRequest, ErrorResponse> {
-        let mut upd_req = User::upd_req_from_db(user_id).await?;
+    ) -> Result<(UpdateUserRequest, Option<String>), ErrorResponse> {
+        let (mut upd_req, preferred_username) = User::upd_req_from_db(user_id).await?;
         let mut uv = upd_req.user_values.unwrap_or_default();
 
         for put in payload.put {
@@ -1004,9 +1060,7 @@ LIMIT $2"#;
                 "password" => {
                     upd_req.password = Some(put.value.as_str().unwrap_or_default().to_string())
                 }
-                "given_name" => {
-                    upd_req.given_name = put.value.as_str().unwrap_or_default().to_string()
-                }
+                "given_name" => upd_req.given_name = put.value.as_str().map(String::from),
                 "family_name" => upd_req.family_name = put.value.as_str().map(String::from),
                 "language" => {
                     let lang = rauthy_api_types::generic::Language::from(Language::from(
@@ -1050,6 +1104,7 @@ LIMIT $2"#;
 
                             "city" => uv.city = put.value.as_str().map(String::from),
                             "country" => uv.country = put.value.as_str().map(String::from),
+                            "tz" => uv.tz = put.value.as_str().map(String::from),
                             v => {
                                 return Err(ErrorResponse::new(
                                     ErrorResponseType::BadRequest,
@@ -1069,6 +1124,7 @@ LIMIT $2"#;
 
         for key in payload.del {
             match key.as_str() {
+                "given_name" => upd_req.given_name = None,
                 "family_name" => upd_req.family_name = None,
                 "language" => upd_req.language = None,
                 "roles" => upd_req.roles = Vec::default(),
@@ -1084,6 +1140,7 @@ LIMIT $2"#;
                             "zip" => uv.zip = None,
                             "city" => uv.city = None,
                             "country" => uv.country = None,
+                            "tz" => uv.tz = None,
                             v => {
                                 return Err(ErrorResponse::new(
                                     ErrorResponseType::BadRequest,
@@ -1107,13 +1164,14 @@ LIMIT $2"#;
             upd_req.user_values = None;
         }
 
-        Ok(upd_req)
+        Ok((upd_req, preferred_username))
     }
 
     pub async fn update(
         id: String,
         mut upd_user: UpdateUserRequest,
         user: Option<User>,
+        preferred_username: Option<String>,
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(id).await?,
@@ -1127,7 +1185,7 @@ LIMIT $2"#;
         };
 
         user.email = upd_user.email;
-        user.given_name = upd_user.given_name;
+        user.given_name = upd_user.given_name.unwrap_or_default();
         user.family_name = upd_user.family_name;
 
         if let Some(lang) = upd_user.language {
@@ -1181,6 +1239,13 @@ LIMIT $2"#;
         // finally, update the custom users values
         let user_values = if let Some(values) = upd_user.user_values {
             UserValues::upsert(user.id.clone(), values).await?
+        } else if let Some(preferred_username) = preferred_username {
+            UserValues::upsert(user.id.clone(), UserValuesRequest::default()).await?;
+            Some(UserValues {
+                id: user.id.clone(),
+                preferred_username: Some(preferred_username),
+                ..Default::default()
+            })
         } else {
             UserValues::delete(user.id.clone()).await?;
             None
@@ -1262,9 +1327,7 @@ LIMIT $2"#;
         let req = UpdateUserRequest {
             // never update the email directly here, only via email confirmation action from the user
             email: user.email.clone(),
-            given_name: upd_user
-                .given_name
-                .unwrap_or_else(|| user.given_name.clone()),
+            given_name: upd_user.given_name,
             family_name: upd_user.family_name,
             language: upd_user.language,
             password,
@@ -1276,8 +1339,12 @@ LIMIT $2"#;
             user_values: upd_user.user_values,
         };
 
+        let preferred_username = UserValues::find_preferred_username(&id).await?;
+
         // a user cannot become a new admin from a self-req
-        let (user, user_values, _is_new_admin) = User::update(id, req, Some(user)).await?;
+        let (user, user_values, _is_new_admin) =
+            User::update(id, req, Some(user), preferred_username).await?;
+
         Ok((user, user_values, email_updated))
     }
 
@@ -1313,6 +1380,25 @@ LIMIT $2"#;
 
         user.save(None).await?;
         Ok(())
+    }
+
+    pub async fn validate_email_free(email: String) -> Result<(), ErrorResponse> {
+        let sql = "SELECT 1 FROM users WHERE email = $1";
+
+        let is_free = if is_hiqlite() {
+            DB::hql().query_raw_one(sql, params!(email)).await.is_err()
+        } else {
+            DB::pg_query_one_row(sql, &[&email]).await.is_err()
+        };
+
+        if is_free {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::NotAccepted,
+                "UNIQUE constraint on: 'email'",
+            ))
+        }
     }
 }
 
@@ -1614,7 +1700,7 @@ impl User {
         let user = Self {
             email: new_user.email.to_lowercase(),
             email_verified: false,
-            given_name: new_user.given_name,
+            given_name: new_user.given_name.unwrap_or_default(),
             family_name: new_user.family_name,
             language: new_user.language.into(),
             roles,
@@ -1677,7 +1763,11 @@ impl User {
         UserResponse {
             id: self.id,
             email: self.email,
-            given_name: self.given_name,
+            given_name: if self.given_name.is_empty() {
+                None
+            } else {
+                Some(self.given_name)
+            },
             family_name: self.family_name,
             language: self.language.into(),
             roles,
@@ -1912,7 +2002,11 @@ impl From<User> for UserResponseSimple {
         Self {
             id: u.id,
             email: u.email,
-            given_name: u.given_name,
+            given_name: if u.given_name.is_empty() {
+                None
+            } else {
+                Some(u.given_name)
+            },
             family_name: u.family_name,
             created_at: u.created_at,
             last_login: u.last_login,

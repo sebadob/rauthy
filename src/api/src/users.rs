@@ -8,17 +8,7 @@ use chrono::Utc;
 use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
 use rauthy_api_types::oidc::PasswordResetResponse;
-use rauthy_api_types::users::{
-    DeviceRequest, DeviceResponse, MfaModTokenRequest, MfaModTokenResponse, MfaPurpose,
-    NewUserRegistrationRequest, NewUserRequest, PasskeyResponse, PasswordResetRequest,
-    RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAttrConfigRequest,
-    UserAttrConfigResponse, UserAttrConfigValueResponse, UserAttrValueResponse,
-    UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserEditableAttrResponse,
-    UserEditableAttrsResponse, UserPictureConfig, UserResponse, UserResponseSimple,
-    UserRevokeParams, WebIdRequest, WebIdResponse, WebauthnAuthFinishRequest,
-    WebauthnAuthStartRequest, WebauthnAuthStartResponse, WebauthnDeleteRequest,
-    WebauthnRegFinishRequest, WebauthnRegStartRequest,
-};
+use rauthy_api_types::users::*;
 use rauthy_common::constants::{
     COOKIE_MFA, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, PWD_CSRF_HEADER,
     PWD_RESET_COOKIE, TEXT_TURTLE,
@@ -54,7 +44,7 @@ use rauthy_data::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
 use rauthy_data::ipgeo;
 use rauthy_data::ipgeo::get_location;
 use rauthy_data::language::Language;
-use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_data::rauthy_config::{RauthyConfig, UserValueConfigValue, VarsUserValuesConfig};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
@@ -65,6 +55,7 @@ use spow::pow::Pow;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::str::FromStr;
 use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
@@ -159,6 +150,13 @@ pub async fn post_users(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Create)?;
     payload.validate()?;
+    UserValuesValidator {
+        given_name: payload.given_name.as_deref(),
+        family_name: payload.family_name.as_deref(),
+        preferred_username: None,
+        user_values: &None,
+    }
+    .validate()?;
 
     let user = User::create_from_new(payload).await?;
 
@@ -407,10 +405,18 @@ pub async fn post_users_register_handle(
     if !RauthyConfig::get().vars.user_registration.enable {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
-            "Open User Registration is not allowed",
+            "Open User Registration is disabled",
         ));
     }
+
     payload.validate()?;
+    UserValuesValidator {
+        given_name: payload.given_name.as_deref(),
+        family_name: payload.family_name.as_deref(),
+        preferred_username: payload.preferred_username.as_deref(),
+        user_values: &payload.user_values,
+    }
+    .validate()?;
 
     let reg = &RauthyConfig::get().vars.user_registration;
 
@@ -431,6 +437,11 @@ pub async fn post_users_register_handle(
             }
         }
     }
+
+    // Note: Always keep the PoW validation BEFORE any other expensive checks with DB access.
+    let challenge = Pow::validate(&payload.pow)?;
+    PowEntity::check_prevent_reuse(challenge.to_string()).await?;
+
     if let Some(redirect_uri) = &payload.redirect_uri
         && !reg.allow_open_redirect
     {
@@ -448,10 +459,6 @@ pub async fn post_users_register_handle(
             ));
         }
     }
-
-    // validate the PoW
-    let challenge = Pow::validate(&payload.pow)?;
-    PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
     let lang = Language::try_from(&req).unwrap_or_default();
     let user = User::create_from_reg(payload, lang).await?;
@@ -1574,7 +1581,11 @@ pub async fn get_user_webid(id: web::Path<String>) -> Result<HttpResponse, Error
         webid: webid.into(),
         issuer: RauthyConfig::get().issuer.clone(),
         email: user.email,
-        given_name: user.given_name,
+        given_name: if user.given_name.is_empty() {
+            None
+        } else {
+            Some(user.given_name)
+        },
         family_name: user.family_name,
         language: user.language.into(),
     };
@@ -1695,7 +1706,8 @@ pub async fn post_user_password_request_reset(
         payload.email,
         real_ip_from_req(&req)?
     );
-    Pow::validate(&payload.pow)?;
+    let challenge = Pow::validate(&payload.pow)?;
+    PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
     match User::find_by_email(payload.email).await {
         Ok(user) => user
@@ -1761,7 +1773,17 @@ pub async fn put_user_by_id(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
     payload.validate()?;
 
-    handle_put_user_by_id(id.into_inner(), req, payload).await
+    UserValuesValidator {
+        given_name: payload.given_name.as_deref(),
+        family_name: payload.family_name.as_deref(),
+        // has its own endpoint for updates
+        preferred_username: None,
+        user_values: &payload.user_values,
+    }
+    .validate()?;
+
+    let preferred_username = UserValues::find_preferred_username(&id).await?;
+    handle_put_user_by_id(id.into_inner(), req, payload, preferred_username).await
 }
 
 /// Modifies a user via a patch operation
@@ -1789,10 +1811,10 @@ pub async fn patch_user(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
 
     let user_id = id.into_inner();
-    let upd_req = User::patch(user_id.clone(), payload).await?;
+    let (upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
     upd_req.validate()?;
 
-    handle_put_user_by_id(user_id, req, upd_req).await
+    handle_put_user_by_id(user_id, req, upd_req, has_preferred_username).await
 }
 
 #[inline]
@@ -1800,8 +1822,10 @@ async fn handle_put_user_by_id(
     user_id: String,
     req: HttpRequest,
     payload: UpdateUserRequest,
+    preferred_username: Option<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let (user, user_values, is_new_admin) = User::update(user_id, payload, None).await?;
+    let (user, user_values, is_new_admin) =
+        User::update(user_id, payload, None, preferred_username).await?;
 
     if is_new_admin {
         RauthyConfig::get()
@@ -1895,13 +1919,126 @@ pub async fn post_user_self_convert_passkey(
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
-
-    // make sure the logged in user can only update itself
     let id = id.into_inner();
-    principal.is_user(&id)?;
+    principal.validate_user_session(&id)?;
 
     User::convert_to_passkey(id).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+/// Retrieve the UserValues config.
+///
+/// This is the same config as the one being inserted into the HTML `<template>` during registration
+/// or user values editing.
+#[utoipa::path(
+    get,
+    path = "/users/values_config",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = VarsUserValuesConfig),
+    ),
+)]
+#[get("/users/values_config")]
+pub async fn get_user_values_config(
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    // There is no need to validate session or API key if the registration is open anyway.
+    // In this case, anyone can pull out the same information from the HTML.
+    if !RauthyConfig::get().vars.user_registration.enable {
+        principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+    }
+    Ok(HttpResponse::Ok().json(&RauthyConfig::get().vars.user_values))
+}
+
+/// Allows modification of specific user values from the user himself
+///
+/// **Permissions**
+/// - authenticated user
+#[utoipa::path(
+    put,
+    path = "/users/{id}/self/preferred_username",
+    tag = "users",
+    request_body = PreferredUsernameRequest,
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 406, description = "NotAccepted", body = ErrorResponse),
+    ),
+)]
+#[put("/users/{id}/self/preferred_username")]
+pub async fn put_user_self_preferred_username(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+    payload: Json<PreferredUsernameRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
+    let id = id.into_inner();
+    let payload = payload.into_inner();
+    let force_overwrite = payload.force_overwrite == Some(true);
+
+    if principal
+        .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)
+        .is_err()
+    {
+        // make sure the logged-in, non-admin can only update its own username
+        principal.validate_user_session(&id)?;
+
+        if force_overwrite {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Only an admin can 'force_overwrite' the 'preferred_username'",
+            ));
+        }
+    }
+
+    let config = &RauthyConfig::get().vars.user_values.preferred_username;
+    let is_empty =
+        payload.preferred_username.is_none() || payload.preferred_username.as_deref() == Some("");
+
+    if is_empty {
+        if config.preferred_username == UserValueConfigValue::Required {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "The 'preferred_username' is required and must not be empty",
+            ));
+        }
+    } else if config.blacklist.contains(
+        &payload
+            .preferred_username
+            .as_ref()
+            .unwrap()
+            .to_lowercase()
+            .into(),
+    ) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotAccepted,
+            format!(
+                "username '{}' is blacklisted",
+                payload.preferred_username.as_ref().unwrap()
+            ),
+        ));
+    }
+
+    if !force_overwrite
+        && config.immutable
+        && let Some(values) = UserValues::find(&id).await?
+        && values.preferred_username.is_some()
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "The 'preferred_username' is immutable",
+        ));
+    }
+
+    if is_empty {
+        UserValues::delete_preferred_username(id).await?;
+    } else {
+        UserValues::upsert_preferred_username(id, payload.preferred_username.unwrap()).await?;
+    }
+
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -1945,4 +2082,113 @@ pub async fn delete_user_by_id(
     });
 
     Ok(HttpResponse::NoContent().finish())
+}
+
+pub struct UserValuesValidator<'a> {
+    given_name: Option<&'a str>,
+    family_name: Option<&'a str>,
+    preferred_username: Option<&'a str>,
+    user_values: &'a Option<UserValuesRequest>,
+}
+
+impl UserValuesValidator<'_> {
+    pub fn validate(&self) -> Result<(), ErrorResponse> {
+        let config = &RauthyConfig::get().vars.user_values;
+
+        if config.given_name == UserValueConfigValue::Required
+            && (self.given_name.is_none() || self.given_name == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'given_name' is required",
+            ));
+        }
+        if config.family_name == UserValueConfigValue::Required
+            && (self.family_name.is_none() || self.family_name == Some(""))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'family_name' is required",
+            ));
+        }
+        if let Some(username) = self.preferred_username
+            && config.preferred_username.preferred_username == UserValueConfigValue::Required
+            && username.is_empty()
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'preferred_username' is required",
+            ));
+        }
+
+        if let Some(uv) = self.user_values {
+            if config.birthdate == UserValueConfigValue::Required
+                && (uv.birthdate.is_none() || uv.birthdate.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'birthdate' is required",
+                ));
+            }
+            if config.street == UserValueConfigValue::Required
+                && (uv.street.is_none() || uv.street.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'street' is required",
+                ));
+            }
+            if config.zip == UserValueConfigValue::Required
+                && (uv.zip.is_none() || uv.zip.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'zip' is required",
+                ));
+            }
+            if config.city == UserValueConfigValue::Required
+                && (uv.city.is_none() || uv.city.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'city' is required",
+                ));
+            }
+            if config.country == UserValueConfigValue::Required
+                && (uv.country.is_none() || uv.country.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'country' is required",
+                ));
+            }
+            if config.phone == UserValueConfigValue::Required
+                && (uv.phone.is_none() || uv.phone.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'phone' is required",
+                ));
+            }
+
+            if config.tz == UserValueConfigValue::Required
+                && (uv.tz.is_none() || uv.tz.as_deref() == Some(""))
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'tz' is required",
+                ));
+            }
+            if let Some(tz) = &uv.tz
+                && chrono_tz::Tz::from_str(tz).is_err()
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "'tz' cannot be parsed",
+                ));
+            }
+        }
+
+        Ok(())
+    }
 }

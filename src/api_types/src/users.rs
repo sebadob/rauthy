@@ -3,7 +3,7 @@ use crate::generic::Language;
 use crate::oidc::AddressClaim;
 use rauthy_common::regex::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_NAME,
-    RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_STREET, RE_URI, RE_USER_NAME,
+    RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_PREFERRED_USERNAME, RE_STREET, RE_URI, RE_USER_NAME,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -59,7 +59,7 @@ pub struct NewUserRequest {
     pub family_name: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
-    pub given_name: String,
+    pub given_name: Option<String>,
     pub language: Language,
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_groups"))]
@@ -79,13 +79,18 @@ pub struct NewUserRequest {
 pub struct NewUserRegistrationRequest {
     #[validate(email)]
     pub email: String,
+    /// Validation: `[user_values.preferred_username] -> regex_rust`
+    #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
+    pub preferred_username: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
     pub family_name: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
-    pub given_name: String,
+    pub given_name: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
+    #[validate(nested)]
+    pub user_values: Option<UserValuesRequest>,
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
     pub pow: String,
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
@@ -117,6 +122,16 @@ pub struct PasswordResetRequest {
 
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct PreferredUsernameRequest {
+    /// Validation: `[user_values.preferred_username] -> regex_rust`
+    #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
+    pub preferred_username: Option<String>,
+    /// Can only be set with an active `rauthy_admin` session
+    pub force_overwrite: Option<bool>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct RequestResetRequest {
     /// Validation: `email`
     #[validate(email)]
@@ -137,7 +152,7 @@ pub struct UpdateUserRequest {
     pub email: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
-    pub given_name: String,
+    pub given_name: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
     pub family_name: Option<String>,
@@ -206,6 +221,9 @@ pub struct UserValuesRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-]{0,48}`
     #[validate(regex(path = "*RE_CITY", code = "[a-zA-Z0-9À-ÿ-]{0,48}"))]
     pub country: Option<String>,
+    /// Validation: Valid Timezone in the format of `Europe/Berlin`
+    #[validate(length(max = 48))]
+    pub tz: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -376,6 +394,7 @@ pub struct PasskeyResponse {
     pub registered: i64,
     /// Unix timestamp in seconds
     pub last_used: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_verified: Option<bool>,
 }
 
@@ -383,8 +402,11 @@ pub struct PasskeyResponse {
 #[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserAttrConfigValueResponse {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub desc: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub default_value: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub typ: Option<UserAttrConfigTyp>,
     pub user_editable: bool,
 }
@@ -412,9 +434,13 @@ pub struct UserAttrValuesResponse {
 #[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserEditableAttrResponse {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub desc: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub default_value: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub typ: Option<UserAttrConfigTyp>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<serde_json::Value>,
 }
 
@@ -485,7 +511,9 @@ pub enum UserAccountTypeResponse {
 pub struct UserResponse {
     pub id: String,
     pub email: String,
-    pub given_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub given_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub family_name: Option<String>,
     pub language: Language,
     pub roles: Vec<String>,
@@ -499,6 +527,7 @@ pub struct UserResponse {
     /// Unix timestamp in seconds
     pub created_at: i64,
     /// Unix timestamp in seconds
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_login: Option<i64>,
     /// Unix timestamp in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -509,10 +538,14 @@ pub struct UserResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_expires: Option<i64>,
     pub account_type: UserAccountTypeResponse,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub webauthn_user_id: Option<String>, // TODO get rid of the webauthn user id ? Not needed at all?
     pub user_values: UserValuesResponse,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub auth_provider_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub federation_uid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub picture_id: Option<String>,
 }
 
@@ -520,19 +553,39 @@ pub struct UserResponse {
 pub struct UserResponseSimple {
     pub id: String,
     pub email: String,
-    pub given_name: String,
+    pub given_name: Option<String>,
     pub family_name: Option<String>,
     pub created_at: i64,
     pub last_login: Option<i64>,
     pub picture_id: Option<String>,
 }
 
-impl From<tokio_postgres::Row> for UserResponseSimple {
-    fn from(row: tokio_postgres::Row) -> Self {
+impl From<hiqlite::Row<'_>> for UserResponseSimple {
+    fn from(mut row: hiqlite::Row<'_>) -> Self {
+        let name: String = row.get("given_name");
+        let given_name = if name.is_empty() { None } else { Some(name) };
+
         Self {
             id: row.get("id"),
             email: row.get("email"),
-            given_name: row.get("given_name"),
+            given_name,
+            family_name: row.get("family_name"),
+            created_at: row.get("created_at"),
+            last_login: row.get("last_login"),
+            picture_id: row.get("picture_id"),
+        }
+    }
+}
+
+impl From<tokio_postgres::Row> for UserResponseSimple {
+    fn from(row: tokio_postgres::Row) -> Self {
+        let name: String = row.get("given_name");
+        let given_name = if name.is_empty() { None } else { Some(name) };
+
+        Self {
+            id: row.get("id"),
+            email: row.get("email"),
+            given_name,
             family_name: row.get("family_name"),
             created_at: row.get("created_at"),
             last_login: row.get("last_login"),
@@ -544,18 +597,29 @@ impl From<tokio_postgres::Row> for UserResponseSimple {
 #[derive(Default, Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserValuesResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub birthdate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub street: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub zip: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub city: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preferred_username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tz: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]
 pub struct WebId {
     pub user_id: String,
     pub expose_email: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub custom_triples: Option<String>,
 }
 
@@ -564,7 +628,9 @@ pub struct WebIdResponse {
     pub webid: WebId,
     pub issuer: String,
     pub email: String,
-    pub given_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub given_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub family_name: Option<String>,
     pub language: Language,
 }

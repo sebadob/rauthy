@@ -12,6 +12,7 @@ export const I18nEn: I18n = {
 		copyToClip: 'Copy value to clipboard',
 		delete: 'Delete',
 		details: 'Details',
+		edit: 'Edit',
 		email: 'E-Mail',
 		errTooShort: 'Input too short',
 		errTooLong: 'Input too long',
@@ -47,6 +48,7 @@ export const I18nEn: I18n = {
 		selectI18n: 'Select Language',
 		show: 'Show',
 		summary: 'Summary',
+		timezone: 'Timezone',
 		weekDaysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
 		year: 'Year'
 	},
@@ -108,6 +110,15 @@ export const I18nEn: I18n = {
 		passwordPolicyFollow: 'You must follow the password policy',
 		passwordReset: 'Password Reset',
 		phone: 'Phone',
+		preferredUsername: {
+			desc: `Some applications will use this username. Which ones do cannot be
+				controlled.`,
+			forceOverwrite: 'Force Overwrite',
+			immutable: 'CAUTION: The username can only be chosen once!',
+			immutableInfo: 'The username is immutable.',
+			notAvailable: 'This name is not available.',
+			preferredUsername: 'Preferred Username'
+		},
 		providerLink: 'Federate Account',
 		providerLinkDesc:
 			'You can link this account to one of the following login providers.\nAfter activating this function, you will be redirected to the login page of the chosen one.\nAfter a successful login and if the email matches, your account will be linked.',

@@ -58,6 +58,7 @@ pub static RE_MFA_CODE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap());
 pub static RE_ORIGIN: OnceLock<Regex> = OnceLock::new();
 pub static RE_PHONE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+[0-9]{0,32}$").unwrap());
+pub static RE_PREFERRED_USERNAME: OnceLock<Regex> = OnceLock::new();
 pub static RE_SCOPE_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-_/:\s*]{0,512}$").unwrap());
 pub static RE_SEARCH: LazyLock<Regex> =

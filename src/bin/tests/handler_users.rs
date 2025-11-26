@@ -32,7 +32,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
 
     // post a new user
     let new_user = NewUserRequest {
-        given_name: "Alfred".to_string(),
+        given_name: Some("Alfred".to_string()),
         family_name: Some("Batman".to_string()),
         email: "alfred@batcave.io".to_string(),
         language: Language::En,
@@ -60,7 +60,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
 
     let alfred = res.json::<UserResponse>().await?;
     assert_eq!(alfred.email, "alfred@batcave.io");
-    assert_eq!(alfred.given_name, "Alfred");
+    assert_eq!(alfred.given_name.as_deref(), Some("Alfred"));
     assert_eq!(alfred.family_name.as_deref(), Some("Batman"));
     assert!(alfred.roles.contains(&"admin".to_string()));
     assert!(alfred.roles.contains(&"user".to_string()));
@@ -148,6 +148,7 @@ async fn test_password_reset_always_ok() -> Result<(), Box<dyn Error>> {
 
     // we should always get back an HTTP 200 for username enumeration prevention
     payload.email = "idonotexist@iamaghost.io".to_string();
+    payload.pow = get_solved_pow().await;
     let res = client
         .post(&url)
         .headers(auth_headers.clone())

@@ -111,7 +111,6 @@ impl HtmlCached {
         } else {
             "none"
         };
-        debug!(encoding);
 
         let lang = Language::try_from(&req).unwrap_or_default();
         debug!(language = ?lang);
@@ -133,7 +132,14 @@ impl HtmlCached {
         let body = match self {
             Self::Account => {
                 let providers = AuthProviderTemplate::get_all_json_template().await?;
-                AccountHtml::build(&lang, theme_ts, &[HtmlTemplate::AuthProviders(providers)])
+                AccountHtml::build(
+                    &lang,
+                    theme_ts,
+                    &[
+                        HtmlTemplate::AuthProviders(providers),
+                        HtmlTemplate::UserValues,
+                    ],
+                )
             }
             Self::Admin => AdminHtml::build(&lang, theme_ts),
             Self::AdminApiKeys => AdminApiKeysHtml::build(&lang, theme_ts),

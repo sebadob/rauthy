@@ -12,6 +12,7 @@ export const I18nKo: I18n = {
 		copyToClip: '클립보드로 복사',
 		delete: '삭제',
 		details: '자세히',
+		edit: 'Edit',
 		email: '이메일',
 		errTooShort: '입력이 너무 짧습니다.',
 		errTooLong: '입력이 너무 깁니다.',
@@ -34,6 +35,7 @@ export const I18nKo: I18n = {
 		selectI18n: '언어 선택',
 		show: '보이기',
 		summary: '요약',
+		timezone: 'Timezone',
 		weekDaysShort: ['일', '월', '화', '수', '목', '금', '토'],
 		year: '년'
 	},
@@ -95,6 +97,15 @@ export const I18nKo: I18n = {
 		passwordPolicyFollow: '비밀번호 정책을 준수해야 합니다.',
 		passwordReset: '비밀번호 초기화',
 		phone: '전화번호',
+		preferredUsername: {
+			desc: `Some applications will use this username. Which ones do cannot be
+				controlled.`,
+			forceOverwrite: 'Force Overwrite',
+			immutable: 'CAUTION: The username can only be chosen once!',
+			immutableInfo: 'The username is immutable.',
+			notAvailable: 'This name is not available.',
+			preferredUsername: 'Preferred Username'
+		},
 		providerLink: '계정 연결',
 		providerLinkDesc:
 			'이 계정은 다음 로그인 공급자 중 하나에 연결할 수 있습니다.\n 프로세스를 활성화하면 선택한 공급자의 로그인 페이지로 리디렉션이 트리거됩니다. 로그인에 성공하고 이메일 주소가 일치하면 이 계정이 연결됩니다.',

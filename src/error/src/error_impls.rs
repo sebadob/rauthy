@@ -57,7 +57,9 @@ impl ResponseError for ErrorResponse {
                 StatusCode::BAD_REQUEST
             }
             ErrorResponseType::Blocked | ErrorResponseType::Forbidden => StatusCode::FORBIDDEN,
-            ErrorResponseType::MfaRequired => StatusCode::NOT_ACCEPTABLE,
+            ErrorResponseType::MfaRequired | ErrorResponseType::NotAccepted => {
+                StatusCode::NOT_ACCEPTABLE
+            }
             ErrorResponseType::NotFound => StatusCode::NOT_FOUND,
             ErrorResponseType::Disabled
             | ErrorResponseType::CSRFTokenError

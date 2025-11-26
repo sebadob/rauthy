@@ -15,14 +15,17 @@
     import UserDelete from "$lib5/admin/users/UserDelete.svelte";
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider";
     import {useTrigger} from "$state/callback.svelte";
+    import type {UserValuesConfig} from "$api/templates/UserValuesConfig";
 
     let {
+        userValuesConfig,
         userId,
         providers,
         roles,
         groups,
         onSave,
     }: {
+        userValuesConfig: UserValuesConfig,
         userId: string,
         providers: AuthProviderTemplate[],
         roles: RoleResponse[],
@@ -82,7 +85,7 @@
 
 {#if user}
     {#if selected === tabs[0]}
-        <UserInfo bind:user {providers} {roles} {groups} {onSave}/>
+        <UserInfo bind:user config={userValuesConfig} {providers} {roles} {groups} {onSave}/>
     {:else if selected === tabs[1]}
         <UserAttr {user} {onSave}/>
     {:else if selected === tabs[2]}

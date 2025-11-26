@@ -18,6 +18,7 @@ actix-web = { workspace = true }
 actix-web-lab = { workspace = true }
 bytes = { workspace = true }
 chrono = { workspace = true }
+chrono-tz = { workspace = true }
 cryptr = { workspace = true }
 futures = { workspace = true }
 mime_guess = { workspace = true }

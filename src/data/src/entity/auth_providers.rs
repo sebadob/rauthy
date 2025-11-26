@@ -865,8 +865,7 @@ impl AuthProviderIdClaims<'_> {
             let (given_name, _) = name.split_once(' ').unwrap_or((name, ""));
             given_name
         } else {
-            // This should never happen at all
-            "N/A"
+            ""
         }
     }
 
@@ -1218,6 +1217,7 @@ impl AuthProviderIdClaims<'_> {
                 zip: values.zip,
                 city: values.city,
                 country: values.country,
+                tz: values.tz,
             },
             None => UserValuesRequest {
                 birthdate: None,
@@ -1226,6 +1226,7 @@ impl AuthProviderIdClaims<'_> {
                 zip: None,
                 city: None,
                 country: None,
+                tz: None,
             },
         };
         if let Some(bday) = &self.birthdate {

@@ -81,7 +81,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
 
     // post a new user
     let new_user = NewUserRequest {
-        given_name: "IT Test".to_string(),
+        given_name: Some("IT Test".to_string()),
         family_name: Some("Testy".to_string()),
         email: "alfred@batcave.io".to_string(),
         language: Language::En,
@@ -97,6 +97,8 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         .await?;
     res = check_status(res, 200).await?;
     let user = res.json::<UserResponse>().await?;
+
+    println!("4");
 
     // Set a password and enable
     let mut upd_req = UpdateUserRequest {
@@ -119,10 +121,13 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         .json(&upd_req)
         .send()
         .await?;
+    println!("{:?}", res);
     res = check_status(res, 400).await?;
     let err = res.json::<ErrorResponse>().await?;
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("Minimum password length is 12"));
+
+    println!("5");
 
     upd_req.password = Some("sosuperdamnsafe".to_string());
     let mut res = reqwest::Client::new()
@@ -136,6 +141,8 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("minimum upper character count: 3"));
 
+    println!("6");
+
     upd_req.password = Some("SOSUPERDAMNSAFE".to_string());
     let mut res = reqwest::Client::new()
         .put(&user_url)
@@ -147,6 +154,8 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
     let err = res.json::<ErrorResponse>().await?;
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("minimum lower character count: 2"));
+
+    println!("7");
 
     upd_req.password = Some("soSuperDamnSafe".to_string());
     let mut res = reqwest::Client::new()
@@ -160,6 +169,8 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("minimum digit count: 4"));
 
+    println!("8");
+
     upd_req.password = Some("1so2Super3Damn4Safe".to_string());
     let mut res = reqwest::Client::new()
         .put(&user_url)
@@ -171,6 +182,8 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
     let err = res.json::<ErrorResponse>().await?;
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("minimum special character count: 5"));
+
+    println!("9");
 
     upd_req.password = Some("!1so$%2Super/3D\"am\\n4^Safe'".to_string());
     let mut res = reqwest::Client::new()
@@ -184,6 +197,8 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
     assert_eq!(resp.id, user.id);
     assert_eq!(resp.email, upd_req.email);
     assert_eq!(resp.enabled, true);
+
+    println!("10");
 
     // the password should not work again - recently used passwords constraint
     let mut res = reqwest::Client::new()

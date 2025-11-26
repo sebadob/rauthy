@@ -217,13 +217,13 @@ impl WebId {
         ))?;
 
         // foaf:name
-        formatter.format(&Self::triple(
-            t_user,
-            "http://xmlns.com/foaf/0.1/givenname",
-            Literal::Simple {
-                value: &resp.given_name,
-            },
-        ))?;
+        if let Some(value) = &resp.given_name {
+            formatter.format(&Self::triple(
+                t_user,
+                "http://xmlns.com/foaf/0.1/givenname",
+                Literal::Simple { value },
+            ))?;
+        }
         if let Some(value) = &resp.family_name {
             formatter.format(&Self::triple(
                 t_user,
@@ -339,7 +339,7 @@ mod tests {
             .into(),
             issuer: "http://localhost:8080/auth/v1".to_string(),
             email: "mail@example.com".to_string(),
-            given_name: "Given".to_string(),
+            given_name: Some("Given".to_string()),
             family_name: Some("Family".to_string()),
             language: Language::En,
         };

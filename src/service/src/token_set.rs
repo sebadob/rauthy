@@ -162,7 +162,6 @@ impl TokenSet {
                 typ: JwtTokenType::Bearer,
                 azp: &client.id,
                 scope: Some(scope),
-                preferred_username: user.as_ref().map(|u| u.email.as_str()),
                 did: did.as_deref(),
                 cnf: dpop_fingerprint
                     .as_ref()
@@ -215,22 +214,23 @@ impl TokenSet {
         sid: Option<SessionId>,
         auth_code_flow: AuthCodeFlow,
     ) -> Result<String, ErrorResponse> {
+        let config = RauthyConfig::get();
+
         let amr = if user.has_webauthn_enabled() && auth_code_flow == AuthCodeFlow::Yes {
             JwtAmrValue::Mfa.as_str()
         } else {
             JwtAmrValue::Pwd.as_str()
         };
-        let aud = if client.is_ephemeral()
-            && RauthyConfig::get().vars.ephemeral_clients.enable_solid_aud
-        {
+        let aud = if client.is_ephemeral() && config.vars.ephemeral_clients.enable_solid_aud {
             Cow::from(format!("[\"{}\",\"solid\"]", client.id))
         } else {
             Cow::Borrowed(client.id.as_str())
         };
 
-        let webid = (RauthyConfig::get().vars.ephemeral_clients.enable_web_id
-            && scope.contains("webid"))
-        .then(|| Cow::from(WebId::resolve_webid_uri(&user.id)));
+        let user_values = UserValues::find(&user.id).await?;
+
+        let webid = (config.vars.ephemeral_clients.enable_web_id && scope.contains("webid"))
+            .then(|| Cow::from(WebId::resolve_webid_uri(&user.id)));
 
         let now = Utc::now().timestamp();
         let mut claims = JwtIdClaims {
@@ -238,14 +238,13 @@ impl TokenSet {
                 iat: now,
                 nbf: now,
                 exp: now + lifetime,
-                iss: &RauthyConfig::get().issuer,
+                iss: &config.issuer,
                 jti: None,
                 aud,
                 sub: Some(user.id.as_str()),
                 typ: JwtTokenType::Id,
                 azp: &client.id,
                 scope: Some(Cow::Borrowed(scope)),
-                preferred_username: Some(user.email.as_str()),
                 did: None,
                 cnf: dpop_fingerprint
                     .as_ref()
@@ -257,6 +256,7 @@ impl TokenSet {
             sid: sid.as_ref().map(|sid| sid.0.as_str()),
             email: None,
             email_verified: None,
+            preferred_username: None,
             given_name: None,
             family_name: None,
             address: None,
@@ -269,39 +269,46 @@ impl TokenSet {
             groups: None,
             custom: None,
             webid,
-        };
-
-        let add_address = scope.contains("address");
-        let add_phone = scope.contains("phone");
-        let add_profile = scope.contains("profile");
-
-        let user_values = if add_address || add_phone || add_profile {
-            UserValues::find(&user.id).await?
-        } else {
-            None
+            zoneinfo: None,
         };
 
         if scope.contains("email") {
             claims.email = Some(user.email.as_str());
             claims.email_verified = Some(user.email_verified);
         }
-        if add_profile {
+        if scope.contains("profile") {
             claims.given_name = Some(user.given_name.as_str());
             claims.family_name = user.family_name.as_deref();
             claims.locale = Some(user.language.as_str());
 
-            if let Some(values) = &user_values
-                && let Some(birthdate) = &values.birthdate
+            if let Some(uv) = &user_values {
+                if let Some(username) = &uv.preferred_username {
+                    claims.preferred_username = Some(username);
+                }
+
+                if let Some(birthdate) = &uv.birthdate {
+                    claims.birthdate = Some(birthdate.as_str());
+                }
+
+                if let Some(zone) = &uv.tz {
+                    claims.zoneinfo = Some(zone)
+                }
+            }
+
+            if config.vars.user_values.preferred_username.email_fallback
+                && claims.preferred_username.is_none()
             {
-                claims.birthdate = Some(birthdate.as_str());
+                claims.preferred_username = Some(user.email.as_str());
             }
 
             claims.picture = user.picture_uri().map(Cow::from);
         }
-        if add_address && let Some(values) = &user_values {
+        if scope.contains("address")
+            && let Some(values) = &user_values
+        {
             claims.address = rauthy_jwt::claims::AddressClaim::try_build(user, values);
         }
-        if add_phone
+        if scope.contains("phone")
             && let Some(values) = &user_values
             && let Some(phone) = &values.phone
         {
@@ -381,7 +388,6 @@ impl TokenSet {
                     typ: JwtTokenType::Refresh,
                     azp: &client.id,
                     scope: None,
-                    preferred_username: None,
                     did: did.as_deref(),
                     cnf: dpop_fingerprint
                         .as_ref()

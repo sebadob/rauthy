@@ -3,6 +3,7 @@
     import {useI18n} from "$state/i18n.svelte";
     import type {FullAutoFill} from "svelte/elements";
     import {genKey} from "$utils/helpers";
+    import {onMount} from "svelte";
 
     let {
         ref = $bindable(),
@@ -42,7 +43,7 @@
         typ?: string,
         id?: string,
         name?: string,
-        value?: string | number,
+        value?: string | number | null,
         label?: string,
         autocomplete?: FullAutoFill | null | undefined,
         placeholder?: string,
@@ -70,10 +71,18 @@
 
     let t = useI18n();
 
+    let isFirstRender = true;
+
+    onMount(() => {
+        requestAnimationFrame(() => {
+            isFirstRender = false;
+        });
+    });
+
     $effect(() => {
         // this unused assignment is used only to trigger a re-validation on any input change
         let v = value;
-        isValid();
+        !isFirstRender && isValid();
     });
 
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLInputElement }) {

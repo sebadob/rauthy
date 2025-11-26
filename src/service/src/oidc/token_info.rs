@@ -47,7 +47,6 @@ pub async fn get_token_info(
         scope: claims.scope,
         client_id: Some(claims.azp),
         aud: Some(claims.aud.as_ref()),
-        username: claims.preferred_username,
         iat: Some(claims.iat),
         nbf: Some(claims.nbf),
         exp: Some(claims.exp),

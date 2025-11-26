@@ -427,8 +427,6 @@ pub struct TokenInfo<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub aud: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub username: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub iat: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nbf: Option<i64>,

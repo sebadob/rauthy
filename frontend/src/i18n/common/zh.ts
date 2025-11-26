@@ -12,6 +12,7 @@ export const I18nZh: I18n = {
 		copyToClip: '复制到剪贴板',
 		delete: '删除',
 		details: '详情',
+		edit: 'Edit',
 		email: '电子邮箱',
 		errTooShort: '输入过短',
 		errTooLong: '输入过长',
@@ -47,6 +48,7 @@ export const I18nZh: I18n = {
 		selectI18n: '选择语言',
 		show: '显示',
 		summary: '概要',
+		timezone: 'Timezone',
 		weekDaysShort: ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
 		year: '年'
 	},
@@ -107,6 +109,15 @@ export const I18nZh: I18n = {
 		passwordPolicyFollow: '密码不符合要求。',
 		passwordReset: '重置密码',
 		phone: '手机',
+		preferredUsername: {
+			desc: `Some applications will use this username. Which ones do cannot be
+				controlled.`,
+			forceOverwrite: 'Force Overwrite',
+			immutable: 'CAUTION: The username can only be chosen once!',
+			immutableInfo: 'The username is immutable.',
+			notAvailable: 'This name is not available.',
+			preferredUsername: 'Preferred Username'
+		},
 		providerLink: '联合账户',
 		providerLinkDesc:
 			'您可以将此账户连接到下列登陆提供者之一。\n激活此功能后，您将被重定向至所选提供者的登陆页面。在成功登陆后，如果电子邮件匹配，您的账户将被连接。',

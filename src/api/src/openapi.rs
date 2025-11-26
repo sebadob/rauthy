@@ -13,6 +13,9 @@ use rauthy_data::ListenScheme;
 use rauthy_data::entity;
 use rauthy_data::entity::auth_providers::AuthProviderTemplate;
 use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_data::rauthy_config::{
+    UserValueConfigValue, VarsUserPreferredUsername, VarsUserValuesConfig,
+};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set;
 use utoipa::openapi::{ExternalDocs, Server};
@@ -200,6 +203,8 @@ use utoipa::{OpenApi, openapi};
         users::patch_user,
         users::put_user_self,
         users::post_user_self_convert_passkey,
+        users::get_user_values_config,
+        users::put_user_self_preferred_username,
         users::delete_user_by_id,
     ),
     components(
@@ -347,6 +352,7 @@ use utoipa::{OpenApi, openapi};
             PamUnlinkedEmailsResponse,
             PamUserResponse,
             PamUserDetailsResponse,
+            PreferredUsernameRequest,
             ProviderResponse,
             ProviderLinkedUserResponse,
             ProviderLookupResponse,
@@ -380,6 +386,9 @@ use utoipa::{OpenApi, openapi};
             WebIdResponse,
 
             token_set::TokenSet,
+            VarsUserValuesConfig,
+            VarsUserPreferredUsername,
+            UserValueConfigValue,
         ),
     ),
     tags(

@@ -2,7 +2,144 @@
 
 ## UNRELEASED
 
+### Breaking
+
+#### `preferred_username` in Tokens
+
+The `preferred_username` was always added to both `access_token` and `id_token` and it always contained the same value
+as the `email` claim. This it NOT the case anymore! This value is configurable now. To match the OIDC spec, it will
+never be added to the `access_token` anymore, and only exist in the `id_token` if the client requested the `profile`
+scope during login. The value of this claim depends on your configuration. For more details, check the
+"`preferred_username` and `tz`" changes below.
+
+Because of these changes, the `email` will not show up as the `username` in the response from the OAuth2 `/introspect`
+endpoint as well.
+
+#### User Request and Response API data
+
+The user values are much more configurable now (see in changes below). At the same time, the `given_name` is now always
+optional in responses from the API. The necessary values during user registration, if you have an open endpoint and
+use direct API requests from somewhere else, have changed as well. They now also depend on your configuration.
+
+If you don't change anything in the new `[user_values]` section, you will not experience any breaking changes for direct
+API requests.
+
 ### Changes
+
+#### `preferred_username` and `tz`
+
+The custom user values have been expanded. Each user can now provide a `preferred_username` and a `tz` (timezone) via
+the account dashboard. The default timezone will always be UTC, just like it was up until this version. The
+`preferred_username` behavior depends on some new configuration values. In addition to that, the requirements of all
+other already existing values has more config options as well. Everything that is `required` will also be requested
+during the initial registration, if you have an open registration endpoint.
+
+Because we have these new values, they will also show up in the `id_token` if the `profile` scope was requested. Until
+now, the `preferred_username` was always existing and simply set to the `email`. However, this has the potential to
+produce issues in downstream clients, if they don't handle the `preferred_username` properly and require some specific
+value (which they really should not ...). If the user has anything else than `UTC` or `Etc/UTC` configured as timezone,
+the `zoneinfo` claim will be added to the `id_token` as well.
+
+CAUTION: If your client does not request the `profile` scope during login, the `preferred_username` will NOT be set to
+the `email` like it was the case up until this version!
+
+These are the new config options:
+
+```toml
+[user_values]
+
+# In this section, you can configure the requirements for different
+# user values to adjust them to your needs. The `preferred_username`
+# as a special value provide some additional options.
+# The `email` is and always will be mandatory.
+#
+# A value of `hidden` will only hide these values for normal users
+# in the account dashboard. An admin will still see all values.
+#
+# You can set one of the following values:
+# - required
+# - optional
+# - hidden
+
+# default: 'required'
+given_name = 'required'
+# default: 'optional'
+family_name = 'optional'
+# default: 'optional'
+birthdate = 'optional'
+# default: 'optional'
+street = 'optional'
+# default: 'optional'
+zip = 'optional'
+# default: 'optional'
+city = 'optional'
+# default: 'optional'
+country = 'optional'
+# default: 'optional'
+phone = 'optional'
+# default: 'optional'
+tz = 'optional'
+
+[user_values.preferred_username]
+
+# If the `preferred_username` is not set for a given user, the
+# `email` will be used as a fallback. This can happen, if it is
+# not set to `required`, or if you had it optional before and
+# then changed it, while the user may have not updated it yet
+# according to the new policy.
+#
+# one of: required, optional, hidden
+# default: 'optional'
+preferred_username = 'optional'
+
+# The `preferred_username` is an unstable claim by the OIDC RFC.
+# This means it MUST NOT be trusted to be unique, be a stable
+# map / uid for a user, or anything like that. It is "just
+# another value" and should be treated like that.
+#
+# However, `preferred_username`s from Rauthy will always be
+# guaranteed to be unique. You can define if these usernames
+# are immutable once they are set, which is the default, or if
+# users can change them freely at any time.
+#
+# default: true
+immutable = true
+
+# Provide an array of blacklisted names.
+#
+# CAUTION: Provide all these names as lowercase! The value
+#  submitted via API will be converted to lowercase and
+#  then compared to each entry in this list.
+#
+# default: ['admin', 'administrator', 'root']
+blacklist = ['admin', 'administrator', 'root']
+
+# You can define the validation regex / pattern.
+#
+# The `pattern_html` it will be sent to the frontend as a
+# String value dynamically. It must be formatted in a way,
+# that it will work as a
+# [`pattern` attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/pattern)
+# after the conversion. If you are unsure if it works, check
+# your developer tools console. You will see an error log
+# if the conversion fails.
+# NOTE: These are NOT Javascript regexes!
+#
+# By default, the validation matches the Linux username regex,
+# but you may want to increase the minimum characters for
+# instance.
+#
+# default: '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
+regex_rust = '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
+# default: '^[a-z][a-z0-9_\-]{1,61}$'
+pattern_html = '^[a-z][a-z0-9_\-]{1,61}$'
+
+# If a user does not have a `preferred_username`, the `email`
+# can be used as a fallback value for the id token.
+#
+# default: true
+email_fallback = true
+```
 
 #### Terms of Service
 

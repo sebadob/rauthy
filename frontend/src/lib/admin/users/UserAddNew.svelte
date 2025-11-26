@@ -20,17 +20,19 @@
     import {untrack} from "svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import {useI18nConfig} from "$state/i18n_config.svelte";
+    import type {UserValuesConfig} from "$api/templates/UserValuesConfig";
 
     let {
+        config,
         onSave,
         roles,
         groups,
     }: {
+        config: UserValuesConfig | undefined,
         onSave: (id: string) => void,
         roles: RoleResponse[],
         groups: GroupResponse[],
     } = $props();
-
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -74,7 +76,7 @@
 
         let payload: NewUserRequest = {
             email,
-            given_name: givenName,
+            given_name: givenName || undefined,
             family_name: familyName || undefined,
             language,
             groups: groupsItems.filter(i => i.selected).map(i => i.name),
@@ -109,7 +111,7 @@
                 autocomplete="off"
                 label={t.account.givenName}
                 placeholder={t.account.givenName}
-                required
+                required={config?.given_name === 'required'}
                 pattern={PATTERN_USER_NAME}
         />
         <Input
@@ -117,6 +119,7 @@
                 autocomplete="off"
                 label={t.account.familyName}
                 placeholder={t.account.familyName}
+                required={config?.family_name === 'required'}
                 pattern={PATTERN_USER_NAME}
         />
 
