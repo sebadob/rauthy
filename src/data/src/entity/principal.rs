@@ -66,13 +66,15 @@ impl Principal {
         self.session.as_ref().map(|s| s.is_mfa).unwrap_or(false)
     }
 
+    /// Returns the `user_id` linked to this session. Will `Err` if this principal does not
+    /// have a valid session.
     #[inline(always)]
     pub fn user_id(&self) -> Result<&str, ErrorResponse> {
         self.session
             .as_ref()
             .and_then(|s| s.user_id.as_deref())
             .ok_or_else(|| {
-                ErrorResponse::new(ErrorResponseType::NotFound, "No session for principal")
+                ErrorResponse::new(ErrorResponseType::Forbidden, "No session for principal")
             })
     }
 
@@ -101,10 +103,27 @@ impl Principal {
         }
     }
 
+    /// Validates the Principal's session that it is authenticated and either an admin session, or
+    /// that the given `id` belongs to the user of this session.
+    #[inline(always)]
+    pub fn validate_admin_or_user(&self, id: &str) -> Result<(), ErrorResponse> {
+        self.validate_session_auth()?;
+
+        if self.is_admin() || self.user_id() == Ok(id) {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "You are not allowed to modify this user",
+            ))
+        }
+    }
+
     /// Validates the Principal's session to only allow authorized Rauthy admin access.
     #[inline(always)]
     pub fn validate_admin_session(&self) -> Result<(), ErrorResponse> {
-        let _session = self.validate_session_auth()?;
+        self.validate_session_auth()?;
+
         if !self.is_admin() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -170,8 +189,8 @@ impl Principal {
         } else {
             trace!("Validating the session failed - was not in auth state");
             Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Unauthorized session or invalid user ID",
+                ErrorResponseType::Forbidden,
+                "Invalid user ID",
             ))
         }
     }

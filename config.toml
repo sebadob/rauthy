@@ -2214,21 +2214,21 @@ enable = true
 # default: 'required'
 given_name = 'required'
 # default: 'optional'
-family_name = 'optional'
+family_name = 'required'
 # default: 'optional'
-birthdate = 'optional'
+birthdate = 'required'
 # default: 'optional'
-street = 'optional'
+street = 'required'
 # default: 'optional'
-zip = 'optional'
+zip = 'required'
 # default: 'optional'
-city = 'optional'
+city = 'required'
 # default: 'optional'
-country = 'optional'
+country = 'required'
 # default: 'optional'
-phone = 'optional'
+phone = 'required'
 # default: 'optional'
-tz = 'optional'
+tz = 'required'
 
 [user_values.preferred_username]
 
@@ -2240,7 +2240,7 @@ tz = 'optional'
 #
 # one of: required, optional, hidden
 # default: 'optional'
-preferred_username = 'optional'
+preferred_username = 'required'
 
 # The `preferred_username` is an unstable claim by the OIDC RFC.
 # This means it MUST NOT be trusted to be unique, be a stable

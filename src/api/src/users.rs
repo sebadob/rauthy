@@ -1915,20 +1915,17 @@ pub async fn post_user_self_convert_passkey(
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
-
-    // make sure the logged in user can only update itself
     let id = id.into_inner();
-    principal.is_user(&id)?;
+    principal.validate_user_session(&id)?;
 
     User::convert_to_passkey(id).await?;
     Ok(HttpResponse::Ok().finish())
 }
 
-/// Retrieve the UserValues config
+/// Retrieve the UserValues config.
 ///
-/// **Permissions**
-/// - rauthy_admin
+/// This is the same config as the one being inserted into the HTML `<template>` during registration
+/// or user values editing.
 #[utoipa::path(
     get,
     path = "/users/values_config",
@@ -1941,7 +1938,11 @@ pub async fn post_user_self_convert_passkey(
 pub async fn get_user_values_config(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+    // There is no need to validate session or API key if the registration is open anyway.
+    // In this case, anyone can pull out the same information from the HTML.
+    if !RauthyConfig::get().vars.user_registration.enable {
+        principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+    }
     Ok(HttpResponse::Ok().json(&RauthyConfig::get().vars.user_values))
 }
 
@@ -1968,23 +1969,28 @@ pub async fn put_user_self_preferred_username(
     principal: ReqPrincipal,
     payload: Json<PreferredUsernameRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
     payload.validate()?;
 
+    let id = id.into_inner();
     let payload = payload.into_inner();
     let force_overwrite = payload.force_overwrite == Some(true);
-    if force_overwrite {
-        principal.validate_admin_session()?;
-    }
 
-    // make sure the logged-in user can only update its own username
-    let id = id.into_inner();
-    if !force_overwrite {
-        principal.is_user(&id)?;
+    if principal
+        .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)
+        .is_err()
+    {
+        // make sure the logged-in, non-admin can only update its own username
+        principal.validate_user_session(&id)?;
+
+        if force_overwrite {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Only an admin can 'force_overwrite' the 'preferred_username'",
+            ));
+        }
     }
 
     let config = &RauthyConfig::get().vars.user_values.preferred_username;
-
     let is_empty =
         payload.preferred_username.is_none() || payload.preferred_username.as_deref() == Some("");
 
