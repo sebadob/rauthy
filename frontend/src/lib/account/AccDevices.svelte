@@ -7,5 +7,5 @@
 </script>
 
 {#if userId}
-    <Devices viewMode="account" {userId}/>
+    <Devices {userId}/>
 {/if}

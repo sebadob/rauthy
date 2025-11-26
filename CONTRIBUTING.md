@@ -370,6 +370,11 @@ Before submitting any PR ready for merge, please execute
 just pre-pr-checks
 ```
 
+### Code Style
+
+For a uniform code style, you can also make use of the `.editorconfig` file. This is especially helpful for all non-Rust
+files that are not affected by `cargo fmt`.
+
 ## FreeBSD
 
 If you want to compile from source on FreeBSD, you may have a few limitations. Compiling the UI on FreeBSD seems to not
