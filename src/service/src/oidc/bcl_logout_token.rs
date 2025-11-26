@@ -90,7 +90,6 @@ impl LogoutToken<'_> {
                 typ: self.typ.clone().unwrap_or(JwtTokenType::Logout),
                 azp: self.aud,
                 scope: None,
-                preferred_username: None,
                 did: None,
                 cnf: None,
             },

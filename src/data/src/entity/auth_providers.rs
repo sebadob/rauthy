@@ -865,8 +865,7 @@ impl AuthProviderIdClaims<'_> {
             let (given_name, _) = name.split_once(' ').unwrap_or((name, ""));
             given_name
         } else {
-            // This should never happen at all
-            "N/A"
+            ""
         }
     }
 

@@ -26,8 +26,6 @@ pub struct JwtCommonClaims<'a> {
     #[serde(borrow, skip_serializing_if = "Option::is_none")]
     pub scope: Option<Cow<'a, str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub preferred_username: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub did: Option<&'a str>,
     #[serde(borrow, skip_serializing_if = "Option::is_none")]
     pub cnf: Option<JktClaim<'a>>,
@@ -148,6 +146,8 @@ pub struct JwtIdClaims<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email_verified: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub preferred_username: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub given_name: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub family_name: Option<&'a str>,
@@ -170,6 +170,8 @@ pub struct JwtIdClaims<'a> {
     pub custom: Option<HashMap<String, serde_json::Value>>,
     #[serde(borrow, skip_serializing_if = "Option::is_none")]
     pub webid: Option<Cow<'a, str>>,
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub zoneinfo: Option<&'a str>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
