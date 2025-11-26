@@ -160,14 +160,19 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
 
         let sql = "SELECT preferred_username FROM users_values WHERE id = $1";
         let slf = if is_hiqlite() {
-            client
-                .query_raw_one(sql, params!(user_id))
-                .await?
-                .get("preferred_username")
+            let mut rows = client.query_raw(sql, params!(user_id)).await?;
+            if rows.is_empty() {
+                None
+            } else {
+                Some(rows[0].get("preferred_username"))
+            }
         } else {
-            DB::pg_query_one_row(sql, &[&user_id])
-                .await?
-                .get("preferred_username")
+            let rows = DB::pg_query_rows(sql, &[&user_id], 0).await?;
+            if rows.is_empty() {
+                None
+            } else {
+                Some(rows[0].get("preferred_username"))
+            }
         };
 
         Ok(slf)

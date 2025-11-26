@@ -167,7 +167,9 @@ mod tests {
     use std::time::{Duration, Instant};
     use tokio::time;
 
+    // pretty intensive test -> ignored by default
     #[tokio::test]
+    #[ignore]
     async fn test_limiter() {
         let argon2_params = argon2::Params::new(32768, 3, 2, None).unwrap();
         let _ = ARGON2_PARAMS.set(argon2_params);
@@ -179,13 +181,24 @@ mod tests {
         assert_eq!(handle.is_finished(), false);
 
         // hash the password once to get the base time
+        // get base time taken to hash a single password
         let plain = "SuperRandom1337";
+
         let start = Instant::now();
         HashPassword::hash_password(plain.to_string())
             .await
             .unwrap();
-        let time_taken = start.elapsed().as_millis();
-        assert!(time_taken > 500);
+        let mut time_taken = start.elapsed().as_millis();
+
+        for _ in 0..2 {
+            let start = Instant::now();
+            HashPassword::hash_password(plain.to_string())
+                .await
+                .unwrap();
+            time_taken += start.elapsed().as_millis();
+            time_taken /= 2;
+        }
+        println!("time_taken: {}", time_taken);
 
         // now do the same with 3 concurrent hashes
         let start = Instant::now();

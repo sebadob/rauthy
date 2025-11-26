@@ -2214,21 +2214,21 @@ enable = true
 # default: 'required'
 given_name = 'required'
 # default: 'optional'
-family_name = 'required'
+family_name = 'optional'
 # default: 'optional'
-birthdate = 'required'
+birthdate = 'optional'
 # default: 'optional'
-street = 'required'
+street = 'optional'
 # default: 'optional'
-zip = 'required'
+zip = 'optional'
 # default: 'optional'
-city = 'required'
+city = 'optional'
 # default: 'optional'
-country = 'required'
+country = 'optional'
 # default: 'optional'
-phone = 'required'
+phone = 'optional'
 # default: 'optional'
-tz = 'required'
+tz = 'optional'
 
 [user_values.preferred_username]
 
@@ -2240,7 +2240,7 @@ tz = 'required'
 #
 # one of: required, optional, hidden
 # default: 'optional'
-preferred_username = 'required'
+preferred_username = 'optional'
 
 # The `preferred_username` is an unstable claim by the OIDC RFC.
 # This means it MUST NOT be trusted to be unique, be a stable
@@ -2253,7 +2253,7 @@ preferred_username = 'required'
 # users can change them freely at any time.
 #
 # default: true
-immutable = false
+immutable = true
 
 # Provide an array of blacklisted names.
 #
@@ -2278,8 +2278,17 @@ blacklist = ['admin', 'administrator', 'root']
 # By default, the validation matches the Linux username regex,
 # but you may want to increase the minimum characters for
 # instance.
+#
+# default: '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
 regex_rust = '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
+# default: '^[a-z][a-z0-9_\-]{1,61}$'
 pattern_html = '^[a-z][a-z0-9_\-]{1,61}$'
+
+# If a user does not have a `preferred_username`, the `email`
+# can be used as a fallback value for the id token.
+#
+# default: true
+email_fallback = true
 
 [webauthn]
 # The 'Relaying Party (RP) ID' - effective domain name.

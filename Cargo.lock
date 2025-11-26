@@ -4751,6 +4751,7 @@ name = "rauthy-api-types"
 version = "0.32.6"
 dependencies = [
  "actix-web",
+ "hiqlite",
  "openssl",
  "openssl-sys",
  "rauthy-common",

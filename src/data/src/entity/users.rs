@@ -1763,7 +1763,11 @@ impl User {
         UserResponse {
             id: self.id,
             email: self.email,
-            given_name: self.given_name,
+            given_name: if self.given_name.is_empty() {
+                None
+            } else {
+                Some(self.given_name)
+            },
             family_name: self.family_name,
             language: self.language.into(),
             roles,
@@ -1998,7 +2002,11 @@ impl From<User> for UserResponseSimple {
         Self {
             id: u.id,
             email: u.email,
-            given_name: u.given_name,
+            given_name: if u.given_name.is_empty() {
+                None
+            } else {
+                Some(u.given_name)
+            },
             family_name: u.family_name,
             created_at: u.created_at,
             last_login: u.last_login,

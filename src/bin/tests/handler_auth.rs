@@ -119,6 +119,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     check_status(res, 401).await?;
 
     req_login.password = Some(PASSWORD.to_string());
+    req_login.pow = get_solved_pow().await;
     let mut res = reqwest::Client::new()
         .post(&url_auth)
         .headers(headers.clone())
@@ -216,6 +217,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     let challenge_s256 = base64_url_encode(hash.as_ref());
     req_login.code_challenge_method = Some("S256".to_string());
     req_login.code_challenge = Some(challenge_s256);
+    req_login.pow = get_solved_pow().await;
     let mut res = reqwest::Client::new()
         .post(&url_auth)
         .headers(headers)
@@ -316,6 +318,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     req_login.code_challenge_method = None;
     req_login.code_challenge = None;
     req_login.state = Some(state.to_string());
+    req_login.pow = get_solved_pow().await;
     let mut res = reqwest::Client::new()
         .post(&url_auth)
         .headers(headers)

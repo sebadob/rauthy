@@ -106,7 +106,7 @@
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
 
 {#snippet header()}
-    <h3>{`${user.given_name} ${user.family_name || ''}`}</h3>
+    <h3>{`${user.given_name || ''} ${user.family_name || ''}`}</h3>
 {/snippet}
 
 <div class="wrapper">

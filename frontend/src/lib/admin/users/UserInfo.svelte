@@ -125,7 +125,7 @@
             }
 
             email = user.email;
-            givenName = user.given_name;
+            givenName = user.given_name || '';
             familyName = user.family_name || '';
             language = user.language;
 

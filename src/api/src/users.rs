@@ -1581,7 +1581,11 @@ pub async fn get_user_webid(id: web::Path<String>) -> Result<HttpResponse, Error
         webid: webid.into(),
         issuer: RauthyConfig::get().issuer.clone(),
         email: user.email,
-        given_name: user.given_name,
+        given_name: if user.given_name.is_empty() {
+            None
+        } else {
+            Some(user.given_name)
+        },
         family_name: user.family_name,
         language: user.language.into(),
     };

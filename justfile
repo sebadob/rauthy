@@ -258,7 +258,7 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
 
     while ! curl -s localhost:8081/auth/v1/ping; do
       sleep 1
-      echo 'Waiting for test-backend to be up and running'
+      echo '>>> Waiting for test-backend to be up and running'
     done
 
     if cargo test {{ test }}; then
@@ -282,7 +282,7 @@ test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlit
 
     while ! curl -s localhost:8081/auth/v1/ping; do
       sleep 1
-      echo 'Waiting for test-backend to be up and running'
+      echo '>>> Waiting for test-backend to be up and running'
     done
 
     if {{ postgres }} cargo test {{ test }}; then

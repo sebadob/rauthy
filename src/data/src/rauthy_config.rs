@@ -714,6 +714,7 @@ impl Default for Vars {
                     immutable: true,
                     blacklist: vec!["admin".into(), "administrator".into(), "root".into()],
                     pattern_html: "^[a-z][a-z0-9_\\-]{1,61}$".into(),
+                    email_fallback: true,
                 },
             },
             webauthn: VarsWebauthn {
@@ -2538,6 +2539,14 @@ impl Vars {
         ) {
             self.user_values.preferred_username.pattern_html = v.into();
         }
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_values.preferred_username",
+            "email_fallback",
+            "",
+        ) {
+            self.user_values.preferred_username.email_fallback = v;
+        }
 
         // linux username regex as fallback
         let _ = RE_PREFERRED_USERNAME.set(RE_LINUX_USERNAME.clone());
@@ -3051,6 +3060,7 @@ pub struct VarsUserPreferredUsername {
     // in macros.
     // pub regex_rust: String,
     pub pattern_html: Cow<'static, str>,
+    pub email_fallback: bool,
 }
 
 #[derive(Debug, PartialEq, Serialize, ToSchema)]
