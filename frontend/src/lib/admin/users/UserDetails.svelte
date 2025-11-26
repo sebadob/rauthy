@@ -85,7 +85,7 @@
 
 {#if user}
     {#if selected === tabs[0]}
-        <UserInfo bind:user {userValuesConfig} {providers} {roles} {groups} {onSave}/>
+        <UserInfo bind:user config={userValuesConfig} {providers} {roles} {groups} {onSave}/>
     {:else if selected === tabs[1]}
         <UserAttr {user} {onSave}/>
     {:else if selected === tabs[2]}

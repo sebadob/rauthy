@@ -34,19 +34,21 @@
 
     let {
         user = $bindable(),
-        userValuesConfig,
+        config,
         roles,
         groups,
         providers,
         onSave,
     }: {
         user: UserResponse,
-        userValuesConfig: UserValuesConfig,
+        config: UserValuesConfig,
         roles: RoleResponse[],
         groups: GroupResponse[],
         providers: AuthProviderTemplate[],
         onSave: () => void,
     } = $props();
+
+    $inspect('config', config);
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -186,7 +188,11 @@
             payload.put.push({key: 'email', value: email});
         }
         if (givenName !== userOrig?.given_name) {
-            payload.put.push({key: 'given_name', value: givenName});
+            if (givenName) {
+                payload.put.push({key: 'given_name', value: givenName});
+            } else {
+                payload.del.push('given_name');
+            }
         }
         if (familyName !== userOrig?.family_name) {
             if (familyName) {
@@ -388,7 +394,7 @@
                         autocomplete="off"
                         label={t.account.givenName}
                         placeholder={t.account.givenName}
-                        required
+                        required={config.given_name === 'required'}
                         pattern={PATTERN_USER_NAME}
                 />
                 <Input
@@ -396,19 +402,21 @@
                         autocomplete="off"
                         label={t.account.familyName}
                         placeholder={t.account.familyName}
+                        required={config.family_name === 'required'}
                         pattern={PATTERN_USER_NAME}
                 />
 
                 <InputDateTimeCombo
                         label={t.account.birthdate}
                         bind:value={birthdate}
+                        required={config.birthdate === 'required'}
                         withDelete
                 />
                 <TZSelect bind:value={tz}/>
                 <PreferredUsername
                         userId={user.id}
                         bind:preferred_username={user.user_values.preferred_username}
-                        config={userValuesConfig.preferred_username}
+                        config={config.preferred_username}
                         isAdmin
                 />
 
@@ -432,6 +440,7 @@
                         autocomplete="off"
                         label={t.account.street}
                         placeholder={t.account.street}
+                        required={config.street === 'required'}
                         pattern={PATTERN_STREET}
                 />
                 <Input
@@ -439,6 +448,7 @@
                         autocomplete="off"
                         label={t.account.zip}
                         placeholder={t.account.zip}
+                        required={config.zip === 'required'}
                         maxLength={24}
                         pattern={PATTERN_ALNUM}
                 />
@@ -447,6 +457,7 @@
                         autocomplete="off"
                         label={t.account.city}
                         placeholder={t.account.city}
+                        required={config.city === 'required'}
                         pattern={PATTERN_CITY}
                 />
                 <Input
@@ -454,6 +465,7 @@
                         autocomplete="off"
                         label={t.account.country}
                         placeholder={t.account.country}
+                        required={config.country === 'required'}
                         pattern={PATTERN_CITY}
                 />
 
@@ -462,6 +474,7 @@
                         autocomplete="off"
                         label={t.account.phone}
                         placeholder={t.account.phone}
+                        required={config.phone === 'required'}
                         pattern={PATTERN_PHONE}
                 />
             </div>
