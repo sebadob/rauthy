@@ -5,7 +5,7 @@ import type {
 	WebauthnAdditionalData,
 	WebauthnAuthFinishRequest,
 	WebauthnAuthStartRequest,
-	WebauthnAuthStartResponse
+	WebauthnAuthStartResponse,
 } from './types.ts';
 import { base64UrlSafeToArrBuf } from './utils';
 
@@ -18,19 +18,19 @@ export async function webauthnAuth(
 	userId: string,
 	purpose: MfaPurpose,
 	errorI18nInvalidKey: string,
-	errorI18nTimeout: string
+	errorI18nTimeout: string,
 ): Promise<WebauthnAuthResult> {
 	let payloadStart: WebauthnAuthStartRequest = {
-		purpose
+		purpose,
 	};
 	let res = await fetchPost<WebauthnAuthStartResponse>(
 		`/auth/v1/users/${userId}/webauthn/auth/start`,
-		payloadStart
+		payloadStart,
 	);
 	if (res.error) {
 		console.error(res.error);
 		return {
-			error: res.error.message || 'Error starting the Authentication'
+			error: res.error.message || 'Error starting the Authentication',
 		};
 	}
 	if (!res.body) {
@@ -48,7 +48,7 @@ export async function webauthnAuth(
 		let error = 'no publicKey in challenge from the backend';
 		console.error(error);
 		return {
-			error
+			error,
 		};
 	}
 
@@ -70,13 +70,13 @@ export async function webauthnAuth(
 			credential = cred;
 		} else {
 			return {
-				error: errorI18nInvalidKey
+				error: errorI18nInvalidKey,
 			};
 		}
 	} catch (e) {
 		const timeout = new Date().getTime() >= expTime;
 		return {
-			error: timeout ? errorI18nTimeout : errorI18nInvalidKey
+			error: timeout ? errorI18nTimeout : errorI18nInvalidKey,
 		};
 	}
 
@@ -94,29 +94,29 @@ export async function webauthnAuth(
 				// @ts-ignore the `response.clientDataJSON` actually exists
 				clientDataJSON: arrBufToBase64UrlSafe(credential.response.clientDataJSON),
 				// @ts-ignore the `response.signature` actually exists
-				signature: arrBufToBase64UrlSafe(credential.response.signature)
+				signature: arrBufToBase64UrlSafe(credential.response.signature),
 			},
 			// @ts-ignore the `response.getClientExtensionResults()` actually exists
 			extensions: credential.getClientExtensionResults(),
-			type: credential.type
-		}
+			type: credential.type,
+		},
 	};
 
 	// finish the ceremony
 	let resFinish = await fetchPost<WebauthnAdditionalData>(
 		`/auth/v1/users/${userId}/webauthn/auth/finish`,
-		payloadFinish
+		payloadFinish,
 	);
 	// 202 -> normal success
 	// 206 -> Webauthn success during login, but needs additional ToS update accept
 	if (resFinish.status === 202 || resFinish.status === 206) {
 		return {
-			data: resFinish.body
+			data: resFinish.body,
 		};
 	} else {
 		console.error(resFinish);
 		return {
-			error: resFinish.error?.message || 'Authentication Error'
+			error: resFinish.error?.message || 'Authentication Error',
 		};
 	}
 }

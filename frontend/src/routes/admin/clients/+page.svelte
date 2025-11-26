@@ -1,9 +1,9 @@
 <script>
-    import Clients from "$lib5/admin/clients/Clients.svelte";
+	import Clients from '$lib5/admin/clients/Clients.svelte';
 </script>
 
 <svelte:head>
-    <title>Rauthy Clients</title>
+	<title>Rauthy Clients</title>
 </svelte:head>
 
-<Clients/>
+<Clients />

@@ -36,7 +36,7 @@ export const I18nZh: I18n = {
 			'九月',
 			'十月',
 			'十一月',
-			'十二月'
+			'十二月',
 		],
 		never: '从不',
 		password: '密码',
@@ -50,7 +50,7 @@ export const I18nZh: I18n = {
 		summary: '概要',
 		timezone: 'Timezone',
 		weekDaysShort: ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
-		year: '年'
+		year: '年',
 	},
 	account: {
 		account: '用户账户',
@@ -97,7 +97,7 @@ export const I18nZh: I18n = {
 		pam: {
 			generatePassword: 'New Password',
 			username: 'Username',
-			validFor: 'Password valid for {{ secs }} seconds'
+			validFor: 'Password valid for {{ secs }} seconds',
 		},
 		passwordConfirm: '确认密码',
 		passwordCurr: '当前密码',
@@ -116,7 +116,7 @@ export const I18nZh: I18n = {
 			immutable: 'CAUTION: The username can only be chosen once!',
 			immutableInfo: 'The username is immutable.',
 			notAvailable: 'This name is not available.',
-			preferredUsername: 'Preferred Username'
+			preferredUsername: 'Preferred Username',
 		},
 		providerLink: '联合账户',
 		providerLinkDesc:
@@ -136,7 +136,7 @@ export const I18nZh: I18n = {
 			'您可以选择哪些字段能够通过WebID发布。\nWebID被一些网络用于去中心化登陆。如果您不知道这是什么，您通常不需要选择。',
 		webIdDescData: '您可以以FOAF词汇格式向您的 WebID 添加自定义数据字段',
 		webIdExpertMode: '启用专家模式',
-		zip: '邮政编码'
+		zip: '邮政编码',
 	},
 	authorize: {
 		clientForceMfa:
@@ -163,7 +163,7 @@ export const I18nZh: I18n = {
 		requestExpires: '请求过期于',
 		requestExpired: '请求已过期',
 		signUp: '用户注册',
-		validEmail: '验证电子邮件地址'
+		validEmail: '验证电子邮件地址',
 	},
 	device: {
 		accept: '接受',
@@ -177,28 +177,28 @@ export const I18nZh: I18n = {
 		submit: '提交',
 		title: '设备授权',
 		userCode: '用户代码',
-		wrongOrExpired: '代码错误或已过期'
+		wrongOrExpired: '代码错误或已过期',
 	},
 	emailChange: {
 		title: '电子邮件地址已更新',
 		textChanged: '您的电子邮件地址已从',
 		textLogin: '您现在可以使用您的新地址进行登陆。',
-		to: '更新为'
+		to: '更新为',
 	},
 	error: {
 		// errorText: "找不到请求的资源",
-		details: '显示详情'
+		details: '显示详情',
 		// detailsText: undefined,
 	},
 	index: {
 		register: '注册',
 		accountLogin: '登陆',
-		adminLogin: '管理'
+		adminLogin: '管理',
 	},
 	logout: {
 		logout: '退出登录',
 		confirmMsg: '您确定要退出登录并结束会话吗？',
-		cancel: '取消'
+		cancel: '取消',
 	},
 	mfa: {
 		p1: '如果您计划在多个系统上使用您的MFA密钥，例如Windows和Android，您应该在Android上进行注册。',
@@ -221,7 +221,7 @@ export const I18nZh: I18n = {
 		passwordInvalid: 'Password Invalid',
 		test: '测试',
 		testError: '开始测试时出现错误',
-		testSuccess: '测试成功！'
+		testSuccess: '测试成功！',
 	},
 	pagination: {
 		entries: '项目',
@@ -230,7 +230,7 @@ export const I18nZh: I18n = {
 		gotoPageNext: '转到后一页',
 		pagination: '分页',
 		showCount: '显示数量',
-		total: '总数'
+		total: '总数',
 	},
 	passwordPolicy: {
 		passwordPolicy: '密码要求',
@@ -240,7 +240,7 @@ export const I18nZh: I18n = {
 		uppercaseMin: '最少大写字母',
 		digitsMin: '最少数字',
 		specialMin: '最少特殊字符',
-		notRecent: '不是最近使用过的密码之一'
+		notRecent: '不是最近使用过的密码之一',
 	},
 	passwordReset: {
 		accountLogin: '账户登录',
@@ -263,7 +263,7 @@ export const I18nZh: I18n = {
 		success3: '如果您未被重定向，请点击此链接：',
 		successPasskey1: '您的通行密钥已成功注册。',
 		successPasskey2:
-			'请登入您的账户并尽快注册一个备份密钥。\n对于仅密钥登陆的账户，在丢失您当前的密钥时，您无法通过电子邮件进行密码重置。'
+			'请登入您的账户并尽快注册一个备份密钥。\n对于仅密钥登陆的账户，在丢失您当前的密钥时，您无法通过电子邮件进行密码重置。',
 	},
 	register: {
 		alreadyRegistered: '电子邮件地址已被注册',
@@ -276,16 +276,16 @@ export const I18nZh: I18n = {
 		regexName: '名字应有2至32个非特殊字符。',
 		register: '注册',
 		success: '注册成功',
-		userReg: '用户注册'
+		userReg: '用户注册',
 	},
 	tos: {
 		acceptOptUntil: 'Accept is optional until:',
 		deny: 'Deny',
-		tos: 'Terms of Service'
+		tos: 'Terms of Service',
 	},
 	userRevoke: {
 		title: 'Revoke Logins',
 		desc1: 'All Logins and Sessions have been revoked for this user as much as possible.',
-		desc2: 'You should immediately renew all your passwords!'
-	}
+		desc2: 'You should immediately renew all your passwords!',
+	},
 };

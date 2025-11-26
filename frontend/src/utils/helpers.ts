@@ -9,7 +9,7 @@ import {
 	PKCE_VERIFIER_UPSTREAM,
 	POST_LOGOUT_REDIRECT_URI,
 	PROVIDER_TOKEN,
-	REDIRECT_URI
+	REDIRECT_URI,
 } from './constants.js';
 import { decode, encode } from 'base64-arraybuffer';
 import type { PasswordPolicyResponse } from '$api/types/password_policy.ts';
@@ -37,7 +37,7 @@ export function isDefaultScope(name: string) {
 }
 
 export const redirectToLogin = (state?: string) => {
-	generatePKCE().then((pkce) => {
+	generatePKCE().then(pkce => {
 		if (pkce) {
 			localStorage.setItem(PKCE_VERIFIER, pkce.verifier);
 			// If we were able to generate PKCE, nonce generation will always succeed as well.
@@ -134,9 +134,9 @@ export function arrBufToBase64UrlSafe(buffer: ArrayBuffer) {
 	const enc = {
 		'+': '-',
 		'/': '_',
-		'=': ''
+		'=': '',
 	};
-	return base64.replace(/[+/=]/g, (m) => enc[m as '+' | '/' | '=']);
+	return base64.replace(/[+/=]/g, m => enc[m as '+' | '/' | '=']);
 }
 
 // export function base64UrlSafeToArrBuf(base64url: string) {
@@ -331,9 +331,9 @@ export function promiseTimeout<T>(prom: Promise<T>, time: number): Promise<T | u
 		prom,
 		new Promise((_r, rej) => {
 			timer = setTimeout(rej, time, 'timeout');
-		})
+		}),
 	]).finally(() => clearTimeout(timer));
 }
 
 // async sleep in ms
-export const sleepAwait = async (ms: number) => await new Promise((x) => setTimeout(x, ms));
+export const sleepAwait = async (ms: number) => await new Promise(x => setTimeout(x, ms));

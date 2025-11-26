@@ -9,7 +9,7 @@ export function useMarkdownWorker() {
 		worker = new Worker(new URL('../../workers/md.ts', import.meta.url));
 	}
 
-	worker.onmessage = (ev) => {
+	worker.onmessage = ev => {
 		let res = ev.data as MDWorkerResp;
 
 		if (res.typ === 'render') {
@@ -25,21 +25,21 @@ export function useMarkdownWorker() {
 		renderMarkdown(markdown: string) {
 			let payload: MDWorkerReq = {
 				typ: 'render',
-				data: markdown
+				data: markdown,
 			};
 			worker?.postMessage(payload);
 		},
 		sanitizeHTML(html: string) {
 			let payload: MDWorkerReq = {
 				typ: 'sanitize',
-				data: html
+				data: html,
 			};
 			worker?.postMessage(payload);
 		},
 		closeWorker() {
 			let payload: MDWorkerReq = {
 				typ: 'close',
-				data: ''
+				data: '',
 			};
 			worker?.postMessage(payload);
 		},
@@ -48,6 +48,6 @@ export function useMarkdownWorker() {
 		},
 		sanitizedHTML(): string {
 			return sanitizedHTML;
-		}
+		},
 	};
 }

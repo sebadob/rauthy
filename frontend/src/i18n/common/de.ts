@@ -36,7 +36,7 @@ export const I18nDe: I18n = {
 			'September',
 			'Oktober',
 			'November',
-			'Dezember'
+			'Dezember',
 		],
 		never: 'Niemals',
 		password: 'Passwort',
@@ -50,7 +50,7 @@ export const I18nDe: I18n = {
 		summary: 'Zusammenfassung',
 		timezone: 'Zeitzone',
 		weekDaysShort: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
-		year: 'Jahr'
+		year: 'Jahr',
 	},
 	account: {
 		account: 'Benutzer Account',
@@ -98,7 +98,7 @@ export const I18nDe: I18n = {
 		pam: {
 			generatePassword: 'Neues Passwort',
 			username: 'Benutzername',
-			validFor: 'Passwort gültig für {{ secs }} Sekunden'
+			validFor: 'Passwort gültig für {{ secs }} Sekunden',
 		},
 		passwordConfirm: 'Passwort bestätigen',
 		passwordCurr: 'Derzeitiges Passwort',
@@ -117,7 +117,7 @@ export const I18nDe: I18n = {
 			immutable: 'ACHTUNG: Der Benutzername kann nur einmalig gesetzt werden!',
 			immutableInfo: 'Der Benutzername kann nicht geändert werden.',
 			notAvailable: 'Dieser Name ist nicht verfügbar.',
-			preferredUsername: 'Bevorzugter Benutzername'
+			preferredUsername: 'Bevorzugter Benutzername',
 		},
 		providerLink: 'Account Verbinden',
 		providerLinkDesc:
@@ -136,9 +136,10 @@ export const I18nDe: I18n = {
 		userVerifiedTooltip: 'Abgesichert durch Fingerabdruck oder PIN',
 		webIdDesc:
 			'Hier können Sie die Felder festlegen, die über Ihre WebID veröffentlicht\nwerden. Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt wird.\nSollten Sie nicht wissen, was die WebID ist, brauchen Sie sie höchstwahrscheinlich nicht.',
-		webIdDescData: 'Sie können eigene Daten zu Ihrer WebID in gültigem FOAF Vokabular\nhinzufügen:',
+		webIdDescData:
+			'Sie können eigene Daten zu Ihrer WebID in gültigem FOAF Vokabular\nhinzufügen:',
 		webIdExpertMode: 'Expertenmodus aktivieren',
-		zip: 'PLZ'
+		zip: 'PLZ',
 	},
 	authorize: {
 		clientForceMfa:
@@ -165,7 +166,7 @@ export const I18nDe: I18n = {
 		requestExpires: 'Anfrage läuft ab',
 		requestExpired: 'Anfrage ist abgelaufen',
 		signUp: 'Benutzer Registrierung',
-		validEmail: 'Gültige E-Mail Adresse angeben'
+		validEmail: 'Gültige E-Mail Adresse angeben',
 	},
 	device: {
 		accept: 'Akzeptieren',
@@ -179,28 +180,28 @@ export const I18nDe: I18n = {
 		submit: 'Absenden',
 		title: 'Gerät Authorisierung',
 		userCode: 'Benutzer Code',
-		wrongOrExpired: 'Ungültiger oder abgelaufener Code'
+		wrongOrExpired: 'Ungültiger oder abgelaufener Code',
 	},
 	emailChange: {
 		title: 'E-Mail Wechsel bestätigt',
 		textChanged: 'Ihre E-Mail Adresse wurde erfolgreich geändert von',
 		textLogin: 'Sie können sich jetzt mit der neuen Adresse einloggen.',
-		to: 'zu'
+		to: 'zu',
 	},
 	error: {
 		// errorText: "Die angeforderte Seite konnte nicht gefunden werden.",
-		details: 'Details Anzeigen'
+		details: 'Details Anzeigen',
 		// detailsText: undefined,
 	},
 	index: {
 		register: 'Registrieren',
 		accountLogin: 'Account',
-		adminLogin: 'Admin'
+		adminLogin: 'Admin',
 	},
 	logout: {
 		logout: 'Logout',
 		confirmMsg: 'Sind Sie sicher, dass Sie sich ausloggen und die Session beenden möchten?',
-		cancel: 'Abbrechen'
+		cancel: 'Abbrechen',
 	},
 	mfa: {
 		p1: 'Wenn Sie mehrere Systeme parallel nutzen möchten, wie z.B. Windows und Android, sollten Sie die Registrierung mit Android durchführen.',
@@ -223,7 +224,7 @@ export const I18nDe: I18n = {
 		test: 'Test',
 		testError: 'Fehler beim Starten des Tests',
 		testSuccess: 'Test erfolgreich',
-		docLinkText: ''
+		docLinkText: '',
 	},
 	pagination: {
 		entries: 'Einträge',
@@ -232,7 +233,7 @@ export const I18nDe: I18n = {
 		gotoPageNext: 'Gehe zu nächster Seite',
 		pagination: 'Seitennummerierung',
 		showCount: 'Anzahl anzeigen',
-		total: 'Gesamt'
+		total: 'Gesamt',
 	},
 	passwordPolicy: {
 		passwordPolicy: 'Passwort Regeln',
@@ -242,7 +243,7 @@ export const I18nDe: I18n = {
 		uppercaseMin: 'Großbuchstaben min',
 		digitsMin: 'Ziffern min',
 		specialMin: 'Spezielle Buchstaben min',
-		notRecent: 'Keins der letzten Passwörter'
+		notRecent: 'Keins der letzten Passwörter',
 	},
 	passwordReset: {
 		accountLogin: 'Account Login',
@@ -266,7 +267,7 @@ export const I18nDe: I18n = {
 		success3: 'Sollte Sie nicht weitergeleitet werden, klicken Sie bitte hier:',
 		successPasskey1: 'Der neue Passkey wurde erfolgreich registriert.',
 		successPasskey2:
-			'Bitte loggen Sie sich direkt in Ihren Account ein und registrieren\nSie mindestens einen weiteren Backup Passkey. Ein passwortloser Account kann nicht den Passwort\nReset via E-Mail nutzen für den Fall, dass der derzeitige Passkey abhanden kommt.'
+			'Bitte loggen Sie sich direkt in Ihren Account ein und registrieren\nSie mindestens einen weiteren Backup Passkey. Ein passwortloser Account kann nicht den Passwort\nReset via E-Mail nutzen für den Fall, dass der derzeitige Passkey abhanden kommt.',
 	},
 	register: {
 		alreadyRegistered: 'E-Mail is bereits registriert',
@@ -279,17 +280,16 @@ export const I18nDe: I18n = {
 		regexName: 'Name mit 2 - 32 Buchstaben ohne Sonderzeichen',
 		register: 'Registrieren',
 		success: 'Registrierung erfolgreich',
-		userReg: 'Benutzer Registrierung'
+		userReg: 'Benutzer Registrierung',
 	},
 	tos: {
 		acceptOptUntil: 'Akzeptieren ist optional bis:',
 		deny: 'Verweigern',
-		tos: 'Allgemeine Geschäftsbedingungen'
+		tos: 'Allgemeine Geschäftsbedingungen',
 	},
 	userRevoke: {
 		title: 'Logins widerrufen',
-		desc1:
-			'Sämtliche Logins und Sessions für diesen Benutzer wurden soweit wie möglich widerrufen.',
-		desc2: 'Passwörter sollten auf der Stelle erneuert werden!'
-	}
+		desc1: 'Sämtliche Logins und Sessions für diesen Benutzer wurden soweit wie möglich widerrufen.',
+		desc2: 'Passwörter sollten auf der Stelle erneuert werden!',
+	},
 };

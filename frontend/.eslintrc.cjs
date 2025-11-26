@@ -1,20 +1,20 @@
 module.exports = {
 	root: true,
 	extends: ['plugin:svelte/recommended', 'prettier'],
-	parser: "@babel/eslint-parser",
+	parser: '@babel/eslint-parser',
 	overrides: [
 		{
-			files: ["*.svelte"],
-			parser: "svelte-eslint-parser",
+			files: ['*.svelte'],
+			parser: 'svelte-eslint-parser',
 		},
 	],
 	parserOptions: {
 		sourceType: 'module',
-		ecmaVersion: 2020
+		ecmaVersion: 2020,
 	},
 	env: {
 		browser: true,
 		es2017: true,
-		node: true
-	}
+		node: true,
+	},
 };

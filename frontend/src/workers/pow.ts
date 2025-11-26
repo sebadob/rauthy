@@ -1,7 +1,7 @@
 const SPOW = import('../wasm/spow/spow');
 
-onmessage = (ev) => {
-	SPOW.then((wasm) => {
+onmessage = ev => {
+	SPOW.then(wasm => {
 		postMessage(wasm.pow_work_wasm(ev.data));
 		self.close();
 	});

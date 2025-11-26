@@ -3,7 +3,7 @@ import {
 	getDayOfWeek,
 	isWeekend,
 	startOfMonth,
-	startOfWeek
+	startOfWeek,
 } from '@internationalized/date';
 
 /**
@@ -65,7 +65,7 @@ export function getWeeksInMonth(date: CalendarDate, locale: string): Week[] {
 			day: date.day,
 			month: date.month,
 			year: date.year,
-			isWeekend: isWeekend(date, locale)
+			isWeekend: isWeekend(date, locale),
 		});
 		date = date.add({ days: 1 });
 	};
@@ -73,7 +73,7 @@ export function getWeeksInMonth(date: CalendarDate, locale: string): Week[] {
 	const pushWeek = () => {
 		let week: Week = {
 			// number: getWeekOfYear(date),
-			days: []
+			days: [],
 		};
 		for (let i = 0; i < 7; i++) {
 			pushWeekDay(week.days);

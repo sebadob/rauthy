@@ -3,7 +3,6 @@ target
 /tls
 rauthy-client/target
 rauthy-client/examples/*/target
-.idea
 rauthy-client/.idea
 rauthy-client/examples/*/.idea
 .vscode

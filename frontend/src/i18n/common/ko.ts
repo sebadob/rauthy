@@ -24,7 +24,20 @@ export const I18nKo: I18n = {
 		maxFileSize: '최대 파일크기',
 		minutes: '분',
 		month: '월',
-		months: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
+		months: [
+			'1월',
+			'2월',
+			'3월',
+			'4월',
+			'5월',
+			'6월',
+			'7월',
+			'8월',
+			'9월',
+			'10월',
+			'11월',
+			'12월',
+		],
 		never: '없음',
 		password: '비밀번호',
 		refresh: 'Refresh',
@@ -37,7 +50,7 @@ export const I18nKo: I18n = {
 		summary: '요약',
 		timezone: 'Timezone',
 		weekDaysShort: ['일', '월', '화', '수', '목', '금', '토'],
-		year: '년'
+		year: '년',
 	},
 	account: {
 		account: '사용자 계정',
@@ -85,7 +98,7 @@ export const I18nKo: I18n = {
 		pam: {
 			generatePassword: 'New Password',
 			username: 'Username',
-			validFor: 'Password valid for {{ secs }} seconds'
+			validFor: 'Password valid for {{ secs }} seconds',
 		},
 		passwordConfirm: '비밀번호 확인',
 		passwordCurr: '현재 비밀번호',
@@ -104,7 +117,7 @@ export const I18nKo: I18n = {
 			immutable: 'CAUTION: The username can only be chosen once!',
 			immutableInfo: 'The username is immutable.',
 			notAvailable: 'This name is not available.',
-			preferredUsername: 'Preferred Username'
+			preferredUsername: 'Preferred Username',
 		},
 		providerLink: '계정 연결',
 		providerLinkDesc:
@@ -125,7 +138,7 @@ export const I18nKo: I18n = {
 			'WebID를 통해 게시되는 필드를 정의할 수 있습니다.\n이는 일부 네트워크에서 분산 로그인을 위해 사용하는 기능입니다. WebID가 무엇인지 모른다면 필요하지 않을 것입니다.',
 		webIdDescData: '유효한 FOAF 어휘로 자신의 데이터를 WebID에 추가할 수 있습니다:',
 		webIdExpertMode: '전문가 모드 활성화',
-		zip: '우편번호'
+		zip: '우편번호',
 	},
 	authorize: {
 		clientForceMfa:
@@ -152,7 +165,7 @@ export const I18nKo: I18n = {
 		requestExpires: '만료일',
 		requestExpired: '요청이 만료되었습니다.',
 		signUp: '사용자 가입',
-		validEmail: '비정상적인 이메일 주소'
+		validEmail: '비정상적인 이메일 주소',
 	},
 	device: {
 		accept: '수락',
@@ -166,28 +179,28 @@ export const I18nKo: I18n = {
 		submit: '제출',
 		title: '기기 인증',
 		userCode: '사용자 코드',
-		wrongOrExpired: '잘못되었거나 만료된 코드입니다.'
+		wrongOrExpired: '잘못되었거나 만료된 코드입니다.',
 	},
 	emailChange: {
 		title: '이메일 변경이 승인되었습니다.',
 		textChanged: '이메일 주소가 다음으로부터 변경되었습니다',
 		textLogin: '이제 새로운 주소로 로그인할 수 있습니다.',
-		to: '에서'
+		to: '에서',
 	},
 	error: {
 		// errorText: "요청 정보를 찾을 수 없습니다.",
-		details: '자세한 정보 표시'
+		details: '자세한 정보 표시',
 		// detailsText: undefined,
 	},
 	index: {
 		register: '가입',
 		accountLogin: '계정',
-		adminLogin: '관리'
+		adminLogin: '관리',
 	},
 	logout: {
 		logout: '로그아웃',
 		confirmMsg: '로그아웃하고 세션을 종료하겠습니까?',
-		cancel: '취소'
+		cancel: '취소',
 	},
 	mfa: {
 		p1: '윈도우와 안드로이드 등 다양한 시스템에서 MFA를 사용하려면, 안드로이드에서 키를 등록하여야 합니다.',
@@ -210,7 +223,7 @@ export const I18nKo: I18n = {
 		test: '테스트',
 		testError: '테스트 시작 중 오류 발생',
 		testSuccess: '테스트 성공',
-		docLinkText: ''
+		docLinkText: '',
 	},
 	pagination: {
 		entries: '표시 개수',
@@ -219,7 +232,7 @@ export const I18nKo: I18n = {
 		gotoPageNext: '다음 페이지',
 		pagination: '페이지 처리',
 		showCount: '개수 보기',
-		total: '전체'
+		total: '전체',
 	},
 	passwordPolicy: {
 		passwordPolicy: '비밀번호 정책',
@@ -229,7 +242,7 @@ export const I18nKo: I18n = {
 		uppercaseMin: '최소 대문자수',
 		digitsMin: '최소 숫자수',
 		specialMin: '최소 특수문자수',
-		notRecent: '최근 비밀번호 제한'
+		notRecent: '최근 비밀번호 제한',
 	},
 	passwordReset: {
 		accountLogin: '계정 로그인',
@@ -253,7 +266,7 @@ export const I18nKo: I18n = {
 		success3: '만약 리다이렉트가 되지 않으면, 여기를 클릭해 주세요:',
 		successPasskey1: '새로운 패스키가 성공적으로 등록되었습니다.',
 		successPasskey2:
-			'계정에 로그인하여 가능한 한 빨리 두 번째 백업 키를 등록해 주세요.\n패스키 전용 계정은 현재 패스키를 잃어버리면, 이메일을 통하여 비밀번호 초기화할 수 없습니다.'
+			'계정에 로그인하여 가능한 한 빨리 두 번째 백업 키를 등록해 주세요.\n패스키 전용 계정은 현재 패스키를 잃어버리면, 이메일을 통하여 비밀번호 초기화할 수 없습니다.',
 	},
 	register: {
 		alreadyRegistered: '이미 등록된 이메일입니다.',
@@ -266,16 +279,16 @@ export const I18nKo: I18n = {
 		regexName: '이름은 특수문자 없이 2~32자여야 합니다.',
 		register: '가입',
 		success: '성공적으로 가입되었습니다.',
-		userReg: '사용자 가입'
+		userReg: '사용자 가입',
 	},
 	tos: {
 		acceptOptUntil: 'Accept is optional until:',
 		deny: 'Deny',
-		tos: 'Terms of Service'
+		tos: 'Terms of Service',
 	},
 	userRevoke: {
 		title: 'Revoke Logins',
 		desc1: 'All Logins and Sessions have been revoked for this user as much as possible.',
-		desc2: 'You should immediately renew all your passwords!'
-	}
+		desc2: 'You should immediately renew all your passwords!',
+	},
 };

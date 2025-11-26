@@ -36,7 +36,7 @@ export const EVENT_TYPES = [
 	'UserEmailChange',
 	'UserLoginRevoke',
 	'UserPasswordReset',
-	'Test'
+	'Test',
 ];
 
 // All TPL_* values match a possibly existing `<template>` id

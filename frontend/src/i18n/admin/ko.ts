@@ -12,7 +12,7 @@ export let I18nAdminKo: I18nAdmin = {
 		generate5:
 			'<code>jq</code> 가 설치되어 있지 않거나 위의 코드가 실패한 경우는 아래 코드를 사용하세요.',
 		keyName: 'API 키 이름',
-		limitedValidity: '만료일'
+		limitedValidity: '만료일',
 	},
 	attrs: {
 		delete1: '이 속성을 삭제하시겠습니까?',
@@ -25,7 +25,7 @@ export let I18nAdminKo: I18nAdmin = {
 		makeEditableP3: `An attribute cannot be changed from editable to non-editable, because it allowed untrusted
             inputs in the past, no matter for how long this was the case.`,
 		name: '속성 이름',
-		userEditable: 'User Editable'
+		userEditable: 'User Editable',
 	},
 	backup: {
 		createBackup: 'Create Backup',
@@ -33,7 +33,7 @@ export let I18nAdminKo: I18nAdmin = {
 		lastModified: 'Last Modified',
 		local: 'Local',
 		name: 'Name',
-		size: 'Size'
+		size: 'Size',
 	},
 	clients: {
 		backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
@@ -43,7 +43,7 @@ export let I18nAdminKo: I18nAdmin = {
 			descFullCss: `다음 값은 완전히 유효한 <code>CSS 색상</code> 값이어야 합니다. 복잡한 계산이나 위에
                 정의된 <code>CSS 변수</code> 를 사용할 수도 있습니다.`,
 			descVariables: `색상의 각 레이블들은 동시에 CSS 변수의 이름입니다. 즉, 입력 칸에서 이를 참조할 수
-                있습니다. (예: <code>hsla(var(--action) / .7)</code>)`
+                있습니다. (예: <code>hsla(var(--action) / .7)</code>)`,
 		},
 		confidential: '기밀',
 		confidentialNoSecret: '이 클라이언트는 기밀이 아닌 클라이언트이므로 Secret이 없습니다.',
@@ -86,14 +86,14 @@ export let I18nAdminKo: I18nAdmin = {
 			reqLi2: `At least <code>/Users</code> endpoints with <code>filter=externalId eq "*"</code> and
                 <code>filter=userName eq "*"</code> must be supported.`,
 			reqLi3: `If groups should be synchronized, <code>/Groups</code> must also support 
-                <code>filter=displayName eq "*"</code>.`
+                <code>filter=displayName eq "*"</code>.`,
 		},
 		scopes: {
 			allowed: '허용된 범위',
 			default: '기본 범위',
 			desc: `허용된 범위는 <code>authorization_code</code> 플로우를 사용할 때 로그인 리디렉션 중에
                 클라이언트가 동적으로 요청할 수 있는 범위입니다. 예를 들어 <code>password</code> 를
-                사용할 때, 일부 문제를 해결하기 위해 기본 범위가 항상 토큰에 추가됩니다.`
+                사용할 때, 일부 문제를 해결하기 위해 기본 범위가 항상 토큰에 추가됩니다.`,
 		},
 		secret: {
 			doCache: 'Cache Client Secret',
@@ -101,14 +101,14 @@ export let I18nAdminKo: I18nAdmin = {
 			generate: '새 Secret 생성',
 			rotateDesc1: `To make graceful updates and secret rotations possible, you have the ability to keep the
                 current secret in an in-memory cache for some time. You can enter a value between 1 and 24 hours.`,
-			rotateDesc2: 'Caution: You should not cache the current secret if you had a leak!'
+			rotateDesc2: 'Caution: You should not cache the current secret if you had a leak!',
 		},
 		tokenLifetime: {
 			p1: `토큰 수명은 액세스 토큰과 ID 토큰에 적용되며, 초 단위입니다.`,
 			p2: `클라이언트가 EdDSA 또는 ed25519 알고리즘을 지원하면, 항상 선호되는 옵션이어야 합니다.
                 RSA 알고리즘은 호환성을 위해서만 존재합니다.`,
-			p3: `Refresh 토큰의 알고리즘은 Rauthy에서만 사용되므로, 변경할 수 없습니다.`
-		}
+			p3: `Refresh 토큰의 알고리즘은 Rauthy에서만 사용되므로, 변경할 수 없습니다.`,
+		},
 	},
 	common: {
 		account: '계정',
@@ -132,7 +132,7 @@ export let I18nAdminKo: I18nAdmin = {
 		preview: 'Preview',
 		reset: '초기화',
 		searchOptions: '검색 옵션',
-		until: '까지'
+		until: '까지',
 	},
 	docs: {
 		book: 'Rauthy에 대한 문서:',
@@ -149,7 +149,7 @@ export let I18nAdminKo: I18nAdmin = {
                 없습니다. 모든 새 JWK 암호화는 항상 현재 활성 키를 사용합니다.`,
 			p3: `기존 Secret을 모두 마이그레이션하는 경우, 데이터 세트가 큰 경우에는 완료하는 데 수 초가 걸릴 수
                 있습니다.`,
-			pNotPossible: '마이그레이션하려면 최소 2개의 암호화 키를 사용할 수 있어야 합니다.'
+			pNotPossible: '마이그레이션하려면 최소 2개의 암호화 키를 사용할 수 있어야 합니다.',
 		},
 		hashing: {
 			calculate: '계산',
@@ -203,12 +203,12 @@ export let I18nAdminKo: I18nAdmin = {
 			pTune: `시스템의 성능에 따라 다릅니다. 성능이 좋을수록 더 안전한 값을 설정할 수 있습니다.`,
 			pUtility: `이 유틸리티는 플랫폼에 가장 적합한 Argon2ID 설정을 찾을 수 있도록 도와줍니다. Argon2ID는 현재
                 사용 가능한 가장 안전한 비밀번호 해싱 알고리즘입니다. 이 알고리즘을 최대한 활용하려면 각 시스템에
-                맞게 조정해야 합니다.`
+                맞게 조정해야 합니다.`,
 		},
 		openapi: '외부 애플리케이션을 통합하기 위한 Rauthy의 API 사용 방법:',
 		openapiNote: `백엔드 설정에 따라 Swagger UI가 외부에 노출되지 않을 수도 있습니다.
             하지만 기본적으로 내부에서는 Swagger UI를 통해 정보를 확인할 수 있습니다.`,
-		source: 'Rauthy의 소스코드'
+		source: 'Rauthy의 소스코드',
 	},
 	editor: {
 		bold: 'Bold',
@@ -225,22 +225,22 @@ export let I18nAdminKo: I18nAdmin = {
 		quote: 'Quote',
 		removeFmt: 'Remove Formatting',
 		strikeThrough: 'Strikethrough',
-		textArea: 'Edit Text'
+		textArea: 'Edit Text',
 	},
 	error: {
 		needsAdminRole: `<b>rauthy_admin</b> 역할이 부여되지 않았습니다.<br/>
             관리자 패널에 접근할 수 없습니다.`,
 		noAdmin: `Rauthy 관리자 계정에는 <b>MFA가 활성화</b>되어 있어야 합니다.<br>
             <b>계정</b> 으로 이동 후 MFA를 활성화하세요.<br>
-            활성화 후에는 로그아웃한 뒤 다시 로그인해야 합니다.`
+            활성화 후에는 로그아웃한 뒤 다시 로그인해야 합니다.`,
 	},
 	events: {
 		eventLevel: '이벤트 레벨',
-		eventType: '이벤트 타입'
+		eventType: '이벤트 타입',
 	},
 	groups: {
 		delete1: '이 그룹을 삭제하시겠습니까?',
-		name: '그룹 이름'
+		name: '그룹 이름',
 	},
 	jwks: {
 		alg: '알고리즘',
@@ -251,7 +251,7 @@ export let I18nAdminKo: I18nAdmin = {
 		p3: `키를 수동으로 회전할 수도 있습니다. Rauthy 인스턴스가 실행 중인 하드웨어에 따라 수 초가 걸릴 수
             있습니다.`,
 		type: '타입',
-		rotateKeys: '키 회전'
+		rotateKeys: '키 회전',
 	},
 	nav: {
 		apiKeys: 'API 키',
@@ -266,12 +266,12 @@ export let I18nAdminKo: I18nAdmin = {
 		roles: '역할',
 		scopes: '범위',
 		sessions: '세션',
-		users: '사용자'
+		users: '사용자',
 	},
 	options: {
 		expires: '만료일',
 		lastSeen: '마지막 사용시간',
-		state: '상태'
+		state: '상태',
 	},
 	pam: {
 		addGroup: 'New PAM Group',
@@ -307,13 +307,13 @@ export let I18nAdminKo: I18nAdmin = {
 		userEmail: 'Linked User E-Mail',
 		username: 'Username',
 		usernameNewDesc: `The Username should be chosen carefully. Once created, it cannot be changed easily afterwards
-            for security reasons.`
+            for security reasons.`,
 	},
 	passwordPolicy: {
 		configDesc: '새 비밀번호에 대한 정책입니다.',
 		resetSet0: '0으로 설정하면 비활성화됩니다.',
 		validForDays: '기간 제한',
-		validityNew: '이전 비밀번호 사용 제한 정책입니다.'
+		validityNew: '이전 비밀번호 사용 제한 정책입니다.',
 	},
 	providers: {
 		config: {
@@ -347,7 +347,7 @@ export let I18nAdminKo: I18nAdmin = {
 				p5: `<code>$.roles</code> 는 <code>&#123;\"roles\": \"value\"&#125;</code> 을 목표로
                     할 수 있습니다.`,
 				p6: `<code>$.roles.*</code> 는 <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>
-                    과 같이 객체 또는 배열 내부의 값을 목표로 할 수 있습니다.`
+                    과 같이 객체 또는 배열 내부의 값을 목표로 할 수 있습니다.`,
 			},
 			lookup: '조회',
 			pathAdminClaim: '관리자 Claim 경로',
@@ -357,7 +357,7 @@ export let I18nAdminKo: I18nAdmin = {
                 MFA Claim 경로를 지정할 수 있습니다.`,
 			mapUser: `업스트림 ID Claim 에 따라 사용자를 Rauthy 관리자로 매핑할 수 있습니다.`,
 			valueAdminClaim: '관리자 Claim 값',
-			valueMfaClaim: 'MFA Claim 값'
+			valueMfaClaim: 'MFA Claim 값',
 		},
 		delete: {
 			areYouSure: '이 공급자를 삭제하시겠습니까?',
@@ -365,13 +365,13 @@ export let I18nAdminKo: I18nAdmin = {
 			isInUse1: '이 공급자는 활성 사용자가 사용 중입니다!',
 			isInUse2: `강제로 삭제할 수는 있지만 로컬 비밀번호나 패스키가 없는 사용자는 더 이상 로그인할 수
                 없습니다.`,
-			linkedUsers: '연결된 사용자'
-		}
+			linkedUsers: '연결된 사용자',
+		},
 	},
 	roles: {
 		adminNoMod: '<code>rauthy_admin</code> 역할은 변경할 수 없습니다.',
 		delete1: '이 역할을 삭제하시겠습니까?',
-		name: '역할 이름'
+		name: '역할 이름',
 	},
 	scopes: {
 		defaultNoMod: '이것은 OIDC 기본 범위 중 하나입니다. 변경할 수 없습니다.',
@@ -380,19 +380,19 @@ export let I18nAdminKo: I18nAdmin = {
 		mapping1: '사용자 지정 범위를 속성에 매핑할 수 있습니다.',
 		mapping2: `구성된 모든 추가 속성은 각 사용자에 대해 사용자 지정 값을 가질 수 있습니다.
             이러한 속성이 범위에 매핑되면 액세스 및 ID 토큰에 포함될 수 있습니다.`,
-		name: '범위 이름'
+		name: '범위 이름',
 	},
 	search: {
 		orderBy: '정렬 기준',
 		orderChangeToAsc: '오름차순으로 정렬',
-		orderChangeToDesc: '내림차순으로 정렬'
+		orderChangeToDesc: '내림차순으로 정렬',
 	},
 	sessions: {
-		invalidateAll: '모든 세션 삭제'
+		invalidateAll: '모든 세션 삭제',
 	},
 	tabs: {
 		config: '설정',
-		delete: '삭제'
+		delete: '삭제',
 	},
 	tos: {
 		accepted: 'Accepted',
@@ -406,16 +406,16 @@ export let I18nAdminKo: I18nAdmin = {
 			desc: `During the transition time, accepting updated ToS is optional. It only becomes 
 				mandatory afterward.`,
 			enable: 'Enable Transition Time',
-			label: 'End of Transition Time'
+			label: 'End of Transition Time',
 		},
-		tos: 'ToS'
+		tos: 'ToS',
 	},
 	users: {
 		antiLockout: {
 			rule: 'Anti-Lockout Rule',
 			delete: 'cannot be deleted',
 			disable: 'cannot be disabled',
-			rauthyAdmin: 'rauthy_admin rule cannot be removed'
+			rauthyAdmin: 'rauthy_admin rule cannot be removed',
 		},
 		attributes: '속성',
 		deleteUser: '이 사용자를 삭제하시겠습니까?',
@@ -438,11 +438,11 @@ export let I18nAdminKo: I18nAdmin = {
 		pwdSendEmailDesc: '새 비밀번호를 설정하거나, 재설정 이메일을 보낼 수 있습니다.',
 		savePassword: '비밀번호 저장',
 		selfServiceDesc: '새 비밀번호를 설정하거나, 재설정 이메일을 보낼 수 있습니다.',
-		sendResetEmail: '재설정 이메일 보내기'
+		sendResetEmail: '재설정 이메일 보내기',
 	},
 	validation: {
 		css: '비정상적인 CSS',
 		origin: '비정상적인 오리진',
-		uri: '비정상적인 URI'
-	}
+		uri: '비정상적인 URI',
+	},
 };

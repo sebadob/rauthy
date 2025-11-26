@@ -36,7 +36,7 @@ export const I18nNb: I18n = {
 			'September',
 			'Oktober',
 			'November',
-			'Desember'
+			'Desember',
 		],
 		never: 'Aldri',
 		password: 'Passord',
@@ -50,7 +50,7 @@ export const I18nNb: I18n = {
 		summary: 'Sammendrag',
 		timezone: 'Timezone',
 		weekDaysShort: ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'],
-		year: 'År'
+		year: 'År',
 	},
 	account: {
 		account: 'Brukerkonto',
@@ -101,7 +101,7 @@ export const I18nNb: I18n = {
 		pam: {
 			generatePassword: 'Nytt passord',
 			username: 'Brukernavn',
-			validFor: 'Passord gyldig i {{ secs }} sekunder'
+			validFor: 'Passord gyldig i {{ secs }} sekunder',
 		},
 		passwordConfirm: 'Bekreft passord',
 		passwordCurr: 'Nåværende passord',
@@ -120,7 +120,7 @@ export const I18nNb: I18n = {
 			immutable: 'CAUTION: The username can only be chosen once!',
 			immutableInfo: 'The username is immutable.',
 			notAvailable: 'This name is not available.',
-			preferredUsername: 'Preferred Username'
+			preferredUsername: 'Preferred Username',
 		},
 		providerLink: 'Koble konto',
 		providerLinkDesc: `Denne kontoen kan kobles til en av følgende innloggingsleverandører. Etter aktivering blir du 
@@ -143,7 +143,7 @@ export const I18nNb: I18n = {
 			det.`,
 		webIdDescData: 'Du kan legge til egne data til din WebID i gyldig FOAF-vokabular:',
 		webIdExpertMode: 'Aktiver ekspertmodus',
-		zip: 'Postnummer'
+		zip: 'Postnummer',
 	},
 	authorize: {
 		clientForceMfa: `Denne påloggingen krever MFA for økt sikkerhet. For å få tilgang, må du logge inn på kontoen din 
@@ -170,7 +170,7 @@ export const I18nNb: I18n = {
 		requestExpires: 'Forespørselen utløper',
 		requestExpired: 'Forespørselen er utløpt',
 		signUp: 'Brukerregistrering',
-		validEmail: 'Oppgi gyldig e-postadresse'
+		validEmail: 'Oppgi gyldig e-postadresse',
 	},
 	device: {
 		accept: 'Godta',
@@ -184,26 +184,26 @@ export const I18nNb: I18n = {
 		submit: 'Send',
 		title: 'Enhetsautorisering',
 		userCode: 'Brukerkode',
-		wrongOrExpired: 'Ugyldig eller utløpt kode'
+		wrongOrExpired: 'Ugyldig eller utløpt kode',
 	},
 	emailChange: {
 		title: 'E-postbytte bekreftet',
 		textChanged: 'Din e-postadresse ble vellykket endret fra',
 		textLogin: 'Du kan nå logge inn med den nye adressen.',
-		to: 'til'
+		to: 'til',
 	},
 	error: {
-		details: 'Vis detaljer'
+		details: 'Vis detaljer',
 	},
 	index: {
 		register: 'Registrer',
 		accountLogin: 'Konto',
-		adminLogin: 'Admin'
+		adminLogin: 'Admin',
 	},
 	logout: {
 		logout: 'Logg ut',
 		confirmMsg: 'Er du sikker på at du vil logge ut og avslutte økten?',
-		cancel: 'Avbryt'
+		cancel: 'Avbryt',
 	},
 	mfa: {
 		p1: `Hvis du ønsker å bruke flere systemer parallelt, som f.eks. Windows og Android, bør du registrere deg med 
@@ -228,7 +228,7 @@ export const I18nNb: I18n = {
 		passwordInvalid: 'Ugyldig passord',
 		test: 'Test',
 		testError: 'Feil ved oppstart av testen',
-		testSuccess: 'Test vellykket'
+		testSuccess: 'Test vellykket',
 	},
 	pagination: {
 		entries: 'Oppføringer',
@@ -237,7 +237,7 @@ export const I18nNb: I18n = {
 		gotoPageNext: 'Gå til neste side',
 		pagination: 'Sidenummerering',
 		showCount: 'Vis antall',
-		total: 'Totalt'
+		total: 'Totalt',
 	},
 	passwordPolicy: {
 		passwordPolicy: 'Passordregler',
@@ -247,7 +247,7 @@ export const I18nNb: I18n = {
 		uppercaseMin: 'Min store bokstaver',
 		digitsMin: 'Min antall sifre',
 		specialMin: 'Min antall spesialtegn',
-		notRecent: 'Ikke noe av de siste passordene'
+		notRecent: 'Ikke noe av de siste passordene',
 	},
 	passwordReset: {
 		accountLogin: 'Konto pålogging',
@@ -272,7 +272,7 @@ export const I18nNb: I18n = {
 		success3: 'Hvis du ikke blir videresendt, vennligst klikk her:',
 		successPasskey1: 'Den nye passkeyen ble vellykket registrert.',
 		successPasskey2: `Vennligst logg inn direkte på kontoen din og registrer minst én annen backup passkey. En 
-			passordløs konto kan ikke bruke passordtilbakestilling via e-post i tilfelle den nåværende passkeyen blir borte.`
+			passordløs konto kan ikke bruke passordtilbakestilling via e-post i tilfelle den nåværende passkeyen blir borte.`,
 	},
 	register: {
 		alreadyRegistered: 'E-posten er allerede registrert',
@@ -285,17 +285,16 @@ export const I18nNb: I18n = {
 		regexName: 'Navn med 2 - 32 bokstaver uten spesialtegn',
 		register: 'Registrer',
 		success: 'Registrering vellykket',
-		userReg: 'Brukerregistrering'
+		userReg: 'Brukerregistrering',
 	},
 	tos: {
 		acceptOptUntil: 'Accept is optional until:',
 		deny: 'Deny',
-		tos: 'Terms of Service'
+		tos: 'Terms of Service',
 	},
 	userRevoke: {
 		title: 'Tilbakekalling av pålogginger',
-		desc1:
-			'Alle pålogginger og økter for denne brukeren har blitt tilbakekalt så langt det er mulig.',
-		desc2: 'Passord bør umiddelbart tilbakestilles!'
-	}
+		desc1: 'Alle pålogginger og økter for denne brukeren har blitt tilbakekalt så langt det er mulig.',
+		desc2: 'Passord bør umiddelbart tilbakestilles!',
+	},
 };

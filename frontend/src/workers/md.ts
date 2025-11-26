@@ -10,29 +10,29 @@ export interface MDWorkerResp {
 
 const MD = import('../wasm/md/md');
 
-onmessage = (ev) => {
-	MD.then((wasm) => {
+onmessage = ev => {
+	MD.then(wasm => {
 		let req = ev.data as MDWorkerReq;
 
 		switch (req.typ) {
 			case 'render':
 				let r: MDWorkerResp = {
 					typ: 'render',
-					data: wasm.render_markdown(req.data)
+					data: wasm.render_markdown(req.data),
 				};
 				postMessage(r);
 				break;
 			case 'sanitize':
 				let s: MDWorkerResp = {
 					typ: 'sanitize',
-					data: wasm.sanitize_html(req.data)
+					data: wasm.sanitize_html(req.data),
 				};
 				postMessage(s);
 				break;
 			case 'close':
 				let c: MDWorkerResp = {
 					typ: 'closed',
-					data: ''
+					data: '',
 				};
 				postMessage(c);
 				console.log('Closing Markdown Worker');

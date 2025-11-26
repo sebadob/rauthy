@@ -13,7 +13,7 @@ export let I18nAdminNb: I18nAdmin = {
 		generate4: 'Følgende <code>curl</code> spørringen kan brukes til testing av nøkkelen:',
 		generate5: 'Hivs <code>jq</code> ikke er installiert, bruk denne versjonen uten:',
 		keyName: 'Nøkkel navn',
-		limitedValidity: 'Begrenset gyldighet'
+		limitedValidity: 'Begrenset gyldighet',
 	},
 	attrs: {
 		delete1: 'Skal dette attributtet slettes?',
@@ -27,7 +27,7 @@ export let I18nAdminNb: I18nAdmin = {
 		makeEditableP3: `Et attributt kan derfor aldri endres fra redigerbart til ikke-redigerbart, fordi
         for en viss tid, uavhengig av varighet, ble uvalidert input tillatt.`,
 		name: 'Attribut navn',
-		userEditable: 'Redigerbart av brukere'
+		userEditable: 'Redigerbart av brukere',
 	},
 	backup: {
 		createBackup: 'Lag Backup',
@@ -36,7 +36,7 @@ export let I18nAdminNb: I18nAdmin = {
 		lastModified: 'Sist endret',
 		local: 'Lokal',
 		name: 'Navn',
-		size: 'Størrelse'
+		size: 'Størrelse',
 	},
 	clients: {
 		backchannelLogout: 'Hvis denne klienten støtter {{ OIDC_BCL }}, kan URIen angis her.',
@@ -47,7 +47,7 @@ export let I18nAdminNb: I18nAdmin = {
                 Kompleks kalkulasjon og definerte CSS variablene over kan også brukes.`,
 			descVariables: `Hver påfølgende etikett er samtidig navnet på CSS variabelen. Det betyr at
                 for eksempel fritekst kan referere til variablene, like som med
-                <code>hsla(var(--action) / .7)</code>.`
+                <code>hsla(var(--action) / .7)</code>.`,
 		},
 		confidential: 'Følsomt',
 		confidentialNoSecret: 'Dette er ikke en følsom klient, og har derfor ingen hemmelighet.',
@@ -92,7 +92,7 @@ export let I18nAdminNb: I18nAdmin = {
 			reqLi2: `Minst <code>/Users</code> endepunkter med <code>filter=externalId eq "*"</code> og
                 <code>filter=userName eq "*"</code> må støttes.`,
 			reqLi3: `Hvis grupper skal synkroniseres, må i tillegg under <code>/Groups</code>
-                <code>filter=displayName eq "*"</code> støttes.`
+                <code>filter=displayName eq "*"</code> støttes.`,
 		},
 		scopes: {
 			allowed: 'Tillatte Scopes',
@@ -100,7 +100,7 @@ export let I18nAdminNb: I18nAdmin = {
 			desc: `Tillatte Scopes er de som klienten dynamisk kan be om ved
             omdirigering til innlogging i <code>authorization_code</code> flyten.
             Standard Scopes legges derimot alltid til og kan løse problemer hvis
-            for eksempel <code>password</code> flyten brukes.`
+            for eksempel <code>password</code> flyten brukes.`,
 		},
 		secret: {
 			doCache: 'Cacher klient hemmelighet',
@@ -109,14 +109,14 @@ export let I18nAdminNb: I18nAdmin = {
 			rotateDesc1: `For å muliggjøre oppdateringer uten nedetid, kan den eksisterende hemmeligheten
                 beholdes i in-memory cachen i en viss tid. En verdi mellom 1 og 24 timer kan angis.`,
 			rotateDesc2:
-				'ADVARSEL: Den nåværende hemmeligheten bør ikke beholdes i cachen hvis det har vært et lekkasje!'
+				'ADVARSEL: Den nåværende hemmeligheten bør ikke beholdes i cachen hvis det har vært et lekkasje!',
 		},
 		tokenLifetime: {
 			p1: 'Tokenets levetid brukes for Access og ID Tokens og angis i sekunder.',
 			p2: `Hvis klienten støtter EdDSA / ed25519 algoritmer, bør dette være det foretrukne valget.
                 RSA algoritmer eksisterer kun av kompatibilitetsgrunner.`,
-			p3: `Algoritmen for Refresh Tokens kan ikke endres, da disse kun skal brukes av Rauthy.`
-		}
+			p3: `Algoritmen for Refresh Tokens kan ikke endres, da disse kun skal brukes av Rauthy.`,
+		},
 	},
 	common: {
 		account: 'Konto',
@@ -140,7 +140,7 @@ export let I18nAdminNb: I18nAdmin = {
 		preview: 'Preview',
 		reset: 'Tilbakestill',
 		searchOptions: 'Søkealternativer',
-		until: 'Til'
+		until: 'Til',
 	},
 	docs: {
 		book: 'For generell dokumentasjon for Rauthy, se',
@@ -159,7 +159,7 @@ export let I18nAdminNb: I18nAdmin = {
             bakoverkompatibilitet.`,
 			p3: `Migrering av alle krypterte verdier på dette tidspunktet kan, avhengig av systemet,
             ta litt tid.`,
-			pNotPossible: 'For å migrere må det finnes minst 2 kypteringsnøkler.'
+			pNotPossible: 'For å migrere må det finnes minst 2 kypteringsnøkler.',
 		},
 		hashing: {
 			calculate: 'Beregn',
@@ -214,12 +214,12 @@ export let I18nAdminNb: I18nAdmin = {
 			pUtility: `Dette verktøyet er en hjelp til å finne de beste Argon2ID-verdiene for det aktuelle systemet.
             Argon2ID er den for tiden sikreste tilgjengelige passordhash-algoritmen. For å kunne utnytte det fulle potensialet
             må imidlertid verdiene tilpasses systemet.`,
-			mCost3: 'Den minimale tillatte verdien for <code>m_cost</code> er <code>32768</code>.'
+			mCost3: 'Den minimale tillatte verdien for <code>m_cost</code> er <code>32768</code>.',
 		},
 		openapi: 'For integrering av en ekstern applikasjon via Rauthys API, se',
 		openapiNote: `Avhengig av konfigurasjonen er Swagger UI kanskje ikke offentlig tilgjengelig via lenken over.
             Den er imidlertid (som standard) tilgjengelig via den interne metrics-serveren for å redusere angrepsflaten.`,
-		source: 'Kildekoden finnes her'
+		source: 'Kildekoden finnes her',
 	},
 	editor: {
 		bold: 'Bold',
@@ -236,21 +236,21 @@ export let I18nAdminNb: I18nAdmin = {
 		quote: 'Quote',
 		removeFmt: 'Remove Formatting',
 		strikeThrough: 'Strikethrough',
-		textArea: 'Edit Text'
+		textArea: 'Edit Text',
 	},
 	error: {
 		needsAdminRole: 'For å få tilgang må du ha rollen <b>rauthy_admin</b>.',
 		noAdmin: `For Rauthy admin-kontoer er <b>MFA påkrevd.</b><br>
             Gå til <b>konto</b> og aktiver MFA.<br>
-            Deretter må du logge ut og inn igjen`
+            Deretter må du logge ut og inn igjen`,
 	},
 	events: {
 		eventLevel: 'Hendelsesnivå',
-		eventType: 'Hendelsestype'
+		eventType: 'Hendelsestype',
 	},
 	groups: {
 		delete1: 'Skal denne gruppen slettes?',
-		name: 'Gruppenavn'
+		name: 'Gruppenavn',
 	},
 	jwks: {
 		alg: 'Algoritme',
@@ -258,7 +258,7 @@ export let I18nAdminNb: I18nAdmin = {
 		p2: `JWKs roteres automatisk den 1. hver måned. For alle nye tokens brukes alltid den nyeste versjonen av en nøkkel for den aktuelle algoritmen. Gamle nøkler beholdes en stund for å validere eksisterende tokens og slettes automatisk etter en tid.`,
 		p3: `Nøkler kan også roteres manuelt. Avhengig av maskinvaren denne Rauthy-instansen kjører på, kan dette ta noen sekunder.`,
 		type: 'Type',
-		rotateKeys: 'Roter nøkler'
+		rotateKeys: 'Roter nøkler',
 	},
 	nav: {
 		apiKeys: 'API-nøkler',
@@ -273,12 +273,12 @@ export let I18nAdminNb: I18nAdmin = {
 		roles: 'Roller',
 		scopes: 'Scopes',
 		sessions: 'Økter',
-		users: 'Brukere'
+		users: 'Brukere',
 	},
 	options: {
 		expires: 'Utløper',
 		lastSeen: 'Sist sett',
-		state: 'Status'
+		state: 'Status',
 	},
 	pam: {
 		addGroup: 'Ny PAM-gruppe',
@@ -304,13 +304,13 @@ export let I18nAdminNb: I18nAdmin = {
 		secretRotate: 'Roter hemmelighet',
 		userEmail: 'Koblet bruker-e-post',
 		username: 'Brukernavn',
-		usernameNewDesc: `Brukernavnet bør velges nøye. Når det er opprettet, kan det ikke enkelt endres senere av sikkerhetsgrunner.`
+		usernameNewDesc: `Brukernavnet bør velges nøye. Når det er opprettet, kan det ikke enkelt endres senere av sikkerhetsgrunner.`,
 	},
 	passwordPolicy: {
 		configDesc: 'Regler for nye passord.',
 		resetSet0: 'Verdien 0 deaktiverer kravet.',
 		validForDays: 'Gyldig i dager',
-		validityNew: 'Gyldighet for nye passord.'
+		validityNew: 'Gyldighet for nye passord.',
 	},
 	providers: {
 		config: {
@@ -334,7 +334,7 @@ export let I18nAdminNb: I18nAdmin = {
 				p3: '<code>$.</code> markerer starten på JSON-objektet',
 				p4: '<code>*</code> kan brukes som jokertegn i stien',
 				p5: '<code>$.roles</code> vil treffe <code>&#123;"roles": "verdi"&#125;</code>',
-				p6: `<code>$.roles.*</code> kan treffe en verdi i et objekt eller array som<br><code>&#123;\"roles\": [\"verdi\", \"ikkeMinVerdi\"]&#125;</code>`
+				p6: `<code>$.roles.*</code> kan treffe en verdi i et objekt eller array som<br><code>&#123;\"roles\": [\"verdi\", \"ikkeMinVerdi\"]&#125;</code>`,
 			},
 			lookup: 'Søk',
 			pathAdminClaim: 'Sti til admin-claim',
@@ -343,20 +343,20 @@ export let I18nAdminNb: I18nAdmin = {
 			mapMfa: `Hvis leverandøren gir en claim som indikerer at brukeren har brukt minst 2FA ved innlogging, kan du oppgi stien til MFA-claimen her.`,
 			mapUser: `Du kan mappe en bruker til å være Rauthy-admin basert på en upstream ID-claim.`,
 			valueAdminClaim: 'Verdi for admin-claim',
-			valueMfaClaim: 'Verdi for MFA-claim'
+			valueMfaClaim: 'Verdi for MFA-claim',
 		},
 		delete: {
 			areYouSure: 'Er du sikker på at denne leverandøren skal slettes?',
 			forceDelete: 'Tving sletting',
 			isInUse1: 'Denne leverandøren brukes av aktive brukere!',
 			isInUse2: `Du kan tvinge sletting, men brukere uten lokalt passord eller passnøkkel vil ikke kunne logge inn lenger.`,
-			linkedUsers: 'Koblede brukere'
-		}
+			linkedUsers: 'Koblede brukere',
+		},
 	},
 	roles: {
 		adminNoMod: 'Rollen <code>rauthy_admin</code> kan ikke endres.',
 		delete1: 'Skal denne rollen slettes?',
-		name: 'Rollenavn'
+		name: 'Rollenavn',
 	},
 	scopes: {
 		defaultNoMod: 'Dette er en standard OIDC Scope. Disse kan ikke endres.',
@@ -364,19 +364,19 @@ export let I18nAdminNb: I18nAdmin = {
 		deleteDefault: 'OIDC standard scopes kan ikke slettes',
 		mapping1: 'Bruker-attributter kan mappes til egne scopes.',
 		mapping2: `Hvert eksisterende attributt har en egen verdi per bruker. Disse attributtene kan mappes til en scope og vil da inkluderes i Access- eller ID-tokenet.`,
-		name: 'Scope-navn'
+		name: 'Scope-navn',
 	},
 	sessions: {
-		invalidateAll: 'Invalidér alle økter'
+		invalidateAll: 'Invalidér alle økter',
 	},
 	search: {
 		orderBy: 'Sorter etter ...',
 		orderChangeToAsc: 'Bytt til stigende sortering',
-		orderChangeToDesc: 'Bytt til synkende sortering'
+		orderChangeToDesc: 'Bytt til synkende sortering',
 	},
 	tabs: {
 		config: 'Konfigurasjon',
-		delete: 'Slett'
+		delete: 'Slett',
 	},
 	tos: {
 		accepted: 'Accepted',
@@ -390,16 +390,16 @@ export let I18nAdminNb: I18nAdmin = {
 			desc: `During the transition time, accepting updated ToS is optional. It only becomes 
 				mandatory afterward.`,
 			enable: 'Enable Transition Time',
-			label: 'End of Transition Time'
+			label: 'End of Transition Time',
 		},
-		tos: 'ToS'
+		tos: 'ToS',
 	},
 	users: {
 		antiLockout: {
 			rule: 'Anti-lockout-regel',
 			delete: 'kan ikke slettes',
 			disable: 'kan ikke deaktiveres',
-			rauthyAdmin: 'rauthy_admin-rollen kan ikke fjernes'
+			rauthyAdmin: 'rauthy_admin-rollen kan ikke fjernes',
 		},
 		attributes: 'Attributter',
 		deleteUser: 'Skal denne brukeren slettes?',
@@ -422,11 +422,11 @@ export let I18nAdminNb: I18nAdmin = {
 		savePassword: 'Lagre passord',
 		selfServiceDesc:
 			'Du kan enten sette et nytt passord eller sende en e-post for tilbakestilling.',
-		sendResetEmail: 'Send e-post for tilbakestilling'
+		sendResetEmail: 'Send e-post for tilbakestilling',
 	},
 	validation: {
 		css: 'Gyldig CSS-verdi',
 		origin: 'Gyldig origin',
-		uri: 'Gyldig URI'
-	}
+		uri: 'Gyldig URI',
+	},
 };

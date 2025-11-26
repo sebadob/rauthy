@@ -13,7 +13,7 @@ export let I18nAdminEn: I18nAdmin = {
 		generate4: 'You can use the following <code>curl</code> request to test your new Key:',
 		generate5: "If you don't have <code>jq</code> installed and the above fails:",
 		keyName: 'Key Name',
-		limitedValidity: 'Limited Validity'
+		limitedValidity: 'Limited Validity',
 	},
 	attrs: {
 		delete1: 'Are you sure you want to delete this attribute?',
@@ -26,7 +26,7 @@ export let I18nAdminEn: I18nAdmin = {
 		makeEditableP3: `An attribute cannot be changed from editable to non-editable, because it allowed untrusted
             inputs in the past, no matter for how long this was the case.`,
 		name: 'Attribute Name',
-		userEditable: 'User Editable'
+		userEditable: 'User Editable',
 	},
 	backup: {
 		createBackup: 'Create Backup',
@@ -34,7 +34,7 @@ export let I18nAdminEn: I18nAdmin = {
 		lastModified: 'Last Modified',
 		local: 'Local',
 		name: 'Name',
-		size: 'Size'
+		size: 'Size',
 	},
 	clients: {
 		backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
@@ -44,7 +44,7 @@ export let I18nAdminEn: I18nAdmin = {
 			descFullCss: `The following values must be fully valid CSS <code>color</code> values.
                 You can also use complex calculations or the above defined CSS variables.`,
 			descVariables: `Each following label is at the same time the name of the CSS variable. This means,
-                that you can reference these in the free inputs, e.g. with <code>hsla(var(--action) / .7)</code>.`
+                that you can reference these in the free inputs, e.g. with <code>hsla(var(--action) / .7)</code>.`,
 		},
 		confidential: 'Confidential',
 		confidentialNoSecret: 'This is a non-confidential client and therefore has not secret.',
@@ -89,7 +89,7 @@ export let I18nAdminEn: I18nAdmin = {
 			reqLi2: `At least <code>/Users</code> endpoints with <code>filter=externalId eq "*"</code> and
                 <code>filter=userName eq "*"</code> must be supported.`,
 			reqLi3: `If groups should be synchronized, <code>/Groups</code> must also support 
-                <code>filter=displayName eq "*"</code>.`
+                <code>filter=displayName eq "*"</code>.`,
 		},
 		scopes: {
 			allowed: 'Allowed Scopes',
@@ -97,7 +97,7 @@ export let I18nAdminEn: I18nAdmin = {
 			desc: `Allowed Scopes are the ones the client is allowed to request dynamically during
             a redirect to the login when using the <code>authorization_code</code> flow. The default
             scopes will always be added to the tokens to solve some issues when using the 
-            <code>password</code> for instance.`
+            <code>password</code> for instance.`,
 		},
 		secret: {
 			doCache: 'Cache Client Secret',
@@ -105,14 +105,14 @@ export let I18nAdminEn: I18nAdmin = {
 			generate: 'Generate New Secret',
 			rotateDesc1: `To make graceful updates and secret rotations possible, you have the ability to keep the
                 current secret in an in-memory cache for some time. You can enter a value between 1 and 24 hours.`,
-			rotateDesc2: 'Caution: You should not cache the current secret if you had a leak!'
+			rotateDesc2: 'Caution: You should not cache the current secret if you had a leak!',
 		},
 		tokenLifetime: {
 			p1: `The token lifetime applies to Access and ID tokens and is given in seconds.`,
 			p2: `If the client supports EdDSA / ed25519 algorithms, it should always be the preferred
                 choice. RSA algorithms exist for compatibility only.`,
-			p3: `The algorithm for refresh tokens cannot be changed, since these are used by Rauthy only.`
-		}
+			p3: `The algorithm for refresh tokens cannot be changed, since these are used by Rauthy only.`,
+		},
 	},
 	common: {
 		account: 'Account',
@@ -136,7 +136,7 @@ export let I18nAdminEn: I18nAdmin = {
 		preview: 'Preview',
 		reset: 'Reset',
 		searchOptions: 'Search Options',
-		until: 'Until'
+		until: 'Until',
 	},
 	docs: {
 		book: 'For general documentation about Rauthy itself, you should take a look at the',
@@ -153,7 +153,7 @@ export let I18nAdminEn: I18nAdmin = {
             here dynamically. All new JWK encryption's will always use the currently active key.`,
 			p3: `If you migrate all existing secrets, it might take a few seconds to finish, if you have a big 
             dataset.`,
-			pNotPossible: 'To be able to migrate, at least 2 encryption keys need to be available.'
+			pNotPossible: 'To be able to migrate, at least 2 encryption keys need to be available.',
 		},
 		hashing: {
 			calculate: 'Calculate',
@@ -212,14 +212,14 @@ export let I18nAdminEn: I18nAdmin = {
             these values can be.`,
 			pUtility: `This utility helps you find the best Argon2ID settings for your platform.
             Argon2ID is currently the safest available password hashing algorithm. To use it to its fullest potential, 
-            it has to be tuned for each deployment.`
+            it has to be tuned for each deployment.`,
 		},
 		openapi:
 			"If you want to integrate an external application and use Rauthy's API, take a look at the",
 		openapiNote: `Depending on the backend configuration, the Swagger UI may not be exposed publicly at this point.
             It is however by default available via the internal metrics HTTP server to not expose any 
             information.`,
-		source: 'The source code can be found here'
+		source: 'The source code can be found here',
 	},
 	editor: {
 		bold: 'Bold',
@@ -236,22 +236,22 @@ export let I18nAdminEn: I18nAdmin = {
 		quote: 'Quote',
 		removeFmt: 'Remove Formatting',
 		strikeThrough: 'Strikethrough',
-		textArea: 'Edit Text'
+		textArea: 'Edit Text',
 	},
 	error: {
 		needsAdminRole: `You are not assigned to the <b>rauthy_admin</b> role.<br/>
             You do not have access to the admin panel.`,
 		noAdmin: `A Rauthy admin account must have <b>MFA enabled.</b><br>
             Please navigate to your <b>account</b> and activate MFA.<br>
-            Afterward, you need to do a logout and log back in.`
+            Afterward, you need to do a logout and log back in.`,
 	},
 	events: {
 		eventLevel: 'Event Level',
-		eventType: 'Event Type'
+		eventType: 'Event Type',
 	},
 	groups: {
 		delete1: 'Are you sure you want to delete this group?',
-		name: 'Group Name'
+		name: 'Group Name',
 	},
 	jwks: {
 		alg: 'Algorithm',
@@ -263,7 +263,7 @@ export let I18nAdminEn: I18nAdmin = {
 		p3: `Keys can also be rotated manually. Depending on the hardware this Rauthy instance is running on, it might
         take a few seconds.`,
 		type: 'Type',
-		rotateKeys: 'Rotate Keys'
+		rotateKeys: 'Rotate Keys',
 	},
 	nav: {
 		apiKeys: 'API Keys',
@@ -278,12 +278,12 @@ export let I18nAdminEn: I18nAdmin = {
 		roles: 'Roles',
 		scopes: 'Scopes',
 		sessions: 'Sessions',
-		users: 'Users'
+		users: 'Users',
 	},
 	options: {
 		expires: 'Expires',
 		lastSeen: 'Last Seen',
-		state: 'State'
+		state: 'State',
 	},
 	pam: {
 		addGroup: 'New PAM Group',
@@ -319,13 +319,13 @@ export let I18nAdminEn: I18nAdmin = {
 		userEmail: 'Linked User E-Mail',
 		username: 'Username',
 		usernameNewDesc: `The Username should be chosen carefully. Once created, it cannot be changed easily afterwards
-            for security reasons.`
+            for security reasons.`,
 	},
 	passwordPolicy: {
 		configDesc: 'Policy for new passwords.',
 		resetSet0: 'The value 0 deactivates the requirement.',
 		validForDays: 'Valid For Days',
-		validityNew: 'Validity for new passwords.'
+		validityNew: 'Validity for new passwords.',
 	},
 	providers: {
 		config: {
@@ -357,7 +357,7 @@ export let I18nAdminEn: I18nAdmin = {
 				p4: '<code>*</code> can be used as a wildcard in your path',
 				p5: '<code>$.roles</code> would target <code>&#123;"roles": "value"&#125;</code>',
 				p6: `<code>$.roles.*</code> can target a value inside an object or array like<br>
-                    <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`
+                    <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
 			},
 			lookup: 'Lookup',
 			pathAdminClaim: 'Admin Claim Path',
@@ -367,7 +367,7 @@ export let I18nAdminEn: I18nAdmin = {
                 login, you can specify the mfa claim path.`,
 			mapUser: `You can map a user to be a Rauthy admin depending on an upstream ID claim.`,
 			valueAdminClaim: 'Admin Claim Value',
-			valueMfaClaim: 'MFA Claim Value'
+			valueMfaClaim: 'MFA Claim Value',
 		},
 		delete: {
 			areYouSure: 'Are you sure you want to delete this provider?',
@@ -375,13 +375,13 @@ export let I18nAdminEn: I18nAdmin = {
 			isInUse1: 'This provider is in use by active users!',
 			isInUse2: `You can force delete it, but users without a local password or passkey
                 will not be able to log in anymore.`,
-			linkedUsers: 'Linked Users'
-		}
+			linkedUsers: 'Linked Users',
+		},
 	},
 	roles: {
 		adminNoMod: 'The <code>rauthy_admin</code> role is immutable.',
 		delete1: 'Are you sure you want to delete this role?',
-		name: 'Role Name'
+		name: 'Role Name',
 	},
 	scopes: {
 		defaultNoMod: 'This is a default OIDC Scope. These are immutable.',
@@ -390,19 +390,19 @@ export let I18nAdminEn: I18nAdmin = {
 		mapping1: 'You can map custom scopes to attributes.',
 		mapping2: `All additional attributes, that were configured, can have a custom value for each user.
             When they are mapped to a scope, they can be included in the Access and / or ID Tokens.`,
-		name: 'Scope Name'
+		name: 'Scope Name',
 	},
 	search: {
 		orderBy: 'Order by ...',
 		orderChangeToAsc: 'Change sort to ascending',
-		orderChangeToDesc: 'Change sort to descending'
+		orderChangeToDesc: 'Change sort to descending',
 	},
 	sessions: {
-		invalidateAll: 'Invalidate All Sessions'
+		invalidateAll: 'Invalidate All Sessions',
 	},
 	tabs: {
 		config: 'Config',
-		delete: 'Delete'
+		delete: 'Delete',
 	},
 	tos: {
 		accepted: 'Accepted',
@@ -416,16 +416,16 @@ export let I18nAdminEn: I18nAdmin = {
 			desc: `During the transition time, accepting updated ToS is optional. It only becomes 
 				mandatory afterward.`,
 			enable: 'Enable Transition Time',
-			label: 'End of Transition Time'
+			label: 'End of Transition Time',
 		},
-		tos: 'ToS'
+		tos: 'ToS',
 	},
 	users: {
 		antiLockout: {
 			rule: 'Anti-Lockout Rule',
 			delete: 'cannot be deleted',
 			disable: 'cannot be disabled',
-			rauthyAdmin: 'rauthy_admin rule cannot be removed'
+			rauthyAdmin: 'rauthy_admin rule cannot be removed',
 		},
 		attributes: 'Attributes',
 		deleteUser: 'Are you sure you want to delete this user?',
@@ -450,11 +450,11 @@ export let I18nAdminEn: I18nAdmin = {
 		pwdSendEmailDesc: 'You may send out a new reset E-Mail, if the user has not received one.',
 		savePassword: 'Save Password',
 		selfServiceDesc: 'You can either set a new password, or send out a reset E-Mail.',
-		sendResetEmail: 'Send Reset E-Mail'
+		sendResetEmail: 'Send Reset E-Mail',
 	},
 	validation: {
 		css: 'Valid CSS Value',
 		origin: 'Valid Origin',
-		uri: 'Valid URI'
-	}
+		uri: 'Valid URI',
+	},
 };

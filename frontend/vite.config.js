@@ -7,7 +7,7 @@ const backend = 'http://127.0.0.1:8080';
 /** @type {import('vite').UserConfig} */
 const config = {
 	build: {
-		target: 'esnext'
+		target: 'esnext',
 	},
 	plugins: [wasm(), sveltekit()],
 	server: {
@@ -45,7 +45,8 @@ const config = {
 			'/auth/v1/encryption/keys': backend,
 			'/auth/v1/encryption/migrate': backend,
 			'/auth/v1/login_time': backend,
-			'^^(?!\/auth\/v1\/users\/(password_reset|register|%7Bid%7D))\/auth\/v1\/users.*': backend,
+			'^^(?!\/auth\/v1\/users\/(password_reset|register|%7Bid%7D))\/auth\/v1\/users.*':
+				backend,
 			'/auth/v1/pam/': backend,
 			'/auth/v1/pow': backend,
 			'/auth/v1/roles': backend,
@@ -63,13 +64,13 @@ const config = {
 			'/auth/v1/tos': backend,
 			'/auth/v1/update_language': backend,
 			'/auth/v1/version': backend,
-			'/docs/v1/': backend
-		}
+			'/docs/v1/': backend,
+		},
 	},
 	worker: {
 		format: 'es',
-		plugins: () => [wasm()]
-	}
+		plugins: () => [wasm()],
+	},
 };
 
 export default config;

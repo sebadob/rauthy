@@ -13,16 +13,16 @@ export async function webauthnReg(
 	errorI18nTimeout: string,
 	magicLinkId?: string,
 	pwdCsrfToken?: string,
-	mfaModTokenId?: string
+	mfaModTokenId?: string,
 ): Promise<WebauthnRegResult> {
 	let payloadStart: WebauthnRegStartRequest = {
 		passkey_name: passkeyName,
 		magic_link_id: magicLinkId,
-		mfa_mod_token_id: mfaModTokenId
+		mfa_mod_token_id: mfaModTokenId,
 	};
 	let headers: HeadersInit = {
 		'Content-Type': 'application/json',
-		Accept: 'application/json'
+		'Accept': 'application/json',
 	};
 	if (pwdCsrfToken) {
 		headers['x-pwd-csrf-token'] = pwdCsrfToken;
@@ -33,12 +33,12 @@ export async function webauthnReg(
 	let resStart = await fetch(`/auth/v1/users/${userId}/webauthn/register/start`, {
 		method: 'POST',
 		headers,
-		body: JSON.stringify(payloadStart)
+		body: JSON.stringify(payloadStart),
 	});
 	let body = await resStart.json();
 	if ('error' in body) {
 		return {
-			error: body.error.message || 'did not receive any registration data'
+			error: body.error.message || 'did not receive any registration data',
 		};
 	}
 
@@ -72,14 +72,14 @@ export async function webauthnReg(
 			credential = cred;
 		} else {
 			return {
-				error: errorI18nInvalidKey
+				error: errorI18nInvalidKey,
 			};
 		}
 	} catch (e) {
 		console.error(e);
 		const timeout = new Date().getTime() >= expTime;
 		return {
-			error: timeout ? errorI18nTimeout : errorI18nInvalidKey
+			error: timeout ? errorI18nTimeout : errorI18nInvalidKey,
 		};
 	}
 
@@ -94,26 +94,26 @@ export async function webauthnReg(
 				// @ts-ignore the `response.attestationObject` actually exists
 				attestationObject: arrBufToBase64UrlSafe(credential.response.attestationObject),
 				// @ts-ignore the `response.clientDataJSON` actually exists
-				clientDataJSON: arrBufToBase64UrlSafe(credential.response.clientDataJSON)
+				clientDataJSON: arrBufToBase64UrlSafe(credential.response.clientDataJSON),
 			},
 			// @ts-ignore the `response.getClientExtensionResults()` actually exists
 			extensions: credential.getClientExtensionResults(),
-			type: credential.type
+			type: credential.type,
 		},
-		magic_link_id: magicLinkId
+		magic_link_id: magicLinkId,
 	};
 
 	let resFinish = await fetch(`/auth/v1/users/${userId}/webauthn/register/finish`, {
 		method: 'POST',
 		headers,
-		body: JSON.stringify(payloadFinish)
+		body: JSON.stringify(payloadFinish),
 	});
 	if (resFinish.status === 201) {
 		return {};
 	} else {
 		let body = await resFinish.json();
 		return {
-			error: body.error?.message || 'Registration failed'
+			error: body.error?.message || 'Registration failed',
 		};
 	}
 }

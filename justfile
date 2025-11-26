@@ -139,7 +139,12 @@ nginx-start:
 
 # Just uses `cargo fmt --all`
 fmt:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
     cargo fmt --all
+    cd frontend
+    npm run format
 
 clippy:
     #!/usr/bin/env bash

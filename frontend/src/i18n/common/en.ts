@@ -36,7 +36,7 @@ export const I18nEn: I18n = {
 			'September',
 			'October',
 			'November',
-			'December'
+			'December',
 		],
 		never: 'Never',
 		password: 'Password',
@@ -50,7 +50,7 @@ export const I18nEn: I18n = {
 		summary: 'Summary',
 		timezone: 'Timezone',
 		weekDaysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-		year: 'Year'
+		year: 'Year',
 	},
 	account: {
 		account: 'User Account',
@@ -98,7 +98,7 @@ export const I18nEn: I18n = {
 		pam: {
 			generatePassword: 'New Password',
 			username: 'Username',
-			validFor: 'Password valid for {{ secs }} seconds'
+			validFor: 'Password valid for {{ secs }} seconds',
 		},
 		passwordConfirm: 'Confirm Password',
 		passwordCurr: 'Current Password',
@@ -117,7 +117,7 @@ export const I18nEn: I18n = {
 			immutable: 'CAUTION: The username can only be chosen once!',
 			immutableInfo: 'The username is immutable.',
 			notAvailable: 'This name is not available.',
-			preferredUsername: 'Preferred Username'
+			preferredUsername: 'Preferred Username',
 		},
 		providerLink: 'Federate Account',
 		providerLinkDesc:
@@ -138,7 +138,7 @@ export const I18nEn: I18n = {
 			'You can configure the fields that should be exposed with your WebID.\nThis is a feature used by some networks for decentralized logins. If you do not know what it is,\nyou most probably do not need it.',
 		webIdDescData: 'You can add custom data fields to your WebID in valid FOAF Vocabulary',
 		webIdExpertMode: 'Enable Expert Mode',
-		zip: 'ZIP / Postal Code'
+		zip: 'ZIP / Postal Code',
 	},
 	authorize: {
 		clientForceMfa:
@@ -165,7 +165,7 @@ export const I18nEn: I18n = {
 		requestExpires: 'Request expires',
 		requestExpired: 'Request has expired',
 		signUp: 'User Registration',
-		validEmail: 'Provide valid E-Mail address'
+		validEmail: 'Provide valid E-Mail address',
 	},
 	device: {
 		accept: 'Accept',
@@ -179,28 +179,28 @@ export const I18nEn: I18n = {
 		submit: 'Submit',
 		title: 'Device Authorization',
 		userCode: 'User Code',
-		wrongOrExpired: 'Wrong or expired code'
+		wrongOrExpired: 'Wrong or expired code',
 	},
 	emailChange: {
 		title: 'E-Mail Change confirmed',
 		textChanged: 'Your E-Mail address has been changed from',
 		textLogin: 'You can now log in using your new address.',
-		to: 'to'
+		to: 'to',
 	},
 	error: {
 		// errorText: "The requested data could not be found",
-		details: 'Show Details'
+		details: 'Show Details',
 		// detailsText: undefined,
 	},
 	index: {
 		register: 'Register',
 		accountLogin: 'Account',
-		adminLogin: 'Admin'
+		adminLogin: 'Admin',
 	},
 	logout: {
 		logout: 'Logout',
 		confirmMsg: 'Do you really want to logout and end your session?',
-		cancel: 'Cancel'
+		cancel: 'Cancel',
 	},
 	mfa: {
 		p1: 'If you plan on using your MFA key with multiple systems like Windows and Android, you should do the registration with Android.',
@@ -223,7 +223,7 @@ export const I18nEn: I18n = {
 		passwordInvalid: 'Password Invalid',
 		test: 'Test',
 		testError: 'Error starting the Test',
-		testSuccess: 'Test successful'
+		testSuccess: 'Test successful',
 	},
 	pagination: {
 		entries: 'Entries',
@@ -232,7 +232,7 @@ export const I18nEn: I18n = {
 		gotoPageNext: 'Go to next page',
 		pagination: 'Pagination',
 		showCount: 'Show count',
-		total: 'Total'
+		total: 'Total',
 	},
 	passwordPolicy: {
 		passwordPolicy: 'Password Policy',
@@ -242,7 +242,7 @@ export const I18nEn: I18n = {
 		uppercaseMin: 'Uppercase letters min',
 		digitsMin: 'Digits min',
 		specialMin: 'Special characters min',
-		notRecent: 'Not one of last recent passwords'
+		notRecent: 'Not one of last recent passwords',
 	},
 	passwordReset: {
 		accountLogin: 'Account Login',
@@ -266,7 +266,7 @@ export const I18nEn: I18n = {
 		success3: 'If you are not being redirected, please click here:',
 		successPasskey1: 'Your new passkey has been registered successfully.',
 		successPasskey2:
-			'Please log into your account and register a second backup key as\nsoon as possible. With a passkey only account, you wil not be able to use a password reset via\nE-Mail in case you lose your current key.'
+			'Please log into your account and register a second backup key as\nsoon as possible. With a passkey only account, you wil not be able to use a password reset via\nE-Mail in case you lose your current key.',
 	},
 	register: {
 		alreadyRegistered: 'E-Mail is already registered',
@@ -279,16 +279,16 @@ export const I18nEn: I18n = {
 		regexName: 'Name should have 2 - 32 non-special characters',
 		register: 'Register',
 		success: 'Registration successful',
-		userReg: 'User Registration'
+		userReg: 'User Registration',
 	},
 	tos: {
 		acceptOptUntil: 'Accept is optional until:',
 		deny: 'Deny',
-		tos: 'Terms of Service'
+		tos: 'Terms of Service',
 	},
 	userRevoke: {
 		title: 'Revoke Logins',
 		desc1: 'All Logins and Sessions have been revoked for this user as much as possible.',
-		desc2: 'You should immediately renew all your passwords!'
-	}
+		desc2: 'You should immediately renew all your passwords!',
+	},
 };
