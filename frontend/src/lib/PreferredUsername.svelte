@@ -171,10 +171,6 @@
         width: 15rem;
     }
 
-    .err {
-        margin-top: .5rem;
-    }
-
     .immutableInfo {
         color: hsla(var(--text) / .5);
         transform: translateY(.25rem);
