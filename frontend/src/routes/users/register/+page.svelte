@@ -107,6 +107,9 @@
     });
 
     async function fetchTos() {
+        tos = undefined;
+        noTosExists = false;
+
         let res = await fetchGet<ToSLatestResponse>('/auth/v1/tos/latest');
         if (res.body) {
             tos = res.body;
