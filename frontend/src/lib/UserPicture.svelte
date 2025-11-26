@@ -18,7 +18,7 @@
         disableUpload,
     }: {
         userId?: string;
-        fallbackCharacters: string;
+        fallbackCharacters: string | undefined;
         pictureId?: string;
         size?: 'small' | 'medium' | 'large';
         disableUpload?: boolean,
@@ -78,7 +78,10 @@
     });
 
     function calculateColor() {
-        let hue = stringToHue(fallbackCharacters);
+        let hue = 0;
+        if (fallbackCharacters) {
+            hue = stringToHue(fallbackCharacters);
+        }
         return `hsl(${hue}, 50%, 50%)`;
     }
 
@@ -189,7 +192,7 @@
 {#snippet avatar()}
     {#if err || !pictureId}
         <span class={`absolute font-mono font-${size} noselect`}>
-            {fallbackCharacters.toUpperCase()}
+            {fallbackCharacters ? fallbackCharacters.toUpperCase() : ''}
         </span>
     {:else}
         <img

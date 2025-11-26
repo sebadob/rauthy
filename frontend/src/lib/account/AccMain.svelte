@@ -8,7 +8,7 @@
     import AccDevices from "$lib5/account/AccDevices.svelte";
     import {useI18n} from "$state/i18n.svelte.js";
     import type {UserResponse} from "$api/types/user.ts";
-    import {TPL_AUTH_PROVIDERS, TPL_USER_VALUES_CONFIG} from "$utils/constants";
+    import {TPL_AUTH_PROVIDERS} from "$utils/constants";
     import Template from "$lib5/Template.svelte";
     import type {AuthProvidersTemplate} from "$api/templates/AuthProvider.ts";
     import {onMount} from "svelte";
@@ -22,7 +22,6 @@
     import AccPAM from "$lib/account/AccPAM.svelte";
     import type {PamUserResponse} from "$api/types/pam";
     import {fetchGet} from "$api/fetch";
-    import type {UserValuesConfig} from "$api/templates/UserValuesConfig";
 
     let {
         user = $bindable(),

@@ -10,7 +10,7 @@ export interface NewUserRequest {
 	/// Validation: `email`
 	email: string;
 	/// Validation: PATTERN_USER_NAME
-	given_name: string;
+	given_name?: string;
 	/// Validation: PATTERN_USER_NAME
 	family_name?: string;
 	language: Language;
@@ -50,7 +50,7 @@ export interface UpdateUserRequest {
 	/// Validation: `email`
 	email: string;
 	/// Validation: PATTERN_USER_NAME
-	given_name: string;
+	given_name?: string;
 	/// Validation: PATTERN_USER_NAME
 	family_name?: string;
 	language?: Language;

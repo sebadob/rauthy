@@ -59,7 +59,7 @@ pub struct NewUserRequest {
     pub family_name: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
-    pub given_name: String,
+    pub given_name: Option<String>,
     pub language: Language,
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_groups"))]
@@ -152,7 +152,7 @@ pub struct UpdateUserRequest {
     pub email: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
-    pub given_name: String,
+    pub given_name: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
     pub family_name: Option<String>,

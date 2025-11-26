@@ -48,8 +48,6 @@
         onSave: () => void,
     } = $props();
 
-    $inspect('config', config);
-
     let t = useI18n();
     let ta = useI18nAdmin();
     let session = useSession('admin');
@@ -114,6 +112,7 @@
                 account_type: user.account_type,
                 email_verified: user.email_verified,
                 created_at: user.created_at,
+                user_expires: user.user_expires,
                 user_values: {
                     birthdate: user.user_values?.birthdate || '',
                     phone: user.user_values?.phone || '',
@@ -169,7 +168,12 @@
     });
 
     function fallbackCharacters(user: UserResponseSimple) {
-        let chars = user.given_name[0];
+        let chars = '';
+        if (user.given_name) {
+            chars = user.given_name[0];
+        } else {
+            chars = user.email[0];
+        }
         if (user.family_name) {
             chars += user.family_name[0];
         }
@@ -238,9 +242,9 @@
         if (emailVerified !== userOrig?.email_verified) {
             payload.put.push({key: 'email_verified', value: emailVerified});
         }
-        let exp = unixTsFromLocalDateTime(expDate, expTime);
-        if (exp !== userOrig?.user_expires) {
+        if (expires !== (!!userOrig?.user_expires || false)) {
             if (expires) {
+                let exp = unixTsFromLocalDateTime(expDate, expTime);
                 payload.put.push({key: 'user_expires', value: exp});
             } else {
                 payload.del.push('user_expires');
@@ -275,7 +279,7 @@
                 payload.del.push('user_values.street');
             }
         }
-        if (zip !== userOrig?.user_values?.zip) {
+        if (zip !== (userOrig?.user_values?.zip || '')) {
             if (zip) {
                 payload.put.push({key: 'user_values.zip', value: zip});
             } else {
@@ -295,6 +299,11 @@
             } else {
                 payload.del.push('user_values.country');
             }
+        }
+
+        if (Object.entries(payload.del).length === 0 && Object.entries(payload.put).length === 0) {
+            console.log('nothing to do');
+            return;
         }
 
         let res = await fetchPatch<UserResponse>(form.action, payload);

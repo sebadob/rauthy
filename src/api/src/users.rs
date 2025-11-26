@@ -151,7 +151,7 @@ pub async fn post_users(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Create)?;
     payload.validate()?;
     UserValuesValidator {
-        given_name: Some(payload.given_name.as_str()),
+        given_name: payload.given_name.as_deref(),
         family_name: payload.family_name.as_deref(),
         preferred_username: None,
         user_values: &None,
@@ -1770,7 +1770,7 @@ pub async fn put_user_by_id(
     payload.validate()?;
 
     UserValuesValidator {
-        given_name: Some(&payload.given_name),
+        given_name: payload.given_name.as_deref(),
         family_name: payload.family_name.as_deref(),
         // has its own endpoint for updates
         preferred_username: None,

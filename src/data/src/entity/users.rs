@@ -631,7 +631,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
             )
             .await
             .map_err(|err| {
-                let err = ErrorResponse::from(err);
                 if err.message.contains("UNIQUE") {
                     ErrorResponse::new(
                         ErrorResponseType::NotAccepted,
@@ -1025,7 +1024,11 @@ LIMIT $2"#;
         Ok((
             UpdateUserRequest {
                 email: u.email,
-                given_name: u.given_name,
+                given_name: if u.given_name.is_empty() {
+                    None
+                } else {
+                    Some(u.given_name)
+                },
                 family_name: u.family_name,
                 language,
                 // Must be None here to avoid triggering the "new password set" logic for each user
@@ -1057,9 +1060,7 @@ LIMIT $2"#;
                 "password" => {
                     upd_req.password = Some(put.value.as_str().unwrap_or_default().to_string())
                 }
-                "given_name" => {
-                    upd_req.given_name = put.value.as_str().unwrap_or_default().to_string()
-                }
+                "given_name" => upd_req.given_name = put.value.as_str().map(String::from),
                 "family_name" => upd_req.family_name = put.value.as_str().map(String::from),
                 "language" => {
                     let lang = rauthy_api_types::generic::Language::from(Language::from(
@@ -1123,6 +1124,7 @@ LIMIT $2"#;
 
         for key in payload.del {
             match key.as_str() {
+                "given_name" => upd_req.given_name = None,
                 "family_name" => upd_req.family_name = None,
                 "language" => upd_req.language = None,
                 "roles" => upd_req.roles = Vec::default(),
@@ -1183,7 +1185,7 @@ LIMIT $2"#;
         };
 
         user.email = upd_user.email;
-        user.given_name = upd_user.given_name;
+        user.given_name = upd_user.given_name.unwrap_or_default();
         user.family_name = upd_user.family_name;
 
         if let Some(lang) = upd_user.language {
@@ -1238,6 +1240,7 @@ LIMIT $2"#;
         let user_values = if let Some(values) = upd_user.user_values {
             UserValues::upsert(user.id.clone(), values).await?
         } else if let Some(preferred_username) = preferred_username {
+            UserValues::upsert(user.id.clone(), UserValuesRequest::default()).await?;
             Some(UserValues {
                 id: user.id.clone(),
                 preferred_username: Some(preferred_username),
@@ -1324,9 +1327,7 @@ LIMIT $2"#;
         let req = UpdateUserRequest {
             // never update the email directly here, only via email confirmation action from the user
             email: user.email.clone(),
-            given_name: upd_user
-                .given_name
-                .unwrap_or_else(|| user.given_name.clone()),
+            given_name: upd_user.given_name,
             family_name: upd_user.family_name,
             language: upd_user.language,
             password,
@@ -1699,7 +1700,7 @@ impl User {
         let user = Self {
             email: new_user.email.to_lowercase(),
             email_verified: false,
-            given_name: new_user.given_name,
+            given_name: new_user.given_name.unwrap_or_default(),
             family_name: new_user.family_name,
             language: new_user.language.into(),
             roles,

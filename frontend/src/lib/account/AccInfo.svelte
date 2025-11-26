@@ -46,7 +46,12 @@
     let isLoading = $state(false);
 
     let fallbackCharacters = $derived.by(() => {
-        let chars = user.given_name[0];
+        let chars = '';
+        if (user.given_name) {
+            chars = user.given_name[0];
+        } else {
+            chars = user.email[0];
+        }
         if (user.family_name && user.family_name.length > 0) {
             chars += user.family_name[0];
         }
@@ -123,15 +128,19 @@
         </div>
     {/if}
 
-    <div class={classRow}>
-        <div class={classLabel}>{t.account.givenName}</div>
-        <span class="value">{user.given_name}</span>
-    </div>
+    {#if user.given_name}
+        <div class={classRow}>
+            <div class={classLabel}>{t.account.givenName}</div>
+            <span class="value">{user.given_name}</span>
+        </div>
+    {/if}
 
-    <div class={classRow}>
-        <div class={classLabel}>{t.account.familyName}</div>
-        <span class="value">{user.family_name}</span>
-    </div>
+    {#if user.family_name}
+        <div class={classRow}>
+            <div class={classLabel}>{t.account.familyName}</div>
+            <span class="value">{user.family_name}</span>
+        </div>
+    {/if}
 
     <div class={classRow}>
         <div class={classLabel}>{t.account.user} ID</div>

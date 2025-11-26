@@ -114,7 +114,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
             )
             .await
             .map_err(|err| {
-                let err = ErrorResponse::from(err);
                 if err.message.contains("UNIQUE") {
                     ErrorResponse::new(
                         ErrorResponseType::NotAccepted,
@@ -262,7 +261,6 @@ RETURNING *"#;
             DB::pg_query_one(sql, &[&user_id, &preferred_username])
                 .await
                 .map_err(|err| {
-                    let err = ErrorResponse::from(err);
                     if err.message.contains("UNIQUE") {
                         ErrorResponse::new(
                             ErrorResponseType::NotAccepted,

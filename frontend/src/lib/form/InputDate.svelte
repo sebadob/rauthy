@@ -1,7 +1,7 @@
 <script lang="ts">
     import {slide} from "svelte/transition";
     import {dayToString, fmtDateInput, getWeeksInMonth, type Day} from "$utils/form";
-    import {untrack} from "svelte";
+    import {onMount, untrack} from "svelte";
     import {useI18n} from "$state/i18n.svelte";
     import {CalendarDate, getDayOfWeek, parseDate} from "@internationalized/date";
     import Popover from "$lib5/Popover.svelte";
@@ -43,6 +43,7 @@
             console.warn('invalid max format for InputDate, expected dateStr only', value);
         }
     });
+    $inspect('value', value);
 
     const today = parseDate(fmtDateInput());
     const todayStr = today.toString();
@@ -66,6 +67,14 @@
     let yearOptions = $state([untrack(() => year)]);
     let weeks = $state(getWeeksInMonth(today, t.lang))
 
+    let isFirstRender = true;
+
+    onMount(() => {
+        requestAnimationFrame(() => {
+            isFirstRender = false;
+        });
+    });
+
     $effect(() => {
         let yearMin = Number.parseInt(min.slice(0, 4));
         let yearMax = Number.parseInt(max.slice(0, 4));
@@ -88,7 +97,10 @@
     });
 
     $effect(() => {
-        value = new CalendarDate(year, monthIdx, day).toString();
+        let dt = new CalendarDate(year, monthIdx, day).toString();
+        if (!isFirstRender) {
+            value = dt;
+        }
     });
 
     $effect(() => {
