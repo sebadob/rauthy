@@ -2206,6 +2206,9 @@ enable = true
 # as a special value provide some additional options.
 # The `email` is and always will be mandatory.
 #
+# A value of `hidden` will only hide these values for normal users
+# in the account dashboard. An admin will still see all values.
+#
 # You can set one of the following values:
 # - required
 # - optional
