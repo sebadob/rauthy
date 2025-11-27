@@ -47,6 +47,8 @@ volumes:
   data:
 ```
 
+_Optional: Create `.env` file with `COMPOSE_PROJECT_NAME=myapp` for custom container/volume name prefix._
+
 Save this into `docker-compose.yaml` and start with:
 
 ```
