@@ -164,14 +164,14 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
             if rows.is_empty() {
                 None
             } else {
-                Some(rows[0].get("preferred_username"))
+                rows[0].try_get("preferred_username").ok()
             }
         } else {
             let rows = DB::pg_query_rows(sql, &[&user_id], 0).await?;
             if rows.is_empty() {
                 None
             } else {
-                Some(rows[0].get("preferred_username"))
+                rows[0].try_get("preferred_username").ok()
             }
         };
 
