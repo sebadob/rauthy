@@ -30,6 +30,7 @@
 	let showModal = $state(false);
 	let closeModal: undefined | (() => void) = $state();
 
+	let error = $state('');
 	let username = $state('');
 	let forceOverwrite = $state(false);
 	let nameExists = $state(false);
@@ -49,7 +50,12 @@
 	});
 
 	async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
-		if (config.immutable && !forceOverwrite) {
+		if (preferred_username && config.immutable && !forceOverwrite) {
+			return;
+		}
+
+		if (config.blacklist.includes(username)) {
+			nameExists = true;
 			return;
 		}
 
@@ -64,8 +70,8 @@
 			forceOverwrite = false;
 		} else if (res.status === 406) {
 			nameExists = true;
-		} else {
-			console.error(res);
+		} else if (res.error) {
+			error = res.error.message;
 		}
 	}
 </script>
@@ -118,7 +124,9 @@
 							<div class="desc">
 								<p>{t.account.preferredUsername.desc}</p>
 								{#if config.immutable}
-									<p class="caution">{t.account.preferredUsername.immutable}</p>
+									<p class="caution">
+										{t.account.preferredUsername.immutable}
+									</p>
 								{/if}
 							</div>
 
@@ -131,7 +139,7 @@
 								</InputCheckbox>
 							{/if}
 
-							{#if !config.immutable || (forceOverwrite && isAdmin)}
+							{#if !preferred_username || !config.immutable || (forceOverwrite && isAdmin)}
 								<div
 									class="btnModal"
 									transition:slide={{ duration: 150 }}
@@ -146,6 +154,12 @@
 										{t.common.cancel}
 									</Button>
 								</div>
+
+								{#if error}
+									<div class="err">
+										{error}
+									</div>
+								{/if}
 							{/if}
 						</Form>
 					</Modal>
@@ -186,6 +200,10 @@
 
 	.desc {
 		width: 15rem;
+	}
+
+	.err {
+		margin-top: 0.5rem;
 	}
 
 	.immutableInfo {
