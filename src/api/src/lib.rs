@@ -28,6 +28,7 @@ pub mod auth_providers;
 pub mod backup;
 pub mod blacklist;
 pub mod clients;
+pub mod cors_preflight;
 pub mod dev_only;
 pub mod events;
 pub mod fed_cm;

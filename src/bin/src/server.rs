@@ -8,8 +8,9 @@ use rauthy_common::utils::UseDummyAddress;
 use rauthy_data::ListenScheme;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_handlers::{
-    api_keys, atproto, auth_providers, backup, blacklist, clients, dev_only, events, fed_cm,
-    generic, groups, html, oidc, pam, roles, scopes, sessions, swagger_ui, themes, tos, users,
+    api_keys, atproto, auth_providers, backup, blacklist, clients, cors_preflight, dev_only,
+    events, fed_cm, generic, groups, html, oidc, pam, roles, scopes, sessions, swagger_ui, themes,
+    tos, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -288,6 +289,17 @@ fn api_services() -> actix_web::Scope {
                 .service(blacklist::get_blacklist)
                 .service(blacklist::post_blacklist)
                 .service(blacklist::delete_blacklist)
+                .service(cors_preflight::options_authorize)
+                .service(cors_preflight::options_certs)
+                .service(cors_preflight::options_certs_by_kid)
+                .service(cors_preflight::options_logout)
+                .service(cors_preflight::options_token)
+                .service(cors_preflight::options_introspect)
+                .service(cors_preflight::options_userinfo)
+                .service(cors_preflight::options_users_picture)
+                .service(cors_preflight::options_users_register)
+                .service(cors_preflight::options_atproto_metadata)
+                .service(cors_preflight::options_openid_configuration)
                 .service(events::post_events)
                 .service(events::sse_events)
                 .service(events::post_event_test)
