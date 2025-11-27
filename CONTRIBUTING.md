@@ -21,6 +21,16 @@ This document should help you to contribute to Rauthy and setting up your local 
   error type. This decision was made instead of just simple `anyhow` error Strings for instance to actually make
   errors understandable by external code by using the `error` field and by humans by using the `message` field.
 
+### Code Style
+
+For a uniform code style, this project makes use of `cargo fmt` for all Rust code, and `prettier` for all other frontend
+related files. There is also a `.editorconfig`, if your editor can make use of it. If your IDE auto-formats code, make
+sure it uses `cargo fmt` for Rust code, the `frontend/.prettierrc` for the UI, and optionally the `.editorconfig`,
+even though the other 2 should have you covered.
+
+You can also use `just fmt` manually to make sure all code is formatted properly. Before submitting a PR ready for
+review, all code must be formatted.
+
 ## Getting Started
 
 ### Prerequisites
@@ -367,13 +377,9 @@ everything is fine.
 Before submitting any PR ready for merge, please execute
 
 ```
+just fmt
 just pre-pr-checks
 ```
-
-### Code Style
-
-For a uniform code style, you can also make use of the `.editorconfig` file. This is especially helpful for all non-Rust
-files that are not affected by `cargo fmt`.
 
 ## FreeBSD
 
