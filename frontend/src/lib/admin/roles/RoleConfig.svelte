@@ -60,14 +60,8 @@
     }
 </script>
 
-<Form
-    action={`/auth/v1/roles/${role.id}`}
-    {onSubmit}
->
-    <LabeledValue
-        label="ID"
-        mono
-    >
+<Form action={`/auth/v1/roles/${role.id}`} {onSubmit}>
+    <LabeledValue label="ID" mono>
         {role.id}
     </LabeledValue>
 

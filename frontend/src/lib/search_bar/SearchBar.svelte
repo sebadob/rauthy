@@ -115,10 +115,7 @@
     />
 
     {#if datalist}
-        <datalist
-            id={idDatalist}
-            class="absolute"
-        >
+        <datalist id={idDatalist} class="absolute">
             {#each datalist as value}
                 <option {value}></option>
             {/each}
@@ -127,11 +124,7 @@
 
     <div class="relative">
         <div class="absolute btnDelete">
-            <Button
-                ariaLabel={t.common.delete}
-                invisible
-                onclick={() => (value = '')}
-            >
+            <Button ariaLabel={t.common.delete} invisible onclick={() => (value = '')}>
                 <span class="backspace">
                     <IconBackspace color="hsla(var(--text) / .5)" />
                 </span>
@@ -141,11 +134,7 @@
 
     {#if onSearch}
         <div class="btnSearch">
-            <Button
-                ariaLabel={t.common.search}
-                invisible
-                onclick={search}
-            >
+            <Button ariaLabel={t.common.search} invisible onclick={search}>
                 <IconMagnify />
             </Button>
         </div>

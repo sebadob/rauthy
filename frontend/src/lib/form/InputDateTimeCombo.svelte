@@ -74,16 +74,9 @@
     </div>
     {#if withDelete}
         <div class="delete">
-            <Button
-                ariaLabel={t.common.delete}
-                invisible
-                onclick={reset}
-            >
+            <Button ariaLabel={t.common.delete} invisible onclick={reset}>
                 <span title={t.common.delete}>
-                    <IconStop
-                        color="hsla(var(--error) / .8)"
-                        width="1.2rem"
-                    />
+                    <IconStop color="hsla(var(--error) / .8)" width="1.2rem" />
                 </span>
             </Button>
         </div>

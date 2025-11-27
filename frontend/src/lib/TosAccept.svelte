@@ -111,17 +111,9 @@
 </script>
 
 {#if tos}
-    <Modal
-        bind:showModal
-        bind:closeModal
-        strict
-    >
+    <Modal bind:showModal bind:closeModal strict>
         <h1>{t.tos.tos}</h1>
-        <p
-            bind:this={refToS}
-            class="tosContent"
-            onscrollend={onScrollEndToS}
-        >
+        <p bind:this={refToS} class="tosContent" onscrollend={onScrollEndToS}>
             {#if tos.is_html}
                 {@html tos.content}
             {:else}
@@ -130,20 +122,12 @@
         </p>
 
         <div class="flex gap-05">
-            <Button
-                ariaLabel={t.common.accept}
-                onclick={onAccept}
-                isDisabled={!tosRead}
-            >
+            <Button ariaLabel={t.common.accept} onclick={onAccept} isDisabled={!tosRead}>
                 {t.common.accept}
             </Button>
 
             {#if acceptOptional}
-                <Button
-                    level={-2}
-                    ariaLabel={t.tos.deny}
-                    onclick={onDeny}
-                >
+                <Button level={-2} ariaLabel={t.tos.deny} onclick={onDeny}>
                     {t.tos.deny}
                 </Button>
 
@@ -154,11 +138,7 @@
                     </div>
                 {/if}
             {:else}
-                <Button
-                    level={-2}
-                    ariaLabel={t.common.cancel}
-                    onclick={onCancel}
-                >
+                <Button level={-2} ariaLabel={t.common.cancel} onclick={onCancel}>
                     {t.common.cancel}
                 </Button>
             {/if}

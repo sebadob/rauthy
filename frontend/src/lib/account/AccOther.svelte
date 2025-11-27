@@ -108,19 +108,13 @@
             </div>
 
             {#if success}
-                <div
-                    class="success"
-                    transition:fade
-                >
+                <div class="success" transition:fade>
                     <IconCheck />
                 </div>
             {/if}
         </div>
         {#if err}
-            <div
-                class="err"
-                transition:fade
-            >
+            <div class="err" transition:fade>
                 {err}
             </div>
         {/if}

@@ -83,10 +83,6 @@
     }
 </script>
 
-<form
-    {action}
-    {method}
-    onsubmit={submit}
->
+<form {action} {method} onsubmit={submit}>
     {@render children()}
 </form>

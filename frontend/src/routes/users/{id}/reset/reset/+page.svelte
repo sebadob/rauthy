@@ -208,23 +208,13 @@
     {/if}
 </svelte:head>
 
-<Template
-    id={TPL_PASSWORD_RESET}
-    bind:value={tplData}
-/>
+<Template id={TPL_PASSWORD_RESET} bind:value={tplData} />
 
 {#snippet passwordInput()}
     {#if tplData}
-        <Form
-            action=""
-            onSubmit={passwordReset}
-        >
+        <Form action="" onSubmit={passwordReset}>
             <div class="policy">
-                <PasswordPolicy
-                    bind:accepted
-                    policy={tplData.password_policy}
-                    {password}
-                />
+                <PasswordPolicy bind:accepted policy={tplData.password_policy} {password} />
             </div>
 
             <InputPassword
@@ -251,18 +241,12 @@
             />
 
             <div class="generate">
-                <Button
-                    level={2}
-                    onclick={generate}
-                >
+                <Button level={2} onclick={generate}>
                     {t.passwordReset.generate}
                 </Button>
             </div>
 
-            <Button
-                type="submit"
-                {isLoading}
-            >
+            <Button type="submit" {isLoading}>
                 {t.common.save}
             </Button>
         </Form>
@@ -275,18 +259,8 @@
             This window shows up during local dev,<br />
             only to be able to switch modes easily.<br />
         </p>
-        <Button
-            level={2}
-            onclick={() => requestType.set('new_user')}
-        >
-            new_user
-        </Button>
-        <Button
-            level={2}
-            onclick={() => requestType.set('password_reset')}
-        >
-            password_reset
-        </Button>
+        <Button level={2} onclick={() => requestType.set('new_user')}>new_user</Button>
+        <Button level={2} onclick={() => requestType.set('password_reset')}>password_reset</Button>
     </div>
 {/if}
 
@@ -318,12 +292,7 @@
                     <p>{t.passwordReset.newAccDesc1}</p>
                     <p>
                         {t.passwordReset.newAccDesc2}
-                        <A
-                            href={t.passwordReset.fidoLink}
-                            target="_blank"
-                        >
-                            FIDO Alliance
-                        </A>
+                        <A href={t.passwordReset.fidoLink} target="_blank">FIDO Alliance</A>
                     </p>
 
                     <div class="typeChoice">
@@ -349,10 +318,7 @@
                         </div>
                     {:else if accountTypeNew === 'passkey'}
                         <div transition:slide>
-                            <Form
-                                action=""
-                                onSubmit={handleRegister}
-                            >
+                            <Form action="" onSubmit={handleRegister}>
                                 <Input
                                     bind:ref={refPasskey}
                                     bind:value={passkeyName}
@@ -364,10 +330,7 @@
                                     pattern={PATTERN_USER_NAME}
                                     required
                                 />
-                                <Button
-                                    type="submit"
-                                    level={success ? 2 : 1}
-                                >
+                                <Button type="submit" level={success ? 2 : 1}>
                                     {t.mfa.register}
                                 </Button>
                             </Form>

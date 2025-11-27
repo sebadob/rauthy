@@ -241,10 +241,7 @@
             />
 
             {#if errFileSize}
-                <div
-                    class="errLimit"
-                    style:width
-                >
+                <div class="errLimit" style:width>
                     {errFileSize}
                 </div>
             {/if}
@@ -255,11 +252,7 @@
         {#if size === 'large' && pictureId}
             <div class="relative">
                 <div class="delete">
-                    <Button
-                        bind:ref={refDel}
-                        invisible
-                        onclick={deletePicture}
-                    >
+                    <Button bind:ref={refDel} invisible onclick={deletePicture}>
                         <div title={t.common.delete}>
                             <IconStop />
                         </div>
@@ -268,12 +261,7 @@
             </div>
         {/if}
     {:else}
-        <span
-            class="avatar"
-            style:background-color={color}
-            style:width
-            style:height={width}
-        >
+        <span class="avatar" style:background-color={color} style:width style:height={width}>
             {@render avatar()}
         </span>
     {/if}

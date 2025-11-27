@@ -30,19 +30,12 @@
     <title>Rauthy Home</title>
 </svelte:head>
 
-<Template
-    id={TPL_IS_REG_OPEN}
-    bind:value={isRegOpen}
-/>
+<Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen} />
 
 <Main>
     <ContentCenter>
         <div class="btn">
-            <Button
-                ariaLabel={t.index.accountLogin}
-                onclick={redirectToAccount}
-                width={btnWidth}
-            >
+            <Button ariaLabel={t.index.accountLogin} onclick={redirectToAccount} width={btnWidth}>
                 {t.index.accountLogin}
             </Button>
             {#if isRegOpen}

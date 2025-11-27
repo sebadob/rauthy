@@ -29,10 +29,7 @@
 </script>
 
 <div class="flex">
-    <div
-        class="label font-label noselect"
-        style:width={labelWidth}
-    >
+    <div class="label font-label noselect" style:width={labelWidth}>
         {@render children()}
     </div>
     <label class="switch">

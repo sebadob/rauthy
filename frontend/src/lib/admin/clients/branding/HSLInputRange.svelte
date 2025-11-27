@@ -22,23 +22,14 @@
 </script>
 
 <div class="outer">
-    <div
-        class="container"
-        style:border-color={hsl}
-    >
+    <div class="container" style:border-color={hsl}>
         <div>
             <h5>
-                <label
-                    for={id}
-                    class="font-label"
-                >
+                <label for={id} class="font-label">
                     {label}
                 </label>
             </h5>
-            <div
-                {id}
-                class="values"
-            >
+            <div {id} class="values">
                 <InputRange
                     label="Hue"
                     bind:value={h}
@@ -74,10 +65,7 @@
                 />
             </div>
         </div>
-        <div
-            class="color"
-            style:background={hsl}
-        ></div>
+        <div class="color" style:background={hsl}></div>
     </div>
 </div>
 

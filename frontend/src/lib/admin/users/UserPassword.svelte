@@ -135,18 +135,12 @@
     <p><b>{ta.users.pwdNoInit}</b></p>
     <p>{ta.users.pwdSendEmailDesc}</p>
 
-    <Button
-        onclick={sendEmail}
-        {isLoading}
-    >
+    <Button onclick={sendEmail} {isLoading}>
         {ta.users.pwdSendEmailBtn}
     </Button>
 
     <p style:margin-top="1rem">{ta.users.manualInitDesc}</p>
-    <Button
-        level={2}
-        onclick={() => (manualInit = true)}
-    >
+    <Button level={2} onclick={() => (manualInit = true)}>
         {ta.users.manualInit}
     </Button>
 {:else if user.account_type === 'passkey' || user.account_type === 'federated_passkey'}
@@ -159,17 +153,10 @@
     <div style:margin-top=".5rem"></div>
 
     {#if policy}
-        <PasswordPolicy
-            password={pwdNew}
-            bind:accepted
-            {policy}
-        />
+        <PasswordPolicy password={pwdNew} bind:accepted {policy} />
     {/if}
 
-    <Form
-        action={`/auth/v1/users/${user.id}`}
-        onSubmit={savePwd}
-    >
+    <Form action={`/auth/v1/users/${user.id}`} onSubmit={savePwd}>
         <InputPassword
             bind:value={pwdNew}
             autocomplete="off"
@@ -192,10 +179,7 @@
             width={inputWidth}
         />
 
-        <Button
-            level={2}
-            onclick={generate}
-        >
+        <Button level={2} onclick={generate}>
             {t.account.generateRandom}
         </Button>
 
@@ -203,18 +187,11 @@
         <p>{ta.users.selfServiceDesc}</p>
 
         <div class="flex gap-05">
-            <Button
-                onclick={sendEmail}
-                {isLoading}
-            >
+            <Button onclick={sendEmail} {isLoading}>
                 {ta.users.sendResetEmail}
             </Button>
 
-            <Button
-                type="submit"
-                level={2}
-                {isLoading}
-            >
+            <Button type="submit" level={2} {isLoading}>
                 {ta.users.savePassword}
             </Button>
 

@@ -138,11 +138,7 @@
         <div class="rel">
             {#if showCopy}
                 <div class="btn clip">
-                    <Button
-                        ariaLabel={t.common.copyToClip}
-                        invisible
-                        onclick={copy}
-                    >
+                    <Button ariaLabel={t.common.copyToClip} invisible onclick={copy}>
                         <div title={t.common.copyToClip}>
                             <IconClipboard />
                         </div>
@@ -152,21 +148,13 @@
 
             <div class="btn show">
                 {#if type === 'password'}
-                    <Button
-                        ariaLabel={t.common.show}
-                        invisible
-                        onclick={toggleView}
-                    >
+                    <Button ariaLabel={t.common.show} invisible onclick={toggleView}>
                         <div title={t.common.show}>
                             <IconEyeSlash />
                         </div>
                     </Button>
                 {:else}
-                    <Button
-                        ariaLabel={t.common.hide}
-                        invisible
-                        onclick={toggleView}
-                    >
+                    <Button ariaLabel={t.common.hide} invisible onclick={toggleView}>
                         <div title={t.common.hide}>
                             <IconEye />
                         </div>
@@ -178,18 +166,11 @@
 </div>
 
 <div class="label">
-    <label
-        for={id}
-        class="font-label noselect"
-        data-required={required}
-    >
+    <label for={id} class="font-label noselect" data-required={required}>
         {label}
     </label>
     {#if isError}
-        <div
-            class="error"
-            transition:slide={{ duration: 150 }}
-        >
+        <div class="error" transition:slide={{ duration: 150 }}>
             {#if !label}
                 <div class="nolabel"></div>
             {/if}

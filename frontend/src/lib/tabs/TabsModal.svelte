@@ -20,13 +20,7 @@
 </script>
 
 <div class="wrapper">
-    <Tabs
-        {tabs}
-        bind:selected
-        borderRadius="none"
-        {center}
-        {width}
-    />
+    <Tabs {tabs} bind:selected borderRadius="none" {center} {width} />
 </div>
 
 <style>

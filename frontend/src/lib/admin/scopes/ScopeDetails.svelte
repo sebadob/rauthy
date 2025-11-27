@@ -37,23 +37,11 @@
 </script>
 
 <div class="flex">
-    <Tabs
-        {tabs}
-        bind:selected
-        bind:focusFirst
-    />
+    <Tabs {tabs} bind:selected bind:focusFirst />
 </div>
 
 {#if selected === ta.nav.config}
-    <ScopeConfig
-        {attrs}
-        {scope}
-        {scopes}
-        {onSave}
-    />
+    <ScopeConfig {attrs} {scope} {scopes} {onSave} />
 {:else if selected === t.common.delete}
-    <ScopeDelete
-        {scope}
-        {onSave}
-    />
+    <ScopeDelete {scope} {onSave} />
 {/if}

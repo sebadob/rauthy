@@ -274,11 +274,7 @@
                         {t.common.seconds}
                     </span>
                 </div>
-                <Button
-                    ariaLabel={t.common.refresh}
-                    invisible
-                    onclick={mfaTokenRefresh}
-                >
+                <Button ariaLabel={t.common.refresh} invisible onclick={mfaTokenRefresh}>
                     <div class="btnRefresh">
                         <IconArrowPathSquare />
                     </div>
@@ -300,23 +296,14 @@
             />
             <div class="regBtns">
                 <Button onclick={handleRegister}>{t.mfa.register}</Button>
-                <Button
-                    level={3}
-                    onclick={() => (showRegInput = false)}>{t.common.cancel}</Button
-                >
+                <Button level={3} onclick={() => (showRegInput = false)}>{t.common.cancel}</Button>
             </div>
         {:else}
             <div class="regNewBtn">
-                <Button
-                    level={passkeys.length === 0 ? 1 : 2}
-                    onclick={onRegisterClick}
-                >
+                <Button level={passkeys.length === 0 ? 1 : 2} onclick={onRegisterClick}>
                     {t.mfa.registerNew}
                 </Button>
-                <Modal
-                    bind:showModal
-                    bind:closeModal
-                >
+                <Modal bind:showModal bind:closeModal>
                     {#if user.webauthn_user_id}
                         <p style:max-width="20rem">
                             {t.mfa.reAuthenticatePasskey}
@@ -328,10 +315,7 @@
                         </ul>
 
                         <div style:margin-top="1rem">
-                            <Button
-                                bind:ref={refPkAuthBtn}
-                                onclick={onMfaTokenWebauthnSubmit}
-                            >
+                            <Button bind:ref={refPkAuthBtn} onclick={onMfaTokenWebauthnSubmit}>
                                 {t.common.authenticate}
                             </Button>
                         </div>
@@ -340,10 +324,7 @@
                             {t.mfa.reAuthenticatePwd}
                         </p>
 
-                        <Form
-                            action=""
-                            onSubmit={onMfaTokenSubmit}
-                        >
+                        <Form action="" onSubmit={onMfaTokenSubmit}>
                             <InputPassword
                                 bind:ref={refInput}
                                 name="password"
@@ -352,10 +333,7 @@
                                 placeholder={t.account.passwordCurr}
                                 required
                             />
-                            <Button
-                                type="submit"
-                                {isLoading}>{t.common.authenticate}</Button
-                            >
+                            <Button type="submit" {isLoading}>{t.common.authenticate}</Button>
                             {#if pwdErr}
                                 <div class="pwdInvalid">
                                     {pwdErr}
@@ -374,11 +352,7 @@
         {/if}
         <div class="keysContainer">
             {#each passkeys as passkey (passkey.name)}
-                <UserPasskey
-                    {passkey}
-                    {showDelete}
-                    onDelete={handleDelete}
-                />
+                <UserPasskey {passkey} {showDelete} onDelete={handleDelete} />
             {/each}
         </div>
 
@@ -388,10 +362,7 @@
             </div>
         {/if}
 
-        <div
-            class:success={!err}
-            class:err
-        >
+        <div class:success={!err} class:err>
             {msg}
         </div>
     {/if}

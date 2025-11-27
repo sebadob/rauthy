@@ -94,10 +94,7 @@
         bind:closeModal
         alignRight
     >
-        <GroupAddNew
-            onSave={onAddNew}
-            {groups}
-        />
+        <GroupAddNew onSave={onAddNew} {groups} />
     </ButtonAddModal>
     <OrderSearchBar
         {searchOptions}
@@ -111,10 +108,7 @@
     {#snippet buttonTiles()}
         <div class="groupsList">
             {#each groupsFiltered as group (group.id)}
-                <NavButtonTile
-                    onclick={() => gid.set(group.id)}
-                    selected={gid.get() === group.id}
-                >
+                <NavButtonTile onclick={() => gid.set(group.id)} selected={gid.get() === group.id}>
                     {group.name}
                 </NavButtonTile>
             {/each}
@@ -131,11 +125,7 @@
 
     <div id="groups">
         {#if group}
-            <GroupDetails
-                {group}
-                {groups}
-                {onSave}
-            />
+            <GroupDetails {group} {groups} {onSave} />
         {/if}
     </div>
 </ContentAdmin>

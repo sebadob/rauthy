@@ -269,17 +269,10 @@
 </script>
 
 <div class="container">
-    <Form
-        action={`/auth/v1/clients/${client.id}`}
-        {onSubmit}
-    >
+    <Form action={`/auth/v1/clients/${client.id}`} {onSubmit}>
         <h5>{ta.common.information}</h5>
 
-        <LabeledValue
-            label="ID"
-            mono
-            copyToClip={client.id}
-        >
+        <LabeledValue label="ID" mono copyToClip={client.id}>
             {client.id}
         </LabeledValue>
 
@@ -303,32 +296,19 @@
             width={inputWidth}
             pattern={PATTERN_URI}
         />
-        <InputTags
-            bind:values={contacts}
-            label={ta.common.contact}
-            pattern={PATTERN_CONTACT}
-        />
+        <InputTags bind:values={contacts} label={ta.common.contact} pattern={PATTERN_CONTACT} />
 
         <div style:height=".5rem"></div>
 
         <h5>{ta.clients.config}</h5>
 
-        <InputCheckbox
-            ariaLabel={ta.common.enabled}
-            bind:checked={enabled}
-        >
+        <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
             {ta.common.enabled}
         </InputCheckbox>
-        <InputCheckbox
-            ariaLabel={ta.clients.confidential}
-            bind:checked={confidential}
-        >
+        <InputCheckbox ariaLabel={ta.clients.confidential} bind:checked={confidential}>
             {ta.clients.confidential}
         </InputCheckbox>
-        <InputCheckbox
-            ariaLabel={ta.clients.forceMfa}
-            bind:checked={forceMfa}
-        >
+        <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={forceMfa}>
             {ta.clients.forceMfa}
         </InputCheckbox>
         <p style:margin-bottom="-.25rem">{ta.clients.descGroupPrefix}</p>
@@ -342,10 +322,7 @@
         />
 
         <p class="mb-0"><b>Authentication Flows</b></p>
-        <InputCheckbox
-            ariaLabel="authorization_code"
-            bind:checked={flows.authorizationCode}
-        >
+        <InputCheckbox ariaLabel="authorization_code" bind:checked={flows.authorizationCode}>
             authorization_code
         </InputCheckbox>
         <InputCheckbox
@@ -354,22 +331,11 @@
         >
             device_code
         </InputCheckbox>
-        <InputCheckbox
-            ariaLabel="client_credentials"
-            bind:checked={flows.clientCredentials}
-        >
+        <InputCheckbox ariaLabel="client_credentials" bind:checked={flows.clientCredentials}>
             client_credentials
         </InputCheckbox>
-        <InputCheckbox
-            ariaLabel="password"
-            bind:checked={flows.password}
-        >
-            password
-        </InputCheckbox>
-        <InputCheckbox
-            ariaLabel="refresh_token"
-            bind:checked={flows.refreshToken}
-        >
+        <InputCheckbox ariaLabel="password" bind:checked={flows.password}>password</InputCheckbox>
+        <InputCheckbox ariaLabel="refresh_token" bind:checked={flows.refreshToken}>
             refresh_token
         </InputCheckbox>
 
@@ -377,24 +343,11 @@
         <p class="mb-0"><b>PKCE</b></p>
         <p class="desc">{ta.clients.descPKCE}</p>
         <p class="desc"><strong>{ta.clients.descPKCEEnforce}</strong></p>
-        <InputCheckbox
-            ariaLabel="PKCE plain"
-            bind:checked={challenges.plain}
-        >
-            plain
-        </InputCheckbox>
-        <InputCheckbox
-            ariaLabel="PKCE S256"
-            bind:checked={challenges.s256}
-        >
-            S256
-        </InputCheckbox>
+        <InputCheckbox ariaLabel="PKCE plain" bind:checked={challenges.plain}>plain</InputCheckbox>
+        <InputCheckbox ariaLabel="PKCE S256" bind:checked={challenges.s256}>S256</InputCheckbox>
 
         {#if !confidential && !challenges.plain && !challenges.s256}
-            <div
-                class="err"
-                transition:slide={{ duration: 150 }}
-            >
+            <div class="err" transition:slide={{ duration: 150 }}>
                 {ta.clients.errConfidentialPKCE}
             </div>
         {/if}
@@ -505,10 +458,7 @@
         />
 
         <p class="mb-0"><b>SCIM</b></p>
-        <p
-            class="desc"
-            style:margin-bottom=".5rem"
-        >
+        <p class="desc" style:margin-bottom=".5rem">
             {@html ta.clients.scim.desc.replace(
                 '{{ SCIM_LINK }}',
                 '<a href="https://www.rfc-editor.org/rfc/rfc7644" target="_blank">SCIM v2</a>',
@@ -523,10 +473,7 @@
         </InputCheckbox>
         {#if scimEnabled}
             <div transition:slide={{ duration: 150 }}>
-                <p
-                    class="desc"
-                    style:margin-bottom=".5rem"
-                >
+                <p class="desc" style:margin-bottom=".5rem">
                     {ta.clients.scim.reqDesc}
                 </p>
                 <ul>
@@ -535,10 +482,7 @@
                     <li>{@html ta.clients.scim.reqLi3}</li>
                 </ul>
 
-                <p
-                    class="mb-0"
-                    style:margin-top="1rem"
-                >
+                <p class="mb-0" style:margin-top="1rem">
                     {@html ta.clients.scim.baseUri}
                 </p>
                 <Input
@@ -587,10 +531,7 @@
             </div>
         {/if}
 
-        <div
-            class="flex gap-05"
-            style:margin-top="1rem"
-        >
+        <div class="flex gap-05" style:margin-top="1rem">
             <Button type="submit">
                 {t.common.save}
             </Button>

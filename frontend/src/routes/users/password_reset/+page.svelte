@@ -52,10 +52,7 @@
     <title>{t?.register.register || 'Register'}</title>
 </svelte:head>
 
-<Template
-    id={TPL_CLIENT_LOGO_UPDATED}
-    bind:value={clientLogoUpdated}
-/>
+<Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated} />
 
 <Main>
     <ContentCenter>
@@ -70,11 +67,7 @@
                 <p>{t.authorize.passwordResetDesc}</p>
             </div>
 
-            <Form
-                action="/auth/v1/users/request_reset"
-                {onSubmit}
-                withPowAs="pow"
-            >
+            <Form action="/auth/v1/users/request_reset" {onSubmit} withPowAs="pow">
                 <Input
                     typ="email"
                     name="email"
@@ -86,10 +79,7 @@
                 />
 
                 <div class="submit">
-                    <Button
-                        type="submit"
-                        {isLoading}>{t.authorize.passwordRequest}</Button
-                    >
+                    <Button type="submit" {isLoading}>{t.authorize.passwordRequest}</Button>
                 </div>
                 {#if success}
                     <div class="success">

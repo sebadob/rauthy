@@ -108,10 +108,7 @@
 </script>
 
 <div class="container">
-    <Form
-        action="/auth/v1/users"
-        {onSubmit}
-    >
+    <Form action="/auth/v1/users" {onSubmit}>
         <Input
             typ="email"
             bind:ref
@@ -156,10 +153,7 @@
             {t.account.groups}
         </SelectList>
 
-        <InputCheckbox
-            ariaLabel={t.account.accessExp}
-            bind:checked={expires}
-        >
+        <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
             {t.account.accessExp}
         </InputCheckbox>
         {#if expires}

@@ -117,20 +117,13 @@
 <h1>{hostSimple.name}</h1>
 
 {#if host}
-    <LabeledValue
-        label="Host ID"
-        copyToClip={host.id}
-        mono
-    >
+    <LabeledValue label="Host ID" copyToClip={host.id} mono>
         {host.id}
     </LabeledValue>
 
     <PAMHostSecret hostId={host.id} />
 
-    <Form
-        action={url}
-        {onSubmit}
-    >
+    <Form action={url} {onSubmit}>
         <Input
             label="Hostname"
             placeholder="Hostname"
@@ -145,21 +138,14 @@
             <div class="label">
                 {ta.pam.groupName}
             </div>
-            <Options
-                ariaLabel={ta.pam.groupName}
-                options={groupNames}
-                bind:value={groupName}
-            />
+            <Options ariaLabel={ta.pam.groupName} options={groupNames} bind:value={groupName} />
         </div>
 
         <div class="row">
             <div class="label">
                 {ta.clients.forceMfa}
             </div>
-            <InputCheckbox
-                ariaLabel={ta.clients.forceMfa}
-                bind:checked={host.force_mfa}
-            />
+            <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={host.force_mfa} />
         </div>
 
         <div class="row">
@@ -172,41 +158,27 @@
             />
         </div>
         {#if host.local_password_only}
-            <div
-                class="err"
-                transition:slide={{ duration: 150 }}
-            >
+            <div class="err" transition:slide={{ duration: 150 }}>
                 <p>
                     {ta.pam.hostLocalPwdOnlyInfo}
                 </p>
             </div>
         {/if}
 
-        <InputTags
-            label={ta.pam.ipAddresses}
-            bind:values={host.ips}
-            width={widthAreas}
-        />
+        <InputTags label={ta.pam.ipAddresses} bind:values={host.ips} width={widthAreas} />
         <InputTags
             label={ta.pam.hostAliases}
             bind:values={host.aliases}
             pattern={PATTERN_LINUX_HOSTNAME}
             width={widthAreas}
         />
-        <InputArea
-            label={ta.pam.notes}
-            bind:value={host.notes}
-            width={widthAreas}
-        />
+        <InputArea label={ta.pam.notes} bind:value={host.notes} width={widthAreas} />
 
         <div class="flex gap-05">
             <Button type="submit">
                 {t.common.save}
             </Button>
-            <Button
-                level={-3}
-                onclick={() => (showDeleteConfirm = !showDeleteConfirm)}
-            >
+            <Button level={-3} onclick={() => (showDeleteConfirm = !showDeleteConfirm)}>
                 {t.common.delete}
             </Button>
 
@@ -220,16 +192,10 @@
                 <p>{ta.pam.deleteHost}</p>
 
                 <div class="flex gap-05">
-                    <Button
-                        level={-1}
-                        onclick={deleteHost}
-                    >
+                    <Button level={-1} onclick={deleteHost}>
                         {t.common.delete}
                     </Button>
-                    <Button
-                        level={2}
-                        onclick={() => (showDeleteConfirm = false)}
-                    >
+                    <Button level={2} onclick={() => (showDeleteConfirm = false)}>
                         {t.common.cancel}
                     </Button>
                 </div>

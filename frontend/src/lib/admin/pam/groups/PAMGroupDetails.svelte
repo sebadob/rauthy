@@ -67,14 +67,8 @@
 </LabeledValue>
 <LabeledValue label={ta.pam.groupType}>
     {group.typ}
-    <Button
-        invisible
-        onclick={() => (showInfo = !showInfo)}
-    >
-        <div
-            class="info"
-            data-selected={showInfo}
-        >
+    <Button invisible onclick={() => (showInfo = !showInfo)}>
+        <div class="info" data-selected={showInfo}>
             <IconInfo width="1.25rem" />
         </div>
     </Button>
@@ -100,11 +94,7 @@
 
 {#if canBeDeleted}
     <div class="deleteBtn">
-        <Button
-            ariaLabel={t.common.delete}
-            level={-1}
-            onclick={deleteGroup}
-        >
+        <Button ariaLabel={t.common.delete} level={-1} onclick={deleteGroup}>
             {t.common.delete}
         </Button>
     </div>

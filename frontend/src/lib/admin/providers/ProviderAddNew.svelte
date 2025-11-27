@@ -304,17 +304,10 @@
 </script>
 
 <div class="container">
-    <Options
-        ariaLabel="Select Mode"
-        options={modes}
-        bind:value={mode}
-    />
+    <Options ariaLabel="Select Mode" options={modes} bind:value={mode} />
     <div style:height=".5rem"></div>
 
-    <Form
-        action={formAction}
-        {onSubmit}
-    >
+    <Form action={formAction} {onSubmit}>
         {#if isOidc && !lookupSuccess}
             <Input
                 name="issuer"
@@ -352,10 +345,7 @@
                         <CheckIcon checked={config.use_pkce} />
                     </LabeledValue>
                 {:else}
-                    <InputCheckbox
-                        ariaLabel="PKCE"
-                        bind:checked={config.use_pkce}
-                    >
+                    <InputCheckbox ariaLabel="PKCE" bind:checked={config.use_pkce}>
                         PKCE
                     </InputCheckbox>
                 {/if}
@@ -377,19 +367,12 @@
             />
         {/if}
         <div class="flex gap-05">
-            <Button
-                type="submit"
-                {isLoading}
-            >
+            <Button type="submit" {isLoading}>
                 {formActionLookup ? ta.providers.config.lookup : t.common.save}
             </Button>
 
             {#if !formActionLookup}
-                <Button
-                    level={3}
-                    onclick={resetValues}
-                    {isLoading}
-                >
+                <Button level={3} onclick={resetValues} {isLoading}>
                     {ta.common.reset}
                 </Button>
             {/if}

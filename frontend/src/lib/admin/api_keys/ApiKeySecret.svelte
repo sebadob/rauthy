@@ -45,19 +45,13 @@
 <p>{ta.api_key.generate2}</p>
 
 <div class="btn">
-    <Button
-        level={!secret ? 1 : 3}
-        onclick={generateSecret}
-    >
+    <Button level={!secret ? 1 : 3} onclick={generateSecret}>
         {t.passwordReset.generate}
     </Button>
 </div>
 
 {#if secret}
-    <div
-        transition:slide={{ duration: 150 }}
-        class="secret font-mono"
-    >
+    <div transition:slide={{ duration: 150 }} class="secret font-mono">
         <InputPassword
             autocomplete="off"
             value={secret}
@@ -79,22 +73,14 @@
     <div transition:slide={{ duration: 150 }}>
         <p>{@html ta.api_key.generate4}</p>
         {#key curlPretty}
-            <HiddenValueArea
-                ariaLabel="curl text command with jq"
-                rows={5}
-                value={curlPretty}
-            />
+            <HiddenValueArea ariaLabel="curl text command with jq" rows={5} value={curlPretty} />
         {/key}
     </div>
 
     <div transition:slide={{ duration: 150 }}>
         <p>{@html ta.api_key.generate5}</p>
         {#key curlPretty}
-            <HiddenValueArea
-                ariaLabel="curl text command simple"
-                rows={5}
-                value={curl}
-            />
+            <HiddenValueArea ariaLabel="curl text command simple" rows={5} value={curl} />
         {/key}
     </div>
 {/if}

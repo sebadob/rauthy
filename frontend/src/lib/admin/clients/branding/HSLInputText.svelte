@@ -16,10 +16,7 @@
     let ref: undefined | HTMLInputElement = $state();
 </script>
 
-<div
-    class="container"
-    style:--color={value}
->
+<div class="container" style:--color={value}>
     <Input
         {label}
         placeholder={label}
@@ -29,19 +26,11 @@
         required
         pattern={PATTERN_CSS_VALUE_LOOSE}
     />
-    <div
-        role="none"
-        class="mask"
-        onclick={() => ref?.click()}
-    >
+    <div role="none" class="mask" onclick={() => ref?.click()}>
         <div class="colorWrapper">
             <div class="color"></div>
         </div>
-        <input
-            bind:this={ref}
-            type="color"
-            bind:value
-        />
+        <input bind:this={ref} type="color" bind:value />
     </div>
 </div>
 

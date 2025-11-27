@@ -499,38 +499,14 @@
     <title>Login: {clientName || clientId}</title>
 </svelte:head>
 
-<Template
-    id={TPL_AUTH_PROVIDERS}
-    bind:value={providers}
-/>
-<Template
-    id={TPL_ATPROTO_ID}
-    bind:value={atprotoId}
-/>
-<Template
-    id={TPL_CLIENT_NAME}
-    bind:value={clientName}
-/>
-<Template
-    id={TPL_CLIENT_URL}
-    bind:value={clientUri}
-/>
-<Template
-    id={TPL_CLIENT_LOGO_UPDATED}
-    bind:value={clientLogoUpdated}
-/>
-<Template
-    id={TPL_CSRF_TOKEN}
-    bind:value={csrfToken}
-/>
-<Template
-    id={TPL_LOGIN_ACTION}
-    bind:value={loginAction}
-/>
-<Template
-    id={TPL_IS_REG_OPEN}
-    bind:value={isRegOpen}
-/>
+<Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
+<Template id={TPL_ATPROTO_ID} bind:value={atprotoId} />
+<Template id={TPL_CLIENT_NAME} bind:value={clientName} />
+<Template id={TPL_CLIENT_URL} bind:value={clientUri} />
+<Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated} />
+<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken} />
+<Template id={TPL_LOGIN_ACTION} bind:value={loginAction} />
+<Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen} />
 
 <Main>
     <div class="outer">
@@ -544,11 +520,7 @@
                         />
                     {/if}
                     {#if clientUri}
-                        <a
-                            class="home"
-                            href={clientUri}
-                            aria-label="Client Home Page"
-                        >
+                        <a class="home" href={clientUri} aria-label="Client Home Page">
                             <IconHome color="hsla(var(--text) / .4)" />
                         </a>
                     {/if}
@@ -574,10 +546,7 @@
                 {/if}
 
                 {#if !clientMfaForce}
-                    <Form
-                        action={authorizeUrl}
-                        {onSubmit}
-                    >
+                    <Form action={authorizeUrl} {onSubmit}>
                         <div class:emailMinHeight={!showPasswordInput}>
                             {#if isAtproto}
                                 <Input
@@ -681,11 +650,7 @@
                                 {t.authorize.signUp}
                             </a>
                         {:else}
-                            <a
-                                class="reg"
-                                href="/auth/v1/users/register"
-                                target="_blank"
-                            >
+                            <a class="reg" href="/auth/v1/users/register" target="_blank">
                                 {t.authorize.signUp}
                             </a>
                         {/if}
@@ -716,12 +681,7 @@
                 {/if}
 
                 {#if tos}
-                    <TosAccept
-                        {tos}
-                        {tosAcceptCode}
-                        onToSAccept={handleAuthRes}
-                        {onToSCancel}
-                    />
+                    <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel} />
                 {/if}
 
                 {#if !clientMfaForce && providers.length > 0 && !isAtproto}

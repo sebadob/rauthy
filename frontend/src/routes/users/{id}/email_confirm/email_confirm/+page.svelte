@@ -18,14 +18,8 @@
     <title>{t.emailChange.title || 'E-Mail Change Confirm'}</title>
 </svelte:head>
 
-<Template
-    id={TPL_EMAIL_OLD}
-    bind:value={emailOld}
-/>
-<Template
-    id={TPL_EMAIL_NEW}
-    bind:value={emailNew}
-/>
+<Template id={TPL_EMAIL_OLD} bind:value={emailOld} />
+<Template id={TPL_EMAIL_NEW} bind:value={emailNew} />
 
 <Main>
     <ContentCenter>

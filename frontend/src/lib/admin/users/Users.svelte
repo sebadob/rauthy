@@ -264,12 +264,7 @@
         bind:closeModal
         alignRight
     >
-        <UserAddNew
-            config={userValuesConfig}
-            onSave={onAddNew}
-            {roles}
-            {groups}
-        />
+        <UserAddNew config={userValuesConfig} onSave={onAddNew} {roles} {groups} />
     </ButtonAddModal>
     <OrderSearchBar
         bind:value={searchValue}
@@ -302,15 +297,9 @@
                 {firstFetchHeaders}
             />
         {:else if useServerSide}
-            <Pagination
-                bind:items={users}
-                bind:itemsPaginated={usersPaginated}
-            />
+            <Pagination bind:items={users} bind:itemsPaginated={usersPaginated} />
         {:else}
-            <Pagination
-                bind:items={usersFiltered}
-                bind:itemsPaginated={usersPaginated}
-            />
+            <Pagination bind:items={usersFiltered} bind:itemsPaginated={usersPaginated} />
         {/if}
     {/snippet}
 </NavSub>
@@ -324,14 +313,7 @@
 
     <div id="users">
         {#if userId && userValuesConfig}
-            <UserDetails
-                {userValuesConfig}
-                {userId}
-                {providers}
-                {roles}
-                {groups}
-                {onSave}
-            />
+            <UserDetails {userValuesConfig} {userId} {providers} {roles} {groups} {onSave} />
         {/if}
     </div>
 </ContentAdmin>

@@ -67,18 +67,9 @@
 
     <div>
         <p>{@html ta.clients.branding.descFullCss}</p>
-        <HSLInputText
-            label="--btn-text"
-            bind:value={values.btn_text}
-        />
-        <HSLInputText
-            label="--theme-sun"
-            bind:value={values.theme_sun}
-        />
-        <HSLInputText
-            label="--theme-moon"
-            bind:value={values.theme_moon}
-        />
+        <HSLInputText label="--btn-text" bind:value={values.btn_text} />
+        <HSLInputText label="--theme-sun" bind:value={values.theme_sun} />
+        <HSLInputText label="--theme-moon" bind:value={values.theme_moon} />
     </div>
 </div>
 

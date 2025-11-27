@@ -111,11 +111,7 @@
 
 <svelte:window bind:innerWidth />
 
-<div
-    id="events"
-    class:wide
-    class:narrow={!wide}
->
+<div id="events" class:wide class:narrow={!wide}>
     <div class="upper">
         <div class="header">
             <div class="flex gap-10">
@@ -128,20 +124,10 @@
                 />
             </div>
 
-            <Button
-                ariaLabel="Test Event"
-                level={3}
-                onclick={sendTestEvent}
-            >
-                Test
-            </Button>
+            <Button ariaLabel="Test Event" level={3} onclick={sendTestEvent}>Test</Button>
         </div>
 
-        <div
-            aria-live="polite"
-            aria-relevant="additions"
-            class="data"
-        >
+        <div aria-live="polite" aria-relevant="additions" class="data">
             {#each eventsFiltered as event (event.id)}
                 <Event {event} />
             {/each}

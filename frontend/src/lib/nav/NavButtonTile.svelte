@@ -17,16 +17,9 @@
     let ref: undefined | HTMLButtonElement = $state();
 </script>
 
-<li
-    class:pictureLeft
-    aria-current={selected ? 'page' : 'false'}
->
+<li class:pictureLeft aria-current={selected ? 'page' : 'false'}>
     <div>
-        <Button
-            bind:ref
-            invisible
-            {onclick}
-        >
+        <Button bind:ref invisible {onclick}>
             <div>
                 {@render children()}
             </div>

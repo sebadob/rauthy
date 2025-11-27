@@ -157,16 +157,10 @@
 >
     {#if isLoading}
         <div class="load">
-            <Loading
-                background={false}
-                color={loadingColor()}
-            />
+            <Loading background={false} color={loadingColor()} />
         </div>
     {:else if showText}
-        <div
-            in:fade
-            class="font-label"
-        >
+        <div in:fade class="font-label">
             {@render children()}
         </div>
     {/if}

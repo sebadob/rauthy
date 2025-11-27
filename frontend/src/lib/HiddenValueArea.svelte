@@ -56,11 +56,7 @@
 <div style:width={`${width}`}>
     <div class="iconsOuter">
         <div class="iconsInner">
-            <Button
-                ariaLabel={show ? t.common.hide : t.common.show}
-                invisible
-                onclick={toggle}
-            >
+            <Button ariaLabel={show ? t.common.hide : t.common.show} invisible onclick={toggle}>
                 {#if show}
                     <div title={t.common.hide}>
                         <IconEye />
@@ -72,11 +68,7 @@
                 {/if}
             </Button>
 
-            <Button
-                ariaLabel={t.common.copyToClip}
-                invisible
-                onclick={copyToClip}
-            >
+            <Button ariaLabel={t.common.copyToClip} invisible onclick={copyToClip}>
                 <div title={t.common.copyToClip}>
                     <IconClipboard />
                 </div>

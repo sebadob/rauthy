@@ -356,16 +356,10 @@
         />
     </div>
 
-    <Form
-        action={`/auth/v1/users/${user.id}`}
-        {onSubmit}
-    >
+    <Form action={`/auth/v1/users/${user.id}`} {onSubmit}>
         <div class="values">
             <div>
-                <LabeledValue
-                    label="ID"
-                    mono
-                >
+                <LabeledValue label="ID" mono>
                     {user.id}
                 </LabeledValue>
             </div>
@@ -405,18 +399,12 @@
                 </div>
             {:else}
                 <div>
-                    <InputCheckbox
-                        ariaLabel={ta.common.enabled}
-                        bind:checked={enabled}
-                    >
+                    <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
                         {ta.common.enabled}
                     </InputCheckbox>
                 </div>
                 <div>
-                    <InputCheckbox
-                        ariaLabel={t.account.emailVerified}
-                        bind:checked={emailVerified}
-                    >
+                    <InputCheckbox ariaLabel={t.account.emailVerified} bind:checked={emailVerified}>
                         {t.account.emailVerified}
                     </InputCheckbox>
                 </div>
@@ -545,10 +533,7 @@
                         </InputCheckbox>
                     </Tooltip>
                 {:else}
-                    <InputCheckbox
-                        ariaLabel={t.account.accessExp}
-                        bind:checked={expires}
-                    >
+                    <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
                         {t.account.accessExp}
                     </InputCheckbox>
                 {/if}

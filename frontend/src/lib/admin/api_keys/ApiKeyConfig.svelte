@@ -98,10 +98,7 @@
     {key.name}
 </LabeledValue>
 
-<InputCheckbox
-    ariaLabel={ta.api_key.limitedValidity}
-    bind:checked={doesExpire}
->
+<InputCheckbox ariaLabel={ta.api_key.limitedValidity} bind:checked={doesExpire}>
     {ta.api_key.limitedValidity}
 </InputCheckbox>
 
@@ -118,10 +115,7 @@
     </div>
 {/if}
 
-<ApiKeyMatrix
-    {key}
-    bind:finalize={finalizeMatrix}
-/>
+<ApiKeyMatrix {key} bind:finalize={finalizeMatrix} />
 
 <div class="btn">
     <Button onclick={onSubmit}>

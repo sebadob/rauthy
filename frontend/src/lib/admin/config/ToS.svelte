@@ -202,25 +202,15 @@
 
         <div>
             {#if selectedTsLabel && selectOpts.length > 1}
-                <Options
-                    ariaLabel="Select ToS"
-                    options={selectOpts}
-                    bind:value={selectedTsLabel}
-                />
+                <Options ariaLabel="Select ToS" options={selectOpts} bind:value={selectedTsLabel} />
             {/if}
 
-            <LabeledValue
-                label={ta.tos.added}
-                title={ta.tos.added}
-            >
+            <LabeledValue label={ta.tos.added} title={ta.tos.added}>
                 {formatDateFromTs(active.ts)}
             </LabeledValue>
 
             {#if active.opt_until}
-                <LabeledValue
-                    label={ta.tos.optUntil.label}
-                    title={ta.tos.optUntil.label}
-                >
+                <LabeledValue label={ta.tos.optUntil.label} title={ta.tos.optUntil.label}>
                     {formatDateFromTs(active.opt_until)}
                 </LabeledValue>
             {/if}
@@ -236,18 +226,12 @@
     {/if}
 </div>
 
-<Modal
-    bind:showModal={showModalAddNew}
-    bind:closeModal={closeModalAddNew}
->
+<Modal bind:showModal={showModalAddNew} bind:closeModal={closeModalAddNew}>
     <div class="modal">
         <h3>{ta.tos.addNewToS}</h3>
 
         <div class="optUntil">
-            <InputCheckbox
-                ariaLabel={ta.tos.optUntil.enable}
-                bind:checked={optUntil}
-            >
+            <InputCheckbox ariaLabel={ta.tos.optUntil.enable} bind:checked={optUntil}>
                 {ta.tos.optUntil.enable}
             </InputCheckbox>
 
@@ -276,10 +260,7 @@
             />
         </div>
 
-        <div
-            class="action"
-            style:margin-bottom="1rem"
-        >
+        <div class="action" style:margin-bottom="1rem">
             <p><b>{ta.tos.immutable}</b></p>
         </div>
 
@@ -290,11 +271,7 @@
         >
             {t.common.save}
         </Button>
-        <Button
-            level={-3}
-            ariaLabel={t.common.cancel}
-            onclick={() => closeModalAddNew?.()}
-        >
+        <Button level={-3} ariaLabel={t.common.cancel} onclick={() => closeModalAddNew?.()}>
             {t.common.cancel}
         </Button>
 
@@ -307,24 +284,14 @@
 </Modal>
 
 {#if tos.length > 0}
-    <Modal
-        bind:showModal={showModalStatus}
-        bind:closeModal={closeModalStatus}
-    >
+    <Modal bind:showModal={showModalStatus} bind:closeModal={closeModalStatus}>
         <h3>{ta.tos.checkStatus}</h3>
 
         <div class="userSearch">
-            <SearchBar
-                bind:ref={refSearch}
-                placeholder="E-Mail"
-                bind:value={searchValue}
-            />
+            <SearchBar bind:ref={refSearch} placeholder="E-Mail" bind:value={searchValue} />
             <div class="searchOpts">
                 {#each searchOptions as opt}
-                    <Button
-                        level={3}
-                        onclick={() => selectOpt(opt)}
-                    >
+                    <Button level={3} onclick={() => selectOpt(opt)}>
                         <span class={selectedId === opt.id ? 'selected' : ''}>
                             {`${opt.given_name} ${opt.family_name || ''} <${opt.email}>`}
                         </span>
@@ -364,10 +331,7 @@
             </div>
         {/if}
 
-        <Button
-            level={2}
-            onclick={() => closeModalStatus?.()}
-        >
+        <Button level={2} onclick={() => closeModalStatus?.()}>
             {t.common.close}
         </Button>
     </Modal>

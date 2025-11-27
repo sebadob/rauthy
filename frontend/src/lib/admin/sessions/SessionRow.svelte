@@ -46,18 +46,12 @@
     }
 </script>
 
-<div
-    class="container"
-    class:expired={session.exp < now}
->
+<div class="container" class:expired={session.exp < now}>
     <Expandable>
         {#snippet summary()}
             <div class="header">
                 <Tooltip text="User ID">
-                    <div
-                        class="uid font-mono"
-                        style:margin-left={session.user_id ? '' : '.35rem'}
-                    >
+                    <div class="uid font-mono" style:margin-left={session.user_id ? '' : '.35rem'}>
                         {session.user_id}
                     </div>
                 </Tooltip>
@@ -69,10 +63,7 @@
                         </div>
                     </Tooltip>
 
-                    <Button
-                        invisible
-                        onclick={copyToClip}
-                    >
+                    <Button invisible onclick={copyToClip}>
                         <Tooltip text={`IP - ${copyText}`}>
                             <div class="ip font-mono">
                                 {session.remote_ip}
@@ -80,10 +71,7 @@
                         </Tooltip>
                     </Button>
 
-                    <Button
-                        invisible
-                        onclick={deleteSession}
-                    >
+                    <Button invisible onclick={deleteSession}>
                         <Tooltip text={t.common.delete}>
                             <div class="trash">
                                 <IconTrash width="1.2rem" />
@@ -123,10 +111,7 @@
                 <CheckIcon checked={session.is_mfa} />
             </LabeledValue>
 
-            <Button
-                level={-1}
-                onclick={deleteSession}
-            >
+            <Button level={-1} onclick={deleteSession}>
                 {t.common.delete}
             </Button>
         {/snippet}

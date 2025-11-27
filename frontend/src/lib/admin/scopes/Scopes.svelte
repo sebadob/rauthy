@@ -111,10 +111,7 @@
         bind:closeModal
         alignRight
     >
-        <ScopeAddNew
-            onSave={onAddNew}
-            {scopes}
-        />
+        <ScopeAddNew onSave={onAddNew} {scopes} />
     </ButtonAddModal>
     <OrderSearchBar
         {searchOptions}
@@ -128,10 +125,7 @@
     {#snippet buttonTiles()}
         <div class="scopesList">
             {#each scopesFiltered as scope (scope.id)}
-                <NavButtonTile
-                    onclick={() => sid.set(scope.id)}
-                    selected={sid.get() === scope.id}
-                >
+                <NavButtonTile onclick={() => sid.set(scope.id)} selected={sid.get() === scope.id}>
                     {scope.name}
                     {#if isDefaultScope(scope.name)}
                         <span class="default">
@@ -153,12 +147,7 @@
 
     <div id="scopes">
         {#if scope}
-            <ScopeDetails
-                {attrs}
-                {scope}
-                {scopes}
-                {onSave}
-            />
+            <ScopeDetails {attrs} {scope} {scopes} {onSave} />
         {/if}
     </div>
 </ContentAdmin>

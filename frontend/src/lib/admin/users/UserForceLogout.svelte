@@ -33,12 +33,7 @@
 <p>{ta.users.forceLogout}</p>
 
 <div class="flex gap-05">
-    <Button
-        level={-1}
-        onclick={onSubmit}
-    >
-        Logout
-    </Button>
+    <Button level={-1} onclick={onSubmit}>Logout</Button>
     {#if success}
         <IconCheck />
     {/if}

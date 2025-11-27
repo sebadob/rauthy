@@ -69,10 +69,7 @@
 <Main>
     <ContentCenter>
         {#if isReady && session && user}
-            <AccMain
-                bind:user
-                bind:webIdData
-            />
+            <AccMain bind:user bind:webIdData />
         {/if}
         <ThemeSwitch absolute />
         <LangSelector absolute />

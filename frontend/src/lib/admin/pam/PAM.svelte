@@ -154,33 +154,18 @@
     width="min(20rem, 100dvw)"
     thresholdNavSub={700}
 >
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={2}
-        bind:closeModal
-        alignRight
-    >
+    <ButtonAddModal bind:ref={refAddNew} level={2} bind:closeModal alignRight>
         {#if isUser}
             <PAMUserAdd onCreate={onCreateUser} />
         {:else if isGroup}
-            <PAMGroupAdd
-                {groups}
-                onCreate={onCreateGroup}
-            />
+            <PAMGroupAdd {groups} onCreate={onCreateGroup} />
         {:else if isHost}
-            <PamHostAdd
-                {groups}
-                onCreate={onCreateHost}
-            />
+            <PamHostAdd {groups} onCreate={onCreateHost} />
         {/if}
     </ButtonAddModal>
 
     <div class="tabs">
-        <Tabs
-            {tabs}
-            bind:selected={selectedNav}
-            center
-        />
+        <Tabs {tabs} bind:selected={selectedNav} center />
     </div>
 
     <SearchBar bind:value={searchValue} />
@@ -258,10 +243,7 @@
 <ContentAdmin>
     <div id="pam">
         {#if isUser && selectedUser}
-            <PAMUserDetails
-                user={selectedUser}
-                {groupsSorted}
-            />
+            <PAMUserDetails user={selectedUser} {groupsSorted} />
         {:else if isGroup && selectedGroup}
             <PAMGroupDetails
                 group={selectedGroup}

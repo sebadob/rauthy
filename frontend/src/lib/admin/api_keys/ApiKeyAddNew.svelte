@@ -85,10 +85,7 @@
 </script>
 
 <div class="container">
-    <Form
-        action="/auth/v1/api_keys"
-        {onSubmit}
-    >
+    <Form action="/auth/v1/api_keys" {onSubmit}>
         <Input
             label={ta.api_key.keyName}
             placeholder={ta.api_key.keyName}
@@ -100,10 +97,7 @@
             pattern={PATTERN_API_KEY}
         />
 
-        <InputCheckbox
-            ariaLabel={ta.api_key.limitedValidity}
-            bind:checked={doesExpire}
-        >
+        <InputCheckbox ariaLabel={ta.api_key.limitedValidity} bind:checked={doesExpire}>
             {ta.api_key.limitedValidity}
         </InputCheckbox>
 

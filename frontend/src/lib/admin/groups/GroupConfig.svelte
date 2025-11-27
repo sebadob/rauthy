@@ -58,14 +58,8 @@
     }
 </script>
 
-<Form
-    action={`/auth/v1/groups/${group.id}`}
-    {onSubmit}
->
-    <LabeledValue
-        label="ID"
-        mono
-    >
+<Form action={`/auth/v1/groups/${group.id}`} {onSubmit}>
+    <LabeledValue label="ID" mono>
         {group.id}
     </LabeledValue>
 

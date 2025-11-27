@@ -61,10 +61,7 @@
 </script>
 
 <div class="container">
-    <Form
-        action="/auth/v1/clients"
-        {onSubmit}
-    >
+    <Form action="/auth/v1/clients" {onSubmit}>
         <Input
             bind:ref
             bind:value={id}
@@ -82,10 +79,7 @@
             pattern={PATTERN_CLIENT_NAME}
         />
 
-        <InputCheckbox
-            ariaLabel={ta.clients.confidential}
-            bind:checked={confidential}
-        >
+        <InputCheckbox ariaLabel={ta.clients.confidential} bind:checked={confidential}>
             {ta.clients.confidential}
         </InputCheckbox>
 

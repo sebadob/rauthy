@@ -91,26 +91,17 @@
 
 <p>{@html ta.providers.config.descAuthMethod}</p>
 <div class="checkbox">
-    <InputCheckbox
-        ariaLabel="client_secret_basic"
-        bind:checked={clientSecretBasic}
-    >
+    <InputCheckbox ariaLabel="client_secret_basic" bind:checked={clientSecretBasic}>
         client_secret_basic
     </InputCheckbox>
 </div>
 <div class="checkbox">
-    <InputCheckbox
-        ariaLabel="client_secret_post"
-        bind:checked={clientSecretPost}
-    >
+    <InputCheckbox ariaLabel="client_secret_post" bind:checked={clientSecretPost}>
         client_secret_post
     </InputCheckbox>
 </div>
 {#if !usePKCE && !clientSecretBasic && !clientSecretPost}
-    <div
-        class="err"
-        transition:slide={{ duration: 150 }}
-    >
+    <div class="err" transition:slide={{ duration: 150 }}>
         {ta.providers.config.errNoAuthMethod}
     </div>
 {/if}

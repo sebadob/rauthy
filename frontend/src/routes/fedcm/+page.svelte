@@ -96,16 +96,10 @@
 
             {#if isSupported}
                 <p>
-                    <Button
-                        onclick={register}
-                        level={2}>Register IdP</Button
-                    >
+                    <Button onclick={register} level={2}>Register IdP</Button>
                 </p>
 
-                <Form
-                    action=""
-                    onSubmit={login}
-                >
+                <Form action="" onSubmit={login}>
                     <p>
                         <Input
                             bind:value={clientId}

@@ -41,12 +41,7 @@
     }
 </script>
 
-<A
-    {href}
-    hideUnderline
-    {highlightIncludes}
-    {onclick}
->
+<A {href} hideUnderline {highlightIncludes} {onclick}>
     {#if compact}
         <div class="compact">
             <div class="iconCompact">
@@ -58,10 +53,7 @@
         </div>
     {:else}
         <div class="wide">
-            <div
-                class="iconWide"
-                style:width
-            >
+            <div class="iconWide" style:width>
                 {@render icon(width)}
             </div>
             <div>

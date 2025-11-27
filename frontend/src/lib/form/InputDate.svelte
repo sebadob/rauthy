@@ -255,14 +255,8 @@
                     lazy
                 >
                     {#snippet button()}
-                        <div
-                            title={label}
-                            class="pointer"
-                        >
-                            <IconCalendar
-                                color="hsl(var(--text)"
-                                width="1.2rem"
-                            />
+                        <div title={label} class="pointer">
+                            <IconCalendar color="hsl(var(--text)" width="1.2rem" />
                         </div>
                     {/snippet}
                     <div class="popup">
@@ -301,10 +295,7 @@
                             {/each}
                         </div>
 
-                        <div
-                            bind:this={refMonthContainer}
-                            class="month"
-                        >
+                        <div bind:this={refMonthContainer} class="month">
                             {#each weeks as week}
                                 <div class="week">
                                     {#each week.days as day}
@@ -342,18 +333,11 @@
     </div>
 
     <div class="label">
-        <label
-            for={id}
-            class="font-label noselect"
-            data-required={required}
-        >
+        <label for={id} class="font-label noselect" data-required={required}>
             {label}
         </label>
         {#if isErr}
-            <div
-                class="error"
-                transition:slide={{ duration: 150 }}
-            >
+            <div class="error" transition:slide={{ duration: 150 }}>
                 {errMsg}
             </div>
         {/if}

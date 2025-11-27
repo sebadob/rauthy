@@ -34,22 +34,11 @@
 </script>
 
 <div class="flex">
-    <Tabs
-        {tabs}
-        bind:selected
-        bind:focusFirst
-    />
+    <Tabs {tabs} bind:selected bind:focusFirst />
 </div>
 
 {#if selected === ta.nav.config}
-    <AttrConfig
-        {attr}
-        {attrs}
-        {onSave}
-    />
+    <AttrConfig {attr} {attrs} {onSave} />
 {:else if selected === t.common.delete}
-    <AttrDelete
-        {attr}
-        {onSave}
-    />
+    <AttrDelete {attr} {onSave} />
 {/if}

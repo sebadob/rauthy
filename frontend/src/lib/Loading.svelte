@@ -21,22 +21,10 @@
     class:background
     transition:fade={{ duration: 100 }}
 >
-    <div
-        class="loading"
-        style="margin-top: {offset}px;"
-    >
-        <div
-            class="loading-1"
-            style:background={color}
-        ></div>
-        <div
-            class="loading-2"
-            style:background={color}
-        ></div>
-        <div
-            class="loading-3"
-            style:background={color}
-        ></div>
+    <div class="loading" style="margin-top: {offset}px;">
+        <div class="loading-1" style:background={color}></div>
+        <div class="loading-2" style:background={color}></div>
+        <div class="loading-3" style:background={color}></div>
     </div>
 </div>
 

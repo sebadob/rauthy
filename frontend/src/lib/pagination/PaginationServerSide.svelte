@@ -123,16 +123,8 @@
 
 <div class="container">
     <div class="flex">
-        <Button
-            onclick={goLeft}
-            invisible
-            isDisabled={page < 2}
-        >
-            <div
-                class="iconLeft"
-                aria-label={t.pagination.gotoPagePrev}
-                data-disabled={page === 1}
-            >
+        <Button onclick={goLeft} invisible isDisabled={page < 2}>
+            <div class="iconLeft" aria-label={t.pagination.gotoPagePrev} data-disabled={page === 1}>
                 <IconChevronRight width={iconSize} />
             </div>
         </Button>
@@ -143,11 +135,7 @@
             </li>
         </ul>
 
-        <Button
-            onclick={goRight}
-            invisible
-            isDisabled={isLastPage}
-        >
+        <Button onclick={goRight} invisible isDisabled={isLastPage}>
             <div
                 class="iconRight"
                 aria-label={t.pagination.gotoPageNext}

@@ -34,22 +34,11 @@
 </script>
 
 <div class="flex">
-    <Tabs
-        {tabs}
-        bind:selected
-        bind:focusFirst
-    />
+    <Tabs {tabs} bind:selected bind:focusFirst />
 </div>
 
 {#if selected === ta.nav.config}
-    <GroupConfig
-        {group}
-        {groups}
-        {onSave}
-    />
+    <GroupConfig {group} {groups} {onSave} />
 {:else if selected === t.common.delete}
-    <GroupDelete
-        {group}
-        {onSave}
-    />
+    <GroupDelete {group} {onSave} />
 {/if}

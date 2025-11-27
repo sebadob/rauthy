@@ -104,31 +104,19 @@
 </script>
 
 <div class="container">
-    <Form
-        action={`/auth/v1/providers/${provider.id}`}
-        {onSubmit}
-    >
-        <LabeledValue
-            label="ID"
-            mono
-        >
+    <Form action={`/auth/v1/providers/${provider.id}`} {onSubmit}>
+        <LabeledValue label="ID" mono>
             {provider.id}
         </LabeledValue>
         <div style:height=".15rem"></div>
 
         <div class="checkbox">
-            <InputCheckbox
-                ariaLabel={ta.common.enabled}
-                bind:checked={provider.enabled}
-            >
+            <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={provider.enabled}>
                 {ta.common.enabled}
             </InputCheckbox>
         </div>
         <div class="checkbox">
-            <InputCheckbox
-                ariaLabel="Auto-Onboarding"
-                bind:checked={provider.auto_onboarding}
-            >
+            <InputCheckbox ariaLabel="Auto-Onboarding" bind:checked={provider.auto_onboarding}>
                 Auto-Onboarding
             </InputCheckbox>
         </div>
@@ -156,12 +144,7 @@
         />
 
         <div class="checkbox">
-            <InputCheckbox
-                ariaLabel="PKCE"
-                bind:checked={provider.use_pkce}
-            >
-                PKCE
-            </InputCheckbox>
+            <InputCheckbox ariaLabel="PKCE" bind:checked={provider.use_pkce}>PKCE</InputCheckbox>
         </div>
 
         <ProviderConfigClientInfo
@@ -194,10 +177,7 @@
         </div>
 
         <div class="flex gap-05">
-            <Button
-                type="submit"
-                {isLoading}
-            >
+            <Button type="submit" {isLoading}>
                 {t.common.save}
             </Button>
 

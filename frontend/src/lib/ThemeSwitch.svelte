@@ -40,14 +40,8 @@
     }
 </script>
 
-<div
-    class="container"
-    class:absolute
->
-    <div
-        aria-live="polite"
-        style:display="none"
-    >
+<div class="container" class:absolute>
+    <div aria-live="polite" style:display="none">
         {t.common.activeTheme}: {activeTheme}
     </div>
     <Button

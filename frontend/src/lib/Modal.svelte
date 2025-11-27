@@ -127,24 +127,13 @@ We need the onclick listener here to make easy click-outside work.
     }}
     onclick={outsideClick}
 >
-    <div
-        bind:this={refContent}
-        role="none"
-        onclick={stopPropagation}
-    >
+    <div bind:this={refContent} role="none" onclick={stopPropagation}>
         {#if !strict}
             <div class="relative">
                 <div class="absolute close">
-                    <Button
-                        ariaLabel={t.common.close}
-                        invisible
-                        onclick={close}
-                    >
+                    <Button ariaLabel={t.common.close} invisible onclick={close}>
                         <span class="closeIcon">
-                            <IconStop
-                                color="currentColor"
-                                width="1.2rem"
-                            />
+                            <IconStop color="currentColor" width="1.2rem" />
                         </span>
                     </Button>
                 </div>

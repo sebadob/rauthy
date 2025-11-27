@@ -32,105 +32,49 @@
     let ref: undefined | HTMLDivElement = $state();
 </script>
 
-<div
-    role="none"
-    class="editor"
-    style:height
-    onclick={() => ref?.focus()}
->
+<div role="none" class="editor" style:height onclick={() => ref?.focus()}>
     <div class="toolbar">
-        <ToolbarIconHtml
-            {ref}
-            title={ta.editor.heading1}
-            tagName="h1"
-        >
+        <ToolbarIconHtml {ref} title={ta.editor.heading1} tagName="h1">
             <IconH1 width={iconSize} />
         </ToolbarIconHtml>
-        <ToolbarIconHtml
-            {ref}
-            title={ta.editor.heading2}
-            tagName="h2"
-        >
+        <ToolbarIconHtml {ref} title={ta.editor.heading2} tagName="h2">
             <IconH2 width={iconSize} />
         </ToolbarIconHtml>
-        <ToolbarIconHtml
-            {ref}
-            title={ta.editor.heading1}
-            tagName="h3"
-        >
+        <ToolbarIconHtml {ref} title={ta.editor.heading1} tagName="h3">
             <IconH3 width={iconSize} />
         </ToolbarIconHtml>
 
-        <ToolbarIconHtml
-            {ref}
-            title={ta.editor.bold}
-            tagName="strong"
-        >
+        <ToolbarIconHtml {ref} title={ta.editor.bold} tagName="strong">
             <IconBold width={iconSize} />
         </ToolbarIconHtml>
 
-        <ToolbarIconHtml
-            {ref}
-            title={ta.editor.italic}
-            tagName="em"
-        >
+        <ToolbarIconHtml {ref} title={ta.editor.italic} tagName="em">
             <IconItalic width={iconSize} />
         </ToolbarIconHtml>
 
-        <ToolbarIconHtml
-            {ref}
-            title={ta.editor.strikeThrough}
-            tagName="s"
-        >
+        <ToolbarIconHtml {ref} title={ta.editor.strikeThrough} tagName="s">
             <IconStrikeThrough width={iconSize} />
         </ToolbarIconHtml>
 
-        <ToolbarIconHtml
-            {ref}
-            title={ta.editor.listBullet}
-            tagName="li"
-            tagNameParent="ul"
-        >
+        <ToolbarIconHtml {ref} title={ta.editor.listBullet} tagName="li" tagNameParent="ul">
             <IconListBullet width={iconSize} />
         </ToolbarIconHtml>
-        <ToolbarIconHtml
-            {ref}
-            title={ta.editor.listNumbered}
-            tagName="li"
-            tagNameParent="ol"
-        >
+        <ToolbarIconHtml {ref} title={ta.editor.listNumbered} tagName="li" tagNameParent="ol">
             <IconListNumbered width={iconSize} />
         </ToolbarIconHtml>
         <!-- TODO checkbox list -> needs multiple mandatory parents -->
 
-        <ToolIconParagraph
-            {ref}
-            {iconSize}
-        />
+        <ToolIconParagraph {ref} {iconSize} />
 
-        <ToolbarIconHtml
-            {ref}
-            title={ta.editor.code}
-            tagName="code"
-        >
+        <ToolbarIconHtml {ref} title={ta.editor.code} tagName="code">
             <IconCode width={iconSize} />
         </ToolbarIconHtml>
-        <ToolbarIconHtml
-            {ref}
-            title={ta.editor.quote}
-            tagName="blockquote"
-        >
+        <ToolbarIconHtml {ref} title={ta.editor.quote} tagName="blockquote">
             <IconQuote width={iconSize} />
         </ToolbarIconHtml>
 
-        <ToolIconLink
-            {ref}
-            {iconSize}
-        />
-        <ToolIconRemoveFmt
-            {ref}
-            {iconSize}
-        />
+        <ToolIconLink {ref} {iconSize} />
+        <ToolIconRemoveFmt {ref} {iconSize} />
     </div>
 
     <div class="content theme-light">

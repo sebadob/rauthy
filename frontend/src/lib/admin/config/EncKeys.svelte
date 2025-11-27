@@ -79,17 +79,10 @@
 {#if keys.length > 1}
     <p>{ta.docs.encKeys.migrateToKey}:</p>
 
-    <Options
-        ariaLabel={ta.docs.encKeys.migrateToKey}
-        options={keys}
-        bind:value={migrateKey}
-    />
+    <Options ariaLabel={ta.docs.encKeys.migrateToKey} options={keys} bind:value={migrateKey} />
 
     <div class="btn flex gap-05">
-        <Button
-            onclick={migrate}
-            {isLoading}
-        >
+        <Button onclick={migrate} {isLoading}>
             {ta.docs.encKeys.migrate}
         </Button>
 

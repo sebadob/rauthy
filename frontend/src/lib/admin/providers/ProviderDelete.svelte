@@ -71,31 +71,20 @@
         </Expandable>
 
         <p>{ta.providers.delete.areYouSure}</p>
-        <InputCheckbox
-            ariaLabel={ta.providers.delete.forceDelete}
-            bind:checked={forceDelete}
-        >
+        <InputCheckbox ariaLabel={ta.providers.delete.forceDelete} bind:checked={forceDelete}>
             <div class="forceDelete">
                 {ta.providers.delete.forceDelete}
             </div>
         </InputCheckbox>
 
         {#if forceDelete}
-            <Button
-                level={-1}
-                onclick={onSubmit}
-                {isLoading}
-            >
+            <Button level={-1} onclick={onSubmit} {isLoading}>
                 {t.common.delete}
             </Button>
         {/if}
     {:else}
         <p>{ta.providers.delete.areYouSure}</p>
-        <Button
-            level={-1}
-            onclick={onSubmit}
-            {isLoading}
-        >
+        <Button level={-1} onclick={onSubmit} {isLoading}>
             {t.common.delete}
         </Button>
     {/if}

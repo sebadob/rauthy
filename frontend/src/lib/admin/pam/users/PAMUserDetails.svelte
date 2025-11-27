@@ -170,10 +170,7 @@
 
 <h1>{user.name}</h1>
 
-<Form
-    action={url}
-    {onSubmit}
->
+<Form action={url} {onSubmit}>
     <LabeledValue label="UID">
         {user.id}
     </LabeledValue>
@@ -187,13 +184,7 @@
         {user.email}
     </LabeledValue>
 
-    <Input
-        label="Shell"
-        placeholder="Shell"
-        required
-        bind:value={user.shell}
-        width="10rem"
-    />
+    <Input label="Shell" placeholder="Shell" required bind:value={user.shell} width="10rem" />
 
     <h2>{ta.pam.groups}</h2>
 

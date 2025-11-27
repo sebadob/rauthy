@@ -94,10 +94,6 @@
     // }
 </script>
 
-<ToolbarIconHtml
-    {ref}
-    title={ta.editor.removeFmt}
-    {onClickCustom}
->
+<ToolbarIconHtml {ref} title={ta.editor.removeFmt} {onClickCustom}>
     <IconBackspace width={iconSize} />
 </ToolbarIconHtml>

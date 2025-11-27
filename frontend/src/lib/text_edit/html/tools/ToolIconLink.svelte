@@ -79,24 +79,13 @@
     }
 </script>
 
-<ToolbarIconHtml
-    {ref}
-    title={ta.editor.link}
-    onClickCustom={addLink}
->
+<ToolbarIconHtml {ref} title={ta.editor.link} onClickCustom={addLink}>
     <IconLink width={iconSize} />
 </ToolbarIconHtml>
-<Modal
-    bind:showModal
-    bind:closeModal
-    {onClose}
->
+<Modal bind:showModal bind:closeModal {onClose}>
     <div>
         <h3>{ta.editor.link}</h3>
-        <Form
-            action=""
-            {onSubmit}
-        >
+        <Form action="" {onSubmit}>
             <Input
                 bind:ref={refName}
                 bind:value={name}

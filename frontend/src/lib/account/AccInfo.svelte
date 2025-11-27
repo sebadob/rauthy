@@ -111,10 +111,7 @@
 </script>
 
 <div>
-    <div
-        class={classRow}
-        style:margin=".5rem 0"
-    >
+    <div class={classRow} style:margin=".5rem 0">
         <div class={classLabel}></div>
         <UserPicture
             {fallbackCharacters}
@@ -161,11 +158,7 @@
             <div class="value">{accType || ''}</div>
             {#if isFederated}
                 <div class="fed-btn">
-                    <Button
-                        ariaLabel={t.account.providerUnlink}
-                        level={3}
-                        onclick={unlinkProvider}
-                    >
+                    <Button ariaLabel={t.account.providerUnlink} level={3} onclick={unlinkProvider}>
                         {t.account.providerUnlink}
                     </Button>
                     {#if unlinkErr}
@@ -175,10 +168,7 @@
                     {/if}
                 </div>
             {:else if providers.length > 0}
-                <Button
-                    level={2}
-                    onclick={() => (showModal = true)}
-                >
+                <Button level={2} onclick={() => (showModal = true)}>
                     {t.account.providerLink}
                 </Button>
                 <Modal bind:showModal>
@@ -255,10 +245,7 @@
         <div class={classRow}>
             <div class={classLabel}>WebID:</div>
             <span class="value">
-                <a
-                    href={buildWebIdUri(user.id)}
-                    target="_blank"
-                >
+                <a href={buildWebIdUri(user.id)} target="_blank">
                     {@html buildWebIdUri(user.id).replace('/auth/', '/auth/<wbr/>')}
                 </a>
             </span>

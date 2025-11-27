@@ -99,10 +99,7 @@
                 <p>{ta.clients.secret.rotateDesc1}</p>
                 <p><b>{ta.clients.secret.rotateDesc2}</b></p>
 
-                <InputCheckbox
-                    ariaLabel="Client Secret Cache"
-                    bind:checked={cacheSecret}
-                >
+                <InputCheckbox ariaLabel="Client Secret Cache" bind:checked={cacheSecret}>
                     {ta.clients.secret.doCache}
                 </InputCheckbox>
 
@@ -121,14 +118,8 @@
                     </div>
                 {/if}
 
-                <div
-                    class="flex gap-05"
-                    style:margin-top="1rem"
-                >
-                    <Button
-                        onclick={generateSecret}
-                        isDisabled={isInputErr}
-                    >
+                <div class="flex gap-05" style:margin-top="1rem">
+                    <Button onclick={generateSecret} isDisabled={isInputErr}>
                         {ta.clients.secret.generate}
                     </Button>
                     {#if success}

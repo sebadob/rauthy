@@ -192,11 +192,7 @@
 <div class="matrix">
     {#snippet btnRight(r: AccessRight)}
         <div class="center">
-            <Button
-                ariaLabel={`Toggle: ${r}`}
-                invisible
-                onclick={() => toggleRight(r)}
-            >
+            <Button ariaLabel={`Toggle: ${r}`} invisible onclick={() => toggleRight(r)}>
                 {r}
             </Button>
         </div>
@@ -211,11 +207,7 @@
 
     {#snippet btnGroup(g: AccessGroup)}
         <div>
-            <Button
-                ariaLabel={`Toggle: ${g}`}
-                invisible
-                onclick={() => toggleGroup(g)}
-            >
+            <Button ariaLabel={`Toggle: ${g}`} invisible onclick={() => toggleGroup(g)}>
                 {g}
             </Button>
         </div>
@@ -224,28 +216,16 @@
         <div class="row">
             {@render btnGroup(row[0])}
             <div class="center">
-                <InputCheckbox
-                    ariaLabel={`${row[0]}: create`}
-                    bind:checked={matrix[i][1]}
-                />
+                <InputCheckbox ariaLabel={`${row[0]}: create`} bind:checked={matrix[i][1]} />
             </div>
             <div class="center">
-                <InputCheckbox
-                    ariaLabel={`${row[0]}: read`}
-                    bind:checked={matrix[i][2]}
-                />
+                <InputCheckbox ariaLabel={`${row[0]}: read`} bind:checked={matrix[i][2]} />
             </div>
             <div class="center">
-                <InputCheckbox
-                    ariaLabel={`${row[0]}: update`}
-                    bind:checked={matrix[i][3]}
-                />
+                <InputCheckbox ariaLabel={`${row[0]}: update`} bind:checked={matrix[i][3]} />
             </div>
             <div class="center">
-                <InputCheckbox
-                    ariaLabel={`${row[0]}: delete`}
-                    bind:checked={matrix[i][4]}
-                />
+                <InputCheckbox ariaLabel={`${row[0]}: delete`} bind:checked={matrix[i][4]} />
             </div>
         </div>
     {/each}

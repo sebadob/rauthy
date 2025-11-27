@@ -77,10 +77,7 @@
         <div class="value font-mono">{value}</div>
     </div>
     <div class="label">
-        <label
-            for={id}
-            class="font-label noselect"
-        >
+        <label for={id} class="font-label noselect">
             {label}
         </label>
     </div>

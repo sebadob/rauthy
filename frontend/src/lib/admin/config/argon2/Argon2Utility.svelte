@@ -62,10 +62,7 @@
 
 <div class="wrapper">
     <div class="container">
-        <Form
-            action="/auth/v1/password_hash_times"
-            {onSubmit}
-        >
+        <Form action="/auth/v1/password_hash_times" {onSubmit}>
             <Input
                 typ="number"
                 bind:value={values.targetTime}
@@ -96,10 +93,7 @@
                 max="256"
                 width={inputWidth}
             />
-            <Button
-                type="submit"
-                {isLoading}
-            >
+            <Button type="submit" {isLoading}>
                 {ta.docs.hashing.calculate}
             </Button>
         </Form>

@@ -154,10 +154,7 @@
     }
 </script>
 
-<Button
-    invisible
-    {onclick}
->
+<Button invisible {onclick}>
     <div {title}>
         {@render children()}
     </div>

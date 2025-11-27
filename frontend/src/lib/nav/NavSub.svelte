@@ -69,11 +69,7 @@
 
 <div class="navSub">
     {#snippet btn()}
-        <Button
-            ariaControls={id}
-            invisible
-            onclick={toggle}
-        >
+        <Button ariaControls={id} invisible onclick={toggle}>
             <svg
                 aria-expanded={!collapsed}
                 class="btn"
@@ -110,10 +106,7 @@
     >
         {#if showIcon && !(collapsed || shouldCollapse)}
             <div class="absolute">
-                <div
-                    class="iconHover"
-                    class:hoverLeft={collapsed}
-                >
+                <div class="iconHover" class:hoverLeft={collapsed}>
                     {@render btn()}
                 </div>
             </div>

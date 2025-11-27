@@ -28,10 +28,7 @@
     }
 </script>
 
-<label
-    class="font-label noselect"
-    data-disabled={disabled}
->
+<label class="font-label noselect" data-disabled={disabled}>
     <input
         type="checkbox"
         style:border-color={borderColor}

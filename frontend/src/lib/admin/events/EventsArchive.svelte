@@ -139,10 +139,7 @@
         {:else}
             <div class="eventsList">
                 {#each eventsFiltered as event (event.id)}
-                    <Event
-                        {event}
-                        inline
-                    />
+                    <Event {event} inline />
                 {/each}
             </div>
         {/if}

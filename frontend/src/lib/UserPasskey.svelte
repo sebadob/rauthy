@@ -30,10 +30,7 @@
             {#if passkey.user_verified}
                 <Tooltip text={t.account.userVerifiedTooltip}>
                     <div style:margin-bottom="-.25rem">
-                        <IconFingerprint
-                            width={18}
-                            color="var(--col-acnt)"
-                        />
+                        <IconFingerprint width={18} color="var(--col-acnt)" />
                     </div>
                 </Tooltip>
             {/if}
@@ -56,10 +53,7 @@
         <div class="row">
             <div></div>
             <div class="deleteBtn">
-                <Button
-                    level={-3}
-                    onclick={() => onDelete(passkey.name)}
-                >
+                <Button level={-3} onclick={() => onDelete(passkey.name)}>
                     {t.common.delete}
                 </Button>
             </div>

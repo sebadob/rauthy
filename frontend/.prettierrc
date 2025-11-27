@@ -18,7 +18,7 @@
     ],
     "quoteProps": "as-needed",
     "semi": true,
-    "singleAttributePerLine": true,
+    "singleAttributePerLine": false,
     "singleQuote": true,
     "svelteAllowShorthand": true,
     "svelteSortOrder": "none",

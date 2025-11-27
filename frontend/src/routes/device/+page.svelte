@@ -97,10 +97,7 @@
     <title>{t?.device.title || 'Device Authorization'}</title>
 </svelte:head>
 
-<Template
-    id={TPL_DEVICE_USER_CODE_LENGTH}
-    bind:value={userCodeLength}
-/>
+<Template id={TPL_DEVICE_USER_CODE_LENGTH} bind:value={userCodeLength} />
 
 <Main>
     <ContentCenter>
@@ -129,10 +126,7 @@
                     />
 
                     <div>
-                        <Button
-                            onclick={() => onSubmit('pending')}
-                            {isLoading}
-                        >
+                        <Button onclick={() => onSubmit('pending')} {isLoading}>
                             {t.device.submit}
                         </Button>
                     </div>
@@ -157,17 +151,10 @@
                     </div>
 
                     <div class="inline">
-                        <Button
-                            onclick={() => onSubmit('accept')}
-                            {isLoading}
-                        >
+                        <Button onclick={() => onSubmit('accept')} {isLoading}>
                             {t.device.accept}
                         </Button>
-                        <Button
-                            level={-1}
-                            onclick={() => onSubmit('decline')}
-                            {isLoading}
-                        >
+                        <Button level={-1} onclick={() => onSubmit('decline')} {isLoading}>
                             {t.device.decline}
                         </Button>
                     </div>

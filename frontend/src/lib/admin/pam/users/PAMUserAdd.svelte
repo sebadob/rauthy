@@ -71,10 +71,7 @@
 <div class="container">
     <h1>{ta.pam.addUser}</h1>
 
-    <Form
-        action="/auth/v1/pam/users"
-        {onSubmit}
-    >
+    <Form action="/auth/v1/pam/users" {onSubmit}>
         <Input
             bind:ref
             label={ta.common.name}

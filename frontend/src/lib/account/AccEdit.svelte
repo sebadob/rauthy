@@ -106,17 +106,11 @@
     }
 </script>
 
-<Template
-    id={TPL_USER_VALUES_CONFIG}
-    bind:value={config}
-/>
+<Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
 
 <div class="container">
     {#if config}
-        <Form
-            action={`/auth/v1/users/${user.id}/self`}
-            {onSubmit}
-        >
+        <Form action={`/auth/v1/users/${user.id}/self`} {onSubmit}>
             <div class="formInner">
                 <div>
                     <Input
@@ -241,10 +235,7 @@
                 </div>
 
                 {#if success}
-                    <div
-                        class="success"
-                        transition:fade
-                    >
+                    <div class="success" transition:fade>
                         <IconCheck />
                     </div>
                 {/if}
@@ -252,10 +243,7 @@
             {#if successEmailConfirm}
                 <p>{t.account.emailUpdateConfirm}</p>
             {:else if err}
-                <div
-                    class="err"
-                    transition:fade
-                >
+                <div class="err" transition:fade>
                     {err}
                 </div>
             {/if}

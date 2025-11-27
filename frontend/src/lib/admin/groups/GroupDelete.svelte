@@ -32,10 +32,7 @@
 
 <p>{ta.groups.delete1}</p>
 
-<Button
-    level={-1}
-    onclick={onSubmit}
->
+<Button level={-1} onclick={onSubmit}>
     {t.common.delete}
 </Button>
 

@@ -79,46 +79,23 @@
 {/if}
 
 <div class="flex">
-    <Tabs
-        {tabs}
-        bind:selected
-        bind:focusFirst
-    />
+    <Tabs {tabs} bind:selected bind:focusFirst />
 </div>
 
 {#if user}
     {#if selected === tabs[0]}
-        <UserInfo
-            bind:user
-            config={userValuesConfig}
-            {providers}
-            {roles}
-            {groups}
-            {onSave}
-        />
+        <UserInfo bind:user config={userValuesConfig} {providers} {roles} {groups} {onSave} />
     {:else if selected === tabs[1]}
-        <UserAttr
-            {user}
-            {onSave}
-        />
+        <UserAttr {user} {onSave} />
     {:else if selected === tabs[2]}
-        <UserPassword
-            {user}
-            {onSave}
-        />
+        <UserPassword {user} {onSave} />
     {:else if selected === tabs[3]}
-        <UserMfa
-            {user}
-            {onSave}
-        />
+        <UserMfa {user} {onSave} />
     {:else if selected === tabs[4]}
         <Devices {userId} />
     {:else if selected === tabs[5]}
         <UserForceLogout {userId} />
     {:else if selected === tabs[6]}
-        <UserDelete
-            {userId}
-            {onSave}
-        />
+        <UserDelete {userId} {onSave} />
     {/if}
 {/if}

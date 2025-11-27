@@ -50,16 +50,8 @@
     }
 </script>
 
-<NavSub
-    width="11rem"
-    buttonTilesAriaControls="federation"
-    paddingTop="6.65rem"
->
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={providers.length === 0 ? 1 : 2}
-        bind:closeModal
-    >
+<NavSub width="11rem" buttonTilesAriaControls="federation" paddingTop="6.65rem">
+    <ButtonAddModal bind:ref={refAddNew} level={providers.length === 0 ? 1 : 2} bind:closeModal>
         <ProviderAddNew {onSave} />
     </ButtonAddModal>
 
@@ -78,15 +70,9 @@
 </NavSub>
 
 <ContentAdmin>
-    <div
-        id="federation"
-        aria-label={ta.common.details}
-    >
+    <div id="federation" aria-label={ta.common.details}>
         {#if provider}
-            <ProviderDetails
-                bind:provider
-                onSave={fetchData}
-            />
+            <ProviderDetails bind:provider onSave={fetchData} />
         {/if}
     </div>
 

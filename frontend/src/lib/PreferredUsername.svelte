@@ -78,10 +78,7 @@
 
 {#if config.preferred_username !== 'hidden'}
     <div class="container">
-        <div
-            class="value"
-            data-required={required && !preferred_username}
-        >
+        <div class="value" data-required={required && !preferred_username}>
             <div class="name">
                 {preferred_username || '-'}
             </div>
@@ -96,10 +93,7 @@
                         {t.common.edit}
                     </Button>
 
-                    <Modal
-                        bind:showModal
-                        bind:closeModal
-                    >
+                    <Modal bind:showModal bind:closeModal>
                         <h3>{t.account.preferredUsername.preferredUsername}</h3>
 
                         <Form
@@ -140,17 +134,11 @@
                             {/if}
 
                             {#if !preferred_username || !config.immutable || (forceOverwrite && isAdmin)}
-                                <div
-                                    class="btnModal"
-                                    transition:slide={{ duration: 150 }}
-                                >
+                                <div class="btnModal" transition:slide={{ duration: 150 }}>
                                     <Button type="submit">
                                         {t.common.save}
                                     </Button>
-                                    <Button
-                                        level={-3}
-                                        onclick={() => closeModal?.()}
-                                    >
+                                    <Button level={-3} onclick={() => closeModal?.()}>
                                         {t.common.cancel}
                                     </Button>
                                 </div>
@@ -173,10 +161,7 @@
             </div>
         </div>
 
-        <div
-            class="label"
-            data-required={required}
-        >
+        <div class="label" data-required={required}>
             {t.account.preferredUsername.preferredUsername}
         </div>
     </div>

@@ -98,10 +98,7 @@
         bind:closeModal
         alignRight
     >
-        <ClientAddNew
-            onSave={onAddNew}
-            {clients}
-        />
+        <ClientAddNew onSave={onAddNew} {clients} />
     </ButtonAddModal>
     <OrderSearchBar
         {searchOptions}
@@ -143,12 +140,7 @@
 
     <div id="groups">
         {#if client}
-            <ClientDetails
-                {client}
-                {clients}
-                {scopesAll}
-                {onSave}
-            />
+            <ClientDetails {client} {clients} {scopesAll} {onSave} />
         {/if}
     </div>
 </ContentAdmin>

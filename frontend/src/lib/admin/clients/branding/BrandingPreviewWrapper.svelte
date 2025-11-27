@@ -19,11 +19,7 @@
     <h2>Preview</h2>
 
     <div class="tabs">
-        <Tabs
-            {tabs}
-            bind:selected
-            center
-        />
+        <Tabs {tabs} bind:selected center />
     </div>
 
     <div class="preview">

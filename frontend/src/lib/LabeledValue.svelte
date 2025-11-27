@@ -43,10 +43,7 @@
         </div>
     {/if}
     <div class="flex gap-05">
-        <div
-            title={title || label || ''}
-            class={mono ? 'font-mono' : ''}
-        >
+        <div title={title || label || ''} class={mono ? 'font-mono' : ''}>
             {@render children()}
         </div>
         {#if button}
@@ -56,15 +53,8 @@
         {/if}
         {#if copyToClip}
             <div class="button">
-                <Button
-                    invisible
-                    onclick={() => copy(copyToClip)}
-                >
-                    <Tooltip
-                        {text}
-                        xOffset={-150}
-                        yOffset={20}
-                    >
+                <Button invisible onclick={() => copy(copyToClip)}>
+                    <Tooltip {text} xOffset={-150} yOffset={20}>
                         <IconClipboard width="1.25rem" />
                     </Tooltip>
                 </Button>

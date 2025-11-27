@@ -37,12 +37,7 @@
     let t = useI18n();
 </script>
 
-<div
-    role="none"
-    class="wrapper"
-    style:height
-    onclick={() => ref?.focus()}
->
+<div role="none" class="wrapper" style:height onclick={() => ref?.focus()}>
     {@render children?.()}
 
     <div
@@ -70,10 +65,7 @@
         <Button onclick={onSave}>
             {t.common.save}
         </Button>
-        <Button
-            level={3}
-            onclick={onCancel}
-        >
+        <Button level={3} onclick={onCancel}>
             {t.common.cancel}
         </Button>
     {/if}

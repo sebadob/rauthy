@@ -53,10 +53,7 @@
         <div class="container">
             <div class="logo">
                 {#if showDefault}
-                    <RauthyLogo
-                        width="100%"
-                        show={typ}
-                    />
+                    <RauthyLogo width="100%" show={typ} />
                 {:else}
                     <img
                         src={logoUrl}
@@ -72,59 +69,31 @@
             <p>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam</p>
             <p><span>--accent-color</span></p>
 
-            <Input
-                label="Preview"
-                placeholder="Preview"
-                width="12.5rem"
-            />
+            <Input label="Preview" placeholder="Preview" width="12.5rem" />
 
             <div class="btn">
                 <div>
-                    <Button
-                        level={1}
-                        {isLoading}
-                        onclick={() => (isLoading = true)}>Button</Button
-                    >
+                    <Button level={1} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
                     <br />
-                    <Button
-                        level={2}
-                        {isLoading}
-                        onclick={() => (isLoading = true)}>Button</Button
-                    >
+                    <Button level={2} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
                     <br />
-                    <Button
-                        level={3}
-                        {isLoading}
-                        onclick={() => (isLoading = true)}>Button</Button
-                    >
+                    <Button level={3} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
                     <br />
                 </div>
 
                 <div>
-                    <Button
-                        level={-1}
-                        {isLoading}
-                        onclick={() => (isLoading = true)}>Button</Button
+                    <Button level={-1} {isLoading} onclick={() => (isLoading = true)}>Button</Button
                     >
                     <br />
-                    <Button
-                        level={-2}
-                        {isLoading}
-                        onclick={() => (isLoading = true)}>Button</Button
+                    <Button level={-2} {isLoading} onclick={() => (isLoading = true)}>Button</Button
                     >
                     <br />
-                    <Button
-                        level={-3}
-                        {isLoading}
-                        onclick={() => (isLoading = true)}>Button</Button
+                    <Button level={-3} {isLoading} onclick={() => (isLoading = true)}>Button</Button
                     >
                 </div>
             </div>
 
-            <a
-                href={window.location.href}
-                onclick={ev => ev.preventDefault()}>Link</a
-            >
+            <a href={window.location.href} onclick={ev => ev.preventDefault()}>Link</a>
 
             <br />
             <ThemeSwitch />

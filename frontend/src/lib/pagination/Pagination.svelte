@@ -103,12 +103,7 @@
                     aria-label={`${t.pagination.gotoPage} ${no}`}
                     aria-current={page === no ? 'step' : undefined}
                 >
-                    <Button
-                        invisible
-                        onclick={() => goto(no)}
-                        onLeft={goLeft}
-                        onRight={goRight}
-                    >
+                    <Button invisible onclick={() => goto(no)} onLeft={goLeft} onRight={goRight}>
                         <div class="link noselect">
                             {no}
                         </div>
@@ -141,27 +136,15 @@
 
 <div class="container">
     <div class="flex">
-        <Button
-            onclick={goLeft}
-            invisible
-            isDisabled={page === 1}
-        >
-            <div
-                class="iconLeft"
-                aria-label={t.pagination.gotoPagePrev}
-                data-disabled={page === 1}
-            >
+        <Button onclick={goLeft} invisible isDisabled={page === 1}>
+            <div class="iconLeft" aria-label={t.pagination.gotoPagePrev} data-disabled={page === 1}>
                 <IconChevronRight width={iconSize} />
             </div>
         </Button>
 
         {@render links()}
 
-        <Button
-            onclick={goRight}
-            invisible
-            isDisabled={page === itemsArr.length}
-        >
+        <Button onclick={goRight} invisible isDisabled={page === itemsArr.length}>
             <div
                 class="iconRight"
                 aria-label={t.pagination.gotoPageNext}

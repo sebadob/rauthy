@@ -35,10 +35,7 @@
 <div class="devices">
     {#if userId}
         {#each devices as device, i (device.id)}
-            <Device
-                bind:device={devices[i]}
-                {userId}
-            />
+            <Device bind:device={devices[i]} {userId} />
         {/each}
     {/if}
 </div>

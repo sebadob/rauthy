@@ -50,10 +50,7 @@
 </script>
 
 <div class="container">
-    <Form
-        action="/auth/v1/groups"
-        {onSubmit}
-    >
+    <Form action="/auth/v1/groups" {onSubmit}>
         <Input
             bind:ref
             bind:value={name}

@@ -101,10 +101,7 @@
             <Loading />
         </div>
     {:else}
-        <label
-            for={id}
-            aria-disabled={disabled}
-        >
+        <label for={id} aria-disabled={disabled}>
             <IconUpload width={buttonSize} />
         </label>
         <input

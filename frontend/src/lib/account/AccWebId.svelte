@@ -44,30 +44,19 @@
     <p>{t.account.webIdDesc}</p>
 
     <p>
-        <A
-            href={webIdLink}
-            target="_blank"
-        >
+        <A href={webIdLink} target="_blank">
             {@html webIdLink.replace('/auth/', '/auth/<wbr/>')}
         </A>
     </p>
 
     <div class="switch">
-        <Switch
-            ariaLabel="E-Mail"
-            bind:checked={webIdData.expose_email}
-            {labelWidth}
-        >
+        <Switch ariaLabel="E-Mail" bind:checked={webIdData.expose_email} {labelWidth}>
             E-Mail
         </Switch>
     </div>
 
     <div class="switch">
-        <Switch
-            ariaLabel={t.account.webIdExpertMode}
-            bind:checked={expertMode}
-            {labelWidth}
-        >
+        <Switch ariaLabel={t.account.webIdExpertMode} bind:checked={expertMode} {labelWidth}>
             {t.account.webIdExpertMode}
         </Switch>
     </div>
@@ -75,11 +64,7 @@
     {#if expertMode}
         <div transition:slide={{ duration: 150 }}>
             <p>{t.account.webIdDescData}</p>
-            <InputArea
-                placeholder="FOAF"
-                rows={15}
-                bind:value={webIdData.custom_triples}
-            />
+            <InputArea placeholder="FOAF" rows={15} bind:value={webIdData.custom_triples} />
         </div>
     {/if}
 
@@ -89,17 +74,11 @@
         </Button>
 
         {#if success}
-            <div
-                class="success"
-                transition:fade
-            >
+            <div class="success" transition:fade>
                 <IconCheck />
             </div>
         {:else if err}
-            <div
-                class="err"
-                transition:fade
-            >
+            <div class="err" transition:fade>
                 {err}
             </div>
         {/if}

@@ -34,26 +34,15 @@
 </script>
 
 <div class="mode">
-    <Tabs
-        bind:selected={mode}
-        tabs={['Markdown', 'Text']}
-        center
-    />
+    <Tabs bind:selected={mode} tabs={['Markdown', 'Text']} center />
 </div>
 
 {#if mode === 'Markdown'}
-    <EditorMarkdownPreview
-        bind:content
-        {height}
-    />
+    <EditorMarkdownPreview bind:content {height} />
     <!--{:else if mode === 'HTML'}-->
     <!--    <EditorHtml bind:content {height}/>-->
 {:else if mode === 'Text'}
-    <EditorText
-        bind:content
-        {height}
-        hideButtons
-    />
+    <EditorText bind:content {height} hideButtons />
 {/if}
 
 <style>

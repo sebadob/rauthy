@@ -20,20 +20,11 @@
 </script>
 
 <div class="flex">
-    <Tabs
-        {tabs}
-        bind:selected
-    />
+    <Tabs {tabs} bind:selected />
 </div>
 
 {#if selected === ta.tabs.config}
-    <ProviderConfig
-        bind:provider
-        bind:onSave
-    />
+    <ProviderConfig bind:provider bind:onSave />
 {:else if selected === ta.tabs.delete}
-    <ProviderDelete
-        {provider}
-        bind:onSave
-    />
+    <ProviderDelete {provider} bind:onSave />
 {/if}

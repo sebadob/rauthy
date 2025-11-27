@@ -117,12 +117,7 @@
     }
 </script>
 
-<div
-    role="none"
-    class="container"
-    onclick={focus}
-    style:width
->
+<div role="none" class="container" onclick={focus} style:width>
     <ul style:max-height={maxHeightList}>
         {#each values as value}
             <li class="value">
@@ -130,10 +125,7 @@
                     {value}
                 </div>
                 <div class="btnClose">
-                    <Button
-                        invisible
-                        onclick={() => deleteValue(value)}
-                    >
+                    <Button invisible onclick={() => deleteValue(value)}>
                         <IconStop width="1.2rem" />
                     </Button>
                 </div>
@@ -167,10 +159,7 @@
             />
 
             {#if datalist && datalist.length > 1}
-                <datalist
-                    id={idDatalist}
-                    class="absolute"
-                >
+                <datalist id={idDatalist} class="absolute">
                     {#each datalist as value}
                         <option {value}></option>
                     {/each}
@@ -178,11 +167,7 @@
             {/if}
         </li>
     </ul>
-    <label
-        for={id}
-        class="font-label noselect"
-        data-required={required}
-    >
+    <label for={id} class="font-label noselect" data-required={required}>
         {label}
         {#if isError}
             {#if isError}

@@ -36,11 +36,7 @@
 
 <p>{ta.clients.delete1}</p>
 
-<Button
-    level={-1}
-    onclick={onSubmit}
-    {isLoading}
->
+<Button level={-1} onclick={onSubmit} {isLoading}>
     {t.common.delete}
 </Button>
 

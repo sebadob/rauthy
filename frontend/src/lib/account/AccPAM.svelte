@@ -142,23 +142,14 @@
     {/if}
 
     {#if expSecs}
-        <div
-            class="exp"
-            transition:slide={{ duration: 150 }}
-        >
+        <div class="exp" transition:slide={{ duration: 150 }}>
             {t.account.pam.validFor.replace('{{ secs }}', expSecs.toString())}
         </div>
     {/if}
 
     {#if expSecs === undefined || expSecs < 30}
-        <div
-            class="btn"
-            transition:slide={{ duration: 150 }}
-        >
-            <Button
-                ariaLabel={t.account.pam.generatePassword}
-                onclick={generateNew}
-            >
+        <div class="btn" transition:slide={{ duration: 150 }}>
+            <Button ariaLabel={t.account.pam.generatePassword} onclick={generateNew}>
                 {t.account.pam.generatePassword}
             </Button>
 
@@ -171,14 +162,8 @@
     {/if}
 
     {#snippet btnClip(value: string)}
-        <Button
-            invisible
-            onclick={() => navigator.clipboard.writeText(value)}
-        >
-            <div
-                title={value}
-                class="clip"
-            >
+        <Button invisible onclick={() => navigator.clipboard.writeText(value)}>
+            <div title={value} class="clip">
                 {value}
             </div>
         </Button>

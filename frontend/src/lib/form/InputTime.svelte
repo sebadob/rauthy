@@ -243,14 +243,8 @@
                     btnInvisible
                 >
                     {#snippet button()}
-                        <div
-                            title={label}
-                            class="pointer"
-                        >
-                            <IconClock
-                                color="hsl(var(--text)"
-                                width="1.2rem"
-                            />
+                        <div title={label} class="pointer">
+                            <IconClock color="hsl(var(--text)" width="1.2rem" />
                         </div>
                     {/snippet}
                     <div class="popup">
@@ -286,18 +280,11 @@
     </div>
 
     <div class="label">
-        <label
-            for={id}
-            class="font-label noselect"
-            data-required={required}
-        >
+        <label for={id} class="font-label noselect" data-required={required}>
             {label}
         </label>
         {#if isErr}
-            <div
-                class="error"
-                transition:slide={{ duration: 150 }}
-            >
+            <div class="error" transition:slide={{ duration: 150 }}>
                 {errMsg}
             </div>
         {/if}

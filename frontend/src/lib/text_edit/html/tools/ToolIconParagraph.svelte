@@ -28,10 +28,6 @@
     }
 </script>
 
-<ToolbarIconHtml
-    {ref}
-    title={ta.editor.paragraph}
-    {onClickCustom}
->
+<ToolbarIconHtml {ref} title={ta.editor.paragraph} {onClickCustom}>
     <Icon3BarsLeft width={iconSize} />
 </ToolbarIconHtml>

@@ -94,10 +94,7 @@
         bind:closeModal
         alignRight
     >
-        <RoleAddNew
-            onSave={onAddNew}
-            {roles}
-        />
+        <RoleAddNew onSave={onAddNew} {roles} />
     </ButtonAddModal>
     <OrderSearchBar
         {searchOptions}
@@ -111,10 +108,7 @@
     {#snippet buttonTiles()}
         <div class="rolesList">
             {#each rolesFiltered as role (role.id)}
-                <NavButtonTile
-                    onclick={() => rid.set(role.id)}
-                    selected={rid.get() === role.id}
-                >
+                <NavButtonTile onclick={() => rid.set(role.id)} selected={rid.get() === role.id}>
                     {role.name}
                 </NavButtonTile>
             {/each}
@@ -131,11 +125,7 @@
 
     <div id="groups">
         {#if role}
-            <RoleDetails
-                {role}
-                {roles}
-                {onSave}
-            />
+            <RoleDetails {role} {roles} {onSave} />
         {/if}
     </div>
 </ContentAdmin>

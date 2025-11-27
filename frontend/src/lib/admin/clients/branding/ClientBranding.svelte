@@ -88,10 +88,7 @@
     }
 </script>
 
-<Form
-    action={url}
-    {onSubmit}
->
+<Form action={url} {onSubmit}>
     <div class="container">
         {#if theme}
             <div class="values">
@@ -116,10 +113,7 @@
             </div>
             <div class="preview">
                 {#key logoKey}
-                    <BrandingPreviewWrapper
-                        {logoUrl}
-                        {theme}
-                    />
+                    <BrandingPreviewWrapper {logoUrl} {theme} />
                 {/key}
 
                 <hr />
@@ -136,10 +130,7 @@
                     <Button type="submit">
                         {t.common.save}
                     </Button>
-                    <Button
-                        level={-2}
-                        onclick={reset}
-                    >
+                    <Button level={-2} onclick={reset}>
                         {ta.common.reset}
                     </Button>
 

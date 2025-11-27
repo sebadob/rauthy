@@ -69,10 +69,7 @@
     <title>{t?.logout.logout || 'Logout'}</title>
 </svelte:head>
 
-<Template
-    id={TPL_CSRF_TOKEN}
-    bind:value={csrfToken}
-/>
+<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken} />
 
 <Main>
     <ContentCenter>
@@ -81,16 +78,10 @@
             <p>{t.logout.confirmMsg}</p>
 
             <div class="btn">
-                <Button
-                    onclick={handleLogout}
-                    {isLoading}
-                >
+                <Button onclick={handleLogout} {isLoading}>
                     {t.logout.logout}
                 </Button>
-                <Button
-                    level={3}
-                    onclick={handleCancel}
-                >
+                <Button level={3} onclick={handleCancel}>
                     {t.common.cancel}
                 </Button>
             </div>

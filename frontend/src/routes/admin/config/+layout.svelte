@@ -21,14 +21,8 @@
     <title>Rauthy Config</title>
 </svelte:head>
 
-<NavSub
-    width="11rem"
-    paddingTop="9.5rem"
->
-    <NavLinkSub
-        bind:ref={refA}
-        href="/auth/v1/admin/config/policy"
-    >
+<NavSub width="11rem" paddingTop="9.5rem">
+    <NavLinkSub bind:ref={refA} href="/auth/v1/admin/config/policy">
         {t.passwordPolicy.passwordPolicy}
     </NavLinkSub>
     <NavLinkSub href="/auth/v1/admin/config/jwks">JWKS</NavLinkSub>

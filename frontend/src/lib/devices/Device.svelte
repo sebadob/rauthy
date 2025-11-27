@@ -61,10 +61,7 @@
 
     {#snippet details()}
         <div class="device">
-            <LabeledValue
-                label={t.account.deviceId}
-                mono
-            >
+            <LabeledValue label={t.account.deviceId} mono>
                 {device.id}
             </LabeledValue>
 
@@ -104,11 +101,7 @@
                         {formatDateFromTs(device.refresh_exp)}
                     </div>
                     {#snippet button()}
-                        <Button
-                            ariaLabel={t.common.delete}
-                            invisible
-                            onclick={onRevokeRefresh}
-                        >
+                        <Button ariaLabel={t.common.delete} invisible onclick={onRevokeRefresh}>
                             <div title={t.common.delete}>
                                 <IconStop />
                             </div>

@@ -23,13 +23,7 @@
 
 <div class="tz">
     <div class="opts">
-        <Options
-            ariaLabel={t.common.timezone}
-            {options}
-            bind:value
-            borderless
-            withSearch
-        />
+        <Options ariaLabel={t.common.timezone} {options} bind:value borderless withSearch />
     </div>
     <div class="label">
         {t.common.timezone}

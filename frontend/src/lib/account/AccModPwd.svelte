@@ -92,11 +92,7 @@
 
 {#if policy}
     <div class="container">
-        <PasswordPolicy
-            bind:accepted
-            {policy}
-            password={passwords.new}
-        />
+        <PasswordPolicy bind:accepted {policy} password={passwords.new} />
 
         {#if !hideCurrentPassword}
             <InputPassword
@@ -130,10 +126,7 @@
         />
 
         <div class="btn">
-            <Button
-                onclick={generate}
-                level={2}
-            >
+            <Button onclick={generate} level={2}>
                 {t.account.generateRandom}
             </Button>
         </div>

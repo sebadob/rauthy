@@ -94,10 +94,7 @@
         </Button>
 
         <div class="refresh">
-            <Button
-                invisible
-                onclick={fetchListings}
-            >
+            <Button invisible onclick={fetchListings}>
                 <IconArrowPathSquare />
             </Button>
         </div>

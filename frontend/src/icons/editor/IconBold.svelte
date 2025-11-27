@@ -4,14 +4,7 @@
     let { opacity = 0.9, width = '1.5rem', color = 'currentColor' }: IconProps = $props();
 </script>
 
-<svg
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke={color}
-    stroke-width={2}
-    {width}
-    {opacity}
->
+<svg fill="none" viewBox="0 0 24 24" stroke={color} stroke-width={2} {width} {opacity}>
     <path
         stroke-linejoin="round"
         d="M6.75 3.744h-.753v8.25h7.125a4.125 4.125 0 0 0 0-8.25H6.75Zm0 0v.38m0 16.122h6.747a4.5 4.5 0 0 0

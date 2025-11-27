@@ -132,15 +132,9 @@
             searchWidth="min(15.75rem, calc(100dvw - 1rem))"
         />
 
-        <ButtonAddModal
-            level={1}
-            bind:closeModal
-        >
+        <ButtonAddModal level={1} bind:closeModal>
             <div class="addNew">
-                <Form
-                    action="/auth/v1/blacklist"
-                    {onSubmit}
-                >
+                <Form action="/auth/v1/blacklist" {onSubmit}>
                     <Input
                         bind:ref={refIp}
                         bind:value={ip}
@@ -178,10 +172,7 @@
         {:else}
             {#snippet row(entry: BlacklistedIp)}
                 <div class="blacklisted">
-                    <Button
-                        invisible
-                        onclick={() => navigator.clipboard.writeText(entry.ip)}
-                    >
+                    <Button invisible onclick={() => navigator.clipboard.writeText(entry.ip)}>
                         <div class="ip">
                             <Tooltip text={t.common.copyToClip}>
                                 {entry.ip}
@@ -191,10 +182,7 @@
                     <div class="date">
                         {formatDateFromTs(entry.exp)}
                     </div>
-                    <Button
-                        invisible
-                        onclick={() => deleteIp(entry.ip)}
-                    >
+                    <Button invisible onclick={() => deleteIp(entry.ip)}>
                         <Tooltip text={t.common.delete}>
                             <div class="delete">
                                 <IconStop width="1.25rem" />

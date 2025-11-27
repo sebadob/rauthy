@@ -166,15 +166,8 @@
         {onkeydown}
         onsubmit={onSubmit}
     />
-    <div
-        aria-live="assertive"
-        class="label"
-    >
-        <label
-            for={id}
-            class="font-label noselect"
-            data-required={required}
-        >
+    <div aria-live="assertive" class="label">
+        <label for={id} class="font-label noselect" data-required={required}>
             {label}
         </label>
         {#if isError}

@@ -39,29 +39,17 @@
 </script>
 
 <div class="flex">
-    <Tabs
-        {tabs}
-        bind:selected
-        bind:focusFirst
-    />
+    <Tabs {tabs} bind:selected bind:focusFirst />
 </div>
 
 <div class="details">
     {#if selected === ta.nav.config}
-        <ClientConfig
-            {client}
-            {clients}
-            {scopesAll}
-            {onSave}
-        />
+        <ClientConfig {client} {clients} {scopesAll} {onSave} />
     {:else if selected === 'Secret'}
         <ClientSecret {client} />
     {:else if selected === 'Branding'}
         <ClientBranding {client} />
     {:else if selected === t.common.delete}
-        <ClientDelete
-            {client}
-            {onSave}
-        />
+        <ClientDelete {client} {onSave} />
     {/if}
 </div>

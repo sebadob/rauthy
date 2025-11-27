@@ -93,10 +93,7 @@
         bind:closeModal
         alignRight
     >
-        <AttrAddNew
-            onSave={onAddNew}
-            {attrs}
-        />
+        <AttrAddNew onSave={onAddNew} {attrs} />
     </ButtonAddModal>
     <OrderSearchBar
         {searchOptions}
@@ -110,10 +107,7 @@
     {#snippet buttonTiles()}
         <div class="attrsList">
             {#each attrsFiltered as attr (attr.name)}
-                <NavButtonTile
-                    onclick={() => an.set(attr.name)}
-                    selected={an.get() === attr.name}
-                >
+                <NavButtonTile onclick={() => an.set(attr.name)} selected={an.get() === attr.name}>
                     {attr.name}
                 </NavButtonTile>
             {/each}
@@ -130,11 +124,7 @@
 
     <div id="groups">
         {#if attr}
-            <AttrDetails
-                {attr}
-                {attrs}
-                {onSave}
-            />
+            <AttrDetails {attr} {attrs} {onSave} />
         {/if}
     </div>
 </ContentAdmin>

@@ -97,10 +97,7 @@
     {ta.passwordPolicy.configDesc}
 </p>
 
-<Form
-    action="/auth/v1/password_policy"
-    {onSubmit}
->
+<Form action="/auth/v1/password_policy" {onSubmit}>
     {#if policy}
         <div class="row">
             <Input

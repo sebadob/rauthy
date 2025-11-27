@@ -95,11 +95,7 @@
                     aria-hidden={!collapsed && !optsButtons}
                 >
                     <div>
-                        <Button
-                            ariaControls="mainNav"
-                            invisible
-                            onclick={toggleCollapsed}
-                        >
+                        <Button ariaControls="mainNav" invisible onclick={toggleCollapsed}>
                             <svg
                                 aria-expanded={!collapsed}
                                 class="inner"
@@ -120,10 +116,7 @@
 
                     {#if !collapsed}
                         <div>
-                            <Button
-                                invisible
-                                onclick={toggleCompact}
-                            >
+                            <Button invisible onclick={toggleCompact}>
                                 <span class="inner">
                                     <IconArrowPathSquare />
                                 </span>
@@ -138,162 +131,99 @@
                     <RauthyLogo width={compact ? '3rem' : '7rem'} />
                 </div>
 
-                <div
-                    class="menu"
-                    style:margin-top={compact ? '.5rem' : '1.5rem'}
-                >
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/users"
-                    >
+                <div class="menu" style:margin-top={compact ? '.5rem' : '1.5rem'}>
+                    <NavLink {compact} {params} route="/users">
                         {#snippet icon(width: string)}
                             <IconUser {width} />
                         {/snippet}
                         {ta.nav.users}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/clients"
-                    >
+                    <NavLink {compact} {params} route="/clients">
                         {#snippet icon(width: string)}
                             <IconOffice {width} />
                         {/snippet}
                         {ta.nav.clients}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/roles"
-                    >
+                    <NavLink {compact} {params} route="/roles">
                         {#snippet icon(width: string)}
                             <IconCheckBadge {width} />
                         {/snippet}
                         {ta.nav.roles}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/groups"
-                    >
+                    <NavLink {compact} {params} route="/groups">
                         {#snippet icon(width: string)}
                             <IconUserGroup {width} />
                         {/snippet}
                         {ta.nav.groups}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/attributes"
-                    >
+                    <NavLink {compact} {params} route="/attributes">
                         {#snippet icon(width: string)}
                             <IconDocText {width} />
                         {/snippet}
                         {ta.nav.attributes}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/scopes"
-                    >
+                    <NavLink {compact} {params} route="/scopes">
                         {#snippet icon(width: string)}
                             <IconId {width} />
                         {/snippet}
                         {ta.nav.scopes}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/pam"
-                    >
+                    <NavLink {compact} {params} route="/pam">
                         {#snippet icon(width: string)}
                             <IconCommandLine {width} />
                         {/snippet}
                         PAM
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/sessions"
-                    >
+                    <NavLink {compact} {params} route="/sessions">
                         {#snippet icon(width: string)}
                             <IconShieldCheck {width} />
                         {/snippet}
                         {ta.nav.sessions}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/events"
-                    >
+                    <NavLink {compact} {params} route="/events">
                         {#snippet icon(width: string)}
                             <IconBell {width} />
                         {/snippet}
                         {ta.nav.events}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/blacklist"
-                    >
+                    <NavLink {compact} {params} route="/blacklist">
                         {#snippet icon(width: string)}
-                            <IconStop
-                                {width}
-                                color="currentColor"
-                            />
+                            <IconStop {width} color="currentColor" />
                         {/snippet}
                         {ta.nav.blacklist}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/api_keys"
-                    >
+                    <NavLink {compact} {params} route="/api_keys">
                         {#snippet icon(width: string)}
                             <IconKey {width} />
                         {/snippet}
                         {ta.nav.apiKeys}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/providers"
-                    >
+                    <NavLink {compact} {params} route="/providers">
                         {#snippet icon(width: string)}
                             <IconCloud {width} />
                         {/snippet}
                         {ta.nav.providers}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/config/policy"
-                        highlightIncludes="/config/"
-                    >
+                    <NavLink {compact} {params} route="/config/policy" highlightIncludes="/config/">
                         {#snippet icon(width: string)}
                             <IconWrenchScrew {width} />
                         {/snippet}
                         {ta.nav.config}
                     </NavLink>
 
-                    <NavLink
-                        {compact}
-                        {params}
-                        route="/docs"
-                    >
+                    <NavLink {compact} {params} route="/docs">
                         {#snippet icon(width: string)}
                             <IconBookOpen {width} />
                         {/snippet}
@@ -307,10 +237,7 @@
             <div class="bottom">
                 {#snippet toLogout()}
                     <div class="logout">
-                        <Button
-                            invisible
-                            onclick={() => redirectToLogout()}
-                        >
+                        <Button invisible onclick={() => redirectToLogout()}>
                             <Tooltip text="Logout">
                                 <IconLogout />
                             </Tooltip>

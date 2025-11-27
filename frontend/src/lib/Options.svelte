@@ -178,27 +178,15 @@
     {onDown}
 >
     {#snippet button()}
-        <div
-            class="btn"
-            data-border={!borderless}
-        >
-            <div
-                class="btnText"
-                title={ariaLabel}
-            >
+        <div class="btn" data-border={!borderless}>
+            <div class="btnText" title={ariaLabel}>
                 {value}
             </div>
             <IconChevronDown width=".8rem" />
         </div>
     {/snippet}
 
-    <div
-        role="listbox"
-        tabindex="0"
-        class="popover"
-        style:max-height={maxHeight}
-        {onkeydown}
-    >
+    <div role="listbox" tabindex="0" class="popover" style:max-height={maxHeight} {onkeydown}>
         {#if withSearch}
             <SearchBar
                 bind:value={searchValue}
@@ -207,16 +195,9 @@
             />
         {/if}
 
-        <div
-            bind:this={refOptions}
-            class="popoverOptions"
-        >
+        <div bind:this={refOptions} class="popoverOptions">
             {#each optionsFiltered as option, i}
-                <Button
-                    invisible
-                    invisibleOutline
-                    onclick={ev => select(ev, option)}
-                >
+                <Button invisible invisibleOutline onclick={ev => select(ev, option)}>
                     <div
                         class="optPopover"
                         aria-selected={value === option}
@@ -228,12 +209,7 @@
             {/each}
         </div>
     </div>
-    <input
-        type="hidden"
-        {name}
-        aria-hidden="true"
-        bind:value
-    />
+    <input type="hidden" {name} aria-hidden="true" bind:value />
 </Popover>
 
 <style>

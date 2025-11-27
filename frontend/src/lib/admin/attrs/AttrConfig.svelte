@@ -85,10 +85,7 @@
     }
 </script>
 
-<Form
-    action={`/auth/v1/users/attr/${attr.name}`}
-    {onSubmit}
->
+<Form action={`/auth/v1/users/attr/${attr.name}`} {onSubmit}>
     <Input
         bind:value={name}
         autocomplete="off"
@@ -154,11 +151,7 @@
     {/if}
 
     <div class="btn">
-        <Button
-            type="submit"
-            level={showMakeEditable ? 2 : 1}
-            bind:ref={refSubmit}
-        >
+        <Button type="submit" level={showMakeEditable ? 2 : 1} bind:ref={refSubmit}>
             {t.common.save}
         </Button>
 

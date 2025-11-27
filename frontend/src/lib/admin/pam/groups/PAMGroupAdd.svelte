@@ -71,10 +71,7 @@
 <div class="container">
     <h1>{ta.pam.addGroup}</h1>
 
-    <Form
-        action="/auth/v1/pam/groups"
-        {onSubmit}
-    >
+    <Form action="/auth/v1/pam/groups" {onSubmit}>
         <Input
             bind:ref
             label={ta.common.name}
@@ -90,11 +87,7 @@
             <div class="label">
                 {ta.pam.groupType}
             </div>
-            <Options
-                ariaLabel={ta.pam.groupType}
-                {options}
-                bind:value={group.typ}
-            />
+            <Options ariaLabel={ta.pam.groupType} {options} bind:value={group.typ} />
         </div>
 
         <p>

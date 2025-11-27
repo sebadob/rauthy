@@ -174,10 +174,7 @@
             {#if success}
                 <CheckIcon checked />
             {:else}
-                <Button
-                    level={2}
-                    onclick={requestPasswordReset}
-                >
+                <Button level={2} onclick={requestPasswordReset}>
                     {t.account.passwordReset}
                 </Button>
             {/if}
@@ -189,10 +186,7 @@
         <p>{t.account.accTypePasskeyText2}</p>
         <p>{t.account.accTypePasskeyText3}</p>
         <div>
-            <Button
-                level={2}
-                onclick={() => (convertAccount = true)}
-            >
+            <Button level={2} onclick={() => (convertAccount = true)}>
                 {t.account.convertAccount}
             </Button>
         </div>
@@ -208,33 +202,20 @@
             />
 
             <div class="save">
-                <Button
-                    onclick={onSubmit}
-                    level={1}
-                    {isLoading}
-                >
+                <Button onclick={onSubmit} level={1} {isLoading}>
                     {t.common.save}
                 </Button>
                 {#if success}
-                    <div
-                        class="success"
-                        transition:fade
-                    >
+                    <div class="success" transition:fade>
                         <IconCheck />
                     </div>
                 {:else if err}
-                    <div
-                        class="err"
-                        transition:fade
-                    >
+                    <div class="err" transition:fade>
                         {err}
                     </div>
                 {:else if convertAccount && !isLoading}
                     <div class="cancel">
-                        <Button
-                            level={3}
-                            onclick={() => (convertAccount = false)}
-                        >
+                        <Button level={3} onclick={() => (convertAccount = false)}>
                             {t.common.cancel}
                         </Button>
                     </div>
@@ -246,10 +227,7 @@
             <div class="convertPasskey">
                 <h3>{t.account.convertAccount}</h3>
                 <p>{t.account.convertAccountP1}</p>
-                <Button
-                    level={2}
-                    onclick={convertToPasskeyOnly}
-                >
+                <Button level={2} onclick={convertToPasskeyOnly}>
                     {t.account.convertAccount}
                 </Button>
             </div>

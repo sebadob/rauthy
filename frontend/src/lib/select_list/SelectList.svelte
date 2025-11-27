@@ -38,10 +38,7 @@
 
 <svelte:window bind:innerWidth />
 
-<div
-    class="container"
-    style:max-width={maxWidth}
->
+<div class="container" style:max-width={maxWidth}>
     <div class="items">
         {#if anySelected}
             <div class="joined">
@@ -50,27 +47,18 @@
         {/if}
 
         <div class="edit">
-            <Button
-                invisible
-                onclick={() => (showModal = true)}
-            >
+            <Button invisible onclick={() => (showModal = true)}>
                 <div title={ta.common.edit}>
                     <IconEdit width="1.2rem" />
                 </div>
             </Button>
         </div>
-        <Modal
-            bind:showModal
-            bind:closeModal
-        >
+        <Modal bind:showModal bind:closeModal>
             <h3>{@render children()}</h3>
             {#if compact}
                 <div class="compact">
                     {#each items as item (item.name)}
-                        <InputCheckbox
-                            ariaLabel={item.name}
-                            bind:checked={item.selected}
-                        >
+                        <InputCheckbox ariaLabel={item.name} bind:checked={item.selected}>
                             {item.name}
                         </InputCheckbox>
                     {/each}
@@ -80,10 +68,7 @@
                     <div>
                         {#each items as item (item.name)}
                             {#if !item.selected}
-                                <InputCheckbox
-                                    ariaLabel={item.name}
-                                    bind:checked={item.selected}
-                                >
+                                <InputCheckbox ariaLabel={item.name} bind:checked={item.selected}>
                                     {item.name}
                                 </InputCheckbox>
                             {/if}
@@ -92,10 +77,7 @@
                     <div>
                         {#each items as item (item.name)}
                             {#if item.selected}
-                                <InputCheckbox
-                                    ariaLabel={item.name}
-                                    bind:checked={item.selected}
-                                >
+                                <InputCheckbox ariaLabel={item.name} bind:checked={item.selected}>
                                     {item.name}
                                 </InputCheckbox>
                             {/if}

@@ -109,10 +109,7 @@
     }
 </script>
 
-<div
-    class="container"
-    style:width
->
+<div class="container" style:width>
     <textarea
         bind:this={ref}
         {id}
@@ -139,18 +136,11 @@
     >
     </textarea>
     <div class="label">
-        <label
-            for={id}
-            class="font-label noselect"
-            data-required={required}
-        >
+        <label for={id} class="font-label noselect" data-required={required}>
             {label}
         </label>
         {#if isError}
-            <div
-                class="error"
-                transition:slide={{ duration: 150 }}
-            >
+            <div class="error" transition:slide={{ duration: 150 }}>
                 {errMsg}
             </div>
         {/if}

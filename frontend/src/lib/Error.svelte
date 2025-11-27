@@ -15,14 +15,8 @@
     let errorDetails = $state('');
 </script>
 
-<Template
-    id={TPL_STATUS_CODE}
-    bind:value={statusCode}
-/>
-<Template
-    id={TPL_ERROR_TEXT}
-    bind:value={errorText}
-/>
+<Template id={TPL_STATUS_CODE} bind:value={statusCode} />
+<Template id={TPL_ERROR_TEXT} bind:value={errorText} />
 
 <Main>
     <ContentCenter>

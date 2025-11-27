@@ -51,13 +51,7 @@
     }
 </script>
 
-<div
-    bind:this={ref}
-    class="tabs"
-    class:center
-    style:border-radius={borderRadius}
-    style:width
->
+<div bind:this={ref} class="tabs" class:center style:border-radius={borderRadius} style:width>
     {#each tabs as tab, i}
         <Button
             ariaCurrent={tab === selected ? 'step' : undefined}
@@ -66,10 +60,7 @@
             onLeft={() => onLeft(i)}
             onRight={() => onRight(i)}
         >
-            <span
-                class="font-label tab"
-                data-selected={tab === selected}
-            >
+            <span class="font-label tab" data-selected={tab === selected}>
                 {tab}
             </span>
         </Button>

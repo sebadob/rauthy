@@ -28,10 +28,7 @@
     }
 </script>
 
-<div
-    class="container"
-    aria-expanded={expand}
->
+<div class="container" aria-expanded={expand}>
     <div class="header">
         <Button
             ariaLabel={t.common.expandContent}
@@ -44,11 +41,7 @@
             </div>
         </Button>
 
-        <div
-            id={idSummary}
-            aria-label={t.common.summary}
-            class="summary"
-        >
+        <div id={idSummary} aria-label={t.common.summary} class="summary">
             {@render summary()}
         </div>
     </div>

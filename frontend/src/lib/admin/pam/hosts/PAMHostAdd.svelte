@@ -70,10 +70,7 @@
 <div class="container">
     <h1>{ta.pam.addHost}</h1>
 
-    <Form
-        action="/auth/v1/pam/hosts"
-        {onSubmit}
-    >
+    <Form action="/auth/v1/pam/hosts" {onSubmit}>
         <Input
             bind:ref
             label="Hostname"
@@ -88,21 +85,14 @@
             <div class="label">
                 {ta.pam.groupName}
             </div>
-            <Options
-                ariaLabel={ta.pam.groupName}
-                {options}
-                bind:value={groupName}
-            />
+            <Options ariaLabel={ta.pam.groupName} {options} bind:value={groupName} />
         </div>
 
         <div class="row">
             <div class="label">
                 {ta.clients.forceMfa}
             </div>
-            <InputCheckbox
-                ariaLabel={ta.clients.forceMfa}
-                bind:checked={host.force_mfa}
-            />
+            <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={host.force_mfa} />
         </div>
 
         <div class="row">
@@ -115,10 +105,7 @@
             />
         </div>
         {#if host.local_password_only}
-            <div
-                class="err"
-                transition:slide={{ duration: 150 }}
-            >
+            <div class="err" transition:slide={{ duration: 150 }}>
                 <p>
                     {ta.pam.hostLocalPwdOnlyInfo}
                 </p>

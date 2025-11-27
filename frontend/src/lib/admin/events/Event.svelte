@@ -69,10 +69,7 @@
     class:inline
     style:border-left={`2px solid ${eventColor(event.level)}`}
 >
-    <div
-        aria-label="Timestamp"
-        class="ts"
-    >
+    <div aria-label="Timestamp" class="ts">
         {formatDateFromTs(event.timestamp / 1000)}
     </div>
 
@@ -83,10 +80,7 @@
     {#if event.typ === 'InvalidLogins'}
         {`: ${event.data}`}
     {:else if event.typ === 'NewRauthyVersion'}
-        <A
-            href={event.text || ''}
-            target="_blank">New Version</A
-        >
+        <A href={event.text || ''} target="_blank">New Version</A>
     {:else if event.typ === 'IpBlacklisted'}
         {ta.common.until}
         {event.data && formatDateFromTs(event.data)}
@@ -96,15 +90,8 @@
 
     {#if event.ip}
         <div>
-            <Button
-                ariaLabel="IP Address"
-                invisible
-                onclick={() => copyToClip(event.ip || '')}
-            >
-                <Tooltip
-                    text={tooltip}
-                    yOffset={20}
-                >
+            <Button ariaLabel="IP Address" invisible onclick={() => copyToClip(event.ip || '')}>
+                <Tooltip text={tooltip} yOffset={20}>
                     <div class="ip font-mono">
                         {event.ip}
                     </div>

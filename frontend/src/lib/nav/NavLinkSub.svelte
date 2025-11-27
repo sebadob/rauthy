@@ -36,17 +36,8 @@
     }
 </script>
 
-<div
-    class="a"
-    data-current={current}
->
-    <A
-        bind:ref
-        {href}
-        hideUnderline
-        {highlightWithParams}
-        {onclick}
-    >
+<div class="a" data-current={current}>
+    <A bind:ref {href} hideUnderline {highlightWithParams} {onclick}>
         {@render children()}
     </A>
 </div>

@@ -34,22 +34,11 @@
 </script>
 
 <div class="flex">
-    <Tabs
-        {tabs}
-        bind:selected
-        bind:focusFirst
-    />
+    <Tabs {tabs} bind:selected bind:focusFirst />
 </div>
 
 {#if selected === ta.nav.config}
-    <RoleConfig
-        {role}
-        {roles}
-        {onSave}
-    />
+    <RoleConfig {role} {roles} {onSave} />
 {:else if selected === t.common.delete}
-    <RoleDelete
-        {role}
-        {onSave}
-    />
+    <RoleDelete {role} {onSave} />
 {/if}

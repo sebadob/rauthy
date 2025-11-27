@@ -199,10 +199,7 @@
             firstDirReverse
         />
         <div class="btn">
-            <Button
-                level={-1}
-                onclick={invalidateSessions}
-            >
+            <Button level={-1} onclick={invalidateSessions}>
                 {ta.sessions.invalidateAll}
             </Button>
         </div>
@@ -217,19 +214,11 @@
     <div id="sessions">
         {#if firstFetchHeaders}
             {#each sessions as session (session.id)}
-                <SessionRow
-                    {session}
-                    {now}
-                    {onDeleted}
-                />
+                <SessionRow {session} {now} {onDeleted} />
             {/each}
         {:else}
             {#each sessionsPaginated as session (session.id)}
-                <SessionRow
-                    {session}
-                    {now}
-                    {onDeleted}
-                />
+                <SessionRow {session} {now} {onDeleted} />
             {/each}
         {/if}
     </div>
@@ -242,15 +231,9 @@
             {firstFetchHeaders}
         />
     {:else if useServerSide}
-        <Pagination
-            bind:items={sessions}
-            bind:itemsPaginated={sessionsPaginated}
-        />
+        <Pagination bind:items={sessions} bind:itemsPaginated={sessionsPaginated} />
     {:else}
-        <Pagination
-            bind:items={sessionsFiltered}
-            bind:itemsPaginated={sessionsPaginated}
-        />
+        <Pagination bind:items={sessionsFiltered} bind:itemsPaginated={sessionsPaginated} />
     {/if}
 </ContentAdmin>
 

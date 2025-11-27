@@ -57,11 +57,7 @@
 
     <div class="keysContainer">
         {#each passkeys as passkey (passkey.name)}
-            <UserPasskey
-                {passkey}
-                showDelete
-                {onDelete}
-            />
+            <UserPasskey {passkey} showDelete {onDelete} />
         {/each}
     </div>
 {/if}

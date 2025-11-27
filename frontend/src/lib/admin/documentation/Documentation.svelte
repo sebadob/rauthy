@@ -16,19 +16,12 @@
 
     <p>
         {ta.docs.book}
-        <A
-            bind:ref
-            href="https://sebadob.github.io/rauthy/"
-            target="_blank">Rauthy Book</A
-        >
+        <A bind:ref href="https://sebadob.github.io/rauthy/" target="_blank">Rauthy Book</A>
     </p>
 
     <p>
         {ta.docs.openapi}
-        <A
-            href="/auth/v1/docs/"
-            target="_blank">Swagger UI</A
-        >
+        <A href="/auth/v1/docs/" target="_blank">Swagger UI</A>
         <br />
         <b>{ta.common.note}:</b>
         {ta.docs.openapiNote}
@@ -36,9 +29,6 @@
 
     <p>
         {ta.docs.source}:
-        <A
-            href="https://github.com/sebadob/rauthy"
-            target="_blank">Github</A
-        >
+        <A href="https://github.com/sebadob/rauthy" target="_blank">Github</A>
     </p>
 </ContentAdmin>

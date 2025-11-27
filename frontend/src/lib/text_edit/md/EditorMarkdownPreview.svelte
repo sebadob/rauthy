@@ -20,11 +20,7 @@
 
 <div class="container">
     <div class="editor">
-        <EditorMarkdown
-            bind:markdown={content}
-            withPreview={previewEmbedded}
-            {height}
-        />
+        <EditorMarkdown bind:markdown={content} withPreview={previewEmbedded} {height} />
     </div>
 
     {#if !previewEmbedded}

@@ -86,10 +86,7 @@
         bind:closeModal
         alignRight
     >
-        <ApiKeyAddNew
-            {keys}
-            onSave={onNewKey}
-        />
+        <ApiKeyAddNew {keys} onSave={onNewKey} />
     </ButtonAddModal>
     <OrderSearchBar
         {searchOptions}
@@ -103,10 +100,7 @@
     {#snippet buttonTiles()}
         <div class="keysList">
             {#each keysFiltered as key (key.name)}
-                <NavButtonTile
-                    onclick={() => kid.set(key.name)}
-                    selected={kid.get() === key.name}
-                >
+                <NavButtonTile onclick={() => kid.set(key.name)} selected={kid.get() === key.name}>
                     {key.name}
                 </NavButtonTile>
             {/each}
@@ -115,15 +109,9 @@
 </NavSub>
 
 <ContentAdmin>
-    <div
-        id="keys"
-        aria-label={ta.common.details}
-    >
+    <div id="keys" aria-label={ta.common.details}>
         {#if key}
-            <ApiKeyDetails
-                bind:key
-                onSave={fetchApiKeys}
-            />
+            <ApiKeyDetails bind:key onSave={fetchApiKeys} />
         {/if}
     </div>
 </ContentAdmin>

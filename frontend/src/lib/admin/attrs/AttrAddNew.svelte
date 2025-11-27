@@ -56,10 +56,7 @@
 </script>
 
 <div class="container">
-    <Form
-        action="/auth/v1/users/attr"
-        {onSubmit}
-    >
+    <Form action="/auth/v1/users/attr" {onSubmit}>
         <Input
             bind:ref
             bind:value={name}

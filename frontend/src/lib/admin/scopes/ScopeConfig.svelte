@@ -106,14 +106,8 @@
     }
 </script>
 
-<Form
-    action={`/auth/v1/scopes/${scope.id}`}
-    {onSubmit}
->
-    <LabeledValue
-        label="ID"
-        mono
-    >
+<Form action={`/auth/v1/scopes/${scope.id}`} {onSubmit}>
+    <LabeledValue label="ID" mono>
         {scope.id}
     </LabeledValue>
 

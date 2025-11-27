@@ -62,56 +62,35 @@
             </div>
         {/snippet}
         {#snippet details()}
-            <LabeledValue
-                label="Key ID"
-                mono
-            >
+            <LabeledValue label="Key ID" mono>
                 {jwk.kid}
             </LabeledValue>
-            <LabeledValue
-                label={ta.jwks.type}
-                mono
-            >
+            <LabeledValue label={ta.jwks.type} mono>
                 {jwk.kty}
             </LabeledValue>
-            <LabeledValue
-                label={ta.jwks.alg}
-                mono
-            >
+            <LabeledValue label={ta.jwks.alg} mono>
                 {jwk.alg}
             </LabeledValue>
 
             {#if jwk.crv}
-                <LabeledValue
-                    label="Curve"
-                    mono
-                >
+                <LabeledValue label="Curve" mono>
                     {jwk.crv}
                 </LabeledValue>
             {/if}
             {#if jwk.n}
-                <LabeledValue
-                    label="n"
-                    mono
-                >
+                <LabeledValue label="n" mono>
                     <div class="n">
                         {jwk.n}
                     </div>
                 </LabeledValue>
             {/if}
             {#if jwk.e}
-                <LabeledValue
-                    label="e"
-                    mono
-                >
+                <LabeledValue label="e" mono>
                     {jwk.e}
                 </LabeledValue>
             {/if}
             {#if jwk.x}
-                <LabeledValue
-                    label="x"
-                    mono
-                >
+                <LabeledValue label="x" mono>
                     {jwk.x}
                 </LabeledValue>
             {/if}
@@ -120,10 +99,7 @@
 {/each}
 
 <div class="btn flex gap-05">
-    <Button
-        onclick={onSubmit}
-        {isLoading}
-    >
+    <Button onclick={onSubmit} {isLoading}>
         {ta.jwks.rotateKeys}
     </Button>
 

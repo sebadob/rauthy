@@ -44,50 +44,24 @@
     });
 </script>
 
-<div
-    role="none"
-    class="editor"
-    style:height
-    onclick={() => ref?.focus()}
->
+<div role="none" class="editor" style:height onclick={() => ref?.focus()}>
     <div class="toolbar">
         <div>
             {#if withPreview}
-                <InputCheckbox
-                    ariaLabel={ta.common.preview}
-                    bind:checked={preview}
-                >
+                <InputCheckbox ariaLabel={ta.common.preview} bind:checked={preview}>
                     {ta.common.preview}
                 </InputCheckbox>
             {/if}
         </div>
 
-        <div
-            class="actions"
-            class:toolbarPreview={preview}
-        >
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.heading1}
-                bind:content={markdown}
-                addLeft="# "
-            >
+        <div class="actions" class:toolbarPreview={preview}>
+            <ToolbarIcon {ref} title={ta.editor.heading1} bind:content={markdown} addLeft="# ">
                 <IconH1 width={iconSize} />
             </ToolbarIcon>
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.heading2}
-                bind:content={markdown}
-                addLeft="## "
-            >
+            <ToolbarIcon {ref} title={ta.editor.heading2} bind:content={markdown} addLeft="## ">
                 <IconH2 width={iconSize} />
             </ToolbarIcon>
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.heading3}
-                bind:content={markdown}
-                addLeft="### "
-            >
+            <ToolbarIcon {ref} title={ta.editor.heading3} bind:content={markdown} addLeft="### ">
                 <IconH3 width={iconSize} />
             </ToolbarIcon>
 
@@ -119,28 +93,13 @@
                 <IconStrikeThrough width={iconSize} />
             </ToolbarIcon>
 
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.listBullet}
-                bind:content={markdown}
-                addLeft="- "
-            >
+            <ToolbarIcon {ref} title={ta.editor.listBullet} bind:content={markdown} addLeft="- ">
                 <IconListBullet width={iconSize} />
             </ToolbarIcon>
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.listNumbered}
-                bind:content={markdown}
-                addLeft="1. "
-            >
+            <ToolbarIcon {ref} title={ta.editor.listNumbered} bind:content={markdown} addLeft="1. ">
                 <IconListNumbered width={iconSize} />
             </ToolbarIcon>
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.listTasks}
-                bind:content={markdown}
-                addLeft="- [ ] "
-            >
+            <ToolbarIcon {ref} title={ta.editor.listTasks} bind:content={markdown} addLeft="- [ ] ">
                 <IconQueueList width={iconSize} />
             </ToolbarIcon>
 
@@ -153,12 +112,7 @@
             >
                 <IconCode width={iconSize} />
             </ToolbarIcon>
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.quote}
-                bind:content={markdown}
-                addLeft="> "
-            >
+            <ToolbarIcon {ref} title={ta.editor.quote} bind:content={markdown} addLeft="> ">
                 <IconQuote width={iconSize} />
             </ToolbarIcon>
 

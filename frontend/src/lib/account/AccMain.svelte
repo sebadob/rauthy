@@ -97,10 +97,7 @@
 
 <svelte:window bind:innerWidth />
 
-<Template
-    id={TPL_AUTH_PROVIDERS}
-    bind:value={providers}
-/>
+<Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
 
 {#snippet header()}
     <h3>{`${user.given_name || ''} ${user.family_name || ''}`}</h3>
@@ -113,10 +110,7 @@
         </div>
 
         <div class="container">
-            <Tabs
-                tabs={tabsCompact}
-                bind:selected
-            />
+            <Tabs tabs={tabsCompact} bind:selected />
 
             <div class="innerPhone">
                 {#if selected === t.account.navInfo}
@@ -131,16 +125,9 @@
                 {:else if selected === 'PAM' && pamUser}
                     <AccPAM {pamUser} />
                 {:else if selected === t.account.navEdit}
-                    <AccEdit
-                        bind:user
-                        viewModePhone
-                    />
+                    <AccEdit bind:user viewModePhone />
                 {:else if selected === t.common.password}
-                    <AccPassword
-                        {user}
-                        {authProvider}
-                        viewModePhone
-                    />
+                    <AccPassword {user} {authProvider} viewModePhone />
                 {:else if selected === t.account.navMfa}
                     <AccMFA {user} />
                 {:else if selected === 'WebID'}
@@ -158,41 +145,22 @@
         <div class="wide">
             {#if !viewModeWideCompact}
                 <div clasS="info">
-                    <AccInfo
-                        bind:user
-                        {pamUser}
-                        {webIdData}
-                        {providers}
-                        {authProvider}
-                    />
+                    <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider} />
                 </div>
             {/if}
 
             <div class="container">
-                <Tabs
-                    tabs={viewModeWideCompact ? tabsCompact : tabsWide}
-                    bind:selected
-                    center
-                />
+                <Tabs tabs={viewModeWideCompact ? tabsCompact : tabsWide} bind:selected center />
 
                 <div class="inner">
                     {#if selected === t.account.navInfo}
-                        <AccInfo
-                            bind:user
-                            {pamUser}
-                            {webIdData}
-                            {providers}
-                            {authProvider}
-                        />
+                        <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider} />
                     {:else if selected === 'PAM' && pamUser}
                         <AccPAM {pamUser} />
                     {:else if selected === t.account.navEdit}
                         <AccEdit bind:user />
                     {:else if selected === t.common.password}
-                        <AccPassword
-                            {user}
-                            {authProvider}
-                        />
+                        <AccPassword {user} {authProvider} />
                     {:else if selected === t.account.navMfa}
                         <AccMFA {user} />
                     {:else if selected === 'WebID'}
@@ -208,14 +176,8 @@
             </div>
 
             <div class="logout">
-                <Button
-                    level={-3}
-                    onclick={redirectToLogout}
-                >
-                    <div
-                        title={t.account.navLogout}
-                        class="flex gap-05"
-                    >
+                <Button level={-3} onclick={redirectToLogout}>
+                    <div title={t.account.navLogout} class="flex gap-05">
                         <IconLogout />
                         {t.account.navLogout}
                     </div>

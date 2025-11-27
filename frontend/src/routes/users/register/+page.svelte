@@ -180,14 +180,8 @@
     <title>{t?.register.register || 'Register'}</title>
 </svelte:head>
 
-<Template
-    id={TPL_RESTRICTED_EMAIL_DOMAIN}
-    bind:value={restrictedDomain}
-/>
-<Template
-    id={TPL_USER_VALUES_CONFIG}
-    bind:value={config}
-/>
+<Template id={TPL_RESTRICTED_EMAIL_DOMAIN} bind:value={restrictedDomain} />
+<Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
 
 <Main>
     <ContentCenter>
@@ -200,10 +194,7 @@
                 {/if}
             </div>
 
-            <Form
-                {action}
-                {onSubmit}
-            >
+            <Form {action} {onSubmit}>
                 <div class={valuesActive > 5 ? 'valuesMany' : ''}>
                     <Input
                         bind:ref={refEmail}
@@ -327,10 +318,7 @@
                 </div>
 
                 <div class="submit">
-                    <Button
-                        type="submit"
-                        {isLoading}>{t.register.register}</Button
-                    >
+                    <Button type="submit" {isLoading}>{t.register.register}</Button>
                 </div>
                 {#if success}
                     <div class="success">
