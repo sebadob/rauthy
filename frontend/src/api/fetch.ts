@@ -17,12 +17,12 @@ function buildHeaders(
 	if (payload === 'json') {
 		headers = {
 			'Content-Type': 'application/json',
-			'Accept': 'application/json',
+			Accept: 'application/json',
 		};
 	} else {
 		headers = {
 			'Content-type': 'application/x-www-form-urlencoded',
-			'Accept': 'application/json',
+			Accept: 'application/json',
 		};
 	}
 

@@ -14,7 +14,7 @@ export function base64UrlSafeToArrBuf(base64url: ArrayBuffer | BufferSource | Ba
 	if (typeof base64url === 'string') {
 		const dec = {
 			'-': '+',
-			'_': '/',
+			_: '/',
 			'.': '=',
 		};
 		const base64 = base64url.replace(/[-_.]/g, m => dec[m as '-' | '_' | '.']);

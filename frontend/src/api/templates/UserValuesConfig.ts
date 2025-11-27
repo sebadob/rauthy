@@ -16,5 +16,7 @@ export interface UserValuesConfig {
 export interface UserValuesPreferredUsername {
 	preferred_username: UserValueConfigValue;
 	immutable: boolean;
+	blacklist: string[];
 	pattern_html: string;
+	email_fallback: boolean;
 }

@@ -22,7 +22,7 @@ export async function webauthnReg(
 	};
 	let headers: HeadersInit = {
 		'Content-Type': 'application/json',
-		'Accept': 'application/json',
+		Accept: 'application/json',
 	};
 	if (pwdCsrfToken) {
 		headers['x-pwd-csrf-token'] = pwdCsrfToken;

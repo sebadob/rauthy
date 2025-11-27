@@ -32,7 +32,7 @@
 			method: 'POST',
 			headers: {
 				'Content-type': 'application/x-www-form-urlencoded',
-				'Accept': 'application/json',
+				Accept: 'application/json',
 			},
 			body: data,
 		});
@@ -51,8 +51,8 @@
 				method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-					'Authorization': `Bearer ${body.access_token}`,
+					Accept: 'application/json',
+					Authorization: `Bearer ${body.access_token}`,
 				},
 			});
 			let info = await resXsrf.json();
