@@ -36,10 +36,15 @@ services:
       - SMTP_URL=mailcrab
       - SMTP_PORT=1025
       - SMTP_DANGER_INSECURE=true
+    volumes:
+      - data:/app/data
     ports:
       - "8443:8443"
     depends_on:
       - mailcrab
+
+volumes:
+  data:
 ```
 
 Save this into `docker-compose.yaml` and start with:
