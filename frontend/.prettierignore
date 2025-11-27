@@ -12,6 +12,3 @@ node_modules
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
-
-# for some very weird reason, prettier will remove the whole content of this file when formatting it
-src/lib/Template.svelte
