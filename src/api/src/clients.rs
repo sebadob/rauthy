@@ -326,25 +326,35 @@ pub async fn get_client_logo(
     params: Query<LogoParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
-    let logo = Logo::find_cached(&id, &LogoType::Client).await?;
+
+    let (content_type, data) = if let Ok(logo) = Logo::find_cached(&id, &LogoType::Client).await {
+        (logo.content_type, logo.data)
+    } else if id != "rauthy"
+        && let Ok(logo) = Logo::find_cached("rauthy", &LogoType::Client).await
+    {
+        // use the rauthy logo as fallback
+        (logo.content_type, logo.data)
+    } else {
+        return Ok(HttpResponse::NotFound().finish());
+    };
 
     // we only cache the response if the client properly used the updated param
     // to never run into issues otherwise
     let csp = "connect-src 'none'; script-src 'none'; frame-ancestors 'none'; object-src 'none';";
     if params.updated.is_some() {
         Ok(HttpResponse::Ok()
-            .insert_header((CONTENT_TYPE, logo.content_type))
+            .insert_header((CONTENT_TYPE, content_type))
             .insert_header((CONTENT_SECURITY_POLICY, csp))
             .insert_header((
                 CACHE_CONTROL,
                 "max-age=31104000, stale-while-revalidate=2592000, public",
             ))
-            .body(logo.data))
+            .body(data))
     } else {
         Ok(HttpResponse::Ok()
-            .insert_header((CONTENT_TYPE, logo.content_type))
+            .insert_header((CONTENT_TYPE, content_type))
             .insert_header((CONTENT_SECURITY_POLICY, csp))
-            .body(logo.data))
+            .body(data))
     }
 }
 
