@@ -229,6 +229,7 @@ impl User {
     pub async fn create(
         new_user: User,
         post_reset_redirect_uri: Option<String>,
+        user_tz: Option<&str>,
     ) -> Result<Self, ErrorResponse> {
         let slf = Self::insert(new_user).await?;
 
@@ -238,7 +239,7 @@ impl User {
             MagicLinkUsage::NewUser(post_reset_redirect_uri),
         )
         .await?;
-        send_pwd_reset(&magic_link, &slf).await;
+        send_pwd_reset(&magic_link, &slf, user_tz).await;
 
         Ok(slf)
     }
@@ -248,8 +249,28 @@ impl User {
     }
 
     pub async fn create_from_new(new_user_req: NewUserRequest) -> Result<User, ErrorResponse> {
+        let tz = new_user_req.tz.clone();
         let new_user = User::from_new_user_req(new_user_req).await?;
-        User::create(new_user, None).await
+        let user = User::create(new_user, None, tz.as_deref()).await?;
+
+        if tz.is_some() && tz.as_deref() != Some("UTC") && tz.as_deref() != Some("Etc/UTC") {
+            UserValues::insert(
+                user.id.clone(),
+                UserValuesRequest {
+                    birthdate: None,
+                    phone: None,
+                    street: None,
+                    zip: None,
+                    city: None,
+                    country: None,
+                    tz,
+                },
+                None,
+            )
+            .await?;
+        }
+
+        Ok(user)
     }
 
     /// Inserts a user from the open registration endpoint into the database.
@@ -270,7 +291,15 @@ impl User {
             ..Default::default()
         };
         new_user.language = lang;
-        let new_user = User::create(new_user, req_data.redirect_uri).await?;
+        let new_user = User::create(
+            new_user,
+            req_data.redirect_uri,
+            req_data
+                .user_values
+                .as_ref()
+                .and_then(|uv| uv.tz.as_deref()),
+        )
+        .await?;
 
         if let Some(uv) = req_data.user_values {
             UserValues::insert(new_user.id.clone(), uv, req_data.preferred_username).await?;
@@ -1310,7 +1339,15 @@ LIMIT $2"#;
                     MagicLinkUsage::EmailChange(email.clone()),
                 )
                 .await?;
-                send_email_change_info_new(&ml, &user, email).await;
+
+                send_email_change_info_new(
+                    &ml,
+                    &user,
+                    upd_user.user_values.as_ref().and_then(|v| v.tz.as_deref()),
+                    email,
+                )
+                .await;
+
                 true
             } else {
                 false
@@ -1914,7 +1951,11 @@ impl User {
             usage,
         )
         .await?;
-        send_pwd_reset(&new_ml, self).await;
+
+        let values = UserValues::find(&self.id).await?;
+        let tz = values.as_ref().and_then(|uv| uv.tz.as_deref());
+
+        send_pwd_reset(&new_ml, self, tz).await;
 
         Ok(())
     }
@@ -1945,7 +1986,11 @@ impl User {
                     MagicLinkUsage::PasswordReset(None),
                 )
                 .await?;
-                send_pwd_reset(&magic_link, self).await;
+
+                let values = UserValues::find(&self.id).await?;
+                let tz = values.as_ref().and_then(|uv| uv.tz.as_deref());
+
+                send_pwd_reset(&magic_link, self, tz).await;
 
                 Err(ErrorResponse::new(
                     ErrorResponseType::PasswordRefresh,

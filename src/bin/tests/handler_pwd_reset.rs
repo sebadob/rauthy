@@ -62,7 +62,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     // check that we got the html document
     let html = res.text().await?;
     println!("{html}");
-    assert!(html.starts_with("<!DOCTYPE html>"));
+    assert!(html.starts_with("<!doctype html>"));
 
     // extract the csrf token from the html
     let (_, content_split) = html.split_once("\"csrf_token\":\"").unwrap();

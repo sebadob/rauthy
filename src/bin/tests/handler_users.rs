@@ -49,6 +49,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
             "non_existent".to_string(),
         ]),
         user_expires: None,
+        tz: None,
     };
     let res = reqwest::Client::new()
         .post(&url)

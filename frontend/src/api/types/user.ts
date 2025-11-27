@@ -20,6 +20,8 @@ export interface NewUserRequest {
     roles: string[];
     /// Unix timestamp in seconds
     user_expires?: number;
+    /// Valid timezone string like e.g. `Europe/Berlin`
+    tz?: string;
 }
 
 export interface PreferredUsernameRequest {

@@ -46,7 +46,7 @@ pub struct EmailResetTxt<'a> {
     pub link_request_new: &'a str,
 }
 
-pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
+pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User, user_tz: Option<&str>) {
     let link = format!(
         "{}/users/{}/reset/{}?type={}",
         RauthyConfig::get().issuer,
@@ -54,7 +54,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User) {
         &magic_link.id,
         magic_link.usage,
     );
-    let exp = email_ts_prettify(magic_link.exp);
+    let exp = email_ts_prettify(magic_link.exp, &user.language, user_tz);
     let theme_vars = ThemeCssFull::find_theme_variables_email()
         .await
         .unwrap_or_default();
