@@ -1,16 +1,16 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {fetchDelete} from "$api/fetch";
-    import type {GroupResponse} from "$api/types/groups.ts";
+    import Button from '$lib5/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { fetchDelete } from '$api/fetch';
+    import type { GroupResponse } from '$api/types/groups.ts';
 
     let {
         group,
         onSave,
     }: {
-        group: GroupResponse,
-        onSave: () => void,
+        group: GroupResponse;
+        onSave: () => void;
     } = $props();
 
     let t = useI18n();

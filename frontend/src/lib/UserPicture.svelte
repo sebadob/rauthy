@@ -1,12 +1,12 @@
 <script lang="ts">
-    import IconUpload from "$icons/IconUpload.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {genKey, getCsrfToken} from "$utils/helpers";
-    import type {ErrorResponse} from "$api/types/error.ts";
-    import IconStop from "$icons/IconStop.svelte";
-    import Button from "$lib/button/Button.svelte";
-    import {fetchDelete} from "$api/fetch";
-    import {usePictureConfig} from "$state/picture_config.svelte";
+    import IconUpload from '$icons/IconUpload.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { genKey, getCsrfToken } from '$utils/helpers';
+    import type { ErrorResponse } from '$api/types/error.ts';
+    import IconStop from '$icons/IconStop.svelte';
+    import Button from '$lib/button/Button.svelte';
+    import { fetchDelete } from '$api/fetch';
+    import { usePictureConfig } from '$state/picture_config.svelte';
 
     let {
         userId,
@@ -21,7 +21,7 @@
         fallbackCharacters: string | undefined;
         pictureId?: string;
         size?: 'small' | 'medium' | 'large';
-        disableUpload?: boolean,
+        disableUpload?: boolean;
     } = $props();
 
     const id = genKey();
@@ -118,7 +118,7 @@
             }
         }
 
-        return ((hues[0] * (64 + hues[1]) + 4 * hues[0]) + (hues[2] * hues[3] - hues[4])) % 360;
+        return (hues[0] * (64 + hues[1]) + 4 * hues[0] + (hues[2] * hues[3] - hues[4])) % 360;
     }
 
     async function deletePicture() {
@@ -160,7 +160,7 @@
             }
 
             let fd = new FormData();
-            fd.append(file.name, file)
+            fd.append(file.name, file);
             let res = await fetch(url, {
                 method: 'PUT',
                 headers: {
@@ -196,13 +196,13 @@
         </span>
     {:else}
         <img
-                src={`/auth/v1/users/${userId}/picture/${pictureId}`}
-                loading="lazy"
-                class="absolute"
-                aria-label="Avatar"
-                alt=""
-                width="100%"
-                {onerror}
+            src={`/auth/v1/users/${userId}/picture/${pictureId}`}
+            loading="lazy"
+            class="absolute"
+            aria-label="Avatar"
+            alt=""
+            width="100%"
+            {onerror}
         />
     {/if}
 {/snippet}
@@ -210,34 +210,34 @@
 <div class="container">
     {#if config?.upload_allowed && !disableUpload}
         <form
-                class="avatar"
-                aria-dropeffect="move"
-                aria-label="Upload"
-                style:background-color={color}
-                style:width
-                {onmouseenter}
-                {onmouseleave}
+            class="avatar"
+            aria-dropeffect="move"
+            aria-label="Upload"
+            style:background-color={color}
+            style:width
+            {onmouseenter}
+            {onmouseleave}
         >
             <label
-                    for={id}
-                    aria-controls={id}
-                    aria-disabled={isUploading}
-                    style:width
-                    data-show={!isUploading && showUpload}
+                for={id}
+                aria-controls={id}
+                aria-disabled={isUploading}
+                style:width
+                data-show={!isUploading && showUpload}
             >
-                <IconUpload {width}/>
+                <IconUpload {width} />
             </label>
             <input
-                    tabindex="0"
-                    {id}
-                    type="file"
-                    disabled={isUploading}
-                    aria-label="Upload Picture"
-                    aria-disabled={isUploading}
-                    onfocusin={() => showUpload = true}
-                    onfocusout={() => showUpload = false}
-                    {accept}
-                    bind:files
+                tabindex="0"
+                {id}
+                type="file"
+                disabled={isUploading}
+                aria-label="Upload Picture"
+                aria-disabled={isUploading}
+                onfocusin={() => (showUpload = true)}
+                onfocusout={() => (showUpload = false)}
+                {accept}
+                bind:files
             />
 
             {#if errFileSize}
@@ -254,21 +254,16 @@
                 <div class="delete">
                     <Button bind:ref={refDel} invisible onclick={deletePicture}>
                         <div title={t.common.delete}>
-                            <IconStop/>
+                            <IconStop />
                         </div>
                     </Button>
                 </div>
             </div>
         {/if}
     {:else}
-        <span
-                class="avatar"
-                style:background-color={color}
-                style:width
-                style:height={width}
-        >
-        {@render avatar()}
-    </span>
+        <span class="avatar" style:background-color={color} style:width style:height={width}>
+            {@render avatar()}
+        </span>
     {/if}
 </div>
 
@@ -285,7 +280,7 @@
         overflow: hidden;
     }
 
-    input[type="file"]::file-selector-button {
+    input[type='file']::file-selector-button {
         display: none;
     }
 
@@ -293,17 +288,17 @@
         position: absolute;
         opacity: 0;
         aspect-ratio: 1;
-        background: hsla(var(--bg) / .8);
+        background: hsla(var(--bg) / 0.8);
         cursor: pointer;
         z-index: 2;
         transition: all 150ms;
     }
 
-    label[aria-disabled="true"] {
+    label[aria-disabled='true'] {
         cursor: default;
     }
 
-    label[data-show="true"] {
+    label[data-show='true'] {
         opacity: 1;
     }
 
@@ -328,12 +323,12 @@
 
     .delete {
         position: absolute;
-        top: -.1rem;
+        top: -0.1rem;
         left: -1.25rem;
     }
 
     .errLimit {
-        padding: 0 .25rem;
+        padding: 0 0.25rem;
         background: hsl(var(--error));
         border-radius: var(--border-radius);
         font-weight: bold;
@@ -341,7 +336,9 @@
         z-index: 1;
     }
 
-    .font-small, .font-medium, .font-large {
+    .font-small,
+    .font-medium,
+    .font-large {
         position: relative;
         color: hsl(var(--bg));
         font-weight: bold;
@@ -349,17 +346,17 @@
     }
 
     .font-small {
-        top: -.05rem;
+        top: -0.05rem;
         font-size: 1.5rem;
     }
 
     .font-medium {
-        top: -.1rem;
+        top: -0.1rem;
         font-size: 2.2rem;
     }
 
     .font-large {
-        top: -.2rem;
+        top: -0.2rem;
         font-size: 9rem;
     }
 </style>

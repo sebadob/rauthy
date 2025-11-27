@@ -1,19 +1,19 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import {PATTERN_GROUP} from "$utils/patterns";
-    import Form from "$lib5/form/Form.svelte";
-    import {fetchPost} from "$api/fetch";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import type {GroupResponse, GroupRequest} from "$api/types/groups.ts";
+    import Button from '$lib5/button/Button.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import { PATTERN_GROUP } from '$utils/patterns';
+    import Form from '$lib5/form/Form.svelte';
+    import { fetchPost } from '$api/fetch';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import type { GroupResponse, GroupRequest } from '$api/types/groups.ts';
 
     let {
         groups,
         onSave,
     }: {
-        groups: GroupResponse[],
-        onSave: (id: string) => void,
+        groups: GroupResponse[];
+        onSave: (id: string) => void;
     } = $props();
 
     let t = useI18n();
@@ -52,13 +52,13 @@
 <div class="container">
     <Form action="/auth/v1/groups" {onSubmit}>
         <Input
-                bind:ref
-                bind:value={name}
-                autocomplete="off"
-                label={ta.groups.name}
-                placeholder={ta.groups.name}
-                required
-                pattern={PATTERN_GROUP}
+            bind:ref
+            bind:value={name}
+            autocomplete="off"
+            label={ta.groups.name}
+            placeholder={ta.groups.name}
+            required
+            pattern={PATTERN_GROUP}
         />
 
         <Button type="submit">

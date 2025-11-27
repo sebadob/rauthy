@@ -1,8 +1,8 @@
 <script lang="ts">
-    import type {Snippet} from "svelte";
-    import {fetchSolvePow} from "$utils/pow";
-    import {unixTsFromLocalDate} from "$utils/form";
-    import {errorFromResponse, fetchForm} from "$api/fetch";
+    import type { Snippet } from 'svelte';
+    import { fetchSolvePow } from '$utils/pow';
+    import { unixTsFromLocalDate } from '$utils/form';
+    import { errorFromResponse, fetchForm } from '$api/fetch';
 
     type T = $$Generic;
 
@@ -21,15 +21,15 @@
         // fetch, solve and append a PoW with the given key
         withPowAs,
     }: {
-        action: string,
-        method?: 'GET' | 'POST',
-        isError?: boolean,
-        convertDateToTs?: string[],
-        resetOnSubmit?: boolean,
-        onSubmit?: (form: HTMLFormElement, params: URLSearchParams) => void,
-        onResponse?: (res: Response) => void,
-        children: Snippet
-        withPowAs?: string,
+        action: string;
+        method?: 'GET' | 'POST';
+        isError?: boolean;
+        convertDateToTs?: string[];
+        resetOnSubmit?: boolean;
+        onSubmit?: (form: HTMLFormElement, params: URLSearchParams) => void;
+        onResponse?: (res: Response) => void;
+        children: Snippet;
+        withPowAs?: string;
     } = $props();
 
     async function submit(ev: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement }) {
@@ -61,7 +61,7 @@
         let params = new URLSearchParams();
         formData.forEach((value, key) => {
             params.append(key, value.toString());
-        })
+        });
 
         if (onSubmit) {
             onSubmit(form, params);

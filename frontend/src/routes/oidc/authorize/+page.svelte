@@ -1,61 +1,58 @@
 <script lang="ts">
-    import {
-        formatDateFromTs,
-        saveCsrfToken,
-        saveProviderToken,
-    } from "$utils/helpers";
-    import Button from "$lib5/button/Button.svelte";
-    import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import LangSelector from "$lib5/LangSelector.svelte";
+    import { formatDateFromTs, saveCsrfToken, saveProviderToken } from '$utils/helpers';
+    import Button from '$lib5/button/Button.svelte';
+    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import LangSelector from '$lib5/LangSelector.svelte';
     import {
         IS_DEV,
         PKCE_VERIFIER_UPSTREAM,
-        TPL_AUTH_PROVIDERS, TPL_CLIENT_LOGO_UPDATED,
+        TPL_AUTH_PROVIDERS,
+        TPL_CLIENT_LOGO_UPDATED,
         TPL_CLIENT_NAME,
         TPL_CLIENT_URL,
         TPL_CSRF_TOKEN,
         TPL_IS_REG_OPEN,
         TPL_LOGIN_ACTION,
-        TPL_ATPROTO_ID
-    } from "$utils/constants.js";
-    import IconHome from "$icons/IconHome.svelte";
-    import Main from "$lib5/Main.svelte";
-    import ContentCenter from "$lib5/ContentCenter.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import Template from "$lib5/Template.svelte";
-    import {useParam} from "$state/param.svelte";
-    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
-    import type {AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
-    import InputPassword from "$lib5/form/InputPassword.svelte";
-    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import {fetchGet, fetchPost, type IResponse} from "$api/fetch";
+        TPL_ATPROTO_ID,
+    } from '$utils/constants.js';
+    import IconHome from '$icons/IconHome.svelte';
+    import Main from '$lib5/Main.svelte';
+    import ContentCenter from '$lib5/ContentCenter.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import Template from '$lib5/Template.svelte';
+    import { useParam } from '$state/param.svelte';
+    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
+    import type { AuthProviderTemplate } from '$api/templates/AuthProvider.ts';
+    import InputPassword from '$lib5/form/InputPassword.svelte';
+    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
+    import { fetchGet, fetchPost, type IResponse } from '$api/fetch';
     import type {
         CodeChallengeMethod,
         LoginRefreshRequest,
         LoginRequest,
         RequestResetRequest,
-        WebauthnLoginResponse
-    } from "$api/types/authorize.ts";
-    import Form from "$lib5/form/Form.svelte";
-    import ButtonAuthProvider from "$lib5/ButtonAuthProvider.svelte";
-    import {onMount} from "svelte";
-    import type {SessionInfoResponse} from "$api/types/session.ts";
-    import ClientLogo from "$lib5/ClientLogo.svelte";
-    import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
-    import {fetchSolvePow} from "$utils/pow";
-    import {generatePKCE} from "$utils/pkce";
-    import {PATTERN_ATPROTO_ID} from "$utils/patterns";
+        WebauthnLoginResponse,
+    } from '$api/types/authorize.ts';
+    import Form from '$lib5/form/Form.svelte';
+    import ButtonAuthProvider from '$lib5/ButtonAuthProvider.svelte';
+    import { onMount } from 'svelte';
+    import type { SessionInfoResponse } from '$api/types/session.ts';
+    import ClientLogo from '$lib5/ClientLogo.svelte';
+    import type { ProviderLoginRequest } from '$api/types/auth_provider.ts';
+    import { fetchSolvePow } from '$utils/pow';
+    import { generatePKCE } from '$utils/pkce';
+    import { PATTERN_ATPROTO_ID } from '$utils/patterns';
     import type {
         ToSAwaitLoginResponse,
         ToSLatestResponse,
         ToSUserAcceptRequest,
-        ToSUserAcceptResponse
-    } from "$api/types/tos";
-    import Modal from "$lib/Modal.svelte";
-    import TosAccept from "$lib/TosAccept.svelte";
+        ToSUserAcceptResponse,
+    } from '$api/types/tos';
+    import Modal from '$lib/Modal.svelte';
+    import TosAccept from '$lib/TosAccept.svelte';
 
-    const inputWidth = "18rem";
+    const inputWidth = '18rem';
 
     let t = useI18n();
 
@@ -76,7 +73,9 @@
     let stateParam = useParam('state').get();
     let stateEncoded = $derived(stateParam ? encodeURIComponent(stateParam) : undefined);
     let challenge = useParam('code_challenge').get();
-    let challengeMethod: CodeChallengeMethod = useParam('code_challenge_method').get() as CodeChallengeMethod;
+    let challengeMethod: CodeChallengeMethod = useParam(
+        'code_challenge_method',
+    ).get() as CodeChallengeMethod;
     let existingMfaUser: undefined | string = $state();
     let providers: AuthProviderTemplate[] = $state([]);
     let mfaPurpose: undefined | MfaPurpose = $state();
@@ -102,7 +101,9 @@
     let email = $state(useParam('login_hint').get() || '');
     let password = $state('');
     let userId = $state('');
-    let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset && !isAtproto);
+    let showPasswordInput = $derived(
+        needsPassword && existingMfaUser !== email && !showReset && !isAtproto,
+    );
 
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
@@ -114,13 +115,16 @@
     });
 
     $effect(() => {
-        if ('Refresh' === loginAction
-            && clientId && clientId.length > 0
-            && redirectUri && redirectUri.length > 0
+        if (
+            'Refresh' === loginAction &&
+            clientId &&
+            clientId.length > 0 &&
+            redirectUri &&
+            redirectUri.length > 0
         ) {
             onRefresh();
         }
-    })
+    });
 
     $effect(() => {
         if (emailSuccess) {
@@ -157,7 +161,7 @@
     async function createSessionDev() {
         let res = await fetchPost<SessionInfoResponse>('/auth/v1/oidc/session');
         if (res.body?.csrf_token) {
-            saveCsrfToken(res.body.csrf_token)
+            saveCsrfToken(res.body.csrf_token);
         } else {
             console.error(res.error);
         }
@@ -190,21 +194,28 @@
             return;
         }
 
-        isLoading = true
+        isLoading = true;
 
         const payload: LoginRefreshRequest = {
             client_id: clientId,
             redirect_uri: redirectUri,
             state: stateEncoded,
             nonce: nonce,
-            scopes
+            scopes,
         };
-        if (challenge && challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
+        if (
+            challenge &&
+            challengeMethod &&
+            (challengeMethod === 'plain' || challengeMethod === 'S256')
+        ) {
             payload.code_challenge = challenge;
             payload.code_challenge_method = challengeMethod;
         }
 
-        let res = await fetchPost<undefined | WebauthnLoginResponse>('/auth/v1/oidc/authorize/refresh', payload);
+        let res = await fetchPost<undefined | WebauthnLoginResponse>(
+            '/auth/v1/oidc/authorize/refresh',
+            payload,
+        );
         await handleAuthRes(res);
     }
 
@@ -226,7 +237,7 @@
 
         isLoading = true;
 
-        let pow = await fetchSolvePow() || '';
+        let pow = (await fetchSolvePow()) || '';
 
         const payload: LoginRequest = {
             email,
@@ -237,7 +248,11 @@
             nonce: nonce,
             scopes,
         };
-        if (challenge && challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
+        if (
+            challenge &&
+            challengeMethod &&
+            (challengeMethod === 'plain' || challengeMethod === 'S256')
+        ) {
             payload.code_challenge = challenge;
             payload.code_challenge_method = challengeMethod;
         }
@@ -261,11 +276,18 @@
             url = '/auth/v1/dev/authorize';
         }
 
-        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(url, payload, 'json', 'noRedirect');
+        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(
+            url,
+            payload,
+            'json',
+            'noRedirect',
+        );
         await handleAuthRes(res);
     }
 
-    async function handleAuthRes(res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>) {
+    async function handleAuthRes(
+        res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
+    ) {
         isLoading = false;
 
         if (!res) {
@@ -287,7 +309,7 @@
             let body = res.body;
             if (body && 'user_id' in body && 'code' in body) {
                 userId = body.user_id as string;
-                mfaPurpose = {Login: body.code as string};
+                mfaPurpose = { Login: body.code as string };
             } else {
                 console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
             }
@@ -394,7 +416,7 @@
         }
 
         isLoading = true;
-        let pow = await fetchSolvePow() || '';
+        let pow = (await fetchSolvePow()) || '';
 
         let payload: ProviderLoginRequest = {
             email: email || undefined,
@@ -408,7 +430,7 @@
             provider_id: id,
             pkce_challenge,
             pow,
-            ...isAtproto && {handle: atprotoHandle},
+            ...(isAtproto && { handle: atprotoHandle }),
         };
 
         let res = await fetchPost<string>('/auth/v1/providers/login', payload);
@@ -451,9 +473,9 @@
 
     async function requestReset() {
         isLoading = true;
-        let pow = await fetchSolvePow() || '';
+        let pow = (await fetchSolvePow()) || '';
 
-        let payload: RequestResetRequest = {email, pow};
+        let payload: RequestResetRequest = { email, pow };
         if (clientUri) {
             payload.redirect_uri = encodeURI(clientUri);
         }
@@ -477,14 +499,14 @@
     <title>Login: {clientName || clientId}</title>
 </svelte:head>
 
-<Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
-<Template id={TPL_ATPROTO_ID} bind:value={atprotoId}/>
-<Template id={TPL_CLIENT_NAME} bind:value={clientName}/>
-<Template id={TPL_CLIENT_URL} bind:value={clientUri}/>
-<Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated}/>
-<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken}/>
-<Template id={TPL_LOGIN_ACTION} bind:value={loginAction}/>
-<Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen}/>
+<Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
+<Template id={TPL_ATPROTO_ID} bind:value={atprotoId} />
+<Template id={TPL_CLIENT_NAME} bind:value={clientName} />
+<Template id={TPL_CLIENT_URL} bind:value={clientUri} />
+<Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated} />
+<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken} />
+<Template id={TPL_LOGIN_ACTION} bind:value={loginAction} />
+<Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen} />
 
 <Main>
     <div class="outer">
@@ -492,11 +514,14 @@
             <div class="container">
                 <div class="head">
                     {#if clientId}
-                        <ClientLogo {clientId} updated={clientLogoUpdated > -1 ? clientLogoUpdated : undefined}/>
+                        <ClientLogo
+                            {clientId}
+                            updated={clientLogoUpdated > -1 ? clientLogoUpdated : undefined}
+                        />
                     {/if}
                     {#if clientUri}
                         <a class="home" href={clientUri} aria-label="Client Home Page">
-                            <IconHome color="hsla(var(--text) / .4)"/>
+                            <IconHome color="hsla(var(--text) / .4)" />
                         </a>
                     {/if}
                 </div>
@@ -513,10 +538,10 @@
                     Another approach would be to check this in the backend and emit warning logs.
                     -->
                     <WebauthnRequest
-                            {userId}
-                            purpose={mfaPurpose}
-                            onSuccess={onWebauthnSuccess}
-                            onError={onWebauthnError}
+                        {userId}
+                        purpose={mfaPurpose}
+                        onSuccess={onWebauthnSuccess}
+                        onError={onWebauthnError}
                     />
                 {/if}
 
@@ -525,53 +550,53 @@
                         <div class:emailMinHeight={!showPasswordInput}>
                             {#if isAtproto}
                                 <Input
-                                        name="handle"
-                                        bind:value={atprotoHandle}
-                                        label="Handle / DID"
-                                        placeholder="Handle / DID"
-                                        pattern={PATTERN_ATPROTO_ID}
-                                        disabled={tooManyRequests}
-                                        width={inputWidth}
-                                        required
+                                    name="handle"
+                                    bind:value={atprotoHandle}
+                                    label="Handle / DID"
+                                    placeholder="Handle / DID"
+                                    pattern={PATTERN_ATPROTO_ID}
+                                    disabled={tooManyRequests}
+                                    width={inputWidth}
+                                    required
                                 />
                             {:else}
                                 <Input
-                                        bind:ref={refEmail}
-                                        typ="email"
-                                        name="email"
-                                        bind:value={email}
-                                        autocomplete="email"
-                                        label={t.common.email}
-                                        placeholder={t.common.email}
-                                        errMsg={t.authorize.validEmail}
-                                        disabled={tooManyRequests || clientMfaForce}
-                                        onInput={onEmailInput}
-                                        width={inputWidth}
-                                        required
+                                    bind:ref={refEmail}
+                                    typ="email"
+                                    name="email"
+                                    bind:value={email}
+                                    autocomplete="email"
+                                    label={t.common.email}
+                                    placeholder={t.common.email}
+                                    errMsg={t.authorize.validEmail}
+                                    disabled={tooManyRequests || clientMfaForce}
+                                    onInput={onEmailInput}
+                                    width={inputWidth}
+                                    required
                                 />
                             {/if}
                         </div>
 
                         {#if showPasswordInput}
                             <InputPassword
-                                    bind:ref={refPassword}
-                                    name="password"
-                                    bind:value={password}
-                                    autocomplete="current-password"
-                                    label={t.common.password}
-                                    placeholder={t.common.password}
-                                    maxLength={256}
-                                    disabled={tooManyRequests || clientMfaForce}
-                                    width={inputWidth}
-                                    required
+                                bind:ref={refPassword}
+                                name="password"
+                                bind:value={password}
+                                autocomplete="current-password"
+                                label={t.common.password}
+                                placeholder={t.common.password}
+                                maxLength={256}
+                                disabled={tooManyRequests || clientMfaForce}
+                                width={inputWidth}
+                                required
                             />
 
                             {#if showResetRequest && !tooManyRequests}
                                 <div class="forgotten">
                                     <Button
-                                            ariaLabel={t.authorize.passwordForgotten}
-                                            invisible
-                                            onclick={handleShowReset}
+                                        ariaLabel={t.authorize.passwordForgotten}
+                                        invisible
+                                        onclick={handleShowReset}
                                     >
                                         {t.authorize.passwordForgotten}
                                     </Button>
@@ -579,27 +604,34 @@
                             {/if}
                         {/if}
 
-                        {#if !tooManyRequests && !clientMfaForce }
+                        {#if !tooManyRequests && !clientMfaForce}
                             {#if showReset && !isAtproto}
                                 <div class="btn flex-col">
-                                    <Button ariaLabel={t.authorize.passwordRequest} onclick={requestReset}>
+                                    <Button
+                                        ariaLabel={t.authorize.passwordRequest}
+                                        onclick={requestReset}
+                                    >
                                         {t.authorize.passwordRequest}
                                     </Button>
                                 </div>
                             {:else}
                                 <div class="btn flex-col">
                                     <Button
-                                            type="submit"
-                                            ariaLabel={t.authorize.login}
-                                            onclick={() => onSubmit()}
-                                            {isLoading}
+                                        type="submit"
+                                        ariaLabel={t.authorize.login}
+                                        onclick={() => onSubmit()}
+                                        {isLoading}
                                     >
                                         {t.authorize.login}
                                     </Button>
                                 </div>
                                 {#if isAtproto}
                                     <div class="btn flex-col">
-                                        <Button ariaLabel={t.common.cancel} level={2} onclick={toggleAtproto}>
+                                        <Button
+                                            ariaLabel={t.common.cancel}
+                                            level={2}
+                                            onclick={toggleAtproto}
+                                        >
                                             {t.common.cancel}
                                         </Button>
                                     </div>
@@ -610,7 +642,11 @@
 
                     {#if isRegOpen && !showResetRequest && !tooManyRequests && !isAtproto}
                         {#if clientUri}
-                            <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
+                            <a
+                                class="reg"
+                                href="/auth/v1/users/register?redirect_uri={clientUri}"
+                                target="_blank"
+                            >
                                 {t.authorize.signUp}
                             </a>
                         {:else}
@@ -635,19 +671,17 @@
 
                 {#if clientMfaForce}
                     <div class="btn flex-col">
-                        <Button ariaLabel="Account" onclick={() => window.location.href = '/auth/v1/account'}>
+                        <Button
+                            ariaLabel="Account"
+                            onclick={() => (window.location.href = '/auth/v1/account')}
+                        >
                             Account
                         </Button>
                     </div>
                 {/if}
 
                 {#if tos}
-                    <TosAccept
-                            {tos}
-                            {tosAcceptCode}
-                            onToSAccept={handleAuthRes}
-                            {onToSCancel}
-                    />
+                    <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel} />
                 {/if}
 
                 {#if !clientMfaForce && providers.length > 0 && !isAtproto}
@@ -662,18 +696,20 @@
                         </div>
                         {#each providers as provider (provider.id)}
                             <ButtonAuthProvider
-                                    ariaLabel={`Login: ${provider.name}`}
-                                    {provider}
-                                    onclick={isProviderAtProto(provider.id) ? toggleAtproto : providerLogin}
-                                    {isLoading}
+                                ariaLabel={`Login: ${provider.name}`}
+                                {provider}
+                                onclick={isProviderAtProto(provider.id)
+                                    ? toggleAtproto
+                                    : providerLogin}
+                                {isLoading}
                             />
                         {/each}
                     </div>
                 {/if}
             </div>
 
-            <ThemeSwitch absolute/>
-            <LangSelector absolute/>
+            <ThemeSwitch absolute />
+            <LangSelector absolute />
         </ContentCenter>
     </div>
 </Main>
@@ -687,7 +723,7 @@
     .outer {
         width: 100dvw;
         height: 100dvh;
-        background: hsla(var(--bg-high) / .25);
+        background: hsla(var(--bg-high) / 0.25);
     }
 
     .container {
@@ -706,7 +742,7 @@
     }
 
     .errMsg {
-        margin: .5rem 0;
+        margin: 0.5rem 0;
         max-width: 18rem;
         text-wrap: wrap;
         color: hsl(var(--error));
@@ -718,7 +754,7 @@
     }
 
     .forgotten {
-        margin: 0 0 .5rem .5rem;
+        margin: 0 0 0.5rem 0.5rem;
     }
 
     .head {
@@ -734,37 +770,37 @@
     .loginWith {
         display: flex;
         justify-content: center;
-        margin-top: -.9rem;
+        margin-top: -0.9rem;
     }
 
     .loginWith > div {
-        padding: 0 .5rem;
-        font-size: .8rem;
-        color: hsla(var(--text) / .6);
+        padding: 0 0.5rem;
+        font-size: 0.8rem;
+        color: hsla(var(--text) / 0.6);
         background: hsl(var(--bg));
     }
 
     .name {
-        margin: 0 .5rem;
+        margin: 0 0.5rem;
     }
 
     .providersSeparator {
         margin-top: 1rem;
-        margin-bottom: .5rem;
+        margin-bottom: 0.5rem;
     }
 
     .separator {
         height: 1px;
-        background: hsla(var(--bg-high) / .8);
+        background: hsla(var(--bg-high) / 0.8);
     }
 
     .providers {
-        margin-top: .66rem;
+        margin-top: 0.66rem;
     }
 
     .reg {
-        margin-top: .5rem;
-        color: hsla(var(--text) / .85);
+        margin-top: 0.5rem;
+        color: hsla(var(--text) / 0.85);
     }
 
     .success {

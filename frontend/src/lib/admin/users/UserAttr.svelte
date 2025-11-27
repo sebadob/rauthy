@@ -1,25 +1,29 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import type {UserAttrValueRequest, UserAttrValuesUpdateRequest, UserResponse} from "$api/types/user.ts";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import IconCheck from "$icons/IconCheck.svelte";
-    import {fetchGet, fetchPut} from "$api/fetch";
+    import { onMount } from 'svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import type {
+        UserAttrValueRequest,
+        UserAttrValuesUpdateRequest,
+        UserResponse,
+    } from '$api/types/user.ts';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import { fetchGet, fetchPut } from '$api/fetch';
     import type {
         UserAttrConfigResponse,
         UserAttrConfigValueResponse,
         UserAttrValueResponse,
         UserAttrValuesResponse,
-    } from "$api/types/user_attrs.ts";
+    } from '$api/types/user_attrs.ts';
 
     let {
         user,
         onSave,
     }: {
-        user: UserResponse,
-        onSave: () => void,
+        user: UserResponse;
+        onSave: () => void;
     } = $props();
 
     let t = useI18n();
@@ -29,11 +33,11 @@
     let success = $state(false);
 
     interface AttrValue {
-        name: string,
-        desc?: string,
-        value: string,
-        defaultValue: string | undefined,
-        userEditable: boolean,
+        name: string;
+        desc?: string;
+        value: string;
+        defaultValue: string | undefined;
+        userEditable: boolean;
     }
 
     let attrsAll: UserAttrConfigValueResponse[] = $state([]);
@@ -43,7 +47,7 @@
 
     onMount(() => {
         fetchAllAttrs();
-    })
+    });
 
     $effect(() => {
         fetchUserAttr();
@@ -93,7 +97,7 @@
                         value: a.value.trim(),
                     };
                     return v;
-                })
+                }),
         };
 
         let res = await fetchPut(`/auth/v1/users/${user.id}/attr`, payload);
@@ -108,7 +112,6 @@
 
         onSave();
     }
-
 </script>
 
 <div class="container">
@@ -119,11 +122,11 @@
 
         {#each attrsCombined as a}
             <Input
-                    bind:value={a.value}
-                    autocomplete="off"
-                    label={a.name}
-                    placeholder={a.defaultValue ? a.defaultValue : a.desc || 'JSON Value'}
-                    onEnter={onSubmit}
+                bind:value={a.value}
+                autocomplete="off"
+                label={a.name}
+                placeholder={a.defaultValue ? a.defaultValue : a.desc || 'JSON Value'}
+                onEnter={onSubmit}
             />
         {/each}
 
@@ -133,7 +136,7 @@
             </Button>
 
             {#if success}
-                <IconCheck/>
+                <IconCheck />
             {/if}
         </div>
     {/if}
@@ -144,7 +147,6 @@
         {err}
     </div>
 {/if}
-
 
 <style>
     .container {

@@ -1,16 +1,16 @@
 <script lang="ts">
-    import {getCsrfToken, purgeStorage, saveCsrfToken} from "$utils/helpers";
-    import Button from "$lib5/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import Main from "$lib5/Main.svelte";
-    import ContentCenter from "$lib5/ContentCenter.svelte";
-    import LangSelector from "$lib5/LangSelector.svelte";
-    import type {LogoutParams} from "$api/types/logout.ts";
-    import Template from "$lib5/Template.svelte";
-    import {IS_DEV, TPL_CSRF_TOKEN} from "$utils/constants";
-    import {useParam} from "$state/param.svelte";
-    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
-    import {formDataFromObj} from "$api/fetch";
+    import { getCsrfToken, purgeStorage, saveCsrfToken } from '$utils/helpers';
+    import Button from '$lib5/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import Main from '$lib5/Main.svelte';
+    import ContentCenter from '$lib5/ContentCenter.svelte';
+    import LangSelector from '$lib5/LangSelector.svelte';
+    import type { LogoutParams } from '$api/types/logout.ts';
+    import Template from '$lib5/Template.svelte';
+    import { IS_DEV, TPL_CSRF_TOKEN } from '$utils/constants';
+    import { useParam } from '$state/param.svelte';
+    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
+    import { formDataFromObj } from '$api/fetch';
 
     let t = useI18n();
     let err = '';
@@ -69,7 +69,7 @@
     <title>{t?.logout.logout || 'Logout'}</title>
 </svelte:head>
 
-<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken}/>
+<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken} />
 
 <Main>
     <ContentCenter>
@@ -93,8 +93,8 @@
             {/if}
         </div>
 
-        <ThemeSwitch absolute/>
-        <LangSelector absolute/>
+        <ThemeSwitch absolute />
+        <LangSelector absolute />
     </ContentCenter>
 </Main>
 
@@ -115,7 +115,7 @@
     }
 
     .err {
-        margin-top: .66rem;
+        margin-top: 0.66rem;
         color: hsl(var(--error));
     }
 </style>

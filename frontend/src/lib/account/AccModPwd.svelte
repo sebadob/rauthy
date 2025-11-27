@@ -1,13 +1,13 @@
 <script lang="ts">
-    import PasswordPolicy from "$lib5/PasswordPolicy.svelte";
-    import {onMount} from "svelte";
-    import {generatePassword} from "$utils/helpers";
-    import InputPassword from "$lib5/form/InputPassword.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte.js";
-    import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
-    import {fetchGet} from "$api/fetch";
-    import type {PropsPassword} from "./props.ts";
+    import PasswordPolicy from '$lib5/PasswordPolicy.svelte';
+    import { onMount } from 'svelte';
+    import { generatePassword } from '$utils/helpers';
+    import InputPassword from '$lib5/form/InputPassword.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte.js';
+    import type { PasswordPolicyResponse } from '$api/types/password_policy.ts';
+    import { fetchGet } from '$api/fetch';
+    import type { PropsPassword } from './props.ts';
 
     let {
         passwords = $bindable(),
@@ -15,10 +15,10 @@
         inputWidth,
         isValid = $bindable(),
     }: {
-        passwords: PropsPassword
-        hideCurrentPassword?: boolean,
-        inputWidth: string,
-        isValid: undefined | (() => boolean),
+        passwords: PropsPassword;
+        hideCurrentPassword?: boolean;
+        inputWidth: string;
+        isValid: undefined | (() => boolean);
     } = $props();
 
     let t = useI18n();
@@ -88,42 +88,41 @@
             reportValidityConfirm?.();
         });
     }
-
 </script>
 
 {#if policy}
     <div class="container">
-        <PasswordPolicy bind:accepted {policy} password={passwords.new}/>
+        <PasswordPolicy bind:accepted {policy} password={passwords.new} />
 
         {#if !hideCurrentPassword}
             <InputPassword
-                    bind:value={passwords.current}
-                    autocomplete="current-password"
-                    label={t.account.passwordCurr}
-                    placeholder={t.account.passwordCurr}
-                    onInput={isPwdValid}
-                    width={inputWidth}
+                bind:value={passwords.current}
+                autocomplete="current-password"
+                label={t.account.passwordCurr}
+                placeholder={t.account.passwordCurr}
+                onInput={isPwdValid}
+                width={inputWidth}
             />
         {/if}
         <InputPassword
-                bind:value={passwords.new}
-                autocomplete="new-password"
-                label={t.account.passwordNew}
-                placeholder={t.account.passwordNew}
-                bind:reportValidity={reportValidityNew}
-                onInput={isPwdValid}
-                {showCopy}
-                width={inputWidth}
+            bind:value={passwords.new}
+            autocomplete="new-password"
+            label={t.account.passwordNew}
+            placeholder={t.account.passwordNew}
+            bind:reportValidity={reportValidityNew}
+            onInput={isPwdValid}
+            {showCopy}
+            width={inputWidth}
         />
         <InputPassword
-                bind:value={passwords.newConfirm}
-                autocomplete="new-password"
-                label={t.account.passwordConfirm}
-                placeholder={t.account.passwordConfirm}
-                bind:reportValidity={reportValidityConfirm}
-                onInput={isPwdValid}
-                {showCopy}
-                width={inputWidth}
+            bind:value={passwords.newConfirm}
+            autocomplete="new-password"
+            label={t.account.passwordConfirm}
+            placeholder={t.account.passwordConfirm}
+            bind:reportValidity={reportValidityConfirm}
+            onInput={isPwdValid}
+            {showCopy}
+            width={inputWidth}
         />
 
         <div class="btn">
@@ -140,15 +139,15 @@
 
 <style>
     .btn {
-        margin: .5rem 0;
+        margin: 0.5rem 0;
     }
 
     .container {
-        margin: .5rem 0;
+        margin: 0.5rem 0;
     }
 
     .err {
-        margin: .5rem 0;
+        margin: 0.5rem 0;
         text-align: left;
         color: hsl(var(--error));
     }

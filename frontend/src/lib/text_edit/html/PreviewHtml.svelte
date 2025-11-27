@@ -1,12 +1,11 @@
 <script lang="ts">
-
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {useMarkdownWorker} from "$lib/text_edit/useWorker.svelte";
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { useMarkdownWorker } from '$lib/text_edit/useWorker.svelte';
 
     let {
         content,
     }: {
-        content: string,
+        content: string;
     } = $props();
 
     let ta = useI18nAdmin();
@@ -19,10 +18,10 @@
 </script>
 
 <iframe
-        title={ta.common.preview}
-        class="md-global"
-        srcdoc={worker.sanitizedHTML()}
-        sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+    title={ta.common.preview}
+    class="md-global"
+    srcdoc={worker.sanitizedHTML()}
+    sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
 ></iframe>
 
 <style>

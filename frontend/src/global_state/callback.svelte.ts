@@ -9,6 +9,6 @@ export function useTrigger() {
         },
         trigger(idx: TriggerIndex, data?: any) {
             _signals[idx]?.(data);
-        }
-    }
+        },
+    };
 }

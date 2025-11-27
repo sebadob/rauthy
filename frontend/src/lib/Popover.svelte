@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type {Snippet} from "svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import {genKey} from "$utils/helpers";
+    import type { Snippet } from 'svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import { genKey } from '$utils/helpers';
 
     let {
         ref = $bindable(),
@@ -24,9 +24,9 @@
         onUp,
         onDown,
     }: {
-        ref?: undefined | HTMLButtonElement,
+        ref?: undefined | HTMLButtonElement;
         ariaLabel: string;
-        children: Snippet,
+        children: Snippet;
         roleButton?: string;
         offsetLeft?: string;
         offsetTop?: string;
@@ -34,15 +34,15 @@
         lazy?: boolean;
         btnDisabled?: boolean;
         btnInvisible?: boolean;
-        button: Snippet,
+        button: Snippet;
         close?: () => void;
 
         onToggle?: (newState: 'open' | 'closed') => void;
-        onTab?: () => void,
-        onLeft?: () => void,
-        onRight?: () => void,
-        onUp?: () => void,
-        onDown?: () => void,
+        onTab?: () => void;
+        onLeft?: () => void;
+        onRight?: () => void;
+        onUp?: () => void;
+        onDown?: () => void;
     } = $props();
 
     const idButton = genKey();
@@ -83,33 +83,33 @@
 
 <div>
     <Button
-            bind:ref
-            role={roleButton}
-            id={idButton}
-            ariaLabel={ariaLabel}
-            ariaControls={idPopover}
-            popovertarget={idPopover}
-            {onclick}
-            invisible={btnInvisible}
-            isDisabled={btnDisabled}
-            {onTab}
-            {onLeft}
-            {onRight}
-            {onUp}
-            {onDown}
+        bind:ref
+        role={roleButton}
+        id={idButton}
+        {ariaLabel}
+        ariaControls={idPopover}
+        popovertarget={idPopover}
+        {onclick}
+        invisible={btnInvisible}
+        isDisabled={btnDisabled}
+        {onTab}
+        {onLeft}
+        {onRight}
+        {onUp}
+        {onDown}
     >
         {@render button()}
     </Button>
 
     <div
-            bind:this={refPopover}
-            id={idPopover}
-            aria-label={ariaLabel}
-            aria-labelledby={idButton}
-            aria-expanded={isOpen}
-            class="popover"
-            popover="auto"
-            {ontoggle}
+        bind:this={refPopover}
+        id={idPopover}
+        aria-label={ariaLabel}
+        aria-labelledby={idButton}
+        aria-expanded={isOpen}
+        class="popover"
+        popover="auto"
+        {ontoggle}
     >
         <div class="inner fade-in">
             {#if lazy}
@@ -126,7 +126,7 @@
 <style>
     .popover {
         position: absolute;
-        background: hsla(var(--bg) / .98);
+        background: hsla(var(--bg) / 0.98);
         margin: 0;
         padding: 0;
         border: 1px solid hsl(var(--bg-high));

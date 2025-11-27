@@ -1,19 +1,19 @@
 <script lang="ts">
-    import {onMount, untrack} from "svelte";
-    import {redirectToLogin} from "$utils/helpers";
-    import Button from "$lib5/button/Button.svelte";
-    import Pagination from "$lib5/pagination/Pagination.svelte";
-    import SessionRow from "./SessionRow.svelte";
-    import type {SessionResponse} from "$api/types/session.ts";
-    import ContentAdmin from "$lib5/ContentAdmin.svelte";
-    import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
-    import {fetchDelete, fetchGet} from "$api/fetch";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {useSession} from "$state/session.svelte";
-    import PaginationServerSide from "$lib5/pagination/PaginationServerSide.svelte";
-    import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props";
-    import {fetchSearchServer, type SearchParamsIdxSession} from "$utils/search";
-    import {useTrigger} from "$state/callback.svelte";
+    import { onMount, untrack } from 'svelte';
+    import { redirectToLogin } from '$utils/helpers';
+    import Button from '$lib5/button/Button.svelte';
+    import Pagination from '$lib5/pagination/Pagination.svelte';
+    import SessionRow from './SessionRow.svelte';
+    import type { SessionResponse } from '$api/types/session.ts';
+    import ContentAdmin from '$lib5/ContentAdmin.svelte';
+    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
+    import { fetchDelete, fetchGet } from '$api/fetch';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { useSession } from '$state/session.svelte';
+    import PaginationServerSide from '$lib5/pagination/PaginationServerSide.svelte';
+    import { PAGE_SIZE_DEFAULT, type PageSize } from '$lib5/pagination/props';
+    import { fetchSearchServer, type SearchParamsIdxSession } from '$utils/search';
+    import { useTrigger } from '$state/callback.svelte';
 
     let ta = useI18nAdmin();
 
@@ -35,7 +35,14 @@
     let searchOptions = ['User ID', 'Session ID', 'IP'];
     let searchOption = $state(searchOptions[0]);
     let searchValue = $state('');
-    let orderOptions = [ta.options.expires, ta.options.lastSeen, 'Session ID', 'User ID', ta.options.state, 'IP'];
+    let orderOptions = [
+        ta.options.expires,
+        ta.options.lastSeen,
+        'Session ID',
+        'User ID',
+        ta.options.state,
+        'IP',
+    ];
 
     onMount(() => {
         fetchSessions('page_size=' + sspPageSize);
@@ -60,10 +67,11 @@
             } else if (searchOption === searchOptions[1]) {
                 sessionsFiltered = sessions.filter(s => s.id.toLowerCase().includes(search));
             } else if (searchOption === searchOptions[2]) {
-                sessionsFiltered = sessions.filter(s => s.remote_ip?.toLowerCase().includes(search));
+                sessionsFiltered = sessions.filter(s =>
+                    s.remote_ip?.toLowerCase().includes(search),
+                );
             }
         }
-
     });
 
     async function searchServer(q: string) {
@@ -79,7 +87,11 @@
             idx = 'ip';
         }
 
-        let res = await fetchSearchServer<SessionResponse[]>({ty: 'session', idx, q});
+        let res = await fetchSearchServer<SessionResponse[]>({
+            ty: 'session',
+            idx,
+            q,
+        });
         if (res.body) {
             sessions = res.body;
         } else {
@@ -90,7 +102,7 @@
     async function fetchSessions(urlParams?: string): Promise<[number, Headers]> {
         let url = '/auth/v1/sessions';
         if (urlParams) {
-            url += `?${urlParams}`
+            url += `?${urlParams}`;
         }
 
         let res = await fetchGet<SessionResponse[]>(url);
@@ -116,11 +128,11 @@
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
-            sessions.sort((a, b) => up ? a.exp - b.exp : b.exp - a.exp);
+            sessions.sort((a, b) => (up ? a.exp - b.exp : b.exp - a.exp));
         } else if (option === orderOptions[1]) {
-            sessions.sort((a, b) => up ? a.last_seen - b.last_seen : b.last_seen - a.last_seen);
+            sessions.sort((a, b) => (up ? a.last_seen - b.last_seen : b.last_seen - a.last_seen));
         } else if (option === orderOptions[2]) {
-            sessions.sort((a, b) => up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id));
+            sessions.sort((a, b) => (up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
         } else if (option === orderOptions[3]) {
             sessions.sort((a, b) => {
                 if (a.user_id && b.user_id) {
@@ -136,7 +148,9 @@
                 }
             });
         } else if (option === orderOptions[4]) {
-            sessions.sort((a, b) => up ? a.state.localeCompare(b.state) : b.state.localeCompare(a.state));
+            sessions.sort((a, b) =>
+                up ? a.state.localeCompare(b.state) : b.state.localeCompare(a.state),
+            );
         } else if (option === orderOptions[5]) {
             sessions.sort((a, b) => {
                 if (a.remote_ip && b.remote_ip) {
@@ -175,14 +189,14 @@
 <ContentAdmin>
     <div class="top">
         <OrderSearchBar
-                bind:ref={refOpts}
-                bind:value={searchValue}
-                {searchOptions}
-                bind:searchOption
-                {orderOptions}
-                {onChangeOrder}
-                searchWidth="min(25rem, calc(100dvw - 1rem))"
-                firstDirReverse
+            bind:ref={refOpts}
+            bind:value={searchValue}
+            {searchOptions}
+            bind:searchOption
+            {orderOptions}
+            {onChangeOrder}
+            searchWidth="min(25rem, calc(100dvw - 1rem))"
+            firstDirReverse
         />
         <div class="btn">
             <Button level={-1} onclick={invalidateSessions}>
@@ -200,32 +214,26 @@
     <div id="sessions">
         {#if firstFetchHeaders}
             {#each sessions as session (session.id)}
-                <SessionRow {session} {now} {onDeleted}/>
+                <SessionRow {session} {now} {onDeleted} />
             {/each}
         {:else}
             {#each sessionsPaginated as session (session.id)}
-                <SessionRow {session} {now} {onDeleted}/>
+                <SessionRow {session} {now} {onDeleted} />
             {/each}
         {/if}
     </div>
 
     {#if firstFetchHeaders}
         <PaginationServerSide
-                bind:pageSize={sspPageSize}
-                sspFetch={fetchSessions}
-                itemsLength={sessions.length}
-                {firstFetchHeaders}
+            bind:pageSize={sspPageSize}
+            sspFetch={fetchSessions}
+            itemsLength={sessions.length}
+            {firstFetchHeaders}
         />
     {:else if useServerSide}
-        <Pagination
-                bind:items={sessions}
-                bind:itemsPaginated={sessionsPaginated}
-        />
+        <Pagination bind:items={sessions} bind:itemsPaginated={sessionsPaginated} />
     {:else}
-        <Pagination
-                bind:items={sessionsFiltered}
-                bind:itemsPaginated={sessionsPaginated}
-        />
+        <Pagination bind:items={sessionsFiltered} bind:itemsPaginated={sessionsPaginated} />
     {/if}
 </ContentAdmin>
 
@@ -236,13 +244,13 @@
     }
 
     .btn {
-        margin: 0 .25rem;
+        margin: 0 0.25rem;
     }
 
     .top {
-        margin-bottom: .5rem;
+        margin-bottom: 0.5rem;
         display: flex;
-        gap: .5rem 1rem;
+        gap: 0.5rem 1rem;
         flex-wrap: wrap;
     }
 </style>

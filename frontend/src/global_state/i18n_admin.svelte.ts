@@ -1,9 +1,9 @@
-import {useLang} from "$state/language.svelte";
-import type {I18nAdmin} from "../i18n/admin/interface.ts";
-import {I18nAdminDe} from "../i18n/admin/de";
-import {I18nAdminEn} from "../i18n/admin/en";
-import {I18nAdminKo} from "../i18n/admin/ko";
-import {I18nAdminNb} from "../i18n/admin/nb";
+import { useLang } from '$state/language.svelte';
+import type { I18nAdmin } from '../i18n/admin/interface.ts';
+import { I18nAdminDe } from '../i18n/admin/de';
+import { I18nAdminEn } from '../i18n/admin/en';
+import { I18nAdminKo } from '../i18n/admin/ko';
+import { I18nAdminNb } from '../i18n/admin/nb';
 
 // This hack makes typescript happy and is fine as long as
 // we `initI18n()` as the very first thing in +layout
@@ -26,8 +26,8 @@ export function useI18nAdmin(): I18nAdmin {
 }
 
 const i18nMap: Record<string, I18nAdmin> = {
-		de: I18nAdminDe,
-		en: I18nAdminEn,
+    de: I18nAdminDe,
+    en: I18nAdminEn,
     ko: I18nAdminKo,
     nb: I18nAdminNb,
 };

@@ -1,8 +1,8 @@
 <script lang="ts">
-    import ContentAdmin from "$lib5/ContentAdmin.svelte";
-    import A from "$lib5/A.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.js";
-    import {useTrigger} from "$state/callback.svelte";
+    import ContentAdmin from '$lib5/ContentAdmin.svelte';
+    import A from '$lib5/A.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte.js';
+    import { useTrigger } from '$state/callback.svelte';
 
     let ta = useI18nAdmin();
 
@@ -22,7 +22,7 @@
     <p>
         {ta.docs.openapi}
         <A href="/auth/v1/docs/" target="_blank">Swagger UI</A>
-        <br>
+        <br />
         <b>{ta.common.note}:</b>
         {ta.docs.openapiNote}
     </p>

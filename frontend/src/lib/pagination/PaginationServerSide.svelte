@@ -1,10 +1,10 @@
 <script lang="ts">
-    import IconChevronRight from "$icons/IconChevronRight.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import Options from "$lib5/Options.svelte";
-    import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props";
-    import {onMount, untrack} from "svelte";
+    import IconChevronRight from '$icons/IconChevronRight.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import Options from '$lib5/Options.svelte';
+    import { PAGE_SIZE_DEFAULT, type PageSize } from '$lib5/pagination/props';
+    import { onMount, untrack } from 'svelte';
 
     const options: PageSize[] = [5, 10, 20, 30, 50, 100];
 
@@ -15,25 +15,29 @@
         itemsLength,
         firstFetchHeaders,
     }: {
-        pageSize: PageSize,
+        pageSize: PageSize;
         sspFetch: (urlParams: string) => Promise<[number, Headers]>;
-        idxTotalCount?: string,
-        itemsLength: number,
-        firstFetchHeaders: Headers,
+        idxTotalCount?: string;
+        itemsLength: number;
+        firstFetchHeaders: Headers;
     } = $props();
 
     let t = useI18n();
 
-    const iconSize = "1rem";
+    const iconSize = '1rem';
 
     // We want to keep that logic inside this component instead of expecting
     // the parent to extract the information from the headers.
-    pageSize = Number.parseInt(firstFetchHeaders.get('x-page-size') || PAGE_SIZE_DEFAULT.toString()) as PageSize;
+    pageSize = Number.parseInt(
+        firstFetchHeaders.get('x-page-size') || PAGE_SIZE_DEFAULT.toString(),
+    ) as PageSize;
 
     let itemsTotal: undefined | null | number = $state();
     let pageSizeBefore = untrack(() => pageSize);
     let pageCount = $state(Number.parseInt(firstFetchHeaders.get('x-page-count') || '1'));
-    let continuationToken: string | undefined | null = $state(firstFetchHeaders.get('x-continuation-token'));
+    let continuationToken: string | undefined | null = $state(
+        firstFetchHeaders.get('x-continuation-token'),
+    );
     let page = $state(1);
 
     let isLastPage = $derived(page >= pageCount);
@@ -121,7 +125,7 @@
     <div class="flex">
         <Button onclick={goLeft} invisible isDisabled={page < 2}>
             <div class="iconLeft" aria-label={t.pagination.gotoPagePrev} data-disabled={page === 1}>
-                <IconChevronRight width={iconSize}/>
+                <IconChevronRight width={iconSize} />
             </div>
         </Button>
 
@@ -132,8 +136,12 @@
         </ul>
 
         <Button onclick={goRight} invisible isDisabled={isLastPage}>
-            <div class="iconRight" aria-label={t.pagination.gotoPageNext} data-disabled={isLastPage}>
-                <IconChevronRight width={iconSize}/>
+            <div
+                class="iconRight"
+                aria-label={t.pagination.gotoPageNext}
+                data-disabled={isLastPage}
+            >
+                <IconChevronRight width={iconSize} />
             </div>
         </Button>
     </div>
@@ -145,16 +153,18 @@
             </div>
             <div>
                 <Options
-                        ariaLabel={t.pagination.showCount}
-                        bind:value={pageSize}
-                        options={options}
-                        offsetTop="-14rem"
-                        borderless
+                    ariaLabel={t.pagination.showCount}
+                    bind:value={pageSize}
+                    {options}
+                    offsetTop="-14rem"
+                    borderless
                 />
             </div>
         </div>
         {#if itemsTotal}
-            <div class="font-label total">{t.pagination.total}: {itemsTotal}</div>
+            <div class="font-label total">
+                {t.pagination.total}: {itemsTotal}
+            </div>
         {/if}
     </div>
 </div>
@@ -175,11 +185,11 @@
         display: flex;
         align-items: center;
         flex-wrap: wrap;
-        padding: .25rem 0;
+        padding: 0.25rem 0;
     }
 
-    .iconLeft[data-disabled="true"],
-    .iconRight[data-disabled="true"] {
+    .iconLeft[data-disabled='true'],
+    .iconRight[data-disabled='true'] {
         color: hsl(var(--bg-high));
     }
 
@@ -193,7 +203,7 @@
     }
 
     .total {
-        transform: translateY(.05rem);
+        transform: translateY(0.05rem);
         text-wrap: nowrap;
     }
 </style>

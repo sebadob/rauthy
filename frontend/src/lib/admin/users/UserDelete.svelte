@@ -1,16 +1,16 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {fetchDelete} from "$api/fetch";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {useSession} from "$state/session.svelte";
+    import Button from '$lib5/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { fetchDelete } from '$api/fetch';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { useSession } from '$state/session.svelte';
 
     let {
         userId,
         onSave,
     }: {
-        userId: string,
-        onSave: () => void,
+        userId: string;
+        onSave: () => void;
     } = $props();
 
     let t = useI18n();

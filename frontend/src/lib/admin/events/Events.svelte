@@ -1,15 +1,15 @@
 <script lang="ts">
-    import Event from "$lib5/admin/events/Event.svelte";
-    import EventsLegend from "./EventsLegend.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import {EVENT_LEVELS} from "$utils/constants";
-    import {isBrowser} from "$utils/helpers";
-    import type {EventLevel, EventResponse} from "$api/types/events.ts";
-    import Options from "$lib5/Options.svelte";
-    import {onDestroy} from "svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {fetchPost} from "$api/fetch";
-    import {useTrigger} from "$state/callback.svelte";
+    import Event from '$lib5/admin/events/Event.svelte';
+    import EventsLegend from './EventsLegend.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import { EVENT_LEVELS } from '$utils/constants';
+    import { isBrowser } from '$utils/helpers';
+    import type { EventLevel, EventResponse } from '$api/types/events.ts';
+    import Options from '$lib5/Options.svelte';
+    import { onDestroy } from 'svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { fetchPost } from '$api/fetch';
+    import { useTrigger } from '$state/callback.svelte';
 
     const latest = 50;
 
@@ -23,8 +23,8 @@
     let eventsFiltered: EventResponse[] = $state([]);
     let level: EventLevel = $state(
         isBrowser()
-            ? localStorage.getItem('eventLevel')?.toLowerCase() as EventLevel || 'info'
-            : 'info'
+            ? (localStorage.getItem('eventLevel')?.toLowerCase() as EventLevel) || 'info'
+            : 'info',
     );
     let levelBefore = '';
 
@@ -52,19 +52,23 @@
                 break;
             case 'notice':
                 eventsFiltered = events.filter(
-                    evt => evt.typ === 'Test'
-                        || evt.level === 'notice'
-                        || evt.level === 'warning'
-                        || evt.level === 'critical'
+                    evt =>
+                        evt.typ === 'Test' ||
+                        evt.level === 'notice' ||
+                        evt.level === 'warning' ||
+                        evt.level === 'critical',
                 );
                 break;
             case 'warning':
                 eventsFiltered = events.filter(
-                    evt => evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical'
+                    evt =>
+                        evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical',
                 );
                 break;
             case 'critical':
-                eventsFiltered = events.filter(evt => evt.typ === 'Test' || evt.level === 'critical');
+                eventsFiltered = events.filter(
+                    evt => evt.typ === 'Test' || evt.level === 'critical',
+                );
                 break;
         }
     });
@@ -74,13 +78,15 @@
     }
 
     function stream() {
-        localStorage.setItem('eventLevel', level)
+        localStorage.setItem('eventLevel', level);
 
         if (es && es.readyState !== 2) {
             es.close();
         }
 
-        es = new EventSource(`/auth/v1/events/stream?latest=${latest}&level=${level.toLowerCase()}`);
+        es = new EventSource(
+            `/auth/v1/events/stream?latest=${latest}&level=${level.toLowerCase()}`,
+        );
 
         es.onopen = () => {
             events = [];
@@ -103,7 +109,7 @@
     }
 </script>
 
-<svelte:window bind:innerWidth/>
+<svelte:window bind:innerWidth />
 
 <div id="events" class:wide class:narrow={!wide}>
     <div class="upper">
@@ -111,36 +117,34 @@
             <div class="flex gap-10">
                 <b>Events</b>
                 <Options
-                        ariaLabel={ta.events.eventLevel}
-                        options={EVENT_LEVELS}
-                        bind:value={level}
-                        borderless
+                    ariaLabel={ta.events.eventLevel}
+                    options={EVENT_LEVELS}
+                    bind:value={level}
+                    borderless
                 />
             </div>
 
-            <Button ariaLabel="Test Event" level={3} onclick={sendTestEvent}>
-                Test
-            </Button>
+            <Button ariaLabel="Test Event" level={3} onclick={sendTestEvent}>Test</Button>
         </div>
 
         <div aria-live="polite" aria-relevant="additions" class="data">
             {#each eventsFiltered as event (event.id)}
-                <Event {event}/>
+                <Event {event} />
             {/each}
         </div>
     </div>
 
-    <EventsLegend {wide}/>
+    <EventsLegend {wide} />
 </div>
 
 <style>
     #events {
         height: 100dvh;
-        margin-left: .5rem;
+        margin-left: 0.5rem;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        background: hsla(var(--bg-high) / .1);
+        background: hsla(var(--bg-high) / 0.1);
         border-radius: var(--border-radius) 0 0 var(--border-radius);
         overflow-y: clip;
         transition: all 150ms ease-in-out;
@@ -148,7 +152,7 @@
 
     .data {
         max-height: calc(100dvh - 7.5rem);
-        background: hsla(var(--bg-high) / .1);
+        background: hsla(var(--bg-high) / 0.1);
         overflow-y: auto;
     }
 
@@ -156,7 +160,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0 .5rem 0 calc(2px + .5rem);
+        padding: 0 0.5rem 0 calc(2px + 0.5rem);
     }
 
     .narrow {

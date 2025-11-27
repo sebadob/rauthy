@@ -1,11 +1,11 @@
 <script lang="ts">
-    import type {FullAutoFill} from "svelte/elements";
-    import IconClipboard from "$icons/IconClipboard.svelte";
-    import IconEyeSlash from "$icons/IconEyeSlash.svelte";
-    import IconEye from "$icons/IconEye.svelte";
-    import {slide} from "svelte/transition";
-    import {useI18n} from "$state/i18n.svelte";
-    import Button from "$lib5/button/Button.svelte";
+    import type { FullAutoFill } from 'svelte/elements';
+    import IconClipboard from '$icons/IconClipboard.svelte';
+    import IconEyeSlash from '$icons/IconEyeSlash.svelte';
+    import IconEye from '$icons/IconEye.svelte';
+    import { slide } from 'svelte/transition';
+    import { useI18n } from '$state/i18n.svelte';
+    import Button from '$lib5/button/Button.svelte';
 
     let {
         ref = $bindable(),
@@ -30,29 +30,29 @@
         onEnter,
         onInput,
     }: {
-        ref?: undefined | HTMLInputElement,
-        type?: string,
-        id?: undefined | string,
-        name?: string,
-        value?: string,
-        label?: string,
-        ariaLabel?: string,
-        autocomplete?: FullAutoFill | null | undefined,
-        placeholder: string,
-        disabled?: boolean | null | undefined,
-        maxLength?: number | null | undefined,
-        min?: string,
-        max?: string,
-        required?: boolean,
-        pattern?: string,
-        errMsg?: string,
-        width?: string,
-        showCopy?: boolean,
+        ref?: undefined | HTMLInputElement;
+        type?: string;
+        id?: undefined | string;
+        name?: string;
+        value?: string;
+        label?: string;
+        ariaLabel?: string;
+        autocomplete?: FullAutoFill | null | undefined;
+        placeholder: string;
+        disabled?: boolean | null | undefined;
+        maxLength?: number | null | undefined;
+        min?: string;
+        max?: string;
+        required?: boolean;
+        pattern?: string;
+        errMsg?: string;
+        width?: string;
+        showCopy?: boolean;
 
-        reportValidity?: () => void,
-        onBlur?: () => void,
-        onEnter?: () => void,
-        onInput?: () => void,
+        reportValidity?: () => void;
+        onBlur?: () => void;
+        onEnter?: () => void;
+        onInput?: () => void;
     } = $props();
 
     let t = useI18n();
@@ -65,7 +65,7 @@
         if (navigator.clipboard) {
             navigator.clipboard.writeText(value);
         } else {
-            console.error("Copy to clipboard is only available in secure contexts");
+            console.error('Copy to clipboard is only available in secure contexts');
         }
     }
 
@@ -79,7 +79,7 @@
 
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLInputElement }) {
         isValid();
-        onBlur?.()
+        onBlur?.();
     }
 
     function oninput(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
@@ -109,34 +109,30 @@
         isError = false;
         return true;
     }
-
 </script>
 
-<div style:width={width}>
+<div style:width>
     <div class="input-row">
         <input
-                bind:this={ref}
-                {type}
-                {id}
-                {name}
-                title={errMsg}
-                aria-label={ariaLabel}
-                style:padding-right={showCopy ? '3.8rem' : '2.2rem'}
-                bind:value
-
-                {autocomplete}
-                {placeholder}
-                {disabled}
-
-                required={required || undefined}
-                aria-required={required || false}
-                maxlength={maxLength || undefined}
-                pattern={pattern || undefined}
-
-                {oninput}
-                {oninvalid}
-                {onblur}
-                {onkeydown}
+            bind:this={ref}
+            {type}
+            {id}
+            {name}
+            title={errMsg}
+            aria-label={ariaLabel}
+            style:padding-right={showCopy ? '3.8rem' : '2.2rem'}
+            bind:value
+            {autocomplete}
+            {placeholder}
+            {disabled}
+            required={required || undefined}
+            aria-required={required || false}
+            maxlength={maxLength || undefined}
+            pattern={pattern || undefined}
+            {oninput}
+            {oninvalid}
+            {onblur}
+            {onkeydown}
         />
 
         <div class="rel">
@@ -144,31 +140,23 @@
                 <div class="btn clip">
                     <Button ariaLabel={t.common.copyToClip} invisible onclick={copy}>
                         <div title={t.common.copyToClip}>
-                            <IconClipboard/>
+                            <IconClipboard />
                         </div>
                     </Button>
                 </div>
             {/if}
 
             <div class="btn show">
-                {#if type === 'password' }
-                    <Button
-                            ariaLabel={t.common.show}
-                            invisible
-                            onclick={toggleView}
-                    >
+                {#if type === 'password'}
+                    <Button ariaLabel={t.common.show} invisible onclick={toggleView}>
                         <div title={t.common.show}>
-                            <IconEyeSlash/>
+                            <IconEyeSlash />
                         </div>
                     </Button>
                 {:else}
-                    <Button
-                            ariaLabel={t.common.hide}
-                            invisible
-                            onclick={toggleView}
-                    >
+                    <Button ariaLabel={t.common.hide} invisible onclick={toggleView}>
                         <div title={t.common.hide}>
-                            <IconEye/>
+                            <IconEye />
                         </div>
                     </Button>
                 {/if}
@@ -182,7 +170,7 @@
         {label}
     </label>
     {#if isError}
-        <div class="error" transition:slide={{duration: 150}}>
+        <div class="error" transition:slide={{ duration: 150 }}>
             {#if !label}
                 <div class="nolabel"></div>
             {/if}
@@ -193,7 +181,7 @@
 
 <style>
     .error {
-        margin-top: -.5rem;
+        margin-top: -0.5rem;
         color: hsl(var(--error));
     }
 
@@ -202,9 +190,10 @@
         flex-direction: row;
     }
 
-    label, .error {
+    label,
+    .error {
         line-height: 1.1rem;
-        font-size: .9rem;
+        font-size: 0.9rem;
     }
 
     label {
@@ -214,11 +203,11 @@
     .label {
         width: 100%;
         margin-top: -1.1rem;
-        padding: .5rem;
+        padding: 0.5rem;
     }
 
     .nolabel {
-        height: .8rem;
+        height: 0.8rem;
     }
 
     .btn {

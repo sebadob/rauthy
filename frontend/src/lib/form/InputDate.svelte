@@ -1,14 +1,14 @@
 <script lang="ts">
-    import {slide} from "svelte/transition";
-    import {dayToString, fmtDateInput, getWeeksInMonth, type Day} from "$utils/form";
-    import {onMount, untrack} from "svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {CalendarDate, getDayOfWeek, parseDate} from "@internationalized/date";
-    import Popover from "$lib5/Popover.svelte";
-    import Options from "$lib5/Options.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import IconCalendar from "$icons/IconCalendar.svelte";
-    import type {PropsInputDate} from "$lib5/form/props.ts";
+    import { slide } from 'svelte/transition';
+    import { dayToString, fmtDateInput, getWeeksInMonth, type Day } from '$utils/form';
+    import { onMount, untrack } from 'svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { CalendarDate, getDayOfWeek, parseDate } from '@internationalized/date';
+    import Popover from '$lib5/Popover.svelte';
+    import Options from '$lib5/Options.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import IconCalendar from '$icons/IconCalendar.svelte';
+    import type { PropsInputDate } from '$lib5/form/props.ts';
 
     let {
         id,
@@ -62,10 +62,10 @@
 
     let day = $state(today.day);
     let month = $state(t.common.months[today.month - 1]);
-    let monthIdx = $derived(t.common.months.findIndex(m => m === month) + 1)
+    let monthIdx = $derived(t.common.months.findIndex(m => m === month) + 1);
     let year = $state(today.year);
     let yearOptions = $state([untrack(() => year)]);
-    let weeks = $state(getWeeksInMonth(today, t.lang))
+    let weeks = $state(getWeeksInMonth(today, t.lang));
 
     let isFirstRender = true;
 
@@ -90,9 +90,9 @@
         if (value) {
             let dt = parseDate(value);
             day = dt.day;
-            month = t.common.months[dt.month - 1]
+            month = t.common.months[dt.month - 1];
             year = dt.year;
-            weeks = getWeeksInMonth(dt, t.lang)
+            weeks = getWeeksInMonth(dt, t.lang);
         }
     });
 
@@ -119,7 +119,7 @@
                         break;
                     }
                 }
-            })
+            });
         }
     });
 
@@ -153,16 +153,16 @@
 
         switch (direction) {
             case 'left':
-                after = before.subtract({days: 1});
+                after = before.subtract({ days: 1 });
                 break;
             case 'right':
-                after = before.add({days: 1});
+                after = before.add({ days: 1 });
                 break;
             case 'up':
-                after = before.subtract({weeks: 1});
+                after = before.subtract({ weeks: 1 });
                 break;
             case 'down':
-                after = before.add({weeks: 1});
+                after = before.add({ weeks: 1 });
                 break;
         }
 
@@ -211,82 +211,78 @@
             case 'closed':
                 refMonthContainer = undefined;
                 break;
-
         }
     }
 
     function reportValidity() {
         isErr = !refInput?.reportValidity();
     }
-
 </script>
 
 <div>
     <div class="flex">
         <input
-                bind:this={refInput}
-                type="date"
-                {id}
-                {name}
-                title={label}
-                aria-label={label}
-                bind:value
-
-                {disabled}
-                aria-disabled={disabled}
-                {required}
-                aria-required={required || false}
-                aria-invalid={isErr}
-                {min}
-                {max}
-                step="any"
-
-                {oninvalid}
-                onkeydown={onKeyDownInput}
-                onblur={() => reportValidity()}
+            bind:this={refInput}
+            type="date"
+            {id}
+            {name}
+            title={label}
+            aria-label={label}
+            bind:value
+            {disabled}
+            aria-disabled={disabled}
+            {required}
+            aria-required={required || false}
+            aria-invalid={isErr}
+            {min}
+            {max}
+            step="any"
+            {oninvalid}
+            onkeydown={onKeyDownInput}
+            onblur={() => reportValidity()}
         />
 
         <div class="relative">
             <div class="absolute patch"></div>
             <div class="absolute indicator">
                 <Popover
-                        ariaLabel="Show Popover Example"
-                        offsetLeft="-7.5rem"
-                        offsetTop="-.2rem"
-                        bind:close
-                        {onToggle}
-                        btnInvisible
-                        lazy
+                    ariaLabel="Show Popover Example"
+                    offsetLeft="-7.5rem"
+                    offsetTop="-.2rem"
+                    bind:close
+                    {onToggle}
+                    btnInvisible
+                    lazy
                 >
                     {#snippet button()}
                         <div title={label} class="pointer">
-                            <IconCalendar color="hsl(var(--text)" width="1.2rem"/>
+                            <IconCalendar color="hsl(var(--text)" width="1.2rem" />
                         </div>
                     {/snippet}
                     <div class="popup">
                         <div class="flex space-between">
                             <div>
                                 <Options
-                                        bind:ref={refMonth}
-                                        ariaLabel={t.common.month}
-                                        options={t.common.months}
-                                        bind:value={month}
-                                        maxHeight="13rem"
-                                        borderless
-                                        onRight={() => refYear?.focus()}
-                                        onDown={setToFirstOfMonth}
+                                    bind:ref={refMonth}
+                                    ariaLabel={t.common.month}
+                                    options={t.common.months}
+                                    bind:value={month}
+                                    maxHeight="13rem"
+                                    borderless
+                                    onRight={() => refYear?.focus()}
+                                    onDown={setToFirstOfMonth}
                                 />
                             </div>
                             <div>
                                 <Options
-                                        bind:ref={refYear}
-                                        ariaLabel={t.common.year}
-                                        options={yearOptions}
-                                        bind:value={year}
-                                        maxHeight="13rem"
-                                        borderless
-                                        onLeft={() => refMonth?.focus()}
-                                        onDown={setToFirstOfMonth}
+                                    bind:ref={refYear}
+                                    ariaLabel={t.common.year}
+                                    options={yearOptions}
+                                    bind:value={year}
+                                    maxHeight="13rem"
+                                    borderless
+                                    onLeft={() => refMonth?.focus()}
+                                    onDown={setToFirstOfMonth}
                                 />
                             </div>
                         </div>
@@ -307,20 +303,20 @@
                                         {@const dataActive = isDataActive(day)}
                                         <div class="day">
                                             <Button
-                                                    onclick={ev => onClick(ev, datetime)}
-                                                    isDisabled={!dataActive}
-                                                    invisible
-                                                    onLeft={() => onKeyDownCalendar('left', datetime)}
-                                                    onRight={() => onKeyDownCalendar('right', datetime)}
-                                                    onUp={() => onKeyDownCalendar('up', datetime)}
-                                                    onDown={() => onKeyDownCalendar('down', datetime)}
+                                                onclick={ev => onClick(ev, datetime)}
+                                                isDisabled={!dataActive}
+                                                invisible
+                                                onLeft={() => onKeyDownCalendar('left', datetime)}
+                                                onRight={() => onKeyDownCalendar('right', datetime)}
+                                                onUp={() => onKeyDownCalendar('up', datetime)}
+                                                onDown={() => onKeyDownCalendar('down', datetime)}
                                             >
                                                 <time
-                                                        data-today={datetime === todayStr}
-                                                        data-active={dataActive}
-                                                        data-selected={datetime === value}
-                                                        data-weekend={day.isWeekend}
-                                                        {datetime}
+                                                    data-today={datetime === todayStr}
+                                                    data-active={dataActive}
+                                                    data-selected={datetime === value}
+                                                    data-weekend={day.isWeekend}
+                                                    {datetime}
                                                 >
                                                     {day.day}
                                                 </time>
@@ -341,7 +337,7 @@
             {label}
         </label>
         {#if isErr}
-            <div class="error" transition:slide={{duration: 150}}>
+            <div class="error" transition:slide={{ duration: 150 }}>
                 {errMsg}
             </div>
         {/if}
@@ -349,8 +345,8 @@
 </div>
 
 <style>
-    input[type="date"] {
-        padding-left: .2rem;
+    input[type='date'] {
+        padding-left: 0.2rem;
         width: 9rem;
     }
 
@@ -362,12 +358,12 @@
     }
 
     .day time {
-        padding: .2rem .33rem;
+        padding: 0.2rem 0.33rem;
         color: hsl(var(--text));
         font-weight: normal;
     }
 
-    time[data-today="true"] {
+    time[data-today='true'] {
         color: hsl(var(--accent));
     }
 
@@ -375,48 +371,49 @@
     /*    background: hsl(var(--bg-high));*/
     /*}*/
 
-    time[data-active="true"]:hover {
+    time[data-active='true']:hover {
         color: hsl(var(--action));
         transform: scale(1.05);
     }
 
-    time[data-weekend="true"] {
+    time[data-weekend='true'] {
         color: hsl(var(--error));
     }
 
-    time[data-selected="true"] {
+    time[data-selected='true'] {
         color: hsl(var(--action));
     }
 
-    time[data-active="false"] {
+    time[data-active='false'] {
         color: hsl(var(--bg-high));
     }
 
     .error {
-        margin-top: -.5rem;
+        margin-top: -0.5rem;
         color: hsl(var(--error));
     }
 
     .indicator {
-        top: -.7rem;
+        top: -0.7rem;
         right: 0;
         padding: 2px 5px 0 5px;
     }
 
-    label, .error {
+    label,
+    .error {
         line-height: 1.1rem;
-        font-size: .9rem;
+        font-size: 0.9rem;
     }
 
     label {
-        color: hsla(var(--text) / .8);
+        color: hsla(var(--text) / 0.8);
         flex-wrap: wrap;
     }
 
     .label {
         width: 100%;
         margin-top: -1.1rem;
-        padding: .5rem;
+        padding: 0.5rem;
     }
 
     .month {
@@ -434,7 +431,7 @@
     }
 
     .popup {
-        padding: .5rem;
+        padding: 0.5rem;
         border-radius: var(--border-radius);
         cursor: default;
     }
@@ -445,7 +442,7 @@
 
     .weekLabel {
         height: 1.2rem;
-        font-size: .7rem;
-        color: hsla(var(--text) / .66);
+        font-size: 0.7rem;
+        color: hsla(var(--text) / 0.66);
     }
 </style>

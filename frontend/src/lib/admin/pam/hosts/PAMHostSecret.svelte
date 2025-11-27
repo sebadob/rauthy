@@ -1,16 +1,16 @@
 <script lang="ts">
-    import Modal from "$lib/Modal.svelte";
-    import Button from "$lib/button/Button.svelte";
-    import {fetchPost, fetchPut} from "$api/fetch";
-    import type {PamHostSecretResponse} from "$api/types/pam";
-    import HiddenValueArea from "$lib/HiddenValueArea.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {useI18n} from "$state/i18n.svelte";
+    import Modal from '$lib/Modal.svelte';
+    import Button from '$lib/button/Button.svelte';
+    import { fetchPost, fetchPut } from '$api/fetch';
+    import type { PamHostSecretResponse } from '$api/types/pam';
+    import HiddenValueArea from '$lib/HiddenValueArea.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { useI18n } from '$state/i18n.svelte';
 
     let {
         hostId,
     }: {
-        hostId: string,
+        hostId: string;
     } = $props();
 
     let t = useI18n();
@@ -55,11 +55,7 @@
         <h1>Secret</h1>
 
         {#key secret}
-            <HiddenValueArea
-                    ariaLabel="Secret"
-                    rows={3}
-                    value={secret}
-            />
+            <HiddenValueArea ariaLabel="Secret" rows={3} value={secret} />
         {/key}
 
         <div class="btn">
@@ -84,7 +80,7 @@
         margin-top: 1rem;
         display: flex;
         align-items: center;
-        gap: .5rem;
+        gap: 0.5rem;
     }
 
     .container {

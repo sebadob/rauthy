@@ -1,29 +1,29 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import {fade} from 'svelte/transition';
-    import AccModPwd from "$lib5/account/AccModPwd.svelte";
-    import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
-    import CheckIcon from "$lib5/CheckIcon.svelte";
-    import {useI18n} from "$state/i18n.svelte.js";
-    import type {UpdateUserSelfRequest, UserResponse} from "$api/types/user.ts";
-    import type {AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
-    import IconCheck from "$icons/IconCheck.svelte";
-    import type {PropsPassword} from "./props.ts";
-    import {fetchGet, fetchPost, fetchPut} from "$api/fetch";
-    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import type {PasskeyResponse} from "$api/types/webauthn.ts";
-    import {onMount} from "svelte";
-    import type {RequestResetRequest} from "$api/types/authorize.ts";
-    import {fetchSolvePow} from "$utils/pow";
+    import Button from '$lib5/button/Button.svelte';
+    import { fade } from 'svelte/transition';
+    import AccModPwd from '$lib5/account/AccModPwd.svelte';
+    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
+    import CheckIcon from '$lib5/CheckIcon.svelte';
+    import { useI18n } from '$state/i18n.svelte.js';
+    import type { UpdateUserSelfRequest, UserResponse } from '$api/types/user.ts';
+    import type { AuthProviderTemplate } from '$api/templates/AuthProvider.ts';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import type { PropsPassword } from './props.ts';
+    import { fetchGet, fetchPost, fetchPut } from '$api/fetch';
+    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
+    import type { PasskeyResponse } from '$api/types/webauthn.ts';
+    import { onMount } from 'svelte';
+    import type { RequestResetRequest } from '$api/types/authorize.ts';
+    import { fetchSolvePow } from '$utils/pow';
 
     let {
         user = $bindable(),
         authProvider,
         viewModePhone,
     }: {
-        user: UserResponse,
-        authProvider: undefined | AuthProviderTemplate,
-        viewModePhone?: boolean,
+        user: UserResponse;
+        authProvider: undefined | AuthProviderTemplate;
+        viewModePhone?: boolean;
     } = $props();
 
     let t = useI18n();
@@ -136,15 +136,15 @@
     function onWebauthnSuccess(data?: WebauthnAdditionalData) {
         mfaPurpose = undefined;
         if (data && 'code' in data) {
-            onSubmitFinish(data.code)
+            onSubmitFinish(data.code);
         }
     }
 
     async function requestPasswordReset() {
-        let pow = await fetchSolvePow() || '';
+        let pow = (await fetchSolvePow()) || '';
         let payload: RequestResetRequest = {
             pow,
-            email: user.email
+            email: user.email,
         };
         let res = await fetchPost('/auth/v1/users/request_reset', payload);
         if (res.error) {
@@ -158,10 +158,10 @@
 <div class="container">
     {#if mfaPurpose}
         <WebauthnRequest
-                userId={user.id}
-                purpose={mfaPurpose}
-                onSuccess={onWebauthnSuccess}
-                onError={onWebauthnError}
+            userId={user.id}
+            purpose={mfaPurpose}
+            onSuccess={onWebauthnSuccess}
+            onError={onWebauthnError}
         />
     {/if}
 
@@ -172,7 +172,7 @@
             <div style:height=".3rem"></div>
             <p>{t.account.federatedConvertPassword2}</p>
             {#if success}
-                <CheckIcon checked/>
+                <CheckIcon checked />
             {:else}
                 <Button level={2} onclick={requestPasswordReset}>
                     {t.account.passwordReset}
@@ -181,24 +181,24 @@
         </div>
     {/if}
 
-    {#if (accType === "passkey" || accType === "federated_passkey") && !convertAccount}
+    {#if (accType === 'passkey' || accType === 'federated_passkey') && !convertAccount}
         <p>{t.account.accTypePasskeyText1}</p>
         <p>{t.account.accTypePasskeyText2}</p>
         <p>{t.account.accTypePasskeyText3}</p>
         <div>
-            <Button level={2} onclick={() => convertAccount = true}>
+            <Button level={2} onclick={() => (convertAccount = true)}>
                 {t.account.convertAccount}
             </Button>
         </div>
     {/if}
 
-    {#if accType === "password" || accType === "federated_password" || convertAccount}
+    {#if accType === 'password' || accType === 'federated_password' || convertAccount}
         <div>
             <AccModPwd
-                    bind:passwords
-                    bind:isValid={isPwdValid}
-                    inputWidth={inputWidth}
-                    hideCurrentPassword={!(accType === "password" && passkeys.length < 1)}
+                bind:passwords
+                bind:isValid={isPwdValid}
+                {inputWidth}
+                hideCurrentPassword={!(accType === 'password' && passkeys.length < 1)}
             />
 
             <div class="save">
@@ -207,7 +207,7 @@
                 </Button>
                 {#if success}
                     <div class="success" transition:fade>
-                        <IconCheck/>
+                        <IconCheck />
                     </div>
                 {:else if err}
                     <div class="err" transition:fade>
@@ -215,7 +215,7 @@
                     </div>
                 {:else if convertAccount && !isLoading}
                     <div class="cancel">
-                        <Button level={3} onclick={() => convertAccount = false}>
+                        <Button level={3} onclick={() => (convertAccount = false)}>
                             {t.common.cancel}
                         </Button>
                     </div>
@@ -248,18 +248,18 @@
     }
 
     .m-05 {
-        margin: .5rem;
+        margin: 0.5rem;
     }
 
     .save {
         margin-top: 1rem;
         display: flex;
         align-items: center;
-        gap: .66rem;
+        gap: 0.66rem;
     }
 
     .success {
-        margin-bottom: -.25rem;
+        margin-bottom: -0.25rem;
         color: var(--col-ok);
     }
 </style>

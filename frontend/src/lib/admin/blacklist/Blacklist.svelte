@@ -1,22 +1,26 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import {formatDateFromTs, formatUtcTsFromDateInput} from "$utils/helpers.js";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
-    import {fmtDateInput, fmtTimeInput} from "$utils/form";
-    import IconStop from "$icons/IconStop.svelte";
-    import {fetchDelete, fetchGet, fetchPost} from "$api/fetch";
-    import ContentAdmin from "$lib5/ContentAdmin.svelte";
-    import type {BlacklistedIp, BlacklistResponse, IpBlacklistRequest} from "$api/types/blacklist.ts";
-    import ButtonAddModal from "$lib5/button/ButtonAddModal.svelte";
-    import Form from "$lib5/form/Form.svelte";
-    import Tooltip from "$lib5/Tooltip.svelte";
-    import Pagination from "$lib5/pagination/Pagination.svelte";
-    import {useTrigger} from "$state/callback.svelte";
+    import { onMount } from 'svelte';
+    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import { formatDateFromTs, formatUtcTsFromDateInput } from '$utils/helpers.js';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
+    import { fmtDateInput, fmtTimeInput } from '$utils/form';
+    import IconStop from '$icons/IconStop.svelte';
+    import { fetchDelete, fetchGet, fetchPost } from '$api/fetch';
+    import ContentAdmin from '$lib5/ContentAdmin.svelte';
+    import type {
+        BlacklistedIp,
+        BlacklistResponse,
+        IpBlacklistRequest,
+    } from '$api/types/blacklist.ts';
+    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
+    import Form from '$lib5/form/Form.svelte';
+    import Tooltip from '$lib5/Tooltip.svelte';
+    import Pagination from '$lib5/pagination/Pagination.svelte';
+    import { useTrigger } from '$state/callback.svelte';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -97,7 +101,6 @@
         } catch (err) {
             errSave = 'Invalid IP Address';
         }
-
     }
 
     async function deleteIp(ip: string) {
@@ -112,7 +115,7 @@
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
-            blacklist.sort((a, b) => up ? a.ip.localeCompare(b.ip) : b.ip.localeCompare(a.ip));
+            blacklist.sort((a, b) => (up ? a.ip.localeCompare(b.ip) : b.ip.localeCompare(a.ip)));
         }
     }
 </script>
@@ -122,31 +125,31 @@
 <ContentAdmin>
     <div class="top">
         <OrderSearchBar
-                bind:ref={refOpts}
-                bind:value={searchValue}
-                {orderOptions}
-                {onChangeOrder}
-                searchWidth="min(15.75rem, calc(100dvw - 1rem))"
+            bind:ref={refOpts}
+            bind:value={searchValue}
+            {orderOptions}
+            {onChangeOrder}
+            searchWidth="min(15.75rem, calc(100dvw - 1rem))"
         />
 
         <ButtonAddModal level={1} bind:closeModal>
             <div class="addNew">
                 <Form action="/auth/v1/blacklist" {onSubmit}>
                     <Input
-                            bind:ref={refIp}
-                            bind:value={ip}
-                            autocomplete="off"
-                            label="IP"
-                            placeholder="IPv4"
-                            required
-                            maxLength={40}
+                        bind:ref={refIp}
+                        bind:value={ip}
+                        autocomplete="off"
+                        label="IP"
+                        placeholder="IPv4"
+                        required
+                        maxLength={40}
                     />
                     <InputDateTimeCombo
-                            label="Expiry"
-                            bind:value={expDate}
-                            bind:timeValue={expTime}
-                            min={fmtDateInput()}
-                            withTime
+                        label="Expiry"
+                        bind:value={expDate}
+                        bind:timeValue={expTime}
+                        min={fmtDateInput()}
+                        withTime
                     />
 
                     <div style:height=".5rem"></div>
@@ -182,7 +185,7 @@
                     <Button invisible onclick={() => deleteIp(entry.ip)}>
                         <Tooltip text={t.common.delete}>
                             <div class="delete">
-                                <IconStop width="1.25rem"/>
+                                <IconStop width="1.25rem" />
                             </div>
                         </Tooltip>
                     </Button>
@@ -205,9 +208,9 @@
 
     {#if blacklist.length > blacklistThreshold}
         <Pagination
-                bind:items={blacklistFiltered}
-                bind:itemsPaginated={blacklistPaginated}
-                pageSize={30}
+            bind:items={blacklistFiltered}
+            bind:itemsPaginated={blacklistPaginated}
+            pageSize={30}
         />
     {/if}
 </ContentAdmin>
@@ -223,29 +226,31 @@
     }
 
     .blacklisted {
-        padding-left: .5rem;
+        padding-left: 0.5rem;
         max-width: 32.5rem;
-        margin: .25rem 0;
+        margin: 0.25rem 0;
         display: grid;
         grid-template-columns: 20.5rem 10rem 1.5rem;
         border-radius: var(--border-radius);
     }
 
-    .blacklisted, .blacklisted div {
+    .blacklisted,
+    .blacklisted div {
         transition: all 150ms;
     }
 
     .blacklisted:nth-of-type(2n + 1) {
-        background: hsla(var(--bg-high) / .3);
+        background: hsla(var(--bg-high) / 0.3);
     }
 
-    .blacklisted:hover, .blacklisted:hover div {
+    .blacklisted:hover,
+    .blacklisted:hover div {
         color: hsl(var(--bg));
         background: hsl(var(--accent));
     }
 
     .date {
-        color: hsla(var(--text) / .8);
+        color: hsla(var(--text) / 0.8);
     }
 
     .delete {
@@ -254,7 +259,7 @@
     }
 
     .ip {
-        margin-bottom: -.15rem;
+        margin-bottom: -0.15rem;
         text-align: left;
         cursor: copy;
     }
@@ -263,6 +268,6 @@
         margin-bottom: 1rem;
         display: flex;
         flex-wrap: wrap;
-        gap: .5rem 1rem;
+        gap: 0.5rem 1rem;
     }
 </style>

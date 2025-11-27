@@ -1,4 +1,5 @@
-export type ADMIN_PAGES = 'ApiKeys'
+export type ADMIN_PAGES =
+    | 'ApiKeys'
     | 'Attributes'
     | 'Blacklist'
     | 'Clients'

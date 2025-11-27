@@ -1,17 +1,20 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import ButtonAddModal from "$lib5/button/ButtonAddModal.svelte";
-    import ContentAdmin from "$lib5/ContentAdmin.svelte";
-    import NavButtonTile from "$lib5/nav/NavButtonTile.svelte";
-    import NavSub from "$lib5/nav/NavSub.svelte";
-    import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
-    import {fetchGet} from "$api/fetch";
-    import {useParam} from "$state/param.svelte";
-    import type {UserAttrConfigResponse, UserAttrConfigValueResponse} from "$api/types/user_attrs.ts";
-    import AttrAddNew from "$lib5/admin/attrs/AttrAddNew.svelte";
-    import AttrDetails from "$lib5/admin/attrs/AttrDetails.svelte";
-    import {useTrigger} from "$state/callback.svelte";
+    import { onMount } from 'svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
+    import ContentAdmin from '$lib5/ContentAdmin.svelte';
+    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
+    import NavSub from '$lib5/nav/NavSub.svelte';
+    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
+    import { fetchGet } from '$api/fetch';
+    import { useParam } from '$state/param.svelte';
+    import type {
+        UserAttrConfigResponse,
+        UserAttrConfigValueResponse,
+    } from '$api/types/user_attrs.ts';
+    import AttrAddNew from '$lib5/admin/attrs/AttrAddNew.svelte';
+    import AttrDetails from '$lib5/admin/attrs/AttrDetails.svelte';
+    import { useTrigger } from '$state/callback.svelte';
 
     let ta = useI18nAdmin();
 
@@ -61,7 +64,9 @@
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
-            attrs.sort((a, b) => up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+            attrs.sort((a, b) =>
+                up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+            );
         }
     }
 
@@ -74,25 +79,29 @@
         await fetchAttrs();
         an.set(name);
     }
-
 </script>
 
 <NavSub
-        paddingTop="2.1rem"
-        buttonTilesAriaControls="groups"
-        width="min(20rem, 100dvw)"
-        thresholdNavSub={700}
+    paddingTop="2.1rem"
+    buttonTilesAriaControls="groups"
+    width="min(20rem, 100dvw)"
+    thresholdNavSub={700}
 >
-    <ButtonAddModal bind:ref={refAddNew} level={attrs.length === 0 ? 1 : 2} bind:closeModal alignRight>
-        <AttrAddNew onSave={onAddNew} {attrs}/>
+    <ButtonAddModal
+        bind:ref={refAddNew}
+        level={attrs.length === 0 ? 1 : 2}
+        bind:closeModal
+        alignRight
+    >
+        <AttrAddNew onSave={onAddNew} {attrs} />
     </ButtonAddModal>
     <OrderSearchBar
-            {searchOptions}
-            bind:searchOption
-            bind:value={searchValue}
-            {orderOptions}
-            {onChangeOrder}
-            searchWidth="min(19.5rem, 100dvw - .5rem)"
+        {searchOptions}
+        bind:searchOption
+        bind:value={searchValue}
+        {orderOptions}
+        {onChangeOrder}
+        searchWidth="min(19.5rem, 100dvw - .5rem)"
     />
 
     {#snippet buttonTiles()}
@@ -115,7 +124,7 @@
 
     <div id="groups">
         {#if attr}
-            <AttrDetails {attr} {attrs} {onSave}/>
+            <AttrDetails {attr} {attrs} {onSave} />
         {/if}
     </div>
 </ContentAdmin>
@@ -123,7 +132,7 @@
 <style>
     .attrsList {
         max-height: calc(100dvh - 9.5rem);
-        margin-top: .5rem;
+        margin-top: 0.5rem;
         overflow-y: auto;
     }
 </style>

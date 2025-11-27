@@ -1,18 +1,18 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import {slide} from "svelte/transition";
-    import {formatUtcTsFromDateInput} from "$utils/helpers.js";
-    import {fmtDateInput, fmtTimeInput} from "$utils/form";
-    import type {ApiKeyAccess, ApiKeyRequest, ApiKeyResponse} from "$api/types/api_keys.ts";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import ApiKeyMatrix from "$lib5/admin/api_keys/ApiKeyMatrix.svelte";
-    import {fetchPost} from "$api/fetch";
-    import {PATTERN_API_KEY} from "$utils/patterns";
-    import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
-    import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
-    import Form from "$lib5/form/Form.svelte";
+    import Button from '$lib5/button/Button.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import { slide } from 'svelte/transition';
+    import { formatUtcTsFromDateInput } from '$utils/helpers.js';
+    import { fmtDateInput, fmtTimeInput } from '$utils/form';
+    import type { ApiKeyAccess, ApiKeyRequest, ApiKeyResponse } from '$api/types/api_keys.ts';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import ApiKeyMatrix from '$lib5/admin/api_keys/ApiKeyMatrix.svelte';
+    import { fetchPost } from '$api/fetch';
+    import { PATTERN_API_KEY } from '$utils/patterns';
+    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
+    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
+    import Form from '$lib5/form/Form.svelte';
 
     const minDate = fmtDateInput();
 
@@ -20,8 +20,8 @@
         keys,
         onSave,
     }: {
-        keys: ApiKeyResponse[],
-        onSave: () => void,
+        keys: ApiKeyResponse[];
+        onSave: () => void;
     } = $props();
 
     let t = useI18n();
@@ -58,7 +58,7 @@
         };
         if (payload.access.length === 0) {
             err = 'Grant the new API Key at least one permission';
-            return
+            return;
         }
 
         if (doesExpire) {
@@ -87,14 +87,14 @@
 <div class="container">
     <Form action="/auth/v1/api_keys" {onSubmit}>
         <Input
-                label={ta.api_key.keyName}
-                placeholder={ta.api_key.keyName}
-                autocomplete="off"
-                bind:value={name}
-                required
-                min="2"
-                max="24"
-                pattern={PATTERN_API_KEY}
+            label={ta.api_key.keyName}
+            placeholder={ta.api_key.keyName}
+            autocomplete="off"
+            bind:value={name}
+            required
+            min="2"
+            max="24"
+            pattern={PATTERN_API_KEY}
         />
 
         <InputCheckbox ariaLabel={ta.api_key.limitedValidity} bind:checked={doesExpire}>
@@ -102,19 +102,19 @@
         </InputCheckbox>
 
         {#if doesExpire}
-            <div transition:slide={{duration: 150}}>
+            <div transition:slide={{ duration: 150 }}>
                 <InputDateTimeCombo
-                        label={ta.api_key.expires}
-                        bind:value={expDate}
-                        bind:timeValue={expTime}
-                        withTime
-                        min={minDate}
-                        required
+                    label={ta.api_key.expires}
+                    bind:value={expDate}
+                    bind:timeValue={expTime}
+                    withTime
+                    min={minDate}
+                    required
                 />
             </div>
         {/if}
 
-        <ApiKeyMatrix bind:finalize={finalizeMatrix}/>
+        <ApiKeyMatrix bind:finalize={finalizeMatrix} />
 
         <Button type="submit">
             {t.common.save}

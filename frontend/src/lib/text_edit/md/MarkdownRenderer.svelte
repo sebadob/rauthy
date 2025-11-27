@@ -1,10 +1,10 @@
 <script lang="ts">
-    import {useMarkdownWorker} from "$lib/text_edit/useWorker.svelte";
+    import { useMarkdownWorker } from '$lib/text_edit/useWorker.svelte';
 
     let {
         markdown,
     }: {
-        markdown: string,
+        markdown: string;
     } = $props();
 
     let worker = useMarkdownWorker();
@@ -22,7 +22,7 @@
     .preview {
         /*max-width: 467pt;*/
         display: block;
-        padding: .5rem;
+        padding: 0.5rem;
         word-break: break-all;
         overflow: auto;
     }

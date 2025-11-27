@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {fade} from 'svelte/transition';
+    import { fade } from 'svelte/transition';
 
     let {
         background = false,
@@ -12,15 +12,14 @@
         global?: boolean;
         offset?: number;
     } = $props();
-
 </script>
 
 <div
-        class="container"
-        class:global
-        class:local={!global}
-        class:background
-        transition:fade="{{ duration: 100 }}"
+    class="container"
+    class:global
+    class:local={!global}
+    class:background
+    transition:fade={{ duration: 100 }}
 >
     <div class="loading" style="margin-top: {offset}px;">
         <div class="loading-1" style:background={color}></div>
@@ -65,7 +64,9 @@
         align-items: center;
     }
 
-    .loading-1, .loading-2, .loading-3 {
+    .loading-1,
+    .loading-2,
+    .loading-3 {
         height: 66%;
         aspect-ratio: 1;
         border-radius: 50%;
@@ -95,6 +96,6 @@
     }
 
     .background {
-        background: rgba(127, 127, 127, .5);
+        background: rgba(127, 127, 127, 0.5);
     }
 </style>

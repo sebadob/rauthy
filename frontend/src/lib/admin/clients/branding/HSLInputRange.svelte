@@ -1,7 +1,7 @@
 <script lang="ts">
-    import {genKey} from "$utils/helpers.ts";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import InputRange from "$lib5/form/InputRange.svelte";
+    import { genKey } from '$utils/helpers.ts';
+    import { useI18n } from '$state/i18n.svelte.ts';
+    import InputRange from '$lib5/form/InputRange.svelte';
 
     let {
         label,
@@ -9,14 +9,14 @@
         s = $bindable(),
         l = $bindable(),
     }: {
-        label: string,
-        h: number,
-        s: number,
-        l: number,
+        label: string;
+        h: number;
+        s: number;
+        l: number;
     } = $props();
 
     const id = genKey();
-    const widthRange = "15rem";
+    const widthRange = '15rem';
 
     let hsl = $derived(`hsl(${h} ${s} ${l})`);
 </script>
@@ -31,37 +31,37 @@
             </h5>
             <div {id} class="values">
                 <InputRange
-                        label="Hue"
-                        bind:value={h}
-                        min={0}
-                        max={359}
-                        {widthRange}
-                        bgMode="hue"
-                        hue={h}
-                        sat={s}
-                        lum={l}
+                    label="Hue"
+                    bind:value={h}
+                    min={0}
+                    max={359}
+                    {widthRange}
+                    bgMode="hue"
+                    hue={h}
+                    sat={s}
+                    lum={l}
                 />
                 <InputRange
-                        label="Sat"
-                        bind:value={s}
-                        min={0}
-                        max={100}
-                        {widthRange}
-                        bgMode="sat"
-                        hue={h}
-                        sat={s}
-                        lum={l}
+                    label="Sat"
+                    bind:value={s}
+                    min={0}
+                    max={100}
+                    {widthRange}
+                    bgMode="sat"
+                    hue={h}
+                    sat={s}
+                    lum={l}
                 />
                 <InputRange
-                        label="Lum"
-                        bind:value={l}
-                        min={0}
-                        max={100}
-                        {widthRange}
-                        bgMode="lum"
-                        hue={h}
-                        sat={s}
-                        lum={l}
+                    label="Lum"
+                    bind:value={l}
+                    min={0}
+                    max={100}
+                    {widthRange}
+                    bgMode="lum"
+                    hue={h}
+                    sat={s}
+                    lum={l}
                 />
             </div>
         </div>
@@ -71,12 +71,12 @@
 
 <style>
     h5 {
-        margin: 0 0 .25rem 0;
+        margin: 0 0 0.25rem 0;
     }
 
     label {
         color: hsl(var(--text-high));
-        margin-left: .5rem;
+        margin-left: 0.5rem;
     }
 
     .color {
@@ -88,14 +88,14 @@
     .container {
         height: 8.5rem;
         display: flex;
-        gap: .5rem;
-        background: hsla(var(--bg-high) / .2);
+        gap: 0.5rem;
+        background: hsla(var(--bg-high) / 0.2);
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
     }
 
     .outer {
-        margin: .5rem 0;
+        margin: 0.5rem 0;
     }
 
     .values {

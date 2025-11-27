@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Tabs from "$lib5/tabs/Tabs.svelte";
+    import Tabs from '$lib5/tabs/Tabs.svelte';
 
     let {
         tabs,
@@ -7,11 +7,11 @@
         center = false,
         width = 'inherit',
     }: {
-        tabs: string[],
-        selected: string,
-        borderRadius?: string,
-        center?: boolean,
-        width?: string,
+        tabs: string[];
+        selected: string;
+        borderRadius?: string;
+        center?: boolean;
+        width?: string;
     } = $props();
 
     if (tabs.length > 0 && selected === '') {
@@ -20,13 +20,7 @@
 </script>
 
 <div class="wrapper">
-    <Tabs
-            {tabs}
-            bind:selected
-            borderRadius="none"
-            {center}
-            {width}
-    />
+    <Tabs {tabs} bind:selected borderRadius="none" {center} {width} />
 </div>
 
 <style>

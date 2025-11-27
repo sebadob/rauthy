@@ -1,10 +1,10 @@
-import {useLang} from "$state/language.svelte";
-import {type I18n} from "../i18n/common/interface";
-import {I18nEn} from "../i18n/common/en";
-import {I18nDe} from "../i18n/common/de";
-import {I18nKo} from "../i18n/common/ko";
-import {I18nZh} from "../i18n/common/zh";
-import {I18nNb} from "../i18n/common/nb";
+import { useLang } from '$state/language.svelte';
+import { type I18n } from '../i18n/common/interface';
+import { I18nEn } from '../i18n/common/en';
+import { I18nDe } from '../i18n/common/de';
+import { I18nKo } from '../i18n/common/ko';
+import { I18nZh } from '../i18n/common/zh';
+import { I18nNb } from '../i18n/common/nb';
 
 // This hack makes typescript happy and is fine as long as
 // we `initI18n()` as the very first thing in +layout
@@ -27,8 +27,8 @@ export function useI18n(): I18n {
 }
 
 const i18nMap: Record<string, I18n> = {
-		de: I18nDe,
-		en: I18nEn,
+    de: I18nDe,
+    en: I18nEn,
     ko: I18nKo,
     nb: I18nNb,
     zh: I18nZh,

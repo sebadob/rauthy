@@ -1,8 +1,8 @@
 <script lang="ts">
-    import type {Snippet} from "svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import IconStop from "$icons/IconStop.svelte";
+    import type { Snippet } from 'svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import IconStop from '$icons/IconStop.svelte';
 
     let {
         showModal = $bindable(),
@@ -12,12 +12,12 @@
         prerender = false,
         children,
     }: {
-        showModal?: boolean,
-        closeModal?: () => void,
-        onClose?: () => void,
-        strict?: boolean,
-        prerender?: boolean,
-        children: Snippet,
+        showModal?: boolean;
+        closeModal?: () => void;
+        onClose?: () => void;
+        strict?: boolean;
+        prerender?: boolean;
+        children: Snippet;
     } = $props();
 
     let t = useI18n();
@@ -35,7 +35,7 @@
         if (showModal) {
             refDialog?.showModal();
         }
-    })
+    });
 
     $effect(() => {
         if (refContent && (showModal || prerender)) {
@@ -50,13 +50,13 @@
                         ev.preventDefault();
                         refLast?.focus();
                     }
-                })
+                });
                 refLast.addEventListener('keydown', ev => {
                     if (ev.code === 'Tab' && !ev.shiftKey) {
                         ev.preventDefault();
                         refFirst?.focus();
                     }
-                })
+                });
 
                 refFirst.focus();
             }
@@ -70,7 +70,10 @@
         let res: HTMLElement[] = [];
 
         for (let elem of elems) {
-            if (elem.getAttribute("hidden") === 'true' || elem.getAttribute("disabled") === 'true') {
+            if (
+                elem.getAttribute('hidden') === 'true' ||
+                elem.getAttribute('disabled') === 'true'
+            ) {
                 // noop
             } else if (elem.getAttribute('tabindex') !== null) {
                 res.push(elem as HTMLElement);
@@ -115,14 +118,14 @@ We need the onclick listener here to make easy click-outside work.
 <!--svelte-ignore a11y_click_events_have_key_events-->
 <!--svelte-ignore a11y_no_noninteractive_element_interactions-->
 <dialog
-        bind:this={refDialog}
-        aria-modal="true"
-        data-strict={strict}
-        onclose={() => {
-            showModal = false;
-            onClose?.();
-        }}
-        onclick={outsideClick}
+    bind:this={refDialog}
+    aria-modal="true"
+    data-strict={strict}
+    onclose={() => {
+        showModal = false;
+        onClose?.();
+    }}
+    onclick={outsideClick}
 >
     <div bind:this={refContent} role="none" onclick={stopPropagation}>
         {#if !strict}
@@ -130,7 +133,7 @@ We need the onclick listener here to make easy click-outside work.
                 <div class="absolute close">
                     <Button ariaLabel={t.common.close} invisible onclick={close}>
                         <span class="closeIcon">
-                            <IconStop color="currentColor" width="1.2rem"/>
+                            <IconStop color="currentColor" width="1.2rem" />
                         </span>
                     </Button>
                 </div>
@@ -158,11 +161,11 @@ We need the onclick listener here to make easy click-outside work.
         background: hsl(var(--bg));
     }
 
-    dialog[data-strict="true"]::backdrop {
+    dialog[data-strict='true']::backdrop {
         background: hsla(var(--bg) / 0.8);
     }
 
-    dialog[data-strict="false"]::backdrop {
+    dialog[data-strict='false']::backdrop {
         background: hsla(var(--bg) / 0.2);
     }
 
@@ -185,7 +188,7 @@ We need the onclick listener here to make easy click-outside work.
     }
 
     .closeIcon {
-        color: hsla(var(--text) / .5);
+        color: hsla(var(--text) / 0.5);
         transition: color 150ms;
     }
 
@@ -195,17 +198,17 @@ We need the onclick listener here to make easy click-outside work.
 
     @media (max-width: 600px) {
         dialog {
-            max-height: calc(100dvh - .5rem);
-            max-width: calc(100dvw - .5rem);
+            max-height: calc(100dvh - 0.5rem);
+            max-width: calc(100dvw - 0.5rem);
         }
 
         dialog > div {
-            padding: .5rem;
+            padding: 0.5rem;
         }
 
         .close {
-            top: -.5rem;
-            right: -.4rem;
+            top: -0.5rem;
+            right: -0.4rem;
             cursor: pointer;
         }
     }

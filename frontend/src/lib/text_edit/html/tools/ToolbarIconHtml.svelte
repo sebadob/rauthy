@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type {Snippet} from "svelte";
-    import {elementsInRangeNoBrHr} from "$lib/text_edit/html/utils";
-    import Button from "$lib/button/Button.svelte";
+    import type { Snippet } from 'svelte';
+    import { elementsInRangeNoBrHr } from '$lib/text_edit/html/utils';
+    import Button from '$lib/button/Button.svelte';
 
     let {
         // ref of the contenteditable div
@@ -16,14 +16,14 @@
         onClickCustom,
         children,
     }: {
-        ref: undefined | HTMLDivElement,
-        title: string,
-        tagName?: string,
-        tagNameParent?: string,
-        attributes?: Map<string, string>,
+        ref: undefined | HTMLDivElement;
+        title: string;
+        tagName?: string;
+        tagNameParent?: string;
+        attributes?: Map<string, string>;
         // withNewline?: boolean,
-        onClickCustom?: (range: Range) => void,
-        children: Snippet,
+        onClickCustom?: (range: Range) => void;
+        children: Snippet;
     } = $props();
 
     function onclick(ev: Event) {
@@ -33,7 +33,11 @@
 
         let sel = document.getSelection();
         // make sure we have a valid selection inside our editor container
-        if (!sel || sel.rangeCount < 1 || !ref.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+        if (
+            !sel ||
+            sel.rangeCount < 1 ||
+            !ref.contains(sel.getRangeAt(0).commonAncestorContainer)
+        ) {
             return;
         }
 
@@ -75,7 +79,7 @@
             return;
         }
 
-        let node = document.createElement(tagName)
+        let node = document.createElement(tagName);
         if (attributes) {
             for (let [k, v] of attributes) {
                 node.setAttribute(k, v);
@@ -89,11 +93,11 @@
             return;
         }
 
-        let parent = document.createElement(tagNameParent)
+        let parent = document.createElement(tagNameParent);
         range.surroundContents(parent);
 
         range.selectNodeContents(parent);
-        let child = document.createElement(tagName)
+        let child = document.createElement(tagName);
         if (attributes) {
             for (let [k, v] of attributes) {
                 child.setAttribute(k, v);
@@ -128,8 +132,7 @@
         if (intersectingNodes.length > 1) {
             let nf = new Range();
             nf.selectNode(intersectingNodes[0]);
-            if (range.compareBoundaryPoints(Range.START_TO_START, nf) === 1
-            ) {
+            if (range.compareBoundaryPoints(Range.START_TO_START, nf) === 1) {
                 let r = new Range();
                 r.setStart(range.startContainer, range.startOffset);
 
@@ -137,13 +140,17 @@
                 if (cmpEnd === -1) {
                     // fully-wrapping outer container
                     intersectingNodes = intersectingNodes.slice(1, intersectingNodes.length);
-                    console.log('remove all-wrapping ancestor from intersections', intersectingNodes);
+                    console.log(
+                        'remove all-wrapping ancestor from intersections',
+                        intersectingNodes,
+                    );
 
                     let allInner = true;
 
                     for (const node of intersectingNodes) {
                         r.selectNode(node);
-                        const startsBefore = range.compareBoundaryPoints(Range.START_TO_START, r) === 1;
+                        const startsBefore =
+                            range.compareBoundaryPoints(Range.START_TO_START, r) === 1;
                         const endsAfter = range.compareBoundaryPoints(Range.END_TO_END, r) === -1;
 
                         if (startsBefore || endsAfter) {
@@ -158,7 +165,9 @@
                         return;
                     } else {
                         // fix the first piece until the next node
-                        console.log('fix the first piece until the next node after ancestor cleanup');
+                        console.log(
+                            'fix the first piece until the next node after ancestor cleanup',
+                        );
                         r.selectNodeContents(intersectingNodes[0]);
                         r.setStart(range.startContainer, range.startOffset);
                         surroundWithTag(r);
@@ -172,7 +181,6 @@
                     surroundWithTag(r);
                 }
             }
-
 
             // if (range.compareBoundaryPoints(Range.START_TO_START, nf) === 1
             //     && range.compareBoundaryPoints(Range.END_TO_END, nf) === -1
@@ -233,7 +241,10 @@
                 textOrTagOnly = true;
                 for (let child of children) {
                     // TODO find a way to check for attributes
-                    if (child.nodeType !== Node.TEXT_NODE && child.nodeName.toLowerCase() !== tagName) {
+                    if (
+                        child.nodeType !== Node.TEXT_NODE &&
+                        child.nodeName.toLowerCase() !== tagName
+                    ) {
                         textOrTagOnly = false;
                         break;
                     }
@@ -264,7 +275,11 @@
                 surroundWithTag(r);
             } else if (startsBefore) {
                 if (!isLastNode) {
-                    console.log('node', nodeNameLower, 'starts before range and is NOT the last node');
+                    console.log(
+                        'node',
+                        nodeNameLower,
+                        'starts before range and is NOT the last node',
+                    );
                     const next = intersectingNodes[i + 1];
                     // if (i === 0) {
                     // }
@@ -277,7 +292,11 @@
                         // -> full wrap
                         surroundWithTag(range);
                     } else {
-                        console.log('node', nodeNameLower, 'starts before range and is the last node');
+                        console.log(
+                            'node',
+                            nodeNameLower,
+                            'starts before range and is the last node',
+                        );
                         let left = new Range();
                         left.selectNodeContents(node);
                         left.setStart(range.startContainer, range.startOffset);

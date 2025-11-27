@@ -1,10 +1,10 @@
 <script lang="ts">
-    import IconChevronRight from "$icons/IconChevronRight.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {untrack} from "svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import Options from "$lib5/Options.svelte";
-    import type {PageSize} from "$lib5/pagination/props.ts";
+    import IconChevronRight from '$icons/IconChevronRight.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { untrack } from 'svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import Options from '$lib5/Options.svelte';
+    import type { PageSize } from '$lib5/pagination/props.ts';
 
     const options: PageSize[] = [5, 10, 20, 30, 50, 100];
 
@@ -24,7 +24,7 @@
 
     let t = useI18n();
 
-    const iconSize = "1rem";
+    const iconSize = '1rem';
     let pageSizeBefore = untrack(() => pageSize);
 
     let itemsArr: any[] = $state([]);
@@ -77,17 +77,14 @@
             for (let i = 1; i <= itemsArr.length; i++) {
                 links.push(i);
             }
-
         } else if (page <= countHalf) {
             for (let i = 1; i <= pageSize; i++) {
                 links.push(i);
             }
-
         } else if (page > itemsArr.length - countHalf - 1) {
             for (let i = itemsArr.length - pageSize; i <= itemsArr.length - 1; i++) {
                 links.push(i + 1);
             }
-
         } else {
             for (let i = page - countHalf; i < page - countHalf + pageSize; i++) {
                 links.push(i);
@@ -96,7 +93,6 @@
 
         pageLinks = links;
     }
-
 </script>
 
 {#snippet links()}
@@ -104,15 +100,10 @@
         <ul>
             {#each pageLinks as no}
                 <li
-                        aria-label={`${t.pagination.gotoPage} ${no}`}
-                        aria-current={page === no ? 'step' : undefined}
+                    aria-label={`${t.pagination.gotoPage} ${no}`}
+                    aria-current={page === no ? 'step' : undefined}
                 >
-                    <Button
-                            invisible
-                            onclick={() => goto(no)}
-                            onLeft={goLeft}
-                            onRight={goRight}
-                    >
+                    <Button invisible onclick={() => goto(no)} onLeft={goLeft} onRight={goRight}>
                         <div class="link noselect">
                             {no}
                         </div>
@@ -131,11 +122,11 @@
             </div>
             <div>
                 <Options
-                        ariaLabel={t.pagination.showCount}
-                        bind:value={pageSize}
-                        options={options}
-                        offsetTop="-14rem"
-                        borderless
+                    ariaLabel={t.pagination.showCount}
+                    bind:value={pageSize}
+                    {options}
+                    offsetTop="-14rem"
+                    borderless
                 />
             </div>
         </div>
@@ -147,15 +138,19 @@
     <div class="flex">
         <Button onclick={goLeft} invisible isDisabled={page === 1}>
             <div class="iconLeft" aria-label={t.pagination.gotoPagePrev} data-disabled={page === 1}>
-                <IconChevronRight width={iconSize}/>
+                <IconChevronRight width={iconSize} />
             </div>
         </Button>
 
         {@render links()}
 
         <Button onclick={goRight} invisible isDisabled={page === itemsArr.length}>
-            <div class="iconRight" aria-label={t.pagination.gotoPageNext} data-disabled={page === itemsArr.length}>
-                <IconChevronRight width={iconSize}/>
+            <div
+                class="iconRight"
+                aria-label={t.pagination.gotoPageNext}
+                data-disabled={page === itemsArr.length}
+            >
+                <IconChevronRight width={iconSize} />
             </div>
         </Button>
     </div>
@@ -168,7 +163,7 @@
 <style>
     nav {
         display: flex;
-        margin: 0 .8rem 0 .25rem;
+        margin: 0 0.8rem 0 0.25rem;
     }
 
     ul {
@@ -182,8 +177,8 @@
         margin: 0;
     }
 
-    li[aria-current="step"] div {
-        color: hsla(var(--action) / .65);
+    li[aria-current='step'] div {
+        color: hsla(var(--action) / 0.65);
         font-weight: bold;
         text-decoration: underline;
     }
@@ -196,11 +191,11 @@
         display: flex;
         align-items: center;
         flex-wrap: wrap;
-        padding: .25rem 0;
+        padding: 0.25rem 0;
     }
 
-    .iconLeft[data-disabled="true"],
-    .iconRight[data-disabled="true"] {
+    .iconLeft[data-disabled='true'],
+    .iconRight[data-disabled='true'] {
         color: hsl(var(--bg-high));
     }
 
@@ -218,11 +213,11 @@
         margin: 2px;
         padding: 2px;
         cursor: pointer;
-        color: hsla(var(--action), .5);
+        color: hsla(var(--action), 0.5);
     }
 
     .total {
-        transform: translateY(.05rem);
+        transform: translateY(0.05rem);
         text-wrap: nowrap;
     }
 </style>

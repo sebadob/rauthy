@@ -1,24 +1,24 @@
 <script lang="ts">
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import ContentAdmin from "$lib5/ContentAdmin.svelte";
-    import ButtonAddModal from "$lib5/button/ButtonAddModal.svelte";
-    import {useTrigger} from "$state/callback.svelte";
-    import NavSub from "$lib/nav/NavSub.svelte";
-    import SearchBar from "$lib/search_bar/SearchBar.svelte";
-    import Tabs from "$lib/tabs/Tabs.svelte";
-    import {fetchGet} from "$api/fetch";
-    import type {PamGroupResponse, PamHostSimpleResponse, PamUserResponse} from "$api/types/pam";
-    import {onMount} from "svelte";
-    import NavButtonTile from "$lib/nav/NavButtonTile.svelte";
-    import PAMGroupDetails from "$lib/admin/pam/groups/PAMGroupDetails.svelte";
-    import PamHostAdd from "$lib/admin/pam/hosts/PAMHostAdd.svelte";
-    import PAMHostDetails from "$lib/admin/pam/hosts/PAMHostDetails.svelte";
-    import PAMGroupAdd from "$lib/admin/pam/groups/PAMGroupAdd.svelte";
-    import PAMUserAdd from "$lib/admin/pam/users/PAMUserAdd.svelte";
-    import UserPicture from "$lib/UserPicture.svelte";
-    import PAMUserDetails from "$lib/admin/pam/users/PAMUserDetails.svelte";
-    import type {PamGroupsSorted} from "$lib/admin/pam/types";
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import ContentAdmin from '$lib5/ContentAdmin.svelte';
+    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
+    import { useTrigger } from '$state/callback.svelte';
+    import NavSub from '$lib/nav/NavSub.svelte';
+    import SearchBar from '$lib/search_bar/SearchBar.svelte';
+    import Tabs from '$lib/tabs/Tabs.svelte';
+    import { fetchGet } from '$api/fetch';
+    import type { PamGroupResponse, PamHostSimpleResponse, PamUserResponse } from '$api/types/pam';
+    import { onMount } from 'svelte';
+    import NavButtonTile from '$lib/nav/NavButtonTile.svelte';
+    import PAMGroupDetails from '$lib/admin/pam/groups/PAMGroupDetails.svelte';
+    import PamHostAdd from '$lib/admin/pam/hosts/PAMHostAdd.svelte';
+    import PAMHostDetails from '$lib/admin/pam/hosts/PAMHostDetails.svelte';
+    import PAMGroupAdd from '$lib/admin/pam/groups/PAMGroupAdd.svelte';
+    import PAMUserAdd from '$lib/admin/pam/users/PAMUserAdd.svelte';
+    import UserPicture from '$lib/UserPicture.svelte';
+    import PAMUserDetails from '$lib/admin/pam/users/PAMUserDetails.svelte';
+    import type { PamGroupsSorted } from '$lib/admin/pam/types';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -72,7 +72,7 @@
         local.sort((a, b) => a.name.localeCompare(b.name));
         user.sort((a, b) => a.name.localeCompare(b.name));
 
-        return {generic, host, local, user}
+        return { generic, host, local, user };
     });
     let hosts: PamHostSimpleResponse[] = $state([]);
     let hostsFiltered: PamHostSimpleResponse[] = $derived.by(() => {
@@ -149,26 +149,26 @@
 </script>
 
 <NavSub
-        paddingTop="2.1rem"
-        buttonTilesAriaControls="scopes"
-        width="min(20rem, 100dvw)"
-        thresholdNavSub={700}
+    paddingTop="2.1rem"
+    buttonTilesAriaControls="scopes"
+    width="min(20rem, 100dvw)"
+    thresholdNavSub={700}
 >
     <ButtonAddModal bind:ref={refAddNew} level={2} bind:closeModal alignRight>
         {#if isUser}
-            <PAMUserAdd onCreate={onCreateUser}/>
+            <PAMUserAdd onCreate={onCreateUser} />
         {:else if isGroup}
-            <PAMGroupAdd {groups} onCreate={onCreateGroup}/>
+            <PAMGroupAdd {groups} onCreate={onCreateGroup} />
         {:else if isHost}
-            <PamHostAdd {groups} onCreate={onCreateHost}/>
+            <PamHostAdd {groups} onCreate={onCreateHost} />
         {/if}
     </ButtonAddModal>
 
     <div class="tabs">
-        <Tabs {tabs} bind:selected={selectedNav} center/>
+        <Tabs {tabs} bind:selected={selectedNav} center />
     </div>
 
-    <SearchBar bind:value={searchValue}/>
+    <SearchBar bind:value={searchValue} />
 
     {#if err}
         <div class="err">{err}</div>
@@ -182,16 +182,16 @@
                 {:else}
                     {#each usersFiltered as user (user.id)}
                         <NavButtonTile
-                                onclick={() => selectedUser = user}
-                                selected={user.id === selectedUser?.id}
-                                pictureLeft
+                            onclick={() => (selectedUser = user)}
+                            selected={user.id === selectedUser?.id}
+                            pictureLeft
                         >
                             <div class="navBtn">
                                 <div class="picture">
                                     <UserPicture
-                                            fallbackCharacters={user.name[0]}
-                                            size="small"
-                                            disableUpload
+                                        fallbackCharacters={user.name[0]}
+                                        size="small"
+                                        disableUpload
                                     />
                                 </div>
                                 <div class="tile">
@@ -203,7 +203,6 @@
                                     </div>
                                 </div>
                             </div>
-
                         </NavButtonTile>
                     {/each}
                 {/if}
@@ -212,7 +211,10 @@
                     {ta.common.noEntries}
                 {:else}
                     {#each groupsFiltered as group (group.id)}
-                        <NavButtonTile onclick={() => selectedGroup = group} selected={group.id === selectedGroup?.id}>
+                        <NavButtonTile
+                            onclick={() => (selectedGroup = group)}
+                            selected={group.id === selectedGroup?.id}
+                        >
                             <span class="typ font-mono">
                                 {group.typ[0].toUpperCase()}
                             </span>
@@ -225,7 +227,10 @@
                     {ta.common.noEntries}
                 {:else}
                     {#each hostsFiltered as host (host.id)}
-                        <NavButtonTile onclick={() => selectedHost = host} selected={host.id === selectedHost?.id}>
+                        <NavButtonTile
+                            onclick={() => (selectedHost = host)}
+                            selected={host.id === selectedHost?.id}
+                        >
                             {host.name}
                         </NavButtonTile>
                     {/each}
@@ -238,26 +243,23 @@
 <ContentAdmin>
     <div id="pam">
         {#if isUser && selectedUser}
-            <PAMUserDetails
-                    user={selectedUser}
-                    {groupsSorted}
-            />
+            <PAMUserDetails user={selectedUser} {groupsSorted} />
         {:else if isGroup && selectedGroup}
             <PAMGroupDetails
-                    group={selectedGroup}
-                    onDelete={() => {
-                        fetchGroups();
-                        selectedGroup = undefined;
-                    }}
+                group={selectedGroup}
+                onDelete={() => {
+                    fetchGroups();
+                    selectedGroup = undefined;
+                }}
             />
         {:else if isHost && selectedHost}
             <PAMHostDetails
-                    hostSimple={selectedHost}
-                    {groups}
-                    onDelete={() => {
-                        fetchHosts();
-                        selectedHost = undefined;
-                    }}
+                hostSimple={selectedHost}
+                {groups}
+                onDelete={() => {
+                    fetchHosts();
+                    selectedHost = undefined;
+                }}
             />
         {/if}
     </div>
@@ -265,25 +267,25 @@
 
 <style>
     .muted {
-        margin-bottom: -.2rem;
-        opacity: .65;
-        font-size: .8rem;
+        margin-bottom: -0.2rem;
+        opacity: 0.65;
+        font-size: 0.8rem;
     }
 
     .navBtn {
         display: flex;
         align-items: center;
-        gap: .5rem;
+        gap: 0.5rem;
     }
 
     .navList {
         max-height: calc(100dvh - 10.25rem);
-        margin-top: .5rem;
+        margin-top: 0.5rem;
         overflow-y: auto;
     }
 
     .tabs {
-        margin: 1rem 0 .5rem 0;
+        margin: 1rem 0 0.5rem 0;
     }
 
     .tile {

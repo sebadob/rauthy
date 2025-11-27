@@ -1,17 +1,21 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import Argon2Results from "./Argon2Results.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import Form from "$lib5/form/Form.svelte";
-    import {fetchPost} from "$api/fetch";
-    import type {PasswordHashTime, PasswordHashTimes, PasswordHashTimesRequest} from "$api/types/password_hashing.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import type {Argon2ParamsResponse} from "$api/types/login_times.ts";
+    import Button from '$lib5/button/Button.svelte';
+    import Argon2Results from './Argon2Results.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import Form from '$lib5/form/Form.svelte';
+    import { fetchPost } from '$api/fetch';
+    import type {
+        PasswordHashTime,
+        PasswordHashTimes,
+        PasswordHashTimesRequest,
+    } from '$api/types/password_hashing.ts';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import type { Argon2ParamsResponse } from '$api/types/login_times.ts';
 
     let {
         params,
     }: {
-        params: Argon2ParamsResponse,
+        params: Argon2ParamsResponse;
     } = $props();
 
     const inputWidth = '10rem';
@@ -54,42 +58,42 @@
     }
 </script>
 
-<svelte:window bind:scrollY={scrollY}/>
+<svelte:window bind:scrollY />
 
 <div class="wrapper">
     <div class="container">
         <Form action="/auth/v1/password_hash_times" {onSubmit}>
             <Input
-                    typ="number"
-                    bind:value={values.targetTime}
-                    autocomplete="off"
-                    label={`${ta.docs.hashing.targetTime} (ms)`}
-                    placeholder={`${ta.docs.hashing.targetTime} (ms)`}
-                    min="500"
-                    max="99999"
-                    required
-                    width={inputWidth}
+                typ="number"
+                bind:value={values.targetTime}
+                autocomplete="off"
+                label={`${ta.docs.hashing.targetTime} (ms)`}
+                placeholder={`${ta.docs.hashing.targetTime} (ms)`}
+                min="500"
+                max="99999"
+                required
+                width={inputWidth}
             />
             <Input
-                    typ="number"
-                    bind:value={values.mCost}
-                    autocomplete="off"
-                    label="m_cost (kB)"
-                    placeholder="m_cost (kB)"
-                    min="32768"
-                    width={inputWidth}
+                typ="number"
+                bind:value={values.mCost}
+                autocomplete="off"
+                label="m_cost (kB)"
+                placeholder="m_cost (kB)"
+                min="32768"
+                width={inputWidth}
             />
             <Input
-                    typ="number"
-                    bind:value={values.pCost}
-                    autocomplete="off"
-                    label="p_cost"
-                    placeholder="p_cost"
-                    min="2"
-                    max="256"
-                    width={inputWidth}
+                typ="number"
+                bind:value={values.pCost}
+                autocomplete="off"
+                label="p_cost"
+                placeholder="p_cost"
+                min="2"
+                max="256"
+                width={inputWidth}
             />
-            <Button type="submit" isLoading={isLoading}>
+            <Button type="submit" {isLoading}>
                 {ta.docs.hashing.calculate}
             </Button>
         </Form>
@@ -97,7 +101,7 @@
 
     {#if hashTimes.length > 0}
         <div class="result">
-            <Argon2Results res={hashTimes}/>
+            <Argon2Results res={hashTimes} />
         </div>
     {/if}
 

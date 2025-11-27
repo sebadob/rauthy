@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {genKey} from "$utils/helpers";
-    import Button from "$lib5/button/Button.svelte";
-    import IconStop from "$icons/IconStop.svelte";
-    import {useI18n} from "$state/i18n.svelte";
+    import { genKey } from '$utils/helpers';
+    import Button from '$lib5/button/Button.svelte';
+    import IconStop from '$icons/IconStop.svelte';
+    import { useI18n } from '$state/i18n.svelte';
 
     let {
         ref = $bindable(),
@@ -33,29 +33,29 @@
         onInput,
         onSubmit,
     } = $props<{
-        ref?: undefined | HTMLInputElement,
-        typ?: 'text' | 'email' | 'url',
-        id?: string,
-        name?: string,
-        values: string[],
+        ref?: undefined | HTMLInputElement;
+        typ?: 'text' | 'email' | 'url';
+        id?: string;
+        name?: string;
+        values: string[];
         datalist?: string[];
-        label?: string,
-        placeholder?: string,
-        errMsg?: string,
-        disabled?: boolean | null | undefined,
-        maxLength?: number | null | undefined,
-        min?: string,
-        max?: string,
-        required?: boolean,
-        pattern?: string,
-        isError?: boolean,
-        width?: string,
-        maxHeightList?: string,
+        label?: string;
+        placeholder?: string;
+        errMsg?: string;
+        disabled?: boolean | null | undefined;
+        maxLength?: number | null | undefined;
+        min?: string;
+        max?: string;
+        required?: boolean;
+        pattern?: string;
+        isError?: boolean;
+        width?: string;
+        maxHeightList?: string;
 
-        onBlur?: () => void,
-        onEnter?: () => void,
-        onInput?: (value: string) => void,
-        onSubmit?: (event: Event & { currentTarget: EventTarget & HTMLInputElement }) => void,
+        onBlur?: () => void;
+        onEnter?: () => void;
+        onInput?: (value: string) => void;
+        onSubmit?: (event: Event & { currentTarget: EventTarget & HTMLInputElement }) => void;
     }>();
 
     let t = useI18n();
@@ -65,7 +65,7 @@
     let list = $derived(datalist && datalist.length > 0 ? idDatalist : undefined);
 
     function deleteValue(value: string) {
-        values = values.filter(v => v !== value)
+        values = values.filter(v => v !== value);
     }
 
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLInputElement }) {
@@ -103,7 +103,7 @@
 
     function focus() {
         ref?.focus();
-        ref?.scrollIntoView({behavior: 'smooth', block: 'center'})
+        ref?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function isValid() {
@@ -126,36 +126,36 @@
                 </div>
                 <div class="btnClose">
                     <Button invisible onclick={() => deleteValue(value)}>
-                        <IconStop width="1.2rem"/>
+                        <IconStop width="1.2rem" />
                     </Button>
                 </div>
             </li>
         {/each}
         <li>
             <input
-                    bind:this={ref}
-                    type={typ}
-                    {id}
-                    {name}
-                    {list}
-                    bind:value
-                    autocomplete="off"
-                    title={errMsg}
-                    aria-label={label || placeholder}
-                    {placeholder}
-                    aria-placeholder={placeholder}
-                    {disabled}
-                    aria-disabled={disabled}
-                    required={required && values.length < 1}
-                    aria-required={required && values.length < 1}
-                    maxlength={maxLength || undefined}
-                    min={min || undefined}
-                    max={max || undefined}
-                    {pattern}
-                    {onkeydown}
-                    {oninput}
-                    {oninvalid}
-                    {onblur}
+                bind:this={ref}
+                type={typ}
+                {id}
+                {name}
+                {list}
+                bind:value
+                autocomplete="off"
+                title={errMsg}
+                aria-label={label || placeholder}
+                {placeholder}
+                aria-placeholder={placeholder}
+                {disabled}
+                aria-disabled={disabled}
+                required={required && values.length < 1}
+                aria-required={required && values.length < 1}
+                maxlength={maxLength || undefined}
+                min={min || undefined}
+                max={max || undefined}
+                {pattern}
+                {onkeydown}
+                {oninput}
+                {oninvalid}
+                {onblur}
             />
 
             {#if datalist && datalist.length > 1}
@@ -197,22 +197,22 @@
     }
 
     label {
-        color: hsla(var(--text) / .8);
-        margin-left: .25rem;
+        color: hsla(var(--text) / 0.8);
+        margin-left: 0.25rem;
     }
 
     ul {
         padding: 0;
         display: flex;
         align-items: center;
-        gap: .5rem;
+        gap: 0.5rem;
         flex-wrap: wrap;
         overflow-y: scroll;
     }
 
     li {
         margin: 0;
-        padding: 0 .25rem 0 .35rem;
+        padding: 0 0.25rem 0 0.35rem;
         display: flex;
         list-style: none;
         border-radius: var(--border-radius);
@@ -222,20 +222,20 @@
     .container {
         margin: 1rem 0;
         max-width: 100%;
-        padding: .25rem .25rem 0 .25rem;
-        background: hsla(var(--bg-high) / .2);
+        padding: 0.25rem 0.25rem 0 0.25rem;
+        background: hsla(var(--bg-high) / 0.2);
         border: 1px solid hsla(var(--bg-high));
         border-radius: var(--border-radius);
         cursor: text;
     }
 
     .btnClose {
-        margin-top: .12rem;
-        margin-bottom: -.5rem;
+        margin-top: 0.12rem;
+        margin-bottom: -0.5rem;
     }
 
     .value {
-        background: hsla(var(--accent) / .2);
+        background: hsla(var(--accent) / 0.2);
         overflow: auto;
     }
 </style>

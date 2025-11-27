@@ -10,6 +10,6 @@ export function useTheme() {
         },
         toggle() {
             isDark = !isDark;
-        }
-    }
+        },
+    };
 }

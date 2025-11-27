@@ -1,19 +1,19 @@
 <script lang="ts">
-    import type {PamGroupHostsCountResponse, PamGroupResponse} from "$api/types/pam";
-    import LabeledValue from "$lib/LabeledValue.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import IconInfo from "$icons/IconInfo.svelte";
-    import {slide} from "svelte/transition";
-    import Button from "$lib/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {fetchDelete, fetchGet} from "$api/fetch";
+    import type { PamGroupHostsCountResponse, PamGroupResponse } from '$api/types/pam';
+    import LabeledValue from '$lib/LabeledValue.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import IconInfo from '$icons/IconInfo.svelte';
+    import { slide } from 'svelte/transition';
+    import Button from '$lib/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { fetchDelete, fetchGet } from '$api/fetch';
 
     let {
         group,
         onDelete,
     }: {
-        group: PamGroupResponse,
-        onDelete: () => void,
+        group: PamGroupResponse;
+        onDelete: () => void;
     } = $props();
 
     let t = useI18n();
@@ -22,9 +22,9 @@
     let showInfo = $state(false);
     let hostsCount = $state(0);
     let canBeDeleted = $derived(
-        group.typ === 'generic'
-        || group.typ === 'local'
-        || group.typ === 'host' && hostsCount === 0
+        group.typ === 'generic' ||
+            group.typ === 'local' ||
+            (group.typ === 'host' && hostsCount === 0),
     );
 
     $effect(() => {
@@ -55,7 +55,6 @@
             console.error(res.error);
         }
     }
-
 </script>
 
 <h1>{group.name}</h1>
@@ -68,9 +67,9 @@
 </LabeledValue>
 <LabeledValue label={ta.pam.groupType}>
     {group.typ}
-    <Button invisible onclick={() => showInfo = !showInfo}>
+    <Button invisible onclick={() => (showInfo = !showInfo)}>
         <div class="info" data-selected={showInfo}>
-            <IconInfo width="1.25rem"/>
+            <IconInfo width="1.25rem" />
         </div>
     </Button>
 </LabeledValue>
@@ -111,10 +110,10 @@
     }
 
     .info {
-        transform: translateY(.25rem);
+        transform: translateY(0.25rem);
     }
 
-    .info[data-selected="true"] {
+    .info[data-selected='true'] {
         color: hsl(var(--action));
     }
 </style>

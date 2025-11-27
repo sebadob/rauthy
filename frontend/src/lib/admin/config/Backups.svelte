@@ -1,13 +1,13 @@
 <script lang="ts">
-    import type {BackupListing, BackupListings} from "$api/types/backup";
-    import {fetchGet, fetchPost} from "$api/fetch";
-    import {onMount} from "svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {formatDateFromTs, prettyFileSize} from "$utils/helpers";
-    import Button from "$lib/button/Button.svelte";
-    import IconCheck from "$icons/IconCheck.svelte";
-    import IconArrowPathSquare from "$icons/IconArrowPathSquare.svelte";
-    import A from "$lib/A.svelte";
+    import type { BackupListing, BackupListings } from '$api/types/backup';
+    import { fetchGet, fetchPost } from '$api/fetch';
+    import { onMount } from 'svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { formatDateFromTs, prettyFileSize } from '$utils/helpers';
+    import Button from '$lib/button/Button.svelte';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import IconArrowPathSquare from '$icons/IconArrowPathSquare.svelte';
+    import A from '$lib/A.svelte';
 
     let ta = useI18nAdmin();
 
@@ -68,9 +68,9 @@
 {#snippet backup(backup: BackupListing, hrefPrefix: string)}
     <div class="row">
         <A href={`${hrefPrefix}/${backup.name}`}>
-                <span class="font-mono">
-                    {backup.name}
-                </span>
+            <span class="font-mono">
+                {backup.name}
+            </span>
         </A>
         <div class="font-mono muted right">
             {formatDateFromTs(backup.last_modified)}
@@ -95,12 +95,12 @@
 
         <div class="refresh">
             <Button invisible onclick={fetchListings}>
-                <IconArrowPathSquare/>
+                <IconArrowPathSquare />
             </Button>
         </div>
 
         {#if success}
-            <IconCheck/>
+            <IconCheck />
         {/if}
     </div>
 
@@ -131,11 +131,11 @@
     }
 
     .muted {
-        color: hsla(var(--text) / .7);
+        color: hsla(var(--text) / 0.7);
     }
 
     .refresh {
-        margin-bottom: -.4rem;
+        margin-bottom: -0.4rem;
     }
 
     .right {

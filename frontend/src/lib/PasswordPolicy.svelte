@@ -1,16 +1,16 @@
 <script lang="ts">
-    import {useI18n} from "$state/i18n.svelte.js";
-    import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
-    import CheckIcon from "$lib/CheckIcon.svelte";
+    import { useI18n } from '$state/i18n.svelte.js';
+    import type { PasswordPolicyResponse } from '$api/types/password_policy.ts';
+    import CheckIcon from '$lib/CheckIcon.svelte';
 
     let {
         policy,
         password,
-        accepted = $bindable(false)
+        accepted = $bindable(false),
     }: {
-        policy: PasswordPolicyResponse,
-        password: string,
-        accepted: boolean,
+        policy: PasswordPolicyResponse;
+        password: string;
+        accepted: boolean;
     } = $props();
 
     let t = useI18n();
@@ -65,30 +65,34 @@
             counts[3] = counts[3] + 1;
         }
 
-        if (policy.include_lower_case
-            && policy.include_lower_case !== -1
-            && policy.include_lower_case > counts[0]
+        if (
+            policy.include_lower_case &&
+            policy.include_lower_case !== -1 &&
+            policy.include_lower_case > counts[0]
         ) {
             pErr[2] = true;
             err = true;
         }
-        if (policy.include_upper_case
-            && policy.include_upper_case !== -1
-            && policy.include_upper_case > counts[1]
+        if (
+            policy.include_upper_case &&
+            policy.include_upper_case !== -1 &&
+            policy.include_upper_case > counts[1]
         ) {
             pErr[3] = true;
             err = true;
         }
-        if (policy.include_digits
-            && policy.include_digits !== -1
-            && policy.include_digits > counts[2]
+        if (
+            policy.include_digits &&
+            policy.include_digits !== -1 &&
+            policy.include_digits > counts[2]
         ) {
             pErr[4] = true;
             err = true;
         }
-        if (policy.include_special
-            && policy.include_special !== -1
-            && policy.include_special > counts[3]
+        if (
+            policy.include_special &&
+            policy.include_special !== -1 &&
+            policy.include_special > counts[3]
         ) {
             pErr[5] = true;
             err = true;
@@ -105,20 +109,20 @@
 
         <ul>
             <li class:policyErr={!!errPolicy[0]}>
-                <CheckIcon checked={!errPolicy[0]}/>
+                <CheckIcon checked={!errPolicy[0]} />
                 {t.passwordPolicy.lengthMin}:
                 {policy.length_min}
             </li>
 
             <li class:policyErr={!!errPolicy[1]}>
-                <CheckIcon checked={!errPolicy[1]}/>
+                <CheckIcon checked={!errPolicy[1]} />
                 {t.passwordPolicy.lengthMax}:
                 {policy?.length_max || 0}
             </li>
 
             {#if -1 !== policy.include_lower_case}
                 <li class:policyErr={!!errPolicy[2]}>
-                    <CheckIcon checked={!errPolicy[2]}/>
+                    <CheckIcon checked={!errPolicy[2]} />
                     {t.passwordPolicy.lowercaseMin}:
                     {policy?.include_lower_case || 0}
                 </li>
@@ -126,7 +130,7 @@
 
             {#if -1 !== policy.include_upper_case}
                 <li class:policyErr={!!errPolicy[3]}>
-                    <CheckIcon checked={!errPolicy[3]}/>
+                    <CheckIcon checked={!errPolicy[3]} />
                     {t.passwordPolicy.uppercaseMin}:
                     {policy?.include_upper_case || 0}
                 </li>
@@ -134,7 +138,7 @@
 
             {#if -1 !== policy.include_digits}
                 <li class:policyErr={!!errPolicy[4]}>
-                    <CheckIcon checked={!errPolicy[4]}/>
+                    <CheckIcon checked={!errPolicy[4]} />
                     {t.passwordPolicy.digitsMin}:
                     {policy?.include_digits || 0}
                 </li>
@@ -142,7 +146,7 @@
 
             {#if -1 !== policy.include_special}
                 <li class:policyErr={!!errPolicy[5]}>
-                    <CheckIcon checked={!errPolicy[5]}/>
+                    <CheckIcon checked={!errPolicy[5]} />
                     {t.passwordPolicy.specialMin}:
                     {policy?.include_special || 0}
                 </li>
@@ -172,11 +176,11 @@
         margin-left: 0;
         display: flex;
         align-items: center;
-        gap: .25rem;
+        gap: 0.25rem;
     }
 
     .policyContainer {
-        margin-left: -.5rem;
+        margin-left: -0.5rem;
         margin-bottom: 1rem;
         overflow: hidden;
     }
@@ -186,6 +190,6 @@
     }
 
     .used {
-        margin-left: .3rem;
+        margin-left: 0.3rem;
     }
 </style>

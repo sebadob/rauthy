@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {eventColor} from "$utils/helpers";
-    import {useI18n} from "$state/i18n.svelte";
+    import { eventColor } from '$utils/helpers';
+    import { useI18n } from '$state/i18n.svelte';
 
-    let {wide}: { wide: boolean } = $props();
+    let { wide }: { wide: boolean } = $props();
 
     let t = useI18n();
 </script>
@@ -24,12 +24,12 @@
     }
 
     legend {
-        font-size: .9rem;
-        color: hsla(var(--text) / .5);
+        font-size: 0.9rem;
+        color: hsla(var(--text) / 0.5);
     }
 
     ul {
-        padding-right: .5rem;
+        padding-right: 0.5rem;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -37,10 +37,10 @@
 
     li {
         margin: 0;
-        padding-left: .5rem;
+        padding-left: 0.5rem;
         list-style: none;
         border-left: 2px solid transparent;
-        color: hsla(var(--text) / .7);
+        color: hsla(var(--text) / 0.7);
     }
 
     .wide {

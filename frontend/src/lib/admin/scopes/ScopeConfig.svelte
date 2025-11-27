@@ -1,18 +1,18 @@
 <script lang="ts">
-    import {isDefaultScope} from "$utils/helpers";
-    import Button from "$lib5/button/Button.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import type {UserAttrConfigValueResponse} from "$api/types/user_attrs.ts";
-    import type {ScopeRequest, ScopeResponse} from "$api/types/scopes.ts";
-    import IconCheck from "$icons/IconCheck.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {fetchPut} from "$api/fetch";
-    import Form from "$lib5/form/Form.svelte";
-    import LabeledValue from "$lib5/LabeledValue.svelte";
-    import type {SelectItem} from "$lib5/select_list/props.ts";
-    import SelectList from "$lib5/select_list/SelectList.svelte";
-    import {PATTERN_ROLE_SCOPE} from "$utils/patterns";
+    import { isDefaultScope } from '$utils/helpers';
+    import Button from '$lib5/button/Button.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import type { UserAttrConfigValueResponse } from '$api/types/user_attrs.ts';
+    import type { ScopeRequest, ScopeResponse } from '$api/types/scopes.ts';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { fetchPut } from '$api/fetch';
+    import Form from '$lib5/form/Form.svelte';
+    import LabeledValue from '$lib5/LabeledValue.svelte';
+    import type { SelectItem } from '$lib5/select_list/props.ts';
+    import SelectList from '$lib5/select_list/SelectList.svelte';
+    import { PATTERN_ROLE_SCOPE } from '$utils/patterns';
 
     let {
         attrs,
@@ -20,10 +20,10 @@
         scopes,
         onSave,
     }: {
-        attrs: UserAttrConfigValueResponse[],
-        scope: ScopeResponse,
-        scopes: ScopeResponse[],
-        onSave: () => void,
+        attrs: UserAttrConfigValueResponse[];
+        scope: ScopeResponse;
+        scopes: ScopeResponse[];
+        onSave: () => void;
     } = $props();
 
     let t = useI18n();
@@ -79,7 +79,7 @@
 
         let payload: ScopeRequest = {
             scope: name,
-        }
+        };
         if (itemsAccess) {
             let filtered = itemsAccess.filter(i => i.selected).map(i => i.name);
             if (filtered.length > 0) {
@@ -112,14 +112,14 @@
     </LabeledValue>
 
     <Input
-            bind:value={name}
-            autocomplete="off"
-            label={ta.scopes.name}
-            placeholder={ta.scopes.name}
-            disabled={isDefault}
-            width="14.5rem"
-            required
-            pattern={PATTERN_ROLE_SCOPE}
+        bind:value={name}
+        autocomplete="off"
+        label={ta.scopes.name}
+        placeholder={ta.scopes.name}
+        disabled={isDefault}
+        width="14.5rem"
+        required
+        pattern={PATTERN_ROLE_SCOPE}
     />
 
     {#if isDefault}
@@ -129,15 +129,11 @@
         <p>{ta.scopes.mapping2}</p>
 
         {#if itemsAccess}
-            <SelectList bind:items={itemsAccess}>
-                Access Token Mappings
-            </SelectList>
+            <SelectList bind:items={itemsAccess}>Access Token Mappings</SelectList>
         {/if}
 
         {#if itemsId}
-            <SelectList bind:items={itemsId}>
-                Id Token Mappings
-            </SelectList>
+            <SelectList bind:items={itemsId}>Id Token Mappings</SelectList>
         {/if}
     {/if}
 
@@ -148,7 +144,7 @@
             </Button>
 
             {#if success}
-                <IconCheck/>
+                <IconCheck />
             {/if}
         </div>
 

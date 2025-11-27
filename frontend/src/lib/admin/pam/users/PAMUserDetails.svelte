@@ -1,26 +1,28 @@
 <script lang="ts">
     import type {
-        PamGroupResponse, PamGroupUserLink,
+        PamGroupResponse,
+        PamGroupUserLink,
         PamUserDetailsResponse,
-        PamUserResponse, PamUserUpdateRequest
-    } from "$api/types/pam";
-    import LabeledValue from "$lib/LabeledValue.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import Button from "$lib/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {fetchGet, fetchPut} from "$api/fetch";
-    import Input from "$lib/form/Input.svelte";
-    import Form from "$lib/form/Form.svelte";
-    import type {PamGroupsSorted} from "$lib/admin/pam/types";
-    import InputCheckbox from "$lib/form/InputCheckbox.svelte";
-    import IconCheck from "$icons/IconCheck.svelte";
+        PamUserResponse,
+        PamUserUpdateRequest,
+    } from '$api/types/pam';
+    import LabeledValue from '$lib/LabeledValue.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import Button from '$lib/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { fetchGet, fetchPut } from '$api/fetch';
+    import Input from '$lib/form/Input.svelte';
+    import Form from '$lib/form/Form.svelte';
+    import type { PamGroupsSorted } from '$lib/admin/pam/types';
+    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
+    import IconCheck from '$icons/IconCheck.svelte';
 
     let {
         user,
         groupsSorted,
     }: {
-        user: PamUserResponse,
-        groupsSorted: PamGroupsSorted,
+        user: PamUserResponse;
+        groupsSorted: PamGroupsSorted;
     } = $props();
 
     let t = useI18n();
@@ -31,10 +33,10 @@
     let details: undefined | PamUserDetailsResponse = $state();
 
     interface LinkedGroup {
-        gid: number,
-        name: string,
-        isMember: boolean,
-        isWheel: boolean,
+        gid: number;
+        name: string;
+        isMember: boolean;
+        isWheel: boolean;
     }
 
     let groupsGeneric: LinkedGroup[] = $state([]);
@@ -42,7 +44,7 @@
     let groupsLocal: LinkedGroup[] = $state([]);
     let groupsUser: LinkedGroup[] = $state([]);
 
-    let url = $derived(`/auth/v1/pam/users/${user.id}`)
+    let url = $derived(`/auth/v1/pam/users/${user.id}`);
 
     $effect(() => {
         fetchDetails();
@@ -119,7 +121,7 @@
                     uid: user.id,
                     gid: group.gid,
                     wheel: group.isWheel,
-                })
+                });
             }
         }
         for (let group of groupsGeneric) {
@@ -128,7 +130,7 @@
                     uid: user.id,
                     gid: group.gid,
                     wheel: group.isWheel,
-                })
+                });
             }
         }
         for (let group of groupsLocal) {
@@ -137,7 +139,7 @@
                     uid: user.id,
                     gid: group.gid,
                     wheel: group.isWheel,
-                })
+                });
             }
         }
         for (let group of groupsUser) {
@@ -146,14 +148,14 @@
                     uid: user.id,
                     gid: group.gid,
                     wheel: group.isWheel,
-                })
+                });
             }
         }
 
         let payload: PamUserUpdateRequest = {
             shell: user.shell,
             groups: links,
-        }
+        };
         let res = await fetchPut(url, payload);
         if (res.status === 200) {
             success = true;
@@ -164,7 +166,6 @@
             err = res.error?.message || 'Error';
         }
     }
-
 </script>
 
 <h1>{user.name}</h1>
@@ -183,13 +184,7 @@
         {user.email}
     </LabeledValue>
 
-    <Input
-            label="Shell"
-            placeholder="Shell"
-            required
-            bind:value={user.shell}
-            width="10rem"
-    />
+    <Input label="Shell" placeholder="Shell" required bind:value={user.shell} width="10rem" />
 
     <h2>{ta.pam.groups}</h2>
 
@@ -212,17 +207,17 @@
                             <div>{group.name}</div>
                             <div class="center checkbox">
                                 <InputCheckbox
-                                        ariaLabel={ta.pam.member}
-                                        bind:checked={group.isMember}
-                                        disabled={group.name === user.name}
+                                    ariaLabel={ta.pam.member}
+                                    bind:checked={group.isMember}
+                                    disabled={group.name === user.name}
                                 />
                             </div>
                             {#if withWheel}
                                 <div class="center checkbox">
                                     <InputCheckbox
-                                            ariaLabel="Wheel"
-                                            bind:checked={group.isWheel}
-                                            disabled={!group.isMember}
+                                        ariaLabel="Wheel"
+                                        bind:checked={group.isWheel}
+                                        disabled={!group.isMember}
                                     />
                                 </div>
                             {/if}
@@ -232,10 +227,10 @@
             {/if}
         {/snippet}
 
-        {@render snipGroups("Host", groupsHost, true)}
-        {@render snipGroups("Generic", groupsGeneric)}
-        {@render snipGroups("Local", groupsLocal)}
-        {@render snipGroups("User", groupsUser)}
+        {@render snipGroups('Host', groupsHost, true)}
+        {@render snipGroups('Generic', groupsGeneric)}
+        {@render snipGroups('Local', groupsLocal)}
+        {@render snipGroups('User', groupsUser)}
     </section>
 
     <div class="submit">
@@ -243,7 +238,7 @@
             {t.common.save}
         </Button>
         {#if success}
-            <IconCheck/>
+            <IconCheck />
         {:else if err}
             <div class="err">
                 {err}
@@ -272,17 +267,17 @@
     }
 
     .checkbox {
-        margin-top: -.25rem;
+        margin-top: -0.25rem;
     }
 
     .header {
-        margin-top: -.66rem;
+        margin-top: -0.66rem;
         font-weight: bold;
     }
 
     .row {
-        padding: .15rem .3rem;
-        max-width: min(25rem, calc(100dvw - .5rem));
+        padding: 0.15rem 0.3rem;
+        max-width: min(25rem, calc(100dvw - 0.5rem));
         display: grid;
         grid-template-columns: 1fr 5rem 4rem;
         border-radius: var(--border-radius);
@@ -298,14 +293,14 @@
     }
 
     .row:hover {
-        background: hsla(var(--accent) / .3);
+        background: hsla(var(--accent) / 0.3);
     }
 
     .submit {
         margin-top: 1rem;
         display: flex;
         align-items: center;
-        gap: .5rem;
+        gap: 0.5rem;
     }
 
     .typ {

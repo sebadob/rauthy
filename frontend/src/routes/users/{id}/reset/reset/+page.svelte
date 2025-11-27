@@ -1,26 +1,26 @@
 <script lang="ts">
-    import {generatePassword} from "$utils/helpers";
-    import Button from "$lib5/button/Button.svelte";
-    import PasswordPolicy from "$lib5/PasswordPolicy.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
-    import {slide} from "svelte/transition";
-    import LangSelector from "$lib5/LangSelector.svelte";
-    import {IS_DEV, TPL_PASSWORD_RESET} from "$utils/constants";
-    import {useI18n} from "$state/i18n.svelte";
-    import Main from "$lib5/Main.svelte";
-    import ContentCenter from "$lib5/ContentCenter.svelte";
-    import type {PasswordResetTemplate} from "$api/templates/PasswordReset";
-    import Template from "$lib5/Template.svelte";
-    import {useParam} from "$state/param.svelte";
-    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
-    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import InputPassword from "$lib5/form/InputPassword.svelte";
-    import A from "$lib5/A.svelte";
-    import {webauthnReg} from "$webauthn/registration";
-    import Form from "$lib5/form/Form.svelte";
-    import {PATTERN_USER_NAME} from "$utils/patterns";
-    import type {PasswordResetRequest} from "$api/types/password_reset.ts";
+    import { generatePassword } from '$utils/helpers';
+    import Button from '$lib5/button/Button.svelte';
+    import PasswordPolicy from '$lib5/PasswordPolicy.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
+    import { slide } from 'svelte/transition';
+    import LangSelector from '$lib5/LangSelector.svelte';
+    import { IS_DEV, TPL_PASSWORD_RESET } from '$utils/constants';
+    import { useI18n } from '$state/i18n.svelte';
+    import Main from '$lib5/Main.svelte';
+    import ContentCenter from '$lib5/ContentCenter.svelte';
+    import type { PasswordResetTemplate } from '$api/templates/PasswordReset';
+    import Template from '$lib5/Template.svelte';
+    import { useParam } from '$state/param.svelte';
+    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
+    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
+    import InputPassword from '$lib5/form/InputPassword.svelte';
+    import A from '$lib5/A.svelte';
+    import { webauthnReg } from '$webauthn/registration';
+    import Form from '$lib5/form/Form.svelte';
+    import { PATTERN_USER_NAME } from '$utils/patterns';
+    import type { PasswordResetRequest } from '$api/types/password_reset.ts';
 
     const inputWidth = '20rem';
 
@@ -182,7 +182,7 @@
     function onWebauthnSuccess(data?: WebauthnAdditionalData) {
         mfaPurpose = undefined;
         if (data && 'code' in data) {
-            onSubmitFinish(data.code)
+            onSubmitFinish(data.code);
         } else {
             console.error('invalid webauthn response', data);
         }
@@ -200,7 +200,7 @@
     {#if t}
         {#if requestType.get()?.startsWith('new_user')}
             <title>{t.passwordReset.newAccount}</title>
-        {:else if requestType.get() === "password_reset"}
+        {:else if requestType.get() === 'password_reset'}
             <title>{t.passwordReset.passwordReset}</title>
         {/if}
     {:else}
@@ -208,40 +208,36 @@
     {/if}
 </svelte:head>
 
-<Template id={TPL_PASSWORD_RESET} bind:value={tplData}/>
+<Template id={TPL_PASSWORD_RESET} bind:value={tplData} />
 
 {#snippet passwordInput()}
     {#if tplData}
         <Form action="" onSubmit={passwordReset}>
             <div class="policy">
-                <PasswordPolicy
-                        bind:accepted
-                        policy={tplData.password_policy}
-                        password={password}
-                />
+                <PasswordPolicy bind:accepted policy={tplData.password_policy} {password} />
             </div>
 
             <InputPassword
-                    bind:ref={refPassword}
-                    bind:value={password}
-                    autocomplete="new-password"
-                    label={t.account.passwordNew}
-                    placeholder={t.account.passwordNew}
-                    maxLength={tplData.password_policy.length_max}
-                    required
-                    bind:reportValidity={reportValidityNew}
-                    showCopy={password.length >= tplData.password_policy.length_min}
-                    width={inputWidth}
+                bind:ref={refPassword}
+                bind:value={password}
+                autocomplete="new-password"
+                label={t.account.passwordNew}
+                placeholder={t.account.passwordNew}
+                maxLength={tplData.password_policy.length_max}
+                required
+                bind:reportValidity={reportValidityNew}
+                showCopy={password.length >= tplData.password_policy.length_min}
+                width={inputWidth}
             />
             <InputPassword
-                    bind:value={passwordConfirm}
-                    autocomplete="new-password"
-                    label={t.account.passwordConfirm}
-                    placeholder={t.account.passwordConfirm}
-                    maxLength={tplData.password_policy.length_max}
-                    bind:reportValidity={reportValidityConfirm}
-                    required
-                    width={inputWidth}
+                bind:value={passwordConfirm}
+                autocomplete="new-password"
+                label={t.account.passwordConfirm}
+                placeholder={t.account.passwordConfirm}
+                maxLength={tplData.password_policy.length_max}
+                bind:reportValidity={reportValidityConfirm}
+                required
+                width={inputWidth}
             />
 
             <div class="generate">
@@ -260,15 +256,11 @@
 {#if IS_DEV}
     <div class="dev">
         <p>
-            This window shows up during local dev,<br>
-            only to be able to switch modes easily.<br>
+            This window shows up during local dev,<br />
+            only to be able to switch modes easily.<br />
         </p>
-        <Button level={2} onclick={() => requestType.set('new_user')}>
-            new_user
-        </Button>
-        <Button level={2} onclick={() => requestType.set('password_reset')}>
-            password_reset
-        </Button>
+        <Button level={2} onclick={() => requestType.set('new_user')}>new_user</Button>
+        <Button level={2} onclick={() => requestType.set('password_reset')}>password_reset</Button>
     </div>
 {/if}
 
@@ -276,20 +268,20 @@
     <ContentCenter>
         {#if mfaPurpose && tplData}
             <WebauthnRequest
-                    userId={tplData.user_id}
-                    purpose={mfaPurpose}
-                    onSuccess={onWebauthnSuccess}
-                    onError={onWebauthnError}
+                userId={tplData.user_id}
+                purpose={mfaPurpose}
+                onSuccess={onWebauthnSuccess}
+                onError={onWebauthnError}
             />
         {/if}
 
         {#if success}
             <p>
                 {t.passwordReset.success1}
-                <br>
+                <br />
                 {t.passwordReset.success2}
-                <br>
-                <br>
+                <br />
+                <br />
                 {t.passwordReset.success3}
                 <A href={redirectUri || '/auth/v1/account'}>Account</A>
             </p>
@@ -298,52 +290,47 @@
                 {#if requestType.get()?.startsWith('new_user')}
                     <h1>{t.passwordReset.newAccount}</h1>
                     <p>{t.passwordReset.newAccDesc1}</p>
-                    <p>{
-                        t.passwordReset.newAccDesc2}
-                        <A href={t.passwordReset.fidoLink} target="_blank">
-                            FIDO Alliance
-                        </A>
+                    <p>
+                        {t.passwordReset.newAccDesc2}
+                        <A href={t.passwordReset.fidoLink} target="_blank">FIDO Alliance</A>
                     </p>
 
                     <div class="typeChoice">
                         <Button
-                                level={!accountTypeNew ? 1 : 3}
-                                onclick={() => accountTypeNew = "passkey"}
-                                {isLoading}
+                            level={!accountTypeNew ? 1 : 3}
+                            onclick={() => (accountTypeNew = 'passkey')}
+                            {isLoading}
                         >
                             {t.passwordReset.passwordless}
                         </Button>
                         <Button
-                                level={!accountTypeNew ? 2 : 3}
-                                onclick={() => accountTypeNew = "password"}
-                                {isLoading}
+                            level={!accountTypeNew ? 2 : 3}
+                            onclick={() => (accountTypeNew = 'password')}
+                            {isLoading}
                         >
                             {t.passwordReset.password}
                         </Button>
                     </div>
 
-                    {#if accountTypeNew === "password"}
+                    {#if accountTypeNew === 'password'}
                         <div transition:slide>
                             {@render passwordInput()}
                         </div>
-                    {:else if accountTypeNew === "passkey"}
+                    {:else if accountTypeNew === 'passkey'}
                         <div transition:slide>
                             <Form action="" onSubmit={handleRegister}>
                                 <Input
-                                        bind:ref={refPasskey}
-                                        bind:value={passkeyName}
-                                        autocomplete="off"
-                                        label={t.mfa.passkeyName}
-                                        placeholder={t.mfa.passkeyName}
-                                        width={inputWidth}
-                                        maxLength={32}
-                                        pattern={PATTERN_USER_NAME}
-                                        required
+                                    bind:ref={refPasskey}
+                                    bind:value={passkeyName}
+                                    autocomplete="off"
+                                    label={t.mfa.passkeyName}
+                                    placeholder={t.mfa.passkeyName}
+                                    width={inputWidth}
+                                    maxLength={32}
+                                    pattern={PATTERN_USER_NAME}
+                                    required
                                 />
-                                <Button
-                                        type="submit"
-                                        level={success ? 2 : 1}
-                                >
+                                <Button type="submit" level={success ? 2 : 1}>
                                     {t.mfa.register}
                                 </Button>
                             </Form>
@@ -372,11 +359,11 @@
             </div>
         {/if}
 
-        <ThemeSwitch absolute/>
+        <ThemeSwitch absolute />
     </ContentCenter>
 </Main>
 
-<LangSelector absolute/>
+<LangSelector absolute />
 
 <style>
     .container {
@@ -387,22 +374,22 @@
     }
 
     .err {
-        margin-top: .5rem;
+        margin-top: 0.5rem;
         max-width: 20rem;
         color: hsl(var(--error));
     }
 
     .dev {
         position: absolute;
-        top: .5rem;
-        right: .5rem;
-        padding: .5rem;
+        top: 0.5rem;
+        right: 0.5rem;
+        padding: 0.5rem;
         border-radius: var(--border-radius);
         background: hsl(var(--bg-high));
     }
 
     .generate {
-        margin-bottom: .66rem;
+        margin-bottom: 0.66rem;
     }
 
     .policy {
@@ -413,6 +400,6 @@
     .typeChoice {
         margin-bottom: 1rem;
         display: flex;
-        gap: .5rem;
+        gap: 0.5rem;
     }
 </style>

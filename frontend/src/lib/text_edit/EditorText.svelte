@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type {Snippet} from "svelte";
-    import Button from "$lib/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte";
+    import type { Snippet } from 'svelte';
+    import Button from '$lib/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
 
     let {
         content = $bindable(''),
@@ -19,19 +19,19 @@
         onScroll,
         children,
     }: {
-        content: string,
-        ref?: undefined | HTMLElement,
-        hideButtons?: boolean,
-        height?: string,
-        appendCustomText?: string,
-        onCancel?: () => void,
-        onSave?: () => void,
-        onKeyUp?: () => void,
-        onMoueUp?: () => void,
-        onFocus?: () => void,
-        onFocusOut?: () => void,
-        onScroll?: () => void,
-        children?: Snippet,
+        content: string;
+        ref?: undefined | HTMLElement;
+        hideButtons?: boolean;
+        height?: string;
+        appendCustomText?: string;
+        onCancel?: () => void;
+        onSave?: () => void;
+        onKeyUp?: () => void;
+        onMoueUp?: () => void;
+        onFocus?: () => void;
+        onFocusOut?: () => void;
+        onScroll?: () => void;
+        children?: Snippet;
     } = $props();
 
     let t = useI18n();
@@ -41,20 +41,19 @@
     {@render children?.()}
 
     <div
-            bind:this={ref}
-            id="editor"
-            role="textbox"
-            tabindex="0"
-            class="edit"
-            contenteditable
-            bind:innerText={content}
-            onkeyup={onKeyUp}
-            onmouseup={onMoueUp}
-            onfocus={onFocus}
-            onfocusout={onFocusOut}
-            onscroll={onScroll}
-    >
-    </div>
+        bind:this={ref}
+        id="editor"
+        role="textbox"
+        tabindex="0"
+        class="edit"
+        contenteditable
+        bind:innerText={content}
+        onkeyup={onKeyUp}
+        onmouseup={onMoueUp}
+        onfocus={onFocus}
+        onfocusout={onFocusOut}
+        onscroll={onScroll}
+    ></div>
 
     {#if appendCustomText}
         <div class="custom">
@@ -79,13 +78,13 @@
     }
 
     .custom {
-        padding: 0 .5rem .5rem .5rem;
+        padding: 0 0.5rem 0.5rem 0.5rem;
         /*border: 1px solid red;*/
     }
 
     .edit {
         width: 100%;
-        padding: .5rem;
+        padding: 0.5rem;
     }
 
     .edit:focus {
@@ -101,7 +100,7 @@
         /*max-height: 30rem;*/
         display: flex;
         flex-direction: column;
-        border: 1px solid hsla(var(--bg-high) / .5);
+        border: 1px solid hsla(var(--bg-high) / 0.5);
         border-radius: var(--border-radius);
         overflow-y: auto;
         cursor: text;

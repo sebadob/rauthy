@@ -1,19 +1,19 @@
 <script lang="ts">
-    import type {PasskeyResponse} from "$api/types/webauthn.ts";
-    import {formatDateFromTs} from "$utils/helpers";
-    import IconFingerprint from "$icons/IconFingerprint.svelte";
-    import Tooltip from "$lib5/Tooltip.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte";
+    import type { PasskeyResponse } from '$api/types/webauthn.ts';
+    import { formatDateFromTs } from '$utils/helpers';
+    import IconFingerprint from '$icons/IconFingerprint.svelte';
+    import Tooltip from '$lib5/Tooltip.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
 
     let {
         passkey,
         showDelete,
         onDelete,
     }: {
-        passkey: PasskeyResponse,
-        showDelete: boolean,
-        onDelete: (name: string) => void,
+        passkey: PasskeyResponse;
+        showDelete: boolean;
+        onDelete: (name: string) => void;
     } = $props();
 
     let t = useI18n();
@@ -30,7 +30,7 @@
             {#if passkey.user_verified}
                 <Tooltip text={t.account.userVerifiedTooltip}>
                     <div style:margin-bottom="-.25rem">
-                        <IconFingerprint width={18} color="var(--col-acnt)"/>
+                        <IconFingerprint width={18} color="var(--col-acnt)" />
                     </div>
                 </Tooltip>
             {/if}
@@ -53,10 +53,7 @@
         <div class="row">
             <div></div>
             <div class="deleteBtn">
-                <Button
-                        level={-3}
-                        onclick={() => onDelete(passkey.name)}
-                >
+                <Button level={-3} onclick={() => onDelete(passkey.name)}>
                     {t.common.delete}
                 </Button>
             </div>
@@ -66,28 +63,28 @@
 
 <style>
     .deleteBtn {
-        margin-right: -.35rem;
+        margin-right: -0.35rem;
     }
 
     .keyContainer {
-        margin: .33rem 0;
+        margin: 0.33rem 0;
         overflow: clip;
     }
 
     .label {
-        color: hsla(var(--text) / .7);
+        color: hsla(var(--text) / 0.7);
     }
 
     .nameUv {
         display: inline-flex;
         align-items: center;
-        gap: .25rem;
+        gap: 0.25rem;
     }
 
     .row {
         width: min(95dvw, 21rem);
         display: flex;
-        gap: .5rem;
+        gap: 0.5rem;
         justify-content: space-between;
         align-items: center;
     }

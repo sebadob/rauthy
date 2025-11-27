@@ -1,9 +1,9 @@
 import {
-	CalendarDate,
-	getDayOfWeek,
-	isWeekend,
-	startOfMonth,
-	startOfWeek
+    CalendarDate,
+    getDayOfWeek,
+    isWeekend,
+    startOfMonth,
+    startOfWeek,
 } from '@internationalized/date';
 
 /**
@@ -12,11 +12,11 @@ import {
  * To include time, use `unixTsFromLocalDateTime()`.
  */
 export function unixTsFromLocalDate(inputDate: string) {
-	let d = Date.parse(inputDate.split('T')[0]);
-	if (isNaN(d)) {
-		return;
-	}
-	return d / 1000;
+    let d = Date.parse(inputDate.split('T')[0]);
+    if (isNaN(d)) {
+        return;
+    }
+    return d / 1000;
 }
 
 /**
@@ -25,28 +25,28 @@ export function unixTsFromLocalDate(inputDate: string) {
  * with respect for the local timezone in the users' browser.
  */
 export function unixTsFromLocalDateTime(date: string, time: string) {
-	let ts = Date.parse(`${date}T${time}`);
-	if (isNaN(ts)) {
-		return;
-	}
-	return ts / 1000 - new Date().getTimezoneOffset();
+    let ts = Date.parse(`${date}T${time}`);
+    if (isNaN(ts)) {
+        return;
+    }
+    return ts / 1000 - new Date().getTimezoneOffset();
 }
 
 export const DAY_MILLIS = 1000 * 60 * 60 * 24;
 
 export interface Day {
-	day: number;
-	month: number;
-	year: number;
-	isWeekend: boolean;
+    day: number;
+    month: number;
+    year: number;
+    isWeekend: boolean;
 }
 
 export function dayToString(day: Day) {
-	return `${day.year}-${day.month > 9 ? day.month : '0' + day.month}-${day.day > 9 ? day.day : '0' + day.day}`;
+    return `${day.year}-${day.month > 9 ? day.month : '0' + day.month}-${day.day > 9 ? day.day : '0' + day.day}`;
 }
 
 export interface Week {
-	days: Day[];
+    days: Day[];
 }
 
 /**
@@ -54,60 +54,60 @@ export interface Week {
  Appends days from the month before and the one after if there is an overlap.
  */
 export function getWeeksInMonth(date: CalendarDate, locale: string): Week[] {
-	const thisMonth = date.month;
+    const thisMonth = date.month;
 
-	date = startOfMonth(date);
-	date = startOfWeek(date, locale);
-	let weeks: Week[] = [];
+    date = startOfMonth(date);
+    date = startOfWeek(date, locale);
+    let weeks: Week[] = [];
 
-	const pushWeekDay = (days: Day[]) => {
-		days.push({
-			day: date.day,
-			month: date.month,
-			year: date.year,
-			isWeekend: isWeekend(date, locale)
-		});
-		date = date.add({ days: 1 });
-	};
+    const pushWeekDay = (days: Day[]) => {
+        days.push({
+            day: date.day,
+            month: date.month,
+            year: date.year,
+            isWeekend: isWeekend(date, locale),
+        });
+        date = date.add({ days: 1 });
+    };
 
-	const pushWeek = () => {
-		let week: Week = {
-			// number: getWeekOfYear(date),
-			days: []
-		};
-		for (let i = 0; i < 7; i++) {
-			pushWeekDay(week.days);
-		}
-		weeks.push(week);
-	};
+    const pushWeek = () => {
+        let week: Week = {
+            // number: getWeekOfYear(date),
+            days: [],
+        };
+        for (let i = 0; i < 7; i++) {
+            pushWeekDay(week.days);
+        }
+        weeks.push(week);
+    };
 
-	// build the first week with possible overlap into month before
-	pushWeek();
+    // build the first week with possible overlap into month before
+    pushWeek();
 
-	// build weeks afterward until we get into the next month
-	while (date.month === thisMonth) {
-		pushWeek();
-	}
+    // build weeks afterward until we get into the next month
+    while (date.month === thisMonth) {
+        pushWeek();
+    }
 
-	// fill up the last week with possible overlap into next month
-	let lastWeek = weeks[weeks.length - 1];
-	let dayOfWeek = getDayOfWeek(date, locale);
-	while (dayOfWeek > 0) {
-		pushWeekDay(lastWeek.days);
-		dayOfWeek = getDayOfWeek(date, locale);
-	}
-	weeks[weeks.length - 1] = lastWeek;
+    // fill up the last week with possible overlap into next month
+    let lastWeek = weeks[weeks.length - 1];
+    let dayOfWeek = getDayOfWeek(date, locale);
+    while (dayOfWeek > 0) {
+        pushWeekDay(lastWeek.days);
+        dayOfWeek = getDayOfWeek(date, locale);
+    }
+    weeks[weeks.length - 1] = lastWeek;
 
-	return weeks;
+    return weeks;
 }
 
 /**
  * Converts the DateTime string inside the given URLSearchParams to a Unix timestamp
  */
 export function formParamsDateToTs(key: string, params: URLSearchParams) {
-	let ts = unixTsFromLocalDate(params.get(key) || '');
-	params.set(key, ts?.toString() || '');
-	return params;
+    let ts = unixTsFromLocalDate(params.get(key) || '');
+    params.set(key, ts?.toString() || '');
+    return params;
 }
 
 /**
@@ -115,21 +115,21 @@ export function formParamsDateToTs(key: string, params: URLSearchParams) {
  * Date will be `local` and probably needs to be combined with the `<TZ>` component.
  */
 export function fmtDateInput(date?: Date) {
-	const d = date || new Date();
+    const d = date || new Date();
 
-	let dd: string | number = d.getDate();
-	// let dd: string | number = d.getUTCDate();
-	if (dd < 10) {
-		dd = '0' + dd;
-	}
-	let mm: string | number = d.getMonth() + 1;
-	// let mm: string | number = d.getUTCMonth() + 1;
-	if (mm < 10) {
-		mm = '0' + mm;
-	}
-	const yyyy = d.getUTCFullYear();
+    let dd: string | number = d.getDate();
+    // let dd: string | number = d.getUTCDate();
+    if (dd < 10) {
+        dd = '0' + dd;
+    }
+    let mm: string | number = d.getMonth() + 1;
+    // let mm: string | number = d.getUTCMonth() + 1;
+    if (mm < 10) {
+        mm = '0' + mm;
+    }
+    const yyyy = d.getUTCFullYear();
 
-	return `${yyyy}-${mm}-${dd}`;
+    return `${yyyy}-${mm}-${dd}`;
 }
 
 /**
@@ -137,20 +137,20 @@ export function fmtDateInput(date?: Date) {
  * Time will be `local` and probably needs to be combined with the `<TZ>` component.
  */
 export function fmtTimeInput(date?: Date) {
-	const d = date || new Date();
+    const d = date || new Date();
 
-	let hr: string | number = d.getHours();
-	// let hr: string | number = d.getUTCHours();
-	if (hr < 10) {
-		hr = '0' + hr;
-	}
-	let mn: string | number = d.getMinutes();
-	// let mn: string | number = d.getUTCMinutes();
-	if (mn < 10) {
-		mn = '0' + mn;
-	}
+    let hr: string | number = d.getHours();
+    // let hr: string | number = d.getUTCHours();
+    if (hr < 10) {
+        hr = '0' + hr;
+    }
+    let mn: string | number = d.getMinutes();
+    // let mn: string | number = d.getUTCMinutes();
+    if (mn < 10) {
+        mn = '0' + mn;
+    }
 
-	return `${hr}:${mn}`;
+    return `${hr}:${mn}`;
 }
 
 /**
@@ -158,9 +158,9 @@ export function fmtTimeInput(date?: Date) {
  * CAUTION: It does NOT check the integrity! Uses unchecked typecasting!
  */
 export function paramsInto<T>(params: URLSearchParams): T {
-	let res: any = {};
-	for (let p of params) {
-		res[p[0]] = p[1] || undefined;
-	}
-	return res as T;
+    let res: any = {};
+    for (let p of params) {
+        res[p[0]] = p[1] || undefined;
+    }
+    return res as T;
 }

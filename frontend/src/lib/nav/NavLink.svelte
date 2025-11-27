@@ -1,7 +1,7 @@
 <script lang="ts">
-    import A from "$lib5/A.svelte";
-    import type {Snippet} from "svelte";
-    import {useTrigger} from "$state/callback.svelte";
+    import A from '$lib5/A.svelte';
+    import type { Snippet } from 'svelte';
+    import { useTrigger } from '$state/callback.svelte';
 
     let {
         compact,
@@ -11,19 +11,19 @@
         highlightIncludes,
         children,
     }: {
-        compact: boolean,
-        params: string,
-        route: string,
-        icon: Snippet<[string]>,
-        highlightIncludes?: string,
-        children: Snippet,
+        compact: boolean;
+        params: string;
+        route: string;
+        icon: Snippet<[string]>;
+        highlightIncludes?: string;
+        children: Snippet;
     } = $props();
 
     const urlPrefix = '/auth/v1/admin';
 
     let tr = useTrigger();
 
-    let width = $derived(compact ? "1.5rem" : "1.2rem");
+    let width = $derived(compact ? '1.5rem' : '1.2rem');
     let href = $derived(`${urlPrefix}${route}${params}`);
 
     function onclick() {
@@ -39,8 +39,6 @@
             }, 100);
         });
     }
-
-
 </script>
 
 <A {href} hideUnderline {highlightIncludes} {onclick}>
@@ -70,26 +68,26 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        font-size: .7rem;
+        font-size: 0.7rem;
         word-break: break-word;
     }
 
     .compact > span {
-        color: hsla(var(--text) / .66);
+        color: hsla(var(--text) / 0.66);
     }
 
     .iconCompact {
-        margin-bottom: -.2rem;
+        margin-bottom: -0.2rem;
     }
 
     .iconWide {
-        transform: translateY(.15rem);
+        transform: translateY(0.15rem);
     }
 
     .wide {
         display: flex;
         align-items: center;
-        gap: .5rem;
+        gap: 0.5rem;
         overflow: clip;
     }
 </style>

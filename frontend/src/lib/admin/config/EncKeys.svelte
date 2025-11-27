@@ -1,11 +1,11 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import IconCheck from "$icons/IconCheck.svelte";
-    import {fetchGet, fetchPost} from "$api/fetch";
-    import type {EncKeyMigrateRequest, EncKeysResponse} from "$api/types/enc_keys.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import Options from "$lib5/Options.svelte";
+    import { onMount } from 'svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import { fetchGet, fetchPost } from '$api/fetch';
+    import type { EncKeyMigrateRequest, EncKeysResponse } from '$api/types/enc_keys.ts';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import Options from '$lib5/Options.svelte';
 
     let ta = useI18nAdmin();
 
@@ -79,11 +79,7 @@
 {#if keys.length > 1}
     <p>{ta.docs.encKeys.migrateToKey}:</p>
 
-    <Options
-            ariaLabel={ta.docs.encKeys.migrateToKey}
-            options={keys}
-            bind:value={migrateKey}
-    />
+    <Options ariaLabel={ta.docs.encKeys.migrateToKey} options={keys} bind:value={migrateKey} />
 
     <div class="btn flex gap-05">
         <Button onclick={migrate} {isLoading}>
@@ -91,7 +87,7 @@
         </Button>
 
         {#if success}
-            <IconCheck/>
+            <IconCheck />
         {/if}
     </div>
 {:else}

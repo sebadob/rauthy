@@ -1,9 +1,9 @@
 <script lang="ts">
-    import {slide} from "svelte/transition";
-    import {useI18n} from "$state/i18n.svelte";
-    import type {FullAutoFill} from "svelte/elements";
-    import {genKey} from "$utils/helpers";
-    import {onMount} from "svelte";
+    import { slide } from 'svelte/transition';
+    import { useI18n } from '$state/i18n.svelte';
+    import type { FullAutoFill } from 'svelte/elements';
+    import { genKey } from '$utils/helpers';
+    import { onMount } from 'svelte';
 
     let {
         ref = $bindable(),
@@ -39,34 +39,34 @@
         onDown,
         onSubmit,
     }: {
-        ref?: undefined | HTMLInputElement,
-        typ?: string,
-        id?: string,
-        name?: string,
-        value?: string | number | null,
-        label?: string,
-        autocomplete?: FullAutoFill | null | undefined,
-        placeholder?: string,
-        disabled?: boolean | null | undefined,
-        minLength?: number | null | undefined,
-        maxLength?: number | null | undefined,
-        min?: string,
-        max?: string,
-        step?: number,
-        required?: boolean,
-        pattern?: string,
-        errMsg?: string,
-        isError?: boolean,
-        width?: string,
+        ref?: undefined | HTMLInputElement;
+        typ?: string;
+        id?: string;
+        name?: string;
+        value?: string | number | null;
+        label?: string;
+        autocomplete?: FullAutoFill | null | undefined;
+        placeholder?: string;
+        disabled?: boolean | null | undefined;
+        minLength?: number | null | undefined;
+        maxLength?: number | null | undefined;
+        min?: string;
+        max?: string;
+        step?: number;
+        required?: boolean;
+        pattern?: string;
+        errMsg?: string;
+        isError?: boolean;
+        width?: string;
 
-        onBlur?: () => void,
-        onEnter?: () => void,
-        onInput?: () => void,
-        onLeft?: () => void,
-        onRight?: () => void,
-        onUp?: () => void,
-        onDown?: () => void,
-        onSubmit?: (event: Event & { currentTarget: EventTarget & HTMLInputElement }) => void,
+        onBlur?: () => void;
+        onEnter?: () => void;
+        onInput?: () => void;
+        onLeft?: () => void;
+        onRight?: () => void;
+        onUp?: () => void;
+        onDown?: () => void;
+        onSubmit?: (event: Event & { currentTarget: EventTarget & HTMLInputElement }) => void;
     } = $props();
 
     let t = useI18n();
@@ -135,40 +135,36 @@
         isError = false;
         return true;
     }
-
 </script>
 
-<div style:width={width}>
+<div style:width>
     <input
-            bind:this={ref}
-            type={typ}
-            {id}
-            {name}
-            title={errMsg}
-            aria-label={label || placeholder}
-            bind:value
-
-            {autocomplete}
-            {placeholder}
-            aria-placeholder={placeholder}
-            {disabled}
-            aria-disabled={disabled}
-
-            minlength={minLength || undefined}
-            maxlength={maxLength || undefined}
-            min={min || undefined}
-            max={max || undefined}
-            {step}
-            required={required || undefined}
-            aria-required={required || false}
-            aria-invalid={isError}
-            pattern={pattern || undefined}
-
-            {oninput}
-            {oninvalid}
-            {onblur}
-            {onkeydown}
-            onsubmit={onSubmit}
+        bind:this={ref}
+        type={typ}
+        {id}
+        {name}
+        title={errMsg}
+        aria-label={label || placeholder}
+        bind:value
+        {autocomplete}
+        {placeholder}
+        aria-placeholder={placeholder}
+        {disabled}
+        aria-disabled={disabled}
+        minlength={minLength || undefined}
+        maxlength={maxLength || undefined}
+        min={min || undefined}
+        max={max || undefined}
+        {step}
+        required={required || undefined}
+        aria-required={required || false}
+        aria-invalid={isError}
+        pattern={pattern || undefined}
+        {oninput}
+        {oninvalid}
+        {onblur}
+        {onkeydown}
+        onsubmit={onSubmit}
     />
     <div aria-live="assertive" class="label">
         <label for={id} class="font-label noselect" data-required={required}>
@@ -176,10 +172,10 @@
         </label>
         {#if isError}
             <div
-                    aria-relevant="all"
-                    class="error"
-                    class:errWithLabel={!!label}
-                    transition:slide={{duration: 150}}
+                aria-relevant="all"
+                class="error"
+                class:errWithLabel={!!label}
+                transition:slide={{ duration: 150 }}
             >
                 {errMsg || t.common.invalidInput}
             </div>
@@ -188,9 +184,10 @@
 </div>
 
 <style>
-    label, .error {
+    label,
+    .error {
         line-height: 1.1rem;
-        font-size: .9rem;
+        font-size: 0.9rem;
     }
 
     label {
@@ -200,7 +197,7 @@
     .label {
         width: 100%;
         margin-top: -1.1rem;
-        padding: .5rem;
+        padding: 0.5rem;
     }
 
     .error {
@@ -208,6 +205,6 @@
     }
 
     .errWithLabel {
-        margin-top: -.5rem;
+        margin-top: -0.5rem;
     }
 </style>

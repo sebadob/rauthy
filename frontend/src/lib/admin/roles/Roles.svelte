@@ -1,17 +1,17 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import ButtonAddModal from "$lib5/button/ButtonAddModal.svelte";
-    import ContentAdmin from "$lib5/ContentAdmin.svelte";
-    import NavButtonTile from "$lib5/nav/NavButtonTile.svelte";
-    import NavSub from "$lib5/nav/NavSub.svelte";
-    import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
-    import {fetchGet} from "$api/fetch";
-    import {useParam} from "$state/param.svelte";
-    import type {RoleResponse} from "$api/types/roles.ts";
-    import RoleAddNew from "$lib5/admin/roles/RoleAddNew.svelte";
-    import RoleDetails from "$lib5/admin/roles/RoleDetails.svelte";
-    import {useTrigger} from "$state/callback.svelte";
+    import { onMount } from 'svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
+    import ContentAdmin from '$lib5/ContentAdmin.svelte';
+    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
+    import NavSub from '$lib5/nav/NavSub.svelte';
+    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
+    import { fetchGet } from '$api/fetch';
+    import { useParam } from '$state/param.svelte';
+    import type { RoleResponse } from '$api/types/roles.ts';
+    import RoleAddNew from '$lib5/admin/roles/RoleAddNew.svelte';
+    import RoleDetails from '$lib5/admin/roles/RoleDetails.svelte';
+    import { useTrigger } from '$state/callback.svelte';
 
     let ta = useI18nAdmin();
 
@@ -63,9 +63,11 @@
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
-            roles.sort((a, b) => up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+            roles.sort((a, b) =>
+                up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+            );
         } else if (option === orderOptions[1]) {
-            roles.sort((a, b) => up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id));
+            roles.sort((a, b) => (up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
         }
     }
 
@@ -78,25 +80,29 @@
         await fetchRoles();
         rid.set(id);
     }
-
 </script>
 
 <NavSub
-        paddingTop="2.1rem"
-        buttonTilesAriaControls="groups"
-        width="min(20rem, 100dvw)"
-        thresholdNavSub={700}
+    paddingTop="2.1rem"
+    buttonTilesAriaControls="groups"
+    width="min(20rem, 100dvw)"
+    thresholdNavSub={700}
 >
-    <ButtonAddModal bind:ref={refAddNew} level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
-        <RoleAddNew onSave={onAddNew} {roles}/>
+    <ButtonAddModal
+        bind:ref={refAddNew}
+        level={roles.length === 0 ? 1 : 2}
+        bind:closeModal
+        alignRight
+    >
+        <RoleAddNew onSave={onAddNew} {roles} />
     </ButtonAddModal>
     <OrderSearchBar
-            {searchOptions}
-            bind:searchOption
-            bind:value={searchValue}
-            {orderOptions}
-            {onChangeOrder}
-            searchWidth="min(19.5rem, 100dvw - .5rem)"
+        {searchOptions}
+        bind:searchOption
+        bind:value={searchValue}
+        {orderOptions}
+        {onChangeOrder}
+        searchWidth="min(19.5rem, 100dvw - .5rem)"
     />
 
     {#snippet buttonTiles()}
@@ -119,7 +125,7 @@
 
     <div id="groups">
         {#if role}
-            <RoleDetails {role} {roles} {onSave}/>
+            <RoleDetails {role} {roles} {onSave} />
         {/if}
     </div>
 </ContentAdmin>
@@ -127,7 +133,7 @@
 <style>
     .rolesList {
         max-height: calc(100dvh - 9.5rem);
-        margin-top: .5rem;
+        margin-top: 0.5rem;
         overflow-y: auto;
     }
 </style>

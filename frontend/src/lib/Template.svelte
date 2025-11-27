@@ -1,7 +1,7 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import {fetchGet} from "$api/fetch";
-    import {IS_DEV} from "$utils/constants";
+    import { onMount } from 'svelte';
+    import { fetchGet } from '$api/fetch';
+    import { IS_DEV } from '$utils/constants';
 
     type T = $$Generic;
 
@@ -9,8 +9,8 @@
         id,
         value = $bindable(),
     }: {
-        id: string,
-        value: boolean | string | number | T,
+        id: string;
+        value: boolean | string | number | T;
     } = $props();
 
     onMount(async () => {
@@ -41,3 +41,5 @@
         }
     }
 </script>
+
+<!-- This empty comment is used to prevent prettier from wiping the file -->

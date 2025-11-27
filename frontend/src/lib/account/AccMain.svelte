@@ -1,34 +1,34 @@
 <script lang="ts">
-    import {redirectToLogout} from "$utils/helpers";
-    import AccInfo from "$lib5/account/AccInfo.svelte";
-    import AccEdit from "$lib5/account/AccEdit.svelte";
-    import AccMFA from "./AccMFA.svelte";
-    import AccPassword from "./AccPassword.svelte";
-    import AccWebId from "./AccWebId.svelte";
-    import AccDevices from "$lib5/account/AccDevices.svelte";
-    import {useI18n} from "$state/i18n.svelte.js";
-    import type {UserResponse} from "$api/types/user.ts";
-    import {TPL_AUTH_PROVIDERS} from "$utils/constants";
-    import Template from "$lib5/Template.svelte";
-    import type {AuthProvidersTemplate} from "$api/templates/AuthProvider.ts";
-    import {onMount} from "svelte";
-    import {useParam} from "$state/param.svelte";
-    import Tabs from "$lib5/tabs/Tabs.svelte";
-    import Devices from "$lib5/devices/Devices.svelte";
-    import type {WebIdResponse} from "$api/types/web_id.ts";
-    import IconLogout from "$icons/IconLogout.svelte";
-    import Button from "$lib/button/Button.svelte";
-    import AccOther from "$lib/account/AccOther.svelte";
-    import AccPAM from "$lib/account/AccPAM.svelte";
-    import type {PamUserResponse} from "$api/types/pam";
-    import {fetchGet} from "$api/fetch";
+    import { redirectToLogout } from '$utils/helpers';
+    import AccInfo from '$lib5/account/AccInfo.svelte';
+    import AccEdit from '$lib5/account/AccEdit.svelte';
+    import AccMFA from './AccMFA.svelte';
+    import AccPassword from './AccPassword.svelte';
+    import AccWebId from './AccWebId.svelte';
+    import AccDevices from '$lib5/account/AccDevices.svelte';
+    import { useI18n } from '$state/i18n.svelte.js';
+    import type { UserResponse } from '$api/types/user.ts';
+    import { TPL_AUTH_PROVIDERS } from '$utils/constants';
+    import Template from '$lib5/Template.svelte';
+    import type { AuthProvidersTemplate } from '$api/templates/AuthProvider.ts';
+    import { onMount } from 'svelte';
+    import { useParam } from '$state/param.svelte';
+    import Tabs from '$lib5/tabs/Tabs.svelte';
+    import Devices from '$lib5/devices/Devices.svelte';
+    import type { WebIdResponse } from '$api/types/web_id.ts';
+    import IconLogout from '$icons/IconLogout.svelte';
+    import Button from '$lib/button/Button.svelte';
+    import AccOther from '$lib/account/AccOther.svelte';
+    import AccPAM from '$lib/account/AccPAM.svelte';
+    import type { PamUserResponse } from '$api/types/pam';
+    import { fetchGet } from '$api/fetch';
 
     let {
         user = $bindable(),
-        webIdData = $bindable()
+        webIdData = $bindable(),
     }: {
-        user: UserResponse,
-        webIdData: undefined | WebIdResponse,
+        user: UserResponse;
+        webIdData: undefined | WebIdResponse;
     } = $props();
 
     let t = useI18n();
@@ -53,13 +53,7 @@
             tabs.push('PAM');
         }
 
-        tabs = [
-            ...tabs,
-            t.account.navMfa,
-            t.account.devices,
-            t.account.navEdit,
-            t.common.password,
-        ];
+        tabs = [...tabs, t.account.navMfa, t.account.devices, t.account.navEdit, t.common.password];
         if (!!webIdData) {
             tabs.push('WebID');
         }
@@ -101,9 +95,9 @@
     }
 </script>
 
-<svelte:window bind:innerWidth/>
+<svelte:window bind:innerWidth />
 
-<Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
+<Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
 
 {#snippet header()}
     <h3>{`${user.given_name || ''} ${user.family_name || ''}`}</h3>
@@ -116,27 +110,34 @@
         </div>
 
         <div class="container">
-            <Tabs tabs={tabsCompact} bind:selected/>
+            <Tabs tabs={tabsCompact} bind:selected />
 
             <div class="innerPhone">
                 {#if selected === t.account.navInfo}
-                    <AccInfo bind:user {pamUser} {providers} {authProvider} viewModePhone {webIdData}/>
+                    <AccInfo
+                        bind:user
+                        {pamUser}
+                        {providers}
+                        {authProvider}
+                        viewModePhone
+                        {webIdData}
+                    />
                 {:else if selected === 'PAM' && pamUser}
-                    <AccPAM {pamUser}/>
+                    <AccPAM {pamUser} />
                 {:else if selected === t.account.navEdit}
-                    <AccEdit bind:user viewModePhone/>
+                    <AccEdit bind:user viewModePhone />
                 {:else if selected === t.common.password}
-                    <AccPassword {user} {authProvider} viewModePhone/>
+                    <AccPassword {user} {authProvider} viewModePhone />
                 {:else if selected === t.account.navMfa}
-                    <AccMFA {user}/>
+                    <AccMFA {user} />
                 {:else if selected === 'WebID'}
                     {#if webIdData}
-                        <AccWebId bind:webIdData/>
+                        <AccWebId bind:webIdData />
                     {/if}
                 {:else if selected === t.account.other}
-                    <AccOther {user}/>
+                    <AccOther {user} />
                 {:else if selected === t.account.devices}
-                    <Devices userId={user.id}/>
+                    <Devices userId={user.id} />
                 {/if}
             </div>
         </div>
@@ -144,36 +145,32 @@
         <div class="wide">
             {#if !viewModeWideCompact}
                 <div clasS="info">
-                    <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider}/>
+                    <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider} />
                 </div>
             {/if}
 
             <div class="container">
-                <Tabs
-                        tabs={viewModeWideCompact ? tabsCompact : tabsWide}
-                        bind:selected
-                        center
-                />
+                <Tabs tabs={viewModeWideCompact ? tabsCompact : tabsWide} bind:selected center />
 
                 <div class="inner">
                     {#if selected === t.account.navInfo}
-                        <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider}/>
+                        <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider} />
                     {:else if selected === 'PAM' && pamUser}
-                        <AccPAM {pamUser}/>
+                        <AccPAM {pamUser} />
                     {:else if selected === t.account.navEdit}
-                        <AccEdit bind:user/>
+                        <AccEdit bind:user />
                     {:else if selected === t.common.password}
-                        <AccPassword {user} {authProvider}/>
+                        <AccPassword {user} {authProvider} />
                     {:else if selected === t.account.navMfa}
-                        <AccMFA {user}/>
+                        <AccMFA {user} />
                     {:else if selected === 'WebID'}
                         {#if webIdData}
-                            <AccWebId bind:webIdData/>
+                            <AccWebId bind:webIdData />
                         {/if}
                     {:else if selected === t.account.other}
-                        <AccOther {user}/>
+                        <AccOther {user} />
                     {:else if selected === t.account.devices}
-                        <AccDevices/>
+                        <AccDevices />
                     {/if}
                 </div>
             </div>
@@ -181,7 +178,7 @@
             <div class="logout">
                 <Button level={-3} onclick={redirectToLogout}>
                     <div title={t.account.navLogout} class="flex gap-05">
-                        <IconLogout/>
+                        <IconLogout />
                         {t.account.navLogout}
                     </div>
                 </Button>
@@ -192,25 +189,26 @@
 
 <style>
     .container {
-        margin-top: .5rem;
+        margin-top: 0.5rem;
         display: flex;
         flex-direction: column;
     }
 
     .headerPhone {
-        margin-left: .5rem;
+        margin-left: 0.5rem;
     }
 
     .info {
         border-right: 1px solid hsl(var(--bg-high));
     }
 
-    .inner, .innerPhone {
-        padding: .5rem;
+    .inner,
+    .innerPhone {
+        padding: 0.5rem;
     }
 
     .inner {
-        margin-top: .5rem;
+        margin-top: 0.5rem;
         width: min(32rem, 100dvw);
         max-height: calc(100dvh - 7rem);
         overflow-y: auto;
@@ -224,8 +222,8 @@
 
     .logout {
         position: absolute;
-        top: .25rem;
-        right: .5rem;
+        top: 0.25rem;
+        right: 0.5rem;
     }
 
     .wide {
@@ -234,7 +232,7 @@
         display: flex;
         gap: 1rem;
         border-radius: var(--border-radius);
-        background: hsla(var(--bg-high) / .25);
+        background: hsla(var(--bg-high) / 0.25);
     }
 
     .wide:has(.info) {

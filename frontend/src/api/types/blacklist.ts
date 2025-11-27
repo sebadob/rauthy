@@ -1,16 +1,16 @@
 export interface IpBlacklistRequest {
     /// Validation: PATTERN_IPV4
-    ip: string,
+    ip: string;
     /// Unix timestamp in seconds
-    exp: number,
+    exp: number;
 }
 
 export interface BlacklistedIp {
-    ip: string,
+    ip: string;
     /// Unix timestamp in seconds
-    exp: number,
+    exp: number;
 }
 
 export interface BlacklistResponse {
-    ips: BlacklistedIp[],
+    ips: BlacklistedIp[];
 }

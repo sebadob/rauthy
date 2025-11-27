@@ -1,16 +1,16 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import type {ApiKeyResponse} from "$api/types/api_keys.ts";
-    import {fetchDelete} from "$api/fetch";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import Button from '$lib5/button/Button.svelte';
+    import type { ApiKeyResponse } from '$api/types/api_keys.ts';
+    import { fetchDelete } from '$api/fetch';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
 
     let {
         key,
         onSave,
     }: {
-        key: ApiKeyResponse,
-        onSave: () => void,
+        key: ApiKeyResponse;
+        onSave: () => void;
     } = $props();
 
     let t = useI18n();
@@ -28,7 +28,6 @@
             onSave();
         }
     }
-
 </script>
 
 <p>{ta.api_key.delete1}</p>

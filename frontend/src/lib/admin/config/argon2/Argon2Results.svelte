@@ -1,11 +1,11 @@
 <script lang="ts">
-    import type {PasswordHashTime} from "$api/types/password_hashing.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import type { PasswordHashTime } from '$api/types/password_hashing.ts';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
 
     let {
         res,
     }: {
-        res: PasswordHashTime[],
+        res: PasswordHashTime[];
     } = $props();
 
     let ta = useI18nAdmin();

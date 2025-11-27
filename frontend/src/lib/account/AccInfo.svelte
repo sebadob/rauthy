@@ -1,20 +1,23 @@
 <script lang="ts">
-    import CheckIcon from "$lib5/CheckIcon.svelte";
-    import {buildWebIdUri, formatDateFromTs, saveProviderToken} from "$utils/helpers";
-    import Button from "$lib5/button/Button.svelte";
-    import Modal from "$lib5/Modal.svelte";
-    import {PKCE_VERIFIER_UPSTREAM} from "$utils/constants";
-    import {useI18n} from "$state/i18n.svelte.js";
-    import type {UserResponse} from "$api/types/user.ts";
-    import type {AuthProvidersTemplate, AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
-    import type {WebIdResponse} from "$api/types/web_id.ts";
-    import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
-    import {fetchDelete, fetchPost} from "$api/fetch";
-    import ButtonAuthProvider from "../ButtonAuthProvider.svelte";
-    import UserPicture from "$lib/UserPicture.svelte";
-    import {fetchSolvePow} from "$utils/pow";
-    import {generatePKCE} from "$utils/pkce";
-    import type {PamUserResponse} from "$api/types/pam";
+    import CheckIcon from '$lib5/CheckIcon.svelte';
+    import { buildWebIdUri, formatDateFromTs, saveProviderToken } from '$utils/helpers';
+    import Button from '$lib5/button/Button.svelte';
+    import Modal from '$lib5/Modal.svelte';
+    import { PKCE_VERIFIER_UPSTREAM } from '$utils/constants';
+    import { useI18n } from '$state/i18n.svelte.js';
+    import type { UserResponse } from '$api/types/user.ts';
+    import type {
+        AuthProvidersTemplate,
+        AuthProviderTemplate,
+    } from '$api/templates/AuthProvider.ts';
+    import type { WebIdResponse } from '$api/types/web_id.ts';
+    import type { ProviderLoginRequest } from '$api/types/auth_provider.ts';
+    import { fetchDelete, fetchPost } from '$api/fetch';
+    import ButtonAuthProvider from '../ButtonAuthProvider.svelte';
+    import UserPicture from '$lib/UserPicture.svelte';
+    import { fetchSolvePow } from '$utils/pow';
+    import { generatePKCE } from '$utils/pkce';
+    import type { PamUserResponse } from '$api/types/pam';
 
     let {
         user = $bindable(),
@@ -24,12 +27,12 @@
         webIdData,
         viewModePhone,
     }: {
-        user: UserResponse,
-        pamUser: undefined | PamUserResponse,
-        providers: AuthProvidersTemplate,
-        authProvider: undefined | AuthProviderTemplate,
-        viewModePhone?: boolean,
-        webIdData: undefined | WebIdResponse,
+        user: UserResponse;
+        pamUser: undefined | PamUserResponse;
+        providers: AuthProvidersTemplate;
+        authProvider: undefined | AuthProviderTemplate;
+        viewModePhone?: boolean;
+        webIdData: undefined | WebIdResponse;
     } = $props();
 
     let t = useI18n();
@@ -38,7 +41,9 @@
     let showModal = $state(false);
 
     let isFederated = $derived(user.account_type?.startsWith('federated'));
-    let accType = $derived(isFederated ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type);
+    let accType = $derived(
+        isFederated ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type,
+    );
 
     let classRow: 'rowPhone' | 'row' = $derived(viewModePhone ? 'rowPhone' : 'row');
     let classLabel: 'labelPhone' | 'label' = $derived(viewModePhone ? 'labelPhone' : 'label');
@@ -70,7 +75,7 @@
     async function providerLoginPkce(id: string, pkce_challenge: string) {
         isLoading = true;
 
-        let pow = await fetchSolvePow() || '';
+        let pow = (await fetchSolvePow()) || '';
         let payload: ProviderLoginRequest = {
             email: user.email,
             pow,
@@ -109,10 +114,10 @@
     <div class={classRow} style:margin=".5rem 0">
         <div class={classLabel}></div>
         <UserPicture
-                {fallbackCharacters}
-                userId={user.id}
-                bind:pictureId={user.picture_id}
-                size="large"
+            {fallbackCharacters}
+            userId={user.id}
+            bind:pictureId={user.picture_id}
+            size="large"
         />
     </div>
 
@@ -163,7 +168,7 @@
                     {/if}
                 </div>
             {:else if providers.length > 0}
-                <Button level={2} onclick={() => showModal = true}>
+                <Button level={2} onclick={() => (showModal = true)}>
                     {t.account.providerLink}
                 </Button>
                 <Modal bind:showModal>
@@ -173,10 +178,10 @@
                     <div class="providers">
                         {#each providers as provider (provider.id)}
                             <ButtonAuthProvider
-                                    ariaLabel={`${t.account.providerLink}: ${provider.name}`}
-                                    {provider}
-                                    onclick={linkProvider}
-                                    {isLoading}
+                                ariaLabel={`${t.account.providerLink}: ${provider.name}`}
+                                {provider}
+                                onclick={linkProvider}
+                                {isLoading}
                             />
                         {/each}
                     </div>
@@ -197,17 +202,17 @@
 
     <div class={classRow}>
         <div class={classLabel}>{t.account.mfaActivated}</div>
-        <CheckIcon checked={!!user.webauthn_user_id}/>
+        <CheckIcon checked={!!user.webauthn_user_id} />
     </div>
 
     <div class={classRow}>
         <div class={classLabel}>{t.account.userEnabled}</div>
-        <CheckIcon checked={user.enabled}/>
+        <CheckIcon checked={user.enabled} />
     </div>
 
     <div class={classRow}>
         <div class={classLabel}>{t.account.emailVerified}</div>
-        <CheckIcon checked={user.email_verified}/>
+        <CheckIcon checked={user.email_verified} />
     </div>
 
     {#if user.last_login}
@@ -220,7 +225,7 @@
     <div class={classRow}>
         <div class={classLabel}>{t.account.passwordExpiry}</div>
         <span class="value">
-            {user.password_expires && formatDateFromTs(user.password_expires) || t.common.never}
+            {(user.password_expires && formatDateFromTs(user.password_expires)) || t.common.never}
         </span>
     </div>
 
@@ -249,13 +254,14 @@
 </div>
 
 <style>
-    .label, .labelPhone {
-        color: hsla(var(--text) / .66);
-        font-size: .9rem;
+    .label,
+    .labelPhone {
+        color: hsla(var(--text) / 0.66);
+        font-size: 0.9rem;
     }
 
     .label {
-        margin-top: -.05rem;
+        margin-top: -0.05rem;
         width: 8.5rem;
     }
 
@@ -280,15 +286,15 @@
     .row {
         display: flex;
         align-items: center;
-        margin-bottom: .25rem;
+        margin-bottom: 0.25rem;
     }
 
     .rowPhone {
-        margin-bottom: .25rem;
+        margin-bottom: 0.25rem;
     }
 
     .rowPhone > .labelPhone {
-        margin-bottom: -.4rem;
+        margin-bottom: -0.4rem;
     }
 
     .value {

@@ -1,13 +1,13 @@
 <script lang="ts">
-    import {useI18n} from "$state/i18n.svelte.js";
-    import {fetchGet} from "$api/fetch";
-    import type {DeviceResponse} from "$api/types/device.ts";
-    import Device from "./Device.svelte";
+    import { useI18n } from '$state/i18n.svelte.js';
+    import { fetchGet } from '$api/fetch';
+    import type { DeviceResponse } from '$api/types/device.ts';
+    import Device from './Device.svelte';
 
     let {
         userId,
     }: {
-        userId: string,
+        userId: string;
     } = $props();
 
     let t = useI18n();
@@ -16,7 +16,7 @@
 
     $effect(() => {
         fetchDevices();
-    })
+    });
 
     async function fetchDevices() {
         let res = await fetchGet<DeviceResponse[]>(`/auth/v1/users/${userId}/devices`);
@@ -35,14 +35,14 @@
 <div class="devices">
     {#if userId}
         {#each devices as device, i (device.id)}
-            <Device bind:device={devices[i]} {userId}/>
+            <Device bind:device={devices[i]} {userId} />
         {/each}
     {/if}
 </div>
 
 <style>
     .head {
-        margin: .5rem 0;
+        margin: 0.5rem 0;
     }
 
     .devices {

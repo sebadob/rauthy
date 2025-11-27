@@ -1,11 +1,11 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import InputDate from "$lib5/form/InputDate.svelte";
-    import IconStop from "$icons/IconStop.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import type {PropsInputDateCombo} from "$lib5/form/props.ts";
-    import {fmtDateInput, fmtTimeInput} from "$utils/form";
-    import InputTime from "$lib5/form/InputTime.svelte";
+    import Button from '$lib5/button/Button.svelte';
+    import InputDate from '$lib5/form/InputDate.svelte';
+    import IconStop from '$icons/IconStop.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import type { PropsInputDateCombo } from '$lib5/form/props.ts';
+    import { fmtDateInput, fmtTimeInput } from '$utils/form';
+    import InputTime from '$lib5/form/InputTime.svelte';
 
     let {
         id,
@@ -31,7 +31,7 @@
 
         withDelete,
         withTime,
-    }: PropsInputDateCombo = $props()
+    }: PropsInputDateCombo = $props();
 
     let t = useI18n();
 
@@ -44,44 +44,40 @@
 <div class="container">
     <div class="inputs">
         <InputDate
-                {id}
-                {name}
-                bind:value
-                {label}
-                {errMsg}
-                {disabled}
-                {min}
-                {max}
-                {required}
-                {onEnter}
-                {onLeft}
-                {onRight}
-                {onUp}
-                {onDown}
+            {id}
+            {name}
+            bind:value
+            {label}
+            {errMsg}
+            {disabled}
+            {min}
+            {max}
+            {required}
+            {onEnter}
+            {onLeft}
+            {onRight}
+            {onUp}
+            {onDown}
         />
         {#if withTime}
             <InputTime
-                    name={timeName}
-                    ariaLabel={label}
-                    bind:value={timeValue}
-                    errMsg={timeErrMsg}
-                    min={timeMin}
-                    max={timeMax}
-                    {disabled}
-                    {required}
+                name={timeName}
+                ariaLabel={label}
+                bind:value={timeValue}
+                errMsg={timeErrMsg}
+                min={timeMin}
+                max={timeMax}
+                {disabled}
+                {required}
             />
         {/if}
     </div>
     {#if withDelete}
         <div class="delete">
-            <Button
-                    ariaLabel={t.common.delete}
-                    invisible
-                    onclick={reset}
-            >
-                    <span title={t.common.delete}>
-                        <IconStop color="hsla(var(--error) / .8)" width="1.2rem"/>
-                    </span>
+            <Button ariaLabel={t.common.delete} invisible onclick={reset}>
+                <span title={t.common.delete}>
+                    <IconStop color="hsla(var(--error) / .8)" width="1.2rem" />
+                </span>
             </Button>
         </div>
     {/if}
@@ -90,11 +86,11 @@
 <style>
     .container {
         display: flex;
-        gap: .25rem;
+        gap: 0.25rem;
     }
 
     .delete {
-        margin-top: .85em;
+        margin-top: 0.85em;
     }
 
     .inputs {

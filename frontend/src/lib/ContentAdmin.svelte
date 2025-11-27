@@ -1,10 +1,10 @@
 <script lang="ts">
-    import type {Snippet} from "svelte";
+    import type { Snippet } from 'svelte';
 
     let {
         children,
     }: {
-        children: Snippet,
+        children: Snippet;
     } = $props();
 </script>
 
@@ -21,7 +21,7 @@
 
     @media (max-width: 800px) {
         .content {
-            padding: 1.35rem .25rem 0 .25rem;
+            padding: 1.35rem 0.25rem 0 0.25rem;
         }
     }
 </style>

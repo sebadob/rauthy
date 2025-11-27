@@ -1,24 +1,24 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import {fade, slide} from 'svelte/transition';
-    import Switch from "$lib5/Switch.svelte";
-    import {buildWebIdUri} from "$utils/helpers";
-    import {useI18n} from "$state/i18n.svelte.js";
-    import type {WebIdResponse} from "$api/types/web_id.ts";
-    import A from "$lib5/A.svelte";
-    import InputArea from "$lib5/form/InputArea.svelte";
-    import IconCheck from "$icons/IconCheck.svelte";
-    import {fetchPut} from "$api/fetch";
+    import Button from '$lib5/button/Button.svelte';
+    import { fade, slide } from 'svelte/transition';
+    import Switch from '$lib5/Switch.svelte';
+    import { buildWebIdUri } from '$utils/helpers';
+    import { useI18n } from '$state/i18n.svelte.js';
+    import type { WebIdResponse } from '$api/types/web_id.ts';
+    import A from '$lib5/A.svelte';
+    import InputArea from '$lib5/form/InputArea.svelte';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import { fetchPut } from '$api/fetch';
 
     let {
         webIdData = $bindable(),
     }: {
-        webIdData: WebIdResponse,
+        webIdData: WebIdResponse;
     } = $props();
 
     let t = useI18n();
 
-    const labelWidth = "14rem";
+    const labelWidth = '14rem';
 
     let err = $state('');
     let success = $state(false);
@@ -38,7 +38,6 @@
             }, 3000);
         }
     }
-
 </script>
 
 <div class="container">
@@ -51,33 +50,21 @@
     </p>
 
     <div class="switch">
-        <Switch
-                ariaLabel="E-Mail"
-                bind:checked={webIdData.expose_email}
-                {labelWidth}
-        >
+        <Switch ariaLabel="E-Mail" bind:checked={webIdData.expose_email} {labelWidth}>
             E-Mail
         </Switch>
     </div>
 
     <div class="switch">
-        <Switch
-                ariaLabel={t.account.webIdExpertMode}
-                bind:checked={expertMode}
-                {labelWidth}
-        >
+        <Switch ariaLabel={t.account.webIdExpertMode} bind:checked={expertMode} {labelWidth}>
             {t.account.webIdExpertMode}
         </Switch>
     </div>
 
     {#if expertMode}
-        <div transition:slide={{duration: 150}}>
+        <div transition:slide={{ duration: 150 }}>
             <p>{t.account.webIdDescData}</p>
-            <InputArea
-                    placeholder="FOAF"
-                    rows={15}
-                    bind:value={webIdData.custom_triples}
-            />
+            <InputArea placeholder="FOAF" rows={15} bind:value={webIdData.custom_triples} />
         </div>
     {/if}
 
@@ -88,7 +75,7 @@
 
         {#if success}
             <div class="success" transition:fade>
-                <IconCheck/>
+                <IconCheck />
             </div>
         {:else if err}
             <div class="err" transition:fade>
@@ -100,10 +87,10 @@
 
 <style>
     .bottom {
-        margin-top: .5rem;
+        margin-top: 0.5rem;
         display: flex;
         flex-direction: row;
-        gap: .5rem;
+        gap: 0.5rem;
     }
 
     .container {
@@ -112,16 +99,16 @@
     }
 
     .err {
-        margin: .2rem 0 0 .5rem;
+        margin: 0.2rem 0 0 0.5rem;
         max-width: 23rem;
         color: hsl(var(--error));
     }
 
     .success {
-        margin-top: .2rem;
+        margin-top: 0.2rem;
     }
 
     .switch {
-        margin: .5rem 0;
+        margin: 0.5rem 0;
     }
 </style>

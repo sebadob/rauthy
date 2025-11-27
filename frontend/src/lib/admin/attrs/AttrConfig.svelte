@@ -1,27 +1,30 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import IconCheck from "$icons/IconCheck.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {fetchPut} from "$api/fetch";
-    import Form from "$lib5/form/Form.svelte";
-    import type {UserAttrConfigRequest, UserAttrConfigValueResponse} from "$api/types/user_attrs.ts";
-    import {PATTERN_ATTR, PATTERN_ATTR_DESC} from "$utils/patterns";
-    import CheckIcon from "$lib/CheckIcon.svelte";
-    import {slide} from "svelte/transition";
+    import Button from '$lib5/button/Button.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { fetchPut } from '$api/fetch';
+    import Form from '$lib5/form/Form.svelte';
+    import type {
+        UserAttrConfigRequest,
+        UserAttrConfigValueResponse,
+    } from '$api/types/user_attrs.ts';
+    import { PATTERN_ATTR, PATTERN_ATTR_DESC } from '$utils/patterns';
+    import CheckIcon from '$lib/CheckIcon.svelte';
+    import { slide } from 'svelte/transition';
 
     let {
         attr,
         attrs,
         onSave,
     }: {
-        attr: UserAttrConfigValueResponse,
-        attrs: UserAttrConfigValueResponse[],
-        onSave: () => void,
+        attr: UserAttrConfigValueResponse;
+        attrs: UserAttrConfigValueResponse[];
+        onSave: () => void;
     } = $props();
 
-    const width = "20rem";
+    const width = '20rem';
 
     let refSubmit: undefined | HTMLButtonElement = $state();
 
@@ -67,7 +70,7 @@
             desc: desc || undefined,
             default_value: defaultValue || undefined,
             user_editable: userEditable || false,
-        }
+        };
 
         let res = await fetchPut(form.action, payload);
         if (res.error) {
@@ -84,42 +87,42 @@
 
 <Form action={`/auth/v1/users/attr/${attr.name}`} {onSubmit}>
     <Input
-            bind:value={name}
-            autocomplete="off"
-            label={ta.attrs.name}
-            placeholder={ta.attrs.name}
-            required
-            pattern={PATTERN_ATTR}
-            {width}
+        bind:value={name}
+        autocomplete="off"
+        label={ta.attrs.name}
+        placeholder={ta.attrs.name}
+        required
+        pattern={PATTERN_ATTR}
+        {width}
     />
     <Input
-            bind:value={desc}
-            autocomplete="off"
-            label={ta.attrs.desc}
-            placeholder={ta.attrs.desc}
-            pattern={PATTERN_ATTR_DESC}
-            {width}
+        bind:value={desc}
+        autocomplete="off"
+        label={ta.attrs.desc}
+        placeholder={ta.attrs.desc}
+        pattern={PATTERN_ATTR_DESC}
+        {width}
     />
     <Input
-            bind:value={defaultValue}
-            autocomplete="off"
-            label={ta.attrs.defaultValue}
-            placeholder={ta.attrs.defaultValue}
-            {width}
+        bind:value={defaultValue}
+        autocomplete="off"
+        label={ta.attrs.defaultValue}
+        placeholder={ta.attrs.defaultValue}
+        {width}
     />
 
     <div class="editableRow">
         <div class="flex gap-05">
             {ta.attrs.userEditable}
-            <CheckIcon checked={userEditable}/>
+            <CheckIcon checked={userEditable} />
         </div>
 
         {#if !userEditable}
             <div class="editable">
                 <Button
-                        ariaLabel={ta.attrs.makeEditable}
-                        level={showMakeEditable ? 3 : 2}
-                        onclick={() => showMakeEditable = !showMakeEditable}
+                    ariaLabel={ta.attrs.makeEditable}
+                    level={showMakeEditable ? 3 : 2}
+                    onclick={() => (showMakeEditable = !showMakeEditable)}
                 >
                     {ta.attrs.makeEditable}
                 </Button>
@@ -136,9 +139,9 @@
                     <p class="err">{ta.attrs.makeEditableP3}</p>
 
                     <Button
-                            ariaLabel={ta.attrs.makeEditable}
-                            level={-1}
-                            onclick={submitMakeEditable}
+                        ariaLabel={ta.attrs.makeEditable}
+                        level={-1}
+                        onclick={submitMakeEditable}
                     >
                         {ta.attrs.makeEditable}
                     </Button>
@@ -153,7 +156,7 @@
         </Button>
 
         {#if success}
-            <IconCheck/>
+            <IconCheck />
         {/if}
     </div>
 
@@ -168,12 +171,12 @@
     .btn {
         margin-top: 1rem;
         display: flex;
-        gap: .5rem;
+        gap: 0.5rem;
         align-items: center;
     }
 
     .editable {
-        margin-top: .5rem;
+        margin-top: 0.5rem;
     }
 
     .editableRow {
@@ -183,6 +186,6 @@
     }
 
     .editableRow > .editable {
-        margin: .2rem 0 0 .5rem;
+        margin: 0.2rem 0 0 0.5rem;
     }
 </style>

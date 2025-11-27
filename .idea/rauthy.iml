@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src/api/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/api_types/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/bin/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/bin/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/src/common/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/data/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/error/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/jwt/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/middlewares/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/notify/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/schedulers/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/service/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/wasm-modules/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/wasm-modules/tests" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/book/book" />
+      <excludeFolder url="file://$MODULE_DIR$/data" />
+      <excludeFolder url="file://$MODULE_DIR$/docs" />
+      <excludeFolder url="file://$MODULE_DIR$/frontend/.svelte-kit" />
+      <excludeFolder url="file://$MODULE_DIR$/rauthy-client/target" />
+      <excludeFolder url="file://$MODULE_DIR$/static" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+      <excludeFolder url="file://$MODULE_DIR$/templates" />
+      <excludeFolder url="file://$MODULE_DIR$/tls" />
+      <excludeFolder url="file://$MODULE_DIR$/rauthy-client/examples/actix-web/target" />
+      <excludeFolder url="file://$MODULE_DIR$/rauthy-client/examples/axum/target" />
+      <excludeFolder url="file://$MODULE_DIR$/rauthy-client/examples/device-code/target" />
+      <excludeFolder url="file://$MODULE_DIR$/rauthy-client/examples/generic/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

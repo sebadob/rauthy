@@ -1,24 +1,28 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import {onMount} from "svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import {useI18n} from "$state/i18n.svelte.js";
-    import {useSession} from "$state/session.svelte.js";
-    import {fetchDelete, fetchGet, fetchPost} from "$api/fetch";
-    import type {PasskeyResponse, WebauthnDeleteRequest} from "$api/types/webauthn.ts";
-    import type {UserResponse} from "$api/types/user.ts";
-    import {PATTERN_USER_NAME} from "$utils/patterns";
-    import {webauthnReg} from "$webauthn/registration";
-    import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
-    import type {MfaPurpose, WebauthnAdditionalData, WebauthnServiceReq} from "$webauthn/types.ts";
-    import UserPasskey from "$lib5/UserPasskey.svelte";
-    import type {MfaModTokenResponse, UserMfaTokenRequest} from "$api/types/mfa_mod_token";
-    import Modal from "$lib/Modal.svelte";
-    import InputPassword from "$lib/form/InputPassword.svelte";
-    import Form from "$lib/form/Form.svelte";
-    import IconArrowPathSquare from "$icons/IconArrowPathSquare.svelte";
+    import Button from '$lib5/button/Button.svelte';
+    import { onMount } from 'svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import { useI18n } from '$state/i18n.svelte.js';
+    import { useSession } from '$state/session.svelte.js';
+    import { fetchDelete, fetchGet, fetchPost } from '$api/fetch';
+    import type { PasskeyResponse, WebauthnDeleteRequest } from '$api/types/webauthn.ts';
+    import type { UserResponse } from '$api/types/user.ts';
+    import { PATTERN_USER_NAME } from '$utils/patterns';
+    import { webauthnReg } from '$webauthn/registration';
+    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
+    import type {
+        MfaPurpose,
+        WebauthnAdditionalData,
+        WebauthnServiceReq,
+    } from '$webauthn/types.ts';
+    import UserPasskey from '$lib5/UserPasskey.svelte';
+    import type { MfaModTokenResponse, UserMfaTokenRequest } from '$api/types/mfa_mod_token';
+    import Modal from '$lib/Modal.svelte';
+    import InputPassword from '$lib/form/InputPassword.svelte';
+    import Form from '$lib/form/Form.svelte';
+    import IconArrowPathSquare from '$icons/IconArrowPathSquare.svelte';
 
-    let {user}: { user: UserResponse } = $props();
+    let { user }: { user: UserResponse } = $props();
 
     const isSupported = 'credentials' in navigator;
 
@@ -33,7 +37,7 @@
     let pwdErr = $state('');
     let msg = $state('');
     let showRegInput = $state(false);
-    let showDelete = $state(user.account_type === "password");
+    let showDelete = $state(user.account_type === 'password');
 
     let mfaPurpose: undefined | MfaPurpose = $state();
     let passkeyName = $state('');
@@ -53,7 +57,7 @@
     });
 
     $effect(() => {
-        if (passkeys.length > 0 && user.account_type === "passkey") {
+        if (passkeys.length > 0 && user.account_type === 'passkey') {
             showDelete = passkeys.length > 1;
         }
     });
@@ -90,7 +94,9 @@
     async function fetchPasskeys() {
         err = false;
 
-        let res = await fetchGet<PasskeyResponse[]>(`/auth/v1/users/${session.get()?.user_id}/webauthn`);
+        let res = await fetchGet<PasskeyResponse[]>(
+            `/auth/v1/users/${session.get()?.user_id}/webauthn`,
+        );
         if (res.body) {
             passkeys = res.body;
         } else {
@@ -165,14 +171,17 @@
         isLoading = true;
 
         let payload: UserMfaTokenRequest = {
-            password: params.get("password") || '',
-        }
+            password: params.get('password') || '',
+        };
         await fetchMfaToken(payload);
         isLoading = false;
     }
 
     async function fetchMfaToken(payload: UserMfaTokenRequest) {
-        let res = await fetchPost<MfaModTokenResponse>(`/auth/v1/users/${user.id}/mfa_token`, payload);
+        let res = await fetchPost<MfaModTokenResponse>(
+            `/auth/v1/users/${user.id}/mfa_token`,
+            payload,
+        );
         if (res.body) {
             mfaModToken = res.body;
             closeModal?.();
@@ -183,7 +192,7 @@
 
             calcModSecs();
             interval = setInterval(() => {
-                calcModSecs()
+                calcModSecs();
             }, 1000);
         } else {
             pwdErr = t.mfa.passwordInvalid;
@@ -219,7 +228,7 @@
             let svc = data as WebauthnServiceReq;
             let payload: UserMfaTokenRequest = {
                 mfa_code: svc.code,
-            }
+            };
             fetchMfaToken(payload);
         } else {
             msg = t.mfa.testSuccess;
@@ -235,26 +244,25 @@
 <div class="container">
     {#if !isSupported}
         <div class="err">
-            <b>
-                Your browser does not support Webauthn credentials and must be updated.
-            </b>
+            <b> Your browser does not support Webauthn credentials and must be updated. </b>
         </div>
     {:else}
         {#if mfaPurpose}
             <WebauthnRequest
-                    userId={user.id}
-                    purpose={mfaPurpose}
-                    onSuccess={onWebauthnSuccess}
-                    onError={onWebauthnError}
+                userId={user.id}
+                purpose={mfaPurpose}
+                onSuccess={onWebauthnSuccess}
+                onError={onWebauthnError}
             />
         {/if}
 
         <p>
             {t.mfa.p1}
-            <br><br>
+            <br /><br />
             {t.mfa.p2}
-            <br><br>
-            {t.mfa.p3} <a href="https://sebadob.github.io/rauthy/config/passkeys.html">{t.mfa.docLinkText}</a>.
+            <br /><br />
+            {t.mfa.p3}
+            <a href="https://sebadob.github.io/rauthy/config/passkeys.html">{t.mfa.docLinkText}</a>.
         </p>
 
         {#if mfaModSecs && mfaModSecs > 0}
@@ -268,7 +276,7 @@
                 </div>
                 <Button ariaLabel={t.common.refresh} invisible onclick={mfaTokenRefresh}>
                     <div class="btnRefresh">
-                        <IconArrowPathSquare/>
+                        <IconArrowPathSquare />
                     </div>
                 </Button>
             </div>
@@ -276,26 +284,23 @@
 
         {#if showRegInput}
             <Input
-                    bind:ref={refInput}
-                    bind:value={passkeyName}
-                    autocomplete="off"
-                    label={t.mfa.passkeyName}
-                    placeholder={t.mfa.passkeyName}
-                    maxLength={32}
-                    pattern={PATTERN_USER_NAME}
-                    bind:isError={isInputError}
-                    onEnter={handleRegister}
+                bind:ref={refInput}
+                bind:value={passkeyName}
+                autocomplete="off"
+                label={t.mfa.passkeyName}
+                placeholder={t.mfa.passkeyName}
+                maxLength={32}
+                pattern={PATTERN_USER_NAME}
+                bind:isError={isInputError}
+                onEnter={handleRegister}
             />
             <div class="regBtns">
                 <Button onclick={handleRegister}>{t.mfa.register}</Button>
-                <Button level={3} onclick={() => showRegInput = false}>{t.common.cancel}</Button>
+                <Button level={3} onclick={() => (showRegInput = false)}>{t.common.cancel}</Button>
             </div>
         {:else}
             <div class="regNewBtn">
-                <Button
-                        level={passkeys.length === 0 ? 1 : 2}
-                        onclick={onRegisterClick}
-                >
+                <Button level={passkeys.length === 0 ? 1 : 2} onclick={onRegisterClick}>
                     {t.mfa.registerNew}
                 </Button>
                 <Modal bind:showModal bind:closeModal>
@@ -321,12 +326,12 @@
 
                         <Form action="" onSubmit={onMfaTokenSubmit}>
                             <InputPassword
-                                    bind:ref={refInput}
-                                    name="password"
-                                    autocomplete="current-password"
-                                    label={t.account.passwordCurr}
-                                    placeholder={t.account.passwordCurr}
-                                    required
+                                bind:ref={refInput}
+                                name="password"
+                                autocomplete="current-password"
+                                label={t.account.passwordCurr}
+                                placeholder={t.account.passwordCurr}
+                                required
                             />
                             <Button type="submit" {isLoading}>{t.common.authenticate}</Button>
                             {#if pwdErr}
@@ -347,13 +352,13 @@
         {/if}
         <div class="keysContainer">
             {#each passkeys as passkey (passkey.name)}
-                <UserPasskey {passkey} {showDelete} onDelete={handleDelete}/>
+                <UserPasskey {passkey} {showDelete} onDelete={handleDelete} />
             {/each}
         </div>
 
         {#if passkeys.length > 0}
             <div class="button">
-                <Button onclick={() => mfaPurpose = 'Test' }>{t.mfa.test}</Button>
+                <Button onclick={() => (mfaPurpose = 'Test')}>{t.mfa.test}</Button>
             </div>
         {/if}
 
@@ -365,11 +370,11 @@
 
 <style>
     p {
-        margin: .5rem 0;
+        margin: 0.5rem 0;
     }
 
     .btnRefresh {
-        color: hsla(var(--text) / .5);
+        color: hsla(var(--text) / 0.5);
     }
 
     .container {
@@ -380,7 +385,7 @@
     }
 
     .button {
-        margin-top: .33rem;
+        margin-top: 0.33rem;
     }
 
     .keysContainer {
@@ -390,27 +395,28 @@
     }
 
     .keysHeader {
-        margin-top: .5rem;
+        margin-top: 0.5rem;
         font-weight: bold;
     }
 
     .modToken {
         display: flex;
-        gap: .5rem;
+        gap: 0.5rem;
     }
 
     .pwdInvalid {
         color: hsl(var(--error));
-        margin: .5rem 0;
+        margin: 0.5rem 0;
     }
 
-    .success, .err {
-        margin: .5rem -.3rem;
+    .success,
+    .err {
+        margin: 0.5rem -0.3rem;
         text-align: left;
     }
 
     .success {
-        margin-left: .2rem;
+        margin-left: 0.2rem;
         color: hsl(var(--action));
     }
 
@@ -419,13 +425,13 @@
     }
 
     .regBtns {
-        margin: .25rem 0;
+        margin: 0.25rem 0;
         display: flex;
         align-items: center;
-        gap: .5rem;
+        gap: 0.5rem;
     }
 
     .regNewBtn {
-        margin: .5rem 0;
+        margin: 0.5rem 0;
     }
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
+    import Button from '$lib5/button/Button.svelte';
 
     let {
         tabs,
@@ -10,13 +10,13 @@
         focusFirst = $bindable(),
         onDown,
     }: {
-        tabs: string[],
-        selected: string,
-        borderRadius?: string,
-        center?: boolean,
-        width?: string,
-        focusFirst?: () => void,
-        onDown?: () => void,
+        tabs: string[];
+        selected: string;
+        borderRadius?: string;
+        center?: boolean;
+        width?: string;
+        focusFirst?: () => void;
+        onDown?: () => void;
     } = $props();
 
     if (tabs.length > 0 && selected === '') {
@@ -51,20 +51,14 @@
     }
 </script>
 
-<div
-        bind:this={ref}
-        class="tabs"
-        class:center
-        style:border-radius={borderRadius}
-        style:width
->
+<div bind:this={ref} class="tabs" class:center style:border-radius={borderRadius} style:width>
     {#each tabs as tab, i}
         <Button
-                ariaCurrent={tab === selected ? 'step' : undefined}
-                invisible
-                onclick={() => selected = tab}
-                onLeft={() => onLeft(i)}
-                onRight={() => onRight(i)}
+            ariaCurrent={tab === selected ? 'step' : undefined}
+            invisible
+            onclick={() => (selected = tab)}
+            onLeft={() => onLeft(i)}
+            onRight={() => onRight(i)}
         >
             <span class="font-label tab" data-selected={tab === selected}>
                 {tab}
@@ -75,10 +69,10 @@
 
 <style>
     .tabs {
-        padding: .5rem .25rem;
+        padding: 0.5rem 0.25rem;
         display: flex;
-        column-gap: .25rem;
-        row-gap: .75rem;
+        column-gap: 0.25rem;
+        row-gap: 0.75rem;
         align-items: center;
         flex-wrap: wrap;
         line-height: 1rem;
@@ -90,7 +84,7 @@
     }
 
     .tab {
-        padding: .25rem .4rem;
+        padding: 0.25rem 0.4rem;
         border-radius: var(--border-radius);
         color: hsl(var(--text));
         background: hsl(var(--bg-high));
@@ -101,7 +95,7 @@
         color: hsl(var(--action));
     }
 
-    .tab[data-selected="true"] {
+    .tab[data-selected='true'] {
         color: hsl(var(--action));
         background: hsl(var(--bg));
     }

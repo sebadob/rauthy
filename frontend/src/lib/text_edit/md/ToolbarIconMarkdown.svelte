@@ -1,6 +1,6 @@
 <script lang="ts">
-    import type {Snippet} from "svelte";
-    import Button from "$lib/button/Button.svelte";
+    import type { Snippet } from 'svelte';
+    import Button from '$lib/button/Button.svelte';
 
     let {
         ref,
@@ -11,13 +11,13 @@
         addRightLink,
         children,
     }: {
-        ref: undefined | HTMLDivElement,
-        title: string,
-        content: string,
-        addLeft: string,
-        addRight?: string,
-        addRightLink?: string,
-        children: Snippet,
+        ref: undefined | HTMLDivElement;
+        title: string;
+        content: string;
+        addLeft: string;
+        addRight?: string;
+        addRightLink?: string;
+        children: Snippet;
     } = $props();
 
     function onclick(ev: Event) {
@@ -27,7 +27,11 @@
 
         let sel = document.getSelection();
         // make sure we have a valid selection inside our editor container
-        if (!sel || sel.rangeCount < 1 || !ref.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+        if (
+            !sel ||
+            sel.rangeCount < 1 ||
+            !ref.contains(sel.getRangeAt(0).commonAncestorContainer)
+        ) {
             return;
         }
 
@@ -37,9 +41,7 @@
         if (addRightLink) {
             let textBefore = range.toString();
 
-            const node = document.createTextNode(
-                addLeft + textBefore + '](' + addRightLink + ')'
-            );
+            const node = document.createTextNode(addLeft + textBefore + '](' + addRightLink + ')');
             range.deleteContents();
             range.insertNode(node);
 
@@ -130,7 +132,7 @@
             textBefore = textBefore.slice(spaceBefore, len - spaceAfter);
 
             const node = document.createTextNode(
-                ' '.repeat(spaceBefore) + addLeft + textBefore + addRight + ' '.repeat(spaceAfter)
+                ' '.repeat(spaceBefore) + addLeft + textBefore + addRight + ' '.repeat(spaceAfter),
             );
             range.deleteContents();
             range.insertNode(node);
@@ -142,7 +144,6 @@
                 range.setStartBefore(node);
                 range.setEndAfter(node);
             }
-
         }
 
         sel.removeAllRanges();

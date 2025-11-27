@@ -1,13 +1,13 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import CheckIcon from "$lib5/CheckIcon.svelte";
-    import Main from "$lib5/Main.svelte";
-    import ContentCenter from "$lib5/ContentCenter.svelte";
-    import {PATTERN_URI} from "$utils/patterns";
-    import Form from "$lib5/form/Form.svelte";
-    import {genKey} from "$utils/helpers";
+    import { onMount } from 'svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import CheckIcon from '$lib5/CheckIcon.svelte';
+    import Main from '$lib5/Main.svelte';
+    import ContentCenter from '$lib5/ContentCenter.svelte';
+    import { PATTERN_URI } from '$utils/patterns';
+    import Form from '$lib5/form/Form.svelte';
+    import { genKey } from '$utils/helpers';
 
     let isSupported = $state(false);
     let isLoggedIn = $state(false);
@@ -30,9 +30,10 @@
         }
 
         // @ts-ignore
-        if (window["IdentityProvider"] && // Is FedCM available?
+        if (
+            window['IdentityProvider'] && // Is FedCM available?
             // @ts-ignore
-            IdentityProvider.register != undefined  // Is the IdP Registration API available?
+            IdentityProvider.register != undefined // Is the IdP Registration API available?
         ) {
             console.log('FedCM is supported');
             isSupported = true;
@@ -49,14 +50,16 @@
                 // @ts-ignore
                 identity: {
                     // context: "sign-in",
-                    mode: "button", // button mode will actually open the `login_url` if `logged-out`
-                    providers: [{
-                        configURL: configUrl,
-                        clientId: clientId,
-                        // CAUTION: the genKey is not crypto safe - just for testing!
-                        nonce: genKey(48),
-                    }]
-                }
+                    mode: 'button', // button mode will actually open the `login_url` if `logged-out`
+                    providers: [
+                        {
+                            configURL: configUrl,
+                            clientId: clientId,
+                            // CAUTION: the genKey is not crypto safe - just for testing!
+                            nonce: genKey(48),
+                        },
+                    ],
+                },
             });
 
             console.log(creds);
@@ -83,11 +86,11 @@
             <div class="row">
                 <div><b>FedCM supported:</b></div>
                 <div class="check">
-                    <CheckIcon check={isSupported}/>
+                    <CheckIcon check={isSupported} />
                 </div>
             </div>
             {#if !isSupported}
-                <br>-> enable idp registration:<br>
+                <br />-> enable idp registration:<br />
                 <code>chrome://flags/#fedcm-idp-registration</code>
             {/if}
 
@@ -99,19 +102,19 @@
                 <Form action="" onSubmit={login}>
                     <p>
                         <Input
-                                bind:value={clientId}
-                                autocomplete="off"
-                                label="Client ID"
-                                placeholder="Client ID"
-                                required
-                                pattern={PATTERN_URI}
+                            bind:value={clientId}
+                            autocomplete="off"
+                            label="Client ID"
+                            placeholder="Client ID"
+                            required
+                            pattern={PATTERN_URI}
                         />
                         <Input
-                                bind:value={configUrl}
-                                autocomplete="off"
-                                label="Config URL"
-                                placeholder="Config URL"
-                                pattern={PATTERN_URI}
+                            bind:value={configUrl}
+                            autocomplete="off"
+                            label="Config URL"
+                            placeholder="Config URL"
+                            pattern={PATTERN_URI}
                         />
                         <Button type="submit">Login</Button>
                     </p>
@@ -120,7 +123,7 @@
                 <div class="row">
                     <b>Logged In:</b>
                     <div class="check">
-                        <CheckIcon check={isLoggedIn}/>
+                        <CheckIcon check={isLoggedIn} />
                     </div>
                 </div>
             {/if}
@@ -140,7 +143,7 @@
 
 <style>
     .check {
-        margin-bottom: -.3rem;
+        margin-bottom: -0.3rem;
     }
 
     .row {

@@ -1,12 +1,12 @@
 <script lang="ts">
-    import {eventColor, formatDateFromTs} from "$utils/helpers";
-    import {onMount} from "svelte";
-    import type {EventResponse} from "$api/types/events.ts";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import A from "$lib5/A.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import Tooltip from "$lib5/Tooltip.svelte";
-    import {useI18n} from "$state/i18n.svelte";
+    import { eventColor, formatDateFromTs } from '$utils/helpers';
+    import { onMount } from 'svelte';
+    import type { EventResponse } from '$api/types/events.ts';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import A from '$lib5/A.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import Tooltip from '$lib5/Tooltip.svelte';
+    import { useI18n } from '$state/i18n.svelte';
 
     // populated fields for different events:
     // - invalid_login: failed logins count as data, ip
@@ -29,8 +29,8 @@
         event,
         inline,
     }: {
-        event: EventResponse,
-        inline?: boolean,
+        event: EventResponse;
+        inline?: boolean;
     } = $props();
 
     let t = useI18n();
@@ -59,38 +59,31 @@
             tooltip = t.common.copyToClip;
         }, 3000);
     }
-
 </script>
 
 <div
-        role="contentinfo"
-        aria-label={`Event Level: ${event.level}}`}
-        class="event"
-        class:highlight
-        class:inline
-        style:border-left={`2px solid ${eventColor(event.level)}`}
+    role="contentinfo"
+    aria-label={`Event Level: ${event.level}}`}
+    class="event"
+    class:highlight
+    class:inline
+    style:border-left={`2px solid ${eventColor(event.level)}`}
 >
     <div aria-label="Timestamp" class="ts">
         {formatDateFromTs(event.timestamp / 1000)}
     </div>
 
-    {#if event.typ !== 'RauthyHealthy'
-    && event.typ !== 'RauthyUnhealthy'
-    && event.typ !== 'NewRauthyVersion'
-    && event.typ !== 'Test'}
+    {#if event.typ !== 'RauthyHealthy' && event.typ !== 'RauthyUnhealthy' && event.typ !== 'NewRauthyVersion' && event.typ !== 'Test'}
         {event.typ}
     {/if}
 
     {#if event.typ === 'InvalidLogins'}
         {`: ${event.data}`}
-
     {:else if event.typ === 'NewRauthyVersion'}
         <A href={event.text || ''} target="_blank">New Version</A>
-
     {:else if event.typ === 'IpBlacklisted'}
         {ta.common.until}
         {event.data && formatDateFromTs(event.data)}
-
     {:else if event.text}
         {event.text}
     {/if}
@@ -112,11 +105,11 @@
     .event {
         width: 100%;
         min-width: 5px;
-        padding: .1rem .5rem .2rem .5rem;
+        padding: 0.1rem 0.5rem 0.2rem 0.5rem;
         display: flex;
         flex-direction: column;
         line-height: 1rem;
-        margin-bottom: .15rem;
+        margin-bottom: 0.15rem;
         word-break: break-word;
         background: transparent;
         color: hsl(var(--text));
@@ -131,24 +124,24 @@
     .inline {
         flex-direction: row;
         align-items: center;
-        column-gap: .5rem;
+        column-gap: 0.5rem;
         flex-wrap: wrap;
     }
 
     .ip {
-        margin-top: -.05rem;
-        font-size: .9rem;
+        margin-top: -0.05rem;
+        font-size: 0.9rem;
         color: hsl(var(--accent));
         cursor: copy;
     }
 
     .ts {
-        font-size: .9rem;
-        color: hsla(var(--text) / .8);
+        font-size: 0.9rem;
+        color: hsla(var(--text) / 0.8);
         transition: color 150ms ease-in-out;
     }
 
     .highlight .ts {
-        color: hsl(var(--bg) / .8);
+        color: hsl(var(--bg) / 0.8);
     }
 </style>

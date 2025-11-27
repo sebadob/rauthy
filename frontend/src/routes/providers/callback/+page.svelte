@@ -1,22 +1,19 @@
 <script lang="ts">
-    import {
-        getProviderToken,
-        getVerifierUpstreamFromStorage,
-    } from "$utils/helpers";
-    import {onMount} from "svelte";
-    import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
-    import LangSelector from "$lib5/LangSelector.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useParam} from "$state/param.svelte";
-    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
-    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import {fetchGet, fetchPost, type IResponse} from "$api/fetch";
-    import type {WebauthnLoginResponse} from "$api/types/authorize.ts";
-    import type {ProviderCallbackRequest} from "$api/types/auth_provider.ts";
-    import {IS_DEV} from "$utils/constants";
-    import type {ToSAwaitLoginResponse, ToSLatestResponse} from "$api/types/tos";
-    import TosAccept from "$lib/TosAccept.svelte";
+    import { getProviderToken, getVerifierUpstreamFromStorage } from '$utils/helpers';
+    import { onMount } from 'svelte';
+    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
+    import LangSelector from '$lib5/LangSelector.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useParam } from '$state/param.svelte';
+    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
+    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
+    import { fetchGet, fetchPost, type IResponse } from '$api/fetch';
+    import type { WebauthnLoginResponse } from '$api/types/authorize.ts';
+    import type { ProviderCallbackRequest } from '$api/types/auth_provider.ts';
+    import { IS_DEV } from '$utils/constants';
+    import type { ToSAwaitLoginResponse, ToSLatestResponse } from '$api/types/tos';
+    import TosAccept from '$lib/TosAccept.svelte';
 
     let t = useI18n();
     let clientMfaForce = $state(false);
@@ -40,12 +37,12 @@
 
         let state = useParam('state').get();
         if (!state) {
-            error = "'state' is missing in URL"
+            error = "'state' is missing in URL";
             return;
         }
         let code = useParam('code').get();
         if (!code) {
-            error = "'code' is missing in URL"
+            error = "'code' is missing in URL";
             return;
         }
         let iss = useParam('iss').get();
@@ -62,12 +59,17 @@
         if (IS_DEV) {
             url = '/auth/v1/dev/providers_callback';
         }
-        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(url, payload);
+        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(
+            url,
+            payload,
+        );
 
         await handleAuthRes(res);
     });
 
-    async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>) {
+    async function handleAuthRes(
+        res: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
+    ) {
         if (res.status === 202) {
             // -> all good
             window.location.replace(res.headers.get('location') || '/auth/v1/account');
@@ -77,7 +79,7 @@
             let body = res.body;
             if (body && 'user_id' in body && 'code' in body) {
                 userId = body.user_id as string;
-                mfaPurpose = {Login: body.code as string};
+                mfaPurpose = { Login: body.code as string };
             } else {
                 console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
             }
@@ -96,7 +98,7 @@
             // any upstream provider link (or the wrong one)
             error = res.error?.message || 'HTTP 403 Forbidden';
         } else if (res.status === 404) {
-            error = "User not found";
+            error = 'User not found';
             setTimeout(() => {
                 window.location.replace('/auth/v1');
             }, 5000);
@@ -136,7 +138,6 @@
             window.location.replace(data.loc as string);
         }
     }
-
 </script>
 
 <svelte:head>
@@ -145,24 +146,22 @@
 
 {#if mfaPurpose && userId}
     <WebauthnRequest
-            {userId}
-            purpose={mfaPurpose}
-            onSuccess={onWebauthnSuccess}
-            onError={onWebauthnError}
+        {userId}
+        purpose={mfaPurpose}
+        onSuccess={onWebauthnSuccess}
+        onError={onWebauthnError}
     />
 {:else if clientMfaForce}
     <div class="btn flex-col">
-        <Button onclick={() => window.location.href = '/auth/v1/account'}>
-            Account
-        </Button>
+        <Button onclick={() => (window.location.href = '/auth/v1/account')}>Account</Button>
     </div>
 {:else if tos}
     <TosAccept
-            {tos}
-            forceAccept={tosForceAccept}
-            {tosAcceptCode}
-            onToSAccept={handleAuthRes}
-            {onToSCancel}
+        {tos}
+        forceAccept={tosForceAccept}
+        {tosAcceptCode}
+        onToSAccept={handleAuthRes}
+        {onToSCancel}
     />
 {:else if error}
     <div class="err">
@@ -170,8 +169,8 @@
     </div>
 {/if}
 
-<ThemeSwitch absolute/>
-<LangSelector absolute/>
+<ThemeSwitch absolute />
+<LangSelector absolute />
 
 <style>
     .btn {

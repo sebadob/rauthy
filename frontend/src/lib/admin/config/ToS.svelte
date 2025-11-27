@@ -1,22 +1,22 @@
 <script lang="ts">
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.js";
-    import {fetchGet, fetchPost} from "$api/fetch.js";
-    import {onMount} from "svelte";
-    import Button from "$lib/button/Button.svelte";
-    import Modal from "$lib/Modal.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import type {ToSRequest, ToSResponse, ToSUserAcceptResponse} from "$api/types/tos";
-    import SearchBar from "$lib/search_bar/SearchBar.svelte";
-    import {fetchSearchServer} from "$utils/search";
-    import type {UserResponseSimple} from "$api/types/user";
-    import InputCheckbox from "$lib/form/InputCheckbox.svelte";
-    import {slide} from "svelte/transition";
-    import InputDateTimeCombo from "$lib/form/InputDateTimeCombo.svelte";
-    import {fmtDateInput, fmtTimeInput} from "$utils/form";
-    import {formatDateFromTs, formatUtcTsFromDateInput} from "$utils/helpers";
-    import LabeledValue from "$lib/LabeledValue.svelte";
-    import Options from "$lib/Options.svelte";
-    import EditorInteractive from "$lib/text_edit/EditorInteractive.svelte";
+    import { useI18nAdmin } from '$state/i18n_admin.svelte.js';
+    import { fetchGet, fetchPost } from '$api/fetch.js';
+    import { onMount } from 'svelte';
+    import Button from '$lib/button/Button.svelte';
+    import Modal from '$lib/Modal.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import type { ToSRequest, ToSResponse, ToSUserAcceptResponse } from '$api/types/tos';
+    import SearchBar from '$lib/search_bar/SearchBar.svelte';
+    import { fetchSearchServer } from '$utils/search';
+    import type { UserResponseSimple } from '$api/types/user';
+    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
+    import { slide } from 'svelte/transition';
+    import InputDateTimeCombo from '$lib/form/InputDateTimeCombo.svelte';
+    import { fmtDateInput, fmtTimeInput } from '$utils/form';
+    import { formatDateFromTs, formatUtcTsFromDateInput } from '$utils/helpers';
+    import LabeledValue from '$lib/LabeledValue.svelte';
+    import Options from '$lib/Options.svelte';
+    import EditorInteractive from '$lib/text_edit/EditorInteractive.svelte';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -101,7 +101,11 @@
             return;
         }
 
-        let res = await fetchSearchServer<UserResponseSimple[]>({ty: 'user', idx: 'email', q: searchValue});
+        let res = await fetchSearchServer<UserResponseSimple[]>({
+            ty: 'user',
+            idx: 'email',
+            q: searchValue,
+        });
         if (res.body) {
             searchOptions = res.body;
         } else {
@@ -159,7 +163,7 @@
             // we need a short timeout for the very first ToS
             setTimeout(() => {
                 getTos();
-            }, 500)
+            }, 500);
         }
     }
 
@@ -167,24 +171,23 @@
         selectedEmail = opt.email;
         selectedId = opt.id;
     }
-
 </script>
 
 <h2>{t.tos.tos}</h2>
 
 <div class="flex gap-05 flex-wrap mh-10">
     <Button
-            ariaLabel={ta.tos.addNewToS}
-            level={isModalOpen ? 2 : 1}
-            onclick={() => showModalAddNew = true}
+        ariaLabel={ta.tos.addNewToS}
+        level={isModalOpen ? 2 : 1}
+        onclick={() => (showModalAddNew = true)}
     >
         {ta.tos.addNewToS}
     </Button>
     {#if tos.length > 0}
         <Button
-                ariaLabel={ta.tos.checkStatus}
-                level={isModalOpen ? 3 : 2}
-                onclick={() => showModalStatus = true}
+            ariaLabel={ta.tos.checkStatus}
+            level={isModalOpen ? 3 : 2}
+            onclick={() => (showModalStatus = true)}
         >
             {ta.tos.checkStatus}
         </Button>
@@ -199,25 +202,15 @@
 
         <div>
             {#if selectedTsLabel && selectOpts.length > 1}
-                <Options
-                        ariaLabel="Select ToS"
-                        options={selectOpts}
-                        bind:value={selectedTsLabel}
-                />
+                <Options ariaLabel="Select ToS" options={selectOpts} bind:value={selectedTsLabel} />
             {/if}
 
-            <LabeledValue
-                    label={ta.tos.added}
-                    title={ta.tos.added}
-            >
+            <LabeledValue label={ta.tos.added} title={ta.tos.added}>
                 {formatDateFromTs(active.ts)}
             </LabeledValue>
 
             {#if active.opt_until}
-                <LabeledValue
-                        label={ta.tos.optUntil.label}
-                        title={ta.tos.optUntil.label}
-                >
+                <LabeledValue label={ta.tos.optUntil.label} title={ta.tos.optUntil.label}>
                     {formatDateFromTs(active.opt_until)}
                 </LabeledValue>
             {/if}
@@ -238,21 +231,18 @@
         <h3>{ta.tos.addNewToS}</h3>
 
         <div class="optUntil">
-            <InputCheckbox
-                    ariaLabel={ta.tos.optUntil.enable}
-                    bind:checked={optUntil}
-            >
+            <InputCheckbox ariaLabel={ta.tos.optUntil.enable} bind:checked={optUntil}>
                 {ta.tos.optUntil.enable}
             </InputCheckbox>
 
             {#if optUntil}
                 <div transition:slide={{ duration: 150 }}>
                     <InputDateTimeCombo
-                            min={fmtDateInput()}
-                            timeMin={fmtTimeInput()}
-                            withTime
-                            bind:value={optUntilDate}
-                            bind:timeValue={optUntilTime}
+                        min={fmtDateInput()}
+                        timeMin={fmtTimeInput()}
+                        withTime
+                        bind:value={optUntilDate}
+                        bind:timeValue={optUntilTime}
                     />
 
                     <p>
@@ -264,9 +254,9 @@
 
         <div class="editor">
             <EditorInteractive
-                    bind:mode={editorMode}
-                    bind:sanitizedValue={newToSContent}
-                    height="min(60dvh, 40rem)"
+                bind:mode={editorMode}
+                bind:sanitizedValue={newToSContent}
+                height="min(60dvh, 40rem)"
             />
         </div>
 
@@ -275,9 +265,9 @@
         </div>
 
         <Button
-                ariaLabel={t.common.save}
-                onclick={saveToS}
-                isDisabled={!newToSContent || newToSContent.trim().length === 0}
+            ariaLabel={t.common.save}
+            onclick={saveToS}
+            isDisabled={!newToSContent || newToSContent.trim().length === 0}
         >
             {t.common.save}
         </Button>
@@ -298,13 +288,13 @@
         <h3>{ta.tos.checkStatus}</h3>
 
         <div class="userSearch">
-            <SearchBar bind:ref={refSearch} placeholder="E-Mail" bind:value={searchValue}/>
+            <SearchBar bind:ref={refSearch} placeholder="E-Mail" bind:value={searchValue} />
             <div class="searchOpts">
                 {#each searchOptions as opt}
                     <Button level={3} onclick={() => selectOpt(opt)}>
                         <span class={selectedId === opt.id ? 'selected' : ''}>
-                        {`${opt.given_name} ${opt.family_name || ''} <${opt.email}>`}
-                            </span>
+                            {`${opt.given_name} ${opt.family_name || ''} <${opt.email}>`}
+                        </span>
                     </Button>
                 {/each}
             </div>
@@ -357,13 +347,13 @@
     }
 
     .optUntil {
-        margin: .75rem 0;
+        margin: 0.75rem 0;
     }
 
     .searchOpts {
         min-height: 10rem;
         width: min(30rem, 90dvw);
-        margin: .5rem 0;
+        margin: 0.5rem 0;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
@@ -383,7 +373,7 @@
     }
 
     .statLabel {
-        font-size: .9rem;
-        color: hsl(var(--text) / .7);
+        font-size: 0.9rem;
+        color: hsl(var(--text) / 0.7);
     }
 </style>

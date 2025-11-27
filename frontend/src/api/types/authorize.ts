@@ -3,48 +3,48 @@ export type JwtTokenType = 'Bearer' | 'DPoP' | 'Id' | 'Refresh';
 
 export interface LoginRequest {
     /// Validation: `email`
-    email: string,
+    email: string;
     /// Validation: max 256
-    password?: string,
-    pow: string,
+    password?: string;
+    pow: string;
     /// Validation: PATTERN_CLIENT_ID_EPHEMERAL
-    client_id: string,
+    client_id: string;
     /// Validation: PATTERN_URI
-    redirect_uri: string,
+    redirect_uri: string;
     /// Validation: PATTERN_ROLE_SCOPE
-    scopes?: string[],
+    scopes?: string[];
     /// Validation: PATTERN_URI
-    state?: string,
+    state?: string;
     /// Validation: PATTERN_URI
-    nonce?: string,
+    nonce?: string;
     /// Validation: PATTERN_CODE_CHALLENGE
-    code_challenge?: string,
+    code_challenge?: string;
     /// Validation: `plain|S256`
-    code_challenge_method?: CodeChallengeMethod,
+    code_challenge_method?: CodeChallengeMethod;
 }
 
 export interface LoginRefreshRequest {
     /// Validation: PATTERN_CLIENT_ID_EPHEMERAL
-    client_id: string,
+    client_id: string;
     /// Validation: PATTERN_URI
-    redirect_uri: string,
+    redirect_uri: string;
     /// Validation: PATTERN_ROLE_SCOPE
-    scopes?: string[],
+    scopes?: string[];
     /// Validation: PATTERN_URI
-    state?: string,
+    state?: string;
     /// Validation: PATTERN_URI
-    nonce?: string,
+    nonce?: string;
     /// Validation: PATTERN_CODE_CHALLENGE
-    code_challenge?: string,
-    code_challenge_method?: CodeChallengeMethod,
+    code_challenge?: string;
+    code_challenge_method?: CodeChallengeMethod;
 }
 
 export interface RequestResetRequest {
     /// Validation: `email`
-    email: string,
+    email: string;
     /// Validation: PATTERN_URI
-    redirect_uri?: string,
-    pow: string,
+    redirect_uri?: string;
+    pow: string;
 }
 
 // export interface TokenSet {
@@ -56,7 +56,7 @@ export interface RequestResetRequest {
 // }
 
 export interface WebauthnLoginResponse {
-    code: string,
-    user_id: string,
-    exp: number,
+    code: string;
+    user_id: string;
+    exp: number;
 }

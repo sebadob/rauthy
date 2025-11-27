@@ -1,10 +1,10 @@
 <script lang="ts">
-    import IconClipboard from "$icons/IconClipboard.svelte";
-    import IconEye from "$icons/IconEye.svelte";
-    import IconEyeSlash from "$icons/IconEyeSlash.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import {onMount} from "svelte";
-    import {useI18n} from "$state/i18n.svelte";
+    import IconClipboard from '$icons/IconClipboard.svelte';
+    import IconEye from '$icons/IconEye.svelte';
+    import IconEyeSlash from '$icons/IconEyeSlash.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import { onMount } from 'svelte';
+    import { useI18n } from '$state/i18n.svelte';
 
     let {
         ariaLabel = '',
@@ -15,12 +15,12 @@
         width = 'min(25rem, calc(100dvw - 2rem))',
         ...rest
     }: {
-        ariaLabel: string,
-        value: string,
-        rows?: number,
-        cols?: number,
-        show?: boolean,
-        width?: string,
+        ariaLabel: string;
+        value: string;
+        rows?: number;
+        cols?: number;
+        show?: boolean;
+        width?: string;
     } = $props();
 
     let t = useI18n();
@@ -59,32 +59,32 @@
             <Button ariaLabel={show ? t.common.hide : t.common.show} invisible onclick={toggle}>
                 {#if show}
                     <div title={t.common.hide}>
-                        <IconEye/>
+                        <IconEye />
                     </div>
                 {:else}
                     <div title={t.common.show}>
-                        <IconEyeSlash/>
+                        <IconEyeSlash />
                     </div>
                 {/if}
             </Button>
 
             <Button ariaLabel={t.common.copyToClip} invisible onclick={copyToClip}>
                 <div title={t.common.copyToClip}>
-                    <IconClipboard/>
+                    <IconClipboard />
                 </div>
             </Button>
         </div>
     </div>
 
     <textarea
-            aria-label={ariaLabel}
-            style:width={width}
-            style:padding-right="3.25rem"
-            disabled
-            bind:value={text}
-            {rows}
-            {cols}
-            {...rest}
+        aria-label={ariaLabel}
+        style:width
+        style:padding-right="3.25rem"
+        disabled
+        bind:value={text}
+        {rows}
+        {cols}
+        {...rest}
     ></textarea>
 </div>
 
@@ -92,7 +92,7 @@
     textarea {
         width: 100%;
         /*width: min(100%, calc(100dvw - 2rem));*/
-        padding: .25rem .5rem;
+        padding: 0.25rem 0.5rem;
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
         color: hsl(var(--text));

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import type {Snippet} from "svelte";
+    import Button from '$lib5/button/Button.svelte';
+    import type { Snippet } from 'svelte';
 
     let {
         selected,
@@ -8,10 +8,10 @@
         onclick,
         children,
     }: {
-        selected: boolean,
-        pictureLeft?: boolean,
-        onclick: () => void,
-        children: Snippet,
+        selected: boolean;
+        pictureLeft?: boolean;
+        onclick: () => void;
+        children: Snippet;
     } = $props();
 
     let ref: undefined | HTMLButtonElement = $state();
@@ -32,7 +32,7 @@
         border-left: 2px solid transparent;
         border-radius: var(--border-radius);
         margin: 0;
-        padding: .25rem .5rem;
+        padding: 0.25rem 0.5rem;
         list-style: none;
         transition: all 150ms;
     }
@@ -44,15 +44,15 @@
     }
 
     li:nth-of-type(2n + 1) {
-        background: hsla(var(--bg-high) / .15);
+        background: hsla(var(--bg-high) / 0.15);
     }
 
-    li[aria-current="page"] {
+    li[aria-current='page'] {
         border-right: 1px solid hsl(var(--accent));
-        background: hsla(var(--bg-high) / .8);
+        background: hsla(var(--bg-high) / 0.8);
     }
 
-    li[aria-current="page"] div {
+    li[aria-current='page'] div {
         color: hsl(var(--text-high));
     }
 
@@ -66,12 +66,12 @@
     }
 
     .pictureLeft {
-        margin: .1rem .25rem;
+        margin: 0.1rem 0.25rem;
         padding: 0;
-        border-radius: .65rem var(--border-radius) var(--border-radius) .65rem;
+        border-radius: 0.65rem var(--border-radius) var(--border-radius) 0.65rem;
     }
 
     .pictureLeft > div {
-        margin-left: -.1rem;
+        margin-left: -0.1rem;
     }
 </style>

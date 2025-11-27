@@ -1,12 +1,12 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import {fetchGet, fetchPost} from "$api/fetch";
-    import type {JWKSCerts, JWKSPublicKeyCerts} from "$api/types/oidc.ts";
-    import Expandable from "$lib5/Expandable.svelte";
-    import LabeledValue from "$lib5/LabeledValue.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import IconCheck from "$icons/IconCheck.svelte";
+    import { onMount } from 'svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import { fetchGet, fetchPost } from '$api/fetch';
+    import type { JWKSCerts, JWKSPublicKeyCerts } from '$api/types/oidc.ts';
+    import Expandable from '$lib5/Expandable.svelte';
+    import LabeledValue from '$lib5/LabeledValue.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import IconCheck from '$icons/IconCheck.svelte';
 
     let ta = useI18nAdmin();
 
@@ -45,7 +45,6 @@
 
         isLoading = false;
     }
-
 </script>
 
 <h2>Json Web Keys</h2>
@@ -105,7 +104,7 @@
     </Button>
 
     {#if success}
-        <IconCheck/>
+        <IconCheck />
     {/if}
 </div>
 

@@ -1,12 +1,12 @@
-import {type ErrorResponse} from "$api/types/error";
-import {getCsrfToken} from "$utils/helpers";
+import { type ErrorResponse } from '$api/types/error';
+import { getCsrfToken } from '$utils/helpers';
 
 export interface IResponse<T> {
-    body: undefined | T,
-    text: undefined | string,
-    error: undefined | ErrorResponse,
-    status: number,
-    headers: Headers,
+    body: undefined | T;
+    text: undefined | string;
+    error: undefined | ErrorResponse;
+    status: number;
+    headers: Headers;
 }
 
 function buildHeaders(
@@ -17,12 +17,12 @@ function buildHeaders(
     if (payload === 'json') {
         headers = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            Accept: 'application/json',
         };
     } else {
         headers = {
             'Content-type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json',
+            Accept: 'application/json',
         };
     }
 
@@ -54,14 +54,6 @@ export async function fetchPost<T>(
     }
 }
 
-// export async function fetchPostMultipart(
-//     uri: string,
-//     body?: Object,
-//     typ: 'json' | 'form' = 'json',
-// ) {
-//     console.warn('TODO fetchPostMultipart');
-// }
-
 export async function fetchForm(form: HTMLFormElement, body: URLSearchParams) {
     return await fetch(form.action, {
         method: form.method,
@@ -69,7 +61,7 @@ export async function fetchForm(form: HTMLFormElement, body: URLSearchParams) {
             'content-type': 'application/x-www-form-urlencoded',
         },
         body,
-    })
+    });
 }
 
 export async function fetchPatch<T>(
@@ -165,7 +157,10 @@ export function formDataFromObj(obj: Object) {
     return params;
 }
 
-export async function handleResponse<T>(res: Response, redirect: 'handle401' | 'noRedirect',): Promise<IResponse<T>> {
+export async function handleResponse<T>(
+    res: Response,
+    redirect: 'handle401' | 'noRedirect',
+): Promise<IResponse<T>> {
     if (redirect === 'handle401' && res.status === 401) {
         window.location.reload();
     }
@@ -194,7 +189,10 @@ export async function handleResponse<T>(res: Response, redirect: 'handle401' | '
     return resp;
 }
 
-export async function errorFromResponse(res: Response, eventOnError?: boolean): Promise<ErrorResponse> {
+export async function errorFromResponse(
+    res: Response,
+    eventOnError?: boolean,
+): Promise<ErrorResponse> {
     let err = await res.json();
     // if (eventOnError) {
     //     useEvents().push('error', ErrorType[err.error], err.message, 5);
@@ -202,7 +200,12 @@ export async function errorFromResponse(res: Response, eventOnError?: boolean): 
     return err;
 }
 
-export async function uploadFile<T>(method: 'POST' | 'PUT', url: string, file: File, name: string): Promise<IResponse<T>> {
+export async function uploadFile<T>(
+    method: 'POST' | 'PUT',
+    url: string,
+    file: File,
+    name: string,
+): Promise<IResponse<T>> {
     const formData = new FormData();
     formData.append(name, file);
 

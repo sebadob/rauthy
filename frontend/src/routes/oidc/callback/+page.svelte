@@ -3,14 +3,10 @@
         deleteVerifierFromStorage,
         getVerifierFromStorage,
         saveCsrfToken,
-    } from "$utils/helpers.js";
-    import {onMount} from "svelte";
-    import {
-        CLIENT_ID,
-        REDIRECT_URI_SUCCESS,
-        REDIRECT_URI_SUCCESS_ACC,
-    } from "$utils/constants.js";
-    import {useParam} from "$state/param.svelte";
+    } from '$utils/helpers.js';
+    import { onMount } from 'svelte';
+    import { CLIENT_ID, REDIRECT_URI_SUCCESS, REDIRECT_URI_SUCCESS_ACC } from '$utils/constants.js';
+    import { useParam } from '$state/param.svelte';
 
     let err = $state('');
 
@@ -36,7 +32,7 @@
             method: 'POST',
             headers: {
                 'Content-type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json',
+                Accept: 'application/json',
             },
             body: data,
         });
@@ -55,8 +51,8 @@
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${body.access_token}`,
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${body.access_token}`,
                 },
             });
             let info = await resXsrf.json();

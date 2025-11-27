@@ -1,26 +1,26 @@
 <script lang="ts">
-    import PasswordPolicy from "$lib5/PasswordPolicy.svelte";
-    import {onMount} from "svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import {generatePassword} from "$utils/helpers";
-    import type {UserResponse} from "$api/types/user.ts";
-    import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
-    import InputPassword from "$lib5/form/InputPassword.svelte";
-    import IconCheck from "$icons/IconCheck.svelte";
-    import Form from "$lib5/form/Form.svelte";
-    import {fetchGet, fetchPatch, fetchPost, fetchPut} from "$api/fetch";
-    import type {RequestResetRequest} from "$api/types/authorize.ts";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import type {PatchOp} from "$api/types/generic";
-    import {fetchSolvePow} from "$utils/pow";
+    import PasswordPolicy from '$lib5/PasswordPolicy.svelte';
+    import { onMount } from 'svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import { generatePassword } from '$utils/helpers';
+    import type { UserResponse } from '$api/types/user.ts';
+    import type { PasswordPolicyResponse } from '$api/types/password_policy.ts';
+    import InputPassword from '$lib5/form/InputPassword.svelte';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import Form from '$lib5/form/Form.svelte';
+    import { fetchGet, fetchPatch, fetchPost, fetchPut } from '$api/fetch';
+    import type { RequestResetRequest } from '$api/types/authorize.ts';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import type { PatchOp } from '$api/types/generic';
+    import { fetchSolvePow } from '$utils/pow';
 
     let {
         user,
         onSave,
     }: {
-        user: UserResponse,
-        onSave: () => void,
+        user: UserResponse;
+        onSave: () => void;
     } = $props();
 
     const inputWidth = 'min(20rem, calc(100dvw - .5rem))';
@@ -64,7 +64,7 @@
         err = '';
         isLoading = true;
 
-        let pow = await fetchSolvePow() || '';
+        let pow = (await fetchSolvePow()) || '';
         let payload: RequestResetRequest = {
             pow,
             email: user.email,
@@ -94,7 +94,7 @@
         }
 
         let payload: PatchOp = {
-            put: [{key: 'password', value: pwdNew}],
+            put: [{ key: 'password', value: pwdNew }],
             del: [],
         };
 
@@ -129,10 +129,9 @@
             reportValidityConfirm?.();
         });
     }
-
 </script>
 
-{#if user.account_type === "new" && !manualInit}
+{#if user.account_type === 'new' && !manualInit}
     <p><b>{ta.users.pwdNoInit}</b></p>
     <p>{ta.users.pwdSendEmailDesc}</p>
 
@@ -141,10 +140,10 @@
     </Button>
 
     <p style:margin-top="1rem">{ta.users.manualInitDesc}</p>
-    <Button level={2} onclick={() => manualInit = true}>
+    <Button level={2} onclick={() => (manualInit = true)}>
         {ta.users.manualInit}
     </Button>
-{:else if user.account_type === "passkey" || user.account_type === 'federated_passkey'}
+{:else if user.account_type === 'passkey' || user.account_type === 'federated_passkey'}
     <div class="desc">
         <p><b>{ta.users.pkOnly1}</b></p>
         <p>{ta.users.pkOnly2}</p>
@@ -154,30 +153,30 @@
     <div style:margin-top=".5rem"></div>
 
     {#if policy}
-        <PasswordPolicy password={pwdNew} bind:accepted {policy}/>
+        <PasswordPolicy password={pwdNew} bind:accepted {policy} />
     {/if}
 
     <Form action={`/auth/v1/users/${user.id}`} onSubmit={savePwd}>
         <InputPassword
-                bind:value={pwdNew}
-                autocomplete="off"
-                label={t.account.passwordNew}
-                placeholder={t.account.passwordNew}
-                {showCopy}
-                bind:reportValidity={reportValidityNew}
-                required
-                maxLength={policy?.length_max || 256}
-                width={inputWidth}
+            bind:value={pwdNew}
+            autocomplete="off"
+            label={t.account.passwordNew}
+            placeholder={t.account.passwordNew}
+            {showCopy}
+            bind:reportValidity={reportValidityNew}
+            required
+            maxLength={policy?.length_max || 256}
+            width={inputWidth}
         />
         <InputPassword
-                bind:value={pwdVerify}
-                autocomplete="off"
-                label={t.account.passwordConfirm}
-                placeholder={t.account.passwordConfirm}
-                bind:reportValidity={reportValidityConfirm}
-                required
-                maxLength={policy?.length_max || 256}
-                width={inputWidth}
+            bind:value={pwdVerify}
+            autocomplete="off"
+            label={t.account.passwordConfirm}
+            placeholder={t.account.passwordConfirm}
+            bind:reportValidity={reportValidityConfirm}
+            required
+            maxLength={policy?.length_max || 256}
+            width={inputWidth}
         />
 
         <Button level={2} onclick={generate}>
@@ -197,7 +196,7 @@
             </Button>
 
             {#if success}
-                <IconCheck/>
+                <IconCheck />
             {/if}
         </div>
     </Form>

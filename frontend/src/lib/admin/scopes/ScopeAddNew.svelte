@@ -1,19 +1,19 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import {PATTERN_ROLE_SCOPE} from "$utils/patterns";
-    import Form from "$lib5/form/Form.svelte";
-    import type {ScopeRequest, ScopeResponse} from "$api/types/scopes.ts";
-    import {fetchPost} from "$api/fetch";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import Button from '$lib5/button/Button.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import { PATTERN_ROLE_SCOPE } from '$utils/patterns';
+    import Form from '$lib5/form/Form.svelte';
+    import type { ScopeRequest, ScopeResponse } from '$api/types/scopes.ts';
+    import { fetchPost } from '$api/fetch';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
 
     let {
         scopes,
         onSave,
     }: {
-        scopes: ScopeResponse[],
-        onSave: (id: string) => void,
+        scopes: ScopeResponse[];
+        onSave: (id: string) => void;
     } = $props();
 
     let t = useI18n();
@@ -52,13 +52,13 @@
 <div class="container">
     <Form action="/auth/v1/scopes" {onSubmit}>
         <Input
-                bind:ref
-                bind:value={name}
-                autocomplete="off"
-                label={ta.scopes.name}
-                placeholder={ta.scopes.name}
-                required
-                pattern={PATTERN_ROLE_SCOPE}
+            bind:ref
+            bind:value={name}
+            autocomplete="off"
+            label={ta.scopes.name}
+            placeholder={ta.scopes.name}
+            required
+            pattern={PATTERN_ROLE_SCOPE}
         />
 
         <Button type="submit">

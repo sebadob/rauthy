@@ -1,13 +1,13 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import IconCheck from "$icons/IconCheck.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {fetchDelete} from "$api/fetch";
+    import Button from '$lib5/button/Button.svelte';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { fetchDelete } from '$api/fetch';
 
     let {
         userId,
     }: {
-        userId: string,
+        userId: string;
     } = $props();
 
     let ta = useI18nAdmin();
@@ -33,11 +33,9 @@
 <p>{ta.users.forceLogout}</p>
 
 <div class="flex gap-05">
-    <Button level={-1} onclick={onSubmit}>
-        Logout
-    </Button>
+    <Button level={-1} onclick={onSubmit}>Logout</Button>
     {#if success}
-        <IconCheck/>
+        <IconCheck />
     {/if}
 </div>
 

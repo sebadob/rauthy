@@ -1,5 +1,7 @@
 /* CSS Reset */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
 }
 
@@ -13,7 +15,10 @@
     background: hsl(var(--action));
 }
 
-input, button, textarea, select {
+input,
+button,
+textarea,
+select {
     font: inherit;
 }
 
@@ -36,8 +41,19 @@ input, button, textarea, select {
 body {
     width: 100%;
     height: 100dvh;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', 'Segoe UI', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        'Roboto',
+        'Segoe UI',
+        'Oxygen',
+        'Ubuntu',
+        'Cantarell',
+        'Fira Sans',
+        'Droid Sans',
+        'Helvetica Neue',
+        sans-serif;
     -webkit-font-smoothing: antialiased;
     line-height: 1.5rem;
     color: hsl(var(--text));
@@ -52,30 +68,38 @@ body {
     --din-a4-height: 842pt;
 }
 
-a, a:link, a:visited {
+a,
+a:link,
+a:visited {
     color: hsl(var(--text));
     transition: all 150ms ease-in-out;
 }
 
-a:hover, a:active {
+a:hover,
+a:active {
     color: hsl(var(--action));
     text-decoration: underline;
 }
 
 blockquote {
-    padding-left: .33rem;
+    padding-left: 0.33rem;
     border-left: 3px solid hsl(var(--accent));
     border-radius: var(--border-radius);
     background-color: hsl(var(--bg-high));
 }
 
 code {
-    padding: 0 .15rem;
-    font-size: .9rem;
+    padding: 0 0.15rem;
+    font-size: 0.9rem;
     background: hsl(var(--bg-high));
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
     color: hsl(var(--text-high));
     overflow-wrap: break-word;
 }
@@ -88,30 +112,30 @@ h1 {
 
 h2 {
     font-size: 1.35rem;
-    margin: .75rem 0;
+    margin: 0.75rem 0;
     letter-spacing: -0.03em;
 }
 
 h3 {
     font-size: 1.25rem;
-    margin: .6rem 0;
+    margin: 0.6rem 0;
     letter-spacing: -0.025em;
 }
 
 h4 {
     font-size: 1.2rem;
-    margin: .65rem 0;
+    margin: 0.65rem 0;
     letter-spacing: -0.015em;
 }
 
 h5 {
     font-size: 1.05rem;
-    margin: .55rem 0;
+    margin: 0.55rem 0;
     letter-spacing: -0.01em;
 }
 
 p {
-    margin: .5rem 0;
+    margin: 0.5rem 0;
     /*
     595pt is exactly the width of DIN A4, the height would be 842pt.
     If you calculate for typical borders of  2.0 - 2.5 cm you get 57pt - 71pt on each side.
@@ -125,7 +149,7 @@ p {
 hr {
     border: none;
     border-top: 1px solid hsl(var(--bg-high));
-    margin: .5rem 0;
+    margin: 0.5rem 0;
 }
 
 li {
@@ -133,22 +157,35 @@ li {
 }
 
 .font-default {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', 'Segoe UI', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        'Roboto',
+        'Segoe UI',
+        'Oxygen',
+        'Ubuntu',
+        'Cantarell',
+        'Fira Sans',
+        'Droid Sans',
+        'Helvetica Neue',
+        sans-serif;
 }
 
 .font-label {
-    font-family: ui-rounded, 'Hiragino Maru Gothic ProN', Quicksand, Comfortaa, Manjari, 'Arial Rounded MT',
-    'Arial Rounded MT Bold', Calibri, source-sans-pro, sans-serif;
+    font-family:
+        ui-rounded, 'Hiragino Maru Gothic ProN', Quicksand, Comfortaa, Manjari, 'Arial Rounded MT',
+        'Arial Rounded MT Bold', Calibri, source-sans-pro, sans-serif;
 }
 
 .font-mono {
-    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas,
-    'DejaVu Sans Mono', monospace;
+    font-family:
+        ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono',
+        monospace;
 }
 
 .absolute {
-    position: absolute
+    position: absolute;
 }
 
 .accent {
@@ -168,7 +205,7 @@ li {
 }
 
 .relative {
-    position: relative
+    position: relative;
 }
 
 .flex {
@@ -186,7 +223,7 @@ li {
 
 .flex-col {
     display: flex;
-    flex-direction: column
+    flex-direction: column;
 }
 
 .flex-wrap {
@@ -198,19 +235,19 @@ li {
 }
 
 .gap-05 {
-    gap: .5rem
+    gap: 0.5rem;
 }
 
 .gap-10 {
-    gap: 1rem
+    gap: 1rem;
 }
 
 .gap-15 {
-    gap: 1.5rem
+    gap: 1.5rem;
 }
 
 .gap-20 {
-    gap: 2rem
+    gap: 2rem;
 }
 
 .hidden {
@@ -220,7 +257,7 @@ li {
 }
 
 .m-05 {
-    margin: .5rem
+    margin: 0.5rem;
 }
 
 .m-10 {
@@ -228,7 +265,7 @@ li {
 }
 
 .ms-05 {
-    margin: 0 .5rem;
+    margin: 0 0.5rem;
 }
 
 .ms-10 {
@@ -236,7 +273,7 @@ li {
 }
 
 .mh-05 {
-    margin: .5rem 0;
+    margin: 0.5rem 0;
 }
 
 .mh-10 {
@@ -263,15 +300,15 @@ li {
     animation: var(--animate-zoom);
 }
 
-label[data-required="true"]:after {
+label[data-required='true']:after {
     content: ' *';
-    color: hsla(var(--error) / .9);
+    color: hsla(var(--error) / 0.9);
 }
 
 input {
     width: 100%;
-    margin: .33rem 0;
-    padding: .25rem .5rem;
+    margin: 0.33rem 0;
+    padding: 0.25rem 0.5rem;
     background: hsl(var(--bg));
     border: none;
     border-radius: var(--border-radius) var(--border-radius) 0 0;
@@ -282,16 +319,17 @@ input {
 }
 
 input:valid {
-    border-bottom: 1px solid hsla(var(--text) / .35);
+    border-bottom: 1px solid hsla(var(--text) / 0.35);
 }
 
 input:invalid {
     border-bottom: 1px solid hsl(var(--error));
 }
 
-input:hover, input:focus {
+input:hover,
+input:focus {
     color: hsl(var(--text-high));
-    background: hsla(var(--action) / .03);
+    background: hsla(var(--action) / 0.03);
 }
 
 input:disabled {

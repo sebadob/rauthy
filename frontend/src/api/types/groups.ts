@@ -1,9 +1,9 @@
 export interface GroupRequest {
     /// Validation: PATTERN_GROUP
-    group: string,
+    group: string;
 }
 
 export interface GroupResponse {
-    id: string,
-    name: string,
+    id: string;
+    name: string;
 }

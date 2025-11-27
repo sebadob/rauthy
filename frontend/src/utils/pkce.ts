@@ -1,8 +1,8 @@
-import {isBrowser} from "$utils/helpers";
+import { isBrowser } from '$utils/helpers';
 
 export interface PKCE {
-    challenge: string,
-    verifier: string,
+    challenge: string;
+    verifier: string;
 }
 
 function b64UrlEncode(string: string) {
@@ -19,14 +19,11 @@ export async function generatePKCE(): Promise<undefined | PKCE> {
     let str = String.fromCharCode.apply(null, Array.from(random));
     let verifier = b64UrlEncode(str);
 
-    let hash = await crypto.subtle.digest(
-        {name: "SHA-256"},
-        new TextEncoder().encode(verifier)
-    );
+    let hash = await crypto.subtle.digest({ name: 'SHA-256' }, new TextEncoder().encode(verifier));
     let strHash = String.fromCharCode.apply(null, Array.from(new Uint8Array(hash)));
     let challenge = b64UrlEncode(strHash);
 
-    return {challenge, verifier};
+    return { challenge, verifier };
 }
 
 export function generateNonce() {

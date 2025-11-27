@@ -1,19 +1,19 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import {onMount} from "svelte";
-    import type {ProviderLinkedUserResponse, ProviderResponse} from "$api/types/auth_provider.ts";
-    import {fetchDelete, fetchGet} from "$api/fetch";
-    import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
-    import Expandable from "$lib5/Expandable.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {useI18n} from "$state/i18n.svelte";
+    import Button from '$lib5/button/Button.svelte';
+    import { onMount } from 'svelte';
+    import type { ProviderLinkedUserResponse, ProviderResponse } from '$api/types/auth_provider.ts';
+    import { fetchDelete, fetchGet } from '$api/fetch';
+    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
+    import Expandable from '$lib5/Expandable.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { useI18n } from '$state/i18n.svelte';
 
     let {
         provider,
         onSave = $bindable(),
     }: {
-        provider: ProviderResponse,
-        onSave: () => void,
+        provider: ProviderResponse;
+        onSave: () => void;
     } = $props();
 
     let t = useI18n();
@@ -34,7 +34,7 @@
         }
 
         isLoading = false;
-    })
+    });
 
     async function onSubmit() {
         err = '';
@@ -49,7 +49,6 @@
 
         isLoading = false;
     }
-
 </script>
 
 <div class="container">
@@ -102,16 +101,16 @@
     }
 
     .forceDelete {
-        margin-bottom: .5rem;
+        margin-bottom: 0.5rem;
         color: hsl(var(--error));
         font-weight: bold;
     }
 
     .muted {
-        color: hsla(var(--text) / .6);
+        color: hsla(var(--text) / 0.6);
     }
 
     .user {
-        margin: .15rem 0;
+        margin: 0.15rem 0;
     }
 </style>

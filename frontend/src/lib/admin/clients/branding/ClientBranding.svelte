@@ -1,26 +1,26 @@
 <script lang="ts">
-    import type {ClientResponse} from "$api/types/clients.ts";
-    import {fetchDelete, fetchPost, fetchPut} from "$api/fetch";
-    import type {ThemeRequestResponse} from "$api/types/themes.ts";
-    import Form from "$lib5/form/Form.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import {PATTERN_CSS_VALUE_LOOSE} from "$utils/patterns";
-    import BrandingMode from "$lib5/admin/clients/branding/BrandingMode.svelte";
-    import BrandingPreviewWrapper from "$lib5/admin/clients/branding/BrandingPreviewWrapper.svelte";
-    import {genKey} from "$utils/helpers";
-    import InputFile from "$lib5/form/InputFile.svelte";
-    import IconCheck from "$icons/IconCheck.svelte";
+    import type { ClientResponse } from '$api/types/clients.ts';
+    import { fetchDelete, fetchPost, fetchPut } from '$api/fetch';
+    import type { ThemeRequestResponse } from '$api/types/themes.ts';
+    import Form from '$lib5/form/Form.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import { PATTERN_CSS_VALUE_LOOSE } from '$utils/patterns';
+    import BrandingMode from '$lib5/admin/clients/branding/BrandingMode.svelte';
+    import BrandingPreviewWrapper from '$lib5/admin/clients/branding/BrandingPreviewWrapper.svelte';
+    import { genKey } from '$utils/helpers';
+    import InputFile from '$lib5/form/InputFile.svelte';
+    import IconCheck from '$icons/IconCheck.svelte';
 
     let {
         client,
     }: {
-        client: ClientResponse,
+        client: ClientResponse;
     } = $props();
 
-    const inputWidth = "13rem";
+    const inputWidth = '13rem';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -95,35 +95,35 @@
                 <p>{@html ta.clients.branding.descVariables}</p>
 
                 <Input
-                        label="--border-radius"
-                        placeholder="--border-radius"
-                        errMsg={ta.validation.css}
-                        width={inputWidth}
-                        bind:value={theme.border_radius}
-                        required
-                        pattern={PATTERN_CSS_VALUE_LOOSE}
+                    label="--border-radius"
+                    placeholder="--border-radius"
+                    errMsg={ta.validation.css}
+                    width={inputWidth}
+                    bind:value={theme.border_radius}
+                    required
+                    pattern={PATTERN_CSS_VALUE_LOOSE}
                 />
 
                 <h1>Light Theme</h1>
-                <BrandingMode bind:values={theme.light}/>
+                <BrandingMode bind:values={theme.light} />
 
-                <br>
+                <br />
                 <h1>Dark Theme</h1>
-                <BrandingMode bind:values={theme.dark}/>
+                <BrandingMode bind:values={theme.dark} />
             </div>
             <div class="preview">
                 {#key logoKey}
-                    <BrandingPreviewWrapper {logoUrl} {theme}/>
+                    <BrandingPreviewWrapper {logoUrl} {theme} />
                 {/key}
 
-                <hr>
+                <hr />
 
                 <p>Logo Upload</p>
                 <InputFile
-                        method="PUT"
-                        url={`/auth/v1/clients/${client.id}/logo`}
-                        fileName="logo"
-                        onSuccess={onUploadSuccess}
+                    method="PUT"
+                    url={`/auth/v1/clients/${client.id}/logo`}
+                    fileName="logo"
+                    onSuccess={onUploadSuccess}
                 />
 
                 <div class="buttons">
@@ -135,7 +135,7 @@
                     </Button>
 
                     {#if success}
-                        <IconCheck/>
+                        <IconCheck />
                     {/if}
                 </div>
 
@@ -154,20 +154,20 @@
         margin: 1rem 0;
         display: flex;
         align-items: center;
-        gap: .5rem;
+        gap: 0.5rem;
     }
 
     .container {
         max-height: calc(100dvh - 4.5rem);
         display: grid;
         grid-template-columns: 1fr 17rem;
-        gap: .5rem;
+        gap: 0.5rem;
     }
 
     .values {
         max-height: calc(100dvh - 5.5rem);
         margin-top: 1rem;
-        padding-right: .5rem;
+        padding-right: 0.5rem;
         overflow: auto;
     }
 

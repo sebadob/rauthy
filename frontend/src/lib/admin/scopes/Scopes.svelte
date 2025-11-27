@@ -1,19 +1,22 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
-    import {fetchGet} from "$api/fetch";
-    import type {UserAttrConfigResponse, UserAttrConfigValueResponse} from "$api/types/user_attrs.ts";
-    import type {ScopeResponse} from "$api/types/scopes.ts";
-    import ContentAdmin from "$lib5/ContentAdmin.svelte";
-    import NavButtonTile from "$lib5/nav/NavButtonTile.svelte";
-    import ButtonAddModal from "$lib5/button/ButtonAddModal.svelte";
-    import NavSub from "$lib5/nav/NavSub.svelte";
-    import {useParam} from "$state/param.svelte";
-    import ScopeDetails from "$lib5/admin/scopes/ScopeDetails.svelte";
-    import ScopeAddNew from "./ScopeAddNew.svelte";
-    import {isDefaultScope} from "$utils/helpers";
-    import {useTrigger} from "$state/callback.svelte";
+    import { onMount } from 'svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
+    import { fetchGet } from '$api/fetch';
+    import type {
+        UserAttrConfigResponse,
+        UserAttrConfigValueResponse,
+    } from '$api/types/user_attrs.ts';
+    import type { ScopeResponse } from '$api/types/scopes.ts';
+    import ContentAdmin from '$lib5/ContentAdmin.svelte';
+    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
+    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
+    import NavSub from '$lib5/nav/NavSub.svelte';
+    import { useParam } from '$state/param.svelte';
+    import ScopeDetails from '$lib5/admin/scopes/ScopeDetails.svelte';
+    import ScopeAddNew from './ScopeAddNew.svelte';
+    import { isDefaultScope } from '$utils/helpers';
+    import { useTrigger } from '$state/callback.svelte';
 
     let ta = useI18nAdmin();
 
@@ -77,9 +80,11 @@
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
-            scopes.sort((a, b) => up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+            scopes.sort((a, b) =>
+                up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+            );
         } else if (option === orderOptions[1]) {
-            scopes.sort((a, b) => up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id));
+            scopes.sort((a, b) => (up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
         }
     }
 
@@ -92,25 +97,29 @@
         await fetchScopes();
         sid.set(id);
     }
-
 </script>
 
 <NavSub
-        paddingTop="2.1rem"
-        buttonTilesAriaControls="scopes"
-        width="min(20rem, 100dvw)"
-        thresholdNavSub={700}
+    paddingTop="2.1rem"
+    buttonTilesAriaControls="scopes"
+    width="min(20rem, 100dvw)"
+    thresholdNavSub={700}
 >
-    <ButtonAddModal bind:ref={refAddNew} level={scopes.length === 0 ? 1 : 2} bind:closeModal alignRight>
-        <ScopeAddNew onSave={onAddNew} {scopes}/>
+    <ButtonAddModal
+        bind:ref={refAddNew}
+        level={scopes.length === 0 ? 1 : 2}
+        bind:closeModal
+        alignRight
+    >
+        <ScopeAddNew onSave={onAddNew} {scopes} />
     </ButtonAddModal>
     <OrderSearchBar
-            {searchOptions}
-            bind:searchOption
-            bind:value={searchValue}
-            {orderOptions}
-            {onChangeOrder}
-            searchWidth="min(19.5rem, 100dvw - .5rem)"
+        {searchOptions}
+        bind:searchOption
+        bind:value={searchValue}
+        {orderOptions}
+        {onChangeOrder}
+        searchWidth="min(19.5rem, 100dvw - .5rem)"
     />
 
     {#snippet buttonTiles()}
@@ -119,9 +128,9 @@
                 <NavButtonTile onclick={() => sid.set(scope.id)} selected={sid.get() === scope.id}>
                     {scope.name}
                     {#if isDefaultScope(scope.name)}
-                    <span class="default">
-                        <i>default</i>
-                    </span>
+                        <span class="default">
+                            <i>default</i>
+                        </span>
                     {/if}
                 </NavButtonTile>
             {/each}
@@ -138,20 +147,20 @@
 
     <div id="scopes">
         {#if scope}
-            <ScopeDetails {attrs} {scope} {scopes} {onSave}/>
+            <ScopeDetails {attrs} {scope} {scopes} {onSave} />
         {/if}
     </div>
 </ContentAdmin>
 
 <style>
     .default {
-        font-size: .8rem;
-        color: hsla(var(--text) / .5);
+        font-size: 0.8rem;
+        color: hsla(var(--text) / 0.5);
     }
 
     .scopesList {
         max-height: calc(100dvh - 9.5rem);
-        margin-top: .5rem;
+        margin-top: 0.5rem;
         overflow-y: auto;
     }
 </style>

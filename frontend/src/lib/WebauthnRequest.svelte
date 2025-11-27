@@ -1,9 +1,9 @@
 <script lang="ts">
-    import Loading from "$lib5/Loading.svelte";
-    import {webauthnAuth, type WebauthnAuthResult} from "$webauthn/authentication";
-    import {useI18n} from "$state/i18n.svelte.js";
-    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import {onMount} from "svelte";
+    import Loading from '$lib5/Loading.svelte';
+    import { webauthnAuth, type WebauthnAuthResult } from '$webauthn/authentication';
+    import { useI18n } from '$state/i18n.svelte.js';
+    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
+    import { onMount } from 'svelte';
 
     let {
         userId,
@@ -11,10 +11,10 @@
         onError,
         onSuccess,
     }: {
-        userId: string,
-        purpose: MfaPurpose,
-        onError: (error: string) => void,
-        onSuccess: (res?: WebauthnAdditionalData) => void,
+        userId: string;
+        purpose: MfaPurpose;
+        onError: (error: string) => void;
+        onSuccess: (res?: WebauthnAdditionalData) => void;
     } = $props();
 
     let t = useI18n();
@@ -22,7 +22,12 @@
     let webauthnRes: undefined | WebauthnAuthResult = $state();
 
     onMount(async () => {
-        webauthnRes = await webauthnAuth(userId, purpose, t.authorize.invalidKeyUsed, t.authorize.requestExpired);
+        webauthnRes = await webauthnAuth(
+            userId,
+            purpose,
+            t.authorize.invalidKeyUsed,
+            t.authorize.requestExpired,
+        );
     });
 
     $effect(() => {
@@ -36,7 +41,6 @@
             }
         }
     });
-
 </script>
 
 {#if purpose}
@@ -62,7 +66,7 @@
                         Stick with just loading until then.
                         -->
                         {#if !webauthnRes}
-                            <Loading/>
+                            <Loading />
                         {/if}
                         <!-- <progress value={progress} max={exp}></progress>-->
                     </div>
@@ -98,7 +102,7 @@
         color: hsl(var(--text-high));
         text-align: center;
         z-index: 99;
-        background: hsla(var(--bg) / .9);
+        background: hsla(var(--bg) / 0.9);
     }
 
     .contentRow {
@@ -106,7 +110,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        margin: .25em;
+        margin: 0.25em;
     }
 
     .contentHeader {
@@ -114,7 +118,8 @@
         font-weight: bold;
     }
 
-    .err, .good {
+    .err,
+    .good {
         font-weight: bold;
     }
 
@@ -144,7 +149,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        background: rgba(0, 0, 0, .85);
+        background: rgba(0, 0, 0, 0.85);
         z-index: 20;
     }
 </style>

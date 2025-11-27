@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type {Snippet} from 'svelte'
+    import type { Snippet } from 'svelte';
 
     let {
         checked = $bindable(false),
@@ -9,12 +9,12 @@
         name,
         children,
     }: {
-        checked: boolean,
-        disabled?: boolean,
-        ariaLabel: string,
-        borderColor?: string,
-        name?: string,
-        children?: Snippet,
+        checked: boolean;
+        disabled?: boolean;
+        ariaLabel: string;
+        borderColor?: string;
+        name?: string;
+        children?: Snippet;
     } = $props();
 
     function onclick() {
@@ -30,16 +30,16 @@
 
 <label class="font-label noselect" data-disabled={disabled}>
     <input
-            type="checkbox"
-            style:border-color={borderColor}
-            {name}
-            bind:checked
-            {disabled}
-            aria-disabled={disabled}
-            aria-checked={checked}
-            aria-label={ariaLabel}
-            {onclick}
-            {onkeydown}
+        type="checkbox"
+        style:border-color={borderColor}
+        {name}
+        bind:checked
+        {disabled}
+        aria-disabled={disabled}
+        aria-checked={checked}
+        aria-label={ariaLabel}
+        {onclick}
+        {onkeydown}
     />
     <span>
         {@render children?.()}
@@ -50,15 +50,15 @@
     label {
         display: grid;
         grid-template-columns: 1rem auto;
-        gap: .66rem;
+        gap: 0.66rem;
         cursor: pointer;
     }
 
-    label[data-disabled="true"] {
+    label[data-disabled='true'] {
         cursor: not-allowed;
     }
 
-    input[type="checkbox"] {
+    input[type='checkbox'] {
         display: grid;
         place-content: center;
         margin: 0;
@@ -66,14 +66,14 @@
         width: 1.25rem;
         height: 1.25rem;
         background: hsl(var(--bg));
-        border: .15rem solid hsl(var(--bg-high));
-        border-radius: .2rem;
-        transform: translateY(.1rem);
+        border: 0.15rem solid hsl(var(--bg-high));
+        border-radius: 0.2rem;
+        transform: translateY(0.1rem);
         cursor: pointer;
     }
 
-    input[type="checkbox"]::before {
-        content: "";
+    input[type='checkbox']::before {
+        content: '';
         width: 0.8rem;
         height: 0.8rem;
         border-radius: 2px;
@@ -84,24 +84,24 @@
         clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
     }
 
-    input[type="checkbox"]:checked::before {
+    input[type='checkbox']:checked::before {
         transform: scale(1);
     }
 
-    input[type="checkbox"]:focus-visible {
+    input[type='checkbox']:focus-visible {
         outline: 2px solid hsl(var(--accent));
         outline-offset: 2px;
     }
 
-    input[type="checkbox"]:disabled::before {
+    input[type='checkbox']:disabled::before {
         background: hsl(var(--text));
     }
 
-    input[type="checkbox"]:disabled {
+    input[type='checkbox']:disabled {
         cursor: not-allowed;
     }
 
     label > span {
-        transform: translateY(.05rem);
+        transform: translateY(0.05rem);
     }
 </style>

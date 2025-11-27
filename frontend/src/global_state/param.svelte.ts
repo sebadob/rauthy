@@ -1,13 +1,12 @@
-import {goto} from "$app/navigation";
+import { goto } from '$app/navigation';
 
 // Record<> or Map<> do not work reactively in this case
 let _signals: any = $state({});
 // needs to be undefined in the beginning (and therefore produce a bit of
 // ugly syntax in useParam()), to make pre-rendering work properly
 // -> `window` is not available on the server
-let _params: undefined | URLSearchParams = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search)
-    : undefined;
+let _params: undefined | URLSearchParams =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : undefined;
 
 export const updateParams = (paramsNew: URLSearchParams) => {
     for (let [key, value] of paramsNew.entries()) {
@@ -17,13 +16,13 @@ export const updateParams = (paramsNew: URLSearchParams) => {
         }
     }
     _params = paramsNew;
-}
+};
 
 export interface IParam {
-    get: () => undefined | string,
-    getNum: () => undefined | number,
-    true: () => boolean,
-    set: (value?: string | number | boolean) => void,
+    get: () => undefined | string;
+    getNum: () => undefined | number;
+    true: () => boolean;
+    set: (value?: string | number | boolean) => void;
 }
 
 export const useParam = (key: string, initialValue?: string | number | boolean): IParam => {
@@ -78,13 +77,12 @@ export const useParam = (key: string, initialValue?: string | number | boolean):
             }
             go();
         },
-    }
-}
+    };
+};
 
 function go() {
     if (typeof window !== 'undefined' && _params) {
         let params = _params.toString().replace(' ', '+');
-        goto(`?${params}`, {})
-            .catch(err => console.error(err));
+        goto(`?${params}`, {}).catch(err => console.error(err));
     }
 }

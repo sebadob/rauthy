@@ -1,9 +1,9 @@
 export interface RoleRequest {
     /// Validation: PATTERN_ROLE_SCOPE
-    role: string,
+    role: string;
 }
 
 export interface RoleResponse {
-    id: string,
-    name: string,
+    id: string;
+    name: string;
 }

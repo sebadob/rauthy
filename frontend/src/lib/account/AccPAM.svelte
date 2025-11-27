@@ -1,25 +1,25 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte.js";
-    import {fetchGet, fetchPost} from "$api/fetch";
+    import Button from '$lib5/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte.js';
+    import { fetchGet, fetchPost } from '$api/fetch';
     import type {
         PamHostAccessResponse,
         PamHostDetailsResponse,
         PamPasswordResponse,
-        PamUserResponse
-    } from "$api/types/pam";
-    import LabeledValue from "$lib/LabeledValue.svelte";
-    import InputPassword from "$lib/form/InputPassword.svelte"
-    import {slide} from "svelte/transition";
-    import {formatDateFromTs} from "$utils/helpers";
-    import {onMount} from "svelte";
-    import Tooltip from "$lib/Tooltip.svelte";
-    import SearchBar from "$lib/search_bar/SearchBar.svelte";
+        PamUserResponse,
+    } from '$api/types/pam';
+    import LabeledValue from '$lib/LabeledValue.svelte';
+    import InputPassword from '$lib/form/InputPassword.svelte';
+    import { slide } from 'svelte/transition';
+    import { formatDateFromTs } from '$utils/helpers';
+    import { onMount } from 'svelte';
+    import Tooltip from '$lib/Tooltip.svelte';
+    import SearchBar from '$lib/search_bar/SearchBar.svelte';
 
     let {
         pamUser,
     }: {
-        pamUser: PamUserResponse,
+        pamUser: PamUserResponse;
     } = $props();
 
     let t = useI18n();
@@ -132,11 +132,11 @@
     {#if password}
         <div transition:slide={{ duration: 150 }}>
             <InputPassword
-                    label={t.common.password}
-                    placeholder={t.common.password}
-                    value={password}
-                    disabled
-                    showCopy
+                label={t.common.password}
+                placeholder={t.common.password}
+                value={password}
+                disabled
+                showCopy
             />
         </div>
     {/if}
@@ -195,7 +195,7 @@
             </div>
 
             {#if host.notes}
-                <hr>
+                <hr />
                 {host.notes}
             {/if}
         </div>
@@ -206,7 +206,7 @@
             <h3>Hosts</h3>
 
             <div class="search">
-                <SearchBar bind:value={search}/>
+                <SearchBar bind:value={search} />
             </div>
 
             {#each hostsFiltered as host}
@@ -230,7 +230,7 @@
         margin-top: 1rem;
         display: flex;
         align-items: center;
-        gap: .5rem;
+        gap: 0.5rem;
     }
 
     .clip {
@@ -244,8 +244,8 @@
 
     .host {
         margin-bottom: 1rem;
-        padding: .25rem .5rem;
-        background-color: hsla(var(--bg-high) / .25);
+        padding: 0.25rem 0.5rem;
+        background-color: hsla(var(--bg-high) / 0.25);
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
     }
@@ -255,7 +255,7 @@
     }
 
     .hostValue {
-        margin: -.25rem 0;
+        margin: -0.25rem 0;
     }
 
     .info {
@@ -270,7 +270,7 @@
     .items {
         display: flex;
         align-items: center;
-        column-gap: .5rem;
+        column-gap: 0.5rem;
         row-gap: 0;
         flex-wrap: wrap;
     }

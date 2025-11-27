@@ -1,7 +1,7 @@
 <script lang="ts">
-    import {fade} from "svelte/transition";
-    import type {Snippet} from 'svelte'
-    import Loading from "$lib5/Loading.svelte";
+    import { fade } from 'svelte/transition';
+    import type { Snippet } from 'svelte';
+    import Loading from '$lib5/Loading.svelte';
 
     let {
         type = 'button',
@@ -28,29 +28,29 @@
         children,
         ...rest
     }: {
-        type?: "button" | "submit" | "reset" | null | undefined,
-        role?: string,
-        ref?: undefined | HTMLButtonElement,
-        id?: string,
-        ariaLabel?: string,
-        ariaControls?: string,
-        ariaCurrent?: "time" | "page" | "step" | "location" | "date" | undefined,
-        level?: number,
-        width?: string,
-        isDisabled?: boolean,
-        isLoading?: boolean,
-        invisible?: boolean,
-        invisibleOutline?: boolean,
-        popovertarget?: string,
-        popovertargetaction?: 'toggle' | 'show' | 'hide' | null | undefined,
-        children: Snippet,
+        type?: 'button' | 'submit' | 'reset' | null | undefined;
+        role?: string;
+        ref?: undefined | HTMLButtonElement;
+        id?: string;
+        ariaLabel?: string;
+        ariaControls?: string;
+        ariaCurrent?: 'time' | 'page' | 'step' | 'location' | 'date' | undefined;
+        level?: number;
+        width?: string;
+        isDisabled?: boolean;
+        isLoading?: boolean;
+        invisible?: boolean;
+        invisibleOutline?: boolean;
+        popovertarget?: string;
+        popovertargetaction?: 'toggle' | 'show' | 'hide' | null | undefined;
+        children: Snippet;
 
-        onclick?: (ev: Event) => void,
-        onTab?: () => void,
-        onLeft?: () => void,
-        onRight?: () => void,
-        onUp?: () => void,
-        onDown?: () => void,
+        onclick?: (ev: Event) => void;
+        onTab?: () => void;
+        onLeft?: () => void;
+        onRight?: () => void;
+        onUp?: () => void;
+        onDown?: () => void;
     } = $props();
 
     let cls = $derived.by(() => {
@@ -85,7 +85,7 @@
                 showText = true;
             }, 120);
         }
-    })
+    });
 
     function loadingColor() {
         switch (level) {
@@ -135,29 +135,29 @@
 </script>
 
 <button
-        bind:this={ref}
-        name={ariaLabel}
-        {role}
-        {type}
-        {id}
-        aria-label={ariaLabel}
-        aria-controls={ariaControls}
-        aria-current={ariaCurrent}
-        class={cls}
-        class:invisibleOutline
-        style:width
-        data-isloading={isLoading}
-        {onclick}
-        {onkeydown}
-        {disabled}
-        aria-disabled={disabled}
-        {popovertarget}
-        {popovertargetaction}
-        {...rest}
+    bind:this={ref}
+    name={ariaLabel}
+    {role}
+    {type}
+    {id}
+    aria-label={ariaLabel}
+    aria-controls={ariaControls}
+    aria-current={ariaCurrent}
+    class={cls}
+    class:invisibleOutline
+    style:width
+    data-isloading={isLoading}
+    {onclick}
+    {onkeydown}
+    {disabled}
+    aria-disabled={disabled}
+    {popovertarget}
+    {popovertargetaction}
+    {...rest}
 >
     {#if isLoading}
         <div class="load">
-            <Loading background={false} color={loadingColor()}/>
+            <Loading background={false} color={loadingColor()} />
         </div>
     {:else if showText}
         <div in:fade class="font-label">
@@ -169,9 +169,9 @@
 <style>
     button {
         height: 2rem;
-        padding: 0 .5rem;
+        padding: 0 0.5rem;
         font-weight: bold;
-        font-size: .9rem;
+        font-size: 0.9rem;
         outline: none;
         border: none;
         border-radius: var(--border-radius);
@@ -187,7 +187,8 @@
         outline: 2px solid hsl(var(--accent));
     }
 
-    .invisible, .invisible:hover {
+    .invisible,
+    .invisible:hover {
         height: inherit;
         margin: 0;
         padding: 0;
@@ -195,7 +196,7 @@
         background: none;
         box-shadow: none;
         font-size: 1rem;
-        color: hsla(var(--action) / .93);
+        color: hsla(var(--action) / 0.93);
     }
 
     .invisible > div {
@@ -211,32 +212,34 @@
         outline: none;
     }
 
-    button[aria-disabled="true"],
-    button[aria-disabled="true"]:hover,
-    button[aria-disabled="true"]:focus {
+    button[aria-disabled='true'],
+    button[aria-disabled='true']:hover,
+    button[aria-disabled='true']:focus {
         color: hsl(var(--bg-high));
     }
 
-    button[aria-disabled="true"],
-    button[data-isloading="true"] {
+    button[aria-disabled='true'],
+    button[data-isloading='true'] {
         cursor: not-allowed;
     }
 
-    .l1, .l2, .l3 {
-        border: 1px solid hsla(var(--action) / .5);
+    .l1,
+    .l2,
+    .l3 {
+        border: 1px solid hsla(var(--action) / 0.5);
     }
 
     .l1 {
         color: var(--btn-text);
-        background: hsla(var(--action) / .93);
+        background: hsla(var(--action) / 0.93);
     }
 
     .l1:hover {
         background: hsl(var(--action));
     }
 
-    .l1[aria-disabled="true"] {
-        background: hsla(var(--text) / .5);
+    .l1[aria-disabled='true'] {
+        background: hsla(var(--text) / 0.5);
     }
 
     .l2 {
@@ -246,7 +249,7 @@
     }
 
     .l3 {
-        color: hsla(var(--action) / .9);
+        color: hsla(var(--action) / 0.9);
         border: none;
         background: transparent;
     }
@@ -255,13 +258,15 @@
         color: hsl(var(--action));
     }
 
-    .l1d, .l2d, .l3d {
-        border: 1px solid hsla(var(--error) / .5);
+    .l1d,
+    .l2d,
+    .l3d {
+        border: 1px solid hsla(var(--error) / 0.5);
     }
 
     .l1d {
         color: var(--btn-text);
-        background: hsla(var(--error) / .93);
+        background: hsla(var(--error) / 0.93);
     }
 
     .l1d:hover {

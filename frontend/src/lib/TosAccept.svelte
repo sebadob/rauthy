@@ -1,12 +1,12 @@
 <script lang="ts">
-    import type {ToSLatestResponse, ToSUserAcceptRequest} from "$api/types/tos";
-    import Modal from "$lib/Modal.svelte";
-    import Button from "$lib/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {fetchPost, type IResponse} from "$api/fetch";
-    import {onMount} from "svelte";
-    import {formatDateFromTs} from "$utils/helpers";
-    import type {WebauthnLoginResponse} from "$api/types/authorize";
+    import type { ToSLatestResponse, ToSUserAcceptRequest } from '$api/types/tos';
+    import Modal from '$lib/Modal.svelte';
+    import Button from '$lib/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { fetchPost, type IResponse } from '$api/fetch';
+    import { onMount } from 'svelte';
+    import { formatDateFromTs } from '$utils/helpers';
+    import type { WebauthnLoginResponse } from '$api/types/authorize';
 
     let {
         tos,
@@ -16,12 +16,12 @@
         onToSCancel,
         skipRequest,
     }: {
-        tos: ToSLatestResponse,
-        tosAcceptCode?: string,
-        forceAccept?: boolean,
-        onToSAccept: (res?: IResponse<undefined | WebauthnLoginResponse>) => void,
-        onToSCancel?: () => void,
-        skipRequest?: boolean,
+        tos: ToSLatestResponse;
+        tosAcceptCode?: string;
+        forceAccept?: boolean;
+        onToSAccept: (res?: IResponse<undefined | WebauthnLoginResponse>) => void;
+        onToSCancel?: () => void;
+        skipRequest?: boolean;
     } = $props();
 
     let t = useI18n();
@@ -34,7 +34,9 @@
     let i = setInterval(() => {
         now = new Date().getTime() / 1000;
     }, 1000);
-    let acceptOptional = $derived(!(forceAccept || tos.opt_until === undefined || tos.opt_until <= now - 3));
+    let acceptOptional = $derived(
+        !(forceAccept || tos.opt_until === undefined || tos.opt_until <= now - 3),
+    );
 
     let tosRead = $state(false);
 
@@ -106,7 +108,6 @@
             onToSAccept(res);
         }
     }
-
 </script>
 
 {#if tos}
@@ -121,20 +122,12 @@
         </p>
 
         <div class="flex gap-05">
-            <Button
-                    ariaLabel={t.common.accept}
-                    onclick={onAccept}
-                    isDisabled={!tosRead}
-            >
+            <Button ariaLabel={t.common.accept} onclick={onAccept} isDisabled={!tosRead}>
                 {t.common.accept}
             </Button>
 
             {#if acceptOptional}
-                <Button
-                        level={-2}
-                        ariaLabel={t.tos.deny}
-                        onclick={onDeny}
-                >
+                <Button level={-2} ariaLabel={t.tos.deny} onclick={onDeny}>
                     {t.tos.deny}
                 </Button>
 
@@ -145,11 +138,7 @@
                     </div>
                 {/if}
             {:else}
-                <Button
-                        level={-2}
-                        ariaLabel={t.common.cancel}
-                        onclick={onCancel}
-                >
+                <Button level={-2} ariaLabel={t.common.cancel} onclick={onCancel}>
                     {t.common.cancel}
                 </Button>
             {/if}
@@ -159,8 +148,8 @@
 
 <style>
     .acceptOpt {
-        font-size: .9rem;
-        color: hsl(var(--text) / .8);
+        font-size: 0.9rem;
+        color: hsl(var(--text) / 0.8);
     }
 
     .tosContent {

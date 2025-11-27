@@ -1,11 +1,11 @@
 <script lang="ts">
-    import {slide} from "svelte/transition";
-    import Options from "$lib5/Options.svelte";
-    import Popover from "$lib5/Popover.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {untrack} from "svelte";
-    import {fmtTimeInput} from "$utils/form";
-    import IconClock from "$icons/IconClock.svelte";
+    import { slide } from 'svelte/transition';
+    import Options from '$lib5/Options.svelte';
+    import Popover from '$lib5/Popover.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { untrack } from 'svelte';
+    import { fmtTimeInput } from '$utils/form';
+    import IconClock from '$icons/IconClock.svelte';
 
     let {
         id,
@@ -26,28 +26,35 @@
         onUp,
         onDown,
     }: {
-        id?: string,
-        name?: string,
-        value?: string,
-        label?: string,
-        ariaLabel?: string,
-        errMsg?: string,
-        disabled?: boolean,
-        min?: string,
-        max?: string,
-        required?: boolean,
-        width?: string,
+        id?: string;
+        name?: string;
+        value?: string;
+        label?: string;
+        ariaLabel?: string;
+        errMsg?: string;
+        disabled?: boolean;
+        min?: string;
+        max?: string;
+        required?: boolean;
+        width?: string;
 
-        onEnter?: () => void,
-        onLeft?: () => void,
-        onRight?: () => void,
-        onUp?: () => void,
-        onDown?: () => void,
+        onEnter?: () => void;
+        onLeft?: () => void;
+        onRight?: () => void;
+        onUp?: () => void;
+        onDown?: () => void;
     } = $props();
 
     $inspect(min, max).with(() => {
-        if (min.length !== 5 || min.charAt(2) !== ':' || max.length !== 5 || max.charAt(2) !== ':') {
-            console.error('min and max values for InputTime must be in the format of 00:00 - 23:59');
+        if (
+            min.length !== 5 ||
+            min.charAt(2) !== ':' ||
+            max.length !== 5 ||
+            max.charAt(2) !== ':'
+        ) {
+            console.error(
+                'min and max values for InputTime must be in the format of 00:00 - 23:59',
+            );
         }
     });
 
@@ -124,8 +131,6 @@
         }
 
         if (val.length === 2) {
-
-
             if (val.charAt(1) === ':') {
                 val = `0${val}:`;
             } else {
@@ -190,79 +195,81 @@
         let intHour = Number.parseInt(hour);
         let intMinute = Number.parseInt(minute);
 
-        if (intHour < hourMin || intHour > hourMax || intMinute < minuteMin || intMinute > minuteMax) {
+        if (
+            intHour < hourMin ||
+            intHour > hourMax ||
+            intMinute < minuteMin ||
+            intMinute > minuteMax
+        ) {
             refInput?.setCustomValidity(errMsg);
         }
 
         isErr = !refInput?.reportValidity();
     }
-
 </script>
 
-<div style:width={width}>
+<div style:width>
     <div class="flex">
         <input
-                bind:this={refInput}
-                type="text"
-                {id}
-                {name}
-                title={errMsg}
-                aria-label={ariaLabel || label}
-                bind:value
-
-                {disabled}
-                aria-disabled={disabled}
-                {required}
-                aria-required={required || false}
-                aria-invalid={isErr}
-                minlength="5"
-                maxlength="5"
-
-                {oninput}
-                {oninvalid}
-                {onkeydown}
-                onfocus={() => refInput?.select()}
-                onblur={() => reportValidity()}
+            bind:this={refInput}
+            type="text"
+            {id}
+            {name}
+            title={errMsg}
+            aria-label={ariaLabel || label}
+            bind:value
+            {disabled}
+            aria-disabled={disabled}
+            {required}
+            aria-required={required || false}
+            aria-invalid={isErr}
+            minlength="5"
+            maxlength="5"
+            {oninput}
+            {oninvalid}
+            {onkeydown}
+            onfocus={() => refInput?.select()}
+            onblur={() => reportValidity()}
         />
 
         <div class="relative">
             <div class="absolute indicator">
                 <Popover
-                        ariaLabel="Show Popover Example"
-                        offsetLeft="-3.8rem"
-                        offsetTop="-.2rem"
-                        bind:close
-                        {onToggle}
-                        btnInvisible
+                    ariaLabel="Show Popover Example"
+                    offsetLeft="-3.8rem"
+                    offsetTop="-.2rem"
+                    bind:close
+                    {onToggle}
+                    btnInvisible
                 >
                     {#snippet button()}
                         <div title={label} class="pointer">
-                            <IconClock color="hsl(var(--text)" width="1.2rem"/>
+                            <IconClock color="hsl(var(--text)" width="1.2rem" />
                         </div>
                     {/snippet}
                     <div class="popup">
                         <div class="flex space-between">
                             <div>
                                 <Options
-                                        bind:ref={refHours}
-                                        ariaLabel={t.common.hours}
-                                        options={optionHour}
-                                        bind:value={hour}
-                                        maxHeight="13rem"
-                                        borderless
-                                        onRight={() => refMinutes?.focus()}
+                                    bind:ref={refHours}
+                                    ariaLabel={t.common.hours}
+                                    options={optionHour}
+                                    bind:value={hour}
+                                    maxHeight="13rem"
+                                    borderless
+                                    onRight={() => refMinutes?.focus()}
                                 />
                             </div>
                             <div class="colon">:</div>
                             <div>
                                 <Options
-                                        bind:ref={refMinutes}
-                                        ariaLabel={t.common.minutes}
-                                        options={optionMinute}
-                                        bind:value={minute}
-                                        maxHeight="13rem"
-                                        borderless
-                                        onLeft={() => refHours?.focus()}
+                                    bind:ref={refMinutes}
+                                    ariaLabel={t.common.minutes}
+                                    options={optionMinute}
+                                    bind:value={minute}
+                                    maxHeight="13rem"
+                                    borderless
+                                    onLeft={() => refHours?.focus()}
                                 />
                             </div>
                         </div>
@@ -277,7 +284,7 @@
             {label}
         </label>
         {#if isErr}
-            <div class="error" transition:slide={{duration: 150}}>
+            <div class="error" transition:slide={{ duration: 150 }}>
                 {errMsg}
             </div>
         {/if}
@@ -286,15 +293,16 @@
 
 <style>
     input {
-        padding-left: .3rem;
+        padding-left: 0.3rem;
         width: 5.25rem;
         letter-spacing: 0.05rem;
         user-select: all;
     }
 
-    label, .error {
+    label,
+    .error {
         line-height: 1.1rem;
-        font-size: .9rem;
+        font-size: 0.9rem;
     }
 
     label {
@@ -304,27 +312,27 @@
     .label {
         width: 100%;
         margin-top: -1.1rem;
-        padding: .5rem;
-        color: hsla(var(--text) / .8);
+        padding: 0.5rem;
+        color: hsla(var(--text) / 0.8);
     }
 
     .colon {
-        margin: 0 .25rem;
+        margin: 0 0.25rem;
     }
 
     .error {
-        margin-top: -.5rem;
+        margin-top: -0.5rem;
         color: hsl(var(--error));
     }
 
     .indicator {
-        top: -.7rem;
+        top: -0.7rem;
         right: 0;
         padding: 2px 5px 0 5px;
     }
 
     .popup {
-        padding: .5rem;
+        padding: 0.5rem;
         border-radius: var(--border-radius);
         cursor: default;
     }

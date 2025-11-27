@@ -1,9 +1,9 @@
 <script lang="ts">
-    import {genKey} from "$utils/helpers";
-    import Loading from "$lib5/Loading.svelte";
-    import IconUpload from "$icons/IconUpload.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {uploadFile} from "$api/fetch";
+    import { genKey } from '$utils/helpers';
+    import Loading from '$lib5/Loading.svelte';
+    import IconUpload from '$icons/IconUpload.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { uploadFile } from '$api/fetch';
 
     let {
         // typ,
@@ -20,7 +20,7 @@
         height = '2.5rem',
     }: {
         // typ: 'avatar' | 'fileType',
-        method?: 'POST' | 'PUT',
+        method?: 'POST' | 'PUT';
         accept?: string[];
         url: string;
         disabled?: boolean;
@@ -77,17 +77,16 @@
         files = undefined;
         isUploading = false;
     }
-
 </script>
 
 <form
-        aria-dropeffect="move"
-        aria-label="Upload"
-        class="flex"
-        data-nopad={buttonOnly}
-        style:width
-        style:height
-        {ondrop}
+    aria-dropeffect="move"
+    aria-label="Upload"
+    class="flex"
+    data-nopad={buttonOnly}
+    style:width
+    style:height
+    {ondrop}
 >
     {#if isUploading}
         <div class="flex space-between loading">
@@ -99,59 +98,59 @@
                 <span>/</span>
                 <span>{filesToUpload}</span>
             </span>
-            <Loading/>
+            <Loading />
         </div>
     {:else}
         <label for={id} aria-disabled={disabled}>
-            <IconUpload width={buttonSize}/>
+            <IconUpload width={buttonSize} />
         </label>
         <input
-                type="file"
-                {id}
-                aria-hidden={buttonOnly}
-                accept={accept && accept.join(', ')}
-                bind:files
-                aria-disabled={disabled}
-                {disabled}
-                {multiple}
+            type="file"
+            {id}
+            aria-hidden={buttonOnly}
+            accept={accept && accept.join(', ')}
+            bind:files
+            aria-disabled={disabled}
+            {disabled}
+            {multiple}
         />
     {/if}
 </form>
 
 <style>
-    input[type="file"] {
+    input[type='file'] {
         background: transparent;
         border: none;
-        color: hsla(var(--text) / .5);
+        color: hsla(var(--text) / 0.5);
         cursor: pointer;
     }
 
-    input[type="file"]::file-selector-button {
+    input[type='file']::file-selector-button {
         display: none;
     }
 
-    input[aria-hidden="true"] {
+    input[aria-hidden='true'] {
         display: none;
     }
 
-    input[type="file"]:disabled {
+    input[type='file']:disabled {
         cursor: not-allowed;
-        color: hsl(var(--bg-high))
+        color: hsl(var(--bg-high));
     }
 
     form {
-        padding-left: .5rem;
+        padding-left: 0.5rem;
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
         transition: background 150ms;
     }
 
-    form[data-nopad="true"] {
+    form[data-nopad='true'] {
         padding: 0;
         aspect-ratio: 1;
     }
 
-    form[data-nopad="true"] label {
+    form[data-nopad='true'] label {
         flex: 1;
         text-align: center;
     }
@@ -162,19 +161,18 @@
 
     label {
         position: relative;
-        bottom: -.2rem;
+        bottom: -0.2rem;
         cursor: pointer;
         transition: color 150ms;
     }
-
 
     label:hover {
         color: hsl(var(--action));
     }
 
-    label[aria-disabled="true"],
-    label[aria-disabled="true"]:hover {
-        color: hsla(var(--text) / .5);
+    label[aria-disabled='true'],
+    label[aria-disabled='true']:hover {
+        color: hsla(var(--text) / 0.5);
     }
 
     .loading {

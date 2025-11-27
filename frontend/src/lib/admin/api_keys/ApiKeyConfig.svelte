@@ -1,24 +1,24 @@
 <script lang="ts">
-    import {formatUtcTsFromDateInput} from "$utils/helpers";
-    import Button from "$lib5/button/Button.svelte";
-    import {slide} from "svelte/transition";
-    import IconCheck from "$icons/IconCheck.svelte";
-    import LabeledValue from "$lib5/LabeledValue.svelte";
-    import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
-    import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
-    import type {ApiKeyAccess, ApiKeyRequest, ApiKeyResponse} from "$api/types/api_keys.ts";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import {fmtDateInput, fmtTimeInput} from "$utils/form";
-    import {fetchPut} from "$api/fetch";
-    import ApiKeyMatrix from "$lib5/admin/api_keys/ApiKeyMatrix.svelte";
+    import { formatUtcTsFromDateInput } from '$utils/helpers';
+    import Button from '$lib5/button/Button.svelte';
+    import { slide } from 'svelte/transition';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import LabeledValue from '$lib5/LabeledValue.svelte';
+    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
+    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
+    import type { ApiKeyAccess, ApiKeyRequest, ApiKeyResponse } from '$api/types/api_keys.ts';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { fmtDateInput, fmtTimeInput } from '$utils/form';
+    import { fetchPut } from '$api/fetch';
+    import ApiKeyMatrix from '$lib5/admin/api_keys/ApiKeyMatrix.svelte';
 
     let {
         key = $bindable(),
-        onSave
+        onSave,
     }: {
-        key: ApiKeyResponse,
-        onSave: () => void,
+        key: ApiKeyResponse;
+        onSave: () => void;
     } = $props();
 
     let t = useI18n();
@@ -68,7 +68,7 @@
         };
         if (payload.access.length === 0) {
             err = 'Grant the API Key at least one permission';
-            return
+            return;
         }
 
         if (doesExpire) {
@@ -103,19 +103,19 @@
 </InputCheckbox>
 
 {#if doesExpire}
-    <div transition:slide={{duration: 150}}>
+    <div transition:slide={{ duration: 150 }}>
         <InputDateTimeCombo
-                label={ta.api_key.expires}
-                bind:value={expDate}
-                bind:timeValue={expTime}
-                withTime
-                min={minDate}
-                required
+            label={ta.api_key.expires}
+            bind:value={expDate}
+            bind:timeValue={expTime}
+            withTime
+            min={minDate}
+            required
         />
     </div>
 {/if}
 
-<ApiKeyMatrix {key} bind:finalize={finalizeMatrix}/>
+<ApiKeyMatrix {key} bind:finalize={finalizeMatrix} />
 
 <div class="btn">
     <Button onclick={onSubmit}>
@@ -123,7 +123,7 @@
     </Button>
 
     {#if success}
-        <IconCheck/>
+        <IconCheck />
     {/if}
 
     {#if err}
@@ -138,6 +138,6 @@
         margin-top: 1rem;
         display: flex;
         align-items: center;
-        gap: .5rem;
+        gap: 0.5rem;
     }
 </style>

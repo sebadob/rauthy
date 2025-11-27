@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {genKey} from "$utils/helpers";
+    import { genKey } from '$utils/helpers';
 
     let {
         name,
@@ -15,18 +15,18 @@
         sat,
         lum,
     }: {
-        name?: string,
-        value: number,
-        label: string,
-        disabled?: boolean | null | undefined,
-        min: number,
-        max: number,
-        step?: number,
-        widthRange?: string,
-        bgMode?: 'generic' | 'hue' | 'sat' | 'lum',
-        hue?: number,
-        sat?: number,
-        lum?: number,
+        name?: string;
+        value: number;
+        label: string;
+        disabled?: boolean | null | undefined;
+        min: number;
+        max: number;
+        step?: number;
+        widthRange?: string;
+        bgMode?: 'generic' | 'hue' | 'sat' | 'lum';
+        hue?: number;
+        sat?: number;
+        lum?: number;
     } = $props();
 
     const id = genKey();
@@ -60,21 +60,19 @@
 <div>
     <div class="flex">
         <input
-                type="range"
-                {id}
-                {name}
-                style:width={widthRange}
-                style:--bg-slider={styleBg}
-                title={label}
-                aria-label={label}
-                bind:value
-
-                {disabled}
-                aria-disabled={disabled}
-
-                {min}
-                {max}
-                {step}
+            type="range"
+            {id}
+            {name}
+            style:width={widthRange}
+            style:--bg-slider={styleBg}
+            title={label}
+            aria-label={label}
+            bind:value
+            {disabled}
+            aria-disabled={disabled}
+            {min}
+            {max}
+            {step}
         />
         <div class="value font-mono">{value}</div>
     </div>
@@ -93,43 +91,43 @@
         appearance: none;
     }
 
-    input[type=range]::-webkit-slider-runnable-track,
-    input[type=range]::-moz-range-track {
+    input[type='range']::-webkit-slider-runnable-track,
+    input[type='range']::-moz-range-track {
         background: var(--bg-slider);
         /*background: hsl(var(--text) / .5);*/
         height: 5px;
         border-radius: var(--border-radius);
     }
 
-    input[type=range]::-webkit-slider-thumb,
-    input[type=range]::-moz-range-thumb {
+    input[type='range']::-webkit-slider-thumb,
+    input[type='range']::-moz-range-thumb {
         height: 1.2rem;
-        width: .66rem;
+        width: 0.66rem;
         background: hsl(var(--text-high));
         border: none;
         border-radius: var(--border-radius);
     }
 
-    input[aria-disabled="true"] {
+    input[aria-disabled='true'] {
         cursor: not-allowed;
     }
 
-    input[aria-disabled="true"]::-webkit-slider-runnable-track,
-    input[aria-disabled="true"]::-moz-range-track {
+    input[aria-disabled='true']::-webkit-slider-runnable-track,
+    input[aria-disabled='true']::-moz-range-track {
         background: hsl(var(--accent));
     }
 
     label {
         line-height: 1.1rem;
-        font-size: .9rem;
-        color: hsla(var(--text) / .8);
+        font-size: 0.9rem;
+        color: hsla(var(--text) / 0.8);
         flex-wrap: wrap;
         width: 100%;
-        padding: .5rem;
+        padding: 0.5rem;
     }
 
     .label {
-        margin-top: -.66rem;
+        margin-top: -0.66rem;
     }
 
     .value {

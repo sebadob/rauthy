@@ -1,8 +1,8 @@
 <script lang="ts">
-    import type {Snippet} from "svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import Modal from "$lib5/Modal.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
+    import type { Snippet } from 'svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import Modal from '$lib5/Modal.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
 
     let {
         alignRight,
@@ -12,12 +12,12 @@
         ref = $bindable(),
         children,
     }: {
-        alignRight?: boolean,
-        level?: number,
-        closeModal?: undefined | (() => void),
-        onClose?: () => void,
-        ref?: undefined | HTMLButtonElement,
-        children: Snippet,
+        alignRight?: boolean;
+        level?: number;
+        closeModal?: undefined | (() => void);
+        onClose?: () => void;
+        ref?: undefined | HTMLButtonElement;
+        children: Snippet;
     } = $props();
 
     let ta = useI18nAdmin();
@@ -27,7 +27,7 @@
 </script>
 
 <div class:alignRight>
-    <Button bind:ref level={showModal ? levelModal : level} onclick={() => showModal = true}>
+    <Button bind:ref level={showModal ? levelModal : level} onclick={() => (showModal = true)}>
         {ta.common.addNew}
     </Button>
     <Modal bind:showModal bind:closeModal {onClose}>
@@ -37,7 +37,7 @@
 
 <style>
     div {
-        margin: 0 .25rem;
+        margin: 0 0.25rem;
     }
 
     .alignRight {

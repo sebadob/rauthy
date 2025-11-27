@@ -1,25 +1,31 @@
 <script lang="ts">
-    import Button from "$lib5/button/Button.svelte";
-    import {IS_DEV, TPL_RESTRICTED_EMAIL_DOMAIN, TPL_USER_VALUES_CONFIG} from "$utils/constants";
-    import Input from "$lib5/form/Input.svelte";
-    import LangSelector from "$lib5/LangSelector.svelte";
-    import Main from "$lib5/Main.svelte";
-    import ContentCenter from "$lib5/ContentCenter.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import Template from "$lib5/Template.svelte";
-    import {useParam} from "$state/param.svelte";
-    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
-    import Form from "$lib5/form/Form.svelte";
-    import {PATTERN_ALNUM, PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME} from "$utils/patterns";
-    import type {NewUserRegistrationRequest} from "$api/types/register.ts";
-    import {fetchGet, fetchPost} from "$api/fetch";
-    import type {ToSLatestResponse} from "$api/types/tos";
-    import {fetchSolvePow} from "$utils/pow";
-    import TosAccept from "$lib/TosAccept.svelte";
-    import type {UserValuesConfig} from "$api/templates/UserValuesConfig";
-    import InputDateTimeCombo from "$lib/form/InputDateTimeCombo.svelte";
-    import TZSelect from "$lib/TZSelect.svelte";
-    import type {UserValuesRequest} from "$api/types/user";
+    import Button from '$lib5/button/Button.svelte';
+    import { IS_DEV, TPL_RESTRICTED_EMAIL_DOMAIN, TPL_USER_VALUES_CONFIG } from '$utils/constants';
+    import Input from '$lib5/form/Input.svelte';
+    import LangSelector from '$lib5/LangSelector.svelte';
+    import Main from '$lib5/Main.svelte';
+    import ContentCenter from '$lib5/ContentCenter.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import Template from '$lib5/Template.svelte';
+    import { useParam } from '$state/param.svelte';
+    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
+    import Form from '$lib5/form/Form.svelte';
+    import {
+        PATTERN_ALNUM,
+        PATTERN_CITY,
+        PATTERN_PHONE,
+        PATTERN_STREET,
+        PATTERN_USER_NAME,
+    } from '$utils/patterns';
+    import type { NewUserRegistrationRequest } from '$api/types/register.ts';
+    import { fetchGet, fetchPost } from '$api/fetch';
+    import type { ToSLatestResponse } from '$api/types/tos';
+    import { fetchSolvePow } from '$utils/pow';
+    import TosAccept from '$lib/TosAccept.svelte';
+    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
+    import InputDateTimeCombo from '$lib/form/InputDateTimeCombo.svelte';
+    import TZSelect from '$lib/TZSelect.svelte';
+    import type { UserValuesRequest } from '$api/types/user';
 
     let t = useI18n();
 
@@ -46,7 +52,7 @@
 
     $effect(() => {
         refEmail?.focus();
-    })
+    });
 
     $effect(() => {
         if (config) {
@@ -145,13 +151,13 @@
     async function submitRegistration() {
         isLoading = true;
 
-        values.pow = await fetchSolvePow() || '';
+        values.pow = (await fetchSolvePow()) || '';
         values.redirect_uri = redirectUri.get();
 
         const res = await fetchPost(action, values);
         if (res.error) {
             let error = res.error.message || 'Error';
-            if (error.includes("UNIQUE constraint")) {
+            if (error.includes('UNIQUE constraint')) {
                 err = t.register.alreadyRegistered;
             } else {
                 err = error;
@@ -174,8 +180,8 @@
     <title>{t?.register.register || 'Register'}</title>
 </svelte:head>
 
-<Template id={TPL_RESTRICTED_EMAIL_DOMAIN} bind:value={restrictedDomain}/>
-<Template id={TPL_USER_VALUES_CONFIG} bind:value={config}/>
+<Template id={TPL_RESTRICTED_EMAIL_DOMAIN} bind:value={restrictedDomain} />
+<Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
 
 <Main>
     <ContentCenter>
@@ -183,7 +189,7 @@
             <div class="domainTxt">
                 <h1>{t.register.userReg}</h1>
                 {#if restrictedDomain}
-                    {t.register.domainRestricted}<br>
+                    {t.register.domainRestricted}<br />
                     {t.register.domainAllowed} <code>@{restrictedDomain}</code>
                 {/if}
             </div>
@@ -191,122 +197,122 @@
             <Form {action} {onSubmit}>
                 <div class={valuesActive > 5 ? 'valuesMany' : ''}>
                     <Input
-                            bind:ref={refEmail}
-                            typ="email"
-                            name="email"
-                            autocomplete="email"
-                            label={t.common.email}
-                            placeholder={t.common.email}
-                            bind:value={values.email}
-                            required
+                        bind:ref={refEmail}
+                        typ="email"
+                        name="email"
+                        autocomplete="email"
+                        label={t.common.email}
+                        placeholder={t.common.email}
+                        bind:value={values.email}
+                        required
                     />
                     {#if values.preferred_username !== undefined}
                         <Input
-                                name="preferred_username"
-                                autocomplete="off"
-                                label={t.account.preferredUsername.preferredUsername}
-                                placeholder={t.account.preferredUsername.preferredUsername}
-                                bind:value={values.preferred_username}
-                                required
-                                isError={usernameExists}
-                                errMsg={usernameExists ? t.account.preferredUsername.notAvailable : ''}
-                                pattern={config?.preferred_username.pattern_html}
-                                onInput={() => usernameExists = false}
+                            name="preferred_username"
+                            autocomplete="off"
+                            label={t.account.preferredUsername.preferredUsername}
+                            placeholder={t.account.preferredUsername.preferredUsername}
+                            bind:value={values.preferred_username}
+                            required
+                            isError={usernameExists}
+                            errMsg={usernameExists ? t.account.preferredUsername.notAvailable : ''}
+                            pattern={config?.preferred_username.pattern_html}
+                            onInput={() => (usernameExists = false)}
                         />
                     {/if}
                     {#if values.given_name !== undefined}
                         <Input
-                                name="given_name"
-                                autocomplete="given-name"
-                                label={t.account.givenName}
-                                placeholder={t.account.givenName}
-                                bind:value={values.given_name}
-                                pattern={PATTERN_USER_NAME}
-                                required
+                            name="given_name"
+                            autocomplete="given-name"
+                            label={t.account.givenName}
+                            placeholder={t.account.givenName}
+                            bind:value={values.given_name}
+                            pattern={PATTERN_USER_NAME}
+                            required
                         />
                     {/if}
                     {#if values.family_name !== undefined}
                         <Input
-                                name="family_name"
-                                autocomplete="family-name"
-                                label={t.account.familyName}
-                                placeholder={t.account.familyName}
-                                bind:value={values.family_name}
-                                pattern={PATTERN_USER_NAME}
-                                required
+                            name="family_name"
+                            autocomplete="family-name"
+                            label={t.account.familyName}
+                            placeholder={t.account.familyName}
+                            bind:value={values.family_name}
+                            pattern={PATTERN_USER_NAME}
+                            required
                         />
                     {/if}
                     {#if values.user_values?.birthdate !== undefined}
                         <InputDateTimeCombo
-                                name="birthdate"
-                                label={t.account.birthdate}
-                                bind:value={values.user_values.birthdate}
-                                required
-                                withDelete
+                            name="birthdate"
+                            label={t.account.birthdate}
+                            bind:value={values.user_values.birthdate}
+                            required
+                            withDelete
                         />
                     {/if}
                     {#if values.user_values?.tz !== undefined}
-                        <TZSelect bind:value={values.user_values.tz}/>
+                        <TZSelect bind:value={values.user_values.tz} />
                     {/if}
 
                     {#if values.user_values?.street !== undefined}
                         <Input
-                                name="street"
-                                autocomplete="street-address"
-                                label={t.account.street}
-                                placeholder={t.account.street}
-                                bind:value={values.user_values.street}
-                                required
-                                maxLength={48}
-                                pattern={PATTERN_STREET}
+                            name="street"
+                            autocomplete="street-address"
+                            label={t.account.street}
+                            placeholder={t.account.street}
+                            bind:value={values.user_values.street}
+                            required
+                            maxLength={48}
+                            pattern={PATTERN_STREET}
                         />
                     {/if}
                     {#if values.user_values?.zip !== undefined}
                         <Input
-                                name="zip"
-                                autocomplete="postal-code"
-                                label={t.account.zip}
-                                placeholder={t.account.zip}
-                                bind:value={values.user_values.zip}
-                                required
-                                maxLength={24}
-                                pattern={PATTERN_ALNUM}
+                            name="zip"
+                            autocomplete="postal-code"
+                            label={t.account.zip}
+                            placeholder={t.account.zip}
+                            bind:value={values.user_values.zip}
+                            required
+                            maxLength={24}
+                            pattern={PATTERN_ALNUM}
                         />
                     {/if}
                     {#if values.user_values?.city !== undefined}
                         <Input
-                                name="city"
-                                autocomplete="address-level2"
-                                label={t.account.city}
-                                placeholder={t.account.city}
-                                bind:value={values.user_values.city}
-                                required
-                                maxLength={48}
-                                pattern={PATTERN_CITY}
+                            name="city"
+                            autocomplete="address-level2"
+                            label={t.account.city}
+                            placeholder={t.account.city}
+                            bind:value={values.user_values.city}
+                            required
+                            maxLength={48}
+                            pattern={PATTERN_CITY}
                         />
                     {/if}
                     {#if values.user_values?.country !== undefined}
                         <Input
-                                name="country"
-                                autocomplete="country"
-                                label={t.account.country}
-                                placeholder={t.account.country}
-                                bind:value={values.user_values.country}
-                                required
-                                maxLength={48}
-                                pattern={PATTERN_CITY}
+                            name="country"
+                            autocomplete="country"
+                            label={t.account.country}
+                            placeholder={t.account.country}
+                            bind:value={values.user_values.country}
+                            required
+                            maxLength={48}
+                            pattern={PATTERN_CITY}
                         />
                     {/if}
                     {#if values.user_values?.phone !== undefined}
                         <Input
-                                name="phone"
-                                autocomplete="tel"
-                                label={t.account.phone}
-                                placeholder={t.account.phone}
-                                bind:value={values.user_values.phone}
-                                required
-                                maxLength={32}
-                                pattern={PATTERN_PHONE}
+                            name="phone"
+                            autocomplete="tel"
+                            label={t.account.phone}
+                            placeholder={t.account.phone}
+                            bind:value={values.user_values.phone}
+                            required
+                            maxLength={32}
+                            pattern={PATTERN_PHONE}
                         />
                     {/if}
                 </div>
@@ -316,7 +322,7 @@
                 </div>
                 {#if success}
                     <div class="success">
-                        {t.register.success}<br/>
+                        {t.register.success}<br />
                         {t.register.emailCheck}
                     </div>
                 {:else if err}
@@ -329,22 +335,22 @@
 
         {#if tos}
             <TosAccept
-                    {tos}
-                    forceAccept
-                    onToSAccept={submitRegistration}
-                    onToSCancel={() => tos = undefined}
-                    skipRequest
+                {tos}
+                forceAccept
+                onToSAccept={submitRegistration}
+                onToSCancel={() => (tos = undefined)}
+                skipRequest
             />
         {/if}
 
-        <ThemeSwitch absolute/>
-        <LangSelector absolute/>
+        <ThemeSwitch absolute />
+        <LangSelector absolute />
     </ContentCenter>
 </Main>
 
 <style>
     .submit {
-        margin-top: .66rem;
+        margin-top: 0.66rem;
     }
 
     .container {
@@ -353,19 +359,20 @@
         flex-direction: column;
         justify-content: center;
         border-radius: var(--border-radius);
-        background: hsla(var(--bg-high) / .25);
+        background: hsla(var(--bg-high) / 0.25);
     }
 
     .err {
         max-width: 16rem;
     }
 
-    .err, .success {
-        margin-top: .5rem;
+    .err,
+    .success {
+        margin-top: 0.5rem;
     }
 
     .domainTxt {
-        margin: .5rem 0;
+        margin: 0.5rem 0;
     }
 
     @media (min-width: 35rem) {
@@ -374,6 +381,5 @@
             grid-template-columns: 1fr 1fr;
             column-gap: 1.5rem;
         }
-
     }
 </style>

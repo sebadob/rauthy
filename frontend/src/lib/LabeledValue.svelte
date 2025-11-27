@@ -1,10 +1,10 @@
 <script lang="ts">
-    import type {Snippet} from "svelte";
-    import IconClipboard from "$icons/IconClipboard.svelte";
-    import Button from "$lib/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte";
-    import Tooltip from "$lib/Tooltip.svelte";
+    import type { Snippet } from 'svelte';
+    import IconClipboard from '$icons/IconClipboard.svelte';
+    import Button from '$lib/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import Tooltip from '$lib/Tooltip.svelte';
 
     let {
         label,
@@ -14,12 +14,12 @@
         button,
         children,
     }: {
-        label?: string,
-        title?: string,
-        mono?: boolean,
-        copyToClip?: string,
-        button?: Snippet,
-        children: Snippet,
+        label?: string;
+        title?: string;
+        mono?: boolean;
+        copyToClip?: string;
+        button?: Snippet;
+        children: Snippet;
     } = $props();
 
     let t = useI18n();
@@ -55,7 +55,7 @@
             <div class="button">
                 <Button invisible onclick={() => copy(copyToClip)}>
                     <Tooltip {text} xOffset={-150} yOffset={20}>
-                        <IconClipboard width="1.25rem"/>
+                        <IconClipboard width="1.25rem" />
                     </Tooltip>
                 </Button>
             </div>
@@ -65,17 +65,17 @@
 
 <style>
     .button {
-        margin-top: -.15rem;
-        margin-bottom: -.5rem;
+        margin-top: -0.15rem;
+        margin-bottom: -0.5rem;
     }
 
     .container {
-        margin: .35rem 0;
+        margin: 0.35rem 0;
     }
 
     .label {
-        margin-bottom: -.45rem;
-        font-size: .85rem;
-        color: hsla(var(--text) / .7);
+        margin-bottom: -0.45rem;
+        font-size: 0.85rem;
+        color: hsla(var(--text) / 0.7);
     }
 </style>

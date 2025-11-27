@@ -1,22 +1,22 @@
 <script lang="ts">
-    import type {DeviceRequest, DeviceResponse} from "$api/types/device.ts";
-    import {formatDateFromTs} from "$utils/helpers";
-    import IconStop from "$icons/IconStop.svelte";
-    import Input from "$lib5/form/Input.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {untrack} from "svelte";
-    import Expandable from "$lib5/Expandable.svelte";
-    import {PATTERN_CLIENT_NAME} from "$utils/patterns";
-    import LabeledValue from "$lib5/LabeledValue.svelte";
-    import Button from "$lib5/button/Button.svelte";
-    import {fetchDelete, fetchPut} from "$api/fetch";
+    import type { DeviceRequest, DeviceResponse } from '$api/types/device.ts';
+    import { formatDateFromTs } from '$utils/helpers';
+    import IconStop from '$icons/IconStop.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { untrack } from 'svelte';
+    import Expandable from '$lib5/Expandable.svelte';
+    import { PATTERN_CLIENT_NAME } from '$utils/patterns';
+    import LabeledValue from '$lib5/LabeledValue.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import { fetchDelete, fetchPut } from '$api/fetch';
 
     let {
         device = $bindable(),
         userId,
     }: {
-        device: DeviceResponse,
-        userId: string,
+        device: DeviceResponse;
+        userId: string;
     } = $props();
 
     let t = useI18n();
@@ -67,14 +67,14 @@
 
             <div class="row">
                 <Input
-                        bind:value={name}
-                        autocomplete="off"
-                        width="17rem"
-                        label={t.account.deviceName}
-                        placeholder={t.account.deviceName}
-                        onEnter={onSaveName}
-                        pattern={PATTERN_CLIENT_NAME}
-                        required
+                    bind:value={name}
+                    autocomplete="off"
+                    width="17rem"
+                    label={t.account.deviceName}
+                    placeholder={t.account.deviceName}
+                    onEnter={onSaveName}
+                    pattern={PATTERN_CLIENT_NAME}
+                    required
                 >
                     {t.account.deviceName}
                 </Input>
@@ -103,7 +103,7 @@
                     {#snippet button()}
                         <Button ariaLabel={t.common.delete} invisible onclick={onRevokeRefresh}>
                             <div title={t.common.delete}>
-                                <IconStop/>
+                                <IconStop />
                             </div>
                         </Button>
                     {/snippet}
@@ -119,7 +119,7 @@
 
 <style>
     .device {
-        margin: 0 .5rem;
+        margin: 0 0.5rem;
     }
 
     .device-header {
@@ -135,11 +135,11 @@
 
     .row {
         display: flex;
-        gap: .66rem;
+        gap: 0.66rem;
         flex-wrap: wrap;
     }
 
     .saveButton {
-        margin-top: .5rem;
+        margin-top: 0.5rem;
     }
 </style>
