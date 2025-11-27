@@ -21,6 +21,7 @@
     import LabeledValue from '$lib5/LabeledValue.svelte';
     import { useI18nConfig } from '$state/i18n_config.svelte';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
+    import TZSelect from '$lib/TZSelect.svelte';
 
     let {
         config,
@@ -49,6 +50,7 @@
             ?.map(l => l as string),
     );
     let language: Language = $state('en');
+    let tz = $state('UTC');
 
     let rolesItems: SelectItem[] = $state(
         untrack(() =>
@@ -94,6 +96,7 @@
             groups: groupsItems.filter(i => i.selected).map(i => i.name),
             roles: rolesItems.filter(i => i.selected).map(i => i.name),
             user_expires: expires ? unixTsFromLocalDateTime(expDate, expTime) : undefined,
+            tz,
         };
         if (payload.groups?.length === 0) {
             payload.groups = undefined;
@@ -135,15 +138,18 @@
             pattern={PATTERN_USER_NAME}
         />
 
+        <TZSelect bind:value={tz} />
         {#if languages}
-            <LabeledValue label={ta.common.language}>
-                <Options
-                    ariaLabel={t.common.selectI18n}
-                    options={languages}
-                    bind:value={language}
-                    borderless
-                />
-            </LabeledValue>
+            <div style:margin-left="0.25rem">
+                <LabeledValue label={ta.common.language}>
+                    <Options
+                        ariaLabel={t.common.selectI18n}
+                        options={languages}
+                        bind:value={language}
+                        borderless
+                    />
+                </LabeledValue>
+            </div>
         {/if}
 
         <SelectList bind:items={rolesItems}>

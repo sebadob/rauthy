@@ -76,7 +76,7 @@
                 uv.birthdate = '';
                 active += 1;
             }
-            if (config.tz === 'required') {
+            if (config.tz !== 'hidden') {
                 uv.tz = 'UTC';
                 active += 1;
             }
