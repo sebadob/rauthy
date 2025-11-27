@@ -72,6 +72,9 @@ pub struct NewUserRequest {
     /// Unix timestamp in seconds
     #[validate(range(min = 1719784800))]
     pub user_expires: Option<i64>,
+    /// Validation: Valid Timezone in the format of `Europe/Berlin`
+    #[validate(length(max = 48))]
+    pub tz: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

@@ -384,6 +384,14 @@ impl Default for Vars {
                 microsoft_graph_uri: None,
                 starttls_only: false,
                 danger_insecure: false,
+                tz_fmt: VarsEmailTzFmt {
+                    de: "%d.%m.%Y %T (%Z)".into(),
+                    en: "%m/%d/%Y %T (%Z)".into(),
+                    ko: "%Y-%m-%d %T (%Z)".into(),
+                    no: "%d.%m.%Y %T (%Z)".into(),
+                    zhhans: "%d-%m-%Y %T (%Z)".into(),
+                    tz_fallback: "UTC".into(),
+                },
             },
             encryption: VarsEncryption {
                 key_active: String::default(),
@@ -1329,6 +1337,29 @@ impl Vars {
             "SMTP_DANGER_INSECURE",
         ) {
             self.email.danger_insecure = v;
+        }
+
+        // [email.tz_fmt]
+        let mut table = t_table(&mut table, "tz_fmt");
+
+        if let Some(v) = t_str(&mut table, "email.tz_fmt", "de", "TZ_FMT_DE") {
+            self.email.tz_fmt.de = v.into();
+        }
+        if let Some(v) = t_str(&mut table, "email.tz_fmt", "en", "TZ_FMT_EN") {
+            self.email.tz_fmt.en = v.into();
+        }
+        if let Some(v) = t_str(&mut table, "email.tz_fmt", "ko", "TZ_FMT_KO") {
+            self.email.tz_fmt.ko = v.into();
+        }
+        if let Some(v) = t_str(&mut table, "email.tz_fmt", "no", "TZ_FMT_NO") {
+            self.email.tz_fmt.no = v.into();
+        }
+        if let Some(v) = t_str(&mut table, "email.tz_fmt", "zhhans", "TZ_FMT_ZHHANS") {
+            self.email.tz_fmt.zhhans = v.into();
+        }
+
+        if let Some(v) = t_str(&mut table, "email.tz_fmt", "tz_fallback", "TZ_FALLBACK") {
+            self.email.tz_fmt.tz_fallback = v.into();
         }
     }
 
@@ -2788,6 +2819,17 @@ pub struct VarsEmail {
     pub microsoft_graph_uri: Option<String>,
     pub starttls_only: bool,
     pub danger_insecure: bool,
+    pub tz_fmt: VarsEmailTzFmt,
+}
+
+#[derive(Debug)]
+pub struct VarsEmailTzFmt {
+    pub de: Cow<'static, str>,
+    pub en: Cow<'static, str>,
+    pub ko: Cow<'static, str>,
+    pub no: Cow<'static, str>,
+    pub zhhans: Cow<'static, str>,
+    pub tz_fallback: Cow<'static, str>,
 }
 
 #[derive(Debug)]

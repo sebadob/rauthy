@@ -38,14 +38,19 @@ pub struct EMailChangeInfoNewTxt<'a> {
     pub expires: &'a str,
 }
 
-pub async fn send_email_change_info_new(magic_link: &MagicLink, user: &User, new_email: String) {
+pub async fn send_email_change_info_new(
+    magic_link: &MagicLink,
+    user: &User,
+    user_tz: Option<&str>,
+    new_email: String,
+) {
     let link = format!(
         "{}/users/{}/email_confirm/{}",
         RauthyConfig::get().issuer,
         magic_link.user_id,
         &magic_link.id,
     );
-    let exp = email_ts_prettify(magic_link.exp);
+    let exp = email_ts_prettify(magic_link.exp, &user.language, user_tz);
     let theme_vars = ThemeCssFull::find_theme_variables_email()
         .await
         .unwrap_or_default();
