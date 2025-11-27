@@ -1030,6 +1030,38 @@ connect_retries = 3
 # overwritten by: SMTP_DANGER_INSECURE
 danger_insecure = true
 
+[email.tz_fmt]
+
+# The formatting of timestamps in emails can be configured
+# depending on the users' language.
+#
+# You can generally use all options from
+# https://docs.rs/chrono/0.4.42/chrono/format/strftime/index.html
+#
+# default: '%d.%m.%Y %T (%Z)'
+# overwritten by: TZ_FMT_DE
+de = '%d.%m.%Y %T (%Z)'
+# default: '%m/%d/%Y %T (%Z)'
+# overwritten by: TZ_FMT_EN
+en = '%m/%d/%Y %T (%Z)'
+# default: '%Y-%m-%d %T (%Z)'
+# overwritten by: TZ_FMT_KO
+ko = '%Y-%m-%d %T (%Z)'
+# default: '%d.%m.%Y %T (%Z)'
+# overwritten by: TZ_FMT_NO
+no = '%d.%m.%Y %T (%Z)'
+# default: '%d-%m-%Y %T (%Z)'
+# overwritten by: TZ_FMT_ZHHANS
+zhhans = '%d-%m-%Y %T (%Z)'
+
+# If a user has no timezone set, you can configure a
+# fallback. This is useful for instance when you run a
+# regional deployment.
+#
+# default: 'UTC'
+# overwritten by: TZ_FALLBACK
+tz_fallback = 'UTC'
+
 [encryption]
 # You need to define at least one valid encryption key.
 # These keys are used in various places, like for instance
@@ -2206,6 +2238,13 @@ enable = true
 # as a special value provide some additional options.
 # The `email` is and always will be mandatory.
 #
+# All `required` values will be shown during an open user
+# registration, if enabled. The only exception is the `tz`. This
+# will also be shown during to be able to send out the email in
+# the correct time format.
+# User registrations from the Admin UI will not be dynamic, since
+# an admin will see the user edit page directly afterward anyway.
+#
 # A value of `hidden` will only hide these values for normal users
 # in the account dashboard. An admin will still see all values.
 #
@@ -2213,7 +2252,7 @@ enable = true
 # - required
 # - optional
 # - hidden
-
+#
 # default: 'required'
 given_name = 'required'
 # default: 'optional'
