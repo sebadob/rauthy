@@ -193,7 +193,7 @@
 		width: 100%;
 		margin-bottom: -0.3rem;
 		padding-left: 0.1rem;
-		padding-top: 0.6rem;
+		padding-top: 0.1rem;
 	}
 
 	.error {

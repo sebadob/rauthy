@@ -305,7 +305,7 @@ label[data-required='true']:after {
 }
 
 .info {
-    overflow: auto;
+	overflow: auto;
 }
 
 input,

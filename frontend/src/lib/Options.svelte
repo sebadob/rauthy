@@ -219,6 +219,8 @@
         font-weight: normal;
         font-size: .9rem;
         transition: all 150ms;
+        border: 2px solid hsla(var(--text) / 0.2);
+        border-radius: var(--border-radius);
     }
 
     .btn[data-border="true"] {
