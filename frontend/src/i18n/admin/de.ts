@@ -10,7 +10,8 @@ export let I18nAdminDe: I18nAdmin = {
             Diese Operation kann nicht rückgängig gemacht werden!`,
         generate3: `Der API Key muss im HTTP <code>Authorization</code> Header im folgenden
             Format mitgegeben werden:`,
-        generate4: 'Der folgende <code>curl</code> request kann zum Testen des Keys verwendet werden:',
+        generate4:
+            'Der folgende <code>curl</code> request kann zum Testen des Keys verwendet werden:',
         generate5: 'Sollte <code>jq</code> nicht installiert sein, hier eine Version ohne:',
         keyName: 'Key Name',
         limitedValidity: 'Begrenzte Gültigkeit',
@@ -31,14 +32,16 @@ export let I18nAdminDe: I18nAdmin = {
     },
     backup: {
         createBackup: 'Backup Erstellen',
-        disabledDesc: 'Diese Funktionen stehen nur zur Verfügung, wenn Hiqlite als Datenbank konfiguriert ist.',
+        disabledDesc:
+            'Diese Funktionen stehen nur zur Verfügung, wenn Hiqlite als Datenbank konfiguriert ist.',
         lastModified: 'Zuletzt Modifiziert',
         local: 'Lokal',
         name: 'Name',
         size: 'Größe',
     },
     clients: {
-        backchannelLogout: 'Sollte dieser client {{ OIDC_BCL }} unterstützen, kann die URI hier angegeben werden.',
+        backchannelLogout:
+            'Sollte dieser client {{ OIDC_BCL }} unterstützen, kann die URI hier angegeben werden.',
         branding: {
             descHsl: `Die folgenden Werte müssen als HSL angegeben werden. Hier wird nur die Basis-Farbe
                 definiert. Alpha Kanäle und andere Werte werden vom Theme dynamisch angepasst.`,
@@ -109,7 +112,8 @@ export let I18nAdminDe: I18nAdmin = {
             rotateDesc1: `Um unterbrechungsfreie Updates durchfürhen zu können, ist es möglich, das bestehende Secret
                 für eine gewisse Zeit im in-memory Cache zu behalten. Es kann ein Wert zwischen 1 und 24 Stunden 
                 angegeben werden.`,
-            rotateDesc2: 'Achtung: Das derzeitige Secret sollte nicht im Cache behalten werden, wenn es ein Leak gab!',
+            rotateDesc2:
+                'Achtung: Das derzeitige Secret sollte nicht im Cache behalten werden, wenn es ein Leak gab!',
         },
         tokenLifetime: {
             p1: `Die Token Lifetime wird auf Access und ID Tokens angewandt und wird in Sekunden angegeben.`,
@@ -361,7 +365,8 @@ export let I18nAdminDe: I18nAdmin = {
             descScope: `Der scope der beim Redirect zum Login genutzt werden soll. Werte müssen durch Leerzeichen
                 getrennt angegeben werden`,
             errNoAuthMethod: 'Ein client secret existiert, jedoch ist keine auth Methode aktiv',
-            errConfidential: 'Es muss mindestens entweder ein client secret existieren oder PKCE aktiv sein.',
+            errConfidential:
+                'Es muss mindestens entweder ein client secret existieren oder PKCE aktiv sein.',
             jsonPath: {
                 p1: 'Werte aus dem ID Token nach einem erfolgreichen Upstream Login können automatisch gemapped werden.',
                 p2: `Der <code>Pfad</code> muss in korrekter Regex Syntax angegeben werden. Er kann auf einzelne JSON
@@ -456,15 +461,18 @@ export let I18nAdminDe: I18nAdmin = {
             dass der Benutzer die Registrierung erneut durchführt.`,
         noMfaKeys: 'Dieser Benutzer hat keine registrierten Passkeys.',
         pkOnly1: 'Dies ist ein Passkey-Only Account.',
-        pkOnly2: 'Das bedeutet, dass dieser Benutzer den passwortlosen Login nutzt und kein Passwort gesetzt hat.',
+        pkOnly2:
+            'Das bedeutet, dass dieser Benutzer den passwortlosen Login nutzt und kein Passwort gesetzt hat.',
         pkOnly3: `Sollte dieser Benutzer alle Passkeys verloren haben, kann der Account vollständig resettet und eine
             Password Reset E-Mail versendet werden. Um dies zu tun, müssen vorher unter dem Reiter 'MFA' sämtliche
             Passkeys gelöscht werden.`,
         pwdNoInit: 'Der Benutzer hat noch nicht den initialien Passwort Reset durchgeführt.',
         pwdSendEmailBtn: 'Reset E-Mail Senden',
-        pwdSendEmailDesc: 'Es kann eine neue Reset E-Mail gesendet werden, sollte der Benutzer keine erhalten haben.',
+        pwdSendEmailDesc:
+            'Es kann eine neue Reset E-Mail gesendet werden, sollte der Benutzer keine erhalten haben.',
         savePassword: 'Passwort Speichern',
-        selfServiceDesc: 'Es kann entweder ein neues Passwort gesetzt, order eine Reset E-Mail versendet werden.',
+        selfServiceDesc:
+            'Es kann entweder ein neues Passwort gesetzt, order eine Reset E-Mail versendet werden.',
         sendResetEmail: 'Reset E-Mail Senden',
     },
     validation: {

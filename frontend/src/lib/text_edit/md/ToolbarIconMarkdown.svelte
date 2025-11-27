@@ -27,7 +27,11 @@
 
         let sel = document.getSelection();
         // make sure we have a valid selection inside our editor container
-        if (!sel || sel.rangeCount < 1 || !ref.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+        if (
+            !sel ||
+            sel.rangeCount < 1 ||
+            !ref.contains(sel.getRangeAt(0).commonAncestorContainer)
+        ) {
             return;
         }
 

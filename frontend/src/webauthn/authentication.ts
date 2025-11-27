@@ -23,7 +23,10 @@ export async function webauthnAuth(
     let payloadStart: WebauthnAuthStartRequest = {
         purpose,
     };
-    let res = await fetchPost<WebauthnAuthStartResponse>(`/auth/v1/users/${userId}/webauthn/auth/start`, payloadStart);
+    let res = await fetchPost<WebauthnAuthStartResponse>(
+        `/auth/v1/users/${userId}/webauthn/auth/start`,
+        payloadStart,
+    );
     if (res.error) {
         console.error(res.error);
         return {

@@ -7,7 +7,13 @@
     import { fetchGet, fetchPut } from '$api/fetch';
     import Form from '$lib5/form/Form.svelte';
     import LabeledValue from '$lib5/LabeledValue.svelte';
-    import { PATTERN_CLIENT_NAME, PATTERN_CONTACT, PATTERN_GROUP, PATTERN_ORIGIN, PATTERN_URI } from '$utils/patterns';
+    import {
+        PATTERN_CLIENT_NAME,
+        PATTERN_CONTACT,
+        PATTERN_GROUP,
+        PATTERN_ORIGIN,
+        PATTERN_URI,
+    } from '$utils/patterns';
     import {
         AuthFlowDeviceCode,
         type ClientResponse,
@@ -48,7 +54,9 @@
     let confidential = $state(client.confidential);
     let uri: string = $state(client.client_uri || '');
     let contacts: string[] = $state(client.contacts ? Array.from(client.contacts) : []);
-    let origins: string[] = $state(client.allowed_origins ? Array.from(client.allowed_origins) : []);
+    let origins: string[] = $state(
+        client.allowed_origins ? Array.from(client.allowed_origins) : [],
+    );
     let redirectURIs: string[] = $state(Array.from(client.redirect_uris));
     let postLogoutRedirectURIs: string[] = $state(
         client.post_logout_redirect_uris ? Array.from(client.post_logout_redirect_uris) : [],
@@ -188,7 +196,8 @@
             confidential,
             allowed_origins: origins.length > 0 ? origins : undefined,
             redirect_uris: redirectURIs,
-            post_logout_redirect_uris: postLogoutRedirectURIs.length > 0 ? postLogoutRedirectURIs : undefined,
+            post_logout_redirect_uris:
+                postLogoutRedirectURIs.length > 0 ? postLogoutRedirectURIs : undefined,
 
             flows_enabled: [],
             access_token_alg: accessTokenAlg,
@@ -240,7 +249,9 @@
                 bearer_token: scim.bearer_token,
                 sync_groups: scim.sync_groups,
                 group_sync_prefix:
-                    scim.sync_groups && scim.group_sync_prefix?.length ? scim.group_sync_prefix : undefined,
+                    scim.sync_groups && scim.group_sync_prefix?.length
+                        ? scim.group_sync_prefix
+                        : undefined,
             };
         }
 
@@ -560,7 +571,9 @@
                 </InputCheckbox>
                 {#if scim.sync_groups}
                     <div transition:slide={{ duration: 150 }}>
-                        <p class="mb-0">{@html ta.clients.scim.groupSyncPrefixDesc}</p>
+                        <p class="mb-0">
+                            {@html ta.clients.scim.groupSyncPrefixDesc}
+                        </p>
                         <Input
                             bind:value={scim.group_sync_prefix}
                             autocomplete="off"

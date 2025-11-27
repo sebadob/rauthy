@@ -9,7 +9,8 @@ export let I18nAdminKo: I18nAdmin = {
             사용할 수 없으며, 이 작업은 되돌릴 수 없습니다!`,
         generate3: `API 키는 HTTP <code>Authorization</code> 헤더에 다음과 같은 형식으로 제공해야 합니다.`,
         generate4: '아래의 <code>curl</code> 요청으로 테스트할 수 있습니다.',
-        generate5: '<code>jq</code> 가 설치되어 있지 않거나 위의 코드가 실패한 경우는 아래 코드를 사용하세요.',
+        generate5:
+            '<code>jq</code> 가 설치되어 있지 않거나 위의 코드가 실패한 경우는 아래 코드를 사용하세요.',
         keyName: 'API 키 이름',
         limitedValidity: '만료일',
     },

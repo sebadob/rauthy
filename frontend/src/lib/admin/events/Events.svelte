@@ -22,7 +22,9 @@
     let events: EventResponse[] = $state([]);
     let eventsFiltered: EventResponse[] = $state([]);
     let level: EventLevel = $state(
-        isBrowser() ? (localStorage.getItem('eventLevel')?.toLowerCase() as EventLevel) || 'info' : 'info',
+        isBrowser()
+            ? (localStorage.getItem('eventLevel')?.toLowerCase() as EventLevel) || 'info'
+            : 'info',
     );
     let levelBefore = '';
 
@@ -59,11 +61,14 @@
                 break;
             case 'warning':
                 eventsFiltered = events.filter(
-                    evt => evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical',
+                    evt =>
+                        evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical',
                 );
                 break;
             case 'critical':
-                eventsFiltered = events.filter(evt => evt.typ === 'Test' || evt.level === 'critical');
+                eventsFiltered = events.filter(
+                    evt => evt.typ === 'Test' || evt.level === 'critical',
+                );
                 break;
         }
     });
@@ -79,7 +84,9 @@
             es.close();
         }
 
-        es = new EventSource(`/auth/v1/events/stream?latest=${latest}&level=${level.toLowerCase()}`);
+        es = new EventSource(
+            `/auth/v1/events/stream?latest=${latest}&level=${level.toLowerCase()}`,
+        );
 
         es.onopen = () => {
             events = [];

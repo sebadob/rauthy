@@ -48,7 +48,8 @@
             name: name || undefined,
             confidential,
             redirect_uris: redirectURIs,
-            post_logout_redirect_uris: postLogoutRedirectURIs.length > 0 ? postLogoutRedirectURIs : undefined,
+            post_logout_redirect_uris:
+                postLogoutRedirectURIs.length > 0 ? postLogoutRedirectURIs : undefined,
         };
         let res = await fetchPost<ClientResponse>(form.action, payload);
         if (res.body) {

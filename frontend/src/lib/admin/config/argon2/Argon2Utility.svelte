@@ -4,7 +4,11 @@
     import Input from '$lib5/form/Input.svelte';
     import Form from '$lib5/form/Form.svelte';
     import { fetchPost } from '$api/fetch';
-    import type { PasswordHashTime, PasswordHashTimes, PasswordHashTimesRequest } from '$api/types/password_hashing.ts';
+    import type {
+        PasswordHashTime,
+        PasswordHashTimes,
+        PasswordHashTimesRequest,
+    } from '$api/types/password_hashing.ts';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import type { Argon2ParamsResponse } from '$api/types/login_times.ts';
 

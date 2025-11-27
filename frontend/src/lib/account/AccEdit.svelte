@@ -5,7 +5,13 @@
     import { useI18n } from '$state/i18n.svelte.js';
     import type { UpdateUserSelfRequest, UserResponse } from '$api/types/user.ts';
     import Form from '$lib5/form/Form.svelte';
-    import { PATTERN_ALNUM, PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME } from '$utils/patterns';
+    import {
+        PATTERN_ALNUM,
+        PATTERN_CITY,
+        PATTERN_PHONE,
+        PATTERN_STREET,
+        PATTERN_USER_NAME,
+    } from '$utils/patterns';
     import IconCheck from '$icons/IconCheck.svelte';
     import { fetchPut } from '$api/fetch';
     import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';

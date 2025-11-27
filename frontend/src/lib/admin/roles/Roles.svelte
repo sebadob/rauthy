@@ -63,7 +63,9 @@
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
-            roles.sort((a, b) => (up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)));
+            roles.sort((a, b) =>
+                up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+            );
         } else if (option === orderOptions[1]) {
             roles.sort((a, b) => (up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
         }

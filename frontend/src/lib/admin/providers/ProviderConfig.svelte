@@ -52,7 +52,10 @@
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
 
-        if (provider.client_secret && !(provider.client_secret_basic || provider.client_secret_post)) {
+        if (
+            provider.client_secret &&
+            !(provider.client_secret_basic || provider.client_secret_post)
+        ) {
             err = ta.providers.config.errNoAuthMethod;
             return;
         }

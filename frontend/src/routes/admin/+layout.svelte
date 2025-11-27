@@ -59,7 +59,9 @@
             <div class="text">
                 {@html ta.error.noAdmin}
             </div>
-            <Button onclick={() => (window.location.href = '/auth/v1/account')}>{ta.common.account}</Button>
+            <Button onclick={() => (window.location.href = '/auth/v1/account')}
+                >{ta.common.account}</Button
+            >
         </div>
     </div>
 {:else if needsAdminRole}

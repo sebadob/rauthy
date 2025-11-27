@@ -1,4 +1,10 @@
-import { CalendarDate, getDayOfWeek, isWeekend, startOfMonth, startOfWeek } from '@internationalized/date';
+import {
+    CalendarDate,
+    getDayOfWeek,
+    isWeekend,
+    startOfMonth,
+    startOfWeek,
+} from '@internationalized/date';
 
 /**
  * Returns a Unix timestamp from the given date string.

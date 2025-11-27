@@ -8,7 +8,10 @@
     import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
     import { fetchGet } from '$api/fetch';
     import { useParam } from '$state/param.svelte';
-    import type { UserAttrConfigResponse, UserAttrConfigValueResponse } from '$api/types/user_attrs.ts';
+    import type {
+        UserAttrConfigResponse,
+        UserAttrConfigValueResponse,
+    } from '$api/types/user_attrs.ts';
     import AttrAddNew from '$lib5/admin/attrs/AttrAddNew.svelte';
     import AttrDetails from '$lib5/admin/attrs/AttrDetails.svelte';
     import { useTrigger } from '$state/callback.svelte';
@@ -61,7 +64,9 @@
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
-            attrs.sort((a, b) => (up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)));
+            attrs.sort((a, b) =>
+                up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+            );
         }
     }
 

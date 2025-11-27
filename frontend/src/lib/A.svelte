@@ -28,35 +28,37 @@
         children: Snippet;
     } = $props();
 
-    let ariaCurrentType: 'page' | 'time' | 'step' | 'location' | 'date' | undefined = $derived.by(() => {
-        if (selectedStep) {
-            return 'step';
-        }
+    let ariaCurrentType: 'page' | 'time' | 'step' | 'location' | 'date' | undefined = $derived.by(
+        () => {
+            if (selectedStep) {
+                return 'step';
+            }
 
-        let route = page.route.id;
-        if (!route) {
-            return;
-        }
-        if (highlightWithParams) {
-            let hrefPage = `${route}${page.url.search}`;
-            if (hrefPage.startsWith(href)) {
-                return 'page';
+            let route = page.route.id;
+            if (!route) {
+                return;
             }
-        } else if (highlightExact) {
-            if (route === href.split('?')[0]) {
-                return 'page';
+            if (highlightWithParams) {
+                let hrefPage = `${route}${page.url.search}`;
+                if (hrefPage.startsWith(href)) {
+                    return 'page';
+                }
+            } else if (highlightExact) {
+                if (route === href.split('?')[0]) {
+                    return 'page';
+                }
+            } else if (highlightIncludes) {
+                if (route.includes(highlightIncludes)) {
+                    return 'page';
+                }
+            } else if (route) {
+                let link = href.split('?')[0];
+                if (link.endsWith(route)) {
+                    return 'page';
+                }
             }
-        } else if (highlightIncludes) {
-            if (route.includes(highlightIncludes)) {
-                return 'page';
-            }
-        } else if (route) {
-            let link = href.split('?')[0];
-            if (link.endsWith(route)) {
-                return 'page';
-            }
-        }
-    });
+        },
+    );
 
     function onkeydown(ev: KeyboardEvent) {
         if (ev.code === 'Enter') {

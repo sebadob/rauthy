@@ -65,19 +65,35 @@
             counts[3] = counts[3] + 1;
         }
 
-        if (policy.include_lower_case && policy.include_lower_case !== -1 && policy.include_lower_case > counts[0]) {
+        if (
+            policy.include_lower_case &&
+            policy.include_lower_case !== -1 &&
+            policy.include_lower_case > counts[0]
+        ) {
             pErr[2] = true;
             err = true;
         }
-        if (policy.include_upper_case && policy.include_upper_case !== -1 && policy.include_upper_case > counts[1]) {
+        if (
+            policy.include_upper_case &&
+            policy.include_upper_case !== -1 &&
+            policy.include_upper_case > counts[1]
+        ) {
             pErr[3] = true;
             err = true;
         }
-        if (policy.include_digits && policy.include_digits !== -1 && policy.include_digits > counts[2]) {
+        if (
+            policy.include_digits &&
+            policy.include_digits !== -1 &&
+            policy.include_digits > counts[2]
+        ) {
             pErr[4] = true;
             err = true;
         }
-        if (policy.include_special && policy.include_special !== -1 && policy.include_special > counts[3]) {
+        if (
+            policy.include_special &&
+            policy.include_special !== -1 &&
+            policy.include_special > counts[3]
+        ) {
             pErr[5] = true;
             err = true;
         }

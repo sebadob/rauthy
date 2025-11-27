@@ -1,7 +1,11 @@
 <script lang="ts">
     import Button from '$lib5/button/Button.svelte';
     import { fetchPost, fetchPut } from '$api/fetch';
-    import type { ClientResponse, ClientSecretRequest, ClientSecretResponse } from '$api/types/clients.ts';
+    import type {
+        ClientResponse,
+        ClientSecretRequest,
+        ClientSecretResponse,
+    } from '$api/types/clients.ts';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import InputPassword from '$lib5/form/InputPassword.svelte';
     import { slide } from 'svelte/transition';
@@ -57,7 +61,10 @@
         let payload: ClientSecretRequest = {
             cache_current_hours: cacheSecret ? Number.parseInt(cacheCurrentHours) : undefined,
         };
-        let res = await fetchPut<ClientSecretResponse>(`/auth/v1/clients/${client.id}/secret`, payload);
+        let res = await fetchPut<ClientSecretResponse>(
+            `/auth/v1/clients/${client.id}/secret`,
+            payload,
+        );
         if (res.body) {
             if (res.body.secret) {
                 secret = res.body.secret;

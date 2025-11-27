@@ -31,7 +31,8 @@ export let I18nAdminNb: I18nAdmin = {
     },
     backup: {
         createBackup: 'Lag Backup',
-        disabledDesc: 'Disse funksjonene er kun tilgjengelige hvis Hiqlite er konfigurert som database.',
+        disabledDesc:
+            'Disse funksjonene er kun tilgjengelige hvis Hiqlite er konfigurert som database.',
         lastModified: 'Sist endret',
         local: 'Lokal',
         name: 'Navn',
@@ -324,7 +325,8 @@ export let I18nAdminNb: I18nAdmin = {
             descClientName: 'Klientnavn som skal vises på Rauthy-innloggingssiden.',
             descClientSecret: `Klienthemmelighet gitt av leverandøren. Minst én hemmelighet eller PKCE må være aktivert.`,
             descScope: `Omfanget klienten skal bruke ved omdirigering til innlogging. Verdier skilles med mellomrom.`,
-            errNoAuthMethod: 'Du har oppgitt en klienthemmelighet, men ingen autentiseringsmetode er aktiv',
+            errNoAuthMethod:
+                'Du har oppgitt en klienthemmelighet, men ingen autentiseringsmetode er aktiv',
             errConfidential: 'Må være enten en følsom klient eller bruke PKCE',
             jsonPath: {
                 p1: 'Verdier fra ID-token etter vellykket innlogging kan mappes automatisk.',
@@ -410,13 +412,16 @@ export let I18nAdminNb: I18nAdmin = {
         mfaDelete2: `Advarsel! Sletting av en passnøkkel <b>kan ikke angres</b> uten at brukeren registrerer seg på nytt.`,
         noMfaKeys: 'Denne brukeren har ingen registrerte passnøkler.',
         pkOnly1: 'Dette er en passkey-only-konto.',
-        pkOnly2: 'Det betyr at denne brukeren bruker passordløs innlogging og ikke har noe passord satt.',
+        pkOnly2:
+            'Det betyr at denne brukeren bruker passordløs innlogging og ikke har noe passord satt.',
         pkOnly3: `Hvis denne brukeren har mistet alle passnøkler, kan kontoen tilbakestilles og en ny e-post for tilbakestilling av passord sendes. For å gjøre dette, gå til 'MFA'-fanen og slett alle eksisterende passnøkler først.`,
         pwdNoInit: 'Brukeren har ikke gjennomført den første tilbakestillingen av passord ennå.',
         pwdSendEmailBtn: 'Send e-post for tilbakestilling',
-        pwdSendEmailDesc: 'Du kan sende en ny e-post for tilbakestilling hvis brukeren ikke har mottatt en.',
+        pwdSendEmailDesc:
+            'Du kan sende en ny e-post for tilbakestilling hvis brukeren ikke har mottatt en.',
         savePassword: 'Lagre passord',
-        selfServiceDesc: 'Du kan enten sette et nytt passord eller sende en e-post for tilbakestilling.',
+        selfServiceDesc:
+            'Du kan enten sette et nytt passord eller sende en e-post for tilbakestilling.',
         sendResetEmail: 'Send e-post for tilbakestilling',
     },
     validation: {

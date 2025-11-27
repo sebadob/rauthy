@@ -73,7 +73,9 @@
     let stateParam = useParam('state').get();
     let stateEncoded = $derived(stateParam ? encodeURIComponent(stateParam) : undefined);
     let challenge = useParam('code_challenge').get();
-    let challengeMethod: CodeChallengeMethod = useParam('code_challenge_method').get() as CodeChallengeMethod;
+    let challengeMethod: CodeChallengeMethod = useParam(
+        'code_challenge_method',
+    ).get() as CodeChallengeMethod;
     let existingMfaUser: undefined | string = $state();
     let providers: AuthProviderTemplate[] = $state([]);
     let mfaPurpose: undefined | MfaPurpose = $state();
@@ -99,7 +101,9 @@
     let email = $state(useParam('login_hint').get() || '');
     let password = $state('');
     let userId = $state('');
-    let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset && !isAtproto);
+    let showPasswordInput = $derived(
+        needsPassword && existingMfaUser !== email && !showReset && !isAtproto,
+    );
 
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
@@ -111,7 +115,13 @@
     });
 
     $effect(() => {
-        if ('Refresh' === loginAction && clientId && clientId.length > 0 && redirectUri && redirectUri.length > 0) {
+        if (
+            'Refresh' === loginAction &&
+            clientId &&
+            clientId.length > 0 &&
+            redirectUri &&
+            redirectUri.length > 0
+        ) {
             onRefresh();
         }
     });
@@ -193,12 +203,19 @@
             nonce: nonce,
             scopes,
         };
-        if (challenge && challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
+        if (
+            challenge &&
+            challengeMethod &&
+            (challengeMethod === 'plain' || challengeMethod === 'S256')
+        ) {
             payload.code_challenge = challenge;
             payload.code_challenge_method = challengeMethod;
         }
 
-        let res = await fetchPost<undefined | WebauthnLoginResponse>('/auth/v1/oidc/authorize/refresh', payload);
+        let res = await fetchPost<undefined | WebauthnLoginResponse>(
+            '/auth/v1/oidc/authorize/refresh',
+            payload,
+        );
         await handleAuthRes(res);
     }
 
@@ -231,7 +248,11 @@
             nonce: nonce,
             scopes,
         };
-        if (challenge && challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
+        if (
+            challenge &&
+            challengeMethod &&
+            (challengeMethod === 'plain' || challengeMethod === 'S256')
+        ) {
             payload.code_challenge = challenge;
             payload.code_challenge_method = challengeMethod;
         }
@@ -264,7 +285,9 @@
         await handleAuthRes(res);
     }
 
-    async function handleAuthRes(res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>) {
+    async function handleAuthRes(
+        res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
+    ) {
         isLoading = false;
 
         if (!res) {
@@ -715,7 +738,9 @@
                             <ButtonAuthProvider
                                 ariaLabel={`Login: ${provider.name}`}
                                 {provider}
-                                onclick={isProviderAtProto(provider.id) ? toggleAtproto : providerLogin}
+                                onclick={isProviderAtProto(provider.id)
+                                    ? toggleAtproto
+                                    : providerLogin}
                                 {isLoading}
                             />
                         {/each}

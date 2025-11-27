@@ -35,7 +35,14 @@
     let searchOptions = ['User ID', 'Session ID', 'IP'];
     let searchOption = $state(searchOptions[0]);
     let searchValue = $state('');
-    let orderOptions = [ta.options.expires, ta.options.lastSeen, 'Session ID', 'User ID', ta.options.state, 'IP'];
+    let orderOptions = [
+        ta.options.expires,
+        ta.options.lastSeen,
+        'Session ID',
+        'User ID',
+        ta.options.state,
+        'IP',
+    ];
 
     onMount(() => {
         fetchSessions('page_size=' + sspPageSize);
@@ -60,7 +67,9 @@
             } else if (searchOption === searchOptions[1]) {
                 sessionsFiltered = sessions.filter(s => s.id.toLowerCase().includes(search));
             } else if (searchOption === searchOptions[2]) {
-                sessionsFiltered = sessions.filter(s => s.remote_ip?.toLowerCase().includes(search));
+                sessionsFiltered = sessions.filter(s =>
+                    s.remote_ip?.toLowerCase().includes(search),
+                );
             }
         }
     });
@@ -78,7 +87,11 @@
             idx = 'ip';
         }
 
-        let res = await fetchSearchServer<SessionResponse[]>({ ty: 'session', idx, q });
+        let res = await fetchSearchServer<SessionResponse[]>({
+            ty: 'session',
+            idx,
+            q,
+        });
         if (res.body) {
             sessions = res.body;
         } else {
@@ -135,7 +148,9 @@
                 }
             });
         } else if (option === orderOptions[4]) {
-            sessions.sort((a, b) => (up ? a.state.localeCompare(b.state) : b.state.localeCompare(a.state)));
+            sessions.sort((a, b) =>
+                up ? a.state.localeCompare(b.state) : b.state.localeCompare(a.state),
+            );
         } else if (option === orderOptions[5]) {
             sessions.sort((a, b) => {
                 if (a.remote_ip && b.remote_ip) {

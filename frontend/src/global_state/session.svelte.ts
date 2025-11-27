@@ -6,13 +6,15 @@ let _session: undefined | SessionInfoResponse = $state();
 
 export function useSession(redirectState: 'admin' | 'account') {
     if (!_session && isBrowser()) {
-        fetchGet<SessionInfoResponse>('/auth/v1/oidc/sessioninfo', 'json', 'noRedirect').then(res => {
-            if (res.status === 401) {
-                redirectToLogin(redirectState);
-            }
-            _session = res.body;
-            // TODO should we maybe start an interval for keep-alive?
-        });
+        fetchGet<SessionInfoResponse>('/auth/v1/oidc/sessioninfo', 'json', 'noRedirect').then(
+            res => {
+                if (res.status === 401) {
+                    redirectToLogin(redirectState);
+                }
+                _session = res.body;
+                // TODO should we maybe start an interval for keep-alive?
+            },
+        );
     }
 
     return {

@@ -257,7 +257,8 @@
             config.use_pkce = res.body.use_pkce;
             config.client_secret_basic = res.body.client_secret_basic;
             // we want to res.enable basic only if it is supported for better compatibility out of the box
-            config.client_secret_post = !res.body.client_secret_basic && res.body.client_secret_post;
+            config.client_secret_post =
+                !res.body.client_secret_basic && res.body.client_secret_post;
             config.scope = res.body.scope;
 
             lookupSuccess = true;

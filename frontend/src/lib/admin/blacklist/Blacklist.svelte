@@ -11,7 +11,11 @@
     import IconStop from '$icons/IconStop.svelte';
     import { fetchDelete, fetchGet, fetchPost } from '$api/fetch';
     import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import type { BlacklistedIp, BlacklistResponse, IpBlacklistRequest } from '$api/types/blacklist.ts';
+    import type {
+        BlacklistedIp,
+        BlacklistResponse,
+        IpBlacklistRequest,
+    } from '$api/types/blacklist.ts';
     import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
     import Form from '$lib5/form/Form.svelte';
     import Tooltip from '$lib5/Tooltip.svelte';

@@ -6,7 +6,10 @@
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import { fetchPut } from '$api/fetch';
     import Form from '$lib5/form/Form.svelte';
-    import type { UserAttrConfigRequest, UserAttrConfigValueResponse } from '$api/types/user_attrs.ts';
+    import type {
+        UserAttrConfigRequest,
+        UserAttrConfigValueResponse,
+    } from '$api/types/user_attrs.ts';
     import { PATTERN_ATTR, PATTERN_ATTR_DESC } from '$utils/patterns';
     import CheckIcon from '$lib/CheckIcon.svelte';
     import { slide } from 'svelte/transition';

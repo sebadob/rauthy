@@ -22,7 +22,9 @@
     let showInfo = $state(false);
     let hostsCount = $state(0);
     let canBeDeleted = $derived(
-        group.typ === 'generic' || group.typ === 'local' || (group.typ === 'host' && hostsCount === 0),
+        group.typ === 'generic' ||
+            group.typ === 'local' ||
+            (group.typ === 'host' && hostsCount === 0),
     );
 
     $effect(() => {

@@ -10,7 +10,9 @@
         height?: string;
     } = $props();
 
-    let innerWidth: undefined | number = $state(typeof window !== 'undefined' ? window.innerWidth : undefined);
+    let innerWidth: undefined | number = $state(
+        typeof window !== 'undefined' ? window.innerWidth : undefined,
+    );
     let previewEmbedded = $derived(!!(innerWidth && innerWidth < 1440));
 </script>
 

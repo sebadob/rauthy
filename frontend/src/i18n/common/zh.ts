@@ -24,7 +24,20 @@ export const I18nZh: I18n = {
         maxFileSize: '最大文件大小',
         minutes: '分',
         month: '月',
-        months: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+        months: [
+            '一月',
+            '二月',
+            '三月',
+            '四月',
+            '五月',
+            '六月',
+            '七月',
+            '八月',
+            '九月',
+            '十月',
+            '十一月',
+            '十二月',
+        ],
         never: '从不',
         password: '密码',
         refresh: 'Refresh',
@@ -65,7 +78,8 @@ export const I18nZh: I18n = {
             '电子邮件地址未被更新。我们已向您的新邮箱发送了一封消息。\n您需要点击其中的确认链接，电子邮件地址将在被确认后更新。',
         emailVerified: '已验证电子邮箱',
         familyName: '姓',
-        federatedConvertPassword1: '您有一个联合账户。\n这意味着您是通过外部鉴权提供者登陆的。您当前的提供者是：',
+        federatedConvertPassword1:
+            '您有一个联合账户。\n这意味着您是通过外部鉴权提供者登陆的。您当前的提供者是：',
         federatedConvertPassword2:
             '您可以通过电子邮件请求密码重置。这将向您的本地账户添加密码，\n之后您可以通过本地密码或您的外部提供者进行登陆。您想要请求密码重置吗？',
         generateRandom: '随机生成',
@@ -125,7 +139,8 @@ export const I18nZh: I18n = {
         zip: '邮政编码',
     },
     authorize: {
-        clientForceMfa: '本次登陆强制使用多因子认证以增强安全性。\n要完成登陆，请登入您的账户并添加一个登陆密钥。',
+        clientForceMfa:
+            '本次登陆强制使用多因子认证以增强安全性。\n要完成登陆，请登入您的账户并添加一个登陆密钥。',
         clientGroupPrefixForbidden: 'Missing group assignment for this login',
         email: '电子邮件地址',
         emailBadFormat: '错误的电子邮件地址格式',
@@ -195,7 +210,8 @@ export const I18nZh: I18n = {
         noKey: '此槽位没有已注册的安全密钥',
         reAuthenticatePasskey:
             'Before you can modify Passkeys, you need to authenticate with an already registered one:',
-        reAuthenticatePwd: 'Before you can modify Passkeys, you need to re-authenticate with your password.',
+        reAuthenticatePwd:
+            'Before you can modify Passkeys, you need to re-authenticate with your password.',
         register: '注册',
         registerNew: '注册新的密钥',
         registerd: '注册时间',

@@ -136,7 +136,8 @@ export const I18nDe: I18n = {
         userVerifiedTooltip: 'Abgesichert durch Fingerabdruck oder PIN',
         webIdDesc:
             'Hier können Sie die Felder festlegen, die über Ihre WebID veröffentlicht\nwerden. Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt wird.\nSollten Sie nicht wissen, was die WebID ist, brauchen Sie sie höchstwahrscheinlich nicht.',
-        webIdDescData: 'Sie können eigene Daten zu Ihrer WebID in gültigem FOAF Vokabular\nhinzufügen:',
+        webIdDescData:
+            'Sie können eigene Daten zu Ihrer WebID in gültigem FOAF Vokabular\nhinzufügen:',
         webIdExpertMode: 'Expertenmodus aktivieren',
         zip: 'PLZ',
     },

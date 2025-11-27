@@ -11,7 +11,9 @@
 
     let showDefault = $state(false);
     let src = $derived(
-        updated ? `/auth/v1/clients/${clientId}/logo?updated=${updated}` : `/auth/v1/clients/${clientId}/logo`,
+        updated
+            ? `/auth/v1/clients/${clientId}/logo?updated=${updated}`
+            : `/auth/v1/clients/${clientId}/logo`,
     );
 </script>
 

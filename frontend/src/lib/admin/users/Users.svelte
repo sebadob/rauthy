@@ -95,7 +95,11 @@
             idx = 'id';
         }
 
-        let res = await fetchSearchServer<UserResponseSimple[]>({ ty: 'user', idx, q });
+        let res = await fetchSearchServer<UserResponseSimple[]>({
+            ty: 'user',
+            idx,
+            q,
+        });
         if (res.body) {
             users = res.body;
         } else {
@@ -180,7 +184,9 @@
 
         // ['E-Mail', 'ID', 'Created', 'Last Login']
         if (option === orderOptions[0]) {
-            users.sort((a, b) => (up ? a.email.localeCompare(b.email) : b.email.localeCompare(a.email)));
+            users.sort((a, b) =>
+                up ? a.email.localeCompare(b.email) : b.email.localeCompare(a.email),
+            );
         } else if (option === orderOptions[1]) {
             users.sort((a, b) => (up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
         } else if (option === orderOptions[2]) {

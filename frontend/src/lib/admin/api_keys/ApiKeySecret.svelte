@@ -71,7 +71,9 @@
 
     <div transition:slide={{ duration: 150 }}>
         <p>{@html ta.api_key.generate3}</p>
-        <p><span class="headerCode"><b><code>{'API-Key <api_key>'}</code></b></span></p>
+        <p>
+            <span class="headerCode"><b><code>{'API-Key <api_key>'}</code></b></span>
+        </p>
     </div>
 
     <div transition:slide={{ duration: 150 }}>

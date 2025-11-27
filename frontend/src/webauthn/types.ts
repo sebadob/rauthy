@@ -1,4 +1,9 @@
-export type MfaPurpose = { Login: string } | 'MfaModToken' | 'PasswordNew' | 'PasswordReset' | 'Test';
+export type MfaPurpose =
+    | { Login: string }
+    | 'MfaModToken'
+    | 'PasswordNew'
+    | 'PasswordReset'
+    | 'Test';
 export type WebauthnAdditionalData = undefined | WebauthnLoginFinishResponse | WebauthnServiceReq;
 
 export interface WebauthnAuthStartRequest {

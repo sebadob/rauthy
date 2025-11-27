@@ -10,11 +10,19 @@
         UserResponse,
     } from '$api/types/user.ts';
     import Form from '$lib5/form/Form.svelte';
-    import { PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME } from '$utils/patterns';
+    import {
+        PATTERN_CITY,
+        PATTERN_PHONE,
+        PATTERN_STREET,
+        PATTERN_USER_NAME,
+    } from '$utils/patterns';
     import IconCheck from '$icons/IconCheck.svelte';
     import { errorFromResponse, fetchGet, fetchPut } from '$api/fetch';
     import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
-    import type { UserEditableAttrResponse, UserEditableAttrsResponse } from '$api/types/user_attrs';
+    import type {
+        UserEditableAttrResponse,
+        UserEditableAttrsResponse,
+    } from '$api/types/user_attrs';
     import { onMount } from 'svelte';
 
     let {
@@ -37,7 +45,9 @@
     });
 
     async function fetchAttrs() {
-        let res = await fetchGet<UserEditableAttrsResponse>(`/auth/v1/users/${user.id}/attr/editable`);
+        let res = await fetchGet<UserEditableAttrsResponse>(
+            `/auth/v1/users/${user.id}/attr/editable`,
+        );
         if (res.body) {
             attrs = res.body.values;
         } else {

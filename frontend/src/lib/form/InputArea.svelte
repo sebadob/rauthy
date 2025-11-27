@@ -53,7 +53,11 @@
 
     const re = pattern ? new RegExp(pattern, 'gm') : undefined;
 
-    function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLTextAreaElement }) {
+    function onblur(
+        event: FocusEvent & {
+            currentTarget: EventTarget & HTMLTextAreaElement;
+        },
+    ) {
         isValid();
         onBlur?.();
     }

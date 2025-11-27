@@ -34,7 +34,9 @@
     let i = setInterval(() => {
         now = new Date().getTime() / 1000;
     }, 1000);
-    let acceptOptional = $derived(!(forceAccept || tos.opt_until === undefined || tos.opt_until <= now - 3));
+    let acceptOptional = $derived(
+        !(forceAccept || tos.opt_until === undefined || tos.opt_until <= now - 3),
+    );
 
     let tosRead = $state(false);
 

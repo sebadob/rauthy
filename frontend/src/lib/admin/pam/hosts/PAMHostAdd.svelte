@@ -4,7 +4,11 @@
     import Button from '$lib/button/Button.svelte';
     import { useI18n } from '$state/i18n.svelte';
     import Input from '$lib/form/Input.svelte';
-    import type { PamGroupResponse, PamHostCreateRequest, PamHostSimpleResponse } from '$api/types/pam';
+    import type {
+        PamGroupResponse,
+        PamHostCreateRequest,
+        PamHostSimpleResponse,
+    } from '$api/types/pam';
     import { PATTERN_LINUX_HOSTNAME } from '$utils/patterns';
     import Options from '$lib/Options.svelte';
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';

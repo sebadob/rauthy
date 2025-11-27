@@ -10,7 +10,11 @@
     import { PATTERN_USER_NAME } from '$utils/patterns';
     import { webauthnReg } from '$webauthn/registration';
     import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
-    import type { MfaPurpose, WebauthnAdditionalData, WebauthnServiceReq } from '$webauthn/types.ts';
+    import type {
+        MfaPurpose,
+        WebauthnAdditionalData,
+        WebauthnServiceReq,
+    } from '$webauthn/types.ts';
     import UserPasskey from '$lib5/UserPasskey.svelte';
     import type { MfaModTokenResponse, UserMfaTokenRequest } from '$api/types/mfa_mod_token';
     import Modal from '$lib/Modal.svelte';
@@ -90,7 +94,9 @@
     async function fetchPasskeys() {
         err = false;
 
-        let res = await fetchGet<PasskeyResponse[]>(`/auth/v1/users/${session.get()?.user_id}/webauthn`);
+        let res = await fetchGet<PasskeyResponse[]>(
+            `/auth/v1/users/${session.get()?.user_id}/webauthn`,
+        );
         if (res.body) {
             passkeys = res.body;
         } else {
@@ -172,7 +178,10 @@
     }
 
     async function fetchMfaToken(payload: UserMfaTokenRequest) {
-        let res = await fetchPost<MfaModTokenResponse>(`/auth/v1/users/${user.id}/mfa_token`, payload);
+        let res = await fetchPost<MfaModTokenResponse>(
+            `/auth/v1/users/${user.id}/mfa_token`,
+            payload,
+        );
         if (res.body) {
             mfaModToken = res.body;
             closeModal?.();

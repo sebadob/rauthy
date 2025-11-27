@@ -46,8 +46,15 @@
     } = $props();
 
     $inspect(min, max).with(() => {
-        if (min.length !== 5 || min.charAt(2) !== ':' || max.length !== 5 || max.charAt(2) !== ':') {
-            console.error('min and max values for InputTime must be in the format of 00:00 - 23:59');
+        if (
+            min.length !== 5 ||
+            min.charAt(2) !== ':' ||
+            max.length !== 5 ||
+            max.charAt(2) !== ':'
+        ) {
+            console.error(
+                'min and max values for InputTime must be in the format of 00:00 - 23:59',
+            );
         }
     });
 
@@ -188,7 +195,12 @@
         let intHour = Number.parseInt(hour);
         let intMinute = Number.parseInt(minute);
 
-        if (intHour < hourMin || intHour > hourMax || intMinute < minuteMin || intMinute > minuteMax) {
+        if (
+            intHour < hourMin ||
+            intHour > hourMax ||
+            intMinute < minuteMin ||
+            intMinute > minuteMax
+        ) {
             refInput?.setCustomValidity(errMsg);
         }
 

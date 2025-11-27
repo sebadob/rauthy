@@ -6,7 +6,10 @@
     import { PKCE_VERIFIER_UPSTREAM } from '$utils/constants';
     import { useI18n } from '$state/i18n.svelte.js';
     import type { UserResponse } from '$api/types/user.ts';
-    import type { AuthProvidersTemplate, AuthProviderTemplate } from '$api/templates/AuthProvider.ts';
+    import type {
+        AuthProvidersTemplate,
+        AuthProviderTemplate,
+    } from '$api/templates/AuthProvider.ts';
     import type { WebIdResponse } from '$api/types/web_id.ts';
     import type { ProviderLoginRequest } from '$api/types/auth_provider.ts';
     import { fetchDelete, fetchPost } from '$api/fetch';
@@ -38,7 +41,9 @@
     let showModal = $state(false);
 
     let isFederated = $derived(user.account_type?.startsWith('federated'));
-    let accType = $derived(isFederated ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type);
+    let accType = $derived(
+        isFederated ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type,
+    );
 
     let classRow: 'rowPhone' | 'row' = $derived(viewModePhone ? 'rowPhone' : 'row');
     let classLabel: 'labelPhone' | 'label' = $derived(viewModePhone ? 'labelPhone' : 'label');

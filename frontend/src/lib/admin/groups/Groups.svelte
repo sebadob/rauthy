@@ -63,7 +63,9 @@
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
-            groups.sort((a, b) => (up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)));
+            groups.sort((a, b) =>
+                up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+            );
         } else if (option === orderOptions[1]) {
             groups.sort((a, b) => (up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
         }

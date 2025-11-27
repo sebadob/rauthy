@@ -24,7 +24,20 @@ export const I18nKo: I18n = {
         maxFileSize: '최대 파일크기',
         minutes: '분',
         month: '월',
-        months: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
+        months: [
+            '1월',
+            '2월',
+            '3월',
+            '4월',
+            '5월',
+            '6월',
+            '7월',
+            '8월',
+            '9월',
+            '10월',
+            '11월',
+            '12월',
+        ],
         never: '없음',
         password: '비밀번호',
         refresh: 'Refresh',
@@ -42,7 +55,8 @@ export const I18nKo: I18n = {
     account: {
         account: '사용자 계정',
         accType: '계정 종류',
-        accTypePasskeyText1: '이 계정은 현재 패스키 전용 계정입니다.\n비밀번호를 입력하지 않아도 됩니다.',
+        accTypePasskeyText1:
+            '이 계정은 현재 패스키 전용 계정입니다.\n비밀번호를 입력하지 않아도 됩니다.',
         accTypePasskeyText2:
             '계정을 전환하고 비밀번호를 추가할 수 있습니다.\n하지만 이렇게 하면 새 기기를 인증할 때마다 추가적으로 비밀번호 인증을 해야 됩니다.\n한 번도 비밀번호를 입력한 적이 없는 기기에서는 바로 로그인할 수 없습니다.',
         accTypePasskeyText3: '계정을 전환하고 비밀번호를 추가하겠습니까?',
@@ -197,7 +211,8 @@ export const I18nKo: I18n = {
         noKey: '이 슬롯에 등록된 보안 키가 없습니다.',
         reAuthenticatePasskey:
             'Before you can modify Passkeys, you need to authenticate with an already registered one:',
-        reAuthenticatePwd: 'Before you can modify Passkeys, you need to re-authenticate with your password.',
+        reAuthenticatePwd:
+            'Before you can modify Passkeys, you need to re-authenticate with your password.',
         register: '등록',
         registerNew: '새 키 등록',
         registerd: '등록일',
@@ -234,7 +249,8 @@ export const I18nKo: I18n = {
         badFormat: '잘못된 형식',
         fidoLink: 'https://fidoalliance.org/fido2/?lang=ko',
         generate: '생성',
-        newAccDesc1: '계정 종류는 비밀번호가 없는 계정 또는 기존의 비밀번호가 있는 계정 중 하나를 선택할 수 있습니다.',
+        newAccDesc1:
+            '계정 종류는 비밀번호가 없는 계정 또는 기존의 비밀번호가 있는 계정 중 하나를 선택할 수 있습니다.',
         newAccDesc2:
             '비밀번호가 없는 계정은 더 강력한 보안 방법을 제공하기 때문에 항상 선호됩니다.\n이러한 계정을 생성하려면 최소 하나의 패스키(Yubikey, Apple Touch ID, Windows Hello, ...)가 필요합니다. 기기가 FIDO2 표준을 지원해야 합니다.\n더 자세한 사항은 다음 링크를 참고해 주세요: ',
         newAccount: '새 계정',

@@ -28,12 +28,16 @@
 
     // We want to keep that logic inside this component instead of expecting
     // the parent to extract the information from the headers.
-    pageSize = Number.parseInt(firstFetchHeaders.get('x-page-size') || PAGE_SIZE_DEFAULT.toString()) as PageSize;
+    pageSize = Number.parseInt(
+        firstFetchHeaders.get('x-page-size') || PAGE_SIZE_DEFAULT.toString(),
+    ) as PageSize;
 
     let itemsTotal: undefined | null | number = $state();
     let pageSizeBefore = untrack(() => pageSize);
     let pageCount = $state(Number.parseInt(firstFetchHeaders.get('x-page-count') || '1'));
-    let continuationToken: string | undefined | null = $state(firstFetchHeaders.get('x-continuation-token'));
+    let continuationToken: string | undefined | null = $state(
+        firstFetchHeaders.get('x-continuation-token'),
+    );
     let page = $state(1);
 
     let isLastPage = $derived(page >= pageCount);
@@ -170,7 +174,9 @@
             </div>
         </div>
         {#if itemsTotal}
-            <div class="font-label total">{t.pagination.total}: {itemsTotal}</div>
+            <div class="font-label total">
+                {t.pagination.total}: {itemsTotal}
+            </div>
         {/if}
     </div>
 </div>

@@ -10,7 +10,13 @@
     import { useParam } from '$state/param.svelte';
     import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
     import Form from '$lib5/form/Form.svelte';
-    import { PATTERN_ALNUM, PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME } from '$utils/patterns';
+    import {
+        PATTERN_ALNUM,
+        PATTERN_CITY,
+        PATTERN_PHONE,
+        PATTERN_STREET,
+        PATTERN_USER_NAME,
+    } from '$utils/patterns';
     import type { NewUserRegistrationRequest } from '$api/types/register.ts';
     import { fetchGet, fetchPost } from '$api/fetch';
     import type { ToSLatestResponse } from '$api/types/tos';

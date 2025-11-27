@@ -44,7 +44,8 @@
             eventsFiltered = events.filter(e => e.ip?.includes(search));
         } else if (searchOption === searchOptions[1]) {
             eventsFiltered = events.filter(
-                e => e.typ?.toLowerCase().includes(search) || e.text?.toLowerCase().includes(search),
+                e =>
+                    e.typ?.toLowerCase().includes(search) || e.text?.toLowerCase().includes(search),
             );
         }
     });
@@ -79,7 +80,9 @@
         if (option === orderOptions[0]) {
             events.sort((a, b) => (up ? a.timestamp - b.timestamp : b.timestamp - a.timestamp));
         } else if (option === orderOptions[1]) {
-            events.sort((a, b) => (up ? a.level.localeCompare(b.level) : b.level.localeCompare(a.level)));
+            events.sort((a, b) =>
+                up ? a.level.localeCompare(b.level) : b.level.localeCompare(a.level),
+            );
         } else if (option === orderOptions[2]) {
             events.sort((a, b) => (up ? a.typ.localeCompare(b.typ) : b.typ.localeCompare(a.typ)));
         }

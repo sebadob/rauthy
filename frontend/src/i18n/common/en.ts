@@ -212,7 +212,8 @@ export const I18nEn: I18n = {
         noKey: 'No Security key registered on this slot',
         reAuthenticatePasskey:
             'Before you can modify Passkeys, you need to authenticate with an already registered one:',
-        reAuthenticatePwd: 'Before you can modify Passkeys, you need to re-authenticate with your password.',
+        reAuthenticatePwd:
+            'Before you can modify Passkeys, you need to re-authenticate with your password.',
         register: 'Register',
         registerNew: 'Register New Key',
         registerd: 'Registered',
@@ -248,7 +249,8 @@ export const I18nEn: I18n = {
         badFormat: 'Bad Format',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Generate',
-        newAccDesc1: 'You have the option between two account types: passwordless or traditional password',
+        newAccDesc1:
+            'You have the option between two account types: passwordless or traditional password',
         newAccDesc2:
             'The passwordless account is always preferred, because it provides\na way with stronger security. You will need at least one passkey (Yubikey, Apple Touch ID, Windows Hello,\n...) to create such an account. Your device must embrace the FIDO2 standard. For more information\nabout this, you may follow this link: ',
         newAccount: 'New Account',

@@ -57,7 +57,9 @@
         }
 
         if (typeof value === 'string') {
-            return options.filter(opt => (opt as string).toLowerCase().includes(searchValue.toLowerCase()));
+            return options.filter(opt =>
+                (opt as string).toLowerCase().includes(searchValue.toLowerCase()),
+            );
         }
 
         let searchInt = Number.parseInt(searchValue) || value;

@@ -70,7 +70,10 @@
         let res: HTMLElement[] = [];
 
         for (let elem of elems) {
-            if (elem.getAttribute('hidden') === 'true' || elem.getAttribute('disabled') === 'true') {
+            if (
+                elem.getAttribute('hidden') === 'true' ||
+                elem.getAttribute('disabled') === 'true'
+            ) {
                 // noop
             } else if (elem.getAttribute('tabindex') !== null) {
                 res.push(elem as HTMLElement);

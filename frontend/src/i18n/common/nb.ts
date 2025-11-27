@@ -215,8 +215,10 @@ export const I18nNb: I18n = {
         errorReg: 'Feil ved oppstart av registrering',
         lastUsed: 'Sist brukt',
         noKey: 'Det er ikke registrert noen sikkerhetsnøkkel i denne lagringen ennå',
-        reAuthenticatePasskey: 'Før passkeys kan redigeres, må en av de eksisterende først verifiseres:',
-        reAuthenticatePwd: 'Før passkeys kan redigeres, er det nødvendig med en ny bekreftelse av passordet.',
+        reAuthenticatePasskey:
+            'Før passkeys kan redigeres, må en av de eksisterende først verifiseres:',
+        reAuthenticatePwd:
+            'Før passkeys kan redigeres, er det nødvendig med en ny bekreftelse av passordet.',
         register: 'Registrer',
         registerNew: 'Registrer ny nøkkel',
         registerd: 'Registrert',

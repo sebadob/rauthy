@@ -59,12 +59,17 @@
         if (IS_DEV) {
             url = '/auth/v1/dev/providers_callback';
         }
-        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(url, payload);
+        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(
+            url,
+            payload,
+        );
 
         await handleAuthRes(res);
     });
 
-    async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>) {
+    async function handleAuthRes(
+        res: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
+    ) {
         if (res.status === 202) {
             // -> all good
             window.location.replace(res.headers.get('location') || '/auth/v1/account');

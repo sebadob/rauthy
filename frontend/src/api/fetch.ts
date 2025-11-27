@@ -9,7 +9,10 @@ export interface IResponse<T> {
     headers: Headers;
 }
 
-function buildHeaders(method: 'GET' | 'PATCH' | 'POST' | 'PUT' | 'DELETE', payload: 'json' | 'form'): HeadersInit {
+function buildHeaders(
+    method: 'GET' | 'PATCH' | 'POST' | 'PUT' | 'DELETE',
+    payload: 'json' | 'form',
+): HeadersInit {
     let headers: any;
     if (payload === 'json') {
         headers = {
@@ -154,7 +157,10 @@ export function formDataFromObj(obj: Object) {
     return params;
 }
 
-export async function handleResponse<T>(res: Response, redirect: 'handle401' | 'noRedirect'): Promise<IResponse<T>> {
+export async function handleResponse<T>(
+    res: Response,
+    redirect: 'handle401' | 'noRedirect',
+): Promise<IResponse<T>> {
     if (redirect === 'handle401' && res.status === 401) {
         window.location.reload();
     }
@@ -183,7 +189,10 @@ export async function handleResponse<T>(res: Response, redirect: 'handle401' | '
     return resp;
 }
 
-export async function errorFromResponse(res: Response, eventOnError?: boolean): Promise<ErrorResponse> {
+export async function errorFromResponse(
+    res: Response,
+    eventOnError?: boolean,
+): Promise<ErrorResponse> {
     let err = await res.json();
     // if (eventOnError) {
     //     useEvents().push('error', ErrorType[err.error], err.message, 5);

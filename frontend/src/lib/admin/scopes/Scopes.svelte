@@ -3,7 +3,10 @@
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
     import { fetchGet } from '$api/fetch';
-    import type { UserAttrConfigResponse, UserAttrConfigValueResponse } from '$api/types/user_attrs.ts';
+    import type {
+        UserAttrConfigResponse,
+        UserAttrConfigValueResponse,
+    } from '$api/types/user_attrs.ts';
     import type { ScopeResponse } from '$api/types/scopes.ts';
     import ContentAdmin from '$lib5/ContentAdmin.svelte';
     import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
@@ -77,7 +80,9 @@
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
-            scopes.sort((a, b) => (up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)));
+            scopes.sort((a, b) =>
+                up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+            );
         } else if (option === orderOptions[1]) {
             scopes.sort((a, b) => (up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
         }

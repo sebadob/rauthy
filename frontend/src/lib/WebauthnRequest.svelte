@@ -22,7 +22,12 @@
     let webauthnRes: undefined | WebauthnAuthResult = $state();
 
     onMount(async () => {
-        webauthnRes = await webauthnAuth(userId, purpose, t.authorize.invalidKeyUsed, t.authorize.requestExpired);
+        webauthnRes = await webauthnAuth(
+            userId,
+            purpose,
+            t.authorize.invalidKeyUsed,
+            t.authorize.requestExpired,
+        );
     });
 
     $effect(() => {

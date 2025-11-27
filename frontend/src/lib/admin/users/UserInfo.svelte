@@ -16,7 +16,13 @@
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import LabeledValue from '$lib5/LabeledValue.svelte';
     import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
-    import { PATTERN_ALNUM, PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME } from '$utils/patterns';
+    import {
+        PATTERN_ALNUM,
+        PATTERN_CITY,
+        PATTERN_PHONE,
+        PATTERN_STREET,
+        PATTERN_USER_NAME,
+    } from '$utils/patterns';
     import Options from '$lib5/Options.svelte';
     import SelectList from '$lib5/select_list/SelectList.svelte';
     import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
@@ -106,7 +112,9 @@
     );
 
     let providerName = $derived(
-        user.account_type?.startsWith('federated') ? providers.filter(p => p.id == user.auth_provider_id)[0]?.name : '',
+        user.account_type?.startsWith('federated')
+            ? providers.filter(p => p.id == user.auth_provider_id)[0]?.name
+            : '',
     );
 
     $effect(() => {
@@ -264,7 +272,10 @@
 
         if (birthdate !== userOrig?.user_values?.birthdate) {
             if (birthdate) {
-                payload.put.push({ key: 'user_values.birthdate', value: birthdate });
+                payload.put.push({
+                    key: 'user_values.birthdate',
+                    value: birthdate,
+                });
             } else {
                 payload.del.push('user_values.birthdate');
             }
@@ -306,7 +317,10 @@
         }
         if (country !== userOrig?.user_values?.country) {
             if (country) {
-                payload.put.push({ key: 'user_values.country', value: country });
+                payload.put.push({
+                    key: 'user_values.country',
+                    value: country,
+                });
             } else {
                 payload.del.push('user_values.country');
             }
