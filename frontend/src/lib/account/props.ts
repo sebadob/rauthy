@@ -1,5 +1,5 @@
 export interface PropsPassword {
-	current: string;
-	new: string;
-	newConfirm: string;
+    current: string;
+    new: string;
+    newConfirm: string;
 }

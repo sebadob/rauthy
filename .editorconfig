@@ -5,7 +5,7 @@ indent_size = 4
 indent_style = space
 insert_final_newline = false
 max_line_length = 120
-tab_width = 4
+tab_width = 2
 ij_continuation_indent_size = 8
 ij_formatter_off_tag = @formatter:off
 ij_formatter_on_tag = @formatter:on
@@ -24,7 +24,6 @@ ij_editorconfig_spaces_around_assignment_operators = true
 
 [{*.bash,*.sh,*.zsh}]
 indent_size = 2
-tab_width = 2
 ij_shell_binary_ops_start_line = false
 ij_shell_keep_column_alignment_padding = false
 ij_shell_minify_program = false

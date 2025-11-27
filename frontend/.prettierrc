@@ -16,13 +16,11 @@
     "plugins": [
         "prettier-plugin-svelte"
     ],
-    "printWidth": 100,
     "quoteProps": "as-needed",
     "semi": true,
     "singleAttributePerLine": true,
     "singleQuote": true,
     "svelteAllowShorthand": true,
     "svelteSortOrder": "none",
-    "trailingComma": "all",
-    "useTabs": true
+    "trailingComma": "all"
 }

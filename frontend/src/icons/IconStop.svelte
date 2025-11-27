@@ -1,21 +1,21 @@
 <script lang="ts">
-	import type { IconProps } from './props.ts';
+    import type { IconProps } from './props.ts';
 
-	let { opacity = 0.9, width = '1.5rem', color = 'hsl(var(--error))' }: IconProps = $props();
+    let { opacity = 0.9, width = '1.5rem', color = 'hsl(var(--error))' }: IconProps = $props();
 </script>
 
 <svg
-	fill="none"
-	viewBox="0 0 24 24"
-	stroke="currentColor"
-	stroke-width={2}
-	{width}
-	{color}
-	{opacity}
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    stroke-width={2}
+    {width}
+    {color}
+    {opacity}
 >
-	<path
-		stroke-linecap="round"
-		stroke-linejoin="round"
-		d="M6 18L18 6M6 6l12 12"
-	/>
+    <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M6 18L18 6M6 6l12 12"
+    />
 </svg>

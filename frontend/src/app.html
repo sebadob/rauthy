@@ -1,35 +1,35 @@
 <!doctype html>
 <html lang="%lang%">
-	<head>
-		<meta charset="utf-8" />
-		<meta
-			name="robots"
-			content="noindex, nofollow"
-		/>
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1"
-		/>
-		<title>Rauthy</title>
-		<link
-			rel="icon"
-			href="%sveltekit.assets%/assets/rauthy_light.svg"
-		/>
-		<link
-			rel="stylesheet"
-			href="/auth/v1/theme/{{client_id}}/{{theme_ts}}"
-		/>
-		%sveltekit.head%
-	</head>
-	<body>
-		<div
-			class="hidden"
-			aria-hidden="true"
-		>
-			{%- for tpl in templates -%}
-			<template id="{{ tpl.id() }}">{{ tpl.inner()|safe }}</template>
-			{%- endfor %}
-		</div>
-		<div style="display: contents">%sveltekit.body%</div>
-	</body>
+    <head>
+        <meta charset="utf-8" />
+        <meta
+            name="robots"
+            content="noindex, nofollow"
+        />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1"
+        />
+        <title>Rauthy</title>
+        <link
+            rel="icon"
+            href="%sveltekit.assets%/assets/rauthy_light.svg"
+        />
+        <link
+            rel="stylesheet"
+            href="/auth/v1/theme/{{client_id}}/{{theme_ts}}"
+        />
+        %sveltekit.head%
+    </head>
+    <body>
+        <div
+            class="hidden"
+            aria-hidden="true"
+        >
+            {%- for tpl in templates -%}
+            <template id="{{ tpl.id() }}">{{ tpl.inner()|safe }}</template>
+            {%- endfor %}
+        </div>
+        <div style="display: contents">%sveltekit.body%</div>
+    </body>
 </html>

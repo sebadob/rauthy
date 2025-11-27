@@ -1,5 +1,5 @@
 export interface SelectItem {
-	name: string;
-	// value: string,
-	selected: boolean;
+    name: string;
+    // value: string,
+    selected: boolean;
 }

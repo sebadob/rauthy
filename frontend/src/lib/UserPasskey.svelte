@@ -1,97 +1,97 @@
 <script lang="ts">
-	import type { PasskeyResponse } from '$api/types/webauthn.ts';
-	import { formatDateFromTs } from '$utils/helpers';
-	import IconFingerprint from '$icons/IconFingerprint.svelte';
-	import Tooltip from '$lib5/Tooltip.svelte';
-	import Button from '$lib5/button/Button.svelte';
-	import { useI18n } from '$state/i18n.svelte';
+    import type { PasskeyResponse } from '$api/types/webauthn.ts';
+    import { formatDateFromTs } from '$utils/helpers';
+    import IconFingerprint from '$icons/IconFingerprint.svelte';
+    import Tooltip from '$lib5/Tooltip.svelte';
+    import Button from '$lib5/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
 
-	let {
-		passkey,
-		showDelete,
-		onDelete,
-	}: {
-		passkey: PasskeyResponse;
-		showDelete: boolean;
-		onDelete: (name: string) => void;
-	} = $props();
+    let {
+        passkey,
+        showDelete,
+        onDelete,
+    }: {
+        passkey: PasskeyResponse;
+        showDelete: boolean;
+        onDelete: (name: string) => void;
+    } = $props();
 
-	let t = useI18n();
+    let t = useI18n();
 </script>
 
 <div class="keyContainer">
-	<div class="row">
-		<span class="label">
-			{t.mfa.passkeyName}
-		</span>
+    <div class="row">
+        <span class="label">
+            {t.mfa.passkeyName}
+        </span>
 
-		<div class="nameUv">
-			<b>{passkey.name}</b>
-			{#if passkey.user_verified}
-				<Tooltip text={t.account.userVerifiedTooltip}>
-					<div style:margin-bottom="-.25rem">
-						<IconFingerprint
-							width={18}
-							color="var(--col-acnt)"
-						/>
-					</div>
-				</Tooltip>
-			{/if}
-		</div>
-	</div>
-	<div class="row">
-		<span class="label">
-			{t.mfa.registerd}
-		</span>
-		<span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
-	</div>
-	<div class="row">
-		<span class="label">
-			{t.mfa.lastUsed}
-		</span>
-		<span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
-	</div>
+        <div class="nameUv">
+            <b>{passkey.name}</b>
+            {#if passkey.user_verified}
+                <Tooltip text={t.account.userVerifiedTooltip}>
+                    <div style:margin-bottom="-.25rem">
+                        <IconFingerprint
+                            width={18}
+                            color="var(--col-acnt)"
+                        />
+                    </div>
+                </Tooltip>
+            {/if}
+        </div>
+    </div>
+    <div class="row">
+        <span class="label">
+            {t.mfa.registerd}
+        </span>
+        <span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
+    </div>
+    <div class="row">
+        <span class="label">
+            {t.mfa.lastUsed}
+        </span>
+        <span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
+    </div>
 
-	{#if showDelete}
-		<div class="row">
-			<div></div>
-			<div class="deleteBtn">
-				<Button
-					level={-3}
-					onclick={() => onDelete(passkey.name)}
-				>
-					{t.common.delete}
-				</Button>
-			</div>
-		</div>
-	{/if}
+    {#if showDelete}
+        <div class="row">
+            <div></div>
+            <div class="deleteBtn">
+                <Button
+                    level={-3}
+                    onclick={() => onDelete(passkey.name)}
+                >
+                    {t.common.delete}
+                </Button>
+            </div>
+        </div>
+    {/if}
 </div>
 
 <style>
-	.deleteBtn {
-		margin-right: -0.35rem;
-	}
+    .deleteBtn {
+        margin-right: -0.35rem;
+    }
 
-	.keyContainer {
-		margin: 0.33rem 0;
-		overflow: clip;
-	}
+    .keyContainer {
+        margin: 0.33rem 0;
+        overflow: clip;
+    }
 
-	.label {
-		color: hsla(var(--text) / 0.7);
-	}
+    .label {
+        color: hsla(var(--text) / 0.7);
+    }
 
-	.nameUv {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-	}
+    .nameUv {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
 
-	.row {
-		width: min(95dvw, 21rem);
-		display: flex;
-		gap: 0.5rem;
-		justify-content: space-between;
-		align-items: center;
-	}
+    .row {
+        width: min(95dvw, 21rem);
+        display: flex;
+        gap: 0.5rem;
+        justify-content: space-between;
+        align-items: center;
+    }
 </style>

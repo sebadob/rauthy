@@ -22,17 +22,17 @@ let _i18n: I18nAdmin = undefined as any as I18nAdmin;
 //
 // For the same reason, we don't even need a rune here.
 export function useI18nAdmin(): I18nAdmin {
-	return _i18n;
+    return _i18n;
 }
 
 const i18nMap: Record<string, I18nAdmin> = {
-	de: I18nAdminDe,
-	en: I18nAdminEn,
-	ko: I18nAdminKo,
-	nb: I18nAdminNb,
+    de: I18nAdminDe,
+    en: I18nAdminEn,
+    ko: I18nAdminKo,
+    nb: I18nAdminNb,
 };
 
 export function initI18nAdmin() {
-	let lang = useLang();
-	_i18n = i18nMap[lang] ?? I18nAdminEn;
+    let lang = useLang();
+    _i18n = i18nMap[lang] ?? I18nAdminEn;
 }

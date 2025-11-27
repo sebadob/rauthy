@@ -1,36 +1,36 @@
 <script lang="ts">
-	import Tabs from '$lib5/tabs/Tabs.svelte';
+    import Tabs from '$lib5/tabs/Tabs.svelte';
 
-	let {
-		tabs,
-		selected = $bindable(''),
-		center = false,
-		width = 'inherit',
-	}: {
-		tabs: string[];
-		selected: string;
-		borderRadius?: string;
-		center?: boolean;
-		width?: string;
-	} = $props();
+    let {
+        tabs,
+        selected = $bindable(''),
+        center = false,
+        width = 'inherit',
+    }: {
+        tabs: string[];
+        selected: string;
+        borderRadius?: string;
+        center?: boolean;
+        width?: string;
+    } = $props();
 
-	if (tabs.length > 0 && selected === '') {
-		selected = tabs[0];
-	}
+    if (tabs.length > 0 && selected === '') {
+        selected = tabs[0];
+    }
 </script>
 
 <div class="wrapper">
-	<Tabs
-		{tabs}
-		bind:selected
-		borderRadius="none"
-		{center}
-		{width}
-	/>
+    <Tabs
+        {tabs}
+        bind:selected
+        borderRadius="none"
+        {center}
+        {width}
+    />
 </div>
 
 <style>
-	.wrapper {
-		margin: -1rem -1rem 1rem -1rem;
-	}
+    .wrapper {
+        margin: -1rem -1rem 1rem -1rem;
+    }
 </style>
