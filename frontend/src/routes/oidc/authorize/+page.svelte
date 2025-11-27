@@ -555,7 +555,10 @@
 						{#if !tooManyRequests && !clientMfaForce}
 							{#if showReset && !isAtproto}
 								<div class="btn flex-col">
-									<Button ariaLabel={t.authorize.passwordRequest} onclick={requestReset}>
+									<Button
+										ariaLabel={t.authorize.passwordRequest}
+										onclick={requestReset}
+									>
 										{t.authorize.passwordRequest}
 									</Button>
 								</div>
@@ -572,7 +575,11 @@
 								</div>
 								{#if isAtproto}
 									<div class="btn flex-col">
-										<Button ariaLabel={t.common.cancel} level={2} onclick={toggleAtproto}>
+										<Button
+											ariaLabel={t.common.cancel}
+											level={2}
+											onclick={toggleAtproto}
+										>
 											{t.common.cancel}
 										</Button>
 									</div>
@@ -612,7 +619,10 @@
 
 				{#if clientMfaForce}
 					<div class="btn flex-col">
-						<Button ariaLabel="Account" onclick={() => (window.location.href = '/auth/v1/account')}>
+						<Button
+							ariaLabel="Account"
+							onclick={() => (window.location.href = '/auth/v1/account')}
+						>
 							Account
 						</Button>
 					</div>
@@ -632,7 +642,9 @@
 							<ButtonAuthProvider
 								ariaLabel={`Login: ${provider.name}`}
 								{provider}
-								onclick={isProviderAtProto(provider.id) ? toggleAtproto : providerLogin}
+								onclick={isProviderAtProto(provider.id)
+									? toggleAtproto
+									: providerLogin}
 								{isLoading}
 							/>
 						{/each}

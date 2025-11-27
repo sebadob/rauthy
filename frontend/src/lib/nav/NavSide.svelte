@@ -89,7 +89,10 @@
 >
 	<div class="nav-container">
 		<div class="relative">
-			<div class="absolute flex space-between navmod" aria-hidden={!collapsed && !optsButtons}>
+			<div
+				class="absolute flex space-between navmod"
+				aria-hidden={!collapsed && !optsButtons}
+			>
 				<div>
 					<Button ariaControls="mainNav" invisible onclick={toggleCollapsed}>
 						<svg
