@@ -22,17 +22,11 @@ If you like to test creating new accounts or password reset flows though, you ne
 is able to send E-Mails. The easiest way (works on localhost only) is the below `docker-compose.yaml`:
 
 ```
-networks:
-  rauthy-test:
-    driver: bridge
-    
 services:
   mailcrab:
     image: marlonb/mailcrab:latest
     ports:
       - "1080:1080"
-    networks:
-      - rauthy-test
       
   rauthy:
     container_name: rauthy-test
@@ -46,8 +40,6 @@ services:
       - "8443:8443"
     depends_on:
       - mailcrab
-    networks:
-      - rauthy-test
 ```
 
 Save this into `docker-compose.yaml` and start with:
