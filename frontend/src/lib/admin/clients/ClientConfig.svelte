@@ -356,7 +356,6 @@
         <p class="mb-0"><b>Origin</b></p>
         <p class="desc">{ta.clients.descOrigin}</p>
         <InputTags
-            typ="url"
             bind:values={origins}
             label="Allowed Origins"
             errMsg={ta.validation.origin}
@@ -365,7 +364,6 @@
 
         <p class="desc">{@html ta.clients.descUri}</p>
         <InputTags
-            typ="url"
             bind:values={redirectURIs}
             label="Redirect URIs"
             errMsg={ta.validation.uri}
@@ -373,7 +371,6 @@
             pattern={PATTERN_URI}
         />
         <InputTags
-            typ="url"
             bind:values={postLogoutRedirectURIs}
             label="Post Logout Redirect URIs"
             errMsg={ta.validation.uri}
