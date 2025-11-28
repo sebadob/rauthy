@@ -1,10 +1,9 @@
 use crate::email::mailer::EMail;
-use crate::entity::theme::{ThemeCss, ThemeCssFull};
+use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::time::Duration;
-use tracing::error;
 
 pub static HTML_EMAIL_HEAD_LEFT: &str = r#"
 <head>
@@ -100,5 +99,5 @@ pub async fn send_custom(
         .tx_email
         .send_timeout(req, Duration::from_secs(10))
         .await
-        .map_err(|err| ErrorResponse::new(ErrorResponseType::Timeout, "email send timeout"))
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::Timeout, "email send timeout"))
 }

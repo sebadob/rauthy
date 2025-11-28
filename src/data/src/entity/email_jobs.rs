@@ -31,14 +31,14 @@ pub struct EmailJob {
 pub enum EmailContentType {
     Text,
     Markdown,
-    HTML,
+    Html,
 }
 
 impl From<&str> for EmailContentType {
     fn from(s: &str) -> Self {
         match s {
             "markdown" => Self::Markdown,
-            "html" => Self::HTML,
+            "html" => Self::Html,
             _ => Self::Text,
         }
     }
@@ -49,7 +49,7 @@ impl Display for EmailContentType {
         match self {
             EmailContentType::Text => write!(f, "text"),
             EmailContentType::Markdown => write!(f, "markdown"),
-            EmailContentType::HTML => write!(f, "html"),
+            EmailContentType::Html => write!(f, "html"),
         }
     }
 }
@@ -323,7 +323,7 @@ impl EmailJob {
             EmailContentType::Markdown => {
                 Cow::from(markdown::render_sanitized_markdown(&self.body))
             }
-            EmailContentType::HTML => Cow::from(self.body.to_string()),
+            EmailContentType::Html => Cow::from(self.body.to_string()),
         };
 
         Ok(Some(email::custom::build_custom_html_email(&body).await?))
@@ -339,17 +339,21 @@ impl EmailJob {
 
     #[inline]
     async fn task_execute(mut self) -> Result<(), ErrorResponse> {
-        let (batch_size, mut delay) = {
+        let (batch_size, delay) = {
             let vars = &RauthyConfig::get().vars.email.jobs;
-            (vars.batch_size, vars.batch_delay_ms as u64)
+            (
+                vars.batch_size,
+                Duration::from_millis(vars.batch_delay_ms as u64),
+            )
         };
+        let mut delay_inner_ms = 10;
 
         let (text, html) = match self.content_type {
             EmailContentType::Text => (Some(self.body.clone()), None),
             EmailContentType::Markdown => {
                 (Some(self.body.clone()), self.render_html_content().await?)
             }
-            EmailContentType::HTML => (None, self.render_html_content().await?),
+            EmailContentType::Html => (None, self.render_html_content().await?),
         };
 
         let mut cancel_check_ts = Utc::now().timestamp();
@@ -438,24 +442,30 @@ impl EmailJob {
                                 ));
                             }
 
-                            let delay_new = delay * 3;
+                            let delay_new = delay_inner_ms * 3;
                             error!(
                                 ?err,
                                 "Reached E-Mail send timeout after {i} retries, increasing batch \
-                                delay from {delay} to {delay_new}"
+                                delay_inner_ms from {delay_inner_ms} to {delay_new}"
                             );
-                            delay = delay_new;
+                            delay_inner_ms = delay_new;
 
-                            tokio::time::sleep(Duration::from_millis(delay)).await;
+                            tokio::time::sleep(Duration::from_millis(delay_inner_ms)).await;
                         }
                     }
                 }
 
                 self.last_user_ts = user.created_at;
+                // Email sending happens on a dedicated thread and if we would not sleep at least
+                // a short amount of time inside the batch, the channel could get filled up pretty
+                // quickly with slow servers.
+                // TODO maybe add a debugging config var to check the time it takes to send a mail
+                //  or even track it automatically with each send to handle backpressure nicely?
+                tokio::time::sleep(Duration::from_millis(delay_inner_ms)).await;
             }
 
             self.save().await?;
-            tokio::time::sleep(Duration::from_millis(delay)).await;
+            tokio::time::sleep(delay).await;
         }
     }
 }
@@ -475,7 +485,7 @@ impl From<EmailContentType> for rauthy_api_types::email_jobs::EmailContentType {
         match value {
             EmailContentType::Text => Self::Text,
             EmailContentType::Markdown => Self::Markdown,
-            EmailContentType::HTML => Self::HTML,
+            EmailContentType::Html => Self::HTML,
         }
     }
 }
@@ -485,7 +495,7 @@ impl From<rauthy_api_types::email_jobs::EmailContentType> for EmailContentType {
         match value {
             rauthy_api_types::email_jobs::EmailContentType::Text => Self::Text,
             rauthy_api_types::email_jobs::EmailContentType::Markdown => Self::Markdown,
-            rauthy_api_types::email_jobs::EmailContentType::HTML => Self::HTML,
+            rauthy_api_types::email_jobs::EmailContentType::HTML => Self::Html,
         }
     }
 }
@@ -502,7 +512,7 @@ impl From<EmailJob> for EmailJobResponse {
         let content_type = match v.content_type {
             EmailContentType::Text => rauthy_api_types::email_jobs::EmailContentType::Text,
             EmailContentType::Markdown => rauthy_api_types::email_jobs::EmailContentType::Markdown,
-            EmailContentType::HTML => rauthy_api_types::email_jobs::EmailContentType::HTML,
+            EmailContentType::Html => rauthy_api_types::email_jobs::EmailContentType::HTML,
         };
 
         Self {
