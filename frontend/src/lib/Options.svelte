@@ -238,6 +238,7 @@
     }
 
     .optPopover {
+        width: 100%;
         text-align: left;
         padding: 0.25rem 0.5rem;
         color: hsl(var(--text));

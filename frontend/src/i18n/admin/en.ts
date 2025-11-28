@@ -238,6 +238,14 @@ export let I18nAdminEn: I18nAdmin = {
         strikeThrough: 'Strikethrough',
         textArea: 'Edit Text',
     },
+    email: {
+        filterType: ['None', 'In Group', 'Not in Group', 'Has Role', 'Has not Role'],
+        sendAllUsers: 'This E-Mail will be sent to all users.',
+        sendAllUsersFiltered: 'This E-Mail will be sent to all users filtered by:',
+        sendMail: 'Send E-Mail',
+        subject: 'Subject',
+        userFilter: 'User Filter',
+    },
     error: {
         needsAdminRole: `You are not assigned to the <b>rauthy_admin</b> role.<br/>
             You do not have access to the admin panel.`,

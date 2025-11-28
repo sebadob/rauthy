@@ -254,6 +254,14 @@ export let I18nAdminDe: I18nAdmin = {
         strikeThrough: 'Durchgestrichen',
         textArea: 'Text Bearbeiten',
     },
+    email: {
+        filterType: ['Keiner', 'In Gruppe', 'Nicht in Gruppe', 'Hat Rolle', 'Hat nicht Rolle'],
+        sendAllUsers: 'Diese E-Mail wird an alle Benutzer gesendet.',
+        sendAllUsersFiltered: 'Diese E-Mail wird an alle Benutzer gesendet, gefiltert durch:',
+        sendMail: 'E-Mail senden',
+        subject: 'Betreff',
+        userFilter: 'Benutzer Filter',
+    },
     error: {
         needsAdminRole: 'Um Zugriff zu erhalten ist die Rolle <b>rauthy_admin</b> notwendig.',
         noAdmin: `Für Rauthy Admin Accounts ist <b>MFA Pflicht.</b><br>

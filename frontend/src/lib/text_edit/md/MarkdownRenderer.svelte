@@ -14,7 +14,7 @@
     });
 </script>
 
-<div class="preview">
+<div class="preview html-render">
     {@html worker.renderedMarkdown()}
 </div>
 

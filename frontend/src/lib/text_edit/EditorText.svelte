@@ -96,8 +96,7 @@
     /*}*/
 
     .wrapper {
-        /*height: 100%;*/
-        /*max-height: 30rem;*/
+        margin: 0.15rem 0;
         display: flex;
         flex-direction: column;
         border: 1px solid hsla(var(--bg-high) / 0.5);
