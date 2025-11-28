@@ -1,12 +1,12 @@
 use crate::{
-    api_keys, atproto, auth_providers, backup, blacklist, clients, events, fed_cm, generic, groups,
-    oidc, pam, roles, scopes, sessions, themes, tos, users,
+    api_keys, atproto, auth_providers, backup, blacklist, clients, email, events, fed_cm, generic,
+    groups, oidc, pam, roles, scopes, sessions, themes, tos, users,
 };
 use rauthy_api_types::*;
 use rauthy_api_types::{
-    api_keys::*, auth_providers::*, backup::*, blacklist::*, clients::*, events::*, fed_cm::*,
-    forward_auth::*, generic::*, groups::*, oidc::*, pam::*, roles::*, scopes::*, sessions::*,
-    themes::*, tos::*, users::*,
+    api_keys::*, auth_providers::*, backup::*, blacklist::*, clients::*, email_jobs::*, events::*,
+    fed_cm::*, forward_auth::*, generic::*, groups::*, oidc::*, pam::*, roles::*, scopes::*,
+    sessions::*, themes::*, tos::*, users::*,
 };
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_data::ListenScheme;
@@ -21,6 +21,7 @@ use rauthy_service::token_set;
 use utoipa::openapi::{ExternalDocs, Server};
 use utoipa::{OpenApi, openapi};
 
+#[rustfmt::skip]
 #[derive(OpenApi)]
 #[openapi(
     paths(
@@ -68,6 +69,8 @@ use utoipa::{OpenApi, openapi};
         clients::delete_client,
         clients::get_forward_auth_oidc,
         clients::get_forward_auth_callback,
+
+        email::post_send_email,
 
         events::post_events,
         events::sse_events,
@@ -253,6 +256,11 @@ use utoipa::{OpenApi, openapi};
             IpBlacklistRequest,
             DeviceRequest,
             DeviceGrantRequest,
+            EmailJobRequest,
+            EmailContentType,
+            EmailJobFilterType,
+            EmailJobResponse,
+            EmailJobStatus,
             EncKeyMigrateRequest,
             FedCMAssertionRequest,
             FedCMClientMetadataRequest,
@@ -407,6 +415,7 @@ use utoipa::{OpenApi, openapi};
         (name = "blacklist", description = "IP Blacklist endpoints"),
         (name = "api_keys", description = "API Keys endpoints"),
         (name = "backup", description = "Backup endpoints"),
+        (name = "email", description = "Email endpoints"),
         (name = "generic", description = "Generic endpoints"),
         (name = "tos", description = "Terms of Service endpoints"),
         (name = "webid", description = "WebID endpoints"),

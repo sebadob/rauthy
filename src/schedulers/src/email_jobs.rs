@@ -43,7 +43,7 @@ async fn execute() -> Result<(), ErrorResponse> {
     );
 
     for job in jobs {
-        job.spawn_task().await;
+        job.spawn_task();
 
         // no need to spike resources and spawn multiple at the same time
         time::sleep(Duration::from_secs(1)).await;

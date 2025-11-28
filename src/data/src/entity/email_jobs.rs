@@ -176,8 +176,22 @@ impl From<tokio_postgres::Row> for EmailJob {
 }
 
 impl EmailJob {
+    pub async fn cancel(&mut self) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE email_jobs SET status = $1 WHERE id = $2";
+
+        let status = EmailJobStatus::Canceled.value();
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(status, self.id)).await?;
+        } else {
+            DB::pg_execute(sql, &[&status, &self.id]).await?;
+        }
+        self.status = EmailJobStatus::Canceled;
+
+        Ok(())
+    }
+
     /// Expects body to be already sanitized if `is_html`!
-    pub async fn insert(payload: EmailJobRequest) -> Result<(), ErrorResponse> {
+    pub async fn insert(payload: EmailJobRequest) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
         let status = EmailJobStatus::Open.value();
         let filter = if let Some(value) = payload.filter_value {
@@ -196,11 +210,12 @@ impl EmailJob {
 
         let sql = r#"
 INSERT INTO email_jobs (id, scheduled, status, updated, filter, content_type, subject, body)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING *"#;
 
-        if is_hiqlite() {
+        let slf = if is_hiqlite() {
             DB::hql()
-                .execute(
+                .query_map_one(
                     sql,
                     params!(
                         now,
@@ -213,9 +228,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
                         payload.body
                     ),
                 )
-                .await?;
+                .await?
         } else {
-            DB::pg_execute(
+            DB::pg_query_one(
                 sql,
                 &[
                     &now,
@@ -228,10 +243,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
                     &payload.body,
                 ],
             )
-            .await?;
-        }
+            .await?
+        };
 
-        Ok(())
+        Ok(slf)
     }
 
     pub async fn find(id: i64) -> Result<Self, ErrorResponse> {
@@ -329,7 +344,7 @@ impl EmailJob {
         Ok(Some(email::custom::build_custom_html_email(&body).await?))
     }
 
-    pub async fn spawn_task(self) {
+    pub fn spawn_task(self) {
         info!("Spawning EmailJob background task {}", self.id);
 
         tokio::task::spawn(async move {
