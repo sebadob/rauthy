@@ -8,6 +8,7 @@ CREATE TABLE email_jobs
     updated      INTEGER NOT NULL,
     last_user_ts INTEGER,
     filter       TEXT,
+    content_type TEXT    NOT NULL,
     subject      TEXT    NOT NULL,
     body         TEXT    NOT NULL
 ) STRICT;

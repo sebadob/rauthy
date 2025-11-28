@@ -19,6 +19,7 @@ cidr = { workspace = true }
 flume = { workspace = true }
 gethostname = { workspace = true }
 libflate = { workspace = true }
+pulldown-cmark = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
 rand = { workspace = true }

@@ -378,8 +378,8 @@ impl Default for Vars {
                 connect_retries: 3,
                 jobs: VarsEmailJobs {
                     orphaned_seconds: 300,
-                    batch_size: 10,
-                    batch_delay_ms: 500,
+                    batch_size: 3,
+                    batch_delay_ms: 2000,
                 },
                 smtp_conn_mode: SmtpConnMode::Default,
                 xoauth_url: None,
@@ -1361,6 +1361,9 @@ impl Vars {
             "batch_size",
             "EMAIL_JOBS_BATCH_SIZE",
         ) {
+            if v == 0 {
+                panic!("[email.jobs].batch_size must not be 0");
+            }
             self.email.jobs.batch_size = v;
         }
         if let Some(v) = t_u32(

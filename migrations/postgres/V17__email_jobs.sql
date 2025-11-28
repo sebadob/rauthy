@@ -8,6 +8,7 @@ CREATE TABLE email_jobs
     updated      BIGINT   NOT NULL,
     last_user_ts BIGINT,
     filter       VARCHAR,
+    content_type VARCHAR  NOT NULL,
     subject      VARCHAR  NOT NULL,
     body         VARCHAR  NOT NULL
 );

@@ -66,9 +66,10 @@ pub async fn send_email_confirm_change(
         recipient_name: user.email_recipient_name(),
         address: email_addr.to_string(),
         subject: format!("{email_sub_prefix} - {}", i18n.subject),
-        text: text
-            .render()
-            .expect("Template rendering: EMailConfirmChangeTxt"),
+        text: Some(
+            text.render()
+                .expect("Template rendering: EMailConfirmChangeTxt"),
+        ),
         html: Some(
             html.render()
                 .expect("Template rendering: EMailConfirmChangeHtml"),

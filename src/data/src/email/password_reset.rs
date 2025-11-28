@@ -141,7 +141,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User, user_tz: Option
         recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
         subject: format!("{email_sub_prefix} - {subject}"),
-        text: text.render().expect("Template rendering: EmailResetTxt"),
+        text: Some(text.render().expect("Template rendering: EmailResetTxt")),
         html: Some(html.render().expect("Template rendering: EmailResetHtml")),
     };
 

@@ -17,7 +17,7 @@ pub struct EMail {
     pub recipient_name: String,
     pub address: String,
     pub subject: String,
-    pub text: String,
+    pub text: Option<String>,
     pub html: Option<String>,
 }
 
@@ -92,18 +92,34 @@ async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<EMail>) {
 
             let to = format!("{} <{}>", req.recipient_name, req.address);
 
-            let email = if let Some(html) = req.html {
+            let email = if req.html.is_some() && req.text.is_some() {
                 lettre::Message::builder()
                     .from(from.clone())
                     .to(to.parse().unwrap())
                     .subject(req.subject)
-                    .multipart(MultiPart::alternative_plain_html(req.text, html))
+                    .multipart(MultiPart::alternative_plain_html(
+                        req.text.unwrap(),
+                        req.html.unwrap(),
+                    ))
+            } else if let Some(html) = req.html {
+                lettre::Message::builder()
+                    .from(from.clone())
+                    .to(to.parse().unwrap())
+                    .subject(req.subject)
+                    .singlepart(SinglePart::html(html))
+            } else if let Some(text) = req.text {
+                lettre::Message::builder()
+                    .from(from.clone())
+                    .to(to.parse().unwrap())
+                    .subject(req.subject)
+                    .singlepart(SinglePart::plain(text))
             } else {
+                warn!("Sending E-Mail with empty body!");
                 lettre::Message::builder()
                     .from(from.clone())
                     .to(to.parse().unwrap())
                     .subject(req.subject)
-                    .singlepart(SinglePart::plain(req.text))
+                    .singlepart(SinglePart::plain(String::default()))
             };
 
             match email {

@@ -72,9 +72,10 @@ pub async fn send_pwd_reset_info(user: &User) {
         recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
         subject: format!("{email_sub_prefix} - {}", i18n.subject),
-        text: text
-            .render()
-            .expect("Template rendering: EmailResetInfoTxt"),
+        text: Some(
+            text.render()
+                .expect("Template rendering: EmailResetInfoTxt"),
+        ),
         html: Some(
             html.render()
                 .expect("Template rendering: EmailResetInfoHtml"),

@@ -93,9 +93,10 @@ pub async fn send_login_location(
         recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
         subject: format!("{email_sub_prefix} - {}", i18n.subject),
-        text: text
-            .render()
-            .expect("Template rendering: EMailLoginLocationTxt"),
+        text: Some(
+            text.render()
+                .expect("Template rendering: EMailLoginLocationTxt"),
+        ),
         html: Some(
             html.render()
                 .expect("Template rendering: EMailLoginLocationHtml"),

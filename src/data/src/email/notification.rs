@@ -51,7 +51,7 @@ pub async fn send_email_notification(
         recipient_name,
         address,
         subject: notification.head.to_string(),
-        text: text.render().expect("Template rendering: EMailEventTxt"),
+        text: Some(text.render().expect("Template rendering: EMailEventTxt")),
         html: Some(html.render().expect("Template rendering: EMailEventHtml")),
     };
 

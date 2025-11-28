@@ -11,10 +11,19 @@ pub struct EmailJobRequest {
     /// Validation: `^[a-zA-Z0-9-_/,:*\s]{2,64}$`
     #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub filter_value: Option<String>,
+    pub content_type: EmailContentType,
     #[validate(length(max = 1024))]
     pub subject: String,
     #[validate(length(max = 32768))]
     pub body: String,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum EmailContentType {
+    Text,
+    Markdown,
+    HTML,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -36,6 +45,7 @@ pub struct EmailJobResponse {
     pub last_user_ts: i64,
     pub filter_type: EmailJobFilterType,
     pub filter_value: Option<String>,
+    pub content_type: EmailContentType,
     pub subject: String,
     pub body: String,
 }
