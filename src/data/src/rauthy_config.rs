@@ -376,6 +376,11 @@ impl Default for Vars {
                 smtp_password: None,
                 smtp_from: "Rauthy <rauthy@localhost>".into(),
                 connect_retries: 3,
+                jobs: VarsEmailJobs {
+                    orphaned_seconds: 300,
+                    batch_size: 10,
+                    batch_delay_ms: 500,
+                },
                 smtp_conn_mode: SmtpConnMode::Default,
                 xoauth_url: None,
                 xoauth_client_id: None,
@@ -1339,26 +1344,54 @@ impl Vars {
             self.email.danger_insecure = v;
         }
 
-        // [email.tz_fmt]
-        let mut table = t_table(&mut table, "tz_fmt");
+        // [email.jobs]
+        let mut jobs = t_table(&mut table, "tz_fmt");
 
-        if let Some(v) = t_str(&mut table, "email.tz_fmt", "de", "TZ_FMT_DE") {
+        if let Some(v) = t_u32(
+            &mut jobs,
+            "email.jobs",
+            "orphaned_seconds",
+            "EMAIL_JOBS_ORPHANED_SECONDS",
+        ) {
+            self.email.jobs.orphaned_seconds = v;
+        }
+        if let Some(v) = t_u16(
+            &mut jobs,
+            "email.jobs",
+            "batch_size",
+            "EMAIL_JOBS_BATCH_SIZE",
+        ) {
+            self.email.jobs.batch_size = v;
+        }
+        if let Some(v) = t_u32(
+            &mut jobs,
+            "email.jobs",
+            "batch_delay_ms",
+            "EMAIL_JOBS_BATCH_DELAY_MS",
+        ) {
+            self.email.jobs.batch_delay_ms = v;
+        }
+
+        // [email.tz_fmt]
+        let mut tz_fmt = t_table(&mut table, "tz_fmt");
+
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "de", "TZ_FMT_DE") {
             self.email.tz_fmt.de = v.into();
         }
-        if let Some(v) = t_str(&mut table, "email.tz_fmt", "en", "TZ_FMT_EN") {
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "en", "TZ_FMT_EN") {
             self.email.tz_fmt.en = v.into();
         }
-        if let Some(v) = t_str(&mut table, "email.tz_fmt", "ko", "TZ_FMT_KO") {
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ko", "TZ_FMT_KO") {
             self.email.tz_fmt.ko = v.into();
         }
-        if let Some(v) = t_str(&mut table, "email.tz_fmt", "no", "TZ_FMT_NO") {
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "no", "TZ_FMT_NO") {
             self.email.tz_fmt.no = v.into();
         }
-        if let Some(v) = t_str(&mut table, "email.tz_fmt", "zhhans", "TZ_FMT_ZHHANS") {
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "zhhans", "TZ_FMT_ZHHANS") {
             self.email.tz_fmt.zhhans = v.into();
         }
 
-        if let Some(v) = t_str(&mut table, "email.tz_fmt", "tz_fallback", "TZ_FALLBACK") {
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "tz_fallback", "TZ_FALLBACK") {
             self.email.tz_fmt.tz_fallback = v.into();
         }
     }
@@ -2811,6 +2844,7 @@ pub struct VarsEmail {
     pub smtp_password: Option<String>,
     pub smtp_from: Cow<'static, str>,
     pub connect_retries: u16,
+    pub jobs: VarsEmailJobs,
     pub smtp_conn_mode: SmtpConnMode,
     pub xoauth_url: Option<String>,
     pub xoauth_client_id: Option<String>,
@@ -2820,6 +2854,13 @@ pub struct VarsEmail {
     pub starttls_only: bool,
     pub danger_insecure: bool,
     pub tz_fmt: VarsEmailTzFmt,
+}
+
+#[derive(Debug)]
+pub struct VarsEmailJobs {
+    pub orphaned_seconds: u32,
+    pub batch_size: u16,
+    pub batch_delay_ms: u32,
 }
 
 #[derive(Debug)]

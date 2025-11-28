@@ -1,7 +1,13 @@
+use crate::database::DB;
+use crate::rauthy_config::RauthyConfig;
+use chrono::Utc;
 use hiqlite::Row;
+use hiqlite_macros::params;
 use rauthy_api_types::email_jobs::{EmailJobFilterType, EmailJobRequest, EmailJobResponse};
+use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use std::fmt::{Display, Formatter};
+use std::ops::Sub;
 use tracing::error;
 
 #[derive(Debug)]
@@ -9,7 +15,7 @@ pub struct EmailJob {
     pub id: i64,
     pub scheduled: Option<i64>,
     pub status: EmailJobStatus,
-    pub updated: bool,
+    pub updated: i64,
     pub last_user_ts: i64,
     pub filter: EmailJobFilter,
     pub subject: String,
@@ -27,9 +33,19 @@ pub enum EmailJobFilter {
 
 #[derive(Debug, PartialEq)]
 pub enum EmailJobStatus {
-    Open = 0,
+    Open,
     Finished,
     Canceled,
+}
+
+impl EmailJobStatus {
+    fn value(&self) -> i16 {
+        match self {
+            EmailJobStatus::Open => 0,
+            EmailJobStatus::Finished => 1,
+            EmailJobStatus::Canceled => 2,
+        }
+    }
 }
 
 impl From<i16> for EmailJobStatus {
@@ -125,11 +141,69 @@ impl From<tokio_postgres::Row> for EmailJob {
 
 impl EmailJob {
     pub async fn insert(payload: EmailJobRequest) -> Result<(), ErrorResponse> {
-        todo!()
+        let now = Utc::now().timestamp();
+        let status = EmailJobStatus::Open.value();
+        let filter = if let Some(value) = payload.filter_value {
+            match payload.filter_type {
+                EmailJobFilterType::None => EmailJobFilter::None,
+                EmailJobFilterType::InGroup => EmailJobFilter::InGroup(value),
+                EmailJobFilterType::NotInGroup => EmailJobFilter::NotInGroup(value),
+                EmailJobFilterType::HasRole => EmailJobFilter::HasRole(value),
+                EmailJobFilterType::HasNotRole => EmailJobFilter::HasNotRole(value),
+            }
+        } else {
+            EmailJobFilter::None
+        }
+        .to_string();
+
+        let sql = r#"
+INSERT INTO email_jobs (id, scheduled, status, updated, filter, subject, body)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
+                    params!(
+                        now,
+                        payload.scheduled,
+                        status,
+                        now,
+                        filter,
+                        payload.subject,
+                        payload.body
+                    ),
+                )
+                .await?;
+        } else {
+            DB::pg_execute(
+                sql,
+                &[
+                    &now,
+                    &payload.scheduled,
+                    &status,
+                    &now,
+                    &filter,
+                    &payload.subject,
+                    &payload.body,
+                ],
+            )
+            .await?;
+        }
+
+        Ok(())
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        todo!()
+        let sql = "SELECT * FROM email_jobs";
+
+        let res = if is_hiqlite() {
+            DB::hql().query_map(sql, params!()).await?
+        } else {
+            DB::pg_query(sql, &[], 0).await?
+        };
+
+        Ok(res)
     }
 
     /// Finds jobs that have not been updated in a long time. This can happen for very long-running
@@ -138,15 +212,53 @@ impl EmailJob {
     /// In HA deployments, only the current leader should look for orphaned jobs and pick them
     /// up to avoid duplicate emails because of possible race conditions.
     pub async fn find_orphaned() -> Result<Vec<Self>, ErrorResponse> {
-        todo!()
+        let sql = r#"
+SELECT * FROM email_jobs
+WHERE status = 0 AND updated < $2"#;
+
+        let threshold = Utc::now()
+            .sub(chrono::Duration::seconds(
+                RauthyConfig::get().vars.email.jobs.orphaned_seconds as i64,
+            ))
+            .timestamp();
+
+        let res = if is_hiqlite() {
+            DB::hql().query_map(sql, params!(threshold)).await?
+        } else {
+            DB::pg_query(sql, &[&threshold], 0).await?
+        };
+
+        Ok(res)
     }
 
-    pub async fn set_status(id: i64, status: EmailJobStatus) -> Result<(), ErrorResponse> {
-        todo!()
-    }
+    /// Updates:
+    /// - scheduled
+    /// - status
+    /// - updated
+    /// - last_user_ts
+    pub async fn save(&mut self) -> Result<(), ErrorResponse> {
+        let sql = r#"
+UPDATE email_jobs
+SET scheduled = $1, status = $2, updated = $3, last_user_ts = $4"#;
 
-    pub async fn save(&self) -> Result<(), ErrorResponse> {
-        todo!()
+        self.updated = Utc::now().timestamp();
+        let status = self.status.value();
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
+                    params!(self.scheduled, status, self.updated, self.last_user_ts),
+                )
+                .await?;
+        } else {
+            DB::pg_execute(
+                sql,
+                &[&self.scheduled, &status, &self.updated, &self.last_user_ts],
+            )
+            .await?;
+        }
+
+        Ok(())
     }
 }
 

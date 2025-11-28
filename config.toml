@@ -1030,6 +1030,42 @@ connect_retries = 3
 # overwritten by: SMTP_DANGER_INSECURE
 danger_insecure = true
 
+[email.jobs]
+
+# This section cares about email sending to users, which can
+# be done via the Admin UIs user page. These settings only
+# apply for custom emails sent via UI. All automatic mails like
+# a new user registration will be sent immediately.
+
+# If an open email job has not been updated for more than
+# `orphaned_seconds` seconds, it will be considered as orphaned.
+# In this case, the current cluster leader can pick up this
+# job and start after the last successful email sent.
+#
+# default: 300
+# overwritten by: EMAIL_JOBS_ORPHANED_SECONDS
+orphaned_seconds = 300
+
+# Configures the batch size and delay between batches of
+# emails sent one after another. The default is pretty
+# conservative to not have CPU and memory spikes if there is
+# a huge amount of users, and to not overwhelm the SMTP server
+# or reach rate limits.
+#
+# Batch size for sending emails without delay between them.
+#
+# default: 10
+# overwritten by: EMAIL_JOBS_BATCH_SIZE
+batch_size = 10
+#
+# Delay in ms between email batches. If you set this to 0,
+# Rauthy will send out emails as fast as possible. This
+# should be avoided, especially for high user counts.
+#
+# default: 500
+# overwritten by: EMAIL_JOBS_BATCH_DELAY_MS
+batch_delay_ms = 500
+
 [email.tz_fmt]
 
 # The formatting of timestamps in emails can be configured

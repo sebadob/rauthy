@@ -32,7 +32,7 @@ pub struct EmailJobResponse {
     pub id: i64,
     pub scheduled: Option<i64>,
     pub status: EmailJobStatus,
-    pub updated: bool,
+    pub updated: i64,
     pub last_user_ts: i64,
     pub filter_type: EmailJobFilterType,
     pub filter_value: Option<String>,
