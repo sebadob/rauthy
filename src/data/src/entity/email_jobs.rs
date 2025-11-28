@@ -330,6 +330,8 @@ impl EmailJob {
     }
 
     pub async fn spawn_task(self) {
+        info!("Spawning EmailJob background task {}", self.id);
+
         tokio::task::spawn(async move {
             if let Err(err) = self.task_execute().await {
                 error!("Error during EmailJob Task: {}", err.message);
@@ -359,9 +361,6 @@ impl EmailJob {
         let mut cancel_check_ts = Utc::now().timestamp();
 
         loop {
-            // TODO remove after debugging
-            warn!("EmailJob Task loop: {:?}", self);
-
             {
                 let now = Utc::now().timestamp();
                 if now + 30 > cancel_check_ts {
@@ -390,6 +389,9 @@ impl EmailJob {
             }
 
             for user in users {
+                // TODO remove after debugging
+                warn!("EmailJob Task for User: {:?}", user);
+
                 match &self.filter {
                     EmailJobFilter::None => {}
                     EmailJobFilter::InGroup(s) => {
@@ -429,7 +431,9 @@ impl EmailJob {
                     .await
                     {
                         Ok(_) => {
+                            // TODO change to `trace` level after initial debugging
                             debug!("E-Mail sent successfully to {}", user.email);
+                            self.last_user_ts = user.created_at;
                             break;
                         }
                         Err(err) => {
@@ -455,12 +459,9 @@ impl EmailJob {
                     }
                 }
 
-                self.last_user_ts = user.created_at;
                 // Email sending happens on a dedicated thread and if we would not sleep at least
                 // a short amount of time inside the batch, the channel could get filled up pretty
                 // quickly with slow servers.
-                // TODO maybe add a debugging config var to check the time it takes to send a mail
-                //  or even track it automatically with each send to handle backpressure nicely?
                 tokio::time::sleep(Duration::from_millis(delay_inner_ms)).await;
             }
 
