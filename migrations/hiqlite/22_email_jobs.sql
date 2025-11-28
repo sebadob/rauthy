@@ -16,8 +16,8 @@ CREATE TABLE email_jobs
 CREATE INDEX email_jobs_scheduled_index
     ON email_jobs (scheduled);
 
-CREATE INDEX email_jobs_finished_index
-    ON email_jobs (finished);
+CREATE INDEX email_jobs_status_index
+    ON email_jobs (status);
 
 CREATE INDEX email_jobs_updated_index
     ON email_jobs (updated);
