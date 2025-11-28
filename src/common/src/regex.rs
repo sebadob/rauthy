@@ -15,7 +15,6 @@ pub static RE_ATTR_DESC: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/\s]{0,128}$").unwrap());
 pub static RE_BASE64: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9+/=]{4}$").unwrap());
-// TODO would be more efficient to impl a custom fn validator
 pub static RE_CODE_CHALLENGE_METHOD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(plain|S256)$").unwrap());
 pub static RE_CITY: LazyLock<Regex> =

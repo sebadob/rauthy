@@ -16,6 +16,7 @@ pub mod continuation_token;
 pub mod db_version;
 pub mod devices;
 pub mod dpop_proof;
+mod email_jobs;
 pub mod failed_backchannel_logout;
 pub mod failed_login_counter;
 pub mod failed_scim_tasks;
