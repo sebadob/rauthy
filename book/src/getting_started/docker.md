@@ -21,34 +21,33 @@ accounts. It is an account like any other. The only reason it is a Rauthy admin,
 If you like to test creating new accounts or password reset flows though, you need to have at least a minimal setup that
 is able to send E-Mails. The easiest way (works on localhost only) is the below `docker-compose.yaml`:
 
-```
-networks:
-  rauthy-test:
-    driver: bridge
-    
+```yaml
 services:
+
   mailcrab:
     image: marlonb/mailcrab:latest
     ports:
       - "1080:1080"
-    networks:
-      - rauthy-test
       
   rauthy:
-    container_name: rauthy-test
     image: ghcr.io/sebadob/rauthy:0.32.6
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
       - SMTP_PORT=1025
       - SMTP_DANGER_INSECURE=true
+    volumes:
+      - data:/app/data
     ports:
       - "8443:8443"
     depends_on:
       - mailcrab
-    networks:
-      - rauthy-test
+
+volumes:
+  data:
 ```
+
+_Optional: Create `.env` file with `COMPOSE_PROJECT_NAME=myapp` for custom container/volume name prefix._
 
 Save this into `docker-compose.yaml` and start with:
 
@@ -59,7 +58,7 @@ docker compose up -d
 You then need the logs output from Rauthy to read the random password for the `admin@localhost` account:
 
 ```
-docker logs -f rauthy-test
+docker compose logs -f rauthy
 ```
 
 Any outgoing E-Mail will be caught by `mailcrab`, which can be accessed
