@@ -234,6 +234,18 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
         Ok(())
     }
 
+    pub async fn find(id: i64) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM email_jobs WHERE id = $1";
+
+        let slf = if is_hiqlite() {
+            DB::hql().query_map_one(sql, params!(id)).await?
+        } else {
+            DB::pg_query_one(sql, &[&id]).await?
+        };
+
+        Ok(slf)
+    }
+
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let sql = "SELECT * FROM email_jobs";
 
@@ -340,12 +352,23 @@ impl EmailJob {
             EmailContentType::HTML => (None, self.render_html_content().await?),
         };
 
-        loop {
-            // TODO maybe have an interval periodically checking if the job was cancelled in the
-            //  meantime and abort early?
+        let mut cancel_check_ts = Utc::now().timestamp();
 
+        loop {
             // TODO remove after debugging
             warn!("EmailJob Task loop: {:?}", self);
+
+            {
+                let now = Utc::now().timestamp();
+                if now + 30 > cancel_check_ts {
+                    let slf = Self::find(self.id).await?;
+                    if slf.status == EmailJobStatus::Canceled {
+                        warn!("EmailJob Task has been canceled externally - exiting");
+                        return Ok(());
+                    }
+                    cancel_check_ts = now;
+                }
+            }
 
             if self.status != EmailJobStatus::Open {
                 info!(
