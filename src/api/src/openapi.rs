@@ -70,7 +70,9 @@ use utoipa::{OpenApi, openapi};
         clients::get_forward_auth_oidc,
         clients::get_forward_auth_callback,
 
+        email::get_email_jobs,
         email::post_send_email,
+        email::post_email_job_cancel,
 
         events::post_events,
         events::sse_events,
