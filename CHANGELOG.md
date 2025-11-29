@@ -6,42 +6,46 @@
 
 #### `preferred_username` in Tokens
 
-The `preferred_username` was always added to both `access_token` and `id_token` and it always contained the same value
-as the `email` claim. This it NOT the case anymore! This value is configurable now. To match the OIDC spec, it will
-never be added to the `access_token` anymore, and only exist in the `id_token` if the client requested the `profile`
-scope during login. The value of this claim depends on your configuration. For more details, check the
-"`preferred_username` and `tz`" changes below.
+The `preferred_username` was always added to both `access_token` and `id_token` and it always
+contained the same value as the `email` claim. This it NOT the case anymore! This value is
+configurable now. To match the OIDC spec, it will never be added to the `access_token` anymore, and
+only exist in the `id_token` if the client requested the `profile` scope during login. The value of
+this claim depends on your configuration. For more details, check the "`preferred_username` and
+`tz`" changes below.
 
-Because of these changes, the `email` will not show up as the `username` in the response from the OAuth2 `/introspect`
-endpoint as well.
+Because of these changes, the `email` will not show up as the `username` in the response from the
+OAuth2 `/introspect` endpoint as well.
 
 #### User Request and Response API data
 
-The user values are much more configurable now (see in changes below). At the same time, the `given_name` is now always
-optional in responses from the API. The necessary values during user registration, if you have an open endpoint and
-use direct API requests from somewhere else, have changed as well. They now also depend on your configuration.
+The user values are much more configurable now (see in changes below). At the same time, the
+`given_name` is now always optional in responses from the API. The necessary values during user
+registration, if you have an open endpoint and use direct API requests from somewhere else, have
+changed as well. They now also depend on your configuration.
 
-If you don't change anything in the new `[user_values]` section, you will not experience any breaking changes for direct
-API requests.
+If you don't change anything in the new `[user_values]` section, you will not experience any
+breaking changes for direct API requests.
 
 ### Changes
 
 #### `preferred_username` and `tz`
 
-The custom user values have been expanded. Each user can now provide a `preferred_username` and a `tz` (timezone) via
-the account dashboard. The default timezone will always be UTC, just like it was up until this version. The
-`preferred_username` behavior depends on some new configuration values. In addition to that, the requirements of all
-other already existing values has more config options as well. Everything that is `required` will also be requested
-during the initial registration, if you have an open registration endpoint.
+The custom user values have been expanded. Each user can now provide a `preferred_username` and a
+`tz` (timezone) via the account dashboard. The default timezone will always be UTC, just like it was
+up until this version. The `preferred_username` behavior depends on some new configuration values.
+In addition to that, the requirements of all other already existing values has more config options
+as well. Everything that is `required` will also be requested during the initial registration, if
+you have an open registration endpoint.
 
-Because we have these new values, they will also show up in the `id_token` if the `profile` scope was requested. Until
-now, the `preferred_username` was always existing and simply set to the `email`. However, this has the potential to
-produce issues in downstream clients, if they don't handle the `preferred_username` properly and require some specific
-value (which they really should not ...). If the user has anything else than `UTC` or `Etc/UTC` configured as timezone,
-the `zoneinfo` claim will be added to the `id_token` as well.
+Because we have these new values, they will also show up in the `id_token` if the `profile` scope
+was requested. Until now, the `preferred_username` was always existing and simply set to the
+`email`. However, this has the potential to produce issues in downstream clients, if they don't
+handle the `preferred_username` properly and require some specific value (which they really should
+not ...). If the user has anything else than `UTC` or `Etc/UTC` configured as timezone, the
+`zoneinfo` claim will be added to the `id_token` as well.
 
-CAUTION: If your client does not request the `profile` scope during login, the `preferred_username` will NOT be set to
-the `email` like it was the case up until this version!
+CAUTION: If your client does not request the `profile` scope during login, the `preferred_username`
+will NOT be set to the `email` like it was the case up until this version!
 
 These are the new config options:
 
@@ -143,23 +147,24 @@ email_fallback = true
 
 #### Terms of Service
 
-It is now possible to add Terms of Service (ToS) to Rauthy. These can be found in the Admin UI under `Config` -> `ToS`.
-I am not a lawyer, but I would say the implementation is legally "safe". If you have an open registration, the latest
-existing ToS is being shown to the user and the registration can only be completed after an accept. The other situation
-is an update to the ToS for existing users. To have it legally correct, a user must accept in the middle of a login
-flow.
+It is now possible to add Terms of Service (ToS) to Rauthy. These can be found in the Admin UI under
+`Config` -> `ToS`. I am not a lawyer, but I would say the implementation is legally "safe". If you
+have an open registration, the latest existing ToS is being shown to the user and the registration
+can only be completed after an accept. The other situation is an update to the ToS for existing
+users. To have it legally correct, a user must accept in the middle of a login flow.
 
-After ToS have been added, they are immutable in every regard, which is another important thing for legal reasons. But,
-you can always add a new version, which users then have to accept. It is also possible to enable an optional transition
-time for new ToS. For instance, if you have Rauthy in front of an application that contains user data, you can make it
-possible for users to at least get their data and download it or whatever, even if they don't want to accept the new
-ToS. Only after the transition time is over, it becomes mandatory to accept updated ToS.
+After ToS have been added, they are immutable in every regard, which is another important thing for
+legal reasons. But, you can always add a new version, which users then have to accept. It is also
+possible to enable an optional transition time for new ToS. For instance, if you have Rauthy in
+front of an application that contains user data, you can make it possible for users to at least get
+their data and download it or whatever, even if they don't want to accept the new ToS. Only after
+the transition time is over, it becomes mandatory to accept updated ToS.
 
 It is also possible to check the accept status for each user via the same page on the Admin UI.
 
-While working in this feature, some major refactoring has been made for the code logic of the login flow. The goal was
-to simplify everything and also make it easier to maintain in the future, because the ToS added some addition
-complexity.
+While working in this feature, some major refactoring has been made for the code logic of the login
+flow. The goal was to simplify everything and also make it easier to maintain in the future, because
+the ToS added some addition complexity.
 
 You can do most things via the Admin UI, but there is a single new config value:
 
@@ -190,33 +195,181 @@ accept_timeout = 900
 
 [#1221](https://github.com/sebadob/rauthy/pull/1221)
 
+#### Send custom E-Mail
+
+It is not possible to send custom E-Mails to users and filtered user groups. This is important for
+instance when you are planning a bigger maintenance window, or maybe you have a deadline for s
+specific client / user group when you enforce MFA-secured logins, and so on.
+
+You can now find a simple editor in the Admin UI -> Users overview in the navigation. You can decide
+to send out E-Mail to all users, or filter them by
+
+- in group
+- not in group
+- has role
+- has not role
+
+It is also possible to not send out the mails directly, but schedule them to a specific date and
+time. There is no such thing as embedding images or sending attachments though.
+
+You will have the following new config options:
+
+```toml
+[email.jobs]
+
+# This section cares about email sending to users, which can
+# be done via the Admin UIs user page. These settings only
+# apply for custom emails sent via UI. All automatic mails like
+# a new user registration will be sent immediately.
+
+# If an open email job has not been updated for more than
+# `orphaned_seconds` seconds, it will be considered as orphaned.
+# In this case, the current cluster leader can pick up this
+# job and start after the last successful email sent.
+#
+# default: 300
+# overwritten by: EMAIL_JOBS_ORPHANED_SECONDS
+orphaned_seconds = 300
+
+# The interval in seconds at which the scheduler for orphaned
+# or scheduled jobs should run and check. Smaller values
+# increase precision for scheduled jobs with sacrificing a bit
+# higher resource usage.
+#
+# default: 300
+# overwritten by: EMAIL_JOBS_SCHED_SECONDS
+scheduler_interval_seconds = 300
+
+# Configures the batch size and delay between batches of users
+# for sending custom emails. The batch size configures the
+# batch of users being retrieved from the DB at once. This means,
+# if you have a filter on your email targets, the total amount
+# of emails sent can be lower of course. Users are filtered
+# on the client side to take the load off the DB.
+#
+# The default is pretty conservative to not have CPU and memory
+# spikes if there is a huge amount of users, and to not overwhelm
+# the SMTP server or reach rate limits.
+# Depending on the speed of your SMTP server, the conservative
+# default will handle ~5000 users in 1 hour. Even if it can
+# take a higher load, be careful with sending too quickly to not
+# trigger spam filters. Only increase throughput if needed.
+#
+# Note: If any error comes up during a batch, some users from this
+# very batch may get duplicate emails when it is retried after
+# being marked as orphaned.
+#
+# default: 3
+# overwritten by: EMAIL_JOBS_BATCH_SIZE
+batch_size = 3
+#
+# Delay in ms between email batches. If you set this to 0,
+# Rauthy will send out emails as fast as possible. This
+# should be avoided, especially for high user counts.
+#
+# default: 2000
+# overwritten by: EMAIL_JOBS_BATCH_DELAY_MS
+batch_delay_ms = 2000
+```
+
+[#1247](https://github.com/sebadob/rauthy/pull/1247)
+
+#### Customize Timestamp formatting in E-Mails
+
+You can now customize how the timestamp in E-Mails will be formatted. In combination with the new
+`tz` value for users (see above), timestamps can now be formatted very specific for each user to
+avoid confusion with UTC.
+
+These are the new config options:
+
+```toml
+[email.tz_fmt]
+
+# The formatting of timestamps in emails can be configured
+# depending on the users' language.
+#
+# You can generally use all options from
+# https://docs.rs/chrono/0.4.42/chrono/format/strftime/index.html
+#
+# default: '%d.%m.%Y %T (%Z)'
+# overwritten by: TZ_FMT_DE
+de = '%d.%m.%Y %T (%Z)'
+# default: '%m/%d/%Y %T (%Z)'
+# overwritten by: TZ_FMT_EN
+en = '%m/%d/%Y %T (%Z)'
+# default: '%Y-%m-%d %T (%Z)'
+# overwritten by: TZ_FMT_KO
+ko = '%Y-%m-%d %T (%Z)'
+# default: '%d.%m.%Y %T (%Z)'
+# overwritten by: TZ_FMT_NO
+no = '%d.%m.%Y %T (%Z)'
+# default: '%d-%m-%Y %T (%Z)'
+# overwritten by: TZ_FMT_ZHHANS
+zhhans = '%d-%m-%Y %T (%Z)'
+
+# If a user has no timezone set, you can configure a
+# fallback. This is useful for instance when you run a
+# regional deployment.
+#
+# default: 'UTC'
+# overwritten by: TZ_FALLBACK
+tz_fallback = 'UTC'
+```
+
+[#1246](https://github.com/sebadob/rauthy/pull/1246)
+
+#### Relaxes input validation for Client URIs
+
+The input validation for different URIs when configuring clients via the Admin UI has been relaxed.
+This makes it possible to e.g have an allowed `redirect_uri` or `http://localhost:*` to work with
+dynamic callback ports.
+
+[#1243](https://github.com/sebadob/rauthy/pull/1243)
+
+#### Rauthy Logo as client fallback
+
+If you have a custom logo for the Rauthy client, the same logo will automatically be used as the
+fallback for all other clients that do not have a custom one on their own. This is an addition of
+the `rauthy` client branding as a fallback in these cases from an earlier version.
+
+[#1242](https://github.com/sebadob/rauthy/pull/1242)
+
+### Bugfix
+
+- With a bigger internal code migration and cleanup some time ago, a few house keeping schedulers
+  got lost and were not started anymore.
+  [#1247](https://github.com/sebadob/rauthy/pull/1247)
+
 ## v0.32.6
 
 ### Bugfix
 
-- In `hiqlite` as an external dependency, it was possible to get into a situation where the WAL cleanup of not anymore
-  needed logs / files was not working as expected. This could lead to an endlessly filling up volume. This version
-  bumps `hiqlite` to the latest, fixed version. With the next snapshot creation for existing instances (every 10k Raft
-  logs), all old WAL files will be cleaned up.
+- In `hiqlite` as an external dependency, it was possible to get into a situation where the WAL
+  cleanup of not anymore needed logs / files was not working as expected. This could lead to an
+  endlessly filling up volume. This version bumps `hiqlite` to the latest, fixed version. With the
+  next snapshot creation for existing instances (every 10k Raft logs), all old WAL files will be
+  cleaned up.
   [#1233](https://github.com/sebadob/rauthy/pull/1233)
 
 ## v0.32.5
 
 ### Bugfix
 
-- It was not possible to send out an additional `Password Reset E-Mail` for users via the Admin UI because of a missing
-  value from the frontend. The loading spinner would run forever and the E-Mail would not be sent.
+- It was not possible to send out an additional `Password Reset E-Mail` for users via the Admin UI
+  because of a missing value from the frontend. The loading spinner would run forever and the E-Mail
+  would not be sent.
   [#1213](https://github.com/sebadob/rauthy/pull/1213)
 
 ## v0.32.4
 
 ### Bugfix / Security
 
-Under certain config conditions and client / user setup, and if you were using the Login Group Prefix limitation for a
-client, it was possible that this restriction was ignored during session refreshes, when logging in to a restricted
-client. The additional check was missing during refreshes, like when you still had a valid session on Rauthy, because
-you logged into something else beforehand, and you then wanted to log in to this restricted client within the session
-timeout window.
+Under certain config conditions and client / user setup, and if you were using the Login Group
+Prefix limitation for a client, it was possible that this restriction was ignored during session
+refreshes, when logging in to a restricted client. The additional check was missing during
+refreshes, like when you still had a valid session on Rauthy, because you logged into something else
+beforehand, and you then wanted to log in to this restricted client within the session timeout
+window.
 
 [#1208](https://github.com/sebadob/rauthy/pull/1208)
 
@@ -224,26 +377,29 @@ timeout window.
 
 ### Bugfix
 
-- When deleting a client,there was a last case that could make the deletion fail under specific circumstances.
+- When deleting a client,there was a last case that could make the deletion fail under specific
+  circumstances.
   [#1198](https://github.com/sebadob/rauthy/pull/1198)
 
 ## v0.32.2
 
 ### Security
 
-Some external dependencies have been bumped because of security issues. However, these either only affected development
-servers, or were false-positives, because the fixed versions were being used already, just not set in the lock files.
+Some external dependencies have been bumped because of security issues. However, these either only
+affected development servers, or were false-positives, because the fixed versions were being used
+already, just not set in the lock files.
 
 ### Changes
 
 #### Additional Events
 
-For improved auditing, Rauthy now emits the additional event types `LoginNewLocation` and `TokenIssued`.
+For improved auditing, Rauthy now emits the additional event types `LoginNewLocation` and
+`TokenIssued`.
 
-The `LoginNewLocation` will be emitted when ever a user does a login from a new / unknown location. The `TokenIssued`
-even will be triggered after each JWT token creation. Especially the `TokenIssued`  can become spammy, if you have
-a huge amount of users. Because of this, you can disable the generation of these events. You get some new config
-variables:
+The `LoginNewLocation` will be emitted when ever a user does a login from a new / unknown location.
+The `TokenIssued` even will be triggered after each JWT token creation. Especially the `TokenIssued`
+can become spammy, if you have a huge amount of users. Because of this, you can disable the
+generation of these events. You get some new config variables:
 
 ```toml
 [events]
@@ -290,19 +446,21 @@ Rauthy now has Norwegian Bokmål (nb) for Admin and User UI translations.
 
 ### Security
 
-- Make sure a `page_size` of `0` will not be accepted when doing server-side searches for users or sessions to prevent
-  a possible division by `0`. This did not lead to a `panic` because of a conversion into `f64`, but definitely to an
-  unexpected answer to the client from the calculation for the next page. The max value for it is now also limited and
-  instead of `u16::MAX`, the max is `server.ssp_threshold`.
+- Make sure a `page_size` of `0` will not be accepted when doing server-side searches for users or
+  sessions to prevent a possible division by `0`. This did not lead to a `panic` because of a
+  conversion into `f64`, but definitely to an unexpected answer to the client from the calculation
+  for the next page. The max value for it is now also limited and instead of `u16::MAX`, the max is
+  `server.ssp_threshold`.
   [#1165](https://github.com/sebadob/rauthy/pull/1165)
 - Make the secret comparison for OIDC clients and PAM hosts constant time.
   [#1167](https://github.com/sebadob/rauthy/pull/1167)
-- Fix logic bug in SVG sanitization for user pictures and allow direct SVG upload via the Account Dashboard. Also add
-  a specially hardened CSP to the client and user picture endpoints.
+- Fix logic bug in SVG sanitization for user pictures and allow direct SVG upload via the Account
+  Dashboard. Also add a specially hardened CSP to the client and user picture endpoints.
   [#1168](https://github.com/sebadob/rauthy/pull/1168)
   [#1169](https://github.com/sebadob/rauthy/pull/1169)
-- Remove a reachable `unwrap()` in the Cache GET handler, which was possible if a request is being cancelled before
-  awaiting the answer from the cache. This was fixed in `hiqlite-0.10.1` as a dependency.
+- Remove a reachable `unwrap()` in the Cache GET handler, which was possible if a request is being
+  cancelled before awaiting the answer from the cache. This was fixed in `hiqlite-0.10.1` as a
+  dependency.
   [#1177](https://github.com/sebadob/rauthy/pull/1177)
 
 ### Changes
@@ -315,10 +473,11 @@ Rauthy now has Norwegian Bokmål (nb) for Admin and User UI translations.
 
 #### Self-Signed TLS certificates
 
-As part of the repo cleanup before an upcoming `v1.0.0`, the static DEV TLS certificates were removed from the repo.
-Rauthy can now generate self-signed certificates (with a proper CA for more in-depth testing) on its own. A CA with a
-lifetime of 10 years will be generated and saved (encrypted) into the database. This CA will be used to create
-self-signed TLS certificates for the HTTPS server, and all nodes of an HA cluster will make use of it.
+As part of the repo cleanup before an upcoming `v1.0.0`, the static DEV TLS certificates were
+removed from the repo. Rauthy can now generate self-signed certificates (with a proper CA for more
+in-depth testing) on its own. A CA with a lifetime of 10 years will be generated and saved (
+encrypted) into the database. This CA will be used to create self-signed TLS certificates for the
+HTTPS server, and all nodes of an HA cluster will make use of it.
 
 ```toml
 [tls]
@@ -346,25 +505,29 @@ generate_self_signed = true
 
 #### PAM + NSS Modules
 
-OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes with `forward_auth`
-support. To not need an additional LDAP / AD / something similar for your backend and workstations, Rauthy now has its
-own custom PAM module. It does not just use JWT Tokens for logging in, but you can actually manage all your Linux
-hosts, groups and users in different ways. You have the option to secure local logins to workstations via Yubikey
-(only USB Passkeys supported, no QR-code / software keys), and all SSH logins can be done with ephemeral, auto-expiring
-passwords, that you can generate via your Account dashboard, if an Admin has created a PAM user for you. This means you
-get MFA-secured SSH logins without the need for any modifications or additional software on your local SSH client, and
-you can use any SSH client from any machine securely, even if it's not your own.
+OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes
+with `forward_auth` support. To not need an additional LDAP / AD / something similar for your
+backend and workstations, Rauthy now has its own custom PAM module. It does not just use JWT Tokens
+for logging in, but you can actually manage all your Linux hosts, groups and users in different
+ways. You have the option to secure local logins to workstations via Yubikey (only USB Passkeys
+supported, no QR-code / software keys), and all SSH logins can be done with ephemeral, auto-expiring
+passwords, that you can generate via your Account dashboard, if an Admin has created a PAM user for
+you. This means you get MFA-secured SSH logins without the need for any modifications or additional
+software on your local SSH client, and you can use any SSH client from any machine securely, even if
+it's not your own.
 
-In addition to the PAM module, you there is an NSS module and an NSS proxy that run on each machine. You can
-dynamically log in to any machine an Admin has given you access to. Users and groups are not added to local files, but
-will be resolved via the network.
+In addition to the PAM module, you there is an NSS module and an NSS proxy that run on each machine.
+You can dynamically log in to any machine an Admin has given you access to. Users and groups are not
+added to local files, but will be resolved via the network.
 
-This module is published in a separate repo to avoid licensing issues, since it relies on some GPLv3 dependencies. You
-can take a look at it here: [rauthy-pam-nss](https://github.com/sebadob/rauthy-pam-nss). It has been tested with local
-terminal and window manager logins, as well es via SSH, but it should work basically anywhere where you can authenticate
-via PAM.
+This module is published in a separate repo to avoid licensing issues, since it relies on some GPLv3
+dependencies. You can take a look at it
+here: [rauthy-pam-nss](https://github.com/sebadob/rauthy-pam-nss). It has been tested with local
+terminal and window manager logins, as well es via SSH, but it should work basically anywhere where
+you can authenticate via PAM.
 
-A more detailed documentation was added to [The Book](https://sebadob.github.io/rauthy/work/pam.html) already.
+A more detailed documentation was added
+to [The Book](https://sebadob.github.io/rauthy/work/pam.html) already.
 
 ```toml
 [pam]
@@ -388,8 +551,10 @@ remote_password_len = 24
 remote_password_ttl = 120
 ```
 
-> Even though a lot of testing was done, I am pretty sure there are still some issues or maybe SELinux warnings that
-> need to be fixed, but it should be absolutely usable. Everything is secured, but it may still lack a good UX here and
+> Even though a lot of testing was done, I am pretty sure there are still some issues or maybe
+> SELinux warnings that
+> need to be fixed, but it should be absolutely usable. Everything is secured, but it may still lack
+> a good UX here and
 > there.
 
 [#1101](https://github.com/sebadob/rauthy/pull/1101)
@@ -399,15 +564,16 @@ remote_password_ttl = 120
 
 #### SMTP: XOAUTH2 + Microsoft Graph
 
-Because Microsoft does really stupid things, and they disable SMTP basic auth in september, you can now also connect via
-SMTP XOAUTH2, or if even that is an issue for you, you can use the Microsoft 365 native Graph API. Both options require
-you to provide all necessary values to fetch an OAuth token via `client_credentials` flow and the SMTP connection may be
-re-opened when the token expires.
+Because Microsoft does really stupid things, and they disable SMTP basic auth in september, you can
+now also connect via SMTP XOAUTH2, or if even that is an issue for you, you can use the Microsoft
+365 native Graph API. Both options require you to provide all necessary values to fetch an OAuth
+token via `client_credentials` flow and the SMTP connection may be re-opened when the token expires.
 
-Both of these options are worse than the default. Against all misleading blog posts about it, they provide absolutely no
-advantages in security, and you should not use them, if you can stick with the default. Both options have an overhead
-of fetching, storing and refreshing the token, and re-opening the connections over and over. Especially the Graph API is
-pretty slow and it should be your last resort.
+Both of these options are worse than the default. Against all misleading blog posts about it, they
+provide absolutely no advantages in security, and you should not use them, if you can stick with the
+default. Both options have an overhead of fetching, storing and refreshing the token, and re-opening
+the connections over and over. Especially the Graph API is pretty slow and it should be your last
+resort.
 
 There are some new config options available in the `email` section:
 
@@ -460,37 +626,45 @@ Upstream Auth Providers have 2 new options:
 - auto-onboarding
 - auto-link user
 
-The `auto-onboarding` should be self-explanatory. If a user does not exist yet inside Rauthys DB after a successful
-auth provider login, it will automatically be created. This was the default up until now. However, this allows anyone
-with an account on the upstream provider to log in, and even though such a user would not have any access rights, this
-may be unwanted. To "fix" this, you can now decide to disable auto-onboarding.
+The `auto-onboarding` should be self-explanatory. If a user does not exist yet inside Rauthys DB
+after a successful auth provider login, it will automatically be created. This was the default up
+until now. However, this allows anyone with an account on the upstream provider to log in, and even
+though such a user would not have any access rights, this may be unwanted. To "fix" this, you can
+now decide to disable auto-onboarding.
 
-To still provide a good UX for new users, the additional `auto-link user` option will allow an Admin to create an fresh
-account, that has no password or anything else set. A user can decide to not create a password for Rauthy, but log in
-via the upstream provider directly and if this option is set and the user is not linked to any other provider yet, it
-will auto-link this user to the upstream provider on login.
+To still provide a good UX for new users, the additional `auto-link user` option will allow an Admin
+to create an fresh account, that has no password or anything else set. A user can decide to not
+create a password for Rauthy, but log in via the upstream provider directly and if this option is
+set and the user is not linked to any other provider yet, it will auto-link this user to the
+upstream provider on login.
 
-> **CAUTION:** This option will show you a warning in the Admin UI as well. If you set `auto-link user` and your
-> upstream provider does NOT VALIDATE E-Mail addresses 100% correctly, and allows a user to set an address that belongs
-> to someone else, this option can lead to account takeover! Do NOT use it if you cannot fully trust the validation
+> **CAUTION:** This option will show you a warning in the Admin UI as well. If you set
+`auto-link user` and your
+> upstream provider does NOT VALIDATE E-Mail addresses 100% correctly, and allows a user to set an
+> address that belongs
+> to someone else, this option can lead to account takeover! Do NOT use it if you cannot fully trust
+> the validation
 > process of the upstream provider!
 
 [#1153](https://github.com/sebadob/rauthy/pull/1153)
 
 #### EncKeyID Validation
 
-The validation regex for EncKeyIDs has been relaxed a tiny bit. It was changed from `^[a-zA-Z0-9]{2,20}$` to
+The validation regex for EncKeyIDs has been relaxed a tiny bit. It was changed from
+`^[a-zA-Z0-9]{2,20}$` to
 `^[a-zA-Z0-9:_-]{2,20}$`.
 
 ### Bugfix
 
-- The default value for `rp_origin` during `LOCAL_TEST=true` was set to a value that would not work out of the box.
+- The default value for `rp_origin` during `LOCAL_TEST=true` was set to a value that would not work
+  out of the box.
   [#1138](https://github.com/sebadob/rauthy/pull/1138)
-- Overwriting ENV vars would not be parsed, if the underlying section did not exist at all in the config file. This was
-  not an issue on its own, because there was nothing to "overwrite" in the first place, but probably unexpected
-  behavior.
+- Overwriting ENV vars would not be parsed, if the underlying section did not exist at all in the
+  config file. This was not an issue on its own, because there was nothing to "overwrite" in the
+  first place, but probably unexpected behavior.
   [#1147](https://github.com/sebadob/rauthy/pull/1147)
-- If a given `redirect_uri` for a client already contained query params, the final URI was not built correctly.
+- If a given `redirect_uri` for a client already contained query params, the final URI was not built
+  correctly.
   [#1148](https://github.com/sebadob/rauthy/pull/1148)
 - `session.validate_ip` was not respected during `/forward_auth`.
   [#1149](https://github.com/sebadob/rauthy/pull/1149)
@@ -499,39 +673,42 @@ The validation regex for EncKeyIDs has been relaxed a tiny bit. It was changed f
 
 ### Bugfix
 
-- The key creation of RSA keys for the RS256 signing algorithm had a typo and generated 2028 bit keys instead of 2048.
-  This tiny difference is not really a huge issue in terms of security, but it made some clients fail to validate the
-  tokens, because they expected 2048.
-  That bug came in with the big JWT rework in v0.30 and the Custom JWT implementation. If you currently have issues with
-  some client that uses RS256, you will get a new pair of keys via: `Admin UI -> Config -> JWKS -> Rotate Keys`
+- The key creation of RSA keys for the RS256 signing algorithm had a typo and generated 2028 bit
+  keys instead of 2048. This tiny difference is not really a huge issue in terms of security, but it
+  made some clients fail to validate the tokens, because they expected 2048. That bug came in with
+  the big JWT rework in v0.30 and the Custom JWT implementation. If you currently have issues with
+  some client that uses RS256, you will get a new pair of keys via:
+  `Admin UI -> Config -> JWKS -> Rotate Keys`
   [#1124](https://github.com/sebadob/rauthy/pull/1124)
-- The automatic Session Refresh action on the Login UI stopped working under some conditions. By default, as long as
-  you have a valid session (and other config + request variables are met), you should not be prompted for another
-  login and the UI should refresh you session automatically and log you in. The effect trigger logic in the UI was
-  reworked slightly, and it fixed the issue in my test setup. If someone still has problems, please open an issue about
-  it.
+- The automatic Session Refresh action on the Login UI stopped working under some conditions. By
+  default, as long as you have a valid session (and other config + request variables are met), you
+  should not be prompted for another login and the UI should refresh you session automatically and
+  log you in. The effect trigger logic in the UI was reworked slightly, and it fixed the issue in my
+  test setup. If someone still has problems, please open an issue about it.
   [#1128](https://github.com/sebadob/rauthy/pull/1128)
 
 ## v0.31.2
 
 ### Bugfix
 
-- It was possible that a "Login from new location" notification was sent out for Passkey-only accounts, if someone knew
-  all the right values incl the username, but was not able to get past the MFA / Passkey challenge. This would have been
-  a false-positive.
+- It was possible that a "Login from new location" notification was sent out for Passkey-only
+  accounts, if someone knew all the right values incl the username, but was not able to get past the
+  MFA / Passkey challenge. This would have been a false-positive.
   [#1105](https://github.com/sebadob/rauthy/pull/1105)
-- After Rauthy received an accessibility review from [HAN](https://www.han.nl/) as part of the NGI funding, it was
-  declared as "fairly accessible" already, but there were still some things that have been improved after the review.
+- After Rauthy received an accessibility review from [HAN](https://www.han.nl/) as part of the NGI
+  funding, it was declared as "fairly accessible" already, but there were still some things that
+  have been improved after the review.
   [#1099](https://github.com/sebadob/rauthy/issues/1099)
-- When using the `MIGRATE_DB_FROM` feature, some of the latest changes and features were missing in migration queries.
+- When using the `MIGRATE_DB_FROM` feature, some of the latest changes and features were missing in
+  migration queries.
   [#1116](https://github.com/sebadob/rauthy/issues/1116)
 
 ## v0.31.1
 
 ### Bugfix
 
-- The Login Location check during the `code` flow has been done on `POST /token` instead of `/authorize` and it
-  therefore caught the OIDC client app instead of the user browser.
+- The Login Location check during the `code` flow has been done on `POST /token` instead of
+  `/authorize` and it therefore caught the OIDC client app instead of the user browser.
   [#1097](https://github.com/sebadob/rauthy/pull/1097)
 
 ## v0.31.0
@@ -540,31 +717,34 @@ The validation regex for EncKeyIDs has been relaxed a tiny bit. It was changed f
 
 #### Empty `User-Agent`s rejected
 
-While implementing Geoblocking (see below), a check for the `User-Agent` has been added. If this is empty, requests will
-be rejected. If you are doing something via API-Keys, make sure your clients send a proper `User-Agent` header. This
-rejection does not provide any security at all, it just catches a few bots out of the box.
+While implementing Geoblocking (see below), a check for the `User-Agent` has been added. If this is
+empty, requests will be rejected. If you are doing something via API-Keys, make sure your clients
+send a proper `User-Agent` header. This rejection does not provide any security at all, it just
+catches a few bots out of the box.
 
 ### Changes
 
 #### Remembered Login Locations
 
-Rauthy will now remember Login locations / IPs for each user and send out an E-Mail notification, if a login from a new
-IP / location was done. This E-Mail will also contain a link to revoke all Sessions and Refresh tokens for this user,
-which will also trigger a backchannel logout to all configured clients, in case an invalid login was done for a user.
-Users should be able to handle these situations without the need of an Admin in this case.
+Rauthy will now remember Login locations / IPs for each user and send out an E-Mail notification, if
+a login from a new IP / location was done. This E-Mail will also contain a link to revoke all
+Sessions and Refresh tokens for this user, which will also trigger a backchannel logout to all
+configured clients, in case an invalid login was done for a user. Users should be able to handle
+these situations without the need of an Admin in this case.
 
 [#1072](https://github.com/sebadob/rauthy/pull/1072)
 
 #### IP-Geoblocking
 
-Rauthy can now block requests depending on the origin country of the peer IP address. You can either provide a custom
-header value, which is inserted for instance by a WAF or CDN, like in case of Cloudflare the `CF-IPCountry` header,
-or you can opt-in and provide a Maxmind AccountID + License for either the free GeoLite databases, or a paid version of
-it. These GeoLite databases are published under the Creative Commons License, you only need to create a free account
-to generate a License. Rauthy will download the configured DB and update it regularly.
+Rauthy can now block requests depending on the origin country of the peer IP address. You can either
+provide a custom header value, which is inserted for instance by a WAF or CDN, like in case of
+Cloudflare the `CF-IPCountry` header, or you can opt-in and provide a Maxmind AccountID + License
+for either the free GeoLite databases, or a paid version of it. These GeoLite databases are
+published under the Creative Commons License, you only need to create a free account to generate a
+License. Rauthy will download the configured DB and update it regularly.
 
-This IpGeo information will also be used for the *Remembered Login Locations* feature above. The country and depending
-on the chosen DB type also the city will be added to the E-Mail notice.
+This IpGeo information will also be used for the *Remembered Login Locations* feature above. The
+country and depending on the chosen DB type also the city will be added to the E-Mail notice.
 
 ```toml
 [geolocation]
@@ -668,86 +848,98 @@ maxmind_db_type = 'GeoLite2-Country'
 maxmind_update_cron = "0 0 5 * * * *"
 ```
 
-> While IP Geo data is very helpful and can boost your security, it is fully optional. Everything will work if you don't
-> provide any of the options. You just won't have Geo data in the "Login from new location" notifications and other
-> places, and you will of course not be able to block requests depending on the origin country.
+> While IP Geo data is very helpful and can boost your security, it is fully optional. Everything
+> will work if you don't provide any of the options. You just won't have Geo data in the "Login from
+> new location" notifications and other places, and you will of course not be able to block requests
+> depending on the origin country.
 
 [#1077](https://github.com/sebadob/rauthy/pull/1077)
 
 #### TLS Hot-Reload
 
-Rauthy can now hot-reload TLS Key + Certificates. If started with `server.scheme` set to any `https` value and TLS
-certificates are used, Rauthy will watch for file changes on `tls.cert_path` + `tls.key_path` and will do a hot-reload
-of the TLS configuration if anything changes. This is a real hot-reload, meaning there is no restarting the server, and
-it does it without any interruption in service.
+Rauthy can now hot-reload TLS Key + Certificates. If started with `server.scheme` set to any `https`
+value and TLS certificates are used, Rauthy will watch for file changes on `tls.cert_path` +
+`tls.key_path` and will do a hot-reload of the TLS configuration if anything changes. This is a real
+hot-reload, meaning there is no restarting the server, and it does it without any interruption in
+service.
 
 [#1056](https://github.com/sebadob/rauthy/pull/1056)
 
 #### OIDC-backed Forward-Auth
 
-In addition to the already existing, very simple `/forward_auth` endpoint, which has limited compatibility, Rauthy now
-provides a very much advanced version of it. This new version is not a replacement of the old approach, but an addition.
+In addition to the already existing, very simple `/forward_auth` endpoint, which has limited
+compatibility, Rauthy now provides a very much advanced version of it. This new version is not a
+replacement of the old approach, but an addition.
 
-The already existing endpoint is very simple: It expects a valid JWT token to be present in the `Authorization` header,
-parses and validates it, and if it's valid, it returns an HTTP 200 and a 401 otherwise. Depending on
-`auth_headers.enable`, it will also append the Forward-Auth headers to the request, which the reverse proxy could inject
-into the request sent to the downstream client.
+The already existing endpoint is very simple: It expects a valid JWT token to be present in the
+`Authorization` header, parses and validates it, and if it's valid, it returns an HTTP 200 and a 401
+otherwise. Depending on `auth_headers.enable`, it will also append the Forward-Auth headers to the
+request, which the reverse proxy could inject into the request sent to the downstream client.
 
-The new version is much improved. It does not work with stateless JWT tokens, but it binds to the Rauthy session. This
-makes it possible to revoke access as any time. It can also do proper CSRF checks, validates the client and user
-configuration, and it can make everything work without any modification to the client. On auth success, it behaves in
-the same way as the already existing endpoint. On invalid though, it will redirect to Rauthys Login, which then again
-will do another redirect to a Callback UI and therefore trigger a complete OIDC flow. On the callback page, Rauthy can
-now set fully-secured session cookies and do others things like check the `Sec-Fetch-Site` header. This is the most
-secure it can get, without modifications to the client. The callback page is exposed by Rauthy itself, and can be
-"injected" into the client app at your reverse proxy level, which makes all of this as secure as possible.
+The new version is much improved. It does not work with stateless JWT tokens, but it binds to the
+Rauthy session. This makes it possible to revoke access as any time. It can also do proper CSRF
+checks, validates the client and user configuration, and it can make everything work without any
+modification to the client. On auth success, it behaves in the same way as the already existing
+endpoint. On invalid though, it will redirect to Rauthys Login, which then again will do another
+redirect to a Callback UI and therefore trigger a complete OIDC flow. On the callback page, Rauthy
+can now set fully-secured session cookies and do others things like check the `Sec-Fetch-Site`
+header. This is the most secure it can get, without modifications to the client. The callback page
+is exposed by Rauthy itself, and can be "injected" into the client app at your reverse proxy level,
+which makes all of this as secure as possible.
 
-You can do this new Forward-Auth for any client, as long as it's configured properly. Rauthy is quite a bit more strict
-about the correct client config upfront. This makes it possible to have a few additional safety hooks which will help
-you prevent unwanted, invalid reverse proxy config, which can happen very quickly for complex setups.
+You can do this new Forward-Auth for any client, as long as it's configured properly. Rauthy is
+quite a bit more strict about the correct client config upfront. This makes it possible to have a
+few additional safety hooks which will help you prevent unwanted, invalid reverse proxy config,
+which can happen very quickly for complex setups.
 
-> CAUTION: Even though this is probably the most secure you can get with Forward-Auth, it should still only be the last
-> resort, and you should always prefer a native OIDC client implementation, if it exists! If you screw up the reverse
-> proxy config, or if an attacker can find a way around your reverse proxy and skip it, all your security will be gone
-> immediately.
+> CAUTION: Even though this is probably the most secure you can get with Forward-Auth, it should
+> still only be the last resort, and you should always prefer a native OIDC client implementation,
+> if it exists! If you screw up the reverse proxy config, or if an attacker can find a way around
+> your reverse proxy and skip it, all your security will be gone immediately.
 >
-> The Rauthy book will be updated in the upcoming days and provide a bit more documentation about the setup.
+> The Rauthy book will be updated in the upcoming days and provide a bit more documentation about
+> the setup.
 
-To help during Forward-Auth setup and making sure you got it right in your environment, the `/auth/v1/whoami` endpoint
-has received an update as well. You can now set `access.whoami_headers = true` or use `WHOAMI_HEADERS`. This will make
-the `/whoami` endpoint not only return the extracted "real IP", but it will also return all request headers it received.
-This will help you make sure your setup is working correctly, if you use `auth_headers`. By default, this is set to
-`false`. Depending on your internal network setup, this could expose sensitive headers, if you inject any. It will not
-return values for `Cookie` and Rauthys own CSRF token headers, but all others return will show their raw values.
+To help during Forward-Auth setup and making sure you got it right in your environment, the
+`/auth/v1/whoami` endpoint has received an update as well. You can now set
+`access.whoami_headers = true` or use `WHOAMI_HEADERS`. This will make the `/whoami` endpoint not
+only return the extracted "real IP", but it will also return all request headers it received.
+This will help you make sure your setup is working correctly, if you use `auth_headers`. By default,
+this is set to `false`. Depending on your internal network setup, this could expose sensitive
+headers, if you inject any. It will not return values for `Cookie` and Rauthys own CSRF token
+headers, but all others return will show their raw values.
 
 [#1053](https://github.com/sebadob/rauthy/pull/1053)
 
 #### Backups via Admin UI
 
-If Rauthy is running with Hiqlite as the database, you can now view and download existing backups via the
-`Admin UI -> Config -> Backups` section. It shows local backup files and the ones on S3 storage, if it's configured.
-You also get the option to trigger manual backups with a new button, which gets rid of the issue of updating the cron
-task to "a few minutes in the future" to trigger a backup on demand.
+If Rauthy is running with Hiqlite as the database, you can now view and download existing backups
+via the `Admin UI -> Config -> Backups` section. It shows local backup files and the ones on S3
+storage, if it's configured. You also get the option to trigger manual backups with a new button,
+which gets rid of the issue of updating the cron task to "a few minutes in the future" to trigger a
+backup on demand.
 
-> If you run a HA cluster and want to download local backups via the Admin UI, you will most probably run into errors
-> when downloading older ones, that have been created before this version, if running behind a load balancer. The
-> timestamp part of the filename was dynamically set by each node independently before and only new backups from this
-> version on will have the exact same filename on all nodes.
+> If you run a HA cluster and want to download local backups via the Admin UI, you will most
+> probably run into errors when downloading older ones, that have been created before this version,
+> if running behind a load balancer. The timestamp part of the filename was dynamically set by each
+> node independently before and only new backups from this version on will have the exact same
+> filename on all nodes.
 
 [#1079](https://github.com/sebadob/rauthy/pull/1079)
 
 #### Re-Authenticate for MFA keys modifications
 
-To be able to modify MFA / Passkeys in any way, a user now needs to re-authenticate. This re-authentication will open
-a 2-minute window that allows modifications for MFA keys, like adding new ones and deleting existing ones.
+To be able to modify MFA / Passkeys in any way, a user now needs to re-authenticate. This
+re-authentication will open a 2-minute window that allows modifications for MFA keys, like adding
+new ones and deleting existing ones.
 
 [#1068](https://github.com/sebadob/rauthy/pull/1068)
 
 #### Load config from Vault
 
-The ability to load the config file from a Vault source has been added. To do this, you need to provide the ENV var
-`USE_VAULT_CONFIG=true` and a `vault.toml` file, that contains the necessary information on how to connect and/or
-override the settings with ENV vars.
+The ability to load the config file from a Vault source has been added. To do this, you need to
+provide the ENV var `USE_VAULT_CONFIG=true` and a `vault.toml` file, that contains the necessary
+information on how to connect and/or override the settings with ENV vars.
 
 ```toml
 [vault]
@@ -833,25 +1025,27 @@ enable = false
 
 #### Additional Event Types
 
-Some new Rauthy Event types have been added. These are now configurable in their notification level as all the other
-ones. The new Events are the following:
+Some new Rauthy Event types have been added. These are now configurable in their notification level
+as all the other ones. The new Events are the following:
 
-- An `Event::ForceLogout` will be created during `DELETE /sessions/{user_id}`. This will happen when and Admin clicks
-  "Force Logout" for a user in the Admin UI.
-- An `Event::UserLoginRevoke` will be created after a user clicked the login revoke link in the (new) notification
-  E-Mail that is sent out after a login from an unknown location.
-- An `Event::SispiciousApiScan` will be created when Rauthy detects a suspicious, very much likely malicious API scan.
+- An `Event::ForceLogout` will be created during `DELETE /sessions/{user_id}`. This will happen when
+  and Admin clicks   "Force Logout" for a user in the Admin UI.
+- An `Event::UserLoginRevoke` will be created after a user clicked the login revoke link in the (
+  new) notification E-Mail that is sent out after a login from an unknown location.
+- An `Event::SispiciousApiScan` will be created when Rauthy detects a suspicious, very much likely
+  malicious API scan.
 
 [#1085](https://github.com/sebadob/rauthy/pull/1085)
 
 #### Anti-Lockout hooks in Admin UI
 
-The Admin UI already had anti-lockout hooks for some important things like the `rauthy` client or the `rauthy_admin`
-role. This release adds some of these hooks to user edit and delete pages, if the currently looked at user matches the
-currently logged-in admin from the session. These hooks prevent, disabling, expiring, and deleting this user, and also
-removing the `rauthy_admin` role from itself. This means a Rauthy admin cannot degrade itself to a non-admin or delete
-itself by accident. Only other admins can do this. This makes sure, that at least always at least one `rauthy_admin`
-exists and you can never fully lock yourself out of Rauthy.
+The Admin UI already had anti-lockout hooks for some important things like the `rauthy` client or
+the `rauthy_admin` role. This release adds some of these hooks to user edit and delete pages, if the
+currently looked at user matches the currently logged-in admin from the session. These hooks
+prevent, disabling, expiring, and deleting this user, and also removing the `rauthy_admin` role from
+itself. This means a Rauthy admin cannot degrade itself to a non-admin or delete itself by accident.
+Only other admins can do this. This makes sure, that at least always at least one `rauthy_admin`
+exists, and you can never fully lock yourself out of Rauthy.
 
 [#1066](https://github.com/sebadob/rauthy/pull/1066)
 
@@ -863,17 +1057,18 @@ You can now also blacklist IPv6 address via the Admin UI -> Blacklist.
 
 #### Default difficulty for PoWs reduced
 
-Since PoWs have been added to the Login UI, and a user needs to calculate 2 PoWs if it's a password-account, the default
-difficulty of `20` was a bit too high for not that powerful devices. Therefore, the default value has been reduced from
-`20` to `19` to compensate for that.
+Since PoWs have been added to the Login UI, and a user needs to calculate 2 PoWs if it's a
+password-account, the default difficulty of `20` was a bit too high for not that powerful devices.
+Therefore, the default value has been reduced from `20` to `19` to compensate for that.
 
 [#1088](https://github.com/sebadob/rauthy/pull/1088)
 
 ### Bugfix
 
-- The `cluster.backup_keep_days_local` setting was not always read properly and might not have been working like
-  expected. This lead to local backup cleanup not working properly. Additionally, the default value in docs was wrong.
-  It's not `3` days by default, but `30`. This was fixed in `hiqlite` directly and the version has been bumped.
+- The `cluster.backup_keep_days_local` setting was not always read properly and might not have been
+  working like expected. This lead to local backup cleanup not working properly. Additionally, the
+  default value in docs was wrong. It's not `3` days by default, but `30`. This was fixed in
+  `hiqlite` directly and the version has been bumped.
 
 ## v0.30.2
 
@@ -883,13 +1078,14 @@ difficulty of `20` was a bit too high for not that powerful devices. Therefore, 
 
 Internally, `hiqlite` was updated to the latest stable version. This brings 2 advantages:
 
-1. `cluster.wal_ignore_lock` has been removed completely. It is not necessary anymore, because `hiqlite` now can do
-   proper cross-platform file locking and therefore can resolve all possible situations on its own. It can detect, if
-   another `hiqlite` process is currently using an existing WAL directory and also do a proper cleanup / deep integrity
-   check after a restart as well.
-2. You have 2 additional config variables to configure the listen address for Hiqlites API and Raft server. This solves
-   an issue in IPv6-only environments, because it used a hardcoded `0.0.0.0` before. You can now also restrict to a
-   specific interface as well, which is beneficial for single instance deployments, or when you have lots of NICs.
+1. `cluster.wal_ignore_lock` has been removed completely. It is not necessary anymore, because
+   `hiqlite` now can do proper cross-platform file locking and therefore can resolve all possible
+   situations on its own. It can detect, if another `hiqlite` process is currently using an existing
+   WAL directory and also do a proper cleanup / deep integrity check after a restart as well.
+2. You have 2 additional config variables to configure the listen address for Hiqlites API and Raft
+   server. This solves an issue in IPv6-only environments, because it used a hardcoded `0.0.0.0`
+   before. You can now also restrict to a specific interface as well, which is beneficial for single
+   instance deployments, or when you have lots of NICs.
 
 ```toml
 [cluster]
@@ -908,9 +1104,9 @@ listen_addr_raft = "0.0.0.0"
 
 #### DB shutdown on unavailable SMTP
 
-If the retries to connect to a configured SMTP server were exceeded, Rauthy panics, which is on purpose. However, the
-behavior has been updated slightly and it will now trigger a graceful DB shutdown before it executes the panic, which
-is just cleaner overall.
+If the retries to connect to a configured SMTP server were exceeded, Rauthy panics, which is on
+purpose. However, the behavior has been updated slightly, and it will now trigger a graceful DB
+shutdown before it executes the panic, which is just cleaner overall.
 
 [#1045](https://github.com/sebadob/rauthy/pull/1045)
 
@@ -929,18 +1125,19 @@ is just cleaner overall.
 
 ### Bugfix
 
-- Fixed the encoding for `EdDSA` public keys. They have changed to b64 encoded DER format during the big JWt rework,
-  when it should have been just raw bytes.
+- Fixed the encoding for `EdDSA` public keys. They have changed to b64 encoded DER format during the
+  big JWt rework, when it should have been just raw bytes.
   [#1018](https://github.com/sebadob/rauthy/pull/1018)
-- Added a short 3-second pre-shutdown delay to smooth out rolling releases inside K8s and also have a bit more headroom
-  for bigger in-memory cache's replication
+- Added a short 3-second pre-shutdown delay to smooth out rolling releases inside K8s and also have
+  a bit more headroom for bigger in-memory cache's replication
   [#1019](https://github.com/sebadob/rauthy/pull/1019)
 - Small CSS fix to match the input width for group prefix login restriction for clients
   [#1020](https://github.com/sebadob/rauthy/pull/1020)
-- In HA deployments, when the Leader was killed with an appended but not yet fully commited WAL log, there was a bug
-  that made it possible that the log truncate would fail after restart and that the start-, instead of the end-offset
-  would be adjusted. This has been fixed in `hiqlite-wal` in combination with a bump in patch version for `openraft`.
-  If you run a **HA cluster, you should upgrade immediately**!.
+- In HA deployments, when the Leader was killed with an appended but not yet fully commited WAL log,
+  there was a bug that made it possible that the log truncate would fail after restart and that the
+  start-, instead of the end-offset would be adjusted. This has been fixed in `hiqlite-wal` in
+  combination with a bump in patch version for `openraft`. If you run a **HA cluster, you should
+  upgrade immediately**!.
 
 ## v0.30.0
 
@@ -950,43 +1147,47 @@ is just cleaner overall.
 
 You will need to migrate your whole configuration with this release.
 
-Over the last months, Rauthy got so many new features and config options, that the old approach got a bit messy and
-hard to follow. Variable names needed to become longer over time to avoid overlap, and so on. Also, because of the way
-the application grew over the last years, configs, single static variables and some snippets existed in many places.
+Over the last months, Rauthy got so many new features and config options, that the old approach got
+a bit messy and hard to follow. Variable names needed to become longer over time to avoid overlap,
+and so on. Also, because of the way the application grew over the last years, configs, single static
+variables and some snippets existed in many places.
 
 This needed to change.
 
-You can still have a config file and overwrite (most) values via ENV vars, if you like, but at least the bare minimum
-must exist as a config file now. Even though ENV var are mostly now a security issue, they are by default not protected
-depending on the situation. The whole config file has been converted into a `TOML` file. This makes it possible to have
-different dedicated sections, shorter variable names again, and it's easier to organize and comes with an already
-existing, basic type-system and we can have arrays and typed primitives out of the box now.
+You can still have a config file and overwrite (most) values via ENV vars, if you like, but at least
+the bare minimum must exist as a config file now. Even though ENV var are mostly now a security
+issue, they are by default not protected depending on the situation. The whole config file has been
+converted into a `TOML` file. This makes it possible to have different dedicated sections, shorter
+variable names again, and it's easier to organize and comes with an already existing, basic
+type-system and we can have arrays and typed primitives out of the box now.
 
-The file has been renamed from `rauthy.cfg` to `config.toml`, and it must follow the `toml` syntax. I created a lookup
-table so everyone can easily convert their existing config with not too much work. The new config also is more verbose
-in terms of documentation and for each value (when it exists), the overwriting ENV var is mentioned directly above.
+The file has been renamed from `rauthy.cfg` to `config.toml`, and it must follow the `toml` syntax.
+I created a lookup table so everyone can easily convert their existing config with not too much
+work. The new config also is more verbose in terms of documentation and for each value (when it
+exists), the overwriting ENV var is mentioned directly above.
 
-In some cases, you cannot overwrite with an ENV var, and in others, you can only do something with an ENV var. The
-situations when you can only do something via ENV are the ones, that will require you do remove the var immediately
-afterward anyway, like e.g. triggering a `DB_MIGRATE_FROM`, or do a new `HQL_WAL_IGNORE_LOCK`, and so on. But I guess
-it will become clear when you take a look at the lookup table. I also tried to make it more clear, which values are
-absolutely mandatory to set.
+In some cases, you cannot overwrite with an ENV var, and in others, you can only do something with
+an ENV var. The situations when you can only do something via ENV are the ones, that will require
+you do remove the var immediately afterward anyway, like e.g. triggering a `DB_MIGRATE_FROM`, or do
+a new `HQL_WAL_IGNORE_LOCK`, and so on. But I guess it will become clear when you take a look at the
+lookup table. I also tried to make it more clear, which values are absolutely mandatory to set.
 
-On the long run, this change, even though it was a huge PR with almost 12k lines changed, will make everything easier
-to maintain and the code a lot more approachable for newcomers. A nice side effect is, that I also optimized it a bit
-so that it requires a little bit less memory.
+On the long run, this change, even though it was a huge PR with almost 12k lines changed, will make
+everything easier to maintain and the code a lot more approachable for newcomers. A nice side effect
+is, that I also optimized it a bit so that it requires a little bit less memory.
 
-> If anyone has issues with the config with this update, please open an issue and let me know. I did a lot of testing
-> and I think, everything is fine, but that many changed lines make it hard to keep track of everything, even though
-> this was necessary.
+> If anyone has issues with the config with this update, please open an issue and let me know. I did
+> a lot of testing and I think, everything is fine, but that many changed lines make it hard to keep
+> track of everything, even though this was necessary.
 
-> This is a tiny one, but the value for `logging.log_level_access` has been changed to all lowercase to match the other
-> log level values.
+> This is a tiny one, but the value for `logging.log_level_access` has been changed to all lowercase
+> to match the other log level values.
 
 ##### Lookup Table ENV var -> TOML value
 
-Here you have the lookup table. When there is a `-` somewhere, it means that either no TOML or ENV var exists in that
-situation. The `TOML path` colum contains the parent table and the value name itself. For instance, when it says
+Here you have the lookup table. When there is a `-` somewhere, it means that either no TOML or ENV
+var exists in that situation. The `TOML path` colum contains the parent table and the value name
+itself. For instance, when it says
 
 ```
 access.userinfo_strict
@@ -1001,7 +1202,8 @@ userinfo_strict = true
 sec_header_block = true
 ```
 
-For a complete documentation for each value, please take a look at the reference config from the book.
+For a complete documentation for each value, please take a look at the reference config from the
+book.
 
 | ENV VAR                                    | TOML path                                   | type       | required |
 |--------------------------------------------|---------------------------------------------|------------|----------|
@@ -1245,47 +1447,51 @@ For a complete documentation for each value, please take a look at the reference
 2. When `s3_url` is given, the other `s3_*` values are expected as well
 3. Required when `database.hiqlite = false`
 4. Required when `MIGRATE_DB_FROM=postgres`
-5. Not strictly required but should probably almost be set when `dynamic_clients.enable = true` to not have an open dyn
-   client registration.
-6. When not set, E-Mail cannot be sent and things like user registration and self-service password requests will not
-   work. You can operate Rauthy without this setting, but then an Admin needs to perform all these actions.
+5. Not strictly required but should probably almost be set when `dynamic_clients.enable = true` to
+   not have an open dyn client registration.
+6. When not set, E-Mail cannot be sent and things like user registration and self-service password
+   requests will not work. You can operate Rauthy without this setting, but then an Admin needs to
+   perform all these actions.
 7. Required when running behind a reverse proxy
-8. The `[templates]` block can be given multiple times for different languages / templates, but if so, `lang` + `typ`
-   are required inside.
+8. The `[templates]` block can be given multiple times for different languages / templates, but if
+   so, `lang` + `typ`    are required inside.
 
-> NOTE: All `\[String\]` types are Arrays inside the TOML, but a single String value for an ENV VAR, which separates the
-> values by `\n`.
+> NOTE: All `\[String\]` types are Arrays inside the TOML, but a single String value for an ENV VAR,
+> which separates the values by `\n`.
 
 > All `Level` values can be one of: 'info', 'notice', 'warning', 'critical'
 
-> Quite a few of these values, even when they are a `String` type, expect a certain format. Take a look at the reference
-> config for more information on each one.
+> Quite a few of these values, even when they are a `String` type, expect a certain format. Take a
+> look at the reference config for more information on each one.
 
 [#991](https://github.com/sebadob/rauthy/pull/991)
 
 #### SwaggerUI Location Change
 
-The way the SwaggerUI used to work was annoying since the very beginning. Even though it's an open source project, you
-usually don't want to have your whole API documentation publicly available. The issue was, that it was hard to work
-with the SwaggerUI because of some internals that made it impossible to have much manual control. For this reason, up
-until `v0.29`, you had the option to expose it internally only in addition to metrics on the internal HTTP server. This
-was very annoying as well, just in another way.
+The way the SwaggerUI used to work was annoying since the very beginning. Even though it's an open
+source project, you usually don't want to have your whole API documentation publicly available. The
+issue was, that it was hard to work with the SwaggerUI because of some internals that made it
+impossible to have much manual control. For this reason, up until `v0.29`, you had the option to
+expose it internally only in addition to metrics on the internal HTTP server. This was very annoying
+as well, just in another way.
 
-After memory profiling and optimizations lately, I found out that the SwaggerUI internal config has additional issues.
-It does a deep clone of the complete dataset instead of using pointers for each additional HTTP worker, which led to
-very high memory consumption by default on machines with many cores.
+After memory profiling and optimizations lately, I found out that the SwaggerUI internal config has
+additional issues. It does a deep clone of the complete dataset instead of using pointers for each
+additional HTTP worker, which led to very high memory consumption by default on machines with many
+cores.
 
-I did a complete rework of the way how it's being served and luckily, in the newer versions you can get manual handles
-to the internal data, which finally made it possible to move it out of its location. Instead of being available under
-`/docs/v1`, it's now under `/auth/v1/docs`, which makes a lot more sense in the first place. Because it's served
-manually, a single instance will be kept in static memory instead of cloning the data into each worker. This improves
-memory usage a lot already. The other improvement this made possible, is that Rauthy can finally check the session and
+I did a complete rework of the way how it's being served and luckily, in the newer versions you can
+get manual handles to the internal data, which finally made it possible to move it out of its
+location. Instead of being available under `/docs/v1`, it's now under `/auth/v1/docs`, which makes a
+lot more sense in the first place. Because it's served manually, a single instance will be kept in
+static memory instead of cloning the data into each worker. This improves memory usage a lot
+already. The other improvement this made possible, is that Rauthy can finally check the session and
 (optionally) only serve it when a valid `rauthy_admin` session was found.
 
-This change made it possible to always have it on the same port while still being able to serve all the different
-use cases from before. You can enable or disable it, and you can decide whether it should be public or not. No weird
-"internal only" stuff anymore. The config variables are still in the server section and the non-public version is now
-fully independent of the metrics server.
+This change made it possible to always have it on the same port while still being able to serve all
+the different use cases from before. You can enable or disable it, and you can decide whether it
+should be public or not. No weird "internal only" stuff anymore. The config variables are still in
+the server section and the non-public version is now fully independent of the metrics server.
 
 ```toml
 [server]
@@ -1309,9 +1515,9 @@ swagger_ui_public = false
 
 #### Type change for `zip` / `postcal_code`
 
-The type for `zip` / `postcal_code` has been changed from an Integer to a String in all locations. This means not only
-the Admin + Account Dashboards, but of course also inside the `address` claim for `id_token`s. This change brings
-compatibility for countries that use non-numeric postal codes.
+The type for `zip` / `postcal_code` has been changed from an Integer to a String in all locations.
+This means not only the Admin + Account Dashboards, but of course also inside the `address` claim
+for `id_token`s. This change brings compatibility for countries that use non-numeric postal codes.
 
 [#1002](https://github.com/sebadob/rauthy/pull/1002)
 
@@ -1319,36 +1525,40 @@ compatibility for countries that use non-numeric postal codes.
 
 #### Hiqlite Optimizations
 
-Hiqlite has received lots of optimizations and its version has been integrated in this Rauthy version. The updates were
-mainly about stability, especially during cluster rolling-releases in environments like Kubernetes, where the versions
-before had some issues with the ephemeral, in-memory Cache Raft state, which could get into a deadlock during a race
-condition. This has been fixed completely.
+Hiqlite has received lots of optimizations and its version has been integrated in this Rauthy
+version. The updates were mainly about stability, especially during cluster rolling-releases in
+environments like Kubernetes, where the versions before had some issues with the ephemeral,
+in-memory Cache Raft state, which could get into a deadlock during a race condition. This has been
+fixed completely.
 
-Another thing is that it's now possible to optionally have the Cache Raft state like WAL + Snapshots on disk instead of
-in-memory. The on-disk solution is of course quite a bit slower, because it's limited by your disk speed, but the memory
-usage will be lower as well. If all of that data is kept in-memory, you basically need 3 times the size of a single
-cache value (+1 in WAL logs and +1 in Snapshot, kind of, depending on TTL of course). Writing the state to disk has
-other advantages as well. The cache can be rebuilt and you never lose cached data even if the whole cluster went down.
+Another thing is that it's now possible to optionally have the Cache Raft state like WAL + Snapshots
+on disk instead of in-memory. The on-disk solution is of course quite a bit slower, because it's
+limited by your disk speed, but the memory usage will be lower as well. If all of that data is kept
+in-memory, you basically need 3 times the size of a single cache value (+1 in WAL logs and +1 in
+Snapshot, kind of, depending on TTL of course). Writing the state to disk has other advantages as
+well. The cache can be rebuilt and you never lose cached data even if the whole cluster went down.
 On restart, the whole in-memory cache layer can be rebuilt from WAL + Snapshots.
 
-The next improvement is that `hiqlite` received a fully custom WAL implementation and we can drop `rocksdb` as the WAL
-store. `rocksdb` is really good and very fast, but a huge overkill for the job, a very heavyweight dependency and
-brings quite a few issues in regard to compilation targets. This feature version still contains code and dependencies
-to migrate existing `rocksdb` Log Stores to the new `hiqlite-wal` store, but from the next feature version, we can fully
-remove the dependency. Just removing `rocksdb` will reduce the release binary size by ~7MB. On top of that,
-`hiqlite-wal` is quite a bit more efficient with your memory at runtime without any sacrifices in throughput.
+The next improvement is that `hiqlite` received a fully custom WAL implementation and we can drop
+`rocksdb` as the WAL store. `rocksdb` is really good and very fast, but a huge overkill for the job,
+a very heavyweight dependency and brings quite a few issues in regard to compilation targets. This
+feature version still contains code and dependencies to migrate existing `rocksdb` Log Stores to the
+new `hiqlite-wal` store, but from the next feature version, we can fully remove the dependency. Just
+removing `rocksdb` will reduce the release binary size by ~7MB. On top of that, `hiqlite-wal` is
+quite a bit more efficient with your memory at runtime without any sacrifices in throughput.
 
-The new `hiqlite-wal` now also has some mechanisms to try to repair a WAL file and recover records that might have been
-corrupted because of a bad crash for instance. `rocksdb` could get into a state where it would be almost impossible to
-recover. If you run your Rauthy instance in a container environment, or anywhere where you can guarantee, that no 2nd
-Rauthy process might try to access the same data on disk, you probably want to set `HQL_IGNORE_WAL_LOCK=true` now, which
-will start and try the repair routine, even if it detects a non-graceful shutdown. It is crucial though that it can
-never happen, that another instance is still running accessing the same data. That's what this warning is for in such
-a scenario. If you rather have full control and double check in case of an error, leave this value unset. The default
-is `false`.
-The other new value is `HQL_CACHE_STORAGE_DISK`, which is `true` by default. This will store the WAL + Snapshots for the
-in-memory cache on disk and therefore free up that memory. If you would rather have everything in-memory though, set
-this value to `false`.
+The new `hiqlite-wal` now also has some mechanisms to try to repair a WAL file and recover records
+that might have been corrupted because of a bad crash for instance. `rocksdb` could get into a state
+where it would be almost impossible to recover. If you run your Rauthy instance in a container
+environment, or anywhere where you can guarantee, that no 2nd Rauthy process might try to access the
+same data on disk, you probably want to set `HQL_IGNORE_WAL_LOCK=true` now, which will start and try
+the repair routine, even if it detects a non-graceful shutdown. It is crucial though that it can
+never happen, that another instance is still running accessing the same data. That's what this
+warning is for in such a scenario. If you rather have full control and double check in case of an
+error, leave this value unset. The default is `false`.
+The other new value is `HQL_CACHE_STORAGE_DISK`, which is `true` by default. This will store the
+WAL + Snapshots for the in-memory cache on disk and therefore free up that memory. If you would
+rather have everything in-memory though, set this value to `false`.
 
 ```toml
 [cluster]
@@ -1400,18 +1610,22 @@ cache_storage_disk = true
 wal_ignore_lock = false
 ```
 
-And if all of this was not enough yet, I was able to improve the overall throughput of `hiqlite` by ~30%. For more
-information, take at the [Hiqlite Repo](https://github.com/sebadob/hiqlite) directly.
+And if all of this was not enough yet, I was able to improve the overall throughput of `hiqlite`
+by ~30%. For more information, take at the [Hiqlite Repo](https://github.com/sebadob/hiqlite)
+directly.
 
-> If you are currently running a HA Cluster with Hiqlite as your database, you should make sure you have a backup before
-> starting this version, just in case, because of the Log Store Migration. It would be even more safe if you can afford
+> If you are currently running a HA Cluster with Hiqlite as your database, you should make sure you
+> have a backup before
+> starting this version, just in case, because of the Log Store Migration. It would be even more
+> safe if you can afford
 > to shut down the whole cluster cleanly first and then restart from scratch.
 
 #### Default for `HTTP_WORKERS` changed
 
-The default value for `HTTP_WORKERS` has been changed. Even though you probably almost always want to set this value
-manually in production, especially when running your instance on a huge underlying host, the default has been tuned to
-fit smaller hosts a bit better. Here is the new description in the config:
+The default value for `HTTP_WORKERS` has been changed. Even though you probably almost always want
+to set this value manually in production, especially when running your instance on a huge underlying
+host, the default has been tuned to fit smaller hosts a bit better. Here is the new description in
+the config:
 
 ```toml
 [server]
@@ -1437,29 +1651,30 @@ http_workers = 1
 
 #### Early `panic` in case of misconfiguration
 
-Most lazy static config variables are now being triggered at the very start of the application. This brings two
-benefits:
+Most lazy static config variables are now being triggered at the very start of the application. This
+brings two benefits:
 
-1. If you have any issues in your config, it will panic and error early, instead of "some time later" when this value
-   is used for the first time.
-2. It will make the start of the Heap way more compact, because all values will align perfectly, and therefore reduce
-   memory fragmentation a little bit.
+1. If you have any issues in your config, it will panic and error early, instead of "some time
+   later" when this value is used for the first time.
+2. It will make the start of the Heap way more compact, because all values will align perfectly, and
+   therefore reduce memory fragmentation a little bit.
 
 [#969](https://github.com/sebadob/rauthy/pull/969)
 
 #### Restrict client login by group prefix
 
-In addition to the already existing "Force MFA" switch for each client, which will fore users to have MFA enabled, you
-can now also restrict the login to each client by an additional group prefix, just like it has been added for SCIM syncs
-recently.
+In addition to the already existing "Force MFA" switch for each client, which will fore users to
+have MFA enabled, you can now also restrict the login to each client by an additional group prefix,
+just like it has been added for SCIM syncs recently.
 
-For instance, if you have groups like `app:admin` and `app:user`, you can restrict the client with the prefix `app:`,
-which will only allow users assigned to one of these groups to do the login.
+For instance, if you have groups like `app:admin` and `app:user`, you can restrict the client with
+the prefix `app:`, which will only allow users assigned to one of these groups to do the login.
 
-Usually, such decisions are done on the client side, depending on the claims in the tokens, because it's a lot more
-powerful and roles can be assigned properly, and so on. However, not all client apps support claim restrictions. In
-these cases, you can now do it on Rauthys side, or maybe just in addition to provide a better UX, because the user will
-get the error message during Rauthys login already and not after the token was exchanged with the client.
+Usually, such decisions are done on the client side, depending on the claims in the tokens, because
+it's a lot more powerful and roles can be assigned properly, and so on. However, not all client apps
+support claim restrictions. In these cases, you can now do it on Rauthys side, or maybe just in
+addition to provide a better UX, because the user will get the error message during Rauthys login
+already and not after the token was exchanged with the client.
 
 [#952](https://github.com/sebadob/rauthy/pull/952)
 
@@ -1471,44 +1686,49 @@ Group names can now contain uppercase letters and spaces.
 
 #### User-Editable custom attributes
 
-User attributes can now be set to be user-editable. A new section has been added to the account dashboard which shows
-these user-editable attributes (if any exist), and the user can modify them without the need of an admin.
+User attributes can now be set to be user-editable. A new section has been added to the account
+dashboard which shows these user-editable attributes (if any exist), and the user can modify them
+without the need of an admin.
 
-CAUTION: Setting an attribute to be user-editable is a one-way operation and cannot be reverted! The reason is, that
-user inputs are always unverified and cannot be trusted, and these attributes MUST NEVER be used in any context of
-authn / authz on clients. To avoid the possibility of leaking, unvalidated inputs, once an attribute was user-editable,
-it can never be changed back, because you cannot trust the existing values at that point. This should act as a
-safety-net for admins.
+CAUTION: Setting an attribute to be user-editable is a one-way operation and cannot be reverted! The
+reason is, that user inputs are always unverified and cannot be trusted, and these attributes MUST
+NEVER be used in any context of authn / authz on clients. To avoid the possibility of leaking,
+unvalidated inputs, once an attribute was user-editable, it can never be changed back, because you
+cannot trust the existing values at that point. This should act as a safety-net for admins.
 
 [#964](https://github.com/sebadob/rauthy/pull/964)
 
 #### Default values for custom attributes
 
-You can now define a default value for each custom attribute. If the value is not set for a user, the default will be
-added to token claims. This makes it possible to set things like default storage quotas for all users via a custom
-attribute, and still allows to overwrite them. It is probably the most powerful, when you can so modify many users at
-once, because it resolves dynamically during token creation and does not need an update for each single user.
+You can now define a default value for each custom attribute. If the value is not set for a user,
+the default will be added to token claims. This makes it possible to set things like default storage
+quotas for all users via a custom attribute, and still allows to overwrite them. It is probably the
+most powerful, when you can so modify many users at once, because it resolves dynamically during
+token creation and does not need an update for each single user.
 
 [#958](https://github.com/sebadob/rauthy/pull/958)
 
 #### User account type in Admin UI
 
-The user account type is now also being shown in the Admin UI, just like it is in the account dashboard. With this
-update, Admins can see which accounts are federated and to which upstream auth provider they are linked.
+The user account type is now also being shown in the Admin UI, just like it is in the account
+dashboard. With this update, Admins can see which accounts are federated and to which upstream auth
+provider they are linked.
 
 [#960](https://github.com/sebadob/rauthy/pull/960)
 
 #### Custom JWT implementation
 
-Do be more flexible and more efficient, the external dependency for generating JWT tokens has been dropped in favor of
-a new, fully custom implementation. This is a lot more light weight, more efficient, and makes Rauthy independent for
-things like PQC algorithms / FIPS 204 in the future. This change alone dropped 21 external dependencies in exchange for
-only a few hundred lines of code in comparison to the old setup.
+Do be more flexible and more efficient, the external dependency for generating JWT tokens has been
+dropped in favor of a new, fully custom implementation. This is a lot more light weight, more
+efficient, and makes Rauthy independent for things like PQC algorithms / FIPS 204 in the future.
+This change alone dropped 21 external dependencies in exchange for only a few hundred lines of code
+in comparison to the old setup.
 
-To avoid possible resource exhaustion attacks on the token introspection and userinfo endpoints, the token size (in
-characters) is now limited to 4096. This is more than double the amount of an RS512 signed `id_token` with more than
-only the default values, so you should never have any problems reaching the limit. Theoretically, it is of course
-possible, so you get a new config variable to tune this:
+To avoid possible resource exhaustion attacks on the token introspection and userinfo endpoints, the
+token size (in characters) is now limited to 4096. This is more than double the amount of an RS512
+signed `id_token` with more than only the default values, so you should never have any problems
+reaching the limit. Theoretically, it is of course possible, so you get a new config variable to
+tune this:
 
 ```toml
 [access]
@@ -1531,36 +1751,39 @@ token_len_limit = 4096
 
 #### IP Blacklisting Rework
 
-The IP blacklisting has been reworked. This was done via listen / notify and an instance-local thread, that manages
-all blacklisted IPs purely in memory. We usually do not want to trigger any DB writes in such a case to keep the work
-as low a possible in case of a DDoS for instance.
+The IP blacklisting has been reworked. This was done via listen / notify and an instance-local
+thread, that manages all blacklisted IPs purely in memory. We usually do not want to trigger any DB
+writes in such a case to keep the work as low a possible in case of a DDoS for instance.
 
-However, this old design was from a time when Hiqlite did not even exist yet. The latest version brings distributed
-counters, which made it possible to easily push blacklisted IPs into the Hiqlite caching layer. In combination with
-another new feature in the latest Hiqlite, which is an optionally persistent WAL + Snapshot on disk for the Cache as
-well (enabled by default), you can now have blacklisted IPs in memory for very fast access, while still being able to
-persist them in a way, that the full in-memory cache can be rebuilt after a restart.
+However, this old design was from a time when Hiqlite did not even exist yet. The latest version
+brings distributed counters, which made it possible to easily push blacklisted IPs into the Hiqlite
+caching layer. In combination with another new feature in the latest Hiqlite, which is an optionally
+persistent WAL + Snapshot on disk for the Cache as well (enabled by default), you can now have
+blacklisted IPs in memory for very fast access, while still being able to persist them in a way,
+that the full in-memory cache can be rebuilt after a restart.
 
-Pushing this logic into Hiqlite removes a maintenance burden from the Rauthy code. It exists inside Hiqlite anyway
-already.
+Pushing this logic into Hiqlite removes a maintenance burden from the Rauthy code. It exists inside
+Hiqlite anyway already.
 
 [#985](https://github.com/sebadob/rauthy/pull/985)
 
 #### `PATCH` is possible on `/users/{id}`
 
-The user modification endpoint now provides a `PATCH` operation, which the Admin UI user config uses by default. It will
-only update the values, that actually have been changed in the UI. This reduces the possibility of overwriting values
-that have been modified by the user via the account dashboard in the exact same moment.
+The user modification endpoint now provides a `PATCH` operation, which the Admin UI user config uses
+by default. It will only update the values, that actually have been changed in the UI. This reduces
+the possibility of overwriting values that have been modified by the user via the account dashboard
+in the exact same moment.
 
 [#951](https://github.com/sebadob/rauthy/pull/951)
 
 #### `jemalloc` feature flag
 
-Rauthy can optionally be compiled with the `jemalloc` feature flag, which will exchange the glibc `malloc` for
-`jemalloc`. It avoids memory fragmentation over time and is a lot more performant. You can also adjust it to match your
-workloads and the default tuning will probably be aimed at being efficient. However, if you run a Rauthy instance with
-thousands or even millions of users, you can custom-compile a version with optimized tuning, which will use more memory,
-but handle this many concurrent allocations better. Take a look at the book for tuning advise.
+Rauthy can optionally be compiled with the `jemalloc` feature flag, which will exchange the glibc
+`malloc` for `jemalloc`. It avoids memory fragmentation over time and is a lot more performant. You
+can also adjust it to match your workloads and the default tuning will probably be aimed at being
+efficient. However, if you run a Rauthy instance with thousands or even millions of users, you can
+custom-compile a version with optimized tuning, which will use more memory, but handle this many
+concurrent allocations better. Take a look at the book for tuning advise.
 
 The `jemalloc` feature flag will be enabled by default from this version on.
 
@@ -1568,50 +1791,55 @@ The `jemalloc` feature flag will be enabled by default from this version on.
 
 #### Rauthy theme as fallback
 
-The custom theme you apply for the `rauthy` client will now be used as a fallback for all other clients, when they don't
-have their own custom values.
+The custom theme you apply for the `rauthy` client will now be used as a fallback for all other
+clients, when they don't have their own custom values.
 
 [#982](https://github.com/sebadob/rauthy/pull/982)
 
 #### Dedicated Password Reset Request Page
 
-A link to a dedicated password reset request page has been added to password reset E-Mails. This helps users request a
-new magic link quickly when they have an expired one for a password reset in their inbox.
+A link to a dedicated password reset request page has been added to password reset E-Mails. This
+helps users request a new magic link quickly when they have an expired one for a password reset in
+their inbox.
 
 [#1011](https://github.com/sebadob/rauthy/pull/1011)
 
 #### Production Init Hardening
 
-To harden the production initialization of the database for a fresh instance a bit more, the user ID for the very first
-initial admin account is being re-generated randomly. In combination with `bootstrap.admin_email`, this makes it now
-100% impossible to guess any value for a possibly existing default admin for any Rauthy instance.
+To harden the production initialization of the database for a fresh instance a bit more, the user ID
+for the very first initial admin account is being re-generated randomly. In combination with
+`bootstrap.admin_email`, this makes it now 100% impossible to guess any value for a possibly
+existing default admin for any Rauthy instance.
 
 [#983](https://github.com/sebadob/rauthy/pull/983)
 
 #### Memory optimizations
 
-All `derive` impl's on all API types have been checked and quite a lot of unnecessary `derive`s have been removed (were
-e.g. only necessary during development / testing). This is a small optimization regarding release compile-time and
-binary size. Additionally, lots of other small improvements have been made all over the code to reduce the number of
-overall memory allocations in general.
+All `derive` impl's on all API types have been checked and quite a lot of unnecessary `derive`s have
+been removed (were e.g. only necessary during development / testing). This is a small optimization
+regarding release compile-time and binary size. Additionally, lots of other small improvements have
+been made all over the code to reduce the number of overall memory allocations in general.
 
 [#956](https://github.com/sebadob/rauthy/pull/956)
 [#968](https://github.com/sebadob/rauthy/pull/968)
 
 ### Bugfix
 
-- The legacy Rauthy placeholder logo was not removed from the `hiqlite` DB migrations for fresh instances
+- The legacy Rauthy placeholder logo was not removed from the `hiqlite` DB migrations for fresh
+  instances
   [#942](https://github.com/sebadob/rauthy/pull/942)
-- Some mobile browsers started failing recently because of some issue with the PKCE challenge generation. The external
-  dependency for this has been dropped in favor of a custom implementation.
+- Some mobile browsers started failing recently because of some issue with the PKCE challenge
+  generation. The external dependency for this has been dropped in favor of a custom implementation.
   [#953](https://github.com/sebadob/rauthy/pull/953)
-- `user.federation_uid` was saved as an escaped JSON string inside the DB instead of as a raw String directly. This was
-  not an issue on it's own, because during login, both the escaped values were compared, but it didn't look good.
+- `user.federation_uid` was saved as an escaped JSON string inside the DB instead of as a raw String
+  directly. This was not an issue on its own, because during login, both the escaped values were
+  compared, but it didn't look good.
   [#962](https://github.com/sebadob/rauthy/pull/962)
-- The default value for the `SMTP_FROM` was changed from `rauthy@localhost.de` to just `rauthy@localhost`.
+- The default value for the `SMTP_FROM` was changed from `rauthy@localhost.de` to just
+  `rauthy@localhost`.
   [#963](https://github.com/sebadob/rauthy/pull/963)
-- The `state` encoding during `/authorize` was broken in some situations, because the urlencoding was removed in some
-  situations, when this param should be sent back to the client unchanged.
+- The `state` encoding during `/authorize` was broken in some situations, because the urlencoding
+  was removed in some situations, when this param should be sent back to the client unchanged.
   [#980](https://github.com/sebadob/rauthy/pull/980)
 
 ## v0.29.4
@@ -1620,35 +1848,40 @@ overall memory allocations in general.
 
 #### Custom Attributes via SCIM
 
-Rauthy's SCIM functionality now also adds custom user attributes. These will be added, just like inside the `id_token`
-claims, under `custom: *` as JSON values. These will be added only if the client should receive these attributes
-defined via the allowed `scope`s.
+Rauthy's SCIM functionality now also adds custom user attributes. These will be added, just like
+inside the `id_token` claims, under `custom: *` as JSON values. These will be added only if the
+client should receive these attributes defined via the allowed `scope`s.
 
-This is a non-RFC value, but it should be ignored by any client, that does not understand the `custom` field. While the
-`rauthy-client` has been released with a new version in the meantime, its implementation gives you access to custom
-attributes, if some exist.
+This is a non-RFC value, but it should be ignored by any client, that does not understand the
+`custom` field. While the `rauthy-client` has been released with a new version in the meantime, its
+implementation gives you access to custom attributes, if some exist.
 
 [#936](https://github.com/sebadob/rauthy/pull/936)
 
 ### Bugfix
 
-- It was possible, that Rauthy tried to sync groups via SCIM even if group syncing has been disabled.
+- It was possible, that Rauthy tried to sync groups via SCIM even if group syncing has been
+  disabled.
   [#936](https://github.com/sebadob/rauthy/pull/936)
-- The legacy Rauthy logo showed up at the login page in versions `0.29.0` - `0.29.3` for fresh Hiqlite deployments. This
-  was due to a missing, permanent database migration that removes the old logo. This was shadowed by the manual version
-  migration queries that existed during the `0.28` release. This patch version has a programmatic query and will add
-  a permanent migration with the `0.30` release to not introduce breaking changes with a patch level.
+- The legacy Rauthy logo showed up at the login page in versions `0.29.0` - `0.29.3` for fresh
+  Hiqlite deployments. This was due to a missing, permanent database migration that removes the old
+  logo. This was shadowed by the manual version migration queries that existed during the `0.28`
+  release. This patch version has a programmatic query and will add a permanent migration with the
+  `0.30` release to not introduce breaking changes with a patch
+  level.
   [#943](https://github.com/sebadob/rauthy/pull/943)
 
 ## v0.29.3
 
 ### Bugfix
 
-- `v0.29.2`s fix for the HTTP 302 instead of 200 on `/logout` broke the logout from the UI without additional
+- `v0.29.2`s fix for the HTTP 302 instead of 200 on `/logout` broke the logout from the UI without
+  additional
   `id_token_hint`.
   [#930](https://github.com/sebadob/rauthy/pull/930)
-- Form validation for Upstream Auth Provider config did not set some fields to required under certain conditions and
-  would therefore return the backend validation error instead of a nicer way of handling it.
+- Form validation for Upstream Auth Provider config did not set some fields to required under
+  certain conditions and would therefore return the backend validation error instead of a nicer way
+  of handling it.
   [#931](https://github.com/sebadob/rauthy/pull/931)
 - Fixed another DB migration query between Hiqlite and Postgres.
   [#932](https://github.com/sebadob/rauthy/pull/932)
@@ -1657,8 +1890,8 @@ attributes, if some exist.
 
 ### Bugfix
 
-- DB Migrations between Hiqlite and Postgres have not been working as expected since database driver and query reworks
-  with `v0.29`.
+- DB Migrations between Hiqlite and Postgres have not been working as expected since database driver
+  and query reworks with `v0.29`.
   [#919](https://github.com/sebadob/rauthy/pull/919)
 - Front-Channel Logout returned HTTP 200 instead of 302 for auto-redirect under certain conditions.
   [#920](https://github.com/sebadob/rauthy/pull/920)
@@ -1667,13 +1900,14 @@ attributes, if some exist.
 
 ### Bugfix
 
-- Because of the default admin renaming with `0.29.0`, the 2 test admin accounts have not been deleted when starting up
-  a new production instance.
+- Because of the default admin renaming with `0.29.0`, the 2 test admin accounts have not been
+  deleted when starting up a new production instance.
   [#909](https://github.com/sebadob/rauthy/pull/909)
-- Error logs with an invalid `rauthy.cfg` have been emitted as tracing logs instead of `eprintln`, when logging was not
-  initialized yet.
+- Error logs with an invalid `rauthy.cfg` have been emitted as tracing logs instead of `eprintln`,
+  when logging was not initialized yet.
   [#910](https://github.com/sebadob/rauthy/pull/910)
-- Because of the new session validation rework and additional safety-nets, a login was impossible when
+- Because of the new session validation rework and additional safety-nets, a login was impossible
+  when
   `SESSION_VALIDATE_IP=false`
   [#911](https://github.com/sebadob/rauthy/pull/911)
 
@@ -1683,27 +1917,30 @@ attributes, if some exist.
 
 #### Postgres: `sqlx` dropped in favor of `tokio-postgres`
 
-Internally, quite a big has happened. `sqlx` has been completely dropped in favor of `tokio-postgres` in combination
-with some other dependencies. This solved a few issues.
+Internally, quite a big has happened. `sqlx` has been completely dropped in favor of
+`tokio-postgres` in combination with some other dependencies. This solved a few issues.
 
-`sqlx` has been blocking updates quite a few times in the past. It pulls in a huge amount of dependencies, even if they
-are not used, which often block other crates. It's also pretty slow with updates, which means you might be forced to
-stick with older versions for several months, and it has some other limitations I don't like.
+`sqlx` has been blocking updates quite a few times in the past. It pulls in a huge amount of
+dependencies, even if they are not used, which often block other crates. It's also pretty slow with
+updates, which means you might be forced to stick with older versions for several months, and it has
+some other limitations I don't like.
 
-Even though the compile-time checked queries are the best feature of `sqlx`, they also produced a lot of issues and
-confusion when other people were trying to build from source, and so on.
+Even though the compile-time checked queries are the best feature of `sqlx`, they also produced a
+lot of issues and confusion when other people were trying to build from source, and so on.
 
-The bonus for everyone not working with the code directly is, that `tokio-postgres` has about half the latency of `sqlx`
-in my testing.
+The bonus for everyone not working with the code directly is, that `tokio-postgres` has about half
+the latency of `sqlx` in my testing.
 
 The breaking changes that comes with this internal change is actually a good one:
 
-You don't specify the `DATABASE_URL` like before. `DATABASE_URL` and `DATABASE_MAX_CONN` have been completely removed.
-Instead, you now have separate config vars for each part of the URL. This removes the limitation that you could only
-have alphanumeric characters inside your password (otherwise the URL would be invalid).
+You don't specify the `DATABASE_URL` like before. `DATABASE_URL` and `DATABASE_MAX_CONN` have been
+completely removed. Instead, you now have separate config vars for each part of the URL. This
+removes the limitation that you could only have alphanumeric characters inside your password (
+otherwise the URL would be invalid).
 
-One additional thing is, that `sqlx` silently ignored TLS certificate validation if it failed, which is actually a
-pretty bad behavior. If you are running a Postgres with self-signed certificates, you need to explicitly allow this.
+One additional thing is, that `sqlx` silently ignored TLS certificate validation if it failed, which
+is actually a pretty bad behavior. If you are running a Postgres with self-signed certificates, you
+need to explicitly allow this.
 
 You now need to provide the following values, if you are using Postgres:
 
@@ -1728,37 +1965,39 @@ PG_PASSWORD=
 #PG_MAX_CONN=20
 ```
 
-**CAUTION:** This is a pretty big change, because existing `sqlx` migrations will be converted manually. Just to be
-safe, you should probably do a database backup before starting `v0.29`!
+**CAUTION:** This is a pretty big change, because existing `sqlx` migrations will be converted
+manually. Just to be safe, you should probably do a database backup before starting `v0.29`!
 
 [#822](https://github.com/sebadob/rauthy/pull/822)
 
 #### Default Admin change
 
-The default admin has been changed from `admin@localhost.de` to just `admin@localhost`. This is due to the fact that
-`localhost.de` is a real domain with a valid TLD and it could introduce issues, if these users exist on a Rauthy
-instance.
+The default admin has been changed from `admin@localhost.de` to just `admin@localhost`. This is due
+to the fact that `localhost.de` is a real domain with a valid TLD and it could introduce issues, if
+these users exist on a Rauthy instance.
 
-If you still had an `admin@localhost.de` around in your database, this will also be changed even for an existing
-deployment! You will see a `warn!` logging during the whole `v0.29` release to make you aware of this. After the new
-version has been started up, your default admin will be `admin@localhost`.
+If you still had an `admin@localhost.de` around in your database, this will also be changed even for
+an existing deployment! You will see a `warn!` logging during the whole `v0.29` release to make you
+aware of this. After the new version has been started up, your default admin will be
+`admin@localhost`.
 
 [#866](https://github.com/sebadob/rauthy/pull/866)
 
 #### Additional PoW requirements
 
 If you have been providing your own, custom login UI, be aware of the fact that the `LoginRequest` +
-`ProviderLoginRequest` now require a solved PoW inside the request body. For further information about this, see the
-notes down below -> *Defense in depth*;
+`ProviderLoginRequest` now require a solved PoW inside the request body. For further information
+about this, see the notes down below -> *Defense in depth*;
 
 [#883](https://github.com/sebadob/rauthy/pull/883)
 
 #### Internal Metrics now opt-in
 
-The internal `/metrics` HTTP server is not used by most people, but it has been enabled by default, while using ~10mb
-of memory in idle and adding the overhead to each API request that metrics are actually collected internally. For this
-reason, the internal metrics (and therefore also internal Swagger UI) are not opt-in instead of opt-out. If you are
-using prometheus metrics right now, make sure that you explicitly set
+The internal `/metrics` HTTP server is not used by most people, but it has been enabled by default,
+while using ~10mb of memory in idle and adding the overhead to each API request that metrics are
+actually collected internally. For this reason, the internal metrics (and therefore also internal
+Swagger UI) are not opt-in instead of opt-out. If you are using prometheus metrics right now, make
+sure that you explicitly set
 
 ```
 METRICS_ENABLE=true
@@ -1768,29 +2007,31 @@ METRICS_ENABLE=true
 
 #### Removed Custom CA from Auth Providers
 
-The custom root CA option has been removed from Upstream Auth Providers. This was due to performance and efficiency
-optimizations. There is a new global HTTP client (mentioned below) which will handle custom root CAs and will be used
-for auth providers as well.
+The custom root CA option has been removed from Upstream Auth Providers. This was due to performance
+and efficiency optimizations. There is a new global HTTP client (mentioned below) which will handle
+custom root CAs and will be used for auth providers as well.
 
-If you are currently using an upstream auth provider with a custom root CA, make sure to add this CA to
-`HTTP_CUST_ROOT_CA_BUNDLE` as mentioned further down below`
+If you are currently using an upstream auth provider with a custom root CA, make sure to add this CA
+to `HTTP_CUST_ROOT_CA_BUNDLE` as mentioned further down below`
 
 ### Changes
 
 #### OpenID Connect Backchannel Logout
 
-Rauthy now supports [OpenID Connect Backchannel Logout](https://openid.net/specs/openid-connect-backchannel-1_0.html).
+Rauthy now
+supports [OpenID Connect Backchannel Logout](https://openid.net/specs/openid-connect-backchannel-1_0.html).
 
-If downstream clients support it, you can now provide a `backchannel_logout_uri` in the config view via the Admin UI.
-Rauthy itself can act as a downstream client for an upstream as well. The default `/auth/v1/oidc/logout` endpoint now
-optionally accepts the `logout_token` and will propagate Backchannel Logouts, if the token is actually coming from a
-valid, configured upstream auth provider.  
-Backchannel Logouts will of course also be triggered in other situations like forced session invalidation by an admin,
-user expiration, or deletion, and so on.
+If downstream clients support it, you can now provide a `backchannel_logout_uri` in the config view
+via the Admin UI. Rauthy itself can act as a downstream client for an upstream as well. The default
+`/auth/v1/oidc/logout` endpoint now optionally accepts the `logout_token` and will propagate
+Backchannel Logouts, if the token is actually coming from a valid, configured upstream auth
+provider.  
+Backchannel Logouts will of course also be triggered in other situations like forced session
+invalidation by an admin, user expiration, or deletion, and so on.
 
-The feature can be seen as in beta state now. Everything has been implemented following the RFC and basic integration
-tests exist as well. However, to catch some weird edge cases, it needs testing in the real world as well. If you have
-any problems using it, please open an issue about it.
+The feature can be seen as in beta state now. Everything has been implemented following the RFC and
+basic integration tests exist as well. However, to catch some weird edge cases, it needs testing in
+the real world as well. If you have any problems using it, please open an issue about it.
 
 There are some new config variables as well:
 
@@ -1857,8 +2098,8 @@ There are some new config variables as well:
 #### RP Initiated Logout
 
 While implementing OpenID Connect Backchannel Logout, support
-for [RP Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) has been added as well to
-provide a complete package.
+for [RP Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) has been
+added as well to provide a complete package.
 
 [#794](https://github.com/sebadob/rauthy/pull/794)
 [#806](https://github.com/sebadob/rauthy/pull/806)
@@ -1867,24 +2108,25 @@ provide a complete package.
 
 This version brings SCIM support to Rauthy.
 
-You can define a custom SCIM base uri per client. The client must support SCIM v2 and the `filter` parameter. Groups
-syncing is optional.
+You can define a custom SCIM base uri per client. The client must support SCIM v2 and the `filter`
+parameter. Groups syncing is optional.
 
 You can also define a group prefix which will act as a filter for the to-be-synced data.
-For instance, if you define a prefix of `myapp:`, only the groups starting with it will be synced, like e.g.
-`myapp:admin`, `myapp:user`. Additionally, only users that are assigned to at least one of these filtered groups will
-by synced, while others are skipped.  
-The advantage of this is, let's say you have an application with limited seats, or where each existing user costs a
-license (Gitlab Enterprise would be an example), you need to pay for each registered user. If you now split your
-users into groups and only your developers need to exist on that instance, you can assign a group like `dev:*` and only
-sync the `dev:` groups via SCIM.
+For instance, if you define a prefix of `myapp:`, only the groups starting with it will be synced,
+like e.g. `myapp:admin`, `myapp:user`. Additionally, only users that are assigned to at least one of
+these filtered groups will by synced, while others are skipped.   
+The advantage of this is, let's say you have an application with limited seats, or where each
+existing user costs a license (Gitlab Enterprise would be an example), you need to pay for each
+registered user. If you now split your users into groups and only your developers need to exist on
+that instance, you can assign a group like `dev:*` and only sync the `dev:` groups via SCIM.
 
-The SCIM impl is not integration tested, as this usually requires an external deployment. For the future, the idea is
-to implement the client side into the `rauthy-client` and use this for integration testing against itself. However, I
-followed the RFC closely and tested all operations manually against https://scim.dev .
+The SCIM impl is not integration tested, as this usually requires an external deployment. For the
+future, the idea is to implement the client side into the `rauthy-client` and use this for
+integration testing against itself. However, I followed the RFC closely and tested all operations
+manually against https://scim.dev .
 
-Just as for the OIDC Backchannel Logout, this feature can be seen as in beta state now. We need some real world testing
-next, but I think it should be just fine.
+Just as for the OIDC Backchannel Logout, this feature can be seen as in beta state now. We need some
+real world testing next, but I think it should be just fine.
 
 ```
 #####################################
@@ -1923,22 +2165,25 @@ next, but I think it should be just fine.
 
 #### Defense in depth
 
-Small improvements have been done in various location inside the code to have additional defense in depth or safety-nets
-during maintenance and development.
+Small improvements have been done in various location inside the code to have additional defense in
+depth or safety-nets during maintenance and development.
 
 The `LoginRequest` during `POST /authorize`, as well as the `ProviderLoginRequest` require a
-solved [Proof of Work](https://github.com/sebadob/spow) from the frontend now. This is an additional DoS protection, and
-it mitigates any automated login checks / brute-force by bots or even tools like burp suite, in addition to the
-already existing login rate-limiting.  
-As an additional UX optimization, all PoW calculations have been removed from the JS main thread and pushed into a
-Web Worker. This keeps the UI responsive, even if you set a higher difficulty which takes a bit longer to compute.
+solved [Proof of Work](https://github.com/sebadob/spow) from the frontend now. This is an additional
+DoS protection, and it mitigates any automated login checks / brute-force by bots or even tools like
+burp suite, in addition to the already existing login rate-limiting.   
+As an additional UX optimization, all PoW calculations have been removed from the JS main thread and
+pushed into a Web Worker. This keeps the UI responsive, even if you set a higher difficulty which
+takes a bit longer to compute.
 
-Even though not necessary from a security point of view, the `redirect_uri` during an `authorization_code` flow is
-checked multiple times between requests. Rauthy validates the URI at the very first possibility and makes it impossible
-to change it during the flow, but additional verification is a nice addition.
+Even though not necessary from a security point of view, the `redirect_uri` during an
+`authorization_code` flow is checked multiple times between requests. Rauthy validates the URI at
+the very first possibility and makes it impossible to change it during the flow, but additional
+verification is a nice addition.
 
-To make future maintenance tasks a bit more safe, the session state is being checked in 2 different locations now. This
-is a tiny overhead of 1 additional `if` clause, but you get a safety net on all API endpoints.
+To make future maintenance tasks a bit more safe, the session state is being checked in 2 different
+locations now. This is a tiny overhead of 1 additional `if` clause, but you get a safety net on all
+API endpoints.
 
 [#834](https://github.com/sebadob/rauthy/pull/834)
 [#881](https://github.com/sebadob/rauthy/pull/881)
@@ -1947,53 +2192,56 @@ is a tiny overhead of 1 additional `if` clause, but you get a safety net on all 
 
 To be able to follow security best practices, you can now rotate client secrets gracefully.
 
-Rauthy does not allow multiple client secrets, and up until now, if you generated a new one, the old one would be gone
-immediately. Now, when you generate a new secret, you have the option to cache the hash of the current one in-memory.
-You can also enter a time between 1 and 24 hours. This makes it possible to rotate secrets as a best practice without
-any interruption in service.  
-If you however need to generate a new secret because of a leak somewhere, you should of course not enable this option.
+Rauthy does not allow multiple client secrets, and up until now, if you generated a new one, the old
+one would be gone immediately. Now, when you generate a new secret, you have the option to cache the
+hash of the current one in-memory. You can also enter a time between 1 and 24 hours. This makes it
+possible to rotate secrets as a best practice without any interruption in service.   
+If you however need to generate a new secret because of a leak somewhere, you should of course not
+enable this option.
 
 [#867](https://github.com/sebadob/rauthy/pull/867)
 
 #### UI Accessibility
 
-Some minor improvements for the accessibility have been made. For instance, some missing `aria-*` labels have been added
-and the colors from the scheme have been switched around slightly in some situations to provide a better contrast out
-of the box without giving up the look.
+Some minor improvements for the accessibility have been made. For instance, some missing `aria-*`
+labels have been added and the colors from the scheme have been switched around slightly in some
+situations to provide a better contrast out of the box without giving up the look.
 
 [#861](https://github.com/sebadob/rauthy/pull/861)
 [#862](https://github.com/sebadob/rauthy/pull/862)
 
 #### Manual Admin-Initiated user init
 
-When an admin created a user manually, it is now possible to initialize this user manually and set a password, even if
-the user never used or received the initial password reset E-Mail.
+When an admin created a user manually, it is now possible to initialize this user manually and set a
+password, even if the user never used or received the initial password reset E-Mail.
 
 [#815](https://github.com/sebadob/rauthy/issues/815)
 
 #### Additional CORS headers
 
-Additional CORS headers and validation have been added to a few different endpoints, where it made sense, like e.g.
-the `/userinfo` or `/introspect` endpoints. Internally, the Origin header extraction and validation has been simplified
-as well to make it a bit easier to maintain.
+Additional CORS headers and validation have been added to a few different endpoints, where it made
+sense, like e.g. the `/userinfo` or `/introspect` endpoints. Internally, the Origin header
+extraction and validation has been simplified as well to make it a bit easier to maintain.
 
 [#855](https://github.com/sebadob/rauthy/pull/855)
 [#856](https://github.com/sebadob/rauthy/pull/856)
 
 #### Global HTTP Client
 
-To optimize memory usage a little bit, Rauthy now only uses a global, lazily initialized HTTP client for for outgoing
-requests (except for Matrix notifications). This static client makes use of connection pooling and keepalives under the
-hood to reduce the overall amount of TLS handshakes and latency during daily operation for a few tasks.
+To optimize memory usage a little bit, Rauthy now only uses a global, lazily initialized HTTP client
+for for outgoing requests (except for Matrix notifications). This static client makes use of
+connection pooling and keepalives under the hood to reduce the overall amount of TLS handshakes and
+latency during daily operation for a few tasks.
 
-Apart from Matrix event notifications, if you need any custom root CA, you need to add it to this client. You can add
-as many as you like, just statically upfront. The dynamic approach from before like for instance for upstream auth
-providers had a huge drawback, which was that the client had to be created dynamically for each request depending on
-the database state. This was very inefficient and a custom root CA usually changes like every 10 years, so it's not any
-issue at all to define them via the configuration.
+Apart from Matrix event notifications, if you need any custom root CA, you need to add it to this
+client. You can add as many as you like, just statically upfront. The dynamic approach from before
+like for instance for upstream auth providers had a huge drawback, which was that the client had to
+be created dynamically for each request depending on the database state. This was very inefficient
+and a custom root CA usually changes like every 10 years, so it's not any issue at all to define
+them via the configuration.
 
-With these changes, you also have access to way more configuration options for the HTTP client and a whole new section
-in the config:
+With these changes, you also have access to way more configuration options for the HTTP client and a
+whole new section in the config:
 
 ```
 #####################################
@@ -2068,57 +2316,63 @@ in the config:
 
 #### Additional safeguards for `MIGRATE_DB_FROM`
 
-Rauthy can migrate between Hiqlite and Postgres on the fly. This feature is only supported as long as you do not bump
-the major or minor version at the same time. Additional safeguards and checks have been added that prevent you from
-doing trying this by accident.
+Rauthy can migrate between Hiqlite and Postgres on the fly. This feature is only supported as long
+as you do not bump the major or minor version at the same time. Additional safeguards and checks
+have been added that prevent you from doing trying this by accident.
 
 [#811](https://github.com/sebadob/rauthy/pull/811)
 
 #### Hiqlite optimizations
 
-After `sqlx` was dropped, I could finally upgrade `hiqlite` to the latest version with quite a few improvements in
-terms of shutdown speed and stability.
+After `sqlx` was dropped, I could finally upgrade `hiqlite` to the latest version with quite a few
+improvements in terms of shutdown speed and stability.
 
-Before, it was possible that you could get into a state with a HA deployment, where the cache leader election got stuck
-after a rolling release e.g. inside Kubernetes. This was already fixed in a new version, but `sqlx` blocked the upgrade
-for a few months. During that time, I have been able to improve the shutdown behavior even more, and the shutdown time
-in HA deployments has been cut in half. For a single instance, it is gone completely now.
+Before, it was possible that you could get into a state with a HA deployment, where the cache leader
+election got stuck after a rolling release e.g. inside Kubernetes. This was already fixed in a new
+version, but `sqlx` blocked the upgrade for a few months. During that time, I have been able to
+improve the shutdown behavior even more, and the shutdown time in HA deployments has been cut in
+half. For a single instance, it is gone completely now.
 
-Because of many improvements of `hiqlite`s codebase, I was also able to improve the throughput by another ~28%. The
-database would never be the bottleneck for a Rauthy deployment (this will always be password hashing, which has to be
-slow and expensive on purpose, to make it secure), but it's a nice to have.
+Because of many improvements of `hiqlite`s codebase, I was also able to improve the throughput by
+another ~28%. The database would never be the bottleneck for a Rauthy deployment (this will always
+be password hashing, which has to be slow and expensive on purpose, to make it secure), but it's a
+nice to have.
 
 #### `SMTP_PORT`
 
-You can now specify a custom `SMTP_PORT` in production. `SMTP_DANGER_INSECURE_PORT` has been dropped in favor of just
-`SMTP_PORT`, which will now also be applied on secure connections in production, not just during local development.
+You can now specify a custom `SMTP_PORT` in production. `SMTP_DANGER_INSECURE_PORT` has been dropped
+in favor of just `SMTP_PORT`, which will now also be applied on secure connections in production,
+not just during local development.
 
 [#840](https://github.com/sebadob/rauthy/pull/840)
 
 #### Latin Extended-B
 
-The `user.given_name`, `user.familiy_name` and `client.name` now also allow characters from the Latin Extended-B.
+The `user.given_name`, `user.familiy_name` and `client.name` now also allow characters from the
+Latin Extended-B.
 
 [#873](https://github.com/sebadob/rauthy/pull/873)
 
 ### Bugfix
 
-- If wrong credentials for the SMTP server have been provided, the optional inner error has been masked.
+- If wrong credentials for the SMTP server have been provided, the optional inner error has been
+  masked.
   [#803](https://github.com/sebadob/rauthy/pull/803)
 - The page title for the user registration page has been broken.
   [#812](https://github.com/sebadob/rauthy/pull/812)
-- A bug in the Admin UI could get you into situations, where you would not see a scrollbar for the user navigation.
+- A bug in the Admin UI could get you into situations, where you would not see a scrollbar for the
+  user navigation.
   [#869](https://github.com/sebadob/rauthy/pull/869)
 
 ## v0.28.3
 
 ### Bugfix
 
-- The new Admin UI has always added an `expires` value during the creation of a new user, even if the checkbox was
-  unchecked.
+- The new Admin UI has always added an `expires` value during the creation of a new user, even if
+  the checkbox was unchecked.
   [#797](https://github.com/sebadob/rauthy/pull/797)
-- It has been possible to construct a situation in which a housekeeping scheduler for expired magic links could have
-  been deleting newly registered users.
+- It has been possible to construct a situation in which a housekeeping scheduler for expired magic
+  links could have been deleting newly registered users.
   [#798](https://github.com/sebadob/rauthy/pull/798)
   [#799](https://github.com/sebadob/rauthy/pull/799)
 
@@ -2126,23 +2380,25 @@ The `user.given_name`, `user.familiy_name` and `client.name` now also allow char
 
 ### Important
 
-This is a pretty important bugfix update. The 0.28 versions before had an error where the `groups` config component in
-the Admin UI has been changed to contain `roles` after the first render. This means, if you have saved a user in the
-Admin UI (even without changing groups), the groups might have been changed depending on your setup.
+This is a pretty important bugfix update. The 0.28 versions before had an error where the `groups`
+config component in the Admin UI has been changed to contain `roles` after the first render. This
+means, if you have saved a user in the Admin UI (even without changing groups), the groups might
+have been changed depending on your setup.
 
-The backend sanitizes any submitted `roles` / `groups` on user updates, so only actually existing values can exist, but
-if you had a `roles` combination `groups` with the exact same naming, like e.g. an `admin` role and an `admin` groups,
-it could have been possible that a user ends up with a group assignment he should not have. At the same time, a user
-might have had some groups removed he had before.
+The backend sanitizes any submitted `roles` / `groups` on user updates, so only actually existing
+values can exist, but if you had a `roles` combination `groups` with the exact same naming, like
+e.g. an `admin` role and an `admin` groups, it could have been possible that a user ends up with a
+group assignment he should not have. At the same time, a user might have had some groups removed he
+had before.
 
-This situation can only occur on users you have updated via the Admin UI with either `0.28.0` or `0.28.1`. You should
-**update to `0.28.2` asap and double check group assignments** for your users you may have updated with an earlier
-`0.28` version via the Admin UI.
+This situation can only occur on users you have updated via the Admin UI with either `0.28.0` or
+`0.28.1`. You should **update to `0.28.2` asap and double check group assignments** for your users
+you may have updated with an earlier `0.28` version via the Admin UI.
 
 ### Bugfix
 
-- Fixes a bug in the Admin UI / Users view where the content of the `groups` config component contained `roles` instead
-  of groups.
+- Fixes a bug in the Admin UI / Users view where the content of the `groups` config component
+  contained `roles` instead of groups.
   [#790](https://github.com/sebadob/rauthy/pull/790)
 
 ## v0.28.1
@@ -2151,9 +2407,9 @@ This situation can only occur on users you have updated via the Admin UI with ei
 
 #### CVE-2025-29787
 
-Rauthy itself has not been vulnerable, but he `zip` dependency pulled in by the Swagger UI as a 3rd party dependency has
-been vulnerable when reading files. `zip` inside the Swagger UI has only been used at build time, never at runtime.
-However, the version has been bumped to a non-vulnerable one.
+Rauthy itself has not been vulnerable, but he `zip` dependency pulled in by the Swagger UI as a 3rd
+party dependency has been vulnerable when reading files. `zip` inside the Swagger UI has only been
+used at build time, never at runtime. However, the version has been bumped to a non-vulnerable one.
 
 [CVE-2025-29787](https://nvd.nist.gov/vuln/detail/CVE-2025-29787)
 
@@ -2163,8 +2419,8 @@ However, the version has been bumped to a non-vulnerable one.
 
 #### Updated Translations
 
-`zh` and `ko` translations have received updates. `ko` is now also available for the Admin UI and has been added to the
-`FILTER_LANG_ADMIN` value from the `0.28.0` release.
+`zh` and `ko` translations have received updates. `ko` is now also available for the Admin UI and
+has been added to the `FILTER_LANG_ADMIN` value from the `0.28.0` release.
 
 [#769](https://github.com/sebadob/rauthy/pull/769)
 [#775](https://github.com/sebadob/rauthy/pull/775)
@@ -2174,7 +2430,8 @@ However, the version has been bumped to a non-vulnerable one.
 - UI: Fixed and updated some translations to make them more clear
   [#779](https://github.com/sebadob/rauthy/pull/779)
   [#783](https://github.com/sebadob/rauthy/pull/783)
-- UI: The `Allow Insecure TLS` checkbox for upstream auth providers has been shown twice in some situations.
+- UI: The `Allow Insecure TLS` checkbox for upstream auth providers has been shown twice in some
+  situations.
   [#780](https://github.com/sebadob/rauthy/pull/780)
 - UI: The `Invalid Input` message has not been reset in some views and situations.
   [#781](https://github.com/sebadob/rauthy/pull/781)
@@ -2185,23 +2442,24 @@ However, the version has been bumped to a non-vulnerable one.
 
 #### Environment Variable Only Config
 
-If you configured Rauthy via environment variables only, you might have breaking changes with this update.
+If you configured Rauthy via environment variables only, you might have breaking changes with this
+update.
 
-If a configuration is being made purely via env vars, and a proper `rauthy.cfg` (at least an empty file) is not being
-created and mounted inside the container, the application would actually use demo values as long as they are not
-overwritten by env vars manually.
+If a configuration is being made purely via env vars, and a proper `rauthy.cfg` (at least an empty
+file) is not being created and mounted inside the container, the application would actually use demo
+values as long as they are not overwritten by env vars manually.
 
-To improve the security out of the box, the container setup has been changed and the demo config has a separate
-filename, which will only be parsed when `LOCAL_TEST=true` is passed in as an env var before app startup.
-Setting this value inside the usual `rauthy.cfg` has no effect.
+To improve the security out of the box, the container setup has been changed and the demo config has
+a separate filename, which will only be parsed when `LOCAL_TEST=true` is passed in as an env var
+before app startup. Setting this value inside the usual `rauthy.cfg` has no effect.
 
-The insecure local testing values that have been set before (again, with an env vars only setup), can be found here
-https://github.com/sebadob/rauthy/blob/v0.27.3/rauthy.deploy.cfg for reference, so you can check, if you would have
-breaking changes.
+The insecure local testing values that have been set before (again, with an env vars only setup),
+can be found here https://github.com/sebadob/rauthy/blob/v0.27.3/rauthy.deploy.cfg for reference, so
+you can check, if you would have breaking changes.
 
-If no `rauthy.cfg` is ever being created, default values will be used, and you can configure the application safely
-with env vars only. If you decide to use both, env vars will keep on having the higher priority over values set inside
-the config file, just like it has been before.
+If no `rauthy.cfg` is ever being created, default values will be used, and you can configure the
+application safely with env vars only. If you decide to use both, env vars will keep on having the
+higher priority over values set inside the config file, just like it has been before.
 
 [#763](https://github.com/sebadob/rauthy/pull/763)
 
@@ -2209,8 +2467,9 @@ the config file, just like it has been before.
 
 This may concern you, if you have built custom UI parts in front of Rauthy.
 
-The Headers names for the session and password reset CSRF tokens have been changed and now contain a leading `x-`.
-This make the API more clean, since custom headers should be marked with a leading `x-`.
+The Headers names for the session and password reset CSRF tokens have been changed and now contain a
+leading `x-`. This make the API more clean, since custom headers should be marked with a leading
+`x-`.
 
 - `csrf-token` -> `x-csrf-token`
 - `pwd-csrf-token` -> `x-pwd-csrf-token`
@@ -2219,16 +2478,18 @@ This make the API more clean, since custom headers should be marked with a leadi
 
 #### Custom Client Branding
 
-With the migration to Svelte 5 (mentioned below), the way theming is done has been changed from the ground up in such
-a way, that it is not possible to migrate possibly existing custom client branding. This means that you will lose and
-need to re-create a possibly existing custom branding with this version.
+With the migration to Svelte 5 (mentioned below), the way theming is done has been changed from the
+ground up in such a way, that it is not possible to migrate possibly existing custom client
+branding. This means that you will lose and need to re-create a possibly existing custom branding
+with this version.
 
 #### Paginated Users / Sessions
 
-This may only concern you if you are doing direct API calls to `GET` users or sessions on a very big Rauthy instance
-in combination with server side pagination. When you added `backwards=true` before, the offset of a single page has
-been added automatically in the backend. This is not the case anymore to provide more flexibility with this API. You
-need to add the `offset` yourself now while going `backwards`.
+This may only concern you if you are doing direct API calls to `GET` users or sessions on a very big
+Rauthy instance in combination with server side pagination. When you added `backwards=true` before,
+the offset of a single page has been added automatically in the backend. This is not the case
+anymore to provide more flexibility with this API. You need to add the `offset` yourself now while
+going `backwards`.
 
 [#732](https://github.com/sebadob/rauthy/pull/732)
 
@@ -2236,16 +2497,17 @@ need to add the `offset` yourself now while going `backwards`.
 
 #### CVE-2025-24898
 
-Even though the vulnerable code blocks have not been used directly, the `openssl` and `openssl-sys` dependencies have
-been bumped to fix [CVE-2025-24898](https://nvd.nist.gov/vuln/detail/CVE-2025-24898).
+Even though the vulnerable code blocks have not been used directly, the `openssl` and `openssl-sys`
+dependencies have been bumped to
+fix [CVE-2025-24898](https://nvd.nist.gov/vuln/detail/CVE-2025-24898).
 
 [#717](https://github.com/sebadob/rauthy/pull/717)
 
 #### GHSA-67mh-4wv8-2f99
 
 This could have only been affecting dev environments, not any production build,
-but [GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99) has been fixed by bumping frontend
-dependencies.
+but [GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99) has been fixed by
+bumping frontend dependencies.
 
 [#735](https://github.com/sebadob/rauthy/pull/735)
 
@@ -2253,11 +2515,12 @@ dependencies.
 
 #### Svelte 5 Migration
 
-The whole UI has been migrated to Svelte 5 + Typescript. Many parts and components have been re-written from the ground
-up to provide a better DX and maintainability in the future.
+The whole UI has been migrated to Svelte 5 + Typescript. Many parts and components have been
+re-written from the ground up to provide a better DX and maintainability in the future.
 
-This whole migration comes with a lot of changes, most of them under the hood regarding performance and efficiency.
-There are so many changes, that it does not make much sense to list them all here, but the TL;DR is:
+This whole migration comes with a lot of changes, most of them under the hood regarding performance
+and efficiency. There are so many changes, that it does not make much sense to list them all here,
+but the TL;DR is:
 
 - The whole UI is now based on Svelte 5 + TS with improved performance.
 - The DX and UX has been improved a lot.
@@ -2265,41 +2528,45 @@ There are so many changes, that it does not make much sense to list them all her
 - Rauthy now comes with a light and dark mode, even for the custom client branding login site.
 - We have a new logo, which makes it a lot easier to identify Rauthy in a tab overview and so on.
 - The whole UI is now fully responsive and usable even down to mobile devices.
-- The whole design of the UI has been changed in a way that most components and payloads can now be cache infinitely.
+- The whole design of the UI has been changed in a way that most components and payloads can now be
+  cache infinitely.
 - The engine for server side rendering of the static HTML content has been migrated
-  from [askama](https://github.com/rinja-rs/askama) to [rinja](https://github.com/rinja-rs/rinja) (based on askama with
-  lots of improvements).
+  from [askama](https://github.com/rinja-rs/askama) to [rinja](https://github.com/rinja-rs/rinja) (
+  based on askama with lots of improvements).
 - The backend now comes with caching and dynamic pre-compression of all dynamic SSR HTML content.
-- The way i18n is done has been changed a lot and moved from the backend into a type-checked frontend file to make
-  it a bit easier to get into and provide caching again.
-- The admin UI can now be translated as well. The i18n for common user sites and the admin UI are split for reduced
-  payloads for most users. Currently, only `en` and `de` exist for the Admin UI, but these can be extended easily in
-  the future as soon as someone provides a PR. They are also independent with the only requirement that a common i18n
-  must exist before an admin i18n. (Translations for E-Mails are still in the backend of course)
-- Part of the state for the Admin UI has been moved into the URL, which makes it possible to copy & paste most links
-  and actually end up where you were before.
+- The way i18n is done has been changed a lot and moved from the backend into a type-checked
+  frontend file to make it a bit easier to get into and provide caching again.
+- The admin UI can now be translated as well. The i18n for common user sites and the admin UI are
+  split for reduced payloads for most users. Currently, only `en` and `de` exist for the Admin UI,
+  but these can be extended easily in the future as soon as someone provides a PR. They are also
+  independent with the only requirement that a common i18n must exist before an admin i18n. (
+  Translations for E-Mails are still in the backend of course)
+- Part of the state for the Admin UI has been moved into the URL, which makes it possible to copy &
+  paste most links and actually end up where you were before.
 
-NOTICE: Since the whole UI has basically been re-written, or at least almost every single line has been touched, the
-new UI can be seen as in beta state. If you have any problems with it, please open an issue.
+NOTICE: Since the whole UI has basically been re-written, or at least almost every single line has
+been touched, the new UI can be seen as in beta state. If you have any problems with it, please open
+an issue.
 
 [#642](https://github.com/sebadob/rauthy/issues/642)
 
 #### User Pictures / Avatars
 
-It is now possible to upload an avatar / picture for each user. This can be done via the account dashboard.
+It is now possible to upload an avatar / picture for each user. This can be done via the account
+dashboard.
 
-Rauthy uses the term `picture` to match the OIDC RFC spec. If the `scope` during login includes `profile` and the user
-has a picture, the `picture` claim will be included in the `id_token` and will contain the URL where the user picture
-can be found.
-User Picture URLs are "safe" to be used publicly, and they contain 2 cryptographically random secure IDs. This makes it
-possible to even make them available without authentication for ease of use. By default, a session / API Key / token
+Rauthy uses the term `picture` to match the OIDC RFC spec. If the `scope` during login includes
+`profile` and the user has a picture, the `picture` claim will be included in the `id_token` and
+will contain the URL where the user picture can be found. User Picture URLs are "safe" to be used
+publicly, and they contain 2 cryptographically random secure IDs. This makes it possible to even
+make them available without authentication for ease of use. By default, a session / API Key / token
 is required to fetch them, but you can opt-out of that.
 
-For storage options, the default is database. This is not ideal and should only be done for small instances with maybe
-a few hundred users. They can fill up the database pretty quickly, even though images are optimized after upload, they
-will end up somewhere in the range of ~25 - 40kB each.
-For single instance deployments, you can use local `file` storage, while for HA deployments, you should probably use
-an S3 bucket to do so.
+For storage options, the default is database. This is not ideal and should only be done for small
+instances with maybe a few hundred users. They can fill up the database pretty quickly, even though
+images are optimized after upload, they will end up somewhere in the range of ~25 - 40kB each.
+For single instance deployments, you can use local `file` storage, while for HA deployments, you
+should probably use an S3 bucket to do so.
 
 Uploading user pictures can be disabled completely by setting `PICTURE_STORAGE_TYPE=disabled`
 
@@ -2364,13 +2631,14 @@ The following new config variables are available:
 
 #### Static HTML + prepared queries added to version control
 
-To make it possible to build Rauthy from source in environments like e.g. FreeBSD, all pre-built static HTML files have
-been added to version control, even though they are built dynamically each time in release pipelines. Additionally, all
-DB queries used by `sqlx` are added to version control as well.
+To make it possible to build Rauthy from source in environments like e.g. FreeBSD, all pre-built
+static HTML files have been added to version control, even though they are built dynamically each
+time in release pipelines. Additionally, all DB queries used by `sqlx` are added to version control
+as well.
 
-The reason is that the UI cannot be built in certain environments. With these files checked-in, you can build from
-source with just `cargo build --release` by having Rust available. You don't need to build the UI or have a Postgres
-running anymore, if you only care about building from source.
+The reason is that the UI cannot be built in certain environments. With these files checked-in, you
+can build from source with just `cargo build --release` by having Rust available. You don't need to
+build the UI or have a Postgres running anymore, if you only care about building from source.
 
 #### I18n - Korean
 
@@ -2380,8 +2648,8 @@ Korean has been added to the translations for all user-facing UI parts.
 #### Filter I18n UI Languages
 
 Since it is likely that the available translations will expand in the future and you may not need or
-want to show all options to the users, because you maybe only have a local / regional deployment, you
-can now apply a filter to the Languages that are shown in the UI selector.
+want to show all options to the users, because you maybe only have a local / regional deployment,
+you can now apply a filter to the Languages that are shown in the UI selector.
 
 ```
 #####################################
@@ -2406,30 +2674,32 @@ can now apply a filter to the Languages that are shown in the UI selector.
 
 #### Manual `Debug` impls
 
-For types in the background, that hold sensitive data like passwords or client secrets, manual impls for `Debug` have
-been added to make sure that no sensitive information can leak into logs with `LOG_LEVEL=debug`.
+For types in the background, that hold sensitive data like passwords or client secrets, manual impls
+for `Debug` have been added to make sure that no sensitive information can leak into logs with
+`LOG_LEVEL=debug`.
 
-CAUTION: If you enable `HQL_LOG_STATEMENTS=true` for DB statement logging, it is guaranteed that you will see sensitive
-information in logs sooner or later, so be very careful when using this in production.
+CAUTION: If you enable `HQL_LOG_STATEMENTS=true` for DB statement logging, it is guaranteed that you
+will see sensitive information in logs sooner or later, so be very careful when using this in
+production.
 
 [#708](https://github.com/sebadob/rauthy/pull/708)
 
 ### Bugfix
 
-- When using the `MIGRATE_DB_FROM` in combination with a Sqlite DB as base that has been created with
-  Rauthy < `v0.20.0`, the migration might fail for you in `v0.27.0` because of an old value in the `config`
-  table that might not have been cleaned up properly in some cases.
+- When using the `MIGRATE_DB_FROM` in combination with a Sqlite DB as base that has been created
+  with Rauthy < `v0.20.0`, the migration might fail for you in `v0.27.0` because of an old value in
+  the `config` table that might not have been cleaned up properly in some cases.
   [#669](https://github.com/sebadob/rauthy/pull/685)
-- Fixed a regression from v0.27.0 which made it impossible to use `zh-Hans` as a users' language. The deserialization
-  of the database value would fail when using Hiqlite.
+- Fixed a regression from v0.27.0 which made it impossible to use `zh-Hans` as a users' language.
+  The deserialization of the database value would fail when using Hiqlite.
   [#693](https://github.com/sebadob/rauthy/pull/693)
-- Fixed a bug in the UI - Custom User Attributed: When only a single existing attributed has been deleted, the
-  list would not properly update and remove it.
+- Fixed a bug in the UI - Custom User Attributed: When only a single existing attributed has been
+  deleted, the list would not properly update and remove it.
   [#695](https://github.com/sebadob/rauthy/pull/695)
-- Type information has been missing for a few endpoints in the OpenAPI definition, which have been fixed in various
-  PRs.
-- A bug has been fixed where the `/logout` endpoint did not correctly forward the optional `state`, if it has been
-  initiated by a downstream client.
+- Type information has been missing for a few endpoints in the OpenAPI definition, which have been
+  fixed in various PRs.
+- A bug has been fixed where the `/logout` endpoint did not correctly forward the optional `state`,
+  if it has been initiated by a downstream client.
   [#690](https://github.com/sebadob/rauthy/pull/690)
 
 ## v0.27.3
@@ -2438,62 +2708,65 @@ information in logs sooner or later, so be very careful when using this in produ
 
 #### Upstream Identity Providers
 
-To provide additional compatibility for some upstream providers like Active Directory Federation Severices,
-some changes have been applied to Rauthy's behavior.
+To provide additional compatibility for some upstream providers like Active Directory Federation
+Severices, some changes have been applied to Rauthy's behavior.
 
-The first thing is that the HTTP client used for upstream Logins does not force TLS v1.3 anymore, but also allows
-TLS v1.2. Both v1.2 and v1.3 are considered being secure by current standards. This is necessary, because some OSes
-like Windows Server 2019 do not support TLS 1.3.
+The first thing is that the HTTP client used for upstream Logins does not force TLS v1.3 anymore,
+but also allows TLS v1.2. Both v1.2 and v1.3 are considered being secure by current standards. This
+is necessary, because some OSes like Windows Server 2019 do not support TLS 1.3.
 
-The second change is for the way upstream providers are configured. The behavior until now was, that Rauthy added the
-client credentials as both Basic Authentication in headers, and in the body for maximum compatibility. However, some
-IdP'S (like ADFS for instance) complain about this and only expect it in one place.
-To make this happen, there are 2 new fields for the upstream IdP configuration:
+The second change is for the way upstream providers are configured. The behavior until now was, that
+Rauthy added the client credentials as both Basic Authentication in headers, and in the body for
+maximum compatibility. However, some IdP'S (like ADFS for instance) complain about this and only
+expect it in one place. To make this happen, there are 2 new fields for the upstream IdP
+configuration:
 
 - `client_secret_basic: bool`
 - `client_secret_post: bool`
 
-These are available as switches in the Admin UI for each upstream provider. To not introduce breaking changes, all
-possibly existing configurations will have both options enabled like it has been up until now.
+These are available as switches in the Admin UI for each upstream provider. To not introduce
+breaking changes, all possibly existing configurations will have both options enabled like it has
+been up until now.
 
 [#659](https://github.com/sebadob/rauthy/pull/659)
 
 #### Note
 
-Even though this changes the request and response objects on the API, this change is **NOT** being handled as
-a breaking change. API clients are forbidden to modify upstream IdPs for security reasons, which means this change
-should only affect the Rauthy Admin UI.
+Even though this changes the request and response objects on the API, this change is **NOT** being
+handled as a breaking change. API clients are forbidden to modify upstream IdPs for security
+reasons, which means this change should only affect the Rauthy Admin UI.
 
 #### Gitlab as Upstream IdP
 
-Gitlab is special and does its own, annoying thing to make it usable as an upstream IdP. An issue has been found
-when someone tries to log in with no publicly shown email address. In this worst case scenario, a successful
-login to Github while retrieving all necessary information (email is mandatory for Rauthy), you need to do 3
-different API requests.
+Gitlab is special and does its own, annoying thing to make it usable as an upstream IdP. An issue
+has been found when someone tries to log in with no publicly shown email address. In this worst case
+scenario, a successful login to Github while retrieving all necessary information (email is
+mandatory for Rauthy), you need to do 3 different API requests.
 
-This version also makes it possible to log in via Github IdP with an account with only private email addresses.
-A different `scope` for the login is necessary to make this possible. The template in the UI has been updated,
-but this will not affect existing Github IdP Providers. If you are currently using Github as upstream IdP, please
-change the `scope` manually from `read:user` to `user:email`.
+This version also makes it possible to log in via Github IdP with an account with only private email
+addresses. A different `scope` for the login is necessary to make this possible. The template in the
+UI has been updated, but this will not affect existing Github IdP Providers. If you are currently
+using Github as upstream IdP, please change the `scope` manually from `read:user` to `user:email`.
 
 [#665](https://github.com/sebadob/rauthy/pull/665)
 
 ### Bugfix
 
-- During the deletion of a custom scope, that has been mapped to only a clients default scopes, but not the
-  free ones, the mapping would be skipped during the whole client cleanup and end up being left-over after the
-  deletion, which needed a manual cleanup afterward.
+- During the deletion of a custom scope, that has been mapped to only a clients default scopes, but
+  not the free ones, the mapping would be skipped during the whole client cleanup and end up being
+  left-over after the deletion, which needed a manual cleanup afterward.
   [#663](https://github.com/sebadob/rauthy/pull/663)
 
 ## v0.27.2
 
 ### Changes
 
-Even though not recommended at all, it is now possible to opt-out of the `refresh_token` nbf claim, and disable it.
+Even though not recommended at all, it is now possible to opt-out of the `refresh_token` nbf claim,
+and disable it.
 
-By default, A `refresh_token` will not be valid before `access_token_lifetime - 60 seconds`, but some (bad) client
-implementations try to refresh `access_tokens` while they are still valid for a long time. To opt-out, you get a new
-config variable:
+By default, A `refresh_token` will not be valid before `access_token_lifetime - 60 seconds`, but
+some (bad) client implementations try to refresh `access_tokens` while they are still valid for a
+long time. To opt-out, you get a new config variable:
 
 ```
 # By default, `refresh_token`s will have an `nbf` claim, making them valid
@@ -2517,21 +2790,24 @@ DISABLE_REFRESH_TOKEN_NBF=false
 
 ### Bugfix
 
-The Rauthy deployment could get stuck in Kubernetes when you were running a HA-Cluster with Postgres as your database
-of choice. The cache raft re-join had an issue sometimes because of a race condition, which needed a full restart of the
-cluster. This has been fixed in [hiqlite-0.3.2](https://github.com/sebadob/hiqlite/releases/tag/v0.3.2) and the
-dependency has been bumped.
+The Rauthy deployment could get stuck in Kubernetes when you were running a HA-Cluster with Postgres
+as your database of choice. The cache raft re-join had an issue sometimes because of a race
+condition, which needed a full restart of the cluster. This has been fixed
+in [hiqlite-0.3.2](https://github.com/sebadob/hiqlite/releases/tag/v0.3.2) and the dependency has
+been bumped.
 
 ## v0.27.1
 
 ### Bugfix
 
-With the big migration to [Hiqlite](https://github.com/sebadob/hiqlite) under the hood, a bug has been introduced with
-`v0.27.0` that made it possible to end up with a `NULL` value for the password policy after an update. Which would
-result in errors further down the road after a restart, because the policy could not be read again.
+With the big migration to [Hiqlite](https://github.com/sebadob/hiqlite) under the hood, a bug has
+been introduced with `v0.27.0` that made it possible to end up with a `NULL` value for the password
+policy after an update. Which would result in errors further down the road after a restart, because
+the policy could not be read again.
 
-This version fixes the issue itself and checks at startup if the database needs a fix for this issue because of an
-already existing `NULL` value. In this case, the default password policy will be inserted correctly at startup.
+This version fixes the issue itself and checks at startup if the database needs a fix for this issue
+because of an already existing `NULL` value. In this case, the default password policy will be
+inserted correctly at startup.
 
 [#646](https://github.com/sebadob/rauthy/pull/646)
 
@@ -2541,48 +2817,54 @@ already existing `NULL` value. In this case, the default password policy will be
 
 #### Single Container Image
 
-The different versions have been combined into a single container image. The image with the `-lite` extension simply
-does not exist anymore and all deployments can be done with just the base image. Since Postgres was the default before,
-you need to change your image name when you do not use Postgres as your database, just remove the `-lite`.
+The different versions have been combined into a single container image. The image with the `-lite`
+extension simply does not exist anymore and all deployments can be done with just the base image.
+Since Postgres was the default before, you need to change your image name when you do not use
+Postgres as your database, just remove the `-lite`.
 
 #### Dropped `sqlx` SQLite in favor of [Hiqlite](https://github.com/sebadob/hiqlite)
 
 From this version on, Rauthy will not support a default SQLite anymore. Instead, it will use
-[Hiqlite](https://github.com/sebadob/hiqlite), which under the hood uses SQLite again and is another project of mine.
+[Hiqlite](https://github.com/sebadob/hiqlite), which under the hood uses SQLite again and is another
+project of mine.
 
-[Hiqlite](https://github.com/sebadob/hiqlite) will bring lots of advantages. It will use a few more resources than a
-direct, plain SQLite, but only ~10-15 MB of memory for small instances. In return, you will get higher consistency and
-never blocking writes to the database during high traffic. It also reduces the latency for all read statements by a huge
-margin compared to the solution before. Rauthy always enables the `dashboard` feature
-for [Hiqlite](https://github.com/sebadob/hiqlite), which will be available over the Hiqlite API port / server.
+[Hiqlite](https://github.com/sebadob/hiqlite) will bring lots of advantages. It will use a few more
+resources than a direct, plain SQLite, but only ~10-15 MB of memory for small instances. In return,
+you will get higher consistency and never blocking writes to the database during high traffic. It
+also reduces the latency for all read statements by a huge margin compared to the solution before.
+Rauthy always enables the `dashboard` feature for [Hiqlite](https://github.com/sebadob/hiqlite),
+which will be available over the Hiqlite API port / server.
 
-The biggest feature it brings though is the ability to **run a HA cluster without any external dependencies**. You can
-use [Hiqlite](https://github.com/sebadob/hiqlite) on a single instance and it would "feel" the same as just a SQLite,
-but you can also spin up 3 or 5 nodes to get High Availability without the need for an external database. It uses the
-Raft algorithm to sync data while still using just a simple SQLite under the hood. The internal design of Hiqlite has
-been optimized a lot to provide way higher throughput as you would normally get when you just use a direct connection
-to a SQLite file. If you are interested more about the internals, take a look at
+The biggest feature it brings though is the ability to **run a HA cluster without any external
+dependencies**. You can use [Hiqlite](https://github.com/sebadob/hiqlite) on a single instance and
+it would "feel" the same as just a SQLite, but you can also spin up 3 or 5 nodes to get High
+Availability without the need for an external database. It uses the Raft algorithm to sync data
+while still using just a simple SQLite under the hood. The internal design of Hiqlite has been
+optimized a lot to provide way higher throughput as you would normally get when you just use a
+direct connection to a SQLite file. If you are interested more about the internals, take a look at
 the [hiqlite/README.md](https://github.com/sebadob/hiqlite/blob/main/README.md)
 or [hiqlite/ARCHITECTURE.md](https://github.com/sebadob/hiqlite/blob/main/ARCHITECTURE.md).
 
-With these features, Hiqlite will always be the preferred database solution for Rauthy. You should really not spin up
-a dedicated Postgres instance just for Rauthy, because it would just use too many resources, which is not necessary.
-If you have a Postgres up and running anyway, you can still opt-in to use it.
+With these features, Hiqlite will always be the preferred database solution for Rauthy. You should
+really not spin up a dedicated Postgres instance just for Rauthy, because it would just use too many
+resources, which is not necessary. If you have a Postgres up and running anyway, you can still
+opt-in to use it.
 
-This was a very big migration and tens of thousands of lines of code has been changed. All tests are passing and a lot
-of additional checks have been included. I could not find any leftover issues or errors, but please let me know if you
-find something.
+This was a very big migration and tens of thousands of lines of code has been changed. All tests are
+passing and a lot of additional checks have been included. I could not find any leftover issues or
+errors, but please let me know if you find something.
 
-If you are using Rauthy with Postgres as database, you don't need to do that much. If however you use SQLite, no
-worries, Rauthy can handle the migration for you after adopting a few config variables. Even if you do the
-auto-migration from an existing SQLite to Hiqlite, Rauthy will keep the original SQLite file in place for additional
-safety, so you don't need to worry about a backup (as long as you set the config correctly of course). The next bigger
-release will maybe do cleanup work when everything worked fine for sure, or you can do it manually.
+If you are using Rauthy with Postgres as database, you don't need to do that much. If however you
+use SQLite, no worries, Rauthy can handle the migration for you after adopting a few config
+variables. Even if you do the auto-migration from an existing SQLite to Hiqlite, Rauthy will keep
+the original SQLite file in place for additional safety, so you don't need to worry about a backup (
+as long as you set the config correctly of course). The next bigger release will maybe do cleanup
+work when everything worked fine for sure, or you can do it manually.
 
 ##### New / Changed Config Variables
 
-There are quite a few new config variables and some old ones are gone. What you need to set to migration will be
-explained below.
+There are quite a few new config variables and some old ones are gone. What you need to set to
+migration will be explained below.
 
 ```
 #####################################
@@ -2754,7 +3036,8 @@ HQL_SECRET_API=SuperSecureSecret1337
 
 ##### Migration (Postgres)
 
-If you use Rauthy with Postgres and want to keep doing that, the only thing you need to do is to opt-out of Hiqlite.
+If you use Rauthy with Postgres and want to keep doing that, the only thing you need to do is to
+opt-out of Hiqlite.
 
 ```
 HIQLITE=false
@@ -2762,17 +3045,18 @@ HIQLITE=false
 
 ##### Migration (SQLite)
 
-If you use Rauthy with SQLite and want to migrate to Hiqlite, you can utilize all the above-mentioned new config
-variables, but mandatory are the following ones.
+If you use Rauthy with SQLite and want to migrate to Hiqlite, you can utilize all the
+above-mentioned new config variables, but mandatory are the following ones.
 
 ###### Backups
 
-Backups for the internal database work in the same way as before, but because I moved the backup functionality directly
-into [Hiqlite](https://github.com/sebadob/hiqlite), the variable names have been changed so they make sense if it is
-used in another context.
+Backups for the internal database work in the same way as before, but because I moved the backup
+functionality directly into [Hiqlite](https://github.com/sebadob/hiqlite), the variable names have
+been changed so they make sense if it is used in another context.
 
 - `BACKUP_TASK` -> `HQL_BACKUP_CRON`
-- `BACKUP_NAME` does not exist anymore, will be chosen automatically depending on the cluster leader name
+- `BACKUP_NAME` does not exist anymore, will be chosen automatically depending on the cluster leader
+  name
 - `BACKUP_RETENTION_LOCAL` -> `HQL_BACKUP_KEEP_DAYS_LOCAL`
 - `RESTORE_BACKUP` -> `HQL_BACKUP_RESTORE`
 - `S3_URL` -> `HQL_S3_URL`
@@ -2784,17 +3068,18 @@ used in another context.
 
 `S3_DANGER_ALLOW_INSECURE` stayed as it is.
 
-`BACKUP_RETENTION_LOCAL` is new, and it will actually handle the backup cleanup on the S3 storage for you,
-without defining retention rules for the whole bucket.
+`BACKUP_RETENTION_LOCAL` is new, and it will actually handle the backup cleanup on the S3 storage
+for you, without defining retention rules for the whole bucket.
 
 ###### Hiqlite Dashboard
 
-Rauthy comes with the `dashboard` feature from Hiqlite enabled. If you want to make use of it, you need to set the
-password for logging in. This is a static config variable, and it will only be a single password, no users / accounts.
-The main idea behind the dashboard is to have debugging capabilities in production, which is usually hard to do with
-a SQLite running inside a container.  
-You need to generate a random password (at least 16 characters), hash it with Argon2ID, and then base64 encode it.
-You can do all this manually, or use the `hiqlite` cli to generate a complete hiqlite config where you copy it from.
+Rauthy comes with the `dashboard` feature from Hiqlite enabled. If you want to make use of it, you
+need to set the password for logging in. This is a static config variable, and it will only be a
+single password, no users / accounts. The main idea behind the dashboard is to have debugging
+capabilities in production, which is usually hard to do with a SQLite running inside a container.  
+You need to generate a random password (at least 16 characters), hash it with Argon2ID, and then
+base64 encode it. You can do all this manually, or use the `hiqlite` cli to generate a complete
+hiqlite config where you copy it from.
 
 **Manual:**
 
@@ -2808,7 +3093,8 @@ Set the following options:
 - Hash Length: 32
 - Argon2id
 
-Then copy the **Output in Encoded Form** and base64 encode it, for instance using https://www.base64encode.org.
+Then copy the **Output in Encoded Form** and base64 encode it, for instance
+using https://www.base64encode.org.
 
 **`hiqlite` cli:**
 
@@ -2820,21 +3106,22 @@ Currently, you can only install the `hiqlite` cli via `cargo`:
 
 ###### Migration
 
-Unless you specified a custom target path on disk for SQLite(`HQL_DATA_DIR`)) before, you should be good with the
-configuration now. If you start up Rauthy now, it will be like a fresh install, which you most probably don't want.
-To migrate your current SQLite to Hiqlite at startup, you need to set the `MIGRATE_DB_FROM` once at startup. If you used
-the default path before, you need to set:
+Unless you specified a custom target path on disk for SQLite(`HQL_DATA_DIR`)) before, you should be
+good with the configuration now. If you start up Rauthy now, it will be like a fresh install, which
+you most probably don't want. To migrate your current SQLite to Hiqlite at startup, you need to set
+the `MIGRATE_DB_FROM` once at startup. If you used the default path before, you need to set:
 
 ```
 MIGRATE_DB_FROM=sqlite:data/rauthy.db
 ```
 
-For a custom path, just adopt the value accordingly. This works as well by the way, if you want to migrate from Postgres
-to Hiqlite.
+For a custom path, just adopt the value accordingly. This works as well by the way, if you want to
+migrate from Postgres to Hiqlite.
 
 **!!! CAUTION !!!**  
-You must remove this variable after Rauthy has been started successfully! Otherwise, it would do the migration again
-and again with each following restart and therefore remove everything that has happened in between!
+You must remove this variable after Rauthy has been started successfully! Otherwise, it would do the
+migration again and again with each following restart and therefore remove everything that has
+happened in between!
 
 [#592](https://github.com/sebadob/rauthy/pull/592)
 [#601](https://github.com/sebadob/rauthy/pull/601)
@@ -2842,9 +3129,10 @@ and again with each following restart and therefore remove everything that has h
 
 #### User Registration - Redirect Hint
 
-As an additional hardening, the open redirect hint for user registrations has been locked down a bit by default.
-If you used this feature before, you should update `Client URI`s via the Admin UI, so all possible `redirect_uri`s
-you are using will still be considered valid, or opt-out of the additional hardening.
+As an additional hardening, the open redirect hint for user registrations has been locked down a bit
+by default. If you used this feature before, you should update `Client URI`s via the Admin UI, so
+all possible `redirect_uri`s you are using will still be considered valid, or opt-out of the
+additional hardening.
 
 ```
 # If set to `true`, any validation of the `redirect_uri` provided during
@@ -2867,13 +3155,13 @@ you are using will still be considered valid, or opt-out of the additional harde
 
 #### Optional User Family Name
 
-Since I received quite a few questions and requests regarding the mandatory `family_name` for users, I decided to change
-it and make it optional. This change should not affect you in any way if you only consumed `id_token`s, because the
-`family_name` inside them has been optional before already. Its existence in the `id_token` depends on allowed and
-requested claims.
+Since I received quite a few questions and requests regarding the mandatory `family_name` for users,
+I decided to change it and make it optional. This change should not affect you in any way if you
+only consumed `id_token`s, because the `family_name` inside them has been optional before already.
+Its existence in the `id_token` depends on allowed and requested claims.
 
-However, if you used to communicate with the Rauthy API directly, you should be aware of this change. The
-`User.family_name` is now optional in all situations.
+However, if you used to communicate with the Rauthy API directly, you should be aware of this
+change. The `User.family_name` is now optional in all situations.
 
 [#631](https://github.com/sebadob/rauthy/pull/631)
 
@@ -2881,16 +3169,17 @@ However, if you used to communicate with the Rauthy API directly, you should be 
 
 #### Efficiency and speed improvements
 
-During the migration to Hiqlite, I stumbled about a few DB queries in different places that were low haging
-fruits for efficiency and speed improvements. I did these while migrating the code base. There were a few ones,
-for instance in situations like session invalidation, for password reminder cron jobs, roles / groups / scopes
-name updates, and so on. These do not affect the behavior, just the handling under the hood has been improved.
+During the migration to Hiqlite, I stumbled about a few DB queries in different places that were low
+haging fruits for efficiency and speed improvements. I did these while migrating the code base.
+There were a few ones, for instance in situations like session invalidation, for password reminder
+cron jobs, roles / groups / scopes name updates, and so on. These do not affect the behavior, just
+the handling under the hood has been improved.
 
 #### SVG Sanitization
 
-Rauthy allows you to upload SVGs as either client or upstream IdP logos. This is an action, that only an authorized
-`rauthy_admin` role can do. However, as an additional defense in-depth and protection against an evil admin, Rauthy
-now sanitizes all uploaded SVGs, no matter what.
+Rauthy allows you to upload SVGs as either client or upstream IdP logos. This is an action, that
+only an authorized `rauthy_admin` role can do. However, as an additional defense in-depth and
+protection against an evil admin, Rauthy now sanitizes all uploaded SVGs, no matter what.
 
 [#615](https://github.com/sebadob/rauthy/pull/615)
 [#616](https://github.com/sebadob/rauthy/pull/616)
@@ -2913,9 +3202,9 @@ have been expanded and will also allow characters from `Latin-1 Extended A`.
   [#602](https://github.com/sebadob/rauthy/pull/602)
 - The banner should not be logged as plain text when `LOG_FMT=json` is set
   [#605](https://github.com/sebadob/rauthy/pull/605)
-- When requesting a single user by its ID using an API key, you would get an invalid session error response.
-  This was due to an earlier migration a few versions back. The session check should be done only when no API key
-  is present to make this request work.
+- When requesting a single user by its ID using an API key, you would get an invalid session error
+  response. This was due to an earlier migration a few versions back. The session check should be
+  done only when no API key is present to make this request work.
   [#609](https://github.com/sebadob/rauthy/pull/609)
 
 ## 0.26.2
@@ -2926,9 +3215,9 @@ This patch reverts an unintended change to the `user:group` inside the container
 This will fix issues with migrations from existing deployments using SQLite with manually managed
 volume access rights.
 
-v0.26.0 changed from `scratch` to `gcr.io/distroless/cc-debian12:nonroot` as the base image for the final deployment.
-The distroless image however sets a user of `65532` by default, while it always has been `10001:10001` before.
-The affected versions are
+v0.26.0 changed from `scratch` to `gcr.io/distroless/cc-debian12:nonroot` as the base image for the
+final deployment. The distroless image however sets a user of `65532` by default, while it always
+has been `10001:10001` before. The affected versions are
 
 - `0.26.0`
 - `0.26.1`
@@ -2946,15 +3235,15 @@ Starting from this release (`0.26.2`), the user inside the container will be the
 #### Upstream Auth Provider Query Params
 
 Some upstream auth providers need custom query params appended to their authorization endpoint URL.
-Rauthy will now accept URLs in the auth provider config with pre-defined query params, as long as they
-don't interfere with OIDC default params.
+Rauthy will now accept URLs in the auth provider config with pre-defined query params, as long as
+they don't interfere with OIDC default params.
 
 [7dee26a](https://github.com/sebadob/rauthy/commit/7dee26af0ab757cd80395652fe03f82ffbc2c8bc)
 
 #### Option Log Fmt as JSON
 
-To make automatic parsing of logs possible (to some extent), you now have the ability to change the logging output from
-text to json with the following new config variable:
+To make automatic parsing of logs possible (to some extent), you now have the ability to change the
+logging output from text to json with the following new config variable:
 
 ```
 # You can change the log output format to JSON, if you set:
@@ -2972,8 +3261,9 @@ text to json with the following new config variable:
 
 ### Bugfix
 
-- With relaxing requirements for password resets for new users, a bug has been introduced that would prevent
-  a user from registering an only-passkey account when doing the very first "password reset".
+- With relaxing requirements for password resets for new users, a bug has been introduced that would
+  prevent a user from registering an only-passkey account when doing the very first "password
+  reset".
   [de2cfea](https://github.com/sebadob/rauthy/commit/de2cfea107cff4fb98fc81be692d0b83cf597398)
 
 ## 0.26.0
@@ -3053,8 +3343,8 @@ HQL_SECRET_API=SuperSecureSecret1337
 
 The response for `/auth/v1/health` has been changed.
 
-If you did not care about the response body, there is nothing to do for you. The body itself returns different values
-now:
+If you did not care about the response body, there is nothing to do for you. The body itself returns
+different values now:
 
 ```rust
 struct HealthResponse {
@@ -3069,20 +3359,20 @@ struct HealthResponse {
 
 #### ZH-Hans Translations
 
-Translations for `ZH-Hans` have been added to Rauthy. These exist in all places other than the Admin UI, just like the
-existing ones already.
+Translations for `ZH-Hans` have been added to Rauthy. These exist in all places other than the Admin
+UI, just like the existing ones already.
 
 [ec6c2c3](https://github.com/sebadob/rauthy/commit/ec6c2c3bb4e8b41fa0cd2a60ccc4043d051c17a5)  
 [fcba3c7](https://github.com/sebadob/rauthy/commit/fcba3c7cd7bce7e15d911c0f9d7f55f852e7c424)
 
 #### Support for deep-linking client apps like Tauri
 
-Up until v0.25, it was not possible to set the `Allowed Origin` for a client in a way that Rauthy would allow access
-for instance from inside a Tauri app. The reason is that Tauri (and most probably others) do not set an HTTP / HTTPS
-scheme in the `Origin` header, but something like `tauri://`.
+Up until v0.25, it was not possible to set the `Allowed Origin` for a client in a way that Rauthy
+would allow access for instance from inside a Tauri app. The reason is that Tauri (and most probably
+others) do not set an HTTP / HTTPS scheme in the `Origin` header, but something like `tauri://`.
 
-Rauthy has now support for such situations with adjusted validation for the Origin values and a new config variable
-to allow specific, additional `Origin` schemes:
+Rauthy has now support for such situations with adjusted validation for the Origin values and a new
+config variable to allow specific, additional `Origin` schemes:
 
 ```
 # To bring support for applications using deep-linking, you can set custom URL
@@ -3099,10 +3389,11 @@ ADDITIONAL_ALLOWED_ORIGIN_SCHEMES="tauri myapp"
 #### More stable health checks in HA
 
 For HA deployments, the `/health` checks are more stable now.  
-The quorum is also checked, which will detect network segmentations. To achieve this and still make it possible to use
-the health check in situations like Kubernetes rollouts, a delay has been added, which will simply always return `true`
-after a fresh app start. This initial delay make it possible to use the endpoint inside Kubernetes and will not prevent
-from scheduling the other nodes. This solves a chicken-and-egg problem.
+The quorum is also checked, which will detect network segmentations. To achieve this and still make
+it possible to use the health check in situations like Kubernetes rollouts, a delay has been added,
+which will simply always return `true` after a fresh app start. This initial delay make it possible
+to use the endpoint inside Kubernetes and will not prevent from scheduling the other nodes. This
+solves a chicken-and-egg problem.
 
 You usually do not need to care about it, but this value can of course be configured:
 
@@ -3124,20 +3415,21 @@ You usually do not need to care about it, but this value can of course be config
 
 #### Migration to `ruma`
 
-To send out Matrix notifications, Rauthy was using the `matrix-sdk` up until now. This crate however comes with a huge
-list of dependencies and at the same time pushes too few updates. I had quite a few issues with it in the past because
-it was blocking me from updating other dependencies.
+To send out Matrix notifications, Rauthy was using the `matrix-sdk` up until now. This crate however
+comes with a huge list of dependencies and at the same time pushes too few updates. I had quite a
+few issues with it in the past because it was blocking me from updating other dependencies.
 
-To solve this issue, I decided to drop `matrix-sdk` in favor of `ruma`, which it is using under the hood anyway. With
-`ruma`, I needed to do a bit more work myself since it's more low level, but at the same time I was able to reduce the
-list of total dependencies Rauthy has by ~90 crates.
+To solve this issue, I decided to drop `matrix-sdk` in favor of `ruma`, which it is using under the
+hood anyway. With `ruma`, I needed to do a bit more work myself since it's more low level, but at
+the same time I was able to reduce the list of total dependencies Rauthy has by ~90 crates.
 
 This made it possible to finally bump other dependencies and to start the internal switch
-from [redhac](https://github.com/sebadob/redhac) to [Hiqlite](https://github.com/sebadob/hiqlite) for caching.
+from [redhac](https://github.com/sebadob/redhac) to [Hiqlite](https://github.com/sebadob/hiqlite)
+for caching.
 
 **IMPORTANT:**  
-If you are using a self-hosted homeserver or anything else than the official `matrix.org` servers for Matrix event
-notifications, you must set a newly introduced config variable:
+If you are using a self-hosted homeserver or anything else than the official `matrix.org` servers
+for Matrix event notifications, you must set a newly introduced config variable:
 
 ```
 # URL of your Matrix server.
@@ -3152,47 +3444,53 @@ notifications, you must set a newly introduced config variable:
 The internal cache layer has been migrated from [redhac](https://github.com/sebadob/redhac)
 to [Hiqlite](https://github.com/sebadob/hiqlite).
 
-A few weeks ago, I started rewriting the whole persistence layer from scratch in a separate project. `redhac` is working
-fine, but it has some issues I wanted to get rid of.
+A few weeks ago, I started rewriting the whole persistence layer from scratch in a separate project.
+`redhac` is working fine, but it has some issues I wanted to get rid of.
 
 - its network layer is way too complicated which makes it very hard to maintain
-- there is no "sync from other nodes" functionality, which is not a problem on its own, but leads to the following
+- there is no "sync from other nodes" functionality, which is not a problem on its own, but leads to
+  the following
 - for security reasons, the whole cache is invalidated when a node has a temporary network issue
-- it is very sensitive to even short term network issues and leader changes happen too often for my taste
+- it is very sensitive to even short term network issues and leader changes happen too often for my
+  taste
 
-I started the [Hiqlite](https://github.com/sebadob/hiqlite) project some time ago to get rid of these things and have
-additional features. It is outsourced to make it generally usable in other contexts as well.
+I started the [Hiqlite](https://github.com/sebadob/hiqlite) project some time ago to get rid of
+these things and have additional features. It is outsourced to make it generally usable in other
+contexts as well.
 
-This first step will also make it possible to only have a single container image in the future without the need to
-decide between Postgres and SQLite via the tag.
+This first step will also make it possible to only have a single container image in the future
+without the need to decide between Postgres and SQLite via the tag.
 
 [0919767](https://github.com/sebadob/rauthy/commit/09197670e6491f83a8b739c0f195d4b842abe771)
 
 #### Local Development
 
-The way the container images are built, the builder for the images is built and also the whole `justfile` have been
-changed quite a bit. This will not concern you if you are not working with the code.
+The way the container images are built, the builder for the images is built and also the whole
+`justfile` have been changed quite a bit. This will not concern you if you are not working with the
+code.
 
-The way of wrapping and executing everything inside a container, even during local dev, became tedious to maintain,
-especially for different architectures and I wanted to get rid of the burden of maintenance, because it did not provide
-that many benefits. Postgres and Mailcrab will of course still run in containers, but the code itself for backend and
-frontend will be built and executed locally.
+The way of wrapping and executing everything inside a container, even during local dev, became
+tedious to maintain, especially for different architectures and I wanted to get rid of the burden of
+maintenance, because it did not provide that many benefits. Postgres and Mailcrab will of course
+still run in containers, but the code itself for backend and frontend will be built and executed
+locally.
 
-The reason I started doing all of this inside containers beforehand was to not need a few additional tool installed
-locally to make everything work, but the high maintenance was not worth it in the end. This change now reduced the
-size of the Rauthy builder image from 2x ~4.5GB down to 1x ~1.9GB, which already is a big improvement. Additionally,
-you don't even need to download the builder image at all when you are not creating a production build, while beforehand
-you always needed the builder image in any case.
+The reason I started doing all of this inside containers beforehand was to not need a few additional
+tool installed locally to make everything work, but the high maintenance was not worth it in the
+end. This change now reduced the size of the Rauthy builder image from 2x ~4.5GB down to 1x ~1.9GB,
+which already is a big improvement. Additionally, you don't even need to download the builder image
+at all when you are not creating a production build, while beforehand you always needed the builder
+image in any case.
 
-To encounter the necessary dev tools installation and first time setup, I instead added a new `just` recipe called
-`setup` which will do everything necessary, as long as you have the prerequisites available (which you needed before
-as well anyway, apart from `npm`). This has been updated in the
+To encounter the necessary dev tools installation and first time setup, I instead added a new `just`
+recipe called `setup` which will do everything necessary, as long as you have the prerequisites
+available (which you needed before as well anyway, apart from `npm`). This has been updated in the
 [CONTRIBUTING.md](https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md).
 
 ### Bugfix
 
-- The `refresh_token` grant type on the `/token` endpoint did not set the original `auth_time` for the `id_token`, but
-  instead calculated it from `now()` each time.
+- The `refresh_token` grant type on the `/token` endpoint did not set the original `auth_time` for
+  the `id_token`, but instead calculated it from `now()` each time.
   [aa6e07d](https://github.com/sebadob/rauthy/commit/aa6e07db8822e72e28329b0ecea52e6113851d4a)
 
 ## v0.25.0
@@ -3202,12 +3500,12 @@ as well anyway, apart from `npm`). This has been updated in the
 #### Token Introspection
 
 The introspection endpoint has been fixed in case of the encoding like mentioned in bugfixes.  
-Additionally, authorization has been added to this endpoint. It will now make sure that the request also includes
-an `AUTHORIZATION` header with either a valid `Bearer JwtToken` or `Basic ClientId:ClientSecret` to prevent
-token scanning.
+Additionally, authorization has been added to this endpoint. It will now make sure that the request
+also includes an `AUTHORIZATION` header with either a valid `Bearer JwtToken` or
+`Basic ClientId:ClientSecret` to prevent token scanning.
 
-The way of authorization on this endpoint is not really standardized, so you may run into issues with your client
-application. If so, you can disable the authentication on this endpoint with
+The way of authorization on this endpoint is not really standardized, so you may run into issues
+with your client application. If so, you can disable the authentication on this endpoint with
 
 ```
 # Can be set to `true` to disable authorization on `/oidc/introspect`.
@@ -3223,24 +3521,26 @@ DANGER_DISABLE_INTROSPECT_AUTH=true
 
 #### API Routes Normalization
 
-In preparation for a clean v1.0.0, some older API routes have been fixed regarding their casing and naming.
-The "current" or old routes and names will be available for exactly one release and will be phased out afterward
-to have a smooth migration, just in case someone uses these renamed routes.
+In preparation for a clean v1.0.0, some older API routes have been fixed regarding their casing and
+naming. The "current" or old routes and names will be available for exactly one release and will be
+phased out afterward to have a smooth migration, just in case someone uses these renamed routes.
 
 - `/oidc/tokenInfo` -> `/oidc/introspect`
 - `/oidc/rotateJwk` -> `/oidc/rotate_jwk`
 
-Since I don't like `kebab-case`, most API routes are written in `snake_case`, with 2 exceptions that follow RFC namings:
+Since I don't like `kebab-case`, most API routes are written in `snake_case`, with 2 exceptions that
+follow RFC namings:
 
 - `openid-configuration`
 - `web-identity`
 
-All the `*info` routes like `userinfo` or `sessioninfo` are not `kebab_case` on purpose, just to match other IdPs and
-RFCs a bit more.
+All the `*info` routes like `userinfo` or `sessioninfo` are not `kebab_case` on purpose, just to
+match other IdPs and RFCs a bit more.
 
-There is not a single `camelCase` anymore in the API routes to avoid confusion and issues in situations where you could
-for instance mistake an uppercase `I` as a lowercase `l`. The current `camelCase` endpoints only exist for a smoother
-migration and will be phased out with the next bigger release.
+There is not a single `camelCase` anymore in the API routes to avoid confusion and issues in
+situations where you could for instance mistake an uppercase `I` as a lowercase `l`. The current
+`camelCase` endpoints only exist for a smoother migration and will be phased out with the next
+bigger release.
 
 [107f148](https://github.com/sebadob/rauthy/commit/107f14807760e56a1671e587fa9b08284589f932)
 
@@ -3248,30 +3548,33 @@ migration and will be phased out with the next bigger release.
 
 The current behavior of reading in config variables was not working as intended.
 
-Rauthy reads the `rauthy.cfg` as a file first and the environment variables afterward. This makes it possible to
-configure it in any way you like and even mix and match.  
-However, the idea was that any existing variables in the environment should overwrite config variables and therefore
-have the higher priority. This was exactly the other way around up until `v0.24.1` and has been fixed now.
+Rauthy reads the `rauthy.cfg` as a file first and the environment variables afterward. This makes it
+possible to configure it in any way you like and even mix and match.   
+However, the idea was that any existing variables in the environment should overwrite config
+variables and therefore have the higher priority. This was exactly the other way around up until
+`v0.24.1` and has been fixed now.
 
 How Rauthy parses config variables now correctly:
 
 1. read `rauthy.cfg`
 2. read env var
-3. all existing env vars will overwrite existing vars from `rauthy.cfg` and therefore have the higher priority
+3. all existing env vars will overwrite existing vars from `rauthy.cfg` and therefore have the
+   higher priority
 
 [28b2457](https://github.com/sebadob/rauthy/commit/28b2457a53bf31163e94a363f2009b811e1b0b76)
 
 ### Bugfixes
 
-- The token introspection endpoint was only accepting requests with `Json` data, when it should have instead been
-  with `Form` data.
+- The token introspection endpoint was only accepting requests with `Json` data, when it should have
+  instead been with `Form` data.
 
 ## 0.24.1
 
-The last weeks were mostly for updating the documentation and including all the new features that came to Rauthy in
-the last months. Some small things are still missing, but it's almost there.
+The last weeks were mostly for updating the documentation and including all the new features that
+came to Rauthy in the last months. Some small things are still missing, but it's almost there.
 
-Apart from that, this is an important update because it fixes some security issues in external dependencies.
+Apart from that, this is an important update because it fixes some security issues in external
+dependencies.
 
 ### Security
 
@@ -3285,19 +3588,21 @@ Security issues in external crates have been fixed:
 
 #### `S3_DANGER_ACCEPT_INVALID_CERTS` renamed
 
-The config var `S3_DANGER_ACCEPT_INVALID_CERTS` has been renamed to `S3_DANGER_ALLOW_INSECURE`. This is not a breaking
-change right now, because for now Rauthy will accept both versions to not introduce a breaking change, but the
-deprecated values will be removed after v0.24.
+The config var `S3_DANGER_ACCEPT_INVALID_CERTS` has been renamed to `S3_DANGER_ALLOW_INSECURE`. This
+is not a breaking change right now, because for now Rauthy will accept both versions to not
+introduce a breaking change, but the deprecated values will be removed after v0.24.
 
 #### S3 Compatibility
 
 Quite a few internal dependencies have been updated to the latest versions (where it made sense).
 
-One of them was my own [cryptr](https://github.com/sebadob/cryptr). This was using the `rusty-s3` crate beforehand,
-which is a nice one when working with S3 storages, but had 2 issues. One of them is that it is using pre-signed URLs.
-That is not a flaw in the first place, just a design decision to become network agnostic. The other one was that it
-signed the URL in a way that would make the request not compatible with [Garage](https://garagehq.deuxfleurs.fr/).  
-I migrated `cryptr` to my own [s3-simple](https://github.com/sebadob/s3-simple) which solves these issues.
+One of them was my own [cryptr](https://github.com/sebadob/cryptr). This was using the `rusty-s3`
+crate beforehand, which is a nice one when working with S3 storages, but had 2 issues. One of them
+is that it is using pre-signed URLs. That is not a flaw in the first place, just a design decision
+to become network agnostic. The other one was that it signed the URL in a way that would make the
+request not compatible with [Garage](https://garagehq.deuxfleurs.fr/).   
+I migrated `cryptr` to my own [s3-simple](https://github.com/sebadob/s3-simple) which solves these
+issues.
 
 This update brings compatibility with the `garage` s3 storage for Rauthy's S3 backup feature.
 
@@ -3305,35 +3610,36 @@ This update brings compatibility with the `garage` s3 storage for Rauthy's S3 ba
 
 ### Bugfixes
 
-- Fetching the favicon (and possibly other images) was forbidden because of the new CSRF middleware from some weeks
-  ago.
+- Fetching the favicon (and possibly other images) was forbidden because of the new CSRF middleware
+  from some weeks ago.
   [76cd728](https://github.com/sebadob/rauthy/commit/76cd7281fcd1493c9f0cbb208c3fa7ef93814422)
-- The UI and the backend had a difference in input validation for `given_name` and `family_name` which could make
-  some buttons in the UI get stuck. This has been fixed and the validation for these 2 is the same everywhere and at
-  least 1 single character is required now.
+- The UI and the backend had a difference in input validation for `given_name` and `family_name`
+  which could make some buttons in the UI get stuck. This has been fixed and the validation for
+  these 2 is the same everywhere and at least 1 single character is required now.
   [19d512a](https://github.com/sebadob/rauthy/commit/19d512ad6ea930467f51d7b704252d3edee7ef1c)
 
 ## v0.24.0
 
-Many thousands of lines have been refactored internally to provide better maintainability in the future.
-These are not mentioned separately, since they did not introduce anything new. Apart from this, there are only small
-changes, but one of them is an important breaking change.
+Many thousands of lines have been refactored internally to provide better maintainability in the
+future. These are not mentioned separately, since they did not introduce anything new. Apart from
+this, there are only small changes, but one of them is an important breaking change.
 
 ### Breaking
 
 #### `TRUSTED_PROXIES` Config Variable
 
 The new config variable `TRUSTED_PROXIES` introduces a breaking change in some cases.  
-If you are running Rauthy with either `PROXY_MODE=true` or with a set `PEER_IP_HEADER_NAME` value, you must add the
-`TRUSTED_PROXIES` to your existing config before updating.
+If you are running Rauthy with either `PROXY_MODE=true` or with a set `PEER_IP_HEADER_NAME` value,
+you must add the `TRUSTED_PROXIES` to your existing config before updating.
 
-This value specifies trusted proxies in the above situation. The reason is that Rauthy extracts the client IP from
-the HTTP headers, which could be spoofed if they are used without validating the source. This was not a security issue,
-but gave an attacker the ability to blacklist or rate-limit IPs that do not belong to him.
+This value specifies trusted proxies in the above situation. The reason is that Rauthy extracts the
+client IP from the HTTP headers, which could be spoofed if they are used without validating the
+source. This was not a security issue, but gave an attacker the ability to blacklist or rate-limit
+IPs that do not belong to him.
 
-When `PROXY_MODE=true` or set `PEER_IP_HEADER_NAME`, Rauthy will now only accept direct connections from IPs specified
-with `TRUSTED_PROXIES` and block all other requests. You can provide a list of CIDRs to have full flexibility for your
-deployment.
+When `PROXY_MODE=true` or set `PEER_IP_HEADER_NAME`, Rauthy will now only accept direct connections
+from IPs specified with `TRUSTED_PROXIES` and block all other requests. You can provide a list of
+CIDRs to have full flexibility for your deployment.
 
 ```
 # A `\n` separated list of trusted proxy CIDRs.
@@ -3348,8 +3654,8 @@ deployment.
 ```
 
 **Note:**  
-Keep in mind, that you must include IPs for direct health checks like for instance inside Kubernetes here,
-if they are not being sent via a trusted proxy.
+Keep in mind, that you must include IPs for direct health checks like for instance inside Kubernetes
+here, if they are not being sent via a trusted proxy.
 
 [e1ae491](https://github.com/sebadob/rauthy/commit/e1ae49164f9753e3ec57cb4b6e2aed8614227bce)
 
@@ -3357,10 +3663,11 @@ if they are not being sent via a trusted proxy.
 
 #### User Registration Domain Blacklisting
 
-If you are using an open user registration without domain restriction, you now have the possibility to blacklist
-certain E-Mail provider domains. Even if your registration endpoint allows registrations, this blacklist will be
-checked and deny requests with these domains.  
-This is mainly useful if you want to prevent malicious E-Mail providers from registering and spamming your database.
+If you are using an open user registration without domain restriction, you now have the possibility
+to blacklist certain E-Mail provider domains. Even if your registration endpoint allows
+registrations, this blacklist will be checked and deny requests with these domains.   
+This is mainly useful if you want to prevent malicious E-Mail providers from registering and
+spamming your database.
 
 ```
 # If `OPEN_USER_REG=true`, you can blacklist certain domains
@@ -3376,8 +3683,8 @@ This is mainly useful if you want to prevent malicious E-Mail providers from reg
 
 ### Changes
 
-Even though it was not needed so far, the OIDC userinfo endpoint now has a proper `POST` handler in addition to the
-existing `GET` to comply with the RFC.  
+Even though it was not needed so far, the OIDC userinfo endpoint now has a proper `POST` handler in
+addition to the existing `GET` to comply with the RFC.  
 [05a8793](https://github.com/sebadob/rauthy/commit/05a8793f013f864db1855ae0ee1c848ec36b9254)
 
 ### Bugfixes
@@ -3389,8 +3696,8 @@ existing `GET` to comply with the RFC.
 
 ### Upstream IdP Locale Fix
 
-This patch fixes a regression from fixing the special characters encoding in upstream IdP JWT tokens. A panic was
-possible when the upstream IdP did not include a `locale` in the `id_token`.  
+This patch fixes a regression from fixing the special characters encoding in upstream IdP JWT
+tokens. A panic was possible when the upstream IdP did not include a `locale` in the `id_token`.  
 [ea24e7e](https://github.com/sebadob/rauthy/commit/ea24e7e73f883446a30d7c4f8e38837148da9732)  
 [481c9b3](https://github.com/sebadob/rauthy/commit/481c9b36d3304a2100c2c4906013224c8a5a934f)
 
@@ -3400,18 +3707,19 @@ This is a tiny update, but brings an important bugfix for upstream IdPs.
 
 ### Bugfix
 
-A bug has been fixed in case an upstream IdP included special characters inside Strings in the returned JWT token after
-a successful user login flow.  
-Since JWT tokens should use UNICODE encoding in these cases, it is not possible to do zero-copy deserialization into
-Rust UTF8 string slices in that case. This has been fixed in a way, that only when there are existing special
-characters,
-Rauthy will now do the additional, necessary String allocations for the deserialization process.  
-This should fix current issues when logging in via an upstream IdP with special characters inside the E-Mail address for
-instance.  
+A bug has been fixed in case an upstream IdP included special characters inside Strings in the
+returned JWT token after a successful user login flow.  
+Since JWT tokens should use UNICODE encoding in these cases, it is not possible to do zero-copy
+deserialization into Rust UTF8 string slices in that case. This has been fixed in a way, that only
+when there are existing special characters, Rauthy will now do the additional, necessary String
+allocations for the deserialization process.   
+This should fix current issues when logging in via an upstream IdP with special characters inside
+the E-Mail address for instance.  
 [aa97cb8](https://github.com/sebadob/rauthy/commit/aa97cb8ba2100f540d48e98aa597c11963c84be3)
 
-Apart from that, there were some minor UX improvements for the Admin UI providers setup page like earlier client side
-checking of variables and preventing form submission when some required ones were missing.  
+Apart from that, there were some minor UX improvements for the Admin UI providers setup page like
+earlier client side checking of variables and preventing form submission when some required ones
+were missing.  
 [9a227c9](https://github.com/sebadob/rauthy/commit/9a227c9297ec326191b3f83eaa45a9f88d8270fb)  
 [c89fb7f](https://github.com/sebadob/rauthy/commit/c89fb7fbacb002a202a8022d8318362ee4d6db73)
 
@@ -3433,12 +3741,13 @@ Updated sections in the documentation for:
 
 #### More strict origin checking
 
-More strict checking and validation for `allowed_origins` has been implemented, when you configure clients. Before,
-the regex only checked for the input to be a valid URI, which is not strict enough for validation an origin.  
+More strict checking and validation for `allowed_origins` has been implemented, when you configure
+clients. Before, the regex only checked for the input to be a valid URI, which is not strict enough
+for validation an origin.  
 This should improve the UX and prevents hard to debug bugs, when someone enters an invalid origin.
 
-At the same time, a better visual separation has been added to the Origins / URI section in the UI when configuring
-clients.
+At the same time, a better visual separation has been added to the Origins / URI section in the UI
+when configuring clients.
 
 [55704f3](https://github.com/sebadob/rauthy/commit/55704f3cd3a5dcf04e5796a66ab4aba48b8c70dd)  
 [d993d42](https://github.com/sebadob/rauthy/commit/d993d420fae628b069ac3857dfc1e69d812b16f7)  
@@ -3451,9 +3760,9 @@ Small improvements have been made in a lot of places, which resulted in less mem
 
 #### POST `/authorize` simplification
 
-The logic on POST `/authorize` has been simplified internally. The code grew to an over-complicated state with new
-features coming in all the time until a point where it was hard to follow. This has been simplified.
-This makes the software better maintainable in the future.  
+The logic on POST `/authorize` has been simplified internally. The code grew to an over-complicated
+state with new features coming in all the time until a point where it was hard to follow. This has
+been simplified. This makes the software better maintainable in the future.  
 [af0db9d](https://github.com/sebadob/rauthy/commit/af0db9d0cbe560de327db60e33b61ccf32e33776)
 
 ### Bugfix
@@ -3462,7 +3771,8 @@ This makes the software better maintainable in the future.
   [360ce46](https://github.com/sebadob/rauthy/commit/360ce46c19bad81ee60de817f3b3f74f0dd3c408)
 - upstream auth provider templates could get stuck in the UI when switching between them
   [d2b928a](https://github.com/sebadob/rauthy/commit/d2b928ad9d34302f0ef2af7830d19cadaf784d5a)
-- when a problem with an upstream provider occurs on `/callback`, you will now see the detailed error in the UI
+- when a problem with an upstream provider occurs on `/callback`, you will now see the detailed
+  error in the UI
   [8041c95](https://github.com/sebadob/rauthy/commit/8041c95b57292ac83330c7613698398857864e30)
 
 ## v0.23.2
@@ -3474,15 +3784,15 @@ This release brings some very minor features and bugfixes.
 #### New CSRF protection middleware
 
 CSRF protection was there already without any issues.  
-However, a new middleware has been added to the whole routing stack in addition to the existing checks. This provides
-another defense in depth. The advantage of the new middleware is, that this can be enforced all the way in the future
-after enough testing in parallel.  
-If this works fine without any issues, we might get rid of the current way of doing it and only use the new middleware,
-which is easier to maintain and to work with.
+However, a new middleware has been added to the whole routing stack in addition to the existing
+checks. This provides another defense in depth. The advantage of the new middleware is, that this
+can be enforced all the way in the future after enough testing in parallel.  
+If this works fine without any issues, we might get rid of the current way of doing it and only use
+the new middleware, which is easier to maintain and to work with.
 
-To not break any existing deployments and make sure I did not forget route exceptions for the new middleware, you can
-set it to warn-only mode for this minor release. This option will be removed in future releases though and should only
-be a temporary solution:
+To not break any existing deployments and make sure I did not forget route exceptions for the new
+middleware, you can set it to warn-only mode for this minor release. This option will be removed in
+future releases though and should only be a temporary solution:
 
 ```
 # If set to true, a violation inside the CSRF protection middleware based
@@ -3498,12 +3808,12 @@ be a temporary solution:
 
 #### Experimental FedCM support
 
-This is not really considered a new feature, but Rauthy now has experimental support for FedCM in its current state.
-This is opt-in and disabled by default. You should not attempt to use it in production because the FedCM implementation
-itself still has a few bumps and sharp edges.  
-The only reason the experimental support is there is to help smooth out these things and hopefully have FedCM as a
-really nice addition. It does not really bring any new possibilities to the table, but it would improve the UX quite a
-bit, if it hopefully turns out great.
+This is not really considered a new feature, but Rauthy now has experimental support for FedCM in
+its current state. This is opt-in and disabled by default. You should not attempt to use it in
+production because the FedCM implementation itself still has a few bumps and sharp edges.  
+The only reason the experimental support is there is to help smooth out these things and hopefully
+have FedCM as a really nice addition. It does not really bring any new possibilities to the table,
+but it would improve the UX quite a bit, if it hopefully turns out great.
 
 ```
 #####################################
@@ -3536,17 +3846,19 @@ bit, if it hopefully turns out great.
 
 #### Relaxed validation on ephemeral `client_id`s
 
-The input validation for ephemeral `client_id`s has been relaxed. This now makes it possible to test them with OIDC
-playgrounds, which typically generate pretty long testing URLs, which were being rejected for their length beforehand.
+The input validation for ephemeral `client_id`s has been relaxed. This now makes it possible to test
+them with OIDC playgrounds, which typically generate pretty long testing URLs, which were being
+rejected for their length beforehand.
 Rauthy now accepts URLs of up to 256 characters as `client_id`s.  
 [62405bb](https://github.com/sebadob/rauthy/commit/62405bbad7230f2e3af864b004081a90ab505f6f)
 
 #### Bumped Argon2ID defaults
 
-The default values for the Argon2ID hashing algorithm have been bumped up quite a bit. Rauthy's goal is to be as secure
-as possible by default. The old values were quite a bit above the OWASP recommendation, but still way too low imho.
-The values will of course still need tuning and adjustment to the target architecture / deployment, but they provide a
-way better starting point and can be considered really secure even if not adjusted.
+The default values for the Argon2ID hashing algorithm have been bumped up quite a bit. Rauthy's goal
+is to be as secure as possible by default. The old values were quite a bit above the OWASP
+recommendation, but still way too low imho. The values will of course still need tuning and
+adjustment to the target architecture / deployment, but they provide a way better starting point and
+can be considered really secure even if not adjusted.
 
 The new defaults are:
 
@@ -3564,14 +3876,15 @@ ARGON2_P_COST=8
 
 ### Bugfixes
 
-- Ephemeral client's now work properly with the `/userinfo` endpoint in strict-validation mode. Their validation is
-  simply being skipped at that point, because it does not make much sense to do an `enabled` check at that point.
+- Ephemeral client's now work properly with the `/userinfo` endpoint in strict-validation mode.
+  Their validation is simply being skipped at that point, because it does not make much sense to do
+  an `enabled` check at that point.
   [90b0367](https://github.com/sebadob/rauthy/commit/90b03677ffd3b99372ac9496540449b302af66d5)
-- A small bug appeared in the UI after you have added new custom user attributes. Instead of resetting the input
-  values to empty strings after the registration, they were set to undefined.
+- A small bug appeared in the UI after you have added new custom user attributes. Instead of
+  resetting the input values to empty strings after the registration, they were set to undefined.
   [ab77595](https://github.com/sebadob/rauthy/commit/ab775958dec70eee3b2915fe2faa8b4a9816ec2e)
-- Because of a bug in the account overview UI, it was not possible to link an already existing account to an upstream
-  IdP after the registration.
+- Because of a bug in the account overview UI, it was not possible to link an already existing
+  account to an upstream IdP after the registration.
   [22751ee](https://github.com/sebadob/rauthy/commit/22751ee6e9b31361d2ee5047a8c8795518d30745)
 
 ## v0.23.1
@@ -3580,32 +3893,34 @@ ARGON2_P_COST=8
 
 #### Global Cookie Encryption
 
-All Rauthy cookies (except for the locale) are now encrypted globally inside the whole app by default.  
-This is just another defense in depth. The AEAD algorithm makes sure, that you can't tamper with the cookie values,
-even if you would try to do it manually.
+All Rauthy cookies (except for the locale) are now encrypted globally inside the whole app by
+default.  
+This is just another defense in depth. The AEAD algorithm makes sure, that you can't tamper with the
+cookie values, even if you would try to do it manually.
 
 [4fdb3f2](https://github.com/sebadob/rauthy/commit/4fdb3f262f128fe803d1542418c06eff08bf210c)
 
 #### Easier extraction of CSRF tokens with external Frontend
 
-If you are in the situation where you run Rauthy behind a reverse proxy on the exact same origin with another app,
-and you want to build custom user facing UI parts, you had to retrieve the original HTML for `/authorize` or the
-password reset to extract the CSRF token from the HTML content.  
+If you are in the situation where you run Rauthy behind a reverse proxy on the exact same origin
+with another app, and you want to build custom user facing UI parts, you had to retrieve the
+original HTML for `/authorize` or the password reset to extract the CSRF token from the HTML
+content.  
 Doing this in tests is fine, but very tedious and wasteful for a production deployment.
 
 For this reason, there are now 2 new possibilities:
 
-- POST `/oidc/session` endpoint to create a session in `Init` state, which will return the cookie and the
-  correct CSRF token in a json body
-- the password reset link returns a json with a CSRF token instead of an HTML document, if you request it
-  with a `Accept: application/json` header
+- POST `/oidc/session` endpoint to create a session in `Init` state, which will return the cookie
+  and the correct CSRF token in a json body
+- the password reset link returns a json with a CSRF token instead of an HTML document, if you
+  request it with a `Accept: application/json` header
 
 [c37e1f5](https://github.com/sebadob/rauthy/commit/c37e1f5bc27ebd679c4424ef568a8bae82c523bc)
 
 ### Bugfix
 
-- the password expiry reminder E-Mail had a wrong a link to the account page, a left over from older versions
-  with `.html` appended
+- the password expiry reminder E-Mail had a wrong a link to the account page, a left over from older
+  versions with `.html` appended
   [d728317](https://github.com/sebadob/rauthy/commit/d728317ef31e20a117a0ca2a903e767e34c556d4)
 
 ## v0.23.0
@@ -3617,41 +3932,41 @@ Quite a few values have been cleaned up or improved.
 
 #### `rauthy-client` compatibility
 
-If you are using the [rauthy-client](https://crates.io/crates/rauthy-client), you should upgrade to `v0.4.0` before
-upgrade Rauthy to `v0.23.0`. Any older client version will not understand the new grant type for the OAuth2
-Device Authorization grant.
+If you are using the [rauthy-client](https://crates.io/crates/rauthy-client), you should upgrade to
+`v0.4.0` before upgrade Rauthy to `v0.23.0`. Any older client version will not understand the new
+grant type for theOAuth2 Device Authorization grant.
 
 #### Removal of `UNSAFE_NO_RESET_BINDING` in favor of `PASSWORD_RESET_COOKIE_BINDING`
 
-The config variable `UNSAFE_NO_RESET_BINDING` has been removed in favor of `PASSWORD_RESET_COOKIE_BINDING`.
-The logic for this security feature has been reversed. The default behavior until now was to block subsequent
-requests to the password reset form if they provided an invalid binding cookie. This created issues for people
-that were using evil E-Mail providers. These would scan their users E-Mails and use links inside them.
-This link usage however made it impossible for "the real user" to use the link properly, because it has been
-used already by its provider.  
-In some cases, this hurts the UX more than it is a benefit to the security, so this feature is now an opt-in
-hardening instead of opt-out evil provider error fixing.  
-Additionally, to improve the UX even further, the additional E-Mail input form has been removed from the password
-reset page as well. The security benefits of this were rather small compared to the UX degradation.
-#365
+The config variable `UNSAFE_NO_RESET_BINDING` has been removed in favor of
+`PASSWORD_RESET_COOKIE_BINDING`. The logic for this security feature has been reversed. The default
+behavior until now was to block subsequent requests to the password reset form if they provided an
+invalid binding cookie. This created issues for people that were using evil E-Mail providers. These
+would scan their users E-Mails and use links inside them. This link usage however made it impossible
+for "the real user" to use the link properly, because it has been used already by its provider.  
+In some cases, this hurts the UX more than it is a benefit to the security, so this feature is now
+an opt-in hardening instead of opt-out evil provider error fixing.  
+Additionally, to improve the UX even further, the additional E-Mail input form has been removed from
+the password reset page as well. The security benefits of this were rather small compared to the UX
+degradation. #365
 [1af7b92](https://github.com/sebadob/rauthy/commit/1af7b92204a99de4883154055bb3081dc196d759)
 
 #### Removal of `OFFLINE_TOKEN_LIFETIME` config var
 
-`OFFLINE_TOKEN_LIFETIME` has been removed from the config. This variable has been deprecated since a lof
-of versions now. The `offline_access` scope was not even allowed via the UI for a long time now, so these offline
-tokens were never issued anyway.  
-The "new" mechanism Rauthy uses with the switch in the Admin UI to issue / allow refresh tokens for a client
-is much more clear, since the `offline_access` scope produces a lot of confusion for people new to OIDC.
-From the name, it simply makes no sense that you need to activate `offline_access` to get a refresh token.
-Having an option named "allow refresh tokens" is just so much better.
+`OFFLINE_TOKEN_LIFETIME` has been removed from the config. This variable has been deprecated since a
+lof of versions now. The `offline_access` scope was not even allowed via the UI for a long time now,
+so these offline tokens were never issued anyway.  
+The "new" mechanism Rauthy uses with the switch in the Admin UI to issue / allow refresh tokens for
+a client is much more clear, since the `offline_access` scope produces a lot of confusion for people
+new to OIDC. From the name, it simply makes no sense that you need to activate `offline_access` to
+get a refresh token. Having an option named "allow refresh tokens" is just so much better.
 [71db7fe](https://github.com/sebadob/rauthy/commit/71db7fef18568a599f30cae6e494bba40cb33e7d)
 
 #### Change in `GET /clients/{id}/secret`
 
-If you used the endpoint for retrieving a client secret with an API key before, you need to change the method.
-The endpoint works exactly the same, but the method has been changed from a `GET` to a `POST` to request and validate
-the additional CSRF token from the Admin UI.  
+If you used the endpoint for retrieving a client secret with an API key before, you need to change
+the method. The endpoint works exactly the same, but the method has been changed from a `GET` to a
+`POST` to request and validate the additional CSRF token from the Admin UI.  
 [72f077f](https://github.com/sebadob/rauthy/commit/72f077f462e4b28624d101510cfb50b64700e425)
 
 #### Removal of the `Refresh Token` switch in Admin UI
@@ -3659,9 +3974,11 @@ the additional CSRF token from the Admin UI.
 The `Refresh Token` switch for a client config in the Admin UI has been removed.  
 The old behavior was misleading and unintuitive, I just got rid of that switch.
 
-If you want to use the refresh flow with a client, the only thing you need to do is to allow the `refresh_token` flow.
-You needed to do this before anyway, but in addition enable the switch further down below. So this is not really a
-breaking change, but could lead to confusion, if this switch is just gone.  
+If you want to use the refresh flow with a client, the only thing you need to do is to allow the
+`refresh_token` flow. You needed to do this before anyway, but in addition enable the switch further
+down below. So this is not really a breaking change, but could lead to confusion, if this switch is
+just gone.
+
 [2ece6ed](https://github.com/sebadob/rauthy/commit/2ece6ed6da214b353cc7c9adfbe7904c0f2f6bce)
 
 ### Features
@@ -3669,13 +3986,16 @@ breaking change, but could lead to confusion, if this switch is just gone.
 #### OAuth 2.0 Device Authorization Grant
 
 This release brings support for the OAuth 2.0 Device Authorization Grant.  
-On top of the default RFC spec, we have some additional features like optional rate limiting and being able to
-do the flow with confidential clients as well. The [rauthy-client](https://crates.io/crates/rauthy-client) has the
-basics implemented as well for fetching tokens via the `device_code` flow. An automatic refresh token handler is
-on the TODO list though. A small
-[example](https://github.com/sebadob/rauthy/blob/main/rauthy-client/examples/device-code/src/main.rs) exists as well.  
-You will find new sections in the account and admin -> user view, where you can see all linked devices, can give
-them a friendly name and revoke refresh tokens, if they exist.
+On top of the default RFC spec, we have some additional features like optional rate limiting and
+being able to do the flow with confidential clients as well.  
+The [rauthy-client](https://crates.io/crates/rauthy-client) has the basics implemented as well for
+fetching tokens via the `device_code` flow. An automatic refresh token handler is
+on the TODO list though. A
+small [example](https://github.com/sebadob/rauthy/blob/main/rauthy-client/examples/device-code/src/main.rs)
+exists as well.  
+You will find new sections in the account and admin -> user view, where you can see all linked
+devices, can give them a friendly name and revoke refresh tokens, if they exist.
+
 [544bebe](https://github.com/sebadob/rauthy/commit/544bebe162797870401ae60ad98dfb8cb6ecae92)
 [8d028bf](https://github.com/sebadob/rauthy/commit/8d028bf6273819395d946bc13f2215ec6289a8b6)
 [e8077ce](https://github.com/sebadob/rauthy/commit/e8077ce2f6c6c21d0e83ba531efe2bf5ef1c6d84)
@@ -3685,12 +4005,12 @@ them a friendly name and revoke refresh tokens, if they exist.
 
 #### Dynamic Server Side Search + Pagination
 
-Until now, the Admin UI used client side searching and pagination. This is fine for most endpoints, but
-the users can grow quite large depending on the instance while all other endpoints will return rather small
-"GET all" data.  
-To keep big Rauthy instances with many thousands of users fast and responsive, you can set a threshold for
-the total users count at which Rauthy will dynamically switch from client side to server side pagination
-and searching for the Admin UI's Users and Sessions page.
+Until now, the Admin UI used client side searching and pagination. This is fine for most endpoints,
+but the users can grow quite large depending on the instance while all other endpoints will return
+rather small "GET all" data.   
+To keep big Rauthy instances with many thousands of users fast and responsive, you can set a
+threshold for the total users count at which Rauthy will dynamically switch from client side to
+server side pagination and searching for the Admin UI's Users and Sessions page.
 
 ```
 # Dynamic server side pagination threshold
@@ -3702,8 +4022,8 @@ SSP_THRESHOLD=1000
 ```
 
 For smaller instances, keeping it client side will make the UI a bit more responsive and snappy.
-For higher user counts, you should switch to do this on the server though to keep the UI fast and not
-send huge payloads each time.
+For higher user counts, you should switch to do this on the server though to keep the UI fast and
+not send huge payloads each time.
 
 [b4dead3](https://github.com/sebadob/rauthy/commit/b4dead36169cc284c97af5a982cc33fb8a0be02b)
 [9f87af3](https://github.com/sebadob/rauthy/commit/9f87af3dfb49b48300b885bf406f852579470193)
@@ -3711,10 +4031,11 @@ send huge payloads each time.
 
 #### UX Improvement on Login
 
-The login form now contains a "Home" icon which will appear, if a `client_uri` is registered for the current
-client. A user may click this and be redirected to the client, if a login is not desired for whatever reason.
-Additionally, if the user registration is configured to be open, a link to the user registration will be shown
-at the bottom as well.
+The login form now contains a "Home" icon which will appear, if a `client_uri` is registered for the
+current client. A user may click this and be redirected to the client, if a login is not desired for
+whatever reason. Additionally, if the user registration is configured to be open, a link to the user
+registration will be shown at the bottom as well.
+
 [b03349c](https://github.com/sebadob/rauthy/commit/b03349c9d3f998aaecd3e4177c7b62bda067bf8b)
 [b03349c](https://github.com/sebadob/rauthy/commit/b03349c9d3f998aaecd3e4177c7b62bda067bf8b)
 
@@ -3729,10 +4050,11 @@ a password or passkey before.
 #### Link Existing Account to Provider
 
 This is the counterpart to the unlink feature from above.
-This makes it possible to link an already existing, unlinked user account to an upstream auth provider.
-The only condition is a matching `email` claim after successful login. Apart from that, there are quite a few things
-going on behind the scenes and you must trigger this provider link from an authorized, valid session from inside your
-user account view. This is necessary to prevent account takeovers if an upstream provider has been hacked in some way.
+This makes it possible to link an already existing, unlinked user account to an upstream auth
+provider. The only condition is a matching `email` claim after successful login. Apart from that,
+there are quite a few things going on behind the scenes and you must trigger this provider link from
+an authorized, valid session from inside your user account view. This is necessary to prevent
+account takeovers if an upstream provider has been hacked in some way.
 
 [fdc683c](https://github.com/sebadob/rauthy/commit/fdc683cec0181e03bb86da1e42fff213715718f0)
 
@@ -3741,7 +4063,8 @@ user account view. This is necessary to prevent account takeovers if an upstream
 You can set environment variables either via `rauthy.cfg`, `.env` or as just an env var during
 initial setup in production. This makes it possible to create an admin account with the very first
 database setup with a custom E-Mail + Password, instead of the default `admin@localhost.de` with
-a random password, which you need to pull from the logs. A single API Key may be bootstrapped as well.
+a random password, which you need to pull from the logs. A single API Key may be bootstrapped as
+well.
 
 ```
 #####################################
@@ -3822,44 +4145,48 @@ BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx
 
 #### New config var `USERINFO_STRICT`
 
-You can now set a new config variable called `USERINFO_STRICT`. If set so true, Rauthy will do additional
-validations on the `/userinfo` endpoint and actually revoke (even otherwise still valid) access tokens,
-when any user / client / device it has been issued for has been deleted, expired or disabled. The non-strict
-mode will simply make sure the token is valid and that the user still exists. The additional validations
-will consume more resources because they need 1-2 additional database lookups but will provide more strict
-validation and possible earlier token revocation. If you don't need it that strict, and you are resource
-constrained, set it to `false`.  
+You can now set a new config variable called `USERINFO_STRICT`. If set so true, Rauthy will do
+additional validations on the `/userinfo` endpoint and actually revoke (even otherwise still valid)
+access tokens, when any user / client / device it has been issued for has been deleted, expired or
+disabled. The non-strict mode will simply make sure the token is valid and that the user still
+exists. The additional validations will consume more resources because they need 1-2 additional
+database lookups but will provide more strict validation and possible earlier token revocation. If
+you don't need it that strict, and you are resource constrained, set it to `false`
+
 [198e7f9](https://github.com/sebadob/rauthy/commit/198e7f957c32fef5f0f786b145408f7d625f20ce)
 
 #### `at_hash` in `id_token`
 
-The Rauthy `id_token` now contains the access token hash `at_hash` claim. This is needed for additional
-downstream validation, if a client provides both tokens and they are not coming from Rauthy directly.
-With the additional validation of the `at_hash` claim, clients can be 100% sure, that a given `id_token`
-belongs to a specific `access_token` and has not been swapped out.  
+The Rauthy `id_token` now contains the access token hash `at_hash` claim. This is needed for
+additional downstream validation, if a client provides both tokens and they are not coming from
+Rauthy directly. With the additional validation of the `at_hash` claim, clients can be 100% sure,
+that a given `id_token` belongs to a specific `access_token` and has not been swapped out.
+
 [d506865](https://github.com/sebadob/rauthy/commit/d506865898e61fce45e5cf4c754ad4300bd37161)
 
 #### Better roles, groups and scopes names
 
-The allowed names for roles, groups and scopes have been adjusted. Rauthy allows names of up to 64 characters
-now and containing `:` or `*`. This will make it possible to define custom scopes with names like
-`urn:matrix:client:api:guest` or `urn:matrix:client:api:*`.
+The allowed names for roles, groups and scopes have been adjusted. Rauthy allows names of up to 64
+characters now and containing `:` or `*`. This will make it possible to define custom scopes with
+names like `urn:matrix:client:api:guest` or `urn:matrix:client:api:*`.
 
 [a5982d9](https://github.com/sebadob/rauthy/commit/a5982d91f37a2f2917ed4215dc6ded216dc0fd69)
 [50d0214](https://github.com/sebadob/rauthy/commit/50d021440eb50473977ec851a46c0bc979bbd12b)
 
 #### Configurable Cookie Security
 
-Depending on your final deployment, you may want to change the way Rauthy's set's its cookies, for instance if you
-want to create your own UI endpoints but still want to be able to communicate with the API.
+Depending on your final deployment, you may want to change the way Rauthy's set's its cookies, for
+instance if you want to create your own UI endpoints but still want to be able to communicate with
+the API.
 
-The default cookie setting has been changed in a way that all cookies will have the `__Host-` prefix now, which provides
-the highest level of security. There might be cases where you don't want this and rather have the path restriction to
-`/auth` from before, for instance when you host an additional app on the same origin behind a reverse proxy, that should
-not be able to read Rauthy's cookies.
+The default cookie setting has been changed in a way that all cookies will have the `__Host-` prefix
+now, which provides the highest level of security. There might be cases where you don't want this
+and rather have the path restriction to `/auth` from before, for instance when you host an
+additional app on the same origin behind a reverse proxy, that should not be able to read Rauthy's
+cookies.
 
-And finally, for all Safari users, since Safari does not consider `localhost` to be secure when testing, you can even
-set insecure cookies for testing purposes.
+And finally, for all Safari users, since Safari does not consider `localhost` to be secure when
+testing, you can even set insecure cookies for testing purposes.
 
 ```
 # You can set different security levels for Rauthy's cookies.
@@ -3892,7 +4219,8 @@ Rauthy can now auto-blacklist IP's that do suspicious requests, like for instanc
 
 ... and so on.  
 Rauthy has a "catch all" API route handler on `/` which looks for these by default.  
-By default, IPs from such requests will be blacklisted for 24 hours, but you can of course configure this.
+By default, IPs from such requests will be blacklisted for 24 hours, but you can of course configure
+this.
 
 ```
 # The "catch all" route handler on `/` will compare the request path
@@ -3915,16 +4243,20 @@ SUSPICIOUS_REQUESTS_LOG=flase
 
 #### Changes for `/auth/v1/whoami`
 
-The whoami endpoint has been changed. It does not return all headers anymore, because this could possibly leak sensitive
-headers in some environments, especially with the new auth headers feature in some situations.  
-Instead, it only returns the peer IP that Rauthy extracted for this request. This can be very helpful if you need to
-configure the extraction, for instance when you are behind a reverse proxy or CDN.  
+The whoami endpoint has been changed. It does not return all headers anymore, because this could
+possibly leak sensitive headers in some environments, especially with the new auth headers feature
+in some situations.  
+Instead, it only returns the peer IP that Rauthy extracted for this request. This can be very
+helpful if you need to configure the extraction, for instance when you are behind a reverse proxy or
+CDN.
+
 [758b31c](https://github.com/sebadob/rauthy/commit/758b31cb5dc2277a0cc3ec31f15b5de90ff00ea7)
 
 #### New sorting options for users
 
 Users in the Admin UI can now be sorted by their `created_at` or `last_login` timestamp.  
-Users that never have logged in will always be at the end of the list, since this value might be `undefined`.  
+Users that never have logged in will always be at the end of the list, since this value might be
+`undefined`.  
 [4c41d64](https://github.com/sebadob/rauthy/commit/4c41d64f570dbbe94dcb8b681ac31608ed492652)
 
 ### Bugfixes
@@ -3933,7 +4265,7 @@ Users that never have logged in will always be at the end of the list, since thi
   disabled when it should not be, and therefore did not send out requests.
   [39e585d](https://github.com/sebadob/rauthy/commit/39e585d1d53a2490b273ba5c33b864ec0d7835d5)
 - A really hard to reproduce bug where the backend complained about a not-possible mapping
-  from postgres `INT4` to Rust `i64` as been fixed. This came with the advantage of hacing
+  from postgres `INT4` to Rust `i64` as been fixed. This came with the advantage of having
   a few more compile-time checked queries for the `users` table.
   [1740177](https://github.com/sebadob/rauthy/commit/174017736d62d2237a5f00b9d0508bca0a57c8b0)
 - A fix for the `/users/register` endpoint in the OpenAPI documentation has been fixed, which
@@ -3947,11 +4279,12 @@ Users that never have logged in will always be at the end of the list, since thi
   [fc3417e](https://github.com/sebadob/rauthy/commit/fc3417e04451a552bc89c2437c11cc2b019867a0)
 - Button labels were misplaced on chrome based browsers
   [901eb55](https://github.com/sebadob/rauthy/commit/901eb55c3e980c5340ace0b67941dba447da0671)
-- `/authorize` for logins had a bit too strict validation for the user password, which had a chance that
-  a new password a user just set, would be rejected because of some invalid special chars not being allowed
+- `/authorize` for logins had a bit too strict validation for the user password, which had a chance
+  that a new password a user just set, would be rejected because of some invalid special chars not
+  being allowed
   [9bb0a72](https://github.com/sebadob/rauthy/commit/9bb0a72fe2e3cc87e000b6db36c84fcf2d255bf5)
-- when resources in the Admin UI have been re-fetched, for instance because of a user deletion, the search input
-  has not been emptied
+- when resources in the Admin UI have been re-fetched, for instance because of a user deletion, the
+  search input has not been emptied
   [033db25](https://github.com/sebadob/rauthy/commit/033db25db695d2565bc4adcdfe07a77125c2a9a5)
 - the deprecated `x-xss-protection` header has been removed
   [5008438](https://github.com/sebadob/rauthy/commit/50084385df887f4782bbe9224e63bc60719600fd)
@@ -3960,7 +4293,8 @@ Users that never have logged in will always be at the end of the list, since thi
 
 ### Security
 
-This version fixes a [potential DoS in rustls](https://rustsec.org/advisories/RUSTSEC-2024-0336.html) which has
+This version fixes
+a [potential DoS in rustls](https://rustsec.org/advisories/RUSTSEC-2024-0336.html) which has
 been found yesterday.  
 [f4d65a6](https://github.com/sebadob/rauthy/commit/f4d65a6b056183f914075d6047384e2a7a4f0329)
 
@@ -3968,14 +4302,14 @@ been found yesterday.
 
 #### Dedicated `/forward_auth` + Trusted Authn/Authz Headers
 
-In addition to the `/userinfo` endpoint specified in the OIDC spec, Rauthy implements an additional endpoint
-specifically for ForwardAuth situations. You can find it at `/auth/v1/oidc/forward_auth` and it can be configured
-to append optional Trusted Header with User Information for downstream applications, that do not support OIDC
-on their own.
+In addition to the `/userinfo` endpoint specified in the OIDC spec, Rauthy implements an additional
+endpoint specifically for ForwardAuth situations. You can find it at `/auth/v1/oidc/forward_auth`
+and it can be configured to append optional Trusted Header with User Information for downstream
+applications, that do not support OIDC on their own.
 
-The HeaderNames can be configured to match your environment.
-Please keep in mind, that you should only use these, if you legacy application does not support OIDC natively,
-because Auth Headers come with a lot of pitfalls, when your environment is not configured properly.
+The HeaderNames can be configured to match your environment. Please keep in mind, that you should
+only use these, if you legacy application does not support OIDC natively, because Auth Headers come
+with a lot of pitfalls, when your environment is not configured properly.
 
 ```
 # You can enable authn/authz headers which would be added to the response
@@ -4012,12 +4346,13 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 
 ### Bugfixes
 
-- allow CORS requests for the GET PoW and the user sign up endpoint's to make it possible to build a custom UI without
-  having a server side. At the same time, the method for requesting a PoW **has been changed from `GET` to `POST`**.
-  This change has been done because even though only in-memory, a request would create data in the backend, which should
-  never be done by a `GET`.
-  Technically, this is a breaking change, but since it has only been available from the Rauthy UI itself because of the
-  CORS header setting, I decided to only bump the patch, not the minor version.
+- allow CORS requests for the GET PoW and the user sign up endpoint's to make it possible to build a
+  custom UI without having a server side. At the same time, the method for requesting a PoW **has
+  been changed from `GET` to `POST`**. This change has been done because even though only in-memory,
+  a request would create data in the backend, which should never be done by a `GET`.
+  Technically, this is a breaking change, but since it has only been available from the Rauthy UI
+  itself because of the CORS header setting, I decided to only bump the patch, not the minor
+  version.
   [e4d935f](https://github.com/sebadob/rauthy/commit/e4d935f7b51459031a37fb2ec2eb9952bc278f2e)
 
 ## v0.22.0
@@ -4026,31 +4361,33 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 
 There is one breaking change, which could not have been avoided.  
 Because of a complete rewrite of the logic how custom client logos (uploaded via
-`Admin UI -> Clients -> Client Config -> Branding`), you will loose custom logos uploaded in the past for a client.
-The reason is pretty simple. Just take a look at `Auto Image Optimization` below.
+`Admin UI -> Clients -> Client Config -> Branding`), you will loose custom logos uploaded in the
+past for a client. The reason is pretty simple. Just take a look at `Auto Image Optimization` below.
 
-Apart from this, quite a few small internal improvements have been made to make life easier for developers and new
-contributors. These changes are not listed in the release notes.
+Apart from this, quite a few small internal improvements have been made to make life easier for
+developers and new contributors. These changes are not listed in the release notes.
 
 ### Changes
 
 #### Upstream Auth Providers
 
 Rauthy v0.22.0 brings (beta) support for upstream authentication providers.  
-This is a huge thing. It will basically allow you to set up things like *Sign In with Github* into Rauthy. You could use
-your Github account for signup and login, and manage custom groups, scopes, and so on for the users on Rauthy. This
-simplifies the whole onboarding and login for normal users a lot.
+This is a huge thing. It will basically allow you to set up things like *Sign In with Github* into
+Rauthy. You could use your Github account for signup and login, and manage custom groups, scopes,
+and so on for the users on Rauthy. This simplifies the whole onboarding and login for normal users a
+lot.
 
-You can add as many auth providers as you like. They are not statically configured, but actually configurable via the
-Admin UI. A user account can only be bound to one auth provider though for security reasons. Additionally, when a user
-already exists inside Rauthy's DB, was not linked to an upstream provider and then tries a login but produces an email
-conflict, the login will be rejected. It must be handled this way, because Rauthy can not know for sure, if the upstream
-email was actually been verified. If this is not the case, simply accepting this login could lead to account takeover,
-which is why this will not allow the user to login in that case.  
-The only absolutely mandatory information, that Rauthy needs from an upstream provider, is an `email` claim in either
-the `id_token` or as response from the userinfo endpoint. If it cannot find any `name` / `given_name` / `family_name`,
-it will simply insert `N/A` as values there. The user will get a warning on his next values update to provide that
-information.
+You can add as many auth providers as you like. They are not statically configured, but actually
+configurable via the Admin UI. A user account can only be bound to one auth provider though for
+security reasons. Additionally, when a user already exists inside Rauthy's DB, was not linked to an
+upstream provider and then tries a login but produces an email conflict, the login will be rejected.
+It must be handled this way, because Rauthy can not know for sure, if the upstream email was
+actually been verified. If this is not the case, simply accepting this login could lead to
+account takeover, which is why this will not allow the user to login in that case.  
+The only absolutely mandatory information, that Rauthy needs from an upstream provider, is an
+`email` claim in either the `id_token` or as response from the userinfo endpoint. If it cannot find
+any `name` /`given_name` / `family_name`, it will simply insert `N/A` as values there. The user will
+get a warning on his next values update to provide that information.
 
 The supported features (so far) are:
 
@@ -4060,53 +4397,58 @@ The supported features (so far) are:
 - choose a template for the config (currently Google and Github exist)
 - fully customized endpoint configuration if the provider does not support auto-lookup
 - optional mfa claim mapping by providing a json parse regex:  
-  If the upstream provider returns information about if the user has actually done at least a 2FA sign in, Rauthy can
-  extract this information dynamically from the returned JSON. For instance, Rauthy itself will add an `amr` claim to
-  the `id_token` and you can find a value with `mfa` inside it, if the user has done an MFA login.  
+  If the upstream provider returns information about if the user has actually done at least a 2FA
+  sign in, Rauthy can extract this information dynamically from the returned JSON. For instance,
+  Rauthy itself will add an `amr` claim to the `id_token` and you can find a value with `mfa` inside
+  it, if the user has done an MFA login.  
   Github returns this information as well (which has been added to the template).
 - optional `rauthy_admin` claim mapping:
-  If you want to allow full rauthy admin access for a user depending on some value returned by the upstream provider,
-  you can do a mapping just like for the mfa claim above.
-- upload a logo for upstream providers
-  Rauthy does not (and never will do) an automatic logo download from a provider, because this logo will be shown on the
-  login page and must be trusted. However, if Rauthy would download any arbitrary logo from a provider, this could
-  lead to code injection into the login page. This is why you need to manually upload a logo after configuration.
+  If you want to allow full rauthy admin access for a user depending on some value returned by the
+  upstream provider, you can do a mapping just like for the mfa claim above.
+- upload a logo for upstream providers Rauthy does not (and never will do) an automatic logo
+  download from a provider, because this logo will be shown on the login page and must be trusted.
+  However, if Rauthy would download any arbitrary logo from a provider, this could lead to code
+  injection into the login page. This is why you need to manually upload a logo after configuration.
 
 **Note:**  
-If you are testing this feature, please provide some feedback in [#166](https://github.com/sebadob/rauthy/issues/166)
-in any case - if you have errors or not. It would be nice to know about providers that do work already and those, that
-might need some adoptions. All OIDC providers should work already, because for these we can rely on standards and RFCs,
-but all others might produce some edge cases and I simply cannot test all of them myself.  
-If we have new providers we know of, that need special values, these values would be helpful as well, because Rauthy
-could provide a template in the UI for these in the future, so please let me know.
+If you are testing this feature, please provide some feedback
+in [#166](https://github.com/sebadob/rauthy/issues/166) in any case - if you have errors or not. It
+would be nice to know about providers that do work already and those, that might need some
+adoptions. All OIDC providers should work already, because for these we can rely on standards and
+RFCs, but all others might produce some edge cases and I simply cannot test all of them myself.  
+If we have new providers we know of, that need special values, these values would be helpful as
+well, because Rauthy could provide a template in the UI for these in the future, so please let me
+know.
 
 #### Auto Image Optimization
 
 The whole logic how images are handled has been rewritten.
-Up until v0.21.1, custom client logos have been taken as a Javascript `data:` url because of easier handling.
-This means however, that we needed to allow `data:` sources in the CSP for `img-src`, which can be a security issue and
-should be avoided if possible.
+Up until v0.21.1, custom client logos have been taken as a Javascript `data:` url because of easier
+handling. This means however, that we needed to allow `data:` sources in the CSP for `img-src`,
+which can be a security issue and should be avoided if possible.
 
-This whole handling and logic has been rewritten. The CSP hardening has been finalized by removing the `data:` allowance
-for `img-src`. You can still upload SVG / JPG / PNG images under the client branding (and for the new auth providers).
-In the backend, Rauthy will actually parse the image data, convert the images to the optimized `webp` format, scale
-the original down and save 2 different versions of it. The first version will be saved internally to fit into 128x128px
-for possible later use, the second one even smaller. The smaller version will be the one actually being displayed on
-the login page for Clients and Auth Providers.  
-This optimization reduces the payload sent to clients during the login by a lot, if the image has not been manually
-optimized beforehand. Client Logos will typically be in the range of ~5kB now while the Auth Providers ones will usually
-be less than 1kB.
+This whole handling and logic has been rewritten. The CSP hardening has been finalized by removing
+the `data:` allowance for `img-src`. You can still upload SVG / JPG / PNG images under the client
+branding (and for the new auth providers). In the backend, Rauthy will actually parse the image
+data, convert the images to the optimized `webp` format, scale the original down and save 2
+different versions of it. The first version will be saved internally to fit into 128x128px
+for possible later use, the second one even smaller. The smaller version will be the one actually
+being displayed on the login page for Clients and Auth Providers.   
+This optimization reduces the payload sent to clients during the login by a lot, if the image has
+not been manually optimized beforehand. Client Logos will typically be in the range of ~5kB now
+while the Auth Providers ones will usually be less than 1kB.
 
 [6ccc541](https://github.com/sebadob/rauthy/commit/6ccc541b0e6d155024aa9ba4d832dcb01f135528)
 
 #### Custom Header Name for extracting Client IPs
 
-With the name config variable `PEER_IP_HEADER_NAME`, you can specify a custom header name which will be used for
-extracting the clients IP address. For instance, if you are running Rauthy behind a Cloudflare proxy, you will usually
-only see the IP of the proxy itself in the `X-FORWARDED-FOR` header. However, cloudflare adds a custom header called
-`CF-Connecting-IP` to the request, which then shows the IP you are looking for.    
-Since it is very important for rate limiting and blacklisting that Rauthy knows the clients IP, this can now be
-customized.
+With the name config variable `PEER_IP_HEADER_NAME`, you can specify a custom header name which will
+be used for extracting the clients IP address. For instance, if you are running Rauthy behind a
+Cloudflare proxy, you will usually only see the IP of the proxy itself in the `X-FORWARDED-FOR`
+header. However, cloudflare adds a custom header called `CF-Connecting-IP` to the request, which
+then shows the IP you are looking for.    
+Since it is very important for rate limiting and blacklisting that Rauthy knows the clients IP, this
+can now be customized.
 
 ```
 # Can be set to extract the remote client peer IP from a custom header name
@@ -4123,9 +4465,10 @@ PEER_IP_HEADER_NAME="CF-Connecting-IP"
 
 #### Additional Client Data: `contacts` and `client_uri`
 
-For each client, you can now specify contacts and a URI, where the application is hosted. These values might be shown
-to users during login in the future. For Rauthy itself, the values will be set with each restart in the internal
-anti lockout rule. You can specify the contact via a new config variable:
+For each client, you can now specify contacts and a URI, where the application is hosted. These
+values might be shown to users during login in the future. For Rauthy itself, the values will be set
+with each restart in the internal anti lockout rule. You can specify the contact via a new config
+variable:
 
 ```
 # This contact information will be added to the `rauthy`client
@@ -4137,15 +4480,17 @@ RAUTHY_ADMIN_EMAIL="admin@localhost.de"
 
 #### Custom `redirect_uri` During User Registration
 
-If you want to initiate a user registration from a downstream app, you might not want your users to be redirected
-to their Rauthy Account page after they have initially set the password. To encounter this, you can redirect them
-to the registration page and append a `?redirect_uri=https%3A%2F%2Frauthy.example.com` query param. This will be
-saved in the backend state and the user will be redirected to this URL instead of their account after they have set
+If you want to initiate a user registration from a downstream app, you might not want your users to
+be redirected to their Rauthy Account page after they have initially set the password. To encounter
+this, you can redirect them to the registration page and append a
+`?redirect_uri=https%3A%2F%2Frauthy.example.com` query param. This will be saved in the backend
+state and the user will be redirected to this URL instead of their account after they have set
 their password.
 
 #### Password E-Mail Tempalte Overwrites
 
-You can not overwrite the template i18n translations for the NewPassword and ResetPassword E-Mail templates.  
+You can not overwrite the template i18n translations for the NewPassword and ResetPassword E-Mail
+templates.  
 There is a whole nwe section in the config and it can be easily done with environment variables:
 
 ```
@@ -4202,13 +4547,14 @@ There is a whole nwe section in the config and it can be easily done with enviro
 
 - UI: when a client name has been removed and saved, the input could show `undefined` in some cases
   [2600005](https://github.com/sebadob/rauthy/commit/2600005be81649083103051a5bfc7b7ec49c9c3c)
-- The default path to TLS certificates inside the container image has been fixed in the deploy cfg template.
-  This makes it possible now to start the container for testing with TLS without explicitly specifying the path
-  manually.
+- The default path to TLS certificates inside the container image has been fixed in the deploy cfg
+  template. This makes it possible now to start the container for testing with TLS without
+  explicitly specifying the path manually.
   [3a04dc0](https://github.com/sebadob/rauthy/commit/3a04dc02a878263cec2d841553747c78a41b7c4a)
-- The early Passkey implementations of the Bitwarden browser extension seem to have not provided all correct values,
-  which made Rauthy complain because of not RFC-compliant requests during Passkey sign in. This error cannot really be
-  reproduced. However, Rauthy tries to show more error information to the user in such a case.
+- The early Passkey implementations of the Bitwarden browser extension seem to have not provided all
+  correct values, which made Rauthy complain because of not RFC-compliant requests during Passkey
+  sign in. This error cannot really be reproduced. However, Rauthy tries to show more error
+  information to the user in such a case.
   [b7f94ff](https://github.com/sebadob/rauthy/commit/b7f94ff8ad3cd9aad61baf3710e4f9788c498ca6)
 - Don't use the reset password template text for "new-password emails"
   [45b4160](https://github.com/sebadob/rauthy/commit/45b41604b1e0c0c9af423be65021953116b88150)
@@ -4222,7 +4568,8 @@ There is a whole nwe section in the config and it can be easily done with enviro
 
 ### Bugfix
 
-- Correctly show the `registration_endpoint` for dynamic client registration in the `openid-configuration`
+- Correctly show the `registration_endpoint` for dynamic client registration in the
+  `openid-configuration`
   if it is enabled.
   [424fdd1](https://github.com/sebadob/rauthy/commit/424fdd10e57639c1d60dde61f551462e67ff4934)
 
@@ -4231,12 +4578,13 @@ There is a whole nwe section in the config and it can be easily done with enviro
 ### Breaking
 
 The access token's `sub` claim had the email as value beforehand. This was actually a bug.  
-The `sub` of access token and id token must be the exact same value. `sub` now correctly contains the user ID,
-which is 100% stable, even if the user changes his email address.  
-This means, if you used the `sub` from the access token before to get the users email, you need to pay attention now.
-The `uid` from the access token has been dropped, because this value is now in `sub`. Additionally, since many
-applications need the email anyway, it makes sense to have it inside the access token. For this purpose, if `email`
-is in the requested `scope`, it will be mapped to the `email` claim in the access token.
+The `sub` of access token and id token must be the exact same value. `sub` now correctly contains
+the user ID, which is 100% stable, even if the user changes his email address.  
+This means, if you used the `sub` from the access token before to get the users email, you need to
+pay attention now. The `uid` from the access token has been dropped, because this value is now in
+`sub`. Additionally, since many applications need the email anyway, it makes sense to have it inside
+the access token. For this purpose, if `email` is in the requested `scope`, it will be mapped to the
+`email` claim in the access token.
 
 ### Features
 
@@ -4251,33 +4599,37 @@ The missing thing was respecting some additional params during GET `/authorize`.
 Rauthy now supports Dynamic Client registration as
 defined [here](https://openid.net/specs/openid-connect-registration-1_0.html).
 
-Dynamic clients will always get a random ID, starting with `dyn$`, followed by a random alphanumeric string,
-so you can distinguish easily between them in the Admin UI.  
-Whenever a dynamic client does a `PUT` on its own modification endpoint with the `registration_token` it
-received from the registration, the `client_secret` and the `registration_token` will be rotated and the
-response will contain new ones, even if no other value has been modified. This is the only "safe" way to
-rotate secrets for dynamic clients in a fully automated manner. The secret expiration is not set on purpose,
-because this could easily cause troubles, if not implemented properly on the client side.  
-If you have a
-badly implemented client that does not catch the secret rotation and only if you cannot fix this on the
-client side, maybe because it's not under your control, you may deactivate the auto rotation with
-`DYN_CLIENT_SECRET_AUTO_ROTATE=false`. Keep in mind, that this reduces the security level of all dynamic
-clients.
+Dynamic clients will always get a random ID, starting with `dyn$`, followed by a random alphanumeric
+string, so you can distinguish easily between them in the Admin UI.  
+Whenever a dynamic client does a `PUT` on its own modification endpoint with the
+`registration_token` it received from the registration, the `client_secret` and the
+`registration_token` will be rotated and the response will contain new ones, even if no other value
+has been modified. This is the only "safe" way to rotate secrets for dynamic clients in a fully
+automated manner. The secret expiration is not set on purpose, because this could easily cause
+troubles, if not implemented properly on the client side.   
+If you have a badly implemented client that does not catch the secret rotation and only if you
+cannot fix this on the client side, maybe because it's not under your control, you may deactivate
+the auto-rotation with `DYN_CLIENT_SECRET_AUTO_ROTATE=false`. Keep in mind, that this reduces the
+security level of all dynamic clients.
 
-Bot and spam protection is built-in as well in the best way I could think of. This is disabled, if you set
-the registration endpoint to need a `DYN_CLIENT_REG_TOKEN`. Even though this option exists for completeness,
-it does not really make sense to me though. If you need to communicate a token beforehand, you could just
-register the client directly. Dynamic clients are a tiny bit less performant than static ones, because we
-need one extra database round trip on successful token creation to make the spam protection work.  
-However, if you do not set a `DYN_CLIENT_REG_TOKEN`, the registration endpoint would be just open to anyone.
-To me, this is the only configuration for dynamic client registration, that makes sense, because only that
-is truly dynamic. The problem then are of course bots and spammers, because they can easily fill your
-database with junk clients. To counter this, Rauthy includes two mechanisms:
+Bot and spam protection is built-in as well in the best way I could think of. This is disabled, if
+you set the registration endpoint to need a `DYN_CLIENT_REG_TOKEN`. Even though this option exists
+for completeness, it does not really make sense to me though. If you need to communicate a token
+beforehand, you could just register the client directly. Dynamic clients are a tiny bit less
+performant than static ones, because we need one extra database round trip on successful token
+creation to make the spam protection work.   
+However, if you do not set a `DYN_CLIENT_REG_TOKEN`, the registration endpoint would be just open to
+anyone. To me, this is the only configuration for dynamic client registration, that makes sense,
+because only that is truly dynamic. The problem then are of course bots and spammers, because they
+can easily fill your database with junk clients. To counter this, Rauthy includes two mechanisms:
 
-- hard rate limiting - After a dynamic client has been registered, another one can only be registered
+- hard rate limiting - After a dynamic client has been registered, another one can only be
+  registered
   after 60 seconds (default, can be set with `DYN_CLIENT_RATE_LIMIT_SEC`) from the same public IP.
-- auto-cleanup of unused clients - All clients, that have been registered but never used, will be deleted
-  automatically 60 minutes after the registration (default, can be set with `DYN_CLIENT_CLEANUP_MINUTES`).
+- auto-cleanup of unused clients - All clients, that have been registered but never used, will be
+  deleted
+  automatically 60 minutes after the registration (default, can be set with
+  `DYN_CLIENT_CLEANUP_MINUTES`).
 
 There is a whole new section in the config:
 
@@ -4359,16 +4711,17 @@ There is a whole new section in the config:
 
 #### Better UX with respecting `login_hint`
 
-This is a small UX improvement in some situations. If a downstream client needs a user to log in, and it knows
-the users E-Mail address somehow, maybe because of an external initial registration, It may append the correct
-value with appending the `login_hint` to the login redirect. If this is present, the login UI will pre-fill the
-E-Mail input field with the given value, which make it one less step for the user to log in.
+This is a small UX improvement in some situations. If a downstream client needs a user to log in,
+and it knows the users E-Mail address somehow, maybe because of an external initial registration, It
+may append the correct value with appending the `login_hint` to the login redirect. If this is
+present, the login UI will pre-fill the E-Mail input field with the given value, which make it one
+less step for the user to log in.
 
 ### Changes
 
-- The `/userinfo` endpoint now correctly respects the `scope` claim from withing the given `Bearer` token
-  and provides more information. Depending on the `scope`, it will show the additional user values that were
-  introduced with v0.20
+- The `/userinfo` endpoint now correctly respects the `scope` claim from withing the given `Bearer`
+  token and provides more information. Depending on the `scope`, it will show the additional user
+  values that were introduced with v0.20
   [49dd553](https://github.com/sebadob/rauthy/commit/49dd553e1df072f6a0db3b1cfaa130f7146aaf25)
 - respect `max_age` during GET `/authorize` and add `auth_time` to the ID token
   [9ca6970](https://github.com/sebadob/rauthy/commit/9ca697091eba2a6297c289162f426a92b28385f4)
@@ -4395,31 +4748,33 @@ E-Mail input field with the given value, which make it one less step for the use
 
 This is a small bugfix release.  
 The temp migrations which exist for v0.20 only to migrate existing database secrets to
-[cryptr](https://github.com/sebadob/cryptr) were causing a crash at startup for a fresh installation. This is the only
-thing that has been fixed
-with this version. They are now simply ignored and a warning is logged into the console at the very first startup.
+[cryptr](https://github.com/sebadob/cryptr) were causing a crash at startup for a fresh
+installation. This is the only thing that has been fixed with this version. They are now simply
+ignored and a warning is logged into the console at the very first startup.
 
 ## v0.20.0
 
 ### Breaking
 
-This update is not backwards-compatible with any previous version. It will modify the database under the hood
-which makes it incompatible with any previous version. If you need to downgrade for whatever reason, you will
-only be able to do this by applying a database backup from an older version.
-Testing has been done and everything was fine in tests. However, if you are using Rauthy in production, I recommend
-taking a database backup, since any version <= v0.19 will not be working with a v0.20+ database.
+This update is not backwards-compatible with any previous version. It will modify the database under
+the hood which makes it incompatible with any previous version. If you need to downgrade for
+whatever reason, you will only be able to do this by applying a database backup from an older
+version. Testing has been done and everything was fine in tests. However, if you are using Rauthy in
+production, I recommend taking a database backup, since any version <= v0.19 will not be working
+with a v0.20+ database.
 
 ### IMPORTANT Upgrade Notes
 
-If you are upgrading from any earlier version, there is a manual action you need to perform, before you can
-start v0.20.0. If this has not been done, it will simply panic early and not start up. Nothing will get damaged.
+If you are upgrading from any earlier version, there is a manual action you need to perform, before
+you can start v0.20.0. If this has not been done, it will simply panic early and not start up.
+Nothing will get damaged.
 
-The internal encryption of certain values has been changed. Rauthy now uses [cryptr](https://github.com/sebadob/cryptr)
-to handle these things,
-like mentioned below as well.
+The internal encryption of certain values has been changed. Rauthy now
+uses [cryptr](https://github.com/sebadob/cryptr) to handle these things, like mentioned below as
+well.
 
-However, to make working with encryption keys easier and provide higher entropy, the format has changed.
-You need to convert your currently used `ENC_KEYS` to the new format:
+However, to make working with encryption keys easier and provide higher entropy, the format has
+changed. You need to convert your currently used `ENC_KEYS` to the new format:
 
 #### Option 1: Use `cryptr` CLI
 
@@ -4472,14 +4827,15 @@ Then decode via shell or any tool your like:
 
 ... and paste the decoded value into cryptr
 
-**4. cryptr will output the correct format for either usage in config or as kubernetes secret again**
+**4. cryptr will output the correct format for either usage in config or as kubernetes secret again
+**
 
 **5. Paste the new format into your Rauthy config / secret and restart.**
 
 #### Option 2: Manual
 
-Rauthy expects the `ENC_KEYS` now base64 encoded, and instead of separated by whitespace it expects them to
-be separated by `\n` instead.  
+Rauthy expects the `ENC_KEYS` now base64 encoded, and instead of separated by whitespace it expects
+them to be separated by `\n` instead.   
 If you don't want to use `cryptr` you need to convert your current keys manually.
 
 For instance, if you have
@@ -4488,10 +4844,12 @@ For instance, if you have
 ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
 ```
 
-in your config, you need to convert the enc key itself, the value after the `/`, to base64, and then separate
+in your config, you need to convert the enc key itself, the value after the `/`, to base64, and then
+separate
 them with `\n`.
 
-For instance, to convert `bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4`, split off the enc key part
+For instance, to convert `bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4`, split off the enc key
+part
 `S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4` and encode it with base64:
 
 ```
@@ -4514,58 +4872,65 @@ q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
 ```
 
 **Important:**  
-Make sure to not add any newline characters or spaces when copying values around when doing the bas64 encoding!
+Make sure to not add any newline characters or spaces when copying values around when doing the
+bas64 encoding!
 
 ### Encrypted SQLite backups to S3 storage
 
 Rauthy can now push encrypted SQLite backups to a configured S3 bucket.
-The local backups to `data/backups/` do still exist. If configured, Rauthy will now push backups from SQLite
+The local backups to `data/backups/` do still exist. If configured, Rauthy will now push backups
+from SQLite
 to an S3 storage and encrypt them on the fly. All this happens with the help
 of [cryptr](https://github.com/sebadob/cryptr)
-which is a new crate of mine. Resource usage is minimal, even if the SQLite file would be multiple GB's big.
+which is a new crate of mine. Resource usage is minimal, even if the SQLite file would be multiple
+GB's big.
 The whole operation is done with streaming.
 
 ### Auto-Restore SQLite backups
 
-Rauthy can now automatically restore SQLite backups either from a backup inside `data/backups/` locally, or
-fetch an encrypted backup from an S3 bucket. You only need to set the new `RESTORE_BACKUP` environment variable
-at startup and Rauthy will do the rest. No manually copying files around.  
-For instance, a local backup can be restored with setting `RESTORE_BACKUP=file:rauthy-backup-1703243039` and an
+Rauthy can now automatically restore SQLite backups either from a backup inside `data/backups/`
+locally, or fetch an encrypted backup from an S3 bucket. You only need to set the new
+`RESTORE_BACKUP` environment variable at startup and Rauthy will do the rest. No manually copying
+files around.  
+For instance, a local backup can be restored with setting
+`RESTORE_BACKUP=file:rauthy-backup-1703243039` and an
 S3 backup with `RESTORE_BACKUP=s3:rauthy-0.20.0-1703243039.cryptr`.
 
 ### Test S3 config at startup
 
-To not show unexpected behavior at runtime, Rauthy will initialize and test a configured S3 connection
-at startup. If anything is not configured correctly, it will panic early. This way, when Rauthy starts
-and the tests are successful, you know it will be working during the backup process at night as well, and
-it will not crash and throw errors all night long, if you just had a typo somewhere.
+To not show unexpected behavior at runtime, Rauthy will initialize and test a configured S3
+connection at startup. If anything is not configured correctly, it will panic early. This way, when
+Rauthy starts and the tests are successful, you know it will be working during the backup process at
+night as well, and it will not crash and throw errors all night long, if you just had a typo
+somewhere.
 
 ### Migration to `spow`
 
-The old (very naive) Proof-of-Work (PoW) mechanism for bot and spam protection has been migrated to make use
-of the [spow](https://github.com/sebadob/spow) crate, which is another new project of mine.
-With this implementation, the difficulty for PoW's a client must solve can be scaled up almost infinitely,
-while the time is takes to verify a PoW on the server side will always be `O(1)`, no matter hoch high the
-difficulty was. `spow` uses a modified version of the popular Hashcat PoW algorithm, which is also being used
-in the Bitcoin blockchain.
+The old (very naive) Proof-of-Work (PoW) mechanism for bot and spam protection has been migrated to
+make use of the [spow](https://github.com/sebadob/spow) crate, which is another new project of mine.
+With this implementation, the difficulty for PoW's a client must solve can be scaled up almost
+infinitely, while the time is takes to verify a PoW on the server side will always be `O(1)`, no
+matter how high the difficulty was. `spow` uses a modified version of the popular Hashcat PoW
+algorithm, which is also being used in the Bitcoin blockchain.
 
 ### Separate users cache
 
 A typical Rauthy deployment will have a finite amount of clients, roles, groups, scopes, and so on.
-The only thing that might scale endlessly are the users. Because of this, the users are now being cached
-inside their own separate cache, which can be configured and customized to fit the deployment's needs.
-You can now set the upper limit and the lifespan for cached user's. This is one of the first upcoming
-optimizations, since Rauthy gets closer to the first v1.0.0 release:
+The only thing that might scale endlessly are the users. Because of this, the users are now being
+cached inside their own separate cache, which can be configured and customized to fit the
+deployment's needs. You can now set the upper limit and the lifespan for cached user's. This is one
+of the first upcoming optimizations, since Rauthy gets closer to the first v1.0.0 release:
 
 ### E-Mails as lowercase only
 
-Up until now, it was possible to register the same E-Mail address multiple times with using uppercase characters.
-E-Mail is case-insensitive by definition though. This version does a migration of all currently existing E-Mail
-addresses
-in the database to lowercase only characters. From that point on, it will always convert any address to lowercase only
-characters to avoid confusion and conflicts.  
-This means, if you currently have the same address in your database with different casing, you need to resolve this
-issue manually. The migration function will throw an error in the console at startup, if it finds such a conflict.
+Up until now, it was possible to register the same E-Mail address multiple times with using
+uppercase characters.
+E-Mail is case-insensitive by definition though. This version does a migration of all currently
+existing E-Mail addresses in the database to lowercase only characters. From that point on, it will
+always convert any address to lowercase only characters to avoid confusion and conflicts.  
+This means, if you currently have the same address in your database with different casing, you need
+to resolve this issue manually. The migration function will throw an error in the console at
+startup, if it finds such a conflict.
 
 ```
 # The max cache size for users. If you can afford it memory-wise, make it possible to fit
@@ -4583,7 +4948,8 @@ CACHE_USERS_LIFESPAN=28800
 
 ### Additional claims available in ID tokens
 
-The scope `profile` now additionally adds the following claims to the ID token (if they exist for the user):
+The scope `profile` now additionally adds the following claims to the ID token (if they exist for
+the user):
 
 - `locale`
 - `birthdate`
@@ -4604,8 +4970,10 @@ The new scope `address` adds:
 - backend + frontend dependencies have been updated to the latest versions everywhere
 - The internal encryption handling has been changed to a new project of mine
   called [cryptr](https://github.com/sebadob/cryptr).  
-  This makes the whole value encryption way easier, more stable and future-proof, because values have their own
-  tiny header data with the minimal amount of information needed. It not only simplifies encryption key rotations,
+  This makes the whole value encryption way easier, more stable and future-proof, because values
+  have their own
+  tiny header data with the minimal amount of information needed. It not only simplifies encryption
+  key rotations,
   but also even encryption algorithm encryptions really easy in the future.
   [d6c224e](https://github.com/sebadob/rauthy/commit/d6c224e98198c155d7df83c25edc5c97ab590d2a)
   [c3df3ce](https://github.com/sebadob/rauthy/commit/c3df3cedbdff4a2a9dd592aac65ae21e5cd67385)
@@ -4617,9 +4985,11 @@ The new scope `address` adds:
   [65bbfea](https://github.com/sebadob/rauthy/commit/65bbfea5a1a3b23735b82f3eb05a415ce7c51013)
 - Migrate to [spow](https://github.com/sebadob/spow)
   [ff579f6](https://github.com/sebadob/rauthy/commit/ff579f60414cb529d727ae27fd83e9506ad770d5)
-- Pre-Compute CSP's for all HTML content at build-time and get rid of the per-request nonce computation
+- Pre-Compute CSP's for all HTML content at build-time and get rid of the per-request nonce
+  computation
   [8fd2c99](https://github.com/sebadob/rauthy/commit/8fd2c99d25aea2f307e0197f6f91a585b4408dce)
-- `noindex, nofollow` globally via headers and meta tag -> Rauthy as an Auth provider should never be indexed
+- `noindex, nofollow` globally via headers and meta tag -> Rauthy as an Auth provider should never
+  be indexed
   [38a2a52](https://github.com/sebadob/rauthy/commit/38a2a52fe6530cf4efdedfe96d2b3041959fcd3d)
 - push users into their own, separate, configurable cache
   [3137927](https://github.com/sebadob/rauthy/commit/31379278440ec6ddaf1a2288ba3950ab60994963)
@@ -4638,9 +5008,11 @@ The new scope `address` adds:
   [3b56b50](https://github.com/sebadob/rauthy/commit/3b56b50f4f24b7707c522934f9c03714703c64ad)
 - An incorrect URL has been returned for the `end_session_endpoint` in the OIDC metadata
   [3caabc9](https://github.com/sebadob/rauthy/commit/3caabc98b24893ecadcd2f9219783a202c12f730)
-- Make the `ItemTiles` UI componend used for roles, groups, and so on, wrap nicely on smaller screens
+- Make the `ItemTiles` UI componend used for roles, groups, and so on, wrap nicely on smaller
+  screens
   [6f83e4a](https://github.com/sebadob/rauthy/commit/6f83e4a917ffd4eaec9b543b66170dc5ea76ed6e)
-- Show the corresponding E-Mail address for `UserPasswordReset` and `UserEmailChange` events in the UI
+- Show the corresponding E-Mail address for `UserPasswordReset` and `UserEmailChange` events in the
+  UI
   [7dc4794](https://github.com/sebadob/rauthy/commit/7dc47945ec3fdd335ed486465f98cdbb4734d653)
 
 ## v0.19.2
@@ -4669,15 +5041,17 @@ The new scope `address` adds:
 This is a small bugfix and compatibility release regarding password reset E-Mails.
 
 The main reason for this release are problems with the Password Reset via E-Mail when users
-are using Microsoft (the only service provider where this problems can be replicated 100% of the time)
-and / or Outlook. These users were unable to use password reset links at all.
-The reason is a "Feature" from Microsoft. They fully scan the user's E-Mails and even follow all links
-inside it. The problem is, that the binding cookie from Rauthy will go to the Microsoft servers instead
-of the user, making is unusable and basically invalidating everything before the user has any chance to
-use the link properly.
+are using Microsoft (the only service provider where this problems can be replicated 100% of the
+time) and / or Outlook. These users were unable to use password reset links at all.
+The reason is a "Feature" from Microsoft. They fully scan the user's E-Mails and even follow all
+links inside it. The problem is, that the binding cookie from Rauthy will go to the Microsoft
+servers instead of the user, making is unusable and basically invalidating everything before the
+user has any chance to use the link properly.
 
-The usage of this config variable is **highly discouraged,** and you should **avoid it, if you can**.
-However, big enterprises are moving slowly (and often not at all). This new config variable can be used
+The usage of this config variable is **highly discouraged,** and you should **avoid it, if you can
+**. However, big enterprises are moving slowly (and often not at all). This new config variable can
+be
+used
 as a last resort, to make it usable by giving up some security.
 
 ```
@@ -4732,7 +5106,8 @@ the basic serving of `webid` documents for each user, Rauthy should now fully su
 This feature just needs some more real world testing with already existing applications though.
 
 These 3 new features are all opt-in, because a default deployment of Rauthy will most probably
-not use them at all. There is a whole new section in the [Config](https://sebadob.github.io/rauthy/config/config.html)
+not use them at all. There is a whole new section in
+the [Config](https://sebadob.github.io/rauthy/config/config.html)
 called `EPHEMERAL CLIENTS` where you can configure these things. The 3 main variables you need
 to set are:
 
@@ -4777,7 +5152,8 @@ case instead of panicking. The panic is the preferred behavior though, because t
   [daade41](https://github.com/sebadob/rauthy/commit/daade41a4ff22980d41e54570462eef783607766)
 - Dynamically build up and serve custom scopes in the `/.well-known/openid-configuration`
   [904cf09](https://github.com/sebadob/rauthy/commit/904cf090a1f3070a33dbbac8c503b7190dd6ee47)
-- A much nicer way of generating both DEV and PROD TLS certificates by using [Nioca](https://github.com/sebadob/nioca)
+- A much nicer way of generating both DEV and PROD TLS certificates by
+  using [Nioca](https://github.com/sebadob/nioca)
   has been integrated into the project itself, as well as the
   [Rauthy Book](https://sebadob.github.io/rauthy/config/tls.html)
   [463bf8a](https://github.com/sebadob/rauthy/commit/463bf8a40bf71e588a0449d647714acc96c68f83)
@@ -4791,7 +5167,8 @@ case instead of panicking. The panic is the preferred behavior though, because t
   [79cb836](https://github.com/sebadob/rauthy/commit/79cb83622fe508b3d296e9a6a71f5d6761a6b83a)
   [55433f4](https://github.com/sebadob/rauthy/commit/55433f4c614b7660dad32ad2321ff86367d8892e)
   [3cdf81c](https://github.com/sebadob/rauthy/commit/3cdf81c03cf9b78177412069264fa76f4d770ecc)
-- For developers, a new [CONTRIBUTING.md](https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md)
+- For developers, a
+  new [CONTRIBUTING.md](https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md)
   guide has been added to get people started quickly
   [7c38142](https://github.com/sebadob/rauthy/commit/7c381428f74210a2dc56a5d995ab76485a3686ad)
   [411393f](https://github.com/sebadob/rauthy/commit/411393faab2d4f0242ea6fc1414d501c1260d50c)
@@ -4819,23 +5196,25 @@ The main reason it is coming so early is the license change.
 ### License Change To Apache 2.0
 
 With this release, the license of Rauthy is changed from the AGPLv3 to an Apache 2.0.
-The Apache is way more permissive and make the integration with other open source projects and software a lot easier.
+The Apache is way more permissive and make the integration with other open source projects and
+software a lot easier.
 
 ### DPoP Token Support (Experimental)
 
 The first steps towards DPoP Token support have been made.
-It is marked as experimental though, because the other authentication methods have been tested and verified with
-various real world applications already. This is not the case for DPoP yet.
-Additionally, the only supported alg for DPoP proofs is EdDSA for now. The main reason being that I am using Jetbrains
-IDE's and the Rust plugin for both IDEA and RustRover are currently broken in conjunction with the `rsa` crate
-(and some others) which makes writing code with them a nightmare. RSA support is prepared as much as possible
-though and I hope they will fix this bug soon, so it can be included.
+It is marked as experimental though, because the other authentication methods have been tested and
+verified with various real world applications already. This is not the case for DPoP yet.
+Additionally, the only supported alg for DPoP proofs is EdDSA for now. The main reason being that I
+am using Jetbrains IDE's and the Rust plugin for both IDEA and RustRover are currently broken in
+conjunction with the `rsa` crate (and some others) which makes writing code with them a nightmare.
+RSA support is prepared as much as possible though and I hope they will fix this bug soon, so it can
+be included.
 
-If you have or use a DPoP application, I would really appreciate testing with Rauthy and to get some feedback, so I
-can make the whole DPoP flow more resilient as well.
+If you have or use a DPoP application, I would really appreciate testing with Rauthy and to get some
+feedback, so I can make the whole DPoP flow more resilient as well.
 
-Please note that Authorization Code binding to a DPoP key is also not yet supported, only the `/token` endpoint accepts
-and validates the `DPoP` header for now.
+Please note that Authorization Code binding to a DPoP key is also not yet supported, only the
+`/token` endpoint accepts and validates the `DPoP` header for now.
 
 ### Changes
 
@@ -4868,21 +5247,23 @@ This is a pretty huge update with a lot of new features.
 
 With the release of v0.17.0, Rauthy's container images are now multi-platform.
 
-Both a `linux/amd64` and a `linux/arm64` are supported. This means you can "just use it" now on Raspberry Pi and
-others, or on Ampere architecture from Cloud providers without the need to compile it yourself.
+Both a `linux/amd64` and a `linux/arm64` are supported. This means you can "just use it" now on
+Raspberry Pi and others, or on Ampere architecture from Cloud providers without the need to compile
+it yourself.
 
 #### Events and Auditing
 
-Rauthy now produces events in all different kinds of situations. These can be used for auditing, monitoring, and so on.
-You can configure quite a lot for them in the new `EVENTS / AUDIT` section in the
-[Rauthy Config](https://sebadob.github.io/rauthy/config/config.html).
+Rauthy now produces events in all different kinds of situations. These can be used for auditing,
+monitoring, and so on. You can configure quite a lot for them in the new `EVENTS / AUDIT` section in
+the [Rauthy Config](https://sebadob.github.io/rauthy/config/config.html).
 
-These events are persisted in the database, and they can be fetched in real time via a new Server Sent Events(SSE)
-endpoint `/auth/v1/events/stream`. There is a new UI component in the Admin UI that uses the same events stream.
-In case of a HA deployment, Rauthy will use one additional DB connection (all the time) from the connection pool
-to distribute these events via pg listen / notify to the other members. This makes a much simpler deployment and
-there is no real need to deploy additional resources like Nats or something like that. This keeps the setup easier
-and therefore more fault-tolerant.
+These events are persisted in the database, and they can be fetched in real time via a new Server
+Sent Events(SSE) endpoint `/auth/v1/events/stream`. There is a new UI component in the Admin UI that
+uses the same events stream. In case of a HA deployment, Rauthy will use one additional DB
+connection (all the time) from the connection pool to distribute these events via pg listen / notify
+to the other members. This makes a much simpler deployment and there is no real need to deploy
+additional resources like Nats or something like that. This keeps the setup easier and therefore
+more fault-tolerant.
 
 > You should at least set `EVENT_EMAIL` now, if you update from an older version.
 
@@ -4890,7 +5271,8 @@ and therefore more fault-tolerant.
 
 The new Events can be sent to a Slack Webhook or Matrix Server.
 
-The Slack integration uses the simple (legacy) Slack Webhooks and can be configured with `EVENT_SLACK_WEBHOOK`:
+The Slack integration uses the simple (legacy) Slack Webhooks and can be configured with
+`EVENT_SLACK_WEBHOOK`:
 
 ```
 # The Webhook for Slack Notifications.
@@ -4898,7 +5280,8 @@ The Slack integration uses the simple (legacy) Slack Webhooks and can be configu
 #EVENT_SLACK_WEBHOOK=
 ```
 
-The Matrix integration can connect to a Matrix server and room. This setup requires you to provide a few more
+The Matrix integration can connect to a Matrix server and room. This setup requires you to provide a
+few more
 variables:
 
 ```
@@ -4954,12 +5337,14 @@ However, this has been improved a lot now.
 When a client does too many invalid logins, the time he needs to wait until he may do another try
 increases with each failed attempt. The important thing here is, that this is not bound to a user,
 but instead to the clients IP.  
-This makes sure, that an attacker cannot just lock a users account by doing invalid logins and therefore
+This makes sure, that an attacker cannot just lock a users account by doing invalid logins and
+therefore
 kind of DoS the user. Additionally, Rauthy can detect Brute-Force or DoS attempts independently of
 a users account.
 
 There are certain thresholds at 7, 10, 15, 20, 25 invalid logins, when a clients IP will get fully
-blacklisted (explained below) for a certain amount of time. This is a good DoS and even DDoS prevention.
+blacklisted (explained below) for a certain amount of time. This is a good DoS and even DDoS
+prevention.
 
 #### Ip Blacklist Middleware
 
@@ -5089,10 +5474,12 @@ if there is a stable update available.
   [41b4c9c](https://github.com/sebadob/rauthy/commit/41b4c9c19c061f36f3ed5fa97d75ddcf803e0614)
 - Show a Link to the accounts page after a password reset if the redirection does not work
   [ace4daf](https://github.com/sebadob/rauthy/commit/ace4daf180b09f0cc8677bf4cf85e792496f9ee0)
-- Send out E-Mail change confirmations E-Mails to both old and new address when an admin changes the address
+- Send out E-Mail change confirmations E-Mails to both old and new address when an admin changes the
+  address
   [8e97e31](https://github.com/sebadob/rauthy/commit/8e97e310a6369bd5150d087cd5cd402d8edc221e)
   [97197db](https://github.com/sebadob/rauthy/commit/97197dbcdf3268647a3269c5cf5648176f0000d7)
-- Allow CORS requests to the `.well-known` endpoints to make the oidc config lookup from an external UI possible
+- Allow CORS requests to the `.well-known` endpoints to make the oidc config lookup from an external
+  UI possible
   [b57656f](https://github.com/sebadob/rauthy/commit/b57656ffaf7e822527d2d8c9d74b7c948193c220)
 - include the `alg` in the JWKS response for the `openid-configuration`
   [c9073cb](https://github.com/sebadob/rauthy/commit/c9073cb473be04092e326c95ca7a1b3502379f40)
@@ -5104,7 +5491,8 @@ if there is a stable update available.
 - A User may have not been updated correctly in the cache when the E-Mail was changed.
   [8d9cdce](https://github.com/sebadob/rauthy/commit/8d9cdce61992ee59e381876b71b18168e7e3ce31)
 - With v0.16, it was possible to not be able to switch back to a password account type from passkey,
-  when it was a password account before already which did update its password in the past and therefore
+  when it was a password account before already which did update its password in the past and
+  therefore
   would have entries in the DB for `last_recent_passwords` if you had the password policy correctly.
   [7a965a2](https://github.com/sebadob/rauthy/commit/7a965a276b2a127057dfd589afde23cf5ec981d1)
 - When you were using a password manager that filled out the username 'again' in the login form,
@@ -5120,12 +5508,13 @@ if there is a stable update available.
 ## v0.16.1
 
 This is a small bugfix release.  
-If you had an active and valid session from a v0.15.0, did an update to v0.16.0 and your session was still valid,
-it did not have valid information about the peer IP. This is mandatory for a new feature introduced with v0.16.0
-though and the warning logging in that case had an unwrap for the remote IP (which can never be null from v0.16.0 on),
-which then would panic.
+If you had an active and valid session from a v0.15.0, did an update to v0.16.0 and your session was
+still valid, it did not have valid information about the peer IP. This is mandatory for a new
+feature introduced with v0.16.0 though and the warning logging in that case had an unwrap for the
+remote IP (which can never be null from v0.16.0 on), which then would panic.
 
-This is a tiny bugfix release that just gets rid of the possible panic and prints `UNKNOWN` into the logs instead.
+This is a tiny bugfix release that just gets rid of the possible panic and prints `UNKNOWN` into the
+logs instead.
 
 ### Changes
 
@@ -5136,49 +5525,53 @@ This is a tiny bugfix release that just gets rid of the possible panic and print
 
 ### Breaking
 
-This version does modify the database and is therefore not backwards compatible with any previous version.
-If you need to downgrade vom v0.15 and above, you will only be able to do this via by applying a DB Backup.
+This version does modify the database and is therefore not backwards compatible with any previous
+version.
+If you need to downgrade vom v0.15 and above, you will only be able to do this via by applying a DB
+Backup.
 
 ### New Features
 
 #### User Expiry
 
 It is now possible to limit the lifetime of a user.  
-You can set an optional expiry date and time for each user. This enables temporary access, for instance in
-a support case where an external person needs access for a limited time.
+You can set an optional expiry date and time for each user. This enables temporary access, for
+instance in a support case where an external person needs access for a limited time.
 
 Once a user has expired, a few things will happen:
 
 - The user will not be able to log in anymore.
-- As soon as the scheduler notices the expiry, it will automatically invalidate all possibly existing
-  sessions and refresh tokens for this user. How often the scheduler will run can be configured with the
-  `SCHED_USER_EXP_MINS` variable. The default is 'every 60 minutes' to have a good balance between security
-  and resource usage. However, if you want this to be very strict, you can adjust this down to something like
-  '5 minutes' for instance.
+- As soon as the scheduler notices the expiry, it will automatically invalidate all possibly
+  existing sessions and refresh tokens for this user. How often the scheduler will run can be
+  configured with the `SCHED_USER_EXP_MINS` variable. The default is 'every 60 minutes' to have a
+  good balance between security and resource usage. However, if you want this to be very strict, you
+  can adjust this down to something like '5 minutes' for instance.
 - If configured, expired users can be cleaned up automatically after the configured time.
-  By default, expired users will not be cleaned up automatically. You can enable this feature with the
-  ´SCHED_USER_EXP_DELETE_MINS` variable.
+  By default, expired users will not be cleaned up automatically. You can enable this feature with
+  the ´SCHED_USER_EXP_DELETE_MINS` variable.
 
 #### `WEBAUTHN_NO_PASSWORD_EXPIRY`
 
-With this new config variable, you can define, if users with at least one valid registered passkey will
-have expiring passwords (depending on the current password policy), or not.  
-By default, these users do not need to renew their passwords like it is defined in the password policy.
+With this new config variable, you can define, if users with at least one valid registered passkey
+will have expiring passwords (depending on the current password policy), or not.   
+By default, these users do not need to renew their passwords like it is defined in the password
+policy.
 
 #### Peer IP's for sessions -> `SESSION_VALIDATE_IP`
 
-When a new session is being created, the peer / remote IP will be extracted and saved with the session
-information. This peer IP can be checked with each access and the session can be rejected, if this IP
-has changed, which will force the user to do a new login.
+When a new session is being created, the peer / remote IP will be extracted and saved with the
+session information. This peer IP can be checked with each access and the session can be rejected,
+if this IP has changed, which will force the user to do a new login.
 
-This will of course happen if a user is "on the road" and uses different wireless networks on the way,
-but it prevents a session hijack and usage from another machine, if an attacker has full access to the
-victims machine and even can steal the encrypted session cookie and(!) the csrf token saved inside the
-local storage. This is very unlikely, since the attacker would need to have full access to the machine
-anyway already, but it is just another security mechanism.
+This will of course happen if a user is "on the road" and uses different wireless networks on the
+way, but it prevents a session hijack and usage from another machine, if an attacker has full access
+to the victims machine and even can steal the encrypted session cookie and(!) the csrf token saved
+inside the local storage. This is very unlikely, since the attacker would need to have full access
+to the machine anyway already, but it is just another security mechanism.
 
-If this IP should be validated each time can be configured with the new `SESSION_VALIDATE_IP` variable.
-By default, peer IP's will be validated and a different IP for an existing session will be rejected.
+If this IP should be validated each time can be configured with the new `SESSION_VALIDATE_IP`
+variable. By default, peer IP's will be validated and a different IP for an existing session will be
+rejected.
 
 #### Prometheus metrics exporter
 
@@ -5221,8 +5614,9 @@ New config variables are:
 
 #### User Verification status for Passkeys
 
-For all registered passkeys, the User Verification (UV) state is now being saved and optionally checked.
-You can see the status for each device with the new fingerprint icon behind its name in the UI.
+For all registered passkeys, the User Verification (UV) state is now being saved and optionally
+checked. You can see the status for each device with the new fingerprint icon behind its name in the
+UI.
 
 New config variable:
 
@@ -5328,19 +5722,22 @@ migrations between versions in the future and helps prevent user error during up
 
 ### Breaking
 
-This version does modify the database and is therefore not backwards compatible with any previous version.
-If you need to downgrade vom v0.15 and above, you will only be able to do this via by applying a DB Backup.
+This version does modify the database and is therefore not backwards compatible with any previous
+version.
+If you need to downgrade vom v0.15 and above, you will only be able to do this via by applying a DB
+Backup.
 
 ### Changes
 
 This release is all about new Passkey Features.
 
 - A user is not limited to just 2 keys anymore
-- During registration, you can (and must) provide a name for the passkey, which helps you identify and distinguish
-  your keys, when you register multiple ones.
-- The `exclude_credentials` feature is now properly used and working. This makes sure, that you cannot register the
-  same Passkey multiple times.
-- The Passkeys / MFA section in the Admin UI has been split from the User Password section to be more convenient to use
+- During registration, you can (and must) provide a name for the passkey, which helps you identify
+  and distinguish your keys, when you register multiple ones.
+- The `exclude_credentials` feature is now properly used and working. This makes sure, that you
+  cannot register the same Passkey multiple times.
+- The Passkeys / MFA section in the Admin UI has been split from the User Password section to be
+  more convenient to use
 
 Commits:
 
@@ -5359,8 +5756,8 @@ Commits:
 ## v0.14.5
 
 This is the last v0.14 release.  
-The next v0.15 will be an "in-between-release" which will do some migration preparations for Webauthn
-/ FIDO 2 updates and features coming in the near future.
+The next v0.15 will be an "in-between-release" which will do some migration preparations for
+Webauthn / FIDO 2 updates and features coming in the near future.
 
 - Removed duplicate `sub` claims from JWT ID Tokens
   [a35db33](https://github.com/sebadob/rauthy/commit/a35db330ff7c6ee680a7d834f08a3db077e08073)
@@ -5455,8 +5852,8 @@ This release is mostly about UI / UX improvements and some smaller bugfixes.
 - UI: small visual bugfixes and improvements in different places
   [459bdbd](https://github.com/sebadob/rauthy/commit/459bdbd55ca60bdb0076908131c569a4dc653086)
   [57a5600](https://github.com/sebadob/rauthy/commit/57a56000f6ffecf46bd1d202a3bea5a2ded4985f)
-- UI: All navigation routes can be reached via their own link now. This means a refresh of
-  the page does not return to the default anymore
+- UI: All navigation routes can be reached via their own link now. This means a refresh of the page
+  does not return to the default anymore
   [4999995](https://github.com/sebadob/rauthy/commit/49999950ac1ade24e433e911df84c99256a7f4d0)
   [7f0ac0b](https://github.com/sebadob/rauthy/commit/7f0ac0b0d1cf1e2c53881c4a4e010ce43cc2ec11)
   [cadaa40](https://github.com/sebadob/rauthy/commit/cadaa407efa9b70b5159e6ec42b5151f8ef79997)
@@ -5486,22 +5883,23 @@ This is just a small bugfix release.
 
 ## v0.13.0
 
-- Improved container security: Rauthy is based off a Scratch container image by default now. This improved the security
-  quite a lot, since you cannot even get a shell into the container anymore, and it reduced the image size by another
-  ~4MB.  
-  This makes it difficult however if you need to debug something, for instance when you use a SQLite deployment. For
-  this reason, you can append `-debug` to a tag
-  and you will get an Alpine based version just like before.
+- Improved container security: Rauthy is based off a Scratch container image by default now. This
+  improved the security quite a lot, since you cannot even get a shell into the container anymore,
+  and it reduced the image size by another ~4MB.  
+  This makes it difficult however if you need to debug something, for instance when you use a SQLite
+  deployment. For this reason, you can append `-debug` to a tag, and you will get an Alpine based
+  version just like before.
   [1a7e79d](https://github.com/sebadob/rauthy/commit/1a7e79dc96d27d8d180d1e4394644c8851cbdf70)
-- More stable HA deployment: In some specific K8s HA deployments, the default HTTP2 keep-alive's from
-  [redhac](https://github.com/sebadob/redhac) were not good enough and we got broken pipes in some environments which
-  caused the leader to change often. This has been fixed
-  in [redhac-0.6.0](https://github.com/sebadob/redhac/releases/tag/v0.6.0)
-  too, which at the same time makes Rauthy HA really stable now.
+- More stable HA deployment: In some specific K8s HA deployments, the default HTTP2 keep-alive's
+  from [redhac](https://github.com/sebadob/redhac) were not good enough and we got broken pipes in
+  some environments which caused the leader to change often. This has been fixed
+  in [redhac-0.6.0](https://github.com/sebadob/redhac/releases/tag/v0.6.0) too, which at the same
+  time makes Rauthy HA really stable now.
 - The client branding section in the UI has better responsiveness for smaller screens
   [dfaa23a](https://github.com/sebadob/rauthy/commit/dfaa23a30ccf77da2b29654c7dd3b41a4ca78168)
-- For a HA deployment, cache modifications are now using proper HA cache functions. These default back to the single
-  instance functions in non-HA mode since [redhac-0.6.0](https://github.com/sebadob/redhac/releases/tag/v0.6.0)
+- For a HA deployment, cache modifications are now using proper HA cache functions. These default
+  back to the single instance functions in non-HA mode
+  since [redhac-0.6.0](https://github.com/sebadob/redhac/releases/tag/v0.6.0)
   [7dae043](https://github.com/sebadob/rauthy/commit/7dae043d7b42724adad85b5ed54f1dcd9d143d27)
 - All static UI files are now precompressed with gzip and brotli to use even fewer resources
   [10ad51a](https://github.com/sebadob/rauthy/commit/10ad51a296c5a7596b34f9c726fe87480b6ec42c)
