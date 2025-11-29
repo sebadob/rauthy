@@ -1,6 +1,7 @@
 use crate::ReqPrincipal;
 use actix_web::web::{Json, Path};
 use actix_web::{HttpResponse, get, post};
+use chrono::Utc;
 use rauthy_api_types::email_jobs::{EmailContentType, EmailJobRequest, EmailJobResponse};
 use rauthy_common::sanitize_html::sanitize_html;
 use rauthy_data::entity::email_jobs::{EmailJob, EmailJobStatus};
@@ -64,7 +65,10 @@ pub async fn post_send_email(
         payload.body = sanitize_html(&payload.body);
     }
 
-    EmailJob::insert(payload).await?.spawn_task();
+    let job = EmailJob::insert(payload).await?;
+    if job.scheduled.is_none() || job.scheduled.unwrap_or_default() <= Utc::now().timestamp() + 5 {
+        job.spawn_task();
+    }
 
     Ok(HttpResponse::Ok().finish())
 }

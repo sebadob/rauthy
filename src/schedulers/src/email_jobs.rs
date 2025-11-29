@@ -8,7 +8,11 @@ use tracing::{debug, error, info};
 
 pub async fn orphaned_email_jobs() {
     let mut interval = tokio::time::interval(Duration::from_secs(
-        RauthyConfig::get().vars.email.jobs.orphaned_seconds as u64,
+        RauthyConfig::get()
+            .vars
+            .email
+            .jobs
+            .scheduler_interval_seconds as u64,
     ));
 
     loop {
@@ -32,13 +36,13 @@ pub async fn orphaned_email_jobs() {
 
 #[inline]
 async fn execute() -> Result<(), ErrorResponse> {
-    let jobs = EmailJob::find_orphaned().await?;
+    let jobs = EmailJob::find_orphaned_or_schedule().await?;
     if jobs.is_empty() {
         return Ok(());
     }
 
     info!(
-        "Found {} orphaned EmailJobs - resuming jobs now",
+        "Found {} orphaned or scheduled EmailJobs - (re)starting them now",
         jobs.len()
     );
 

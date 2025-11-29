@@ -1046,6 +1046,15 @@ danger_insecure = true
 # overwritten by: EMAIL_JOBS_ORPHANED_SECONDS
 orphaned_seconds = 300
 
+# The interval in seconds at which the scheduler for orphaned
+# or scheduled jobs should run and check. Smaller values
+# increase precision for scheduled jobs with sacrificing a bit
+# higher resource usage.
+#
+# default: 300
+# overwritten by: EMAIL_JOBS_SCHED_SECONDS
+scheduler_interval_seconds = 300
+
 # Configures the batch size and delay between batches of users
 # for sending custom emails. The batch size configures the
 # batch of users being retrieved from the DB at once. This means,

@@ -19,7 +19,7 @@ mod user_login_states;
 mod users;
 
 /// Spawn all Rauthy schedulers and periodic tasks
-pub async fn spawn() {
+pub fn spawn() {
     info!("Starting schedulers");
 
     tokio::spawn(backchannel_logout::backchannel_logout_retry());

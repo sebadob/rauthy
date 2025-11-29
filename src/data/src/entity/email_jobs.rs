@@ -10,7 +10,6 @@ use rauthy_common::{is_hiqlite, markdown};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
-use std::ops::Sub;
 use std::time::Duration;
 use tracing::{debug, error, info, warn};
 
@@ -20,7 +19,7 @@ pub struct EmailJob {
     pub scheduled: Option<i64>,
     pub status: EmailJobStatus,
     pub updated: i64,
-    pub last_user_ts: i64,
+    pub last_user_ts: Option<String>,
     pub filter: EmailJobFilter,
     pub content_type: EmailContentType,
     pub subject: String,
@@ -215,7 +214,7 @@ RETURNING *"#;
 
         let slf = if is_hiqlite() {
             DB::hql()
-                .query_map_one(
+                .execute_returning_map_one(
                     sql,
                     params!(
                         now,
@@ -273,26 +272,22 @@ RETURNING *"#;
         Ok(res)
     }
 
-    /// Finds jobs that have not been updated in a long time. This can happen for very long-running
-    /// jobs, when for instance the executing instance was restarted or something like that.
+    /// Finds jobs that have not been updated in a long time, or are scheduled for "now".
     ///
     /// In HA deployments, only the current leader should look for orphaned jobs and pick them
     /// up to avoid duplicate emails because of possible race conditions.
-    pub async fn find_orphaned() -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_orphaned_or_schedule() -> Result<Vec<Self>, ErrorResponse> {
         let sql = r#"
 SELECT * FROM email_jobs
-WHERE status = 0 AND updated < $2"#;
+WHERE status = 0 AND updated < $2 AND (scheduled IS NULL OR scheduled <= $1)"#;
 
-        let threshold = Utc::now()
-            .sub(chrono::Duration::seconds(
-                RauthyConfig::get().vars.email.jobs.orphaned_seconds as i64,
-            ))
-            .timestamp();
+        let now = Utc::now().timestamp();
+        let threshold = now - RauthyConfig::get().vars.email.jobs.orphaned_seconds as i64;
 
         let res = if is_hiqlite() {
-            DB::hql().query_map(sql, params!(threshold)).await?
+            DB::hql().query_map(sql, params!(now, threshold)).await?
         } else {
-            DB::pg_query(sql, &[&threshold], 0).await?
+            DB::pg_query(sql, &[&now, &threshold], 0).await?
         };
 
         Ok(res)
@@ -314,7 +309,7 @@ SET scheduled = $1, status = $2, updated = $3, last_user_ts = $4"#;
             DB::hql()
                 .execute(
                     sql,
-                    params!(self.scheduled, status, self.updated, self.last_user_ts),
+                    params!(self.scheduled, status, self.updated, &self.last_user_ts),
                 )
                 .await?;
         } else {
@@ -396,7 +391,10 @@ impl EmailJob {
                 return Ok(());
             }
 
-            let users = User::find_batch(self.last_user_ts, batch_size).await?;
+            let users = {
+                let (email, ts) = self.last_user_ts();
+                User::find_batch(email, ts, batch_size).await?
+            };
             if users.is_empty() {
                 self.status = EmailJobStatus::Finished;
                 self.save().await?;
@@ -411,25 +409,25 @@ impl EmailJob {
                     EmailJobFilter::None => {}
                     EmailJobFilter::InGroup(s) => {
                         if !user.get_groups().contains(s) {
-                            self.last_user_ts = user.created_at;
+                            self.set_last_user_ts(&user.email, user.created_at);
                             continue;
                         }
                     }
                     EmailJobFilter::NotInGroup(s) => {
                         if user.get_groups().contains(s) {
-                            self.last_user_ts = user.created_at;
+                            self.set_last_user_ts(&user.email, user.created_at);
                             continue;
                         }
                     }
                     EmailJobFilter::HasRole(s) => {
                         if !user.get_roles().contains(s) {
-                            self.last_user_ts = user.created_at;
+                            self.set_last_user_ts(&user.email, user.created_at);
                             continue;
                         }
                     }
                     EmailJobFilter::HasNotRole(s) => {
                         if user.get_roles().contains(s) {
-                            self.last_user_ts = user.created_at;
+                            self.set_last_user_ts(&user.email, user.created_at);
                             continue;
                         }
                     }
@@ -448,7 +446,7 @@ impl EmailJob {
                         Ok(_) => {
                             // TODO change to `trace` level after initial debugging
                             debug!("E-Mail sent successfully to {}", user.email);
-                            self.last_user_ts = user.created_at;
+                            self.set_last_user_ts(&user.email, user.created_at);
                             break;
                         }
                         Err(err) => {
@@ -483,6 +481,21 @@ impl EmailJob {
             self.save().await?;
             tokio::time::sleep(delay).await;
         }
+    }
+
+    #[inline]
+    fn last_user_ts(&self) -> (&str, i64) {
+        if let Some(last_user_ts) = &self.last_user_ts {
+            let (ts, email) = last_user_ts.split_at(10);
+            (email, ts.parse().unwrap())
+        } else {
+            ("", 0)
+        }
+    }
+
+    #[inline]
+    fn set_last_user_ts(&mut self, email: &str, created_at: i64) {
+        self.last_user_ts = Some(format!("{created_at}{email}"));
     }
 }
 

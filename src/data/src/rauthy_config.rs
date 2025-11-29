@@ -378,6 +378,7 @@ impl Default for Vars {
                 connect_retries: 3,
                 jobs: VarsEmailJobs {
                     orphaned_seconds: 300,
+                    scheduler_interval_seconds: 300,
                     batch_size: 3,
                     batch_delay_ms: 2000,
                 },
@@ -1345,7 +1346,7 @@ impl Vars {
         }
 
         // [email.jobs]
-        let mut jobs = t_table(&mut table, "tz_fmt");
+        let mut jobs = t_table(&mut table, "jobs");
 
         if let Some(v) = t_u32(
             &mut jobs,
@@ -1354,6 +1355,14 @@ impl Vars {
             "EMAIL_JOBS_ORPHANED_SECONDS",
         ) {
             self.email.jobs.orphaned_seconds = v;
+        }
+        if let Some(v) = t_u32(
+            &mut jobs,
+            "email.jobs",
+            "scheduler_interval_seconds",
+            "EMAIL_JOBS_SCHED_SECONDS",
+        ) {
+            self.email.jobs.scheduler_interval_seconds = v;
         }
         if let Some(v) = t_u16(
             &mut jobs,
@@ -2862,6 +2871,7 @@ pub struct VarsEmail {
 #[derive(Debug)]
 pub struct VarsEmailJobs {
     pub orphaned_seconds: u32,
+    pub scheduler_interval_seconds: u32,
     pub batch_size: u16,
     pub batch_delay_ms: u32,
 }

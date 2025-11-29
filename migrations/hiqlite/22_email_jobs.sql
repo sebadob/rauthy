@@ -6,7 +6,7 @@ CREATE TABLE email_jobs
     scheduled    INTEGER,
     status       INTEGER NOT NULL,
     updated      INTEGER NOT NULL,
-    last_user_ts INTEGER,
+    last_user_ts TEXT,
     filter       TEXT,
     content_type TEXT    NOT NULL,
     subject      TEXT    NOT NULL,

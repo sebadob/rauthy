@@ -10,7 +10,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use tokio::task::JoinSet;
 use tokio::time;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 pub async fn backchannel_logout_retry() {
     let retry_count = RauthyConfig::get().vars.backchannel_logout.retry_count;
@@ -22,6 +22,7 @@ pub async fn backchannel_logout_retry() {
         // This increases the chance opf success in case of a network segmentation.
         let millis = get_rand_between(60_000, 90_000);
         time::sleep(Duration::from_millis(millis)).await;
+        debug!("Running scheduler backchannel_logout_retry");
 
         clients.clear();
         kps.clear();
