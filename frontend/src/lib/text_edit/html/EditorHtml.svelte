@@ -122,7 +122,7 @@
         align-items: center;
         gap: 0 0.25rem;
         flex-wrap: wrap;
-        border-bottom: 1px solid hsla(var(--bg-high), 0.8);
+        border-bottom: 1px solid hsla(var(--bg-high) / 0.8);
         cursor: default;
     }
 </style>

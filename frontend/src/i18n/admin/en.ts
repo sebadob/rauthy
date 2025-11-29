@@ -239,7 +239,10 @@ export let I18nAdminEn: I18nAdmin = {
         textArea: 'Edit Text',
     },
     email: {
+        cancelJob: 'Cancel Job',
         filterType: ['None', 'In Group', 'Not in Group', 'Has Role', 'Has not Role'],
+        immediate: 'Immediate',
+        jobs: 'E-Mail Jobs',
         scheduled: 'Scheduled Dispatch',
         sendAllUsers: 'This E-Mail will be sent to all users.',
         sendAllUsersFiltered: 'This E-Mail will be sent to all users filtered by:',

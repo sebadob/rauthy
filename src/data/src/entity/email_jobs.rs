@@ -261,7 +261,7 @@ RETURNING *"#;
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let sql = "SELECT * FROM email_jobs";
+        let sql = "SELECT * FROM email_jobs ORDER BY id DESC";
 
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!()).await?
@@ -301,7 +301,8 @@ WHERE status = 0 AND updated < $2 AND (scheduled IS NULL OR scheduled <= $1)"#;
     pub async fn save(&mut self) -> Result<(), ErrorResponse> {
         let sql = r#"
 UPDATE email_jobs
-SET scheduled = $1, status = $2, updated = $3, last_user_ts = $4"#;
+SET scheduled = $1, status = $2, updated = $3, last_user_ts = $4
+WHERE id = $5"#;
 
         self.updated = Utc::now().timestamp();
         let status = self.status.value();
@@ -309,13 +310,25 @@ SET scheduled = $1, status = $2, updated = $3, last_user_ts = $4"#;
             DB::hql()
                 .execute(
                     sql,
-                    params!(self.scheduled, status, self.updated, &self.last_user_ts),
+                    params!(
+                        self.scheduled,
+                        status,
+                        self.updated,
+                        &self.last_user_ts,
+                        self.id
+                    ),
                 )
                 .await?;
         } else {
             DB::pg_execute(
                 sql,
-                &[&self.scheduled, &status, &self.updated, &self.last_user_ts],
+                &[
+                    &self.scheduled,
+                    &status,
+                    &self.updated,
+                    &self.last_user_ts,
+                    &self.id,
+                ],
             )
             .await?;
         }

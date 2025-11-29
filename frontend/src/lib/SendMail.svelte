@@ -25,7 +25,7 @@
 
     let ta = useI18nAdmin();
 
-    let showModal = $state(true);
+    let showModal = $state(false);
     let closeModal: undefined | (() => void) = $state();
 
     let editorMode: 'Text' | 'Markdown' | 'HTML' = $state('Markdown');
@@ -205,7 +205,7 @@
         </p>
 
         <div class="flex gap-10">
-            <Button onclick={submit} isDisabled={!body || !subject}>Send</Button>
+            <Button onclick={submit} isDisabled={!(body || bodyRaw) || !subject}>Send</Button>
 
             {#if success}
                 <IconCheck />

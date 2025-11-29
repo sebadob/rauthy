@@ -45,7 +45,7 @@ pub static HTML_EMAIL_HEAD_RIGHT: &str = r#"
         h4 { font-size: 1.2rem; margin: .65rem 0; letter-spacing: -0.015em; }
         h5 { font-size: 1.05rem; margin: .55rem 0; letter-spacing: -0.01em; }
         p { margin: .5rem 0;  max-width: 467pt; }
-        hr { border: none; border-top: 1px solid hsla(var(--bg-high), .66); margin: .5rem 0; }
+        hr { border: none; border-top: 1px solid hsla(var(--bg-high) / .66); margin: .5rem 0; }
         code {
             border-radius: var(--border-radius);
             font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas,

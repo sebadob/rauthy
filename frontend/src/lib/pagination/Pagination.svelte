@@ -213,7 +213,7 @@
         margin: 2px;
         padding: 2px;
         cursor: pointer;
-        color: hsla(var(--action), 0.5);
+        color: hsla(var(--action) / 0.5);
     }
 
     .total {

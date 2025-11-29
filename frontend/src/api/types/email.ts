@@ -1,6 +1,6 @@
 export type EmailContentType = 'text' | 'markdown' | 'html';
 export type EmailJobFilterType = 'none' | 'in_group' | 'not_in_group' | 'has_role' | 'has_not_role';
-export type EmailJobStatus = 'open' | 'finished' | 'canceled';
+export type EmailJobStatus = 'Open' | 'Finished' | 'Canceled';
 
 export interface EmailJobRequest {
     /// Validation: Unix TS in the future

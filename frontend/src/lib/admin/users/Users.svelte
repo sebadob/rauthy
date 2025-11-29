@@ -23,6 +23,7 @@
     import Button from '$lib/button/Button.svelte';
     import IconEnvelope from '$icons/IconEnvelope.svelte';
     import SendMail from '$lib/SendMail.svelte';
+    import EmailJobs from '$lib/EmailJobs.svelte';
 
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
@@ -263,6 +264,7 @@
 >
     <div class="topBtns">
         <SendMail {groups} {roles} />
+        <EmailJobs />
         <ButtonAddModal
             bind:ref={refAddNew}
             level={roles.length === 0 ? 1 : 2}
