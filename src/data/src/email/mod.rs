@@ -4,6 +4,7 @@ use chrono::DateTime;
 use chrono_tz::Tz;
 use std::str::FromStr;
 
+pub mod custom;
 pub mod email_change_confirm;
 pub mod email_change_info;
 pub mod i18n;

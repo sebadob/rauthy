@@ -84,9 +84,10 @@ pub async fn send_email_change_info_new(
         recipient_name: user.email_recipient_name(),
         address: new_email.clone(),
         subject: format!("{} - {}", email_sub_prefix, i18n.subject),
-        text: text
-            .render()
-            .expect("Template rendering: EMailChangeInfoNewTxt"),
+        text: Some(
+            text.render()
+                .expect("Template rendering: EMailChangeInfoNewTxt"),
+        ),
         html: Some(
             html.render()
                 .expect("Template rendering: EMailChangeInfoNewHtml"),

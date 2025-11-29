@@ -238,6 +238,18 @@ export let I18nAdminNb: I18nAdmin = {
         strikeThrough: 'Strikethrough',
         textArea: 'Edit Text',
     },
+    email: {
+        cancelJob: 'Cancel Job',
+        filterType: ['None', 'In Group', 'Not in Group', 'Has Role', 'Has not Role'],
+        immediate: 'Immediate',
+        jobs: 'E-Mail Jobs',
+        scheduled: 'Scheduled Dispatch',
+        sendAllUsers: 'This E-Mail will be sent to all users.',
+        sendAllUsersFiltered: 'This E-Mail will be sent to all users filtered by:',
+        sendMail: 'Send E-Mail',
+        subject: 'Subject',
+        userFilter: 'User Filter',
+    },
     error: {
         needsAdminRole: 'For å få tilgang må du ha rollen <b>rauthy_admin</b>.',
         noAdmin: `For Rauthy admin-kontoer er <b>MFA påkrevd.</b><br>

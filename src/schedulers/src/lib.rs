@@ -6,6 +6,7 @@ mod app_version;
 mod backchannel_logout;
 mod devices;
 mod dyn_clients;
+mod email_jobs;
 mod events;
 mod ip_geo_db;
 mod jwks;
@@ -18,12 +19,13 @@ mod user_login_states;
 mod users;
 
 /// Spawn all Rauthy schedulers and periodic tasks
-pub async fn spawn() {
+pub fn spawn() {
     info!("Starting schedulers");
 
     tokio::spawn(backchannel_logout::backchannel_logout_retry());
     tokio::spawn(scim_tasks::scim_task_retry());
     tokio::spawn(dyn_clients::dyn_client_cleanup());
+    tokio::spawn(email_jobs::orphaned_email_jobs());
     tokio::spawn(events::events_cleanup());
     tokio::spawn(ip_geo_db::update_ip_geo_db());
     tokio::spawn(devices::devices_cleanup());

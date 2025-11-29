@@ -160,7 +160,7 @@
             <Loading background={false} color={loadingColor()} />
         </div>
     {:else if showText}
-        <div in:fade class="font-label">
+        <div in:fade class="children font-label">
             {@render children()}
         </div>
     {/if}
@@ -185,6 +185,11 @@
 
     button:focus-visible {
         outline: 2px solid hsl(var(--accent));
+    }
+
+    .children {
+        display: flex;
+        align-items: center;
     }
 
     .invisible,

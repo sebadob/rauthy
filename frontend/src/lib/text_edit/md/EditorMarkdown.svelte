@@ -185,7 +185,7 @@
         justify-content: space-between;
         align-items: center;
         gap: 1rem;
-        border-bottom: 1px solid hsla(var(--bg-high), 0.8);
+        border-bottom: 1px solid hsla(var(--bg-high) / 0.8);
         cursor: default;
     }
 

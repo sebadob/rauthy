@@ -8,7 +8,7 @@ use rauthy_common::utils::UseDummyAddress;
 use rauthy_data::ListenScheme;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_handlers::{
-    api_keys, atproto, auth_providers, backup, blacklist, clients, cors_preflight, dev_only,
+    api_keys, atproto, auth_providers, backup, blacklist, clients, cors_preflight, dev_only, email,
     events, fed_cm, generic, groups, html, oidc, pam, roles, scopes, sessions, swagger_ui, themes,
     tos, users,
 };
@@ -300,6 +300,9 @@ fn api_services() -> actix_web::Scope {
                 .service(cors_preflight::options_users_register)
                 .service(cors_preflight::options_atproto_metadata)
                 .service(cors_preflight::options_openid_configuration)
+                .service(email::get_email_jobs)
+                .service(email::post_send_email)
+                .service(email::post_email_job_cancel)
                 .service(events::post_events)
                 .service(events::sse_events)
                 .service(events::post_event_test)

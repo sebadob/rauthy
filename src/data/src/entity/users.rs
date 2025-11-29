@@ -441,6 +441,34 @@ ORDER BY created_at ASC"#;
         Ok(res)
     }
 
+    pub async fn find_batch(
+        after_email: &str,
+        from_created_at: i64,
+        batch_size: u16,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let sql = r#"
+SELECT * FROM users
+WHERE created_at >= $1 AND email > $2
+ORDER BY created_at ASC, email ASC
+LIMIT $3"#;
+
+        let batch_size = batch_size as i64;
+        let res = if is_hiqlite() {
+            DB::hql()
+                .query_as(sql, params!(from_created_at, after_email, batch_size))
+                .await?
+        } else {
+            DB::pg_query(
+                sql,
+                &[&from_created_at, &after_email, &batch_size],
+                batch_size as usize,
+            )
+            .await?
+        };
+
+        Ok(res)
+    }
+
     /// This is a very expensive query using `LIKE`, use only when necessary.
     pub async fn find_with_group(group_name: &str) -> Result<Vec<Self>, ErrorResponse> {
         let like = format!("%{group_name}%");

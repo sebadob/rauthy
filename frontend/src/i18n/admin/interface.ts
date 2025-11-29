@@ -199,6 +199,20 @@ export interface I18nAdmin {
         strikeThrough: string;
         textArea: string;
     };
+    email: {
+        cancelJob: string;
+        // MUST be in the order:
+        // 'none' | 'in_group' | 'not_in_group' | 'has_role' | 'has_not_role'
+        filterType: string[];
+        immediate: string;
+        jobs: string;
+        scheduled: string;
+        sendAllUsers: string;
+        sendAllUsersFiltered: string;
+        sendMail: string;
+        subject: string;
+        userFilter: string;
+    };
     error: {
         // inserted as html
         needsAdminRole: string;

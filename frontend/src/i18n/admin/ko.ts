@@ -227,6 +227,18 @@ export let I18nAdminKo: I18nAdmin = {
         strikeThrough: 'Strikethrough',
         textArea: 'Edit Text',
     },
+    email: {
+        cancelJob: 'Cancel Job',
+        filterType: ['None', 'In Group', 'Not in Group', 'Has Role', 'Has not Role'],
+        immediate: 'Immediate',
+        jobs: 'E-Mail Jobs',
+        scheduled: 'Scheduled Dispatch',
+        sendAllUsers: 'This E-Mail will be sent to all users.',
+        sendAllUsersFiltered: 'This E-Mail will be sent to all users filtered by:',
+        sendMail: 'Send E-Mail',
+        subject: 'Subject',
+        userFilter: 'User Filter',
+    },
     error: {
         needsAdminRole: `<b>rauthy_admin</b> 역할이 부여되지 않았습니다.<br/>
             관리자 패널에 접근할 수 없습니다.`,

@@ -30,6 +30,7 @@ pub mod blacklist;
 pub mod clients;
 pub mod cors_preflight;
 pub mod dev_only;
+pub mod email;
 pub mod events;
 pub mod fed_cm;
 pub mod generic;

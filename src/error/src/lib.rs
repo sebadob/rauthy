@@ -31,6 +31,7 @@ pub enum ErrorResponseType {
     Scim,
     SessionExpired,
     SessionTimeout,
+    Timeout,
     TooManyRequests(i64),
     Unauthorized,
     NotAccepted,

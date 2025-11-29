@@ -1030,6 +1030,62 @@ connect_retries = 3
 # overwritten by: SMTP_DANGER_INSECURE
 danger_insecure = true
 
+[email.jobs]
+
+# This section cares about email sending to users, which can
+# be done via the Admin UIs user page. These settings only
+# apply for custom emails sent via UI. All automatic mails like
+# a new user registration will be sent immediately.
+
+# If an open email job has not been updated for more than
+# `orphaned_seconds` seconds, it will be considered as orphaned.
+# In this case, the current cluster leader can pick up this
+# job and start after the last successful email sent.
+#
+# default: 300
+# overwritten by: EMAIL_JOBS_ORPHANED_SECONDS
+orphaned_seconds = 300
+
+# The interval in seconds at which the scheduler for orphaned
+# or scheduled jobs should run and check. Smaller values
+# increase precision for scheduled jobs with sacrificing a bit
+# higher resource usage.
+#
+# default: 300
+# overwritten by: EMAIL_JOBS_SCHED_SECONDS
+scheduler_interval_seconds = 300
+
+# Configures the batch size and delay between batches of users
+# for sending custom emails. The batch size configures the
+# batch of users being retrieved from the DB at once. This means,
+# if you have a filter on your email targets, the total amount
+# of emails sent can be lower of course. Users are filtered
+# on the client side to take the load off the DB.
+#
+# The default is pretty conservative to not have CPU and memory
+# spikes if there is a huge amount of users, and to not overwhelm
+# the SMTP server or reach rate limits.
+# Depending on the speed of your SMTP server, the conservative
+# default will handle ~5000 users in 1 hour. Even if it can
+# take a higher load, be careful with sending too quickly to not
+# trigger spam filters. Only increase throughput if needed.
+#
+# Note: If any error comes up during a batch, some users from this
+# very batch may get duplicate emails when it is retried after
+# being marked as orphaned.
+#
+# default: 3
+# overwritten by: EMAIL_JOBS_BATCH_SIZE
+batch_size = 3
+#
+# Delay in ms between email batches. If you set this to 0,
+# Rauthy will send out emails as fast as possible. This
+# should be avoided, especially for high user counts.
+#
+# default: 2000
+# overwritten by: EMAIL_JOBS_BATCH_DELAY_MS
+batch_delay_ms = 2000
+
 [email.tz_fmt]
 
 # The formatting of timestamps in emails can be configured

@@ -24,7 +24,8 @@
     </div>
 
     {#if !previewEmbedded}
-        <div class="editor">
+        <div class="editor preview">
+            <i>Preview</i>
             <MarkdownRenderer markdown={content} />
         </div>
     {/if}
@@ -40,6 +41,17 @@
         height: min(37.8rem, 100dvh - 16rem);
         flex: 1;
         overflow: auto;
+    }
+
+    .preview {
+        border: 1px solid hsl(var(--bg-high));
+        border-radius: var(--border-radius);
+    }
+
+    .preview > i {
+        margin-left: 0.5rem;
+        border-bottom: 1px solid hsla(var(--text) / 0.5);
+        color: hsla(var(--text) / 0.7);
     }
 
     @media (max-width: 450px) {

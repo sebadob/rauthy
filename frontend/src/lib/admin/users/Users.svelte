@@ -20,6 +20,10 @@
     import type { AuthProviderTemplate } from '$api/templates/AuthProvider';
     import { useTrigger } from '$state/callback.svelte';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
+    import Button from '$lib/button/Button.svelte';
+    import IconEnvelope from '$icons/IconEnvelope.svelte';
+    import SendMail from '$lib/SendMail.svelte';
+    import EmailJobs from '$lib/EmailJobs.svelte';
 
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
@@ -258,14 +262,19 @@
     width="min(23rem, 100dvw)"
     thresholdNavSub={700}
 >
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={roles.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
-        <UserAddNew config={userValuesConfig} onSave={onAddNew} {roles} {groups} />
-    </ButtonAddModal>
+    <div class="topBtns">
+        <SendMail {groups} {roles} />
+        <EmailJobs />
+        <ButtonAddModal
+            bind:ref={refAddNew}
+            level={roles.length === 0 ? 1 : 2}
+            bind:closeModal
+            alignRight
+        >
+            <UserAddNew config={userValuesConfig} onSave={onAddNew} {roles} {groups} />
+        </ButtonAddModal>
+    </div>
+
     <OrderSearchBar
         bind:value={searchValue}
         {searchOptions}
@@ -328,6 +337,13 @@
     .navBtn {
         display: flex;
         align-items: center;
+        gap: 0.5rem;
+    }
+
+    .topBtns {
+        margin-left: 0.5rem;
+        display: flex;
+        justify-content: flex-end;
         gap: 0.5rem;
     }
 

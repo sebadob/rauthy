@@ -84,9 +84,15 @@ pub async fn sender_microsoft_graph(mut rx: mpsc::Receiver<EMail>) {
                     content,
                     content_type: EmailContentType::Html,
                 }
-            } else {
+            } else if let Some(content) = req.text {
                 EmailBody {
-                    content: req.text,
+                    content,
+                    content_type: EmailContentType::Text,
+                }
+            } else {
+                warn!("Sending E-Mail with empty body!");
+                EmailBody {
+                    content: String::default(),
                     content_type: EmailContentType::Text,
                 }
             };

@@ -100,7 +100,7 @@
     }
 
     .container:nth-child(odd) {
-        background: hsla(var(--bg-high), 0.2);
+        background: hsla(var(--bg-high) / 0.2);
     }
 
     .header {
