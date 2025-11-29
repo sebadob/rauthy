@@ -2,11 +2,11 @@
 
 ## CURRENT WORK
 
-ToS TODO
+TODO before next release:
 
-- handle updates during immediate login refresh
-- handle updates during AuthProvider logins
-- find a clean way to handle updates during Webauthn logins
+- update secrets migration
+- update DB migrations with new tables
+- maybe include `preferred_username` in integration tests
 
 ## Stage 1 - essentials
 
