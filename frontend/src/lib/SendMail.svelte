@@ -8,7 +8,12 @@
     import type { GroupResponse } from '$api/types/groups';
     import type { RoleResponse } from '$api/types/roles';
     import Input from '$lib/form/Input.svelte';
-    import type { EmailContentType, EmailJobFilterType, EmailJobRequest } from '$api/types/email';
+    import type { EmailJobRequest } from '$api/types/email';
+    import InputDateTimeCombo from '$lib/form/InputDateTimeCombo.svelte';
+    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '$utils/form';
+    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
+    import { fetchPost } from '$api/fetch';
+    import IconCheck from '$icons/IconCheck.svelte';
 
     let {
         groups,
@@ -24,11 +29,20 @@
     let closeModal: undefined | (() => void) = $state();
 
     let editorMode: 'Text' | 'Markdown' | 'HTML' = $state('Markdown');
+
     let filter = $state(ta.email.filterType[0]);
     let group = $state('');
     let role = $state('');
+
+    let scheduled = $state(false);
+    let schedDate = $state(fmtDateInput());
+    let schedTime = $state(fmtTimeInput());
+
     let subject = $state('');
     let body = $state('');
+    let bodyRaw = $state('');
+
+    let success = $state(false);
     let error = $state('');
 
     let isFilterNone = $derived(filter === ta.email.filterType[0]);
@@ -57,9 +71,12 @@
             filter_type: 'none',
             content_type: editorMode === 'Text' ? 'text' : 'markdown',
             subject,
-            body,
+            body: editorMode === 'HTML' ? body : bodyRaw,
         };
 
+        if (scheduled) {
+            payload.scheduled = unixTsFromLocalDateTime(schedDate, schedTime);
+        }
         if (isFilterGroup) {
             payload.filter_value = group;
             if (filter === ta.email.filterType[1]) {
@@ -77,7 +94,26 @@
             }
         }
 
-        console.log(payload);
+        let res = await fetchPost('/auth/v1/email', payload);
+        if (res.status === 200) {
+            success = true;
+            setTimeout(() => {
+                closeModal?.();
+                reset();
+            }, 3000);
+        } else {
+            error = res.error?.message || 'Error';
+        }
+    }
+
+    function reset() {
+        scheduled = false;
+        filter = ta.email.filterType[0];
+        subject = '';
+        bodyRaw = '';
+        body = '';
+        success = false;
+        error = '';
     }
 </script>
 
@@ -86,41 +122,56 @@
 </Button>
 
 <Modal bind:showModal bind:closeModal>
-    <h2>{ta.email.sendMail}</h2>
+    <div class="options">
+        <div class="scheduled">
+            <InputCheckbox ariaLabel={ta.email.scheduled} bind:checked={scheduled}>
+                {ta.email.scheduled}
+            </InputCheckbox>
 
-    <div class="filter">
-        <div class="label">
-            {ta.email.userFilter}
-            <span style:margin=".25rem 0">:</span>
-        </div>
-
-        <Options
-            ariaLabel={ta.email.userFilter}
-            options={ta.email.filterType}
-            bind:value={filter}
-            borderless
-        />
-
-        {#if filter !== ta.email.filterType[0]}
-            <div class="ms-05">:</div>
-            {#if isFilterGroup}
-                <Options
-                    ariaLabel={ta.email.userFilter}
-                    options={groups.map(g => g.name)}
-                    bind:value={group}
-                    borderless
-                    withSearch={groups.length > 7}
-                />
-            {:else if isFilterRole}
-                <Options
-                    ariaLabel={ta.email.userFilter}
-                    options={roles.map(g => g.name)}
-                    bind:value={role}
-                    borderless
-                    withSearch={roles.length > 7}
+            {#if scheduled}
+                <InputDateTimeCombo
+                    bind:value={schedDate}
+                    bind:timeValue={schedTime}
+                    min={fmtDateInput()}
+                    withTime
                 />
             {/if}
-        {/if}
+        </div>
+
+        <div class="filter">
+            <div class="label">
+                {ta.email.userFilter}
+                <span style:margin=".25rem 0">:</span>
+            </div>
+
+            <Options
+                ariaLabel={ta.email.userFilter}
+                options={ta.email.filterType}
+                bind:value={filter}
+                borderless
+            />
+
+            {#if filter !== ta.email.filterType[0]}
+                <div class="ms-05">:</div>
+                {#if isFilterGroup}
+                    <Options
+                        ariaLabel={ta.email.userFilter}
+                        options={groups.map(g => g.name)}
+                        bind:value={group}
+                        borderless
+                        withSearch={groups.length > 7}
+                    />
+                {:else if isFilterRole}
+                    <Options
+                        ariaLabel={ta.email.userFilter}
+                        options={roles.map(g => g.name)}
+                        bind:value={role}
+                        borderless
+                        withSearch={roles.length > 7}
+                    />
+                {/if}
+            {/if}
+        </div>
     </div>
 
     <div class="editor">
@@ -134,6 +185,7 @@
         />
         <EditorInteractive
             bind:mode={editorMode}
+            bind:contentRaw={bodyRaw}
             bind:sanitizedValue={body}
             height="min(60dvh, 40rem)"
         />
@@ -152,13 +204,17 @@
             {/if}
         </p>
 
-        <Button onclick={submit} isDisabled={!body || !subject}>Send</Button>
+        <div class="flex gap-10">
+            <Button onclick={submit} isDisabled={!body || !subject}>Send</Button>
 
-        {#if error}
-            <div class="err">
-                {error}
-            </div>
-        {/if}
+            {#if success}
+                <IconCheck />
+            {:else if error}
+                <span class="err">
+                    {error}
+                </span>
+            {/if}
+        </div>
     </div>
 </Modal>
 
@@ -172,9 +228,23 @@
     }
 
     .filter {
+        margin-top: -0.1rem;
         margin-bottom: 0.5rem;
         display: flex;
         align-items: center;
+        font-size: 0.98rem;
+        flex-wrap: wrap;
+    }
+
+    .options {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .scheduled {
+        min-width: 15rem;
     }
 
     .send {

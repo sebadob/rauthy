@@ -8,15 +8,16 @@
     let {
         height = 'calc(90dvh - 5.5rem)',
         mode = $bindable('Markdown'),
+        contentRaw = $bindable(''),
         sanitizedValue = $bindable(''),
     }: {
         height?: string;
         mode?: 'Text' | 'Markdown' | 'HTML';
-        sanitizedValue: string;
+        contentRaw?: string;
+        sanitizedValue?: string;
     } = $props();
 
     let worker = useMarkdownWorker();
-    let content = $state('');
 
     onDestroy(() => {
         worker.closeWorker();
@@ -24,7 +25,7 @@
 
     $effect(() => {
         if (mode === 'Text') {
-            sanitizedValue = content;
+            sanitizedValue = contentRaw;
         } else if (mode === 'Markdown') {
             sanitizedValue = worker.renderedMarkdown();
             // } else if (mode === 'HTML') {
@@ -38,11 +39,11 @@
 </div>
 
 {#if mode === 'Markdown'}
-    <EditorMarkdownPreview bind:content {height} />
+    <EditorMarkdownPreview bind:content={contentRaw} {height} />
     <!--{:else if mode === 'HTML'}-->
     <!--    <EditorHtml bind:content {height}/>-->
 {:else if mode === 'Text'}
-    <EditorText bind:content {height} hideButtons />
+    <EditorText bind:content={contentRaw} {height} hideButtons />
 {/if}
 
 <style>

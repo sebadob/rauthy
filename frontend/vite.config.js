@@ -42,6 +42,7 @@ const config = {
             '/auth/v1/oidc/sessioninfo': backend,
             '/auth/v1/oidc/token': backend,
             '/auth/v1/clients': backend,
+            '/auth/v1/email': backend,
             '/auth/v1/encryption/keys': backend,
             '/auth/v1/encryption/migrate': backend,
             '/auth/v1/login_time': backend,

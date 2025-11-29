@@ -203,6 +203,7 @@ export interface I18nAdmin {
         // MUST be in the order:
         // 'none' | 'in_group' | 'not_in_group' | 'has_role' | 'has_not_role'
         filterType: string[];
+        scheduled: string;
         sendAllUsers: string;
         sendAllUsersFiltered: string;
         sendMail: string;

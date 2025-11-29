@@ -20,7 +20,7 @@ export interface EmailJobResponse {
     scheduled?: number;
     status: EmailJobStatus;
     updated: number;
-    last_user_ts: number;
+    last_user_ts?: number;
     filter_type: EmailJobFilterType;
     filter_value?: string;
     content_type: EmailContentType;

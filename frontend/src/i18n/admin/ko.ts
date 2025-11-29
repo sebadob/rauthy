@@ -229,6 +229,7 @@ export let I18nAdminKo: I18nAdmin = {
     },
     email: {
         filterType: ['None', 'In Group', 'Not in Group', 'Has Role', 'Has not Role'],
+        scheduled: 'Scheduled Dispatch',
         sendAllUsers: 'This E-Mail will be sent to all users.',
         sendAllUsersFiltered: 'This E-Mail will be sent to all users filtered by:',
         sendMail: 'Send E-Mail',

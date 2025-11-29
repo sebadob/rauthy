@@ -256,6 +256,7 @@ export let I18nAdminDe: I18nAdmin = {
     },
     email: {
         filterType: ['Keiner', 'In Gruppe', 'Nicht in Gruppe', 'Hat Rolle', 'Hat nicht Rolle'],
+        scheduled: 'Termin-Versand',
         sendAllUsers: 'Diese E-Mail wird an alle Benutzer gesendet.',
         sendAllUsersFiltered: 'Diese E-Mail wird an alle Benutzer gesendet, gefiltert durch:',
         sendMail: 'E-Mail senden',
