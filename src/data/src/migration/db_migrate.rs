@@ -88,9 +88,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // CONFIG
     debug!("Migrating table: config");
-    let before =
-        query_sqlite::<ConfigEntity>(&conn, "SELECT * FROM config WHERE id = 'password_policy'")
-            .await?;
+    let before = query_sqlite::<ConfigEntity>(&conn, "SELECT * FROM config").await?;
     inserts::config(before).await?;
 
     // API KEYS
@@ -529,13 +527,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // CONFIG
     debug!("Migrating table: config");
-    let before = DB::pg_query_map_with(
-        &cl,
-        "SELECT * FROM config WHERE id = 'password_policy'",
-        &[],
-        1,
-    )
-    .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM config", &[], 1).await?;
     inserts::config(before).await?;
 
     // API KEYS
