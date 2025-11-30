@@ -2,6 +2,7 @@ use cryptr::{EncKeys, EncValue};
 use rauthy_data::entity::api_keys::ApiKeyEntity;
 use rauthy_data::entity::auth_providers::AuthProvider;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::jwk::JWKS;
 use rauthy_error::ErrorResponse;
 use tracing::{error, info};
@@ -99,6 +100,24 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
     }
     info!(
         "Finished auth provider secrets migration to key id: {}",
+        new_kid
+    );
+
+    // migrate SCIM clients
+    for client in ClientScim::find_all().await? {
+        // the upsert just re-encrypts the bearer token
+        // and otherwise does not update anything else
+        ClientScim::upsert(
+            client.client_id,
+            client.bearer_token.as_bytes(),
+            client.base_uri,
+            client.sync_groups,
+            client.group_sync_prefix,
+        )
+        .await?;
+    }
+    info!(
+        "Finished SCIM clients secrets migration to key id: {}",
         new_kid
     );
 

@@ -72,7 +72,7 @@ async fn execute(cleanup_after_secs: Option<u64>) -> Result<(), ErrorResponse> {
         logout::execute_backchannel_logout(None, Some(user.id.clone())).await?;
 
         // expire possibly existing SSH keys
-        if let Ok(pam_user) = PamUser::find_by_user_id(user.id).await {
+        if let Ok(pam_user) = PamUser::find_by_user_id(user.id.clone()).await {
             AuthorizedKey::expire_all_keys_by_uid(pam_user.id).await?;
         }
 
