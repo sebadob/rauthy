@@ -1077,6 +1077,37 @@ pub async fn put_pam_user(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// Update a PAM user
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    delete,
+    path = "/pam/users/{uid}/authorized_key/{ts_added}",
+    tag = "pam",
+    request_body = PamUserUpdateRequest,
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
+#[delete("/pam/users/{uid}/authorized_key/{ts_added}")]
+pub async fn delete_pam_user_authorized_key(
+    path: Path<(u32, i64)>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Update)?;
+
+    let (pam_uid, ts_added) = path.into_inner();
+    AuthorizedKey::find_by_uid_ts(pam_uid, ts_added)
+        .await?
+        .delete()
+        .await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
 /// Validation endpoint for PAM tokens from a PAM host
 ///
 /// **Permissions**

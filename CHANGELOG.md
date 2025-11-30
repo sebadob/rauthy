@@ -112,6 +112,7 @@ forced_key_expiry_days = 365
 
 [#1249](https://github.com/sebadob/rauthy/pull/1249)
 [#1250](https://github.com/sebadob/rauthy/pull/1250)
+[#1253](https://github.com/sebadob/rauthy/pull/1253)
 
 #### `preferred_username` and `tz`
 

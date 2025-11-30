@@ -173,9 +173,11 @@ SELECT * FROM ssh_auth_keys WHERE pam_uid = (
             .blacklist_used_keys
             && self.expires.is_some();
 
+        // a conflict may happen if config for blacklisting has changed in the meantime
         let sql_blacklist = r#"
 INSERT INTO ssh_auth_keys_used (used_key_hash, ts_added)
 VALUES ($1, $2)
+ON CONFLICT (used_key_hash) DO NOTHING
 "#;
         let sql_delete = "DELETE FROM ssh_auth_keys WHERE pam_uid = $1 AND ts_added = $2";
 
