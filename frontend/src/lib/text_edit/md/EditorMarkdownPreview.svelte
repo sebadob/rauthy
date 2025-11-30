@@ -26,7 +26,7 @@
     {#if !previewEmbedded}
         <div class="editor preview">
             <i>Preview</i>
-            <MarkdownRenderer markdown={content} />
+            <MarkdownRenderer />
         </div>
     {/if}
 </div>

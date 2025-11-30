@@ -15,6 +15,7 @@
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';
     import MarkdownRenderer from '$lib/text_edit/md/MarkdownRenderer.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { useMarkdownWorker } from '$lib/text_edit/useWorker.svelte';
 
     let {
         markdown = $bindable(),
@@ -33,9 +34,14 @@
     const iconSize = '1.3rem';
 
     let ta = useI18nAdmin();
+    let worker = useMarkdownWorker();
 
     let ref: undefined | HTMLDivElement = $state();
     let preview = $state(false);
+
+    $effect(() => {
+        worker.renderMarkdown(markdown);
+    });
 
     $effect(() => {
         if (!withPreview && preview) {
@@ -142,7 +148,7 @@
     </div>
 
     {#if preview}
-        <MarkdownRenderer {markdown} />
+        <MarkdownRenderer />
     {:else}
         <div
             role="textbox"

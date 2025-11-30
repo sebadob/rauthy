@@ -7,6 +7,7 @@ use crate::entity::clients_scim::ClientScim;
 use crate::entity::config::ConfigEntity;
 use crate::entity::db_version::DbVersion;
 use crate::entity::devices::DeviceEntity;
+use crate::entity::email_jobs::{EmailContentType, EmailJob, EmailJobFilter, EmailJobStatus};
 use crate::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use crate::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use crate::entity::groups::Group;
@@ -25,6 +26,8 @@ use crate::entity::roles::Role;
 use crate::entity::scopes::Scope;
 use crate::entity::sessions::{Session, SessionState};
 use crate::entity::theme::{ThemeCss, ThemeCssFull};
+use crate::entity::tos::ToS;
+use crate::entity::tos_user_accept::ToSUserAccept;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::user_login_states::UserLoginState;
 use crate::entity::user_revoke::UserRevoke;
@@ -85,9 +88,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // CONFIG
     debug!("Migrating table: config");
-    let before =
-        query_sqlite::<ConfigEntity>(&conn, "SELECT * FROM config WHERE id = 'password_policy'")
-            .await?;
+    let before = query_sqlite::<ConfigEntity>(&conn, "SELECT * FROM config").await?;
     inserts::config(before).await?;
 
     // API KEYS
@@ -455,6 +456,42 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .collect_vec();
     inserts::pam_rel_groups_users(before).await?;
 
+    // TOS
+    debug!("Migrating table: tos");
+    let before = query_sqlite::<ToS>(&conn, "SELECT * FROM tos").await?;
+    inserts::tos(before).await?;
+
+    // TOS USER ACCEPT
+    debug!("Migrating table: tos_user_accept");
+    let before = query_sqlite::<ToSUserAccept>(&conn, "SELECT * FROM tos_user_accept").await?;
+    inserts::tos_user_accept(before).await?;
+
+    // EMAIL JOBS
+    debug!("Migrating table: email_jobs");
+    let mut stmt = conn.prepare("SELECT * FROM email_jobs")?;
+    let before = stmt
+        .query_map([], |row| {
+            let status = EmailJobStatus::from(row.get::<_, i64>("status")? as i16);
+            let filter = EmailJobFilter::from(row.get::<_, String>("filter")?.as_str());
+            let content_type =
+                EmailContentType::from(row.get::<_, String>("content_type")?.as_str());
+
+            Ok(EmailJob {
+                id: row.get("id")?,
+                scheduled: row.get("scheduled")?,
+                status,
+                updated: row.get("updated")?,
+                last_user_ts: row.get("last_user_ts")?,
+                filter,
+                content_type,
+                subject: row.get("subject")?,
+                body: row.get("body")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::email_jobs(before).await?;
+
     Ok(())
 }
 
@@ -490,13 +527,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // CONFIG
     debug!("Migrating table: config");
-    let before = DB::pg_query_map_with(
-        &cl,
-        "SELECT * FROM config WHERE id = 'password_policy'",
-        &[],
-        1,
-    )
-    .await?;
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM config", &[], 1).await?;
     inserts::config(before).await?;
 
     // API KEYS
@@ -746,6 +777,21 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
         })
         .collect::<Vec<_>>();
     inserts::pam_rel_groups_users(before).await?;
+
+    // TOS
+    debug!("Migrating table: tos");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM tos", &[], 0).await?;
+    inserts::tos(before).await?;
+
+    // TOS USER ACCEPT
+    debug!("Migrating table: tos_user_accept");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM tos_user_accept", &[], 0).await?;
+    inserts::tos_user_accept(before).await?;
+
+    // EMAIL JOBS
+    debug!("Migrating table: email_jobs");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM email_jobs", &[], 0).await?;
+    inserts::email_jobs(before).await?;
 
     Ok(())
 }

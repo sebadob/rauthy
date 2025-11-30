@@ -4,13 +4,15 @@
     let {
         markdown,
     }: {
-        markdown: string;
+        markdown?: string;
     } = $props();
 
     let worker = useMarkdownWorker();
 
     $effect(() => {
-        worker.renderMarkdown(markdown);
+        if (markdown) {
+            worker.renderMarkdown(markdown);
+        }
     });
 </script>
 

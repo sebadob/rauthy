@@ -113,13 +113,13 @@
 {#if tos}
     <Modal bind:showModal bind:closeModal strict>
         <h1>{t.tos.tos}</h1>
-        <p bind:this={refToS} class="tosContent" onscrollend={onScrollEndToS}>
+        <div bind:this={refToS} class="tosContent html-render" onscrollend={onScrollEndToS}>
             {#if tos.is_html}
                 {@html tos.content}
             {:else}
                 {tos.content}
             {/if}
-        </p>
+        </div>
 
         <div class="flex gap-05">
             <Button ariaLabel={t.common.accept} onclick={onAccept} isDisabled={!tosRead}>

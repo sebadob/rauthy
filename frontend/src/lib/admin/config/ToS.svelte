@@ -216,13 +216,13 @@
             {/if}
         </div>
 
-        <p>
+        <div class="html-render">
             {#if active.is_html}
                 {@html active.content}
             {:else}
                 {active.content}
             {/if}
-        </p>
+        </div>
     {/if}
 </div>
 

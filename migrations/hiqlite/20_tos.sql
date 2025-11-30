@@ -14,8 +14,14 @@ CREATE UNIQUE INDEX tos_ts_uindex
 
 CREATE TABLE tos_user_accept
 (
-    user_id   TEXT    NOT NULL,
-    tos_ts    INTEGER NOT NULL,
+    user_id   TEXT    NOT NULL
+        CONSTRAINT tos_user_accept_users_id_fk
+            REFERENCES users
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    tos_ts    INTEGER NOT NULL
+        CONSTRAINT tos_user_accept_tos_ts_fk
+            REFERENCES tos
+            ON UPDATE CASCADE ON DELETE CASCADE,
     accept_ts INTEGER NOT NULL,
     location  TEXT    NOT NULL,
     CONSTRAINT tos_user_accept_pk
