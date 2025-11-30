@@ -3,6 +3,7 @@ use tokio::time;
 use tracing::info;
 
 mod app_version;
+mod authorized_keys;
 mod backchannel_logout;
 mod devices;
 mod dyn_clients;
@@ -22,6 +23,7 @@ mod users;
 pub fn spawn() {
     info!("Starting schedulers");
 
+    tokio::spawn(authorized_keys::cleanup_authorized_keys());
     tokio::spawn(backchannel_logout::backchannel_logout_retry());
     tokio::spawn(scim_tasks::scim_task_retry());
     tokio::spawn(dyn_clients::dyn_client_cleanup());

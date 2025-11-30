@@ -95,7 +95,11 @@ export const I18nZh: I18n = {
         navLogout: '退出登录',
         other: 'Other',
         pam: {
+            addSshKey: 'Add New Key',
+            comment: 'Comment',
             generatePassword: 'New Password',
+            keyAdded: 'Added',
+            keyType: 'Type',
             username: 'Username',
             validFor: 'Password valid for {{ secs }} seconds',
         },

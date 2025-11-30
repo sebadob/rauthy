@@ -33,6 +33,11 @@ export interface PamHostUpdateRequest {
     aliases: string[];
 }
 
+export interface PamSshAuthKeyRequest {
+    /// Validate: max length 8192
+    data: string;
+}
+
 export interface PamUserCreateRequest {
     /// Validation: PATTERN_LINUX_USERNAME
     username: string;
@@ -100,12 +105,21 @@ export interface PamPasswordResponse {
     password: string;
 }
 
+export interface PamSshAuthKeyResponse {
+    ts_added: number;
+    expires?: number;
+    typ: string;
+    data: string;
+    comment: string;
+}
+
 export interface PamUserResponse {
     id: number;
     name: string;
     gid: number;
     email: string;
     shell: string;
+    authorized_keys?: PamSshAuthKeyResponse[];
 }
 
 export interface PamUserDetailsResponse {
@@ -115,4 +129,5 @@ export interface PamUserDetailsResponse {
     email: string;
     shell: string;
     groups: PamGroupUserLink[];
+    authorized_keys?: PamSshAuthKeyResponse[];
 }

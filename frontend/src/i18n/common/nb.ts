@@ -99,7 +99,11 @@ export const I18nNb: I18n = {
         navLogout: 'Logg ut',
         other: 'Annet',
         pam: {
+            addSshKey: 'Add New Key',
+            comment: 'Comment',
             generatePassword: 'Nytt passord',
+            keyAdded: 'Added',
+            keyType: 'Type',
             username: 'Brukernavn',
             validFor: 'Passord gyldig i {{ secs }} sekunder',
         },

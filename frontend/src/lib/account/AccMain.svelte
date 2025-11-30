@@ -123,7 +123,7 @@
                         {webIdData}
                     />
                 {:else if selected === 'PAM' && pamUser}
-                    <AccPAM {pamUser} />
+                    <AccPAM bind:pamUser />
                 {:else if selected === t.account.navEdit}
                     <AccEdit bind:user viewModePhone />
                 {:else if selected === t.common.password}
@@ -156,7 +156,7 @@
                     {#if selected === t.account.navInfo}
                         <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider} />
                     {:else if selected === 'PAM' && pamUser}
-                        <AccPAM {pamUser} />
+                        <AccPAM bind:pamUser />
                     {:else if selected === t.account.navEdit}
                         <AccEdit bind:user />
                     {:else if selected === t.common.password}

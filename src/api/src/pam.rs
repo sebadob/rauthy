@@ -1,5 +1,6 @@
 use crate::ReqPrincipal;
 use actix_web::http::header::AUTHORIZATION;
+use actix_web::mime::TEXT_PLAIN;
 use actix_web::web::Path;
 use actix_web::{HttpRequest, HttpResponse, delete, get, post, put};
 use actix_web_lab::extract::Json;
@@ -9,12 +10,14 @@ use rauthy_api_types::pam::{
     PamGroupMembersResponse, PamGroupResponse, PamHostAccessResponse, PamHostCreateRequest,
     PamHostDetailsResponse, PamHostSecretResponse, PamHostSimpleResponse, PamHostUpdateRequest,
     PamHostWhoamiRequest, PamLoginRequest, PamMfaFinishRequest, PamMfaStartRequest,
-    PamPasswordResponse, PamPreflightRequest, PamPreflightResponse, PamUnlinkedEmailsResponse,
-    PamUserCreateRequest, PamUserDetailsResponse, PamUserResponse, PamUserUpdateRequest,
+    PamPasswordResponse, PamPreflightRequest, PamPreflightResponse, PamSshAuthKeyRequest,
+    PamSshAuthKeyResponse, PamUnlinkedEmailsResponse, PamUserCreateRequest, PamUserDetailsResponse,
+    PamUserResponse, PamUserUpdateRequest,
 };
 use rauthy_api_types::users::{MfaPurpose, WebauthnAuthStartResponse};
 use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::pam::authorized_keys::AuthorizedKey;
 use rauthy_data::entity::pam::group_user_links::PamGroupUserLink;
 use rauthy_data::entity::pam::groups::{PamGroup, PamGroupType};
 use rauthy_data::entity::pam::hosts::PamHost;
@@ -24,6 +27,7 @@ use rauthy_data::entity::pam::users::PamUser;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::webauthn;
 use rauthy_data::entity::webauthn::{WebauthnAdditionalData, WebauthnServiceReq};
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::cmp::max;
 use std::collections::{BTreeMap, BTreeSet};
@@ -94,7 +98,8 @@ pub async fn post_getent(
                 .into_iter()
                 .filter_map(|u| {
                     if links.contains(&u.id) {
-                        Some(PamUserResponse::from(u))
+                        // No need to include the SSH keys and do additional lookups for a get all
+                        Some(u.build_response(None))
                     } else {
                         None
                     }
@@ -105,11 +110,21 @@ pub async fn post_getent(
         }
         Getent::Username(name) => {
             let user = PamUser::find_by_name(name).await?;
-            PamGetentResponse::User(PamUserResponse::from(user))
+            let authorized_keys = if validate_authorized_keys_enabled().is_ok() {
+                Some(AuthorizedKey::find_by_uid(user.id).await?)
+            } else {
+                None
+            };
+            PamGetentResponse::User(user.build_response(authorized_keys))
         }
         Getent::UserId(id) => {
             let user = PamUser::find_by_id(id).await?;
-            PamGetentResponse::User(PamUserResponse::from(user))
+            let authorized_keys = if validate_authorized_keys_enabled().is_ok() {
+                Some(AuthorizedKey::find_by_uid(user.id).await?)
+            } else {
+                None
+            };
+            PamGetentResponse::User(user.build_response(authorized_keys))
         }
 
         Getent::Groups => {
@@ -833,7 +848,7 @@ pub async fn get_pam_users(principal: ReqPrincipal) -> Result<HttpResponse, Erro
     let users = PamUser::find_all()
         .await?
         .into_iter()
-        .map(PamUserResponse::from)
+        .map(|u| u.build_response(None))
         .collect::<Vec<_>>();
 
     Ok(HttpResponse::Ok().json(users))
@@ -864,7 +879,7 @@ pub async fn post_pam_users(
     let user = User::find_by_email(payload.email).await?;
     let pam_user = PamUser::insert(payload.username, user.email).await?;
 
-    Ok(HttpResponse::Ok().json(PamUserResponse::from(pam_user)))
+    Ok(HttpResponse::Ok().json(pam_user.build_response(None)))
 }
 
 /// GET the PAM user for "this" session
@@ -885,8 +900,93 @@ pub async fn get_pam_user_self(principal: ReqPrincipal) -> Result<HttpResponse, 
     principal.validate_session_auth()?;
 
     let pam_user = PamUser::find_by_user_id(principal.user_id()?.to_string()).await?;
+    let authorized_keys = if validate_authorized_keys_enabled().is_ok() {
+        Some(AuthorizedKey::find_by_uid(pam_user.id).await?)
+    } else {
+        None
+    };
 
-    Ok(HttpResponse::Ok().json(PamUserResponse::from(pam_user)))
+    Ok(HttpResponse::Ok().json(pam_user.build_response(authorized_keys)))
+}
+
+/// Add an `authorized_key` for the currently logged-in user
+///
+/// **Permissions**
+/// - any authenticated session
+#[utoipa::path(
+    post,
+    path = "/pam/users/self/authorized_keys",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
+#[post("/pam/users/self/authorized_keys")]
+pub async fn post_pam_user_self_authorized_keys(
+    principal: ReqPrincipal,
+    payload: Json<PamSshAuthKeyRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+    validate_authorized_keys_enabled()?;
+    payload.validate()?;
+
+    let pam_user = PamUser::find_by_user_id(principal.user_id()?.to_string()).await?;
+    AuthorizedKey::insert(pam_user.id, &payload.data).await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+/// Add an `authorized_key` for the currently logged-in user
+///
+/// **Permissions**
+/// - any authenticated session
+#[utoipa::path(
+    delete,
+    path = "/pam/users/self/authorized_keys/{ts_added}",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
+#[delete("/pam/users/self/authorized_keys/{ts_added}")]
+pub async fn delete_pam_user_self_authorized_keys(
+    principal: ReqPrincipal,
+    ts_added: Path<i64>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+    validate_authorized_keys_enabled()?;
+
+    let pam_user = PamUser::find_by_user_id(principal.user_id()?.to_string()).await?;
+    AuthorizedKey::find_by_uid_ts(pam_user.id, ts_added.into_inner())
+        .await?
+        .delete()
+        .await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+/// GET `AuthorizedKeys` for a user
+#[utoipa::path(
+    get,
+    path = "/pam/users/authorized_keys/{username}",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 404, description = "NotFound"),
+    ),
+)]
+#[get("/pam/users/authorized_keys/{username}")]
+pub async fn get_pam_users_authorized_keys(
+    username: Path<String>,
+) -> Result<HttpResponse, ErrorResponse> {
+    validate_authorized_keys_enabled()?;
+
+    let keys = AuthorizedKey::find_by_username(username.into_inner()).await?;
+    let text = AuthorizedKey::fmt_authorized_keys(&keys)?;
+
+    Ok(HttpResponse::Ok().content_type(TEXT_PLAIN).body(text))
 }
 
 /// GET detailed information for a PAM user
@@ -911,11 +1011,24 @@ pub async fn get_pam_user(
     principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Read)?;
 
     let pam_user = PamUser::find_by_id(uid.into_inner()).await?;
+
     let groups = PamGroupUserLink::find_for_user(pam_user.id)
         .await?
         .into_iter()
         .map(rauthy_api_types::pam::PamGroupUserLink::from)
         .collect::<Vec<_>>();
+
+    let authorized_keys = if validate_authorized_keys_enabled().is_ok() {
+        Some(
+            AuthorizedKey::find_by_uid(pam_user.id)
+                .await?
+                .into_iter()
+                .map(PamSshAuthKeyResponse::from)
+                .collect::<Vec<_>>(),
+        )
+    } else {
+        None
+    };
 
     let resp = PamUserDetailsResponse {
         id: pam_user.id,
@@ -924,6 +1037,7 @@ pub async fn get_pam_user(
         email: pam_user.email,
         shell: pam_user.shell,
         groups,
+        authorized_keys,
     };
 
     Ok(HttpResponse::Ok().json(resp))
@@ -1011,4 +1125,21 @@ pub async fn get_validate_user(
     user.check_expired()?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+#[inline]
+fn validate_authorized_keys_enabled() -> Result<(), ErrorResponse> {
+    if RauthyConfig::get()
+        .vars
+        .pam
+        .authorized_keys
+        .static_keys_enable
+    {
+        Ok(())
+    } else {
+        Err(ErrorResponse::new(
+            ErrorResponseType::NotFound,
+            "SSH authorized_keys disabled",
+        ))
+    }
 }

@@ -58,7 +58,7 @@ pub async fn jwks_cleanup() {
         // clean up all JWKs older than 90 days
         let cleanup_threshold = Utc::now().sub(chrono::Duration::days(90)).timestamp();
 
-        let sql = "SELECT * FROM jwks ORDER BY created_at asc";
+        let sql = "SELECT * FROM jwks ORDER BY created_at ASC";
         let res: Result<Vec<Jwk>, String> = if is_hiqlite() {
             DB::hql()
                 .query_as(sql, params!())

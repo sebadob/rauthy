@@ -1889,6 +1889,52 @@ remote_password_len = 24
 # overwritten by: PAM_REMOTE_PASSWORD_TTL
 remote_password_ttl = 120
 
+[pam.authorized_keys]
+
+# If set to `true`, a user with a linked PAM user can upload
+# public SSH keys via the account dashboard. This is disabled
+# by default, because the auto-expiring PAM user passwords are
+# the safer option.
+#
+# default: false
+# overwritten by: PAM_SSH_STATIC_KEYS_ENABLE
+static_keys_enable = true
+
+# By default, SSH keys that have expired because of
+# `forced_key_expiry_days` below will be added to an internal
+# blacklist. This blacklist will be checked upon key add to
+# make sure keys were actually rotated and that not an old key
+# is added again.
+#
+# default: true
+# overwritten by: PAM_SSH_BLACKLIST_SSH_KEYS
+blacklist_used_keys = true
+
+# Configure the days after which blacklisted SSH keys will be
+# cleaned up.
+#
+# default: 730
+# overwritten by: PAM_SSH_BLACKLIST_CLEANUP_DAYS
+blacklist_cleanup_days = 730
+
+# You can include comments in the public response for the
+# `authorized_keys` for each user. This can be helpful for
+# debugging, but should generally be disabled to not
+# disclose any possibly somewhat "internal" information.
+#
+# default: false
+# overwritten by: PAM_SSH_INCLUDE_COMMENTS
+include_comments = false
+
+# You can enforece an SSH key expiry in days. After this time,
+# users must generate new keys. This enforces a key rotation
+# with is usually overlooked especially for SSH keys.
+# Set to `0` to disable the forced expiry.
+#
+# default: 365
+# overwritten by: PAM_SSH_KEY_EXP_DAYS
+forced_key_expiry_days = 365
+
 [pow]
 # The difficulty for a Proof-of-Work (PoW).
 # The default is 20, which is reasonable for modern processors.
