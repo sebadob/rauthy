@@ -15,6 +15,7 @@ use crate::entity::jwk::Jwk;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
+use crate::entity::pam::authorized_keys::AuthorizedKey;
 use crate::entity::pam::groups::{PamGroup, PamGroupType};
 use crate::entity::pam::hosts::PamHost;
 use crate::entity::pam::users::PamUser;
@@ -492,6 +493,38 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .collect_vec();
     inserts::email_jobs(before).await?;
 
+    // SSH AUTH KEYS
+    debug!("Migrating table: ssh_auth_keys");
+    let mut stmt = conn.prepare("SELECT * FROM ssh_auth_keys")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(AuthorizedKey {
+                // type cast is safe because Rauthy controls the input
+                pam_uid: row.get::<_, i64>("pam_uid")? as u32,
+                ts_added: row.get("ts_added")?,
+                expires: row.get("expires")?,
+                typ: row.get("typ")?,
+                data: row.get("data")?,
+                comment: row.get("comment")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::ssh_auth_keys(before).await?;
+
+    // SSH AUTH KEYS USED
+    debug!("Migrating table: ssh_auth_keys_used");
+    let mut stmt = conn.prepare("SELECT * FROM ssh_auth_keys_used")?;
+    let before = stmt
+        .query_map([], |row| {
+            let used_key_hash = row.get::<_, String>("used_key_hash")?;
+            let ts_added = row.get::<_, i64>("ts_added")?;
+            Ok((used_key_hash, ts_added))
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::ssh_auth_keys_used(before).await?;
+
     Ok(())
 }
 
@@ -792,6 +825,24 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: email_jobs");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM email_jobs", &[], 0).await?;
     inserts::email_jobs(before).await?;
+
+    // SSH AUTH KEYS
+    debug!("Migrating table: ssh_auth_keys");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM ssh_auth_keys", &[], 0).await?;
+    inserts::ssh_auth_keys(before).await?;
+
+    // SSH AUTH KEYS USED
+    debug!("Migrating table: ssh_auth_keys_used");
+    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM ssh_auth_keys_used", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| {
+            let used_key_hash: String = row.get("used_key_hash");
+            let ts_added: i64 = row.get("ts_added");
+            (used_key_hash, ts_added)
+        })
+        .collect::<Vec<_>>();
+    inserts::ssh_auth_keys_used(before).await?;
 
     Ok(())
 }
