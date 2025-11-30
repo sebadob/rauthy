@@ -15,9 +15,10 @@
     import { onMount } from 'svelte';
     import Tooltip from '$lib/Tooltip.svelte';
     import SearchBar from '$lib/search_bar/SearchBar.svelte';
+    import PamAuthorizedKeys from '$lib/PamAuthorizedKeys.svelte';
 
     let {
-        pamUser,
+        pamUser = $bindable(),
     }: {
         pamUser: PamUserResponse;
     } = $props();
@@ -87,6 +88,13 @@
             hosts = res.body;
         } else {
             err = res.error?.message || 'Error';
+        }
+    }
+
+    async function fetchPamUser() {
+        let res = await fetchGet<PamUserResponse>('/auth/v1/pam/users/self');
+        if (res.body) {
+            pamUser = res.body;
         }
     }
 
@@ -160,6 +168,8 @@
             {/if}
         </div>
     {/if}
+
+    <PamAuthorizedKeys authorizedKeys={pamUser.authorized_keys} onSave={fetchPamUser} />
 
     {#snippet btnClip(value: string)}
         <Button invisible onclick={() => navigator.clipboard.writeText(value)}>

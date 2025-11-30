@@ -1,7 +1,8 @@
 use crate::database::DB;
+use crate::entity::pam::authorized_keys::AuthorizedKey;
 use crate::entity::pam::groups::{PamGroup, PamGroupType};
 use hiqlite_macros::params;
-use rauthy_api_types::pam::{PamGroupUserLink, PamUserResponse};
+use rauthy_api_types::pam::{PamGroupUserLink, PamSshAuthKeyResponse, PamUserResponse};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
@@ -205,14 +206,19 @@ VALUES ($1, $2, $3)
     }
 }
 
-impl From<PamUser> for PamUserResponse {
-    fn from(u: PamUser) -> Self {
-        Self {
-            id: u.id,
-            name: u.name,
-            gid: u.gid,
-            email: u.email,
-            shell: u.shell,
+impl PamUser {
+    pub fn build_response(self, authorized_keys: Option<Vec<AuthorizedKey>>) -> PamUserResponse {
+        PamUserResponse {
+            id: self.id,
+            name: self.name,
+            gid: self.gid,
+            email: self.email,
+            shell: self.shell,
+            authorized_keys: authorized_keys.map(|keys| {
+                keys.into_iter()
+                    .map(PamSshAuthKeyResponse::from)
+                    .collect::<Vec<_>>()
+            }),
         }
     }
 }

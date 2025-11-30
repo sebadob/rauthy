@@ -524,6 +524,13 @@ impl Default for Vars {
             pam: VarsPam {
                 remote_password_len: 24,
                 remote_password_ttl: 120,
+                authorized_keys: VarsPamAuthorizedKeys {
+                    authorized_keys_enable: false,
+                    blacklist_used_keys: true,
+                    blacklist_cleanup_days: 730,
+                    include_comments: false,
+                    forced_key_expiry_days: 365,
+                },
             },
             pow: VarsPow {
                 difficulty: 19,
@@ -2172,6 +2179,50 @@ impl Vars {
         ) {
             self.pam.remote_password_ttl = v;
         }
+
+        // [pam.authorized_keys]
+        let mut auth_keys = t_table(&mut table, "authorized_keys");
+
+        if let Some(v) = t_bool(
+            &mut auth_keys,
+            "pam.authorized_keys",
+            "authorized_keys_enable",
+            "PAM_SSH_AUTHORIZED_KEYS_ENABLE",
+        ) {
+            self.pam.authorized_keys.authorized_keys_enable = v;
+        }
+        if let Some(v) = t_bool(
+            &mut auth_keys,
+            "pam.authorized_keys",
+            "blacklist_used_keys",
+            "PAM_SSH_BLACKLIST_SSH_KEYS",
+        ) {
+            self.pam.authorized_keys.blacklist_used_keys = v;
+        }
+        if let Some(v) = t_u16(
+            &mut auth_keys,
+            "pam.authorized_keys",
+            "blacklist_cleanup_days",
+            "PAM_SSH_BLACKLIST_CLEANUP_DAYS",
+        ) {
+            self.pam.authorized_keys.blacklist_cleanup_days = v;
+        }
+        if let Some(v) = t_bool(
+            &mut auth_keys,
+            "pam.authorized_keys",
+            "include_comments",
+            "PAM_SSH_INCLUDE_COMMENTS",
+        ) {
+            self.pam.authorized_keys.include_comments = v;
+        }
+        if let Some(v) = t_u16(
+            &mut auth_keys,
+            "pam.authorized_keys",
+            "forced_key_expiry_days",
+            "PAM_SSH_KEY_EXP_DAYS",
+        ) {
+            self.pam.authorized_keys.forced_key_expiry_days = v;
+        }
     }
 
     fn parse_pow(&mut self, table: &mut toml::Table) {
@@ -3029,6 +3080,16 @@ pub struct VarsMfa {
 pub struct VarsPam {
     pub remote_password_len: u8,
     pub remote_password_ttl: u16,
+    pub authorized_keys: VarsPamAuthorizedKeys,
+}
+
+#[derive(Debug)]
+pub struct VarsPamAuthorizedKeys {
+    pub authorized_keys_enable: bool,
+    pub blacklist_used_keys: bool,
+    pub blacklist_cleanup_days: u16,
+    pub include_comments: bool,
+    pub forced_key_expiry_days: u16,
 }
 
 #[derive(Debug)]

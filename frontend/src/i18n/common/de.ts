@@ -96,7 +96,11 @@ export const I18nDe: I18n = {
         navLogout: 'Logout',
         other: 'Sonstiges',
         pam: {
+            addSshKey: 'Neuen Key Hinzufügen',
+            comment: 'Kommentar',
             generatePassword: 'Neues Passwort',
+            keyAdded: 'Hinzugefügt',
+            keyType: 'Typ',
             username: 'Benutzername',
             validFor: 'Passwort gültig für {{ secs }} Sekunden',
         },

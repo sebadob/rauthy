@@ -79,7 +79,11 @@ export interface I18n {
         navLogout: string;
         other: string;
         pam: {
+            addSshKey: string;
+            comment: string;
             generatePassword: string;
+            keyAdded: string;
+            keyType: string;
             username: string;
             validFor: string;
         };

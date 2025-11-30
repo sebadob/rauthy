@@ -1,6 +1,5 @@
 <script lang="ts">
     import type {
-        PamGroupResponse,
         PamGroupUserLink,
         PamUserDetailsResponse,
         PamUserResponse,

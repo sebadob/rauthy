@@ -14,6 +14,7 @@ use crate::entity::jwk::Jwk;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
+use crate::entity::pam::authorized_keys::AuthorizedKey;
 use crate::entity::pam::groups::PamGroup;
 use crate::entity::pam::hosts::PamHost;
 use crate::entity::pam::users::PamUser;
@@ -1220,6 +1221,63 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                 ],
             )
             .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn ssh_auth_keys(data_before: Vec<AuthorizedKey>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM ssh_auth_keys";
+    let sql_2 = r#"
+INSERT INTO ssh_auth_keys (pam_uid, ts_added, expires, typ, data, comment)
+VALUES ($1, $2, $3, $4, $5, $6)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(b.pam_uid, b.ts_added, b.expires, b.typ, b.data, b.comment),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &(b.pam_uid as i64),
+                    &b.ts_added,
+                    &b.expires,
+                    &b.typ,
+                    &b.data,
+                    &b.comment,
+                ],
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn ssh_auth_keys_used(data_before: Vec<(String, i64)>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM ssh_auth_keys_used";
+    let sql_2 = r#"
+INSERT INTO ssh_auth_keys_used (used_key_hash, ts_added)
+VALUES ($1, $2)
+"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql().execute(sql_2, params!(b.0, b.1)).await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[&b.0, &b.1]).await?;
         }
     }
     Ok(())

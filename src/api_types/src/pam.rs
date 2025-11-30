@@ -162,6 +162,12 @@ pub struct PamPreflightRequest {
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
+pub struct PamSshAuthKeyRequest {
+    #[validate(length(max = 8192))]
+    pub data: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct PamUserCreateRequest {
     //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
     #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
@@ -261,6 +267,15 @@ pub struct PamPreflightResponse {
     pub mfa_required: bool,
 }
 
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PamSshAuthKeyResponse {
+    pub ts_added: i64,
+    pub expires: Option<i64>,
+    pub typ: String,
+    pub data: String,
+    pub comment: String,
+}
+
 #[derive(Serialize, ToSchema)]
 pub struct PamUnlinkedEmailsResponse {
     pub emails: Vec<String>,
@@ -273,6 +288,7 @@ pub struct PamUserResponse {
     pub gid: u32,
     pub email: String,
     pub shell: String,
+    pub authorized_keys: Option<Vec<PamSshAuthKeyResponse>>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -283,4 +299,5 @@ pub struct PamUserDetailsResponse {
     pub email: String,
     pub shell: String,
     pub groups: Vec<PamGroupUserLink>,
+    pub authorized_keys: Option<Vec<PamSshAuthKeyResponse>>,
 }

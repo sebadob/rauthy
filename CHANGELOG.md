@@ -28,6 +28,88 @@ breaking changes for direct API requests.
 
 ### Changes
 
+#### `AuthorizedKeys` for PAM users
+
+If a user is linked to an existing PAM user, and the config allows it, users can upload their own
+public keys. A server can then make use of the `AuthorizedKeysCommand` via the `sshd_config`
+and resolve these public keys dynamically:
+
+```
+AuthorizedKeysCommand
+   Specifies a program to be used to look up the user's
+   public keys.  The program must be owned by root, not
+   writable by group or others and specified by an absolute
+   path.  Arguments to AuthorizedKeysCommand accept the
+   tokens described in the “TOKENS” section.  If no arguments
+   are specified then the username of the target user is
+   used.
+
+   The program should produce on standard output zero or more
+   lines of authorized_keys output (see “AUTHORIZED_KEYS” in
+   sshd(8)).  AuthorizedKeysCommand is tried after the usual
+   AuthorizedKeysFile files and will not be executed if a
+   matching key is found there.  By default, no
+   AuthorizedKeysCommand is run.
+```
+
+At the time of writing, [rauthy-pam-nss](https://github.com/sebadob/rauthy-pam-nss) was not updated
+yet and does not yet contain a client for this. However, it is actually dead simple and can even
+be executed with a `curl` like this for instance:
+
+```bash
+curl -s localhost:8080/auth/v1/pam/users/authorized_keys/admin
+```
+
+You will also have the following new config options:
+
+```toml
+[pam.authorized_keys]
+
+# If set to `true`, a user with a linked PAM user can upload
+# public SSH keys via the account dashboard. This is disabled
+# by default, because the auto-expiring PAM user passwords are
+# the safer option.
+#
+# default: true
+# overwritten by: PAM_SSH_AUTHORIZED_KEYS_ENABLE
+authorized_keys_enable = true
+
+# By default, SSH keys that have expired because of
+# `forced_key_expiry_days` below will be added to an internal
+# blacklist. This blacklist will be checked upon key add to
+# make sure keys were actually rotated and that not an old key
+# is added again.
+#
+# default: true
+# overwritten by: PAM_SSH_BLACKLIST_SSH_KEYS
+blacklist_used_keys = true
+
+# Configure the days after which blacklisted SSH keys will be
+# cleaned up.
+#
+# default: 730
+# overwritten by: PAM_SSH_BLACKLIST_CLEANUP_DAYS
+blacklist_cleanup_days = 730
+
+# You can include comments in the public response for the
+# `authorized_keys` for each user. This can be helpful for
+# debugging, but should generally be disabled to not
+# disclose any possibly somewhat "internal" information.
+#
+# default: false
+# overwritten by: PAM_SSH_INCLUDE_COMMENTS
+include_comments = false
+
+# You can enforece an SSH key expiry in days. After this time,
+# users must generate new keys. This enforces a key rotation
+# with is usually overlooked especially for SSH keys.
+# Set to `0` to disable the forced expiry.
+#
+# default: 365
+# overwritten by: PAM_SSH_KEY_EXP_DAYS
+forced_key_expiry_days = 365
+```
+
 #### `preferred_username` and `tz`
 
 The custom user values have been expanded. Each user can now provide a `preferred_username` and a
