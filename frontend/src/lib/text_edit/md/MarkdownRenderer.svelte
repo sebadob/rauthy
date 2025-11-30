@@ -9,9 +9,9 @@
 
     let worker = useMarkdownWorker();
 
-    $effect(() => {
-        worker.renderMarkdown(markdown);
-    });
+    // $effect(() => {
+    //     worker.renderMarkdown(markdown);
+    // });
 </script>
 
 <div class="preview html-render">

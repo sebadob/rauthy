@@ -17,6 +17,9 @@
         sanitizedValue?: string;
     } = $props();
 
+    $inspect('contentRaw', contentRaw);
+    $inspect('sanitizedValue', sanitizedValue);
+
     let worker = useMarkdownWorker();
 
     onDestroy(() => {

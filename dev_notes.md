@@ -5,7 +5,6 @@
 TODO before next release:
 
 - update secrets migration
-- update DB migrations with new tables
 - maybe include `preferred_username` in integration tests
 
 ## Stage 1 - essentials

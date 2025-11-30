@@ -6,6 +6,7 @@ use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::config::ConfigEntity;
 use crate::entity::devices::DeviceEntity;
+use crate::entity::email_jobs::EmailJob;
 use crate::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use crate::entity::failed_scim_tasks::FailedScimTask;
 use crate::entity::groups::Group;
@@ -24,6 +25,8 @@ use crate::entity::roles::Role;
 use crate::entity::scopes::Scope;
 use crate::entity::sessions::Session;
 use crate::entity::theme::ThemeCssFull;
+use crate::entity::tos::ToS;
+use crate::entity::tos_user_accept::ToSUserAccept;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::user_login_states::UserLoginState;
 use crate::entity::user_revoke::UserRevoke;
@@ -445,6 +448,53 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
                     &b.refresh_exp,
                     &b.peer_ip,
                     &b.name,
+                ],
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn email_jobs(data_before: Vec<EmailJob>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM email_jobs";
+    let sql_2 = r#"
+INSERT INTO email_jobs (id, scheduled, status, updated, filter, content_type, subject, body)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(
+                        b.id,
+                        b.scheduled,
+                        b.status.value(),
+                        b.updated,
+                        b.filter.to_string(),
+                        b.content_type.to_string(),
+                        b.subject,
+                        b.body
+                    ),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.id,
+                    &b.scheduled,
+                    &b.status.value(),
+                    &b.updated,
+                    &b.filter.to_string(),
+                    &b.content_type.to_string(),
+                    &b.subject,
+                    &b.body,
                 ],
             )
             .await?;
@@ -1218,6 +1268,57 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
     Ok(())
 }
 
+pub async fn tos(data_before: Vec<ToS>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM tos";
+    let sql_2 = r#"
+INSERT INTO tos (ts, author, is_html, opt_until, content)
+VALUES ($1, $2, $3, $4, $5)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(b.ts, b.author, b.is_html, b.opt_until, b.content),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(
+                sql_2,
+                &[&b.ts, &b.author, &b.is_html, &b.opt_until, &b.content],
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn tos_user_accept(data_before: Vec<ToSUserAccept>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM tos_user_accept";
+    let sql_2 = r#"
+INSERT INTO tos_user_accept (user_id, tos_ts, accept_ts, location)
+VALUES ($1, $2, $3, $4)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(sql_2, params!(b.user_id, b.tos_ts, b.accept_ts, b.location))
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[&b.user_id, &b.tos_ts, &b.accept_ts, &b.location]).await?;
+        }
+    }
+    Ok(())
+}
+
 pub async fn user_attr_config(data_before: Vec<UserAttrConfigEntity>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM user_attr_config";
     let sql_2 = r#"
@@ -1384,8 +1485,8 @@ pub async fn users_values(data_before: Vec<UserValues>) -> Result<(), ErrorRespo
     let sql_1 = "DELETE FROM users_values";
     let sql_2 = r#"
 INSERT INTO
-users_values (id, birthdate, phone, street, zip, city, country)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+users_values (id, birthdate, phone, street, zip, city, country, preferred_username, tz)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1400,7 +1501,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
                         b.street,
                         b.zip,
                         b.city,
-                        b.country
+                        b.country,
+                        b.preferred_username,
+                        b.tz
                     ),
                 )
                 .await?;
@@ -1418,6 +1521,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
                     &b.zip,
                     &b.city,
                     &b.country,
+                    &b.preferred_username,
+                    &b.tz,
                 ],
             )
             .await?;

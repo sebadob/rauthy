@@ -11,7 +11,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::time::Duration;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, trace, warn};
 
 #[derive(Debug)]
 pub struct EmailJob {
@@ -70,7 +70,7 @@ pub enum EmailJobStatus {
 }
 
 impl EmailJobStatus {
-    fn value(&self) -> i16 {
+    pub fn value(&self) -> i16 {
         match self {
             EmailJobStatus::Open => 0,
             EmailJobStatus::Finished => 1,
@@ -415,9 +415,6 @@ impl EmailJob {
             }
 
             for user in users {
-                // TODO remove after debugging
-                warn!("EmailJob Task for User: {:?}", user);
-
                 match &self.filter {
                     EmailJobFilter::None => {}
                     EmailJobFilter::InGroup(s) => {
@@ -457,8 +454,7 @@ impl EmailJob {
                     .await
                     {
                         Ok(_) => {
-                            // TODO change to `trace` level after initial debugging
-                            debug!("E-Mail sent successfully to {}", user.email);
+                            trace!("E-Mail sent successfully to {}", user.email);
                             self.set_last_user_ts(&user.email, user.created_at);
                             break;
                         }
