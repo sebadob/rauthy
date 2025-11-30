@@ -103,7 +103,7 @@ pub(crate) async fn jwks_handler() {
     tokio::spawn(async move {
         let mut jwks_uri = None;
 
-        let mut recently_looked_up = cached::TimedCache::with_lifespan(300);
+        let mut recently_looked_up = cached::TimedCache::with_lifespan(Duration::from_secs(300));
         // for small collections, Vec will always be faster and more efficient than a HashMap
         let mut jwks: Vec<JwkPublicKey> = Vec::with_capacity(4);
 

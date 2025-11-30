@@ -10,7 +10,7 @@ rauthy-client = { path = "../..", features = ["axum", "backchannel-logout", "sci
 
 anyhow = "1.0.75"
 axum = { version = "0.8.1", features = ["http2"] }
-axum-extra = { version = "0.10.0", features = ["cookie"] }
+axum-extra = { version = "0.12.2", features = ["cookie"] }
 dotenvy = "0.15.7"
 serde_json = "1.0.140"
 tokio = { version = "1.43.1", features = ["full"] }

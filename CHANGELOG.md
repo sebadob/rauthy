@@ -282,7 +282,7 @@ accept_timeout = 900
 
 #### Send custom E-Mail
 
-It is not possible to send custom E-Mails to users and filtered user groups. This is important for
+It is now possible to send custom E-Mails to users and filtered user groups. This is important for
 instance when you are planning a bigger maintenance window, or maybe you have a deadline for s
 specific client / user group when you enforce MFA-secured logins, and so on.
 
