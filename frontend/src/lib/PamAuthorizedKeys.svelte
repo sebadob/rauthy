@@ -14,10 +14,20 @@
     let {
         authorizedKeys,
         onSave,
+        isAdmin,
+        pamUid,
     }: {
         authorizedKeys: undefined | PamSshAuthKeyResponse[];
         onSave: () => void;
+        isAdmin?: boolean;
+        pamUid?: number;
     } = $props();
+
+    $inspect(isAdmin, pamUid).with(() => {
+        if (isAdmin && !pamUid) {
+            console.error('PamAuthorizedKeys must have pamUid given when isAdmin');
+        }
+    });
 
     const now = new Date().getTime() / 1000;
 
@@ -37,7 +47,14 @@
     });
 
     async function deleteKey(tsAdded: number) {
-        let res = await fetchDelete(`/auth/v1/pam/users/self/authorized_keys/${tsAdded}`);
+        let url = '';
+        if (isAdmin) {
+            url = `/auth/v1/pam/users/${pamUid}/authorized_key/${tsAdded}`;
+        } else {
+            url = `/auth/v1/pam/users/self/authorized_keys/${tsAdded}`;
+        }
+
+        let res = await fetchDelete(url);
         if (res.error) {
             error = res.error.message;
         } else {
@@ -64,9 +81,11 @@
     <div class="container">
         <div class="keyAdd">
             <h4>SSH Keys</h4>
-            <Button level={2} onclick={() => (showModal = true)}>
-                {t.account.pam.addSshKey}
-            </Button>
+            {#if !isAdmin}
+                <Button level={2} onclick={() => (showModal = true)}>
+                    {t.account.pam.addSshKey}
+                </Button>
+            {/if}
         </div>
 
         <Modal bind:showModal bind:closeModal>

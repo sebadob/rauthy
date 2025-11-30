@@ -15,6 +15,7 @@
     import type { PamGroupsSorted } from '$lib/admin/pam/types';
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';
     import IconCheck from '$icons/IconCheck.svelte';
+    import PamAuthorizedKeys from '$lib/PamAuthorizedKeys.svelte';
 
     let {
         user,
@@ -231,6 +232,15 @@
         {@render snipGroups('Local', groupsLocal)}
         {@render snipGroups('User', groupsUser)}
     </section>
+
+    {#if details?.authorized_keys}
+        <PamAuthorizedKeys
+            authorizedKeys={details.authorized_keys}
+            onSave={fetchDetails}
+            isAdmin
+            pamUid={user.id}
+        />
+    {/if}
 
     <div class="submit">
         <Button type="submit">
