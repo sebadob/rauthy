@@ -525,7 +525,7 @@ impl Default for Vars {
                 remote_password_len: 24,
                 remote_password_ttl: 120,
                 authorized_keys: VarsPamAuthorizedKeys {
-                    static_keys_enable: false,
+                    authorized_keys_enable: false,
                     blacklist_used_keys: true,
                     blacklist_cleanup_days: 730,
                     include_comments: false,
@@ -2186,10 +2186,10 @@ impl Vars {
         if let Some(v) = t_bool(
             &mut auth_keys,
             "pam.authorized_keys",
-            "static_keys_enable",
-            "PAM_SSH_STATIC_KEYS_ENABLE",
+            "authorized_keys_enable",
+            "PAM_SSH_AUTHORIZED_KEYS_ENABLE",
         ) {
-            self.pam.authorized_keys.static_keys_enable = v;
+            self.pam.authorized_keys.authorized_keys_enable = v;
         }
         if let Some(v) = t_bool(
             &mut auth_keys,
@@ -3085,7 +3085,7 @@ pub struct VarsPam {
 
 #[derive(Debug)]
 pub struct VarsPamAuthorizedKeys {
-    pub static_keys_enable: bool,
+    pub authorized_keys_enable: bool,
     pub blacklist_used_keys: bool,
     pub blacklist_cleanup_days: u16,
     pub include_comments: bool,

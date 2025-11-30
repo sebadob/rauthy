@@ -1133,7 +1133,7 @@ fn validate_authorized_keys_enabled() -> Result<(), ErrorResponse> {
         .vars
         .pam
         .authorized_keys
-        .static_keys_enable
+        .authorized_keys_enable
     {
         Ok(())
     } else {

@@ -1896,9 +1896,9 @@ remote_password_ttl = 120
 # by default, because the auto-expiring PAM user passwords are
 # the safer option.
 #
-# default: false
-# overwritten by: PAM_SSH_STATIC_KEYS_ENABLE
-static_keys_enable = true
+# default: true
+# overwritten by: PAM_SSH_AUTHORIZED_KEYS_ENABLE
+authorized_keys_enable = true
 
 # By default, SSH keys that have expired because of
 # `forced_key_expiry_days` below will be added to an internal
