@@ -21,11 +21,11 @@ CREATE UNIQUE INDEX ssh_auth_keys_pam_uid_ts_added_uindex
 
 CREATE TABLE ssh_auth_keys_used
 (
-    used_key_hash TEXT    NOT NULL
+    used_key_hash VARCHAR NOT NULL
         CONSTRAINT ssh_auth_keys_used_pk
             PRIMARY KEY,
-    ts_added      INTEGER NOT NULL
-) STRICT;
+    ts_added      BIGINT  NOT NULL
+);
 
 CREATE INDEX ssh_auth_keys_used_used_key_hash_index
     ON ssh_auth_keys_used (used_key_hash);

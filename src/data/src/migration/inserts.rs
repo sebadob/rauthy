@@ -1248,7 +1248,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::pg_execute(
                 sql_2,
                 &[
-                    &b.pam_uid,
+                    &(b.pam_uid as i64),
                     &b.ts_added,
                     &b.expires,
                     &b.typ,
