@@ -110,6 +110,9 @@ include_comments = false
 forced_key_expiry_days = 365
 ```
 
+[#1249](https://github.com/sebadob/rauthy/pull/1249)
+[#1250](https://github.com/sebadob/rauthy/pull/1250)
+
 #### `preferred_username` and `tz`
 
 The custom user values have been expanded. Each user can now provide a `preferred_username` and a
