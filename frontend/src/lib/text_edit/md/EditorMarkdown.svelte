@@ -148,7 +148,7 @@
     </div>
 
     {#if preview}
-        <MarkdownRenderer {markdown} />
+        <MarkdownRenderer />
     {:else}
         <div
             role="textbox"
