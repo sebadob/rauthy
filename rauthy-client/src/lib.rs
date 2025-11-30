@@ -22,16 +22,15 @@
 //! - `userinfo` adds additional types and helpers to easily fetch the `/userinfo` endpoint and
 //!   actively validate against it.
 
-use crate::provider::OidcProvider;
-use base64::{engine, engine::general_purpose, Engine as _};
-use rand::{distr, Rng};
-use tracing::{error, warn};
-
 use crate::handler::OidcCookieInsecure;
 use crate::jwks::jwks_handler;
+use crate::provider::OidcProvider;
 use crate::rauthy_error::RauthyError;
+use base64::{engine, engine::general_purpose, Engine as _};
+use rand::{distr, Rng};
 pub use reqwest::Certificate as RootCertificate;
 use sha2::{Digest, Sha256};
+use tracing::{error, warn};
 
 /// OIDC Backchannel Logout
 #[cfg(feature = "backchannel-logout")]

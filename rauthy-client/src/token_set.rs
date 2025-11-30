@@ -97,7 +97,6 @@ pub struct JwtAccessClaims {
     pub allowed_origins: Option<Vec<String>>,
     // user part
     pub uid: Option<String>,
-    pub preferred_username: Option<String>,
     pub roles: Option<Vec<String>>,
     pub groups: Option<Vec<String>>,
     pub cnf: Option<JktClaim>,
@@ -142,7 +141,7 @@ pub struct JwtIdClaims {
     pub auth_time: i64,
     pub at_hash: Option<String>,
     pub sid: Option<String>,
-    pub preferred_username: String,
+    pub preferred_username: Option<String>,
     pub email: Option<String>,
     pub email_verified: Option<bool>,
     pub given_name: Option<String>,
@@ -157,6 +156,7 @@ pub struct JwtIdClaims {
     pub cnf: Option<JktClaim>,
     pub custom: Option<HashMap<String, serde_json::Value>>,
     pub webid: Option<String>,
+    pub zoneinfo: Option<String>,
 }
 
 impl JwtIdClaims {

@@ -4,7 +4,7 @@ use axum::body::Body;
 use axum::extract::Query;
 use axum::http::header::{CONTENT_TYPE, SET_COOKIE};
 use axum::response::{IntoResponse, Response};
-use axum_extra::extract::CookieJar;
+use axum_extra::extract::cookie::CookieJar;
 use rauthy_client::backchannel_logout::logout_token::LogoutToken;
 use rauthy_client::handler::{OidcCallbackParams, OidcCookieInsecure, OidcSetRedirectStatus};
 use rauthy_client::principal::PrincipalOidc;

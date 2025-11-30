@@ -4,7 +4,6 @@
 
 TODO before next release:
 
-- update secrets migration
 - maybe include `preferred_username` in integration tests
 
 ## Stage 1 - essentials
