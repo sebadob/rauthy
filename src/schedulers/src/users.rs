@@ -1,6 +1,8 @@
 use chrono::Utc;
 use rauthy_data::database::DB;
 use rauthy_data::entity::clients_scim::ClientScim;
+use rauthy_data::entity::pam::authorized_keys::AuthorizedKey;
+use rauthy_data::entity::pam::users::PamUser;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
@@ -68,6 +70,11 @@ async fn execute(cleanup_after_secs: Option<u64>) -> Result<(), ErrorResponse> {
         Session::invalidate_for_user(&user.id).await?;
         RefreshToken::invalidate_for_user(&user.id).await?;
         logout::execute_backchannel_logout(None, Some(user.id.clone())).await?;
+
+        // expire possibly existing SSH keys
+        if let Ok(pam_user) = PamUser::find_by_user_id(user.id).await {
+            AuthorizedKey::expire_all_keys_by_uid(pam_user.id).await?;
+        }
 
         // possibly auto-cleanup expired user
         if let Some(secs) = cleanup_after_secs {

@@ -1926,7 +1926,7 @@ blacklist_cleanup_days = 730
 # overwritten by: PAM_SSH_INCLUDE_COMMENTS
 include_comments = false
 
-# You can enforece an SSH key expiry in days. After this time,
+# You can enforce an SSH key expiry in days. After this time,
 # users must generate new keys. This enforces a key rotation
 # with is usually overlooked especially for SSH keys.
 # Set to `0` to disable the forced expiry.

@@ -225,6 +225,17 @@ VALUES ($1, $2)
 
         Ok(())
     }
+
+    pub async fn expire_all_keys_by_uid(pam_uid: u32) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE ssh_auth_keys SET expires = $1 WHERE pam_uid = $2";
+
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(pam_uid)).await?;
+        } else {
+            DB::pg_execute(sql, &[&(pam_uid as i64)]).await?;
+        }
+        Ok(())
+    }
 }
 
 impl AuthorizedKey {
