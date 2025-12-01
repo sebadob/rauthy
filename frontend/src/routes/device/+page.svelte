@@ -86,7 +86,7 @@
             err = t.device.wrongOrExpired;
         } else {
             console.error(res);
-            err = res.error?.message;
+            err = res.error?.message || '';
         }
 
         isLoading = false;

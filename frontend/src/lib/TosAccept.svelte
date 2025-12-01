@@ -1,5 +1,9 @@
 <script lang="ts">
-    import type { ToSLatestResponse, ToSUserAcceptRequest } from '$api/types/tos';
+    import type {
+        ToSAwaitLoginResponse,
+        ToSLatestResponse,
+        ToSUserAcceptRequest,
+    } from '$api/types/tos';
     import Modal from '$lib/Modal.svelte';
     import Button from '$lib/button/Button.svelte';
     import { useI18n } from '$state/i18n.svelte';
@@ -19,7 +23,9 @@
         tos: ToSLatestResponse;
         tosAcceptCode?: string;
         forceAccept?: boolean;
-        onToSAccept: (res?: IResponse<undefined | WebauthnLoginResponse>) => void;
+        onToSAccept: (
+            res?: IResponse<undefined | ToSAwaitLoginResponse | WebauthnLoginResponse>,
+        ) => Promise<void>;
         onToSCancel?: () => void;
         skipRequest?: boolean;
     } = $props();
@@ -75,9 +81,9 @@
             };
             let res = await fetchPost<undefined>('/auth/v1/tos/accept', payload);
             // TODO handle accept code expiration
-            onToSAccept(res);
+            await onToSAccept(res);
         } else {
-            onToSAccept();
+            await onToSAccept();
         }
 
         closeModal?.();
@@ -105,7 +111,7 @@
             tos.opt_until = undefined;
         } else {
             closeModal?.();
-            onToSAccept(res);
+            await onToSAccept(res);
         }
     }
 </script>

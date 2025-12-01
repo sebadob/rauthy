@@ -75,9 +75,7 @@
                     onEnter={onSaveName}
                     pattern={PATTERN_CLIENT_NAME}
                     required
-                >
-                    {t.account.deviceName}
-                </Input>
+                />
                 {#if name !== device.name}
                     <div class="saveButton">
                         <Button onclick={onSaveName}>

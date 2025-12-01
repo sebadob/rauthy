@@ -65,6 +65,8 @@
     let list = $derived(datalist && datalist.length > 0 ? idDatalist : undefined);
 
     function deleteValue(value: string) {
+        // for some reason TS complains about any type, when its string[]
+        // @ts-ignore
         values = values.filter(v => v !== value);
     }
 

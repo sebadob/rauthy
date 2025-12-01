@@ -30,7 +30,7 @@
             {#if passkey.user_verified}
                 <Tooltip text={t.account.userVerifiedTooltip}>
                     <div style:margin-bottom="-.25rem">
-                        <IconFingerprint width={18} color="var(--col-acnt)" />
+                        <IconFingerprint width="1rem" color="var(--accent)" />
                     </div>
                 </Tooltip>
             {/if}

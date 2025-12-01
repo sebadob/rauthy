@@ -251,7 +251,7 @@
                             withDelete
                         />
                     {/if}
-                    {#if values.user_values?.tz !== undefined}
+                    {#if values.user_values?.tz !== undefined && values.user_values?.tz != null}
                         <TZSelect bind:value={values.user_values.tz} />
                     {/if}
 

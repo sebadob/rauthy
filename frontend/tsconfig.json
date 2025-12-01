@@ -1,4 +1,5 @@
 {
+    "exclude": ["node_modules", "build", "src/wasm"],
     "extends": "./.svelte-kit/tsconfig.json",
     "compilerOptions": {
         "allowJs": true,

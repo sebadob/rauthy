@@ -31,7 +31,7 @@
 
         // @ts-ignore
         if (
-            window['IdentityProvider'] && // Is FedCM available?
+            window['IdentityProvider' as any] && // Is FedCM available?
             // @ts-ignore
             IdentityProvider.register != undefined // Is the IdP Registration API available?
         ) {
@@ -86,7 +86,7 @@
             <div class="row">
                 <div><b>FedCM supported:</b></div>
                 <div class="check">
-                    <CheckIcon check={isSupported} />
+                    <CheckIcon checked={isSupported} />
                 </div>
             </div>
             {#if !isSupported}
@@ -123,7 +123,7 @@
                 <div class="row">
                     <b>Logged In:</b>
                     <div class="check">
-                        <CheckIcon check={isLoggedIn} />
+                        <CheckIcon checked={isLoggedIn} />
                     </div>
                 </div>
             {/if}
