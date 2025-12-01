@@ -1,19 +1,16 @@
 <script lang="ts">
     import type { PasswordHashTime } from '$api/types/password_hashing.ts';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
 
     let {
         res,
     }: {
         res: PasswordHashTime[];
     } = $props();
-
-    let ta = useI18nAdmin();
 </script>
 
 <div>
     <div class="row header font-label">
-        <div>{ta.common.time} (ms)</div>
+        <div>ms</div>
         <div>t_cost</div>
         <div>m_cost</div>
         <div>p_cost</div>

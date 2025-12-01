@@ -7,7 +7,7 @@
     let {
         value = $bindable('UTC'),
     }: {
-        value: string | undefined | null;
+        value?: string;
     } = $props();
 
     let t = useI18n();

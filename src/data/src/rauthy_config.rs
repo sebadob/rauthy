@@ -525,7 +525,7 @@ impl Default for Vars {
                 remote_password_len: 24,
                 remote_password_ttl: 120,
                 authorized_keys: VarsPamAuthorizedKeys {
-                    authorized_keys_enable: false,
+                    authorized_keys_enable: true,
                     blacklist_used_keys: true,
                     blacklist_cleanup_days: 730,
                     include_comments: false,

@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { genKey } from '$utils/helpers.ts';
-    import { useI18n } from '$state/i18n.svelte.ts';
+    import { genKey } from '$utils/helpers';
     import InputRange from '$lib5/form/InputRange.svelte';
 
     let {

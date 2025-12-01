@@ -68,8 +68,12 @@
     });
 
     async function handleAuthRes(
-        res: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
+        res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
     ) {
+        if (!res) {
+            return;
+        }
+
         if (res.status === 202) {
             // -> all good
             window.location.replace(res.headers.get('location') || '/auth/v1/account');
