@@ -2722,6 +2722,10 @@ impl Vars {
             panic!("Database set to Postgres but missing `database.pg_*` config");
         }
 
+        if self.device_grant.user_code_length > 255 {
+            panic!("device_grant.user_code_length must be <=255");
+        }
+
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
             warn!(
                 "Open dynamic client registration - consider setting a registration token, if possible."

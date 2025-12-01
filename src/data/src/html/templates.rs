@@ -350,10 +350,9 @@ impl DeviceHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::DeviceUserCodeLength(max(
-                RauthyConfig::get().vars.device_grant.user_code_length,
-                255,
-            ) as u8)],
+            templates: &[HtmlTemplate::DeviceUserCodeLength(
+                RauthyConfig::get().vars.device_grant.user_code_length as u8,
+            )],
         };
 
         res.render().unwrap()
