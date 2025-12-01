@@ -13,7 +13,7 @@ async-trait = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
 reqwest = { workspace = true }
-ruma = { workspace = true }
+ruma-client = { workspace = true }
 serde = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
