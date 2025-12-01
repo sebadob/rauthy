@@ -16,6 +16,8 @@ this claim depends on your configuration. For more details, check the "`preferre
 Because of these changes, the `email` will not show up as the `username` in the response from the
 OAuth2 `/introspect` endpoint as well.
 
+> Note: If you are using the `rauthy-client`, make sure to upgrade it to `0.11.0` beforehand.
+
 #### User Request and Response API data
 
 The user values are much more configurable now (see in changes below). At the same time, the
