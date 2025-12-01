@@ -481,8 +481,12 @@ is-clean:
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # exit early if clippy emits warnings
-    cargo clippy postgres -- -D warnings
+    cd frontend
+    npm run check
+    cd ..
+
+    cargo clippy -- -D warnings
+    cargo fmt --check
 
     # make sure everything has been committed
     git diff --exit-code
