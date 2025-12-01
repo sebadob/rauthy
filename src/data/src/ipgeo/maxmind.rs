@@ -226,30 +226,25 @@ pub(super) fn get_location(ip: IpAddr) -> Result<Option<LookupResponse>, ErrorRe
     };
 
     let rdr = rdr.load();
-    let city: Option<geoip2::City> = rdr
+    let res = rdr
         .lookup(ip)
+        .map_err(|err| ErrorResponse::new(ErrorResponseType::Internal, err.to_string()))?;
+    if !res.has_data() {
+        return Ok(None);
+    }
+    let city: Option<geoip2::City> = res
+        .decode()
         .map_err(|err| ErrorResponse::new(ErrorResponseType::Internal, err.to_string()))?;
 
     if let Some(city) = city {
-        let Some(country) = city.country else {
-            return Ok(None);
-        };
-        let Some(alpha_2_code) = country.iso_code else {
+        let Some(alpha_2_code) = city.country.iso_code else {
             return Ok(None);
         };
 
         return Ok(Some(LookupResponse {
             alpha_2_code: alpha_2_code.to_string(),
-            country: country
-                .names
-                .unwrap_or_default()
-                .get("en")
-                .map(|n| n.to_string())
-                .unwrap_or_default(),
-            city: city
-                .city
-                .map(|c| c.names.unwrap_or_default().get("en").map(|n| n.to_string()))
-                .unwrap_or_default(),
+            country: city.country.names.english.unwrap_or_default().to_string(),
+            city: city.city.names.english.map(String::from),
         }));
     }
 
