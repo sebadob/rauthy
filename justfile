@@ -12,7 +12,7 @@ npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 node_image := "node:22"
 builder_image := "ghcr.io/sebadob/rauthy-builder"
-builder_tag_date := "20250804"
+builder_tag_date := "20251201"
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
@@ -457,6 +457,24 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
           -f Dockerfile_builder \
           .
     {{ docker }} push {{ image }}:$TODAY
+
+# execs into a new blank builder image for debugging with local volume mounts
+exec-into-new-builder:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    IMAGE=$(grep ^FROM Dockerfile_builder | cut -d ' ' -f2)
+
+    {{ docker }} run -it --rm \
+        -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
+        -v {{ invocation_directory() }}/:/work/ \
+        -w /work \
+        -e DEBIAN_FRONTEND=noninteractive \
+        -e CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc \
+        -e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
+        -e PKG_CONFIG_ALLOW_CROSS=1 \
+        $IMAGE \
+        bash
 
 # makes sure everything is fine
 is-clean:

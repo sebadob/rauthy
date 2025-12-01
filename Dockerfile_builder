@@ -1,4 +1,4 @@
-FROM rust:1.88-bookworm
+FROM rust:1.91.1-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -11,7 +11,8 @@ RUN <<EOF
 set -e
 
 apt-get update
-apt-get install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libpam0g-dev librust-libudev-sys-dev npm
+apt-get install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+  libpam0g-dev librust-libudev-sys-dev npm
 apt-get clean
 
 rustup target add aarch64-unknown-linux-gnu
@@ -26,4 +27,3 @@ EOF
 WORKDIR /work
 
 CMD ["/bin/bash"]
-
