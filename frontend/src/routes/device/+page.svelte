@@ -38,6 +38,9 @@
 
         let res = await fetchGet<SessionResponse>('/auth/v1/oidc/sessioninfo');
         if (res.body) {
+            if (res.body.state != 'Auth') {
+                redirectToLogin(`device?code=${code}`);
+            }
             session = res.body;
         } else if (code) {
             redirectToLogin(`device?code=${code}`);

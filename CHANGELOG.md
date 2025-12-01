@@ -427,6 +427,9 @@ the `rauthy` client branding as a fallback in these cases from an earlier versio
 - With a bigger internal code migration and cleanup some time ago, a few house keeping schedulers
   got lost and were not started anymore.
   [#1247](https://github.com/sebadob/rauthy/pull/1247)
+- The UI for the `device_code` flow had a wrong value for the `user_code_length` inserted via
+  HTML `<template>`s.
+  [#1258](https://github.com/sebadob/rauthy/pull/1258)
 
 ## v0.32.6
 
