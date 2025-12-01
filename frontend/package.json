@@ -6,11 +6,12 @@
         "dev": "vite dev",
         "build": "vite build",
         "preview": "vite preview",
-        "check": "./node_modules/svelte-check/bin/svelte-check --tsconfig ./tsconfig.json",
+        "check": "./node_modules/svelte-check/bin/svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "test": "playwright test",
         "lint": "prettier --check . && eslint .",
-        "format": "prettier --write ."
+        "format": "./node_modules/prettier/bin/prettier.cjs --write .",
+        "format-check": "./node_modules/prettier/bin/prettier.cjs -c ."
     },
     "devDependencies": {
         "@internationalized/date": "^3.5.5",
