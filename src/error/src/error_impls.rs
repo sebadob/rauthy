@@ -496,16 +496,6 @@ impl From<std::fmt::Error> for ErrorResponse {
     }
 }
 
-impl From<ruma::client::Error<reqwest::Error, ruma::api::client::Error>> for ErrorResponse {
-    fn from(value: ruma::client::Error<reqwest::Error, ruma::api::client::Error>) -> Self {
-        debug!("ruma::Error {value:?}");
-        ErrorResponse::new(
-            ErrorResponseType::Connection,
-            format!("matrix error: {value:?}"),
-        )
-    }
-}
-
 impl From<svg_hush::FError> for ErrorResponse {
     fn from(value: FError) -> Self {
         debug!("svg_hush::FError: {value:?}");

@@ -1,16 +1,16 @@
+use crate::{Notification, Notify};
 use async_trait::async_trait;
 use rauthy_common::constants::RAUTHY_VERSION;
+use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use ruma::client::http_client;
-use ruma::events::room::message::RoomMessageEventContent;
-use ruma::{OwnedDeviceId, OwnedRoomId, OwnedUserId, TransactionId};
+use ruma_client::http_client;
+use ruma_client::ruma::events::room::message::RoomMessageEventContent;
+use ruma_client::ruma::{OwnedDeviceId, OwnedRoomId, OwnedTransactionId, OwnedUserId};
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time;
 use tracing::{debug, error, info, warn};
-
-use crate::{Notification, Notify};
 
 #[derive(Debug)]
 pub struct NotifierMatrix {
@@ -19,7 +19,7 @@ pub struct NotifierMatrix {
     user_password: Option<String>,
     device_id: OwnedDeviceId,
 
-    client: ruma::Client<http_client::Reqwest>,
+    client: ruma_client::Client<http_client::Reqwest>,
     access_token: Mutex<Option<String>>,
     refresh_token: Mutex<Option<String>>,
 }
@@ -53,11 +53,17 @@ impl NotifierMatrix {
 
         let http_client = Notification::build_client(disable_tls_validation, root_ca_path).await;
 
-        let client = ruma::Client::builder()
+        let client = ruma_client::Client::builder()
             .homeserver_url(server_url.to_string())
             .access_token(access_token.clone())
             .http_client(http_client)
-            .await?;
+            .await
+            .map_err(|err| {
+                ErrorResponse::new(
+                    ErrorResponseType::Connection,
+                    format!("Matrix connect: {:?}", err),
+                )
+            })?;
 
         if disable_tls_validation {
             warn!("Matrix Event Notifier client has TLS validation disabled");
@@ -107,10 +113,16 @@ impl NotifierMatrix {
         if let Some(token) = refresh_token {
             let res = self
                 .client
-                .send_request(ruma::api::client::session::refresh_token::v3::Request::new(
-                    token,
-                ))
-                .await?;
+                .send_request(
+                    ruma_client::ruma::api::client::session::refresh_token::v3::Request::new(token),
+                )
+                .await
+                .map_err(|err| {
+                    ErrorResponse::new(
+                        ErrorResponseType::Connection,
+                        format!("Matrix refresh token: {:?}", err),
+                    )
+                })?;
 
             {
                 let mut lock = self.access_token.lock().await;
@@ -141,7 +153,13 @@ impl NotifierMatrix {
                 Some(&self.device_id),
                 Some("Rauthy Events"),
             )
-            .await?;
+            .await
+            .map_err(|err| {
+                ErrorResponse::new(
+                    ErrorResponseType::Connection,
+                    format!("Matrix login: {:?}", err),
+                )
+            })?;
 
         {
             let mut lock = self.access_token.lock().await;
@@ -165,7 +183,7 @@ impl NotifierMatrix {
     async fn logged_in_check_sync(&self) -> Result<(), ErrorResponse> {
         let resp = self
             .client
-            .send_request(ruma::api::client::account::whoami::v3::Request::new())
+            .send_request(ruma_client::ruma::api::client::account::whoami::v3::Request::new())
             .await
             .map_err(|err| {
                 ErrorResponse::new(
@@ -188,8 +206,16 @@ impl NotifierMatrix {
     async fn check_room_config(&self) -> Result<(), ErrorResponse> {
         let resp = self
             .client
-            .send_request(ruma::api::client::membership::joined_rooms::v3::Request::new())
-            .await?;
+            .send_request(
+                ruma_client::ruma::api::client::membership::joined_rooms::v3::Request::new(),
+            )
+            .await
+            .map_err(|err| {
+                ErrorResponse::new(
+                    ErrorResponseType::Connection,
+                    format!("Matrix join room: {:?}", err),
+                )
+            })?;
 
         debug!(
             "Looking for Matrix room id {} in joined rooms: {:?}",
@@ -205,11 +231,17 @@ impl NotifierMatrix {
             let resp = self
                 .client
                 .send_request(
-                    ruma::api::client::membership::join_room_by_id::v3::Request::new(
+                    ruma_client::ruma::api::client::membership::join_room_by_id::v3::Request::new(
                         self.room_id.clone(),
                     ),
                 )
-                .await?;
+                .await
+                .map_err(|err| {
+                    ErrorResponse::new(
+                        ErrorResponseType::Connection,
+                        format!("Matrix join room: {:?}", err),
+                    )
+                })?;
             assert_eq!(resp.room_id, self.room_id);
         }
 
@@ -223,17 +255,22 @@ impl Notify for NotifierMatrix {
         debug!("Sending message to Matrix");
 
         let send_msg = || {
-            let msg = if let Some(row_2) = &notification.row_2 {
-                format!("**{}**\n{}\n{row_2}", notification.head, notification.row_1)
-            } else {
-                format!("**{}**\n{}", notification.head, notification.row_1)
-            };
+            let mut text = format!("{}\n{}", notification.head, notification.row_1);
+            let mut html = format!("<b>{}</b><br/>{}", notification.head, notification.row_1);
+
+            if let Some(row_2) = &notification.row_2 {
+                text.push('\n');
+                text.push_str(row_2);
+
+                html.push_str("<br/>");
+                html.push_str(row_2);
+            }
 
             self.client.send_request(
-                ruma::api::client::message::send_message_event::v3::Request::new(
+                ruma_client::ruma::api::client::message::send_message_event::v3::Request::new(
                     self.room_id.clone(),
-                    TransactionId::new(),
-                    &RoomMessageEventContent::text_markdown(msg),
+                    OwnedTransactionId::from(get_rand(24)),
+                    &RoomMessageEventContent::text_html(text, html),
                 )
                 .expect("Matrix message to always build fine"),
             )

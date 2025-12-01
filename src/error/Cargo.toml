@@ -22,7 +22,6 @@ openssl-sys = { workspace = true }
 reqwest = { workspace = true }
 ring = { workspace = true }
 rio_turtle = { workspace = true }
-ruma = { workspace = true }
 rusqlite = { workspace = true }
 rsa = { workspace = true }
 s3-simple = { workspace = true }
