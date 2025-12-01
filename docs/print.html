@@ -413,38 +413,36 @@ accounts. It is an account like any other. The only reason it is a Rauthy admin,
 <code>rauthy_admin</code> role.</p>
 <p>If you like to test creating new accounts or password reset flows though, you need to have at least a minimal setup that
 is able to send E-Mails. The easiest way (works on localhost only) is the below <code>docker-compose.yaml</code>:</p>
-<pre><code>networks:
-  rauthy-test:
-    driver: bridge
-    
-services:
+<pre><code class="language-yaml">services:
+
   mailcrab:
     image: marlonb/mailcrab:latest
     ports:
       - "1080:1080"
-    networks:
-      - rauthy-test
       
   rauthy:
-    container_name: rauthy-test
     image: ghcr.io/sebadob/rauthy:0.32.6
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
       - SMTP_PORT=1025
       - SMTP_DANGER_INSECURE=true
+    volumes:
+      - data:/app/data
     ports:
       - "8443:8443"
     depends_on:
       - mailcrab
-    networks:
-      - rauthy-test
+
+volumes:
+  data:
 </code></pre>
+<p><em>Optional: Create <code>.env</code> file with <code>COMPOSE_PROJECT_NAME=myapp</code> for custom container/volume name prefix.</em></p>
 <p>Save this into <code>docker-compose.yaml</code> and start with:</p>
 <pre><code>docker compose up -d
 </code></pre>
 <p>You then need the logs output from Rauthy to read the random password for the <code>admin@localhost</code> account:</p>
-<pre><code>docker logs -f rauthy-test
+<pre><code>docker compose logs -f rauthy
 </code></pre>
 <p>Any outgoing E-Mail will be caught by <code>mailcrab</code>, which can be accessed
 via <a href="http://localhost:1080">http://localhost:1080</a> .
@@ -7019,6 +7017,29 @@ key_path = 'tls/key.pem'
 # default: false
 # overwritten by: TLS_GENERATE_SELF_SIGNED
 #generate_self_signed = false
+
+[tos]
+
+# The timeout in seconds for a user to accept update ToS during the
+# login flow.
+# The initial lifetime of an AuthCode after a successful authentication
+# will be extended by the `accept_timeout`. This gives the user a bit
+# more time to read through updates ToS and avoids an AuthCode expiry
+# if it takes a bit longer. This is mainly a UX improvement. After the
+# ToS have been accepted, the original AuthCode will be re-saved with
+# the actual lifetime to not weaken the security in these cases.
+#
+# CAUTION: Even though you can extend the lifetime on Rauthys side, you
+# can run into issues with logins on the client side. For legal reasons,
+# accepting updated ToS must happen after a successful login but before
+# providing any access. Login flows are not only time-limited on Rauthys
+# side, but most often also on the client side. This means if it takes
+# too long to read and accept update ToS, the user may run into an auth
+# error and do the login again.
+#
+# default: 900
+# overwritten by: TOS_ACCEPT_TIMEOUT
+#accept_timeout = 900
 
 [user_pictures]
 # The storage type for user pictures.
