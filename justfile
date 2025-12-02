@@ -1,6 +1,5 @@
 set dotenv-load := true
 set positional-arguments := true
-#set shell := ["/bin/bash", "-c"]
 
 export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
 export TODAY := `date +%Y%m%d`
