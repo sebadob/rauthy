@@ -93,8 +93,7 @@
 
     input[type='range']::-webkit-slider-runnable-track,
     input[type='range']::-moz-range-track {
-        background: var(--bg-slider);
-        /*background: hsl(var(--text) / .5);*/
+        background: hsl(var(--text) / 0.5);
         height: 5px;
         border-radius: var(--border-radius);
     }

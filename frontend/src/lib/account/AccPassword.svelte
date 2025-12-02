@@ -260,6 +260,6 @@
 
     .success {
         margin-bottom: -0.25rem;
-        color: var(--action);
+        color: hsl(var(--action));
     }
 </style>

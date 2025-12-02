@@ -209,7 +209,7 @@
 
     .inner {
         margin-top: 0.5rem;
-        width: min(32rem, 100dvw);
+        width: min(33rem, 100dvw);
         max-height: calc(100dvh - 7rem);
         overflow-y: auto;
     }

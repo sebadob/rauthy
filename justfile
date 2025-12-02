@@ -6,7 +6,8 @@ export TODAY := `date +%Y%m%d`
 export DEV_HOST := `echo ${PUB_URL:-localhost:8080} | cut -d':' -f1`
 export USER := `echo "$(id -u):$(id -g)"`
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
-docker := `echo ${DOCKER:-docker}`
+is_mac_container := `if test -f /usr/local/bin/container; then echo true; else echo false; fi`
+docker := `which docker || which podman || which container`
 map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
 npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
@@ -37,7 +38,7 @@ setup:
     cd ..
 
     echo "Installing wasm-pack"
-    cargo install wasm-pack
+    cargo install wasm-pack mdbook mdbook-admonish
 
     echo "Building WASM modules"
     just build-wasm
@@ -74,14 +75,16 @@ docker-buildx-setup:
 # Starts mailcrab
 mailcrab-start:
     #!/usr/bin/env bash
-    if {{ docker }} ps -a --format '{{{{ .Names }}' | grep -q "^{{ container_mailcrab }}$"; then
+
+    if {{ is_mac_container }} && {{ docker }} ls -a | grep "^{{ container_mailcrab }} "; then
+        {{ docker }} start {{ container_mailcrab }}
+    elif !{{ is_mac_container }} && {{ docker }} ps -a --format '{{{{ .Names }}' | grep -q "^{{ container_mailcrab }}$"; then
         {{ docker }} start {{ container_mailcrab }}
     else
         {{ docker }} run -d \
             -p 1025:1025 \
             -p 1080:1080 \
             --name {{ container_mailcrab }} \
-            --restart unless-stopped \
             docker.io/marlonb/mailcrab || echo ">>> Mailcrab is already running - nothing to do"
     fi
 
@@ -96,7 +99,9 @@ mailcrab-rm:
 postgres-start:
     #!/usr/bin/env bash
 
-    if {{ docker }} ps -a --format '{{{{ .Names }}' | grep -q "^{{ container_postgres }}$"; then
+    if {{ is_mac_container }} && {{ docker }} ls -a | grep "^{{ container_postgres }} "; then
+        {{ docker }} start {{ container_postgres }}
+    elif !{{ docker }} ps -a --format '{{{{ .Names }}' | grep -q "^{{ container_postgres }}$"; then
         {{ docker }} start {{ container_postgres }}
     else
         {{ docker }} run -d \
@@ -105,7 +110,6 @@ postgres-start:
             -e POSTGRES_DB=rauthy \
             -p 5432:5432 \
             --name {{ container_postgres }} \
-            --restart unless-stopped \
             docker.io/library/postgres:17.2-alpine || echo ">>> Postgres is already running - nothing to do"
     fi
 
@@ -130,7 +134,7 @@ nginx-start:
     rm assets/nginx/access.log
     touch assets/nginx/access.log
 
-    docker run -it --rm \
+    {{ docker }} run -it --rm \
             -v ./assets/nginx/conf.d:/etc/nginx/conf.d:ro \
             -v ./assets/nginx/access.log:/var/log/nginx/access.log \
             --network host \
@@ -356,18 +360,6 @@ build-docs:
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # make sure tools are installed
-    readarray -t cargopkgs < <(cargo install --list | cut -d' ' -f1 | sort | uniq)
-    for pkg in mdbook mdbook-admonish; do
-        if command -v "$pkg" &>/dev/null; then
-            if ! printf '%s\0' "${cargopkgs[@]}" | grep -qw "$pkg"; then
-                cargo install "$pkg"
-            fi
-        else
-            cargo install "$pkg"
-        fi
-    done
-
     cd book
     mdbook build -d ../docs
     git add ../docs/*
@@ -506,6 +498,7 @@ release:
 
 # publishes the application images - full pipeline incl clippy and testing you can provide a custom image name as variable
 publish: build-docs fmt test-hiqlite test-postgres build archive-ui
+#publish: build-docs fmt is-clean test-hiqlite test-postgres build archive-ui
 
 # publishes the application images - full pipeline incl clippy and testing
 publish-latest:
@@ -517,7 +510,7 @@ publish-latest:
     {{ docker }} push ghcr.io/sebadob/rauthy:latest
 
 # should be run before submitting a PR to make sure everything is fine
-pre-pr-checks: build-ui fmt test-hiqlite test-postgres clippy
+pre-pr-checks: build-ui fmt is-clean test-hiqlite test-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
