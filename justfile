@@ -506,6 +506,7 @@ release:
 
 # publishes the application images - full pipeline incl clippy and testing you can provide a custom image name as variable
 publish: build-docs fmt test-hiqlite test-postgres build archive-ui
+#publish: build-docs fmt is-clean test-hiqlite test-postgres build archive-ui
 
 # publishes the application images - full pipeline incl clippy and testing
 publish-latest:
@@ -517,7 +518,7 @@ publish-latest:
     {{ docker }} push ghcr.io/sebadob/rauthy:latest
 
 # should be run before submitting a PR to make sure everything is fine
-pre-pr-checks: build-ui fmt test-hiqlite test-postgres clippy
+pre-pr-checks: build-ui fmt is-clean test-hiqlite test-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
