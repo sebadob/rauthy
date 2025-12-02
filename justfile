@@ -27,11 +27,6 @@ postgres := "HIQLITE=false"
 default:
     @just --list
 
-docker:
-    #!/usr/bin/env bash
-    echo {{ is_mac_container }}
-    echo {{ docker }}
-
 # Execute after a fresh clone of the repo. It will fully set up your dev env.
 setup:
     #!/usr/bin/env bash
