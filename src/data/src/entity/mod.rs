@@ -57,11 +57,9 @@ pub mod well_known;
 #[inline]
 pub async fn is_db_alive() -> bool {
     if is_hiqlite() {
-        DB::hql().is_healthy_cache().await.is_ok()
-            && DB::hql().is_healthy_db().await.is_ok()
+        DB::hql().is_healthy_db().await.is_ok()
             && DB::hql().query_raw_one("SELECT 1", params!()).await.is_ok()
     } else {
-        DB::hql().is_healthy_cache().await.is_ok()
-            && DB::pg_query_one_row("SELECT 1", &[]).await.is_ok()
+        DB::pg_query_one_row("SELECT 1", &[]).await.is_ok()
     }
 }
