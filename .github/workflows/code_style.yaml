@@ -14,7 +14,7 @@ jobs:
     name: Check Code Style
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/sebadob/rauthy-builder:20251201
+      image: ghcr.io/sebadob/rauthy-builder:20251203
     steps:
       - uses: actions/checkout@v4
       - name: npm install

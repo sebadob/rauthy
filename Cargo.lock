@@ -2603,7 +2603,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.11.1"
-source = "git+https://github.com/sebadob/hiqlite.git?branch=debug-logs-ready-check#e70dc52827174c11f05cf40e9561013454b15e3d"
+source = "git+https://github.com/sebadob/hiqlite.git?branch=debug-logs-ready-check#caef434f539307ee265d67362e848a3b2bdf45ca"
 dependencies = [
  "argon2",
  "axum",
@@ -2657,7 +2657,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-macros"
 version = "0.11.0"
-source = "git+https://github.com/sebadob/hiqlite.git?branch=debug-logs-ready-check#e70dc52827174c11f05cf40e9561013454b15e3d"
+source = "git+https://github.com/sebadob/hiqlite.git?branch=debug-logs-ready-check#caef434f539307ee265d67362e848a3b2bdf45ca"
 dependencies = [
  "hiqlite",
  "rust-embed",
@@ -2666,7 +2666,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-wal"
 version = "0.11.0"
-source = "git+https://github.com/sebadob/hiqlite.git?branch=debug-logs-ready-check#e70dc52827174c11f05cf40e9561013454b15e3d"
+source = "git+https://github.com/sebadob/hiqlite.git?branch=debug-logs-ready-check#caef434f539307ee265d67362e848a3b2bdf45ca"
 dependencies = [
  "bincode",
  "byteorder",
