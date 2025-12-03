@@ -17,7 +17,7 @@ jobs:
       image: ghcr.io/sebadob/rauthy-builder:20251203
     steps:
       - uses: actions/checkout@v4
-      - name: Setup
+      - name: Setup && build UI
         run: |
           just build-wasm
           
