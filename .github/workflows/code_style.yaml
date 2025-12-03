@@ -21,9 +21,12 @@ jobs:
         run: cargo fmt --check
       - name: Code Style Backend
         run: cargo clippy -- -D warnings
+      - name: npm install
+        working-directory: ./frontend
+        run: npm install
       - name: Code Format UI
         working-directory: ./frontend
         run: npm run format-check
       - name: Code Style UI
         working-directory: ./frontend
-        run: npm install && npm run check
+        run: npm run check
