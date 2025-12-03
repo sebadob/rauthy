@@ -17,13 +17,15 @@ jobs:
       image: ghcr.io/sebadob/rauthy-builder:20251201
     steps:
       - uses: actions/checkout@v4
+      - name: npm install
+        working-directory: ./frontend
+        run: npm install
+      - name: Build HTML
+        run: just build-ui
       - name: Code Format Backend
         run: cargo fmt --check
       - name: Code Style Backend
         run: cargo clippy -- -D warnings
-      - name: npm install
-        working-directory: ./frontend
-        run: npm install
       - name: Code Format UI
         working-directory: ./frontend
         run: npm run format-check
