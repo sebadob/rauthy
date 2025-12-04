@@ -842,7 +842,7 @@ impl JwkKeyPair {
     }
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub enum JwkKeyPairType {
     RSA,
     #[default]
