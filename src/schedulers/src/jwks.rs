@@ -99,18 +99,19 @@ pub async fn jwks_cleanup() {
         let count = to_delete.len();
         let sql = "DELETE FROM jwks WHERE kid = $1";
         for kid in to_delete {
+            let cache_idx = format!("{IDX_JWK_KID}{kid}");
+
             if is_hiqlite() {
-                if let Err(err) = DB::hql().execute(sql, params!()).await {
-                    error!(?err, "cannot clean up JWK {kid} in jwks_cleanup");
+                if let Err(err) = DB::hql().execute(sql, params!(kid)).await {
+                    error!(?err, "cannot clean up JWK in jwks_cleanup");
                     continue;
                 }
-            } else if let Err(err) = DB::pg_execute(sql, &[]).await {
-                error!(?err, "cannot clean up JWK {kid} in jwks_cleanup");
+            } else if let Err(err) = DB::pg_execute(sql, &[&kid]).await {
+                error!(?err, "cannot clean up JWK in jwks_cleanup");
                 continue;
             }
 
-            let idx = format!("{IDX_JWK_KID}{kid}");
-            if let Err(err) = DB::hql().delete(Cache::App, idx).await {
+            if let Err(err) = DB::hql().delete(Cache::App, cache_idx).await {
                 error!(?err, "deleting JWK from cache");
             }
         }

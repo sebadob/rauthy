@@ -422,6 +422,18 @@ the `rauthy` client branding as a fallback in these cases from an earlier versio
 
 [#1242](https://github.com/sebadob/rauthy/pull/1242)
 
+#### `skip_okp=true` for GET `/oidc/certs`
+
+As a workaround for some buggy OIDC client implementations like e.g. Cloudflare Zero Trust, you can
+now add `skip_okp=true` as a query param to the JWKS URI. If set to `true`, it will strip all `OKP`
+keys from the response. The URI will then look like this:
+
+```
+https://iam.example.com/auth/v1/oidc/certs?skip_okp=true
+```
+
+[#1263](https://github.com/sebadob/rauthy/pull/1263)
+
 ### Bugfix
 
 - With a bigger internal code migration and cleanup some time ago, a few house keeping schedulers
@@ -430,6 +442,8 @@ the `rauthy` client branding as a fallback in these cases from an earlier versio
 - The UI for the `device_code` flow had a wrong value for the `user_code_length` inserted via
   HTML `<template>`s.
   [#1258](https://github.com/sebadob/rauthy/pull/1258)
+- A query param was missing in the SQL for cleaning up old JWKs.
+  [#1265](https://github.com/sebadob/rauthy/pull/1265)
 
 ## v0.32.6
 
