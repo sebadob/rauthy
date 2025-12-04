@@ -1,16 +1,19 @@
 name: Code Style
 
 on:
-  issues:
-    types: [ opened, edited ]
   pull_request:
     types:
+      - opened
+      - reopened
       - synchronize
+      - ready_for_review
+
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   check:
+    if: github.event.pull_request.draft == false
     name: Check Code Style
     runs-on: ubuntu-latest
     container:
