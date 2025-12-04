@@ -9,7 +9,7 @@ use actix_web::web::{Form, Json, Query};
 use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError, get, post, web};
 use chrono::Utc;
 use rauthy_api_types::oidc::{
-    AuthRequest, DeviceAcceptedRequest, DeviceCodeResponse, DeviceGrantRequest,
+    AuthRequest, CertsParams, DeviceAcceptedRequest, DeviceCodeResponse, DeviceGrantRequest,
     DeviceVerifyRequest, DeviceVerifyResponse, JWKSCerts, JWKSPublicKeyCerts, LoginRefreshRequest,
     LoginRequest, LogoutRequest, OAuth2ErrorResponse, OAuth2ErrorTypeResponse, SessionInfoResponse,
     TokenInfo, TokenRequest, TokenValidationRequest,
@@ -31,7 +31,7 @@ use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::devices::DeviceAuthCode;
 use rauthy_data::entity::fed_cm::FedCMLoginStatus;
 use rauthy_data::entity::ip_rate_limit::DeviceIpRateLimit;
-use rauthy_data::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPair};
+use rauthy_data::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPair, JwkKeyPairType};
 use rauthy_data::entity::logos::{Logo, LogoType};
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::sessions::Session;
@@ -415,8 +415,13 @@ pub async fn get_callback_html(
     responses((status = 200, description = "Ok", body = JWKSCerts)),
 )]
 #[get("/oidc/certs")]
-pub async fn get_certs() -> Result<HttpResponse, ErrorResponse> {
-    let jwks = JWKS::find_pk().await?;
+pub async fn get_certs(params: Query<CertsParams>) -> Result<HttpResponse, ErrorResponse> {
+    let mut jwks = JWKS::find_pk().await?;
+
+    if params.skip_okp == Some(true) {
+        jwks.keys.retain(|k| k.kty != JwkKeyPairType::OKP);
+    }
+
     let res = JWKSCerts::from(jwks);
     Ok(HttpResponse::Ok()
         .insert_header((

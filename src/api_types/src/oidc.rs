@@ -75,10 +75,9 @@ pub struct BackchannelLogoutRequest {
     pub logout_token: String,
 }
 
-#[derive(Serialize, ToSchema)]
-pub struct PasswordResetResponse {
-    pub csrf_token: String,
-    pub password_policy: PasswordPolicyResponse,
+#[derive(Deserialize, ToSchema)]
+pub struct CertsParams {
+    pub skip_okp: Option<bool>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -366,6 +365,12 @@ pub struct JWKSPublicKeyCerts {
 #[derive(Default, Serialize, ToSchema)]
 pub struct JWKSCerts {
     pub keys: Vec<JWKSPublicKeyCerts>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct PasswordResetResponse {
+    pub csrf_token: String,
+    pub password_policy: PasswordPolicyResponse,
 }
 
 #[derive(Serialize, ToSchema)]
