@@ -100,11 +100,11 @@ pub async fn jwks_cleanup() {
         let sql = "DELETE FROM jwks WHERE kid = $1";
         for kid in to_delete {
             if is_hiqlite() {
-                if let Err(err) = DB::hql().execute(sql, params!()).await {
+                if let Err(err) = DB::hql().execute(sql, params!(kid)).await {
                     error!(?err, "cannot clean up JWK {kid} in jwks_cleanup");
                     continue;
                 }
-            } else if let Err(err) = DB::pg_execute(sql, &[]).await {
+            } else if let Err(err) = DB::pg_execute(sql, &[&kid]).await {
                 error!(?err, "cannot clean up JWK {kid} in jwks_cleanup");
                 continue;
             }
