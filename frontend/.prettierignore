@@ -8,6 +8,9 @@ node_modules
 !.env.example
 .prettierrc
 
+# auto-built and exported by `wasm-modules`
+src/wasm
+
 # Ignore files for PNPM, NPM and YARN
 pnpm-lock.yaml
 package-lock.json

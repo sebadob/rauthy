@@ -1,0 +1,38 @@
+name: Code Style
+
+on:
+  issues:
+    types: [ opened, edited ]
+  pull_request:
+    types:
+      - synchronize
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Check Code Style
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/sebadob/rauthy-builder:20251203
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup && build UI
+        run: |
+          just build-wasm
+          
+          cd frontend
+          npm install
+          cd ..
+          
+          just build-ui
+      - name: Code Format Backend
+        run: cargo fmt --check
+      - name: Code Style Backend
+        run: cargo clippy -- -D warnings
+      - name: Code Format UI
+        working-directory: ./frontend
+        run: npm run format-check
+      - name: Code Style UI
+        working-directory: ./frontend
+        run: npm run check

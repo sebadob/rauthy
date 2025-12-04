@@ -7,13 +7,13 @@ export DEV_HOST := `echo ${PUB_URL:-localhost:8080} | cut -d':' -f1`
 export USER := `echo "$(id -u):$(id -g)"`
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 is_mac_container := `if test -f /usr/local/bin/container; then echo true; else echo false; fi`
-docker := `which docker || which podman || which container`
+docker := `which docker || which podman || which container || echo 'no-container-runtime-found'`
 map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
 npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 node_image := "node:22"
 builder_image := "ghcr.io/sebadob/rauthy-builder"
-builder_tag_date := "20251201"
+builder_tag_date := "20251203"
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
