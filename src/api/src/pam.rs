@@ -16,6 +16,7 @@ use rauthy_api_types::pam::{
 };
 use rauthy_api_types::users::{MfaPurpose, WebauthnAuthStartResponse};
 use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
+use rauthy_common::utils::base64_decode;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::pam::authorized_keys::AuthorizedKey;
 use rauthy_data::entity::pam::group_user_links::PamGroupUserLink;
@@ -968,6 +969,8 @@ pub async fn delete_pam_user_self_authorized_keys(
 }
 
 /// GET `AuthorizedKeys` for a user
+///
+/// May require `host_id:host_secret` as basic Authorization header depending on config.
 #[utoipa::path(
     get,
     path = "/pam/users/authorized_keys/{username}",
@@ -980,8 +983,35 @@ pub async fn delete_pam_user_self_authorized_keys(
 #[get("/pam/users/authorized_keys/{username}")]
 pub async fn get_pam_users_authorized_keys(
     username: Path<String>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     validate_authorized_keys_enabled()?;
+
+    if RauthyConfig::get().vars.pam.authorized_keys.auth_required {
+        let Some(head) = req.headers().get(AUTHORIZATION) else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "'Authorization' header missing",
+            ));
+        };
+        let Some(b64) = head.to_str().unwrap_or_default().strip_prefix("Basic ") else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "'Authorization' invalid - expected 'Basic' authentication",
+            ));
+        };
+        let bytes = base64_decode(b64)?;
+        let data = String::from_utf8_lossy(bytes.as_ref());
+        let Some((host_id, host_secret)) = data.split_once(":") else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "'Authorization' invalid format",
+            ));
+        };
+
+        let host = PamHost::find_simple(host_id.to_string()).await?;
+        host.validate_secret(host_secret.as_bytes())?;
+    }
 
     let keys = AuthorizedKey::find_by_username(username.into_inner()).await?;
     let text = AuthorizedKey::fmt_authorized_keys(&keys)?;
