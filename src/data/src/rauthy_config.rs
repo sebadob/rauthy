@@ -526,9 +526,10 @@ impl Default for Vars {
                 remote_password_ttl: 120,
                 authorized_keys: VarsPamAuthorizedKeys {
                     authorized_keys_enable: true,
+                    auth_required: true,
                     blacklist_used_keys: true,
                     blacklist_cleanup_days: 730,
-                    include_comments: false,
+                    include_comments: true,
                     forced_key_expiry_days: 365,
                 },
             },
@@ -2194,6 +2195,14 @@ impl Vars {
         if let Some(v) = t_bool(
             &mut auth_keys,
             "pam.authorized_keys",
+            "auth_required",
+            "PAM_SSH_AUTH_REQUIRED",
+        ) {
+            self.pam.authorized_keys.auth_required = v;
+        }
+        if let Some(v) = t_bool(
+            &mut auth_keys,
+            "pam.authorized_keys",
             "blacklist_used_keys",
             "PAM_SSH_BLACKLIST_SSH_KEYS",
         ) {
@@ -3090,6 +3099,7 @@ pub struct VarsPam {
 #[derive(Debug)]
 pub struct VarsPamAuthorizedKeys {
     pub authorized_keys_enable: bool,
+    pub auth_required: bool,
     pub blacklist_used_keys: bool,
     pub blacklist_cleanup_days: u16,
     pub include_comments: bool,

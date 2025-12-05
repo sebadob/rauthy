@@ -1900,6 +1900,21 @@ remote_password_ttl = 120
 # overwritten by: PAM_SSH_AUTHORIZED_KEYS_ENABLE
 authorized_keys_enable = true
 
+# By default, even though these are "public" keys, the endpoint
+# to retrieve them quires authentication. This will be a `basic"
+# `Authentication` header in the form of `host_id:host_secret` of
+# any valid PAM host configured on Rauthy.
+# If you set it to `false`, the endpoint will be publicly available.
+# This is fine in the sense that you cannot leak any keys (they are
+# public keys anyway), but the endpoint could be abused for username
+# enumeration. Depending on the `include_comments` settings below,
+# you might even leak some more information that is not strictly
+# sensitive, but could be abused in some other way.
+#
+# default: true
+# overwritten by: PAM_SSH_AUTH_REQUIRED
+auth_required = true
+
 # By default, SSH keys that have expired because of
 # `forced_key_expiry_days` below will be added to an internal
 # blacklist. This blacklist will be checked upon key add to
@@ -1922,9 +1937,9 @@ blacklist_cleanup_days = 730
 # debugging, but should generally be disabled to not
 # disclose any possibly somewhat "internal" information.
 #
-# default: false
+# default: true
 # overwritten by: PAM_SSH_INCLUDE_COMMENTS
-include_comments = false
+include_comments = true
 
 # You can enforce an SSH key expiry in days. After this time,
 # users must generate new keys. This enforces a key rotation

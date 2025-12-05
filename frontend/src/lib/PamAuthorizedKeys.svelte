@@ -152,6 +152,7 @@
 
 <style>
     .container {
+        max-width: 43rem;
         margin: 1rem 0;
     }
 
