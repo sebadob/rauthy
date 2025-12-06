@@ -305,25 +305,41 @@ label[data-required='true']:after {
     color: hsla(var(--error) / 0.9);
 }
 
-input {
-    width: 100%;
+.info {
+    overflow: auto;
+}
+
+input,
+.input {
     margin: 0.33rem 0;
     padding: 0.25rem 0.5rem;
     background: hsl(var(--bg));
-    border: none;
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
     color: hsl(var(--text));
     font-size: 1.05rem;
     outline: none;
     transition: 150ms all;
+    border: 2px solid hsla(var(--text) / 0.2);
+    border-radius: var(--border-radius);
+}
+input {
+    width: 100%;
 }
 
-input:valid {
-    border-bottom: 1px solid hsla(var(--text) / 0.35);
+input:focus {
+    border-color: hsla(var(--text) / 0.4);
 }
 
+/* Prevent native :invalid styles from showing */
 input:invalid {
-    border-bottom: 1px solid hsl(var(--error));
+    box-shadow: none;
+}
+
+input.invalid {
+    border-color: hsl(var(--error));
+}
+
+input.invalid:focus {
+    border-color: hsl(var(--error));
 }
 
 input:hover,
@@ -335,10 +351,6 @@ input:focus {
 input:disabled {
     background: hsl(var(--bg-high));
     cursor: not-allowed;
-}
-
-pre {
-    background: hsl(var(--bg-high));
 }
 
 .html-render {

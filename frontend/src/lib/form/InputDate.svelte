@@ -423,9 +423,9 @@
     /* Just to hide the native browser picker indicator */
     .patch {
         width: 2rem;
-        height: 2rem;
-        top: calc(-1rem - 1px);
-        right: 0;
+        height: 1.8rem;
+        top: calc(-0.8rem - 1px);
+        right: 2px;
         background: hsl(var(--bg));
     }
 
