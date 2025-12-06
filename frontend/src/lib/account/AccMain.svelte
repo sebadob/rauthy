@@ -144,7 +144,7 @@
     {:else}
         <div class="wide">
             {#if !viewModeWideCompact}
-                <div clasS="info">
+                <div class="info">
                     <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider} />
                 </div>
             {/if}

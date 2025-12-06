@@ -153,7 +153,7 @@
     }
 
     .muted {
-        height: 0.8rem;
+        height: 1rem;
         opacity: 0.5;
         font-size: 0.8rem;
     }

@@ -250,13 +250,11 @@
 
     .l2 {
         color: hsl(var(--action));
-        border: 1px solid hsl(var(--action));
         background: transparent;
     }
 
     .l3 {
         color: hsla(var(--action) / 0.9);
-        border: none;
         background: transparent;
     }
 

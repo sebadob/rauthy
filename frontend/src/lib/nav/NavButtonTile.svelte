@@ -32,7 +32,7 @@
         border-left: 2px solid transparent;
         border-radius: var(--border-radius);
         margin: 0;
-        padding: 0.25rem 0.5rem;
+        padding: 0 0.5rem 0.25rem 0.5rem;
         list-style: none;
         transition: all 150ms;
     }

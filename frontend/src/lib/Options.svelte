@@ -10,7 +10,7 @@
         options = [],
         name,
         value = $bindable(),
-        maxHeight = '20rem',
+        maxHeight,
         offsetTop,
         offsetLeft,
         borderless = false,
@@ -221,6 +221,8 @@
         font-weight: normal;
         font-size: 0.9rem;
         transition: all 150ms;
+        border: 2px solid hsla(var(--text) / 0.2);
+        border-radius: var(--border-radius);
     }
 
     .btn[data-border='true'] {
@@ -240,7 +242,7 @@
     .optPopover {
         width: 100%;
         text-align: left;
-        padding: 0.25rem 0.5rem;
+        padding: 0.25rem 0.7rem;
         color: hsl(var(--text));
         font-weight: normal;
         border-radius: var(--border-radius);

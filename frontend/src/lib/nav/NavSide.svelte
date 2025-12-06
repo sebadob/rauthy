@@ -87,45 +87,45 @@
     onmouseleave={hideOpts}
     data-compact={compact}
 >
-    <div>
-        <div>
-            <div class="relative">
-                <div
-                    class="absolute flex space-between navmod"
-                    aria-hidden={!collapsed && !optsButtons}
-                >
+    <div class="nav-container">
+        <div class="relative">
+            <div
+                class="absolute flex space-between navmod"
+                aria-hidden={!collapsed && !optsButtons}
+            >
+                <div>
+                    <Button ariaControls="mainNav" invisible onclick={toggleCollapsed}>
+                        <svg
+                            aria-expanded={!collapsed}
+                            class="inner"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width={2}
+                            width="1.5rem"
+                            opacity={0.9}
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                            />
+                        </svg>
+                    </Button>
+                </div>
+
+                {#if !collapsed}
                     <div>
-                        <Button ariaControls="mainNav" invisible onclick={toggleCollapsed}>
-                            <svg
-                                aria-expanded={!collapsed}
-                                class="inner"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width={2}
-                                width="1.5rem"
-                                opacity={0.9}
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                                />
-                            </svg>
+                        <Button invisible onclick={toggleCompact}>
+                            <span class="inner">
+                                <IconArrowPathSquare />
+                            </span>
                         </Button>
                     </div>
-
-                    {#if !collapsed}
-                        <div>
-                            <Button invisible onclick={toggleCompact}>
-                                <span class="inner">
-                                    <IconArrowPathSquare />
-                                </span>
-                            </Button>
-                        </div>
-                    {/if}
-                </div>
+                {/if}
             </div>
+        </div>
 
+        <div class="scrollable-content">
             {#if !collapsed}
                 <div class="logo">
                     <RauthyLogo width={compact ? '3rem' : '7rem'} />
@@ -238,7 +238,7 @@
                 {#snippet toLogout()}
                     <div class="logout">
                         <Button invisible onclick={() => redirectToLogout()}>
-                            <Tooltip text="Logout">
+                            <Tooltip text="Logout" yOffset={-40}>
                                 <IconLogout />
                             </Tooltip>
                         </Button>
@@ -268,11 +268,12 @@
 
 <style>
     nav {
-        width: 12.5rem;
+        width: 13.5rem;
         height: 100dvh;
         background: hsl(var(--bg));
         z-index: 101;
         transition: width 150ms;
+        overflow: hidden;
     }
 
     @media (max-width: 800px) {
@@ -283,7 +284,7 @@
         }
     }
 
-    nav > div {
+    .nav-container {
         width: 100%;
         height: 100%;
         padding: 1rem 1rem 0.5rem 1rem;
@@ -294,21 +295,28 @@
         transition: all 150ms;
     }
 
+    .scrollable-content {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 0;
+    }
+
     nav[data-compact='true'] {
         width: 4rem;
     }
 
-    nav[data-compact='true'] > div {
+    nav[data-compact='true'] .nav-container {
         padding: 0.5rem 0.2rem 0 0.2rem;
         text-align: center;
         line-height: 0.8rem;
     }
 
     nav[aria-hidden='true'] {
-        width: 0;
+        width: 3rem;
     }
 
-    nav[aria-hidden='true'] > div {
+    nav[aria-hidden='true'] .nav-container {
         padding: 0;
     }
 
@@ -317,6 +325,8 @@
         flex-direction: column;
         justify-content: space-between;
         line-height: 1.5rem;
+        margin-top: 0.4rem;
+        margin-bottom: 0.4rem;
     }
 
     nav[data-compact='true'] .theme {
@@ -349,9 +359,10 @@
 
     .navmod {
         opacity: 0;
-        margin: -1rem 0 0 -1rem;
-        width: calc(100% + 1.8rem);
+        margin: 0;
+        width: 100%;
         transition: all 150ms ease-in-out;
+        z-index: 1;
     }
 
     nav[aria-hidden='true'] .navmod {
@@ -360,8 +371,8 @@
     }
 
     nav[data-compact='true'] .navmod {
-        margin: -0.2rem 0 0 -0.2rem;
-        width: calc(100% + 0.4rem);
+        margin: 0;
+        width: 100%;
     }
 
     .navmod[aria-hidden='false'],
