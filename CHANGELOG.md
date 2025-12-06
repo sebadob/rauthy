@@ -439,7 +439,7 @@ registration as well.
 enable_self_delete = true
 ```
 
-[]()
+[#1267](https://github.com/sebadob/rauthy/pull/1267)
 
 #### Relax input validation for Client URIs
 
