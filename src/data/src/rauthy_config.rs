@@ -275,6 +275,7 @@ pub struct Vars {
     pub templates: VarsTemplates,
     pub tls: VarsTls,
     pub tos: VarsToS,
+    pub user_delete: VarsUserDelete,
     pub user_pictures: VarsUserPictures,
     pub user_registration: VarsUserRegistration,
     pub user_values: VarsUserValuesConfig,
@@ -703,6 +704,9 @@ impl Default for Vars {
             tos: VarsToS {
                 accept_timeout: 900,
             },
+            user_delete: VarsUserDelete {
+                enable_self_delete: false,
+            },
             user_pictures: VarsUserPictures {
                 storage_type: "db".into(),
                 path: "./pictures".into(),
@@ -821,6 +825,7 @@ impl Vars {
         slf.parse_templates(&mut table);
         slf.parse_tls(&mut table);
         slf.parse_tos(&mut table);
+        slf.parse_user_delete(&mut table);
         slf.parse_user_pictures(&mut table);
         slf.parse_user_registration(&mut table);
         slf.parse_user_values(&mut table);
@@ -2516,6 +2521,19 @@ impl Vars {
         }
     }
 
+    fn parse_user_delete(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "user_delete");
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_delete",
+            "enable_self_delete",
+            "USER_ENABLE_SELF_DELETE",
+        ) {
+            self.user_delete.enable_self_delete = v;
+        }
+    }
+
     fn parse_user_pictures(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "user_pictures");
 
@@ -3183,6 +3201,11 @@ pub struct VarsTls {
 #[derive(Debug)]
 pub struct VarsToS {
     pub accept_timeout: u16,
+}
+
+#[derive(Debug)]
+pub struct VarsUserDelete {
+    pub enable_self_delete: bool,
 }
 
 #[derive(Debug)]

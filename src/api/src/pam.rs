@@ -606,6 +606,7 @@ pub async fn post_login(
     if payload.password.is_none()
         && payload.webauthn_code.is_none()
         && payload.remote_password.is_none()
+        && payload.danger_auth_checked_locally != Some(true)
     {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -683,10 +684,17 @@ pub async fn post_login(
         {
             pwd_login_fail(&mut user, err).await?;
         }
+    } else if payload.danger_auth_checked_locally == Some(true) {
+        // noop
+        // This option is necessary for account management requests and checking authorization
+        // after a local authentication was successful already. This is the case e.g. for SSH
+        // public key logins, where `sshd` already validates the correctness of the key.
     } else {
         unreachable!();
     }
 
+    // TODO should we even do this user update here? The PAM user belongs to this user, but on the
+    //  other hand, these metrics are for all non-PAM logins.
     user.last_login = Some(Utc::now().timestamp());
     user.last_failed_login = None;
     user.failed_login_attempts = None;
