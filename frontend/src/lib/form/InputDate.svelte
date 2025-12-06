@@ -43,7 +43,6 @@
             console.warn('invalid max format for InputDate, expected dateStr only', value);
         }
     });
-    $inspect('value', value);
 
     const today = parseDate(fmtDateInput());
     const todayStr = today.toString();

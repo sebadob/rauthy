@@ -56,8 +56,8 @@ export const I18nZh: I18n = {
         account: '用户账户',
         accType: '账户类型',
         accTypePasskeyText1: '此账户目前为仅密钥登录账户。\n因此，此账户没有密码，也无需设置密码。',
-        accTypePasskeyText2:
-            '您可以转换此账户并添加密码。\n但请注意，调整后在新设备上登录时需额外进行密码验证。\n如果您没有事先输入过至少一次密码，您将无法在任何设备上登录。',
+        accTypePasskeyText2: `您可以转换此账户并添加密码。\n但请注意，调整后在新设备上登录时需额外进行密码验证。
+            \n如果您没有事先输入过至少一次密码，您将无法在任何设备上登录。`,
         accTypePasskeyText3: '您想要转换您的账户并添加一个密码吗？',
         accessExp: '过期',
         accessRenew: '续期至',
@@ -67,21 +67,27 @@ export const I18nZh: I18n = {
         city: '城市',
         changePassword: '更改密码',
         convertAccount: '转换账户',
-        convertAccountP1:
-            '您可以将您的账户转换为仅密钥登陆账户。\n此转换将删除您的密码，您将仅能够通过注册的密钥进行登陆。\n请注意，只有支持额外用户验证的密钥可被用于登陆。\n如果您的密钥支持用户验证，您可以在“MFA”页面中，密钥名称的后面看到一个符号。',
+        convertAccountP1: `您可以将您的账户转换为仅密钥登陆账户。\n此转换将删除您的密码，
+            您将仅能够通过注册的密钥进行登陆。\n请注意，只有支持额外用户验证的密钥可被用于登陆。\n如果您的密钥支持用户验证，您可以在
+            “MFA”页面中，密钥名称的后面看到一个符号。`,
         country: '国家',
+        deleteAccount: {
+            deleteAccount: 'Delete Account',
+            deleteAccountDesc: `CAUTION: The deletion of this account cannot be reverted! To 
+                confirm, please enter:`,
+        },
         deviceId: 'ID',
         deviceName: '名称',
         devices: '设备',
         devicesDesc: '链接到此账户的设备',
-        emailUpdateConfirm:
-            '电子邮件地址未被更新。我们已向您的新邮箱发送了一封消息。\n您需要点击其中的确认链接，电子邮件地址将在被确认后更新。',
+        emailUpdateConfirm: `电子邮件地址未被更新。我们已向您的新邮箱发送了一封消息。\n
+            您需要点击其中的确认链接，电子邮件地址将在被确认后更新。`,
         emailVerified: '已验证电子邮箱',
         familyName: '姓',
         federatedConvertPassword1:
             '您有一个联合账户。\n这意味着您是通过外部鉴权提供者登陆的。您当前的提供者是：',
-        federatedConvertPassword2:
-            '您可以通过电子邮件请求密码重置。这将向您的本地账户添加密码，\n之后您可以通过本地密码或您的外部提供者进行登陆。您想要请求密码重置吗？',
+        federatedConvertPassword2: `您可以通过电子邮件请求密码重置。这将向您的本地账户添加密码，\n
+            之后您可以通过本地密码或您的外部提供者进行登陆。您想要请求密码重置吗？`,
         generateRandom: '随机生成',
         givenName: '名',
         groups: '组',
@@ -123,8 +129,8 @@ export const I18nZh: I18n = {
             preferredUsername: 'Preferred Username',
         },
         providerLink: '联合账户',
-        providerLinkDesc:
-            '您可以将此账户连接到下列登陆提供者之一。\n激活此功能后，您将被重定向至所选提供者的登陆页面。在成功登陆后，如果电子邮件匹配，您的账户将被连接。',
+        providerLinkDesc: `您可以将此账户连接到下列登陆提供者之一。\n
+            激活此功能后，您将被重定向至所选提供者的登陆页面。在成功登陆后，如果电子邮件匹配，您的账户将被连接。`,
         providerUnlink: '取消联合',
         providerUnlinkDesc: '仅当您已设置至少一个密码或登陆密钥后，您才能和登陆提供者取消连接。',
         regDate: '注册日期',
@@ -136,8 +142,8 @@ export const I18nZh: I18n = {
         userEnabled: '启用',
         userExpiry: '过期',
         userVerifiedTooltip: '指纹或PIN保护',
-        webIdDesc:
-            '您可以选择哪些字段能够通过WebID发布。\nWebID被一些网络用于去中心化登陆。如果您不知道这是什么，您通常不需要选择。',
+        webIdDesc: `您可以选择哪些字段能够通过WebID发布。\n
+            WebID被一些网络用于去中心化登陆。如果您不知道这是什么，您通常不需要选择。`,
         webIdDescData: '您可以以FOAF词汇格式向您的 WebID 添加自定义数据字段',
         webIdExpertMode: '启用专家模式',
         zip: '邮政编码',
@@ -161,8 +167,8 @@ export const I18nZh: I18n = {
         passwordForgotten: '忘记密码',
         passwordRequest: '请求',
         passwordRequired: '密码必填。',
-        passwordResetDesc: `Please provide your E-Mail to request a password reset link. If your address exists in out
-            database, you will receive a link via E-Mail.`,
+        passwordResetDesc: `Please provide your E-Mail to request a password reset link. If your 
+            address exists in out database, you will receive a link via E-Mail.`,
         passwordResetSuccess: 'Request received. You can close this window now.',
         requestExpires: '请求过期于',
         requestExpired: '请求已过期',
@@ -252,8 +258,8 @@ export const I18nZh: I18n = {
         fidoLink: 'https://fidoalliance.org/fido2/?lang=zh-hans',
         generate: '生成',
         newAccDesc1: '您可以在无密码账户和传统的密码账户之中选择其一。',
-        newAccDesc2:
-            '无密码账户应被优先考虑，因为其提供更强的安全性。\n您需要至少一个支持FIDO2标准的通行密钥（Yubikey、Apple Touch ID或Windows Hello等）以完成账户创建。\n获取更多信息：',
+        newAccDesc2: `无密码账户应被优先考虑，因为其提供更强的安全性。\n您需要至少一个支持FIDO2标准的通行密钥（
+            Yubikey、Apple Touch ID或Windows Hello等）以完成账户创建。\n获取更多信息：`,
         newAccount: '新账户',
         passwordReset: '密码重置',
         password: '密码',
@@ -266,8 +272,8 @@ export const I18nZh: I18n = {
         success2: '您将被重定向。',
         success3: '如果您未被重定向，请点击此链接：',
         successPasskey1: '您的通行密钥已成功注册。',
-        successPasskey2:
-            '请登入您的账户并尽快注册一个备份密钥。\n对于仅密钥登陆的账户，在丢失您当前的密钥时，您无法通过电子邮件进行密码重置。',
+        successPasskey2: `请登入您的账户并尽快注册一个备份密钥。\n对于仅密钥登陆的账户，在丢失您当前的密钥时，
+            您无法通过电子邮件进行密码重置。`,
     },
     register: {
         alreadyRegistered: '电子邮件地址已被注册',
