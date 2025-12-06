@@ -64,11 +64,19 @@
     async function fetchUser() {
         let res = await fetchGet<UserResponse>(`/auth/v1/users/${userId}`);
         if (res.body) {
-            user = res.body;
+            user = undefined;
+            requestAnimationFrame(() => {
+                user = res.body;
+            });
             focusFirst?.();
         } else {
             err = res.error?.message || 'Error fetching user';
         }
+    }
+
+    async function onSaveLocal() {
+        onSave();
+        await fetchUser();
     }
 </script>
 
@@ -84,7 +92,14 @@
 
 {#if user}
     {#if selected === tabs[0]}
-        <UserInfo bind:user config={userValuesConfig} {providers} {roles} {groups} {onSave} />
+        <UserInfo
+            bind:user
+            config={userValuesConfig}
+            {providers}
+            {roles}
+            {groups}
+            onSave={onSaveLocal}
+        />
     {:else if selected === tabs[1]}
         <UserAttr {user} {onSave} />
     {:else if selected === tabs[2]}

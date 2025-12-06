@@ -436,7 +436,7 @@ registration as well.
 #
 # default: false
 # overwritten by: USER_ENABLE_SELF_DELETE
-enable_self_delete = true
+enable_self_delete = false
 ```
 
 [#1267](https://github.com/sebadob/rauthy/pull/1267)

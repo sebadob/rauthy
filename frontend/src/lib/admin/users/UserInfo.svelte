@@ -117,6 +117,31 @@
             : '',
     );
 
+    let isUnsaved = $derived(
+        email !== userOrig?.email ||
+            givenName !== userOrig?.given_name ||
+            familyName !== userOrig?.family_name ||
+            language !== userOrig?.language ||
+            rolesItems
+                .filter(i => i.selected)
+                .map(i => i.name)
+                .join(',') !== userOrig?.roles?.join(',') ||
+            groupsItems
+                .filter(i => i.selected)
+                .map(i => i.name)
+                .join(',') !== userOrig?.groups?.join(',') ||
+            enabled !== userOrig?.enabled ||
+            emailVerified !== userOrig?.email_verified ||
+            expires !== (!!userOrig?.user_expires || false) ||
+            birthdate !== userOrig?.user_values?.birthdate ||
+            tz !== userOrig?.user_values?.tz ||
+            phone !== userOrig?.user_values?.phone ||
+            street !== userOrig?.user_values?.street ||
+            zip !== (userOrig?.user_values?.zip || '') ||
+            city !== userOrig?.user_values?.city ||
+            country !== userOrig?.user_values?.country,
+    );
+
     $effect(() => {
         if (user) {
             userOrig = {
@@ -327,7 +352,6 @@
         }
 
         if (Object.entries(payload.del).length === 0 && Object.entries(payload.put).length === 0) {
-            console.log('nothing to do');
             return;
         }
 
@@ -346,257 +370,268 @@
     }
 </script>
 
-{#if user}
-    <div class="picture">
-        <UserPicture
-            fallbackCharacters={fallbackCharacters(user)}
-            userId={user.id}
-            pictureId={user.picture_id}
-            size="large"
-        />
-    </div>
-
-    <Form action={`/auth/v1/users/${user.id}`} {onSubmit}>
-        <div class="values">
-            <div>
-                <LabeledValue label="ID" mono>
-                    {user.id}
-                </LabeledValue>
-            </div>
-            <div>
-                <LabeledValue label={t.account.accType}>
-                    {user.account_type}
-                    {#if providerName}
-                        : {providerName}
-                    {/if}
-                </LabeledValue>
-            </div>
+<div class="container" style:border-color={isUnsaved ? 'hsla(var(--action) / .7)' : 'transparent'}>
+    {#if user}
+        <div class="picture">
+            <UserPicture
+                fallbackCharacters={fallbackCharacters(user)}
+                userId={user.id}
+                pictureId={user.picture_id}
+                size="large"
+            />
         </div>
 
-        <div class="values">
-            {#if isSelf}
+        <Form action={`/auth/v1/users/${user.id}`} {onSubmit}>
+            <div class="values">
                 <div>
-                    <Tooltip text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}>
-                        <InputCheckbox
-                            ariaLabel={ta.common.enabled}
-                            bind:checked={enabled}
-                            disabled
-                        >
-                            {ta.common.enabled}
-                        </InputCheckbox>
-                    </Tooltip>
+                    <LabeledValue label="ID" mono>
+                        {user.id}
+                    </LabeledValue>
                 </div>
                 <div>
-                    <Tooltip text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}>
+                    <LabeledValue label={t.account.accType}>
+                        {user.account_type}
+                        {#if providerName}
+                            : {providerName}
+                        {/if}
+                    </LabeledValue>
+                </div>
+            </div>
+
+            <div class="values">
+                {#if isSelf}
+                    <div>
+                        <Tooltip
+                            text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}
+                        >
+                            <InputCheckbox
+                                ariaLabel={ta.common.enabled}
+                                bind:checked={enabled}
+                                disabled
+                            >
+                                {ta.common.enabled}
+                            </InputCheckbox>
+                        </Tooltip>
+                    </div>
+                    <div>
+                        <Tooltip
+                            text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}
+                        >
+                            <InputCheckbox
+                                ariaLabel={t.account.emailVerified}
+                                bind:checked={emailVerified}
+                                disabled
+                            >
+                                {t.account.emailVerified}
+                            </InputCheckbox>
+                        </Tooltip>
+                    </div>
+                {:else}
+                    <div>
+                        <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
+                            {ta.common.enabled}
+                        </InputCheckbox>
+                    </div>
+                    <div>
                         <InputCheckbox
                             ariaLabel={t.account.emailVerified}
                             bind:checked={emailVerified}
-                            disabled
                         >
                             {t.account.emailVerified}
                         </InputCheckbox>
-                    </Tooltip>
-                </div>
-            {:else}
-                <div>
-                    <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
-                        {ta.common.enabled}
-                    </InputCheckbox>
-                </div>
-                <div>
-                    <InputCheckbox ariaLabel={t.account.emailVerified} bind:checked={emailVerified}>
-                        {t.account.emailVerified}
-                    </InputCheckbox>
-                </div>
-            {/if}
-        </div>
-
-        <div class="values">
-            <div>
-                <Input
-                    typ="email"
-                    bind:value={email}
-                    autocomplete="off"
-                    label="E-Mail"
-                    placeholder="E-Mail"
-                    required
-                />
-
-                <Input
-                    bind:value={givenName}
-                    autocomplete="off"
-                    label={t.account.givenName}
-                    placeholder={t.account.givenName}
-                    required={config.given_name === 'required'}
-                    pattern={PATTERN_USER_NAME}
-                />
-                <Input
-                    bind:value={familyName}
-                    autocomplete="off"
-                    label={t.account.familyName}
-                    placeholder={t.account.familyName}
-                    required={config.family_name === 'required'}
-                    pattern={PATTERN_USER_NAME}
-                />
-
-                <InputDateTimeCombo
-                    label={t.account.birthdate}
-                    bind:value={birthdate}
-                    required={config.birthdate === 'required'}
-                    withDelete
-                />
-                <TZSelect bind:value={tz} />
-                <PreferredUsername
-                    userId={user.id}
-                    bind:preferred_username={user.user_values.preferred_username}
-                    config={config.preferred_username}
-                    isAdmin
-                />
-
-                {#if languages}
-                    <div style:padding=".25rem">
-                        <LabeledValue label={ta.common.language}>
-                            <Options
-                                ariaLabel={t.common.selectI18n}
-                                options={languages}
-                                bind:value={language}
-                                borderless
-                            />
-                        </LabeledValue>
                     </div>
                 {/if}
             </div>
 
-            <div>
-                <Input
-                    bind:value={street}
-                    autocomplete="off"
-                    label={t.account.street}
-                    placeholder={t.account.street}
-                    required={config.street === 'required'}
-                    pattern={PATTERN_STREET}
-                />
-                <Input
-                    bind:value={zip}
-                    autocomplete="off"
-                    label={t.account.zip}
-                    placeholder={t.account.zip}
-                    required={config.zip === 'required'}
-                    maxLength={24}
-                    pattern={PATTERN_ALNUM}
-                />
-                <Input
-                    bind:value={city}
-                    autocomplete="off"
-                    label={t.account.city}
-                    placeholder={t.account.city}
-                    required={config.city === 'required'}
-                    pattern={PATTERN_CITY}
-                />
-                <Input
-                    bind:value={country}
-                    autocomplete="off"
-                    label={t.account.country}
-                    placeholder={t.account.country}
-                    required={config.country === 'required'}
-                    pattern={PATTERN_CITY}
-                />
-
-                <Input
-                    bind:value={phone}
-                    autocomplete="off"
-                    label={t.account.phone}
-                    placeholder={t.account.phone}
-                    required={config.phone === 'required'}
-                    pattern={PATTERN_PHONE}
-                />
-            </div>
-        </div>
-
-        <SelectList bind:items={rolesItems}>
-            {t.account.roles.replaceAll(',', ' ')}
-        </SelectList>
-        <SelectList bind:items={groupsItems}>
-            {t.account.groups.replaceAll(',', ' ')}
-        </SelectList>
-
-        <div class="values">
-            <div style:margin-top=".5rem">
-                {#if !expires && isSelf}
-                    <Tooltip text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}>
-                        <InputCheckbox
-                            ariaLabel={t.account.accessExp}
-                            bind:checked={expires}
-                            disabled
-                        >
-                            {t.account.accessExp}
-                        </InputCheckbox>
-                    </Tooltip>
-                {:else}
-                    <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
-                        {t.account.accessExp}
-                    </InputCheckbox>
-                {/if}
-            </div>
-            {#if expires}
-                <div transition:slide={{ duration: 150 }}>
-                    <InputDateTimeCombo
-                        label={t.account.accessExp}
-                        bind:value={expDate}
-                        bind:timeValue={expTime}
-                        withTime
-                        min={fmtDateInput()}
+            <div class="values">
+                <div>
+                    <Input
+                        typ="email"
+                        bind:value={email}
+                        autocomplete="off"
+                        label="E-Mail"
+                        placeholder="E-Mail"
                         required
                     />
+
+                    <Input
+                        bind:value={givenName}
+                        autocomplete="off"
+                        label={t.account.givenName}
+                        placeholder={t.account.givenName}
+                        required={config.given_name === 'required'}
+                        pattern={PATTERN_USER_NAME}
+                    />
+                    <Input
+                        bind:value={familyName}
+                        autocomplete="off"
+                        label={t.account.familyName}
+                        placeholder={t.account.familyName}
+                        required={config.family_name === 'required'}
+                        pattern={PATTERN_USER_NAME}
+                    />
+
+                    <InputDateTimeCombo
+                        label={t.account.birthdate}
+                        bind:value={birthdate}
+                        required={config.birthdate === 'required'}
+                        withDelete
+                    />
+                    <TZSelect bind:value={tz} />
+                    <PreferredUsername
+                        userId={user.id}
+                        bind:preferred_username={user.user_values.preferred_username}
+                        config={config.preferred_username}
+                        isAdmin
+                    />
+
+                    {#if languages}
+                        <div style:padding=".25rem">
+                            <LabeledValue label={ta.common.language}>
+                                <Options
+                                    ariaLabel={t.common.selectI18n}
+                                    options={languages}
+                                    bind:value={language}
+                                    borderless
+                                />
+                            </LabeledValue>
+                        </div>
+                    {/if}
+                </div>
+
+                <div>
+                    <Input
+                        bind:value={street}
+                        autocomplete="off"
+                        label={t.account.street}
+                        placeholder={t.account.street}
+                        required={config.street === 'required'}
+                        pattern={PATTERN_STREET}
+                    />
+                    <Input
+                        bind:value={zip}
+                        autocomplete="off"
+                        label={t.account.zip}
+                        placeholder={t.account.zip}
+                        required={config.zip === 'required'}
+                        maxLength={24}
+                        pattern={PATTERN_ALNUM}
+                    />
+                    <Input
+                        bind:value={city}
+                        autocomplete="off"
+                        label={t.account.city}
+                        placeholder={t.account.city}
+                        required={config.city === 'required'}
+                        pattern={PATTERN_CITY}
+                    />
+                    <Input
+                        bind:value={country}
+                        autocomplete="off"
+                        label={t.account.country}
+                        placeholder={t.account.country}
+                        required={config.country === 'required'}
+                        pattern={PATTERN_CITY}
+                    />
+
+                    <Input
+                        bind:value={phone}
+                        autocomplete="off"
+                        label={t.account.phone}
+                        placeholder={t.account.phone}
+                        required={config.phone === 'required'}
+                        pattern={PATTERN_PHONE}
+                    />
+                </div>
+            </div>
+
+            <SelectList bind:items={rolesItems}>
+                {t.account.roles.replaceAll(',', ' ')}
+            </SelectList>
+            <SelectList bind:items={groupsItems}>
+                {t.account.groups.replaceAll(',', ' ')}
+            </SelectList>
+
+            <div class="values">
+                <div style:margin-top=".5rem">
+                    {#if !expires && isSelf}
+                        <Tooltip
+                            text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}
+                        >
+                            <InputCheckbox
+                                ariaLabel={t.account.accessExp}
+                                bind:checked={expires}
+                                disabled
+                            >
+                                {t.account.accessExp}
+                            </InputCheckbox>
+                        </Tooltip>
+                    {:else}
+                        <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
+                            {t.account.accessExp}
+                        </InputCheckbox>
+                    {/if}
+                </div>
+                {#if expires}
+                    <div transition:slide={{ duration: 150 }}>
+                        <InputDateTimeCombo
+                            label={t.account.accessExp}
+                            bind:value={expDate}
+                            bind:timeValue={expTime}
+                            withTime
+                            min={fmtDateInput()}
+                            required
+                        />
+                    </div>
+                {/if}
+            </div>
+
+            <div class="values">
+                <div>
+                    <LabeledValue label={t.account.userCreated}>
+                        {formatDateFromTs(user.created_at)}
+                    </LabeledValue>
+                    <LabeledValue label={ta.users.lastLogin}>
+                        {#if user.last_login}
+                            {formatDateFromTs(user.last_login)}
+                        {:else}
+                            {t.common.never}
+                        {/if}
+                    </LabeledValue>
+                </div>
+
+                <div>
+                    <LabeledValue label={t.account.passwordExpiry}>
+                        {#if user.password_expires}
+                            {formatDateFromTs(user.password_expires)}
+                        {:else}
+                            {t.common.never}
+                        {/if}
+                    </LabeledValue>
+                    <LabeledValue label={t.account.mfaActivated}>
+                        <CheckIcon checked={!!user.webauthn_user_id} />
+                    </LabeledValue>
+                </div>
+            </div>
+
+            <div class="btn">
+                <Button type="submit">
+                    {t.common.save}
+                </Button>
+
+                {#if success}
+                    <IconCheck />
+                {/if}
+            </div>
+
+            {#if err}
+                <div class="err">
+                    {err}
                 </div>
             {/if}
-        </div>
-
-        <div class="values">
-            <div>
-                <LabeledValue label={t.account.userCreated}>
-                    {formatDateFromTs(user.created_at)}
-                </LabeledValue>
-                <LabeledValue label={ta.users.lastLogin}>
-                    {#if user.last_login}
-                        {formatDateFromTs(user.last_login)}
-                    {:else}
-                        {t.common.never}
-                    {/if}
-                </LabeledValue>
-            </div>
-
-            <div>
-                <LabeledValue label={t.account.passwordExpiry}>
-                    {#if user.password_expires}
-                        {formatDateFromTs(user.password_expires)}
-                    {:else}
-                        {t.common.never}
-                    {/if}
-                </LabeledValue>
-                <LabeledValue label={t.account.mfaActivated}>
-                    <CheckIcon checked={!!user.webauthn_user_id} />
-                </LabeledValue>
-            </div>
-        </div>
-
-        <div class="btn">
-            <Button type="submit">
-                {t.common.save}
-            </Button>
-
-            {#if success}
-                <IconCheck />
-            {/if}
-        </div>
-
-        {#if err}
-            <div class="err">
-                {err}
-            </div>
-        {/if}
-    </Form>
-{/if}
+        </Form>
+    {/if}
+</div>
 
 <style>
     .btn {
@@ -604,6 +639,11 @@
         align-items: center;
         gap: 0.5rem;
         margin-bottom: 1rem;
+    }
+
+    .container {
+        padding-left: 0.5rem;
+        border-left: 2px solid transparent;
     }
 
     .picture {
