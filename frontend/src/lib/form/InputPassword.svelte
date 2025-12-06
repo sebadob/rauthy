@@ -112,6 +112,11 @@
 </script>
 
 <div style:width>
+    <div aria-live="assertive" class="label">
+        <label for={id} class="font-label noselect" data-required={required}>
+            {label}
+        </label>
+    </div>
     <div class="input-row">
         <input
             bind:this={ref}
@@ -129,6 +134,7 @@
             aria-required={required || false}
             maxlength={maxLength || undefined}
             pattern={pattern || undefined}
+            class:invalid={isError}
             {oninput}
             {oninvalid}
             {onblur}
@@ -163,12 +169,6 @@
             </div>
         </div>
     </div>
-</div>
-
-<div class="label">
-    <label for={id} class="font-label noselect" data-required={required}>
-        {label}
-    </label>
     {#if isError}
         <div class="error" transition:slide={{ duration: 150 }}>
             {#if !label}
@@ -180,30 +180,28 @@
 </div>
 
 <style>
-    .error {
-        margin-top: -0.5rem;
-        color: hsl(var(--error));
-    }
-
     .input-row {
         display: flex;
         flex-direction: row;
     }
 
-    label,
-    .error {
-        line-height: 1.1rem;
-        font-size: 0.9rem;
-    }
-
     label {
+        font-size: 0.9em;
         flex-wrap: wrap;
     }
 
     .label {
         width: 100%;
-        margin-top: -1.1rem;
-        padding: 0.5rem;
+        margin-bottom: -0.3rem;
+        padding-left: 0.1rem;
+        padding-top: 0.6rem;
+    }
+
+    .error {
+        color: hsl(var(--error));
+        margin-top: -0.4rem;
+        padding-left: 0.1rem;
+        font-size: 0.8rem;
     }
 
     .nolabel {
