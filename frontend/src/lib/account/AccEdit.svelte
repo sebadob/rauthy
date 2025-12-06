@@ -13,14 +13,12 @@
         PATTERN_USER_NAME,
     } from '$utils/patterns';
     import IconCheck from '$icons/IconCheck.svelte';
-    import { fetchPut } from '$api/fetch';
+    import { fetchDelete, fetchGet, fetchPut } from '$api/fetch';
     import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
-    import type { UserValueConfigValue, UserValuesConfig } from '$api/templates/UserValuesConfig';
+    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
     import { TPL_USER_VALUES_CONFIG } from '$utils/constants';
     import Template from '$lib/Template.svelte';
     import { onMount } from 'svelte';
-    import { fetchTimezones } from '$utils/helpers';
-    import Options from '$lib/Options.svelte';
     import TZSelect from '$lib/TZSelect.svelte';
     import PreferredUsername from '$lib/PreferredUsername.svelte';
 
@@ -49,6 +47,24 @@
     let successEmailConfirm = $state(false);
 
     let config: undefined | UserValuesConfig = $state();
+    let canSelfDelete = $state(false);
+    let showDeleteConfirm = $state(false);
+    let deleteConfirmValue = $state('');
+
+    onMount(() => {
+        fetchSelfDeleteConfig();
+    });
+
+    $effect(() => {
+        if (showDeleteConfirm) {
+            deleteConfirmValue = '';
+        }
+    });
+
+    async function fetchSelfDeleteConfig() {
+        let res = await fetchGet(`/auth/v1/users/${user.id}/self/delete`);
+        canSelfDelete = res.status === 202;
+    }
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         if (!config) {
@@ -102,6 +118,13 @@
         } else if (res.error) {
             console.error(res.error);
             err = res.error.message;
+        }
+    }
+
+    async function onSubmitDelete() {
+        let res = await fetchDelete(`/auth/v1/users/${user.id}/self/delete`);
+        if (res.status === 204) {
+            window.location.href = '/auth/v1';
         }
     }
 </script>
@@ -233,6 +256,13 @@
                         {t.common.save}
                     </Button>
                 </div>
+                {#if canSelfDelete}
+                    <div>
+                        <Button level={-3} onclick={() => (showDeleteConfirm = !showDeleteConfirm)}>
+                            {t.account.deleteAccount.deleteAccount}
+                        </Button>
+                    </div>
+                {/if}
 
                 {#if success}
                     <div class="success" transition:fade>
@@ -248,6 +278,30 @@
                 </div>
             {/if}
         </Form>
+    {/if}
+
+    {#if showDeleteConfirm}
+        <div class="selfDelete">
+            <h5>{t.account.deleteAccount.deleteAccount}</h5>
+            <p>
+                {t.account.deleteAccount.deleteAccountDesc}
+                <b>{t.common.delete.toUpperCase()}</b>
+            </p>
+
+            <Input
+                label={t.common.delete.toUpperCase()}
+                placeholder={t.common.delete.toUpperCase()}
+                bind:value={deleteConfirmValue}
+                width="15rem"
+            />
+            <Button
+                level={deleteConfirmValue !== t.common.delete.toUpperCase() ? -3 : -1}
+                onclick={onSubmitDelete}
+                isDisabled={deleteConfirmValue !== t.common.delete.toUpperCase()}
+            >
+                {t.common.delete}
+            </Button>
+        </div>
     {/if}
 </div>
 
@@ -272,6 +326,15 @@
         display: flex;
         gap: 1rem;
         flex-wrap: wrap;
+    }
+
+    .selfDelete {
+        margin-top: 3rem;
+        margin-bottom: 1rem;
+        padding: 0 0.5rem 1rem 0.5rem;
+        border: 1px solid hsla(var(--error) / 0.8);
+        border-radius: var(--border-radius);
+        background: hsla(var(--error) / 0.05);
     }
 
     .success {

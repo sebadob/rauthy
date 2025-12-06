@@ -55,10 +55,12 @@ export const I18nDe: I18n = {
     account: {
         account: 'Benutzer Account',
         accType: 'Account Typ',
-        accTypePasskeyText1:
-            'Dies ist ein "Passkey-Only" Account. Das bedeutet, dass\ndieser Account kein Passwort hat und auch keines benötigt.',
-        accTypePasskeyText2:
-            'Der Account kann in einen Passwort-Account umgewandelt\nwerden. Das würde allerdings bedeuten, dass ein Login auf einem neuen Gerät ohne vorherige, zumindest\neinmalige zusätzliche Verifizierung des Passwortes nicht mehr möglich sein wird.',
+        accTypePasskeyText1: `Dies ist ein "Passkey-Only" Account. Das bedeutet, dass\ndieser 
+            Account kein Passwort hat und auch keines benötigt.`,
+        accTypePasskeyText2: `Der Account kann in einen Passwort-Account umgewandelt\nwerden. Das 
+            würde allerdings bedeuten, dass ein Login auf einem neuen Gerät ohne vorherige, 
+            zumindest\neinmalige zusätzliche Verifizierung des Passwortes nicht mehr möglich sein 
+            wird.`,
         accTypePasskeyText3: 'Soll dieser Account gewandelt und ein Passwort hinzugefügt werden?',
         accessExp: 'Zugang erlischt',
         accessRenew: 'Zugang erneuerbar bis',
@@ -68,21 +70,33 @@ export const I18nDe: I18n = {
         city: 'Stadt',
         changePassword: 'Passwort wechseln',
         convertAccount: 'Account Umwandeln',
-        convertAccountP1:
-            "Dieser Account kann in einen Passkey-Only Account umgewandelt\nwerden. Diese Umwandling löscht das Passwort und erlaubt den alleinigen Login mit den registrieren\nPasskeys. Nur Passkeys mit zusätzlicher Benutzerverifizierung werden akzeptiert. Diese sind auf der\n'MFA' Seite durch das zusätzliche Symbol hinter dem Passkey Namen gekennzeichnet.",
+        convertAccountP1: `Dieser Account kann in einen Passkey-Only Account umgewandelt\nwerden. 
+            Diese Umwandling löscht das Passwort und erlaubt den alleinigen Login mit den 
+            registrieren\nPasskeys. Nur Passkeys mit zusätzlicher Benutzerverifizierung werden 
+            akzeptiert. Diese sind auf der\n'MFA' Seite durch das zusätzliche Symbol hinter dem 
+            Passkey Namen gekennzeichnet.`,
         country: 'Land',
+        deleteAccount: {
+            deleteAccount: 'Account Löschen',
+            deleteAccountDesc: `ACHTUNG: Das Löschen dieses Accounts ist unwiderruflich! Zur 
+            Bestätigung, bitte eingeben:`,
+        },
         deviceId: 'ID',
         deviceName: 'Name',
         devices: 'Geräte',
         devicesDesc: 'Mit diesem Account verknüpfte Geräte',
-        emailUpdateConfirm:
-            'Die E-Mail Adresse wurde noch nicht aktualisiert. Eine Nachricht\nmit einem Bestätigungslink wurde an die neue Adresse geschickt. Das Update muss über den\nenthaltenen Link bestätigt werden. Nach der Bestätigung wird die neue Adresse gesetzt.',
+        emailUpdateConfirm: `Die E-Mail Adresse wurde noch nicht aktualisiert. Eine Nachricht\nmit 
+            einem Bestätigungslink wurde an die neue Adresse geschickt. Das Update muss über den
+            \nenthaltenen Link bestätigt werden. Nach der Bestätigung wird die neue Adresse gesetzt.`,
         emailVerified: 'E-Mail verifiziert',
         familyName: 'Nachname',
-        federatedConvertPassword1:
-            'Dies ist ein verknüpfter Account. Das bedeutet, dass\nder Login via externem Provider zur Authenzifizierung geschieht. Der derzeitige Provider ist:',
-        federatedConvertPassword2:
-            'Es kann ein Passwort Reset via E-Mail angefordert\nwerden. Das würde nach Abschluss diesem Account ein lokales Passwort hinzufügen. Danach wäre der\nLogin entweder per externem Provider oder lokalem Password möglich. Passwort Reset anfordern?',
+        federatedConvertPassword1: `Dies ist ein verknüpfter Account. Das bedeutet, dass\nder 
+            Login via externem Provider zur Authenzifizierung geschieht. Der derzeitige Provider 
+            ist:`,
+        federatedConvertPassword2: `Es kann ein Passwort Reset via E-Mail angefordert\nwerden. Das 
+            würde nach Abschluss diesem Account ein lokales Passwort hinzufügen. Danach wäre der\n
+            Login entweder per externem Provider oder lokalem Password möglich. Passwort Reset 
+            anfordern?`,
         generateRandom: 'Zufällig generiert',
         givenName: 'Vorname',
         groups: 'Gruppen',
@@ -124,11 +138,13 @@ export const I18nDe: I18n = {
             preferredUsername: 'Bevorzugter Benutzername',
         },
         providerLink: 'Account Verbinden',
-        providerLinkDesc:
-            'Dieser Account kann mit einem der folgenden Login Provider\nverbunden werden. Nach der Aktivierung des Prozesses wird eine Weiterleitung auf die Login Seite\ndes gewählten Providers ausgelöst. Nach erfolgreichem Login und bei Übereinstimmung der E-Mail\nAdressen wird dieser Account verknüpft.',
+        providerLinkDesc: `Dieser Account kann mit einem der folgenden Login Provider\nverbunden 
+            werden. Nach der Aktivierung des Prozesses wird eine Weiterleitung auf die Login Seite\n
+            des gewählten Providers ausgelöst. Nach erfolgreichem Login und bei Übereinstimmung der 
+            E-Mail\nAdressen wird dieser Account verknüpft.`,
         providerUnlink: 'Verbindung Trennen',
-        providerUnlinkDesc:
-            'Nur wenn mindestens ein Passwort oder ein Passkey für diesen\nAccount gesetzt ist, kann die Verbindung zum Provider gelöst werden.',
+        providerUnlinkDesc: `Nur wenn mindestens ein Passwort oder ein Passkey für diesen\nAccount 
+            gesetzt ist, kann die Verbindung zum Provider gelöst werden.`,
         regDate: 'Datum der Registrierung',
         regIp: 'Registrierung von IP',
         roles: 'Rollen',
@@ -138,16 +154,19 @@ export const I18nDe: I18n = {
         userEnabled: 'Benutzer Aktiviert',
         userExpiry: 'Benutzer Ablauf',
         userVerifiedTooltip: 'Abgesichert durch Fingerabdruck oder PIN',
-        webIdDesc:
-            'Hier können Sie die Felder festlegen, die über Ihre WebID veröffentlicht\nwerden. Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt wird.\nSollten Sie nicht wissen, was die WebID ist, brauchen Sie sie höchstwahrscheinlich nicht.',
+        webIdDesc: `Hier können Sie die Felder festlegen, die über Ihre WebID veröffentlicht\n
+            werden. Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt 
+            wird.\nSollten Sie nicht wissen, was die WebID ist, brauchen Sie sie 
+            höchstwahrscheinlich nicht.`,
         webIdDescData:
             'Sie können eigene Daten zu Ihrer WebID in gültigem FOAF Vokabular\nhinzufügen:',
         webIdExpertMode: 'Expertenmodus aktivieren',
         zip: 'PLZ',
     },
     authorize: {
-        clientForceMfa:
-            'Dieser Login setzt MFA voraus für eine erhöhte Sicherheit.\nUm Zugang zu bekommen, müssen Sie sie in Ihren Account einloggen und mindestens einen Passkey\nhinzufügen.',
+        clientForceMfa: `Dieser Login setzt MFA voraus für eine erhöhte Sicherheit.\nUm Zugang zu 
+            bekommen, müssen Sie sie in Ihren Account einloggen und mindestens einen Passkey\n
+            hinzufügen.`,
         clientGroupPrefixForbidden: 'Fehlende Gruppenzugehörigkeit für diesen Login',
         email: 'E-Mail',
         emailBadFormat: 'Inkorrektes E-Mail Format',
@@ -164,8 +183,8 @@ export const I18nDe: I18n = {
         passwordForgotten: 'Password vergessen?',
         passwordRequest: 'Anfordern',
         passwordRequired: 'Password ist notwendig',
-        passwordResetDesc: `Bitte E-Mail Adresse angeben, um einen Password Reset Link anzufordern. Sollte die Adresse
-            in der Datenbank existieren, wird and diese ein Link verschickt.`,
+        passwordResetDesc: `Bitte E-Mail Adresse angeben, um einen Password Reset Link anzufordern. 
+            Sollte die Adresse in der Datenbank existieren, wird and diese ein Link verschickt.`,
         passwordResetSuccess: 'Anfrage erhalten. Dieses Fenster kann nun geschlossen werden.',
         requestExpires: 'Anfrage läuft ab',
         requestExpired: 'Anfrage ist abgelaufen',
@@ -208,16 +227,19 @@ export const I18nDe: I18n = {
         cancel: 'Abbrechen',
     },
     mfa: {
-        p1: 'Wenn Sie mehrere Systeme parallel nutzen möchten, wie z.B. Windows und Android, sollten Sie die Registrierung mit Android durchführen.',
-        p2: 'Android ist diejenige Plattform, die derzeit die wenigsten Features der passwortlosen Technologie unterstützt. Schlüssel, die dort registriert werden, funktionieren auf anderen Geräten gleichermaßen. Dies gilt jedoch nicht andersherum.',
+        p1: `Wenn Sie mehrere Systeme parallel nutzen möchten, wie z.B. Windows und Android, 
+            sollten Sie die Registrierung mit Android durchführen.`,
+        p2: `Android ist diejenige Plattform, die derzeit die wenigsten Features der passwortlosen 
+            Technologie unterstützt. Schlüssel, die dort registriert werden, funktionieren auf 
+            anderen Geräten gleichermaßen. Dies gilt jedoch nicht andersherum.`,
         p3: 'Für weitere Informationen, siehe',
         errorReg: 'Fehler beim Starten der Registrierung',
         lastUsed: 'Zuletzt genutzt',
         noKey: 'Es wurde in diesem Speicher noch kein Sicherheitsschlüssel registriert',
-        reAuthenticatePasskey:
-            'Bevor Passkeys bearbeitet werden können, muss zuerst einer der bestehenden überprüft werden:',
-        reAuthenticatePwd:
-            'Bevor Passkeys bearbeitet werden können, ist eine erneute Bestätigung des Passworts notwendig.',
+        reAuthenticatePasskey: `Bevor Passkeys bearbeitet werden können, muss zuerst einer der 
+            bestehenden überprüft werden:`,
+        reAuthenticatePwd: `Bevor Passkeys bearbeitet werden können, ist eine erneute Bestätigung 
+            des Passworts notwendig.`,
         register: 'Registrieren',
         registerNew: 'Neuen Key Registrieren',
         registerd: 'Registriert',
@@ -254,10 +276,13 @@ export const I18nDe: I18n = {
         badFormat: 'Ungültiges Format',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Generieren',
-        newAccDesc1:
-            'Sie haben die Option zwischen zwei Account Typen zu wählen: Passwortlos oder\ntraditionalles Passwort.',
-        newAccDesc2:
-            'Der passwortlose Account Typ ist immer zu bevorzugen. Er bietet einen\nsehr viel höheren Sicherheitsstandard als traditionelle Passwörter und gleichzeitig einen einfacheren\nund schnelleren Login.\nDazu wird mindestens ein Passkey (Yubikey, Apple Touch ID, Windows Hello, ...) benötigt, welcher dem\nFIDO2 Standard gerecht wird. Für weitere Informationen können Sie diesem Link folgen: ',
+        newAccDesc1: `Sie haben die Option zwischen zwei Account Typen zu wählen: Passwortlos 
+            oder\ntraditionalles Passwort.`,
+        newAccDesc2: `Der passwortlose Account Typ ist immer zu bevorzugen. Er bietet einen\nsehr 
+            viel höheren Sicherheitsstandard als traditionelle Passwörter und gleichzeitig einen 
+            einfacheren\nund schnelleren Login.\nDazu wird mindestens ein Passkey (Yubikey, Apple 
+            Touch ID, Windows Hello, ...) benötigt, welcher dem\nFIDO2 Standard gerecht wird. Für 
+            weitere Informationen können Sie diesem Link folgen: `,
         newAccount: 'Neuer Account',
         passwordReset: 'Passwort Zurücksetzen',
         password: 'Passwort',
@@ -270,8 +295,10 @@ export const I18nDe: I18n = {
         success2: 'Sie werden in Kürze weitergeleitet.',
         success3: 'Sollte Sie nicht weitergeleitet werden, klicken Sie bitte hier:',
         successPasskey1: 'Der neue Passkey wurde erfolgreich registriert.',
-        successPasskey2:
-            'Bitte loggen Sie sich direkt in Ihren Account ein und registrieren\nSie mindestens einen weiteren Backup Passkey. Ein passwortloser Account kann nicht den Passwort\nReset via E-Mail nutzen für den Fall, dass der derzeitige Passkey abhanden kommt.',
+        successPasskey2: `Bitte loggen Sie sich direkt in Ihren Account ein und registrieren\nSie 
+            mindestens einen weiteren Backup Passkey. Ein passwortloser Account kann nicht den 
+            Passwort\nReset via E-Mail nutzen für den Fall, dass der derzeitige Passkey abhanden 
+            kommt.`,
     },
     register: {
         alreadyRegistered: 'E-Mail is bereits registriert',
@@ -293,7 +320,8 @@ export const I18nDe: I18n = {
     },
     userRevoke: {
         title: 'Logins widerrufen',
-        desc1: 'Sämtliche Logins und Sessions für diesen Benutzer wurden soweit wie möglich widerrufen.',
+        desc1: `Sämtliche Logins und Sessions für diesen Benutzer wurden soweit wie möglich 
+            widerrufen.`,
         desc2: 'Passwörter sollten auf der Stelle erneuert werden!',
     },
 };

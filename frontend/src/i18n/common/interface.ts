@@ -57,6 +57,10 @@ export interface I18n {
         convertAccount: string;
         convertAccountP1: string;
         country: string;
+        deleteAccount: {
+            deleteAccount: string;
+            deleteAccountDesc: string;
+        };
         deviceId: string;
         deviceName: string;
         devices: string;

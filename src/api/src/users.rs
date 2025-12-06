@@ -1900,6 +1900,122 @@ pub async fn put_user_self(
     }
 }
 
+/// Check if user self-deletion is allowed.
+///
+/// Self-deletion is forbidden, if the user is assigned to the `rauthy_admin` rule as part of the
+/// anti-lockout rules.
+///
+/// **Permissions**
+/// - authenticated user
+#[utoipa::path(
+    get,
+    path = "/users/{id}/self/delete",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 406, description = "NotAccepted", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{id}/self/delete")]
+pub async fn get_user_self_delete_config(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    if !RauthyConfig::get().vars.user_delete.enable_self_delete {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotAccepted,
+            "User self-delete is disabled",
+        ));
+    }
+
+    // make sure the logged-in user can only delete itself
+    let id = id.into_inner();
+    principal.is_user(&id)?;
+
+    let user = User::find(id).await?;
+    if user.roles_iter().any(|r| r == "rauthy_admin") {
+        Err(ErrorResponse::new(
+            ErrorResponseType::NotAccepted,
+            "A `rauthy_admin` cannot be self-deleted",
+        ))
+    } else {
+        Ok(HttpResponse::Accepted().finish())
+    }
+}
+
+/// DELETE for a user by self-service, if enabled
+///
+/// This endpoint always deletes this very user the session is valid for.
+///
+/// **Permissions**
+/// - authenticated user
+#[utoipa::path(
+    delete,
+    path = "/users/{id}/self/delete",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 406, description = "NotAccepted", body = ErrorResponse),
+    ),
+)]
+#[delete("/users/{id}/self/delete")]
+pub async fn delete_user_self(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    if !RauthyConfig::get().vars.user_delete.enable_self_delete {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotAccepted,
+            "User self-delete is disabled",
+        ));
+    }
+
+    // make sure the logged-in user can only delete itself
+    let id = id.into_inner();
+    principal.is_user(&id)?;
+
+    let user = User::find(id).await?;
+    if user.roles_iter().any(|r| r == "rauthy_admin") {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotAccepted,
+            "A `rauthy_admin` cannot be self-deleted",
+        ));
+    }
+
+    handle_user_delete(user).await
+}
+
+async fn handle_user_delete(user: User) -> Result<HttpResponse, ErrorResponse> {
+    logout::execute_backchannel_logout(None, Some(user.id.clone())).await?;
+
+    // sessions and other tables have a cascading FK to the users table
+    user.delete().await?;
+
+    let clients_scim = ClientScim::find_all().await?;
+    task::spawn(async move {
+        let email = user.email.clone();
+
+        for client_scim in clients_scim {
+            if let Err(err) = client_scim.delete_user(&user).await {
+                error!(
+                    "Error during SCIM Client user delete for {}: {:?}",
+                    email, err
+                );
+            }
+        }
+    });
+
+    Ok(HttpResponse::NoContent().finish())
+}
+
 /// Allows an authenticated and logged-in user to convert his account to passkey only
 ///
 /// **Permissions**
@@ -2058,30 +2174,12 @@ pub async fn put_user_self_preferred_username(
 )]
 #[delete("/users/{id}")]
 pub async fn delete_user_by_id(
-    path: web::Path<String>,
+    id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)?;
-
-    let user = User::find(path.into_inner()).await?;
-    logout::execute_backchannel_logout(None, Some(user.id.clone())).await?;
-    user.delete().await?;
-
-    let clients_scim = ClientScim::find_all().await?;
-    task::spawn(async move {
-        let email = user.email.clone();
-
-        for client_scim in clients_scim {
-            if let Err(err) = client_scim.delete_user(&user).await {
-                error!(
-                    "Error during SCIM Client user delete for {}: {:?}",
-                    email, err
-                );
-            }
-        }
-    });
-
-    Ok(HttpResponse::NoContent().finish())
+    let user = User::find(id.into_inner()).await?;
+    handle_user_delete(user).await
 }
 
 pub struct UserValuesValidator<'a> {

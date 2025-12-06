@@ -2240,6 +2240,19 @@ generate_self_signed = true
 # overwritten by: TOS_ACCEPT_TIMEOUT
 #accept_timeout = 900
 
+[user_delete]
+
+# You can enable user self-deletion via the Account Dashboard.
+# It is disabled by default, because especially if you use things like
+# SCIM, the deletion of a user might trigger a series of events which
+# will delete other important data as well, that might be linked to a
+# user account, and you want to clean up manually before a user is being
+# fully deleted.
+#
+# default: false
+# overwritten by: USER_ENABLE_SELF_DELETE
+enable_self_delete = true
+
 [user_pictures]
 # The storage type for user pictures.
 # By default, they are saved inside the Database, which is not ideal.

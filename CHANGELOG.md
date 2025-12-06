@@ -54,15 +54,10 @@ AuthorizedKeysCommand
    AuthorizedKeysCommand is run.
 ```
 
-At the time of writing, [rauthy-pam-nss](https://github.com/sebadob/rauthy-pam-nss) was not updated
-yet and does not yet contain a client for this. However, it is actually dead simple and can even
-be executed with a `curl` like this for instance:
+[rauthy-pam-nss](https://github.com/sebadob/rauthy-pam-nss) was updated and can work with this new
+feature. You need to update to `v0.2.0` for compatibility.
 
-```bash
-curl -s localhost:8080/auth/v1/pam/users/authorized_keys/admin
-```
-
-You will also have the following new config options:
+You will have the following new config options:
 
 ```toml
 [pam.authorized_keys]
@@ -75,6 +70,21 @@ You will also have the following new config options:
 # default: true
 # overwritten by: PAM_SSH_AUTHORIZED_KEYS_ENABLE
 authorized_keys_enable = true
+
+# By default, even though these are "public" keys, the endpoint
+# to retrieve them quires authentication. This will be a `basic"
+# `Authentication` header in the form of `host_id:host_secret` of
+# any valid PAM host configured on Rauthy.
+# If you set it to `false`, the endpoint will be publicly available.
+# This is fine in the sense that you cannot leak any keys (they are
+# public keys anyway), but the endpoint could be abused for username
+# enumeration. Depending on the `include_comments` settings below,
+# you might even leak some more information that is not strictly
+# sensitive, but could be abused in some other way.
+#
+# default: true
+# overwritten by: PAM_SSH_AUTH_REQUIRED
+auth_required = true
 
 # By default, SSH keys that have expired because of
 # `forced_key_expiry_days` below will be added to an internal
@@ -406,7 +416,32 @@ tz_fallback = 'UTC'
 
 [#1246](https://github.com/sebadob/rauthy/pull/1246)
 
-#### Relaxes input validation for Client URIs
+#### User self-delete
+
+Users can now be allowed to self-delete their accounts. By default, it is disabled, because when
+you are using e.g. SCIM, a user deletion can trigger quite a few events in other clients as well,
+and it might delete data that you need to clean up (or archive for legal reasons) before you can
+fully delete a user. So, it's opt-in, and it probably makes the most sense when you have an open
+registration as well.
+
+```toml
+[user_delete]
+
+# You can enable user self-deletion via the Account Dashboard.
+# It is disabled by default, because especially if you use things like
+# SCIM, the deletion of a user might trigger a series of events which
+# will delete other important data as well, that might be linked to a
+# user account, and you want to clean up manually before a user is being
+# fully deleted.
+#
+# default: false
+# overwritten by: USER_ENABLE_SELF_DELETE
+enable_self_delete = true
+```
+
+[#1267](https://github.com/sebadob/rauthy/pull/1267)
+
+#### Relax input validation for Client URIs
 
 The input validation for different URIs when configuring clients via the Admin UI has been relaxed.
 This makes it possible to e.g have an allowed `redirect_uri` or `http://localhost:*` to work with
