@@ -43,7 +43,7 @@
         </div>
     {/if}
     <div class="flex gap-05">
-        <div title={title || label || ''} class="{mono ? 'font-mono' : ''} input no-border">
+        <div title={title || label || ''} class="{mono ? 'font-mono' : ''} input input-noedit">
             {@render children()}
         </div>
         {#if button}
@@ -76,10 +76,12 @@
     .label {
         width: 100%;
         margin-bottom: -0.3rem;
-        padding-left: 0.1rem;
+        padding-left: 0rem;
     }
 
-    .no-border {
+    .input-noedit {
         border: none;
+        background: none;
+        padding-left: 0rem;
     }
 </style>
