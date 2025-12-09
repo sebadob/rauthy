@@ -465,8 +465,8 @@ export let I18nAdminEn: I18nAdmin = {
         sendResetEmail: 'Send Reset E-Mail',
     },
     validation: {
-        css: 'Valid CSS Value',
-        origin: 'Valid Origin',
-        uri: 'Valid URI',
+        css: 'Invalid CSS Value',
+        origin: 'Invalid Origin',
+        uri: 'Invalid URI',
     },
 };

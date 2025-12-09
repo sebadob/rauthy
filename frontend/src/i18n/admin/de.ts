@@ -488,8 +488,8 @@ export let I18nAdminDe: I18nAdmin = {
         sendResetEmail: 'Reset E-Mail Senden',
     },
     validation: {
-        css: 'Gültiger CSS Wert',
-        origin: 'Gültige Origin',
-        uri: 'Gültige URI',
+        css: 'Ungültiger CSS Wert',
+        origin: 'Ungültige Origin',
+        uri: 'Ungültige URI',
     },
 };
