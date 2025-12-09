@@ -3,7 +3,6 @@
     import { useI18n } from '$state/i18n.svelte';
     import type { FullAutoFill } from 'svelte/elements';
     import { genKey } from '$utils/helpers';
-    import { onMount } from 'svelte';
 
     let {
         ref = $bindable(),
@@ -71,21 +70,18 @@
 
     let t = useI18n();
 
-    let isFirstRender = true;
-
-    onMount(() => {
-        requestAnimationFrame(() => {
-            isFirstRender = false;
-        });
-    });
+    let touched = $state(false);
 
     $effect(() => {
         // this unused assignment is used only to trigger a re-validation on any input change
         let v = value;
-        !isFirstRender && isValid();
+        if (touched) {
+            isValid();
+        }
     });
 
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLInputElement }) {
+        touched = true;
         isError = false;
         // the animation frame triggers some screen readers to re-read errors if they still exist
         requestAnimationFrame(() => {
@@ -95,6 +91,8 @@
     }
 
     function oninput(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
+        touched = true;
+        isValid();
         onInput?.();
     }
 
@@ -138,6 +136,11 @@
 </script>
 
 <div style:width>
+    <div aria-live="assertive" class="label">
+        <label for={id} class="font-label noselect" data-required={required}>
+            {label}
+        </label>
+    </div>
     <input
         bind:this={ref}
         type={typ}
@@ -160,51 +163,42 @@
         aria-required={required || false}
         aria-invalid={isError}
         pattern={pattern || undefined}
+        class:invalid={isError}
         {oninput}
         {oninvalid}
         {onblur}
         {onkeydown}
         onsubmit={onSubmit}
     />
-    <div aria-live="assertive" class="label">
-        <label for={id} class="font-label noselect" data-required={required}>
-            {label}
-        </label>
-        {#if isError}
-            <div
-                aria-relevant="all"
-                class="error"
-                class:errWithLabel={!!label}
-                transition:slide={{ duration: 150 }}
-            >
-                {errMsg || t.common.invalidInput}
-            </div>
-        {/if}
-    </div>
+    {#if isError}
+        <div
+            aria-relevant="all"
+            class="error"
+            class:errWithLabel={!!label}
+            transition:slide={{ duration: 150 }}
+        >
+            {errMsg || t.common.invalidInput}
+        </div>
+    {/if}
 </div>
 
 <style>
-    label,
-    .error {
-        line-height: 1.1rem;
-        font-size: 0.9rem;
-    }
-
     label {
+        font-size: 0.9em;
         flex-wrap: wrap;
     }
 
     .label {
         width: 100%;
-        margin-top: -1.1rem;
-        padding: 0.5rem;
+        margin-bottom: -0.3rem;
+        padding-left: 0.1rem;
+        padding-top: 0.1rem;
     }
 
     .error {
         color: hsl(var(--error));
-    }
-
-    .errWithLabel {
-        margin-top: -0.5rem;
+        margin-top: -0.4rem;
+        padding-left: 0.1rem;
+        font-size: 0.8rem;
     }
 </style>

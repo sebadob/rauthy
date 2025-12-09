@@ -219,6 +219,12 @@
 </script>
 
 <div>
+    <div aria-live="assertive" class="label">
+        <label for={id} class="font-label noselect" data-required={required}>
+            {label}
+        </label>
+    </div>
+
     <div class="flex">
         <input
             bind:this={refInput}
@@ -331,16 +337,11 @@
         </div>
     </div>
 
-    <div class="label">
-        <label for={id} class="font-label noselect" data-required={required}>
-            {label}
-        </label>
-        {#if isErr}
-            <div class="error" transition:slide={{ duration: 150 }}>
-                {errMsg}
-            </div>
-        {/if}
-    </div>
+    {#if isErr}
+        <div class="error" transition:slide={{ duration: 150 }}>
+            {errMsg}
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -388,31 +389,28 @@
     }
 
     .error {
-        margin-top: -0.5rem;
         color: hsl(var(--error));
+        margin-top: -0.4rem;
+        padding-left: 0.1rem;
+        font-size: 0.8rem;
     }
 
     .indicator {
-        top: -0.7rem;
+        top: -0.8rem;
         right: 0;
         padding: 2px 5px 0 5px;
     }
 
-    label,
-    .error {
-        line-height: 1.1rem;
-        font-size: 0.9rem;
-    }
-
     label {
-        color: hsla(var(--text) / 0.8);
+        font-size: 0.9em;
         flex-wrap: wrap;
     }
 
     .label {
         width: 100%;
-        margin-top: -1.1rem;
-        padding: 0.5rem;
+        margin-bottom: -0.3rem;
+        padding-left: 0.1rem;
+        padding-top: 0.1rem;
     }
 
     .month {
@@ -423,9 +421,9 @@
     /* Just to hide the native browser picker indicator */
     .patch {
         width: 2rem;
-        height: 2rem;
-        top: calc(-1rem - 1px);
-        right: 0;
+        height: 1.7rem;
+        top: calc(-0.9rem - 1px);
+        right: 2px;
         background: hsl(var(--bg));
     }
 

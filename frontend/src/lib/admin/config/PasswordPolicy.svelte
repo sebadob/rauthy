@@ -173,11 +173,6 @@
             />
         </div>
 
-        <p>
-            {ta.passwordPolicy.validityNew}<br />
-            {ta.passwordPolicy.resetSet0}
-        </p>
-
         <div class="row">
             <Input
                 typ="number"
@@ -189,7 +184,14 @@
                 max="32"
                 width={inputWidth}
             />
+        </div>
 
+        <p>
+            {ta.passwordPolicy.validityNew}<br />
+            {ta.passwordPolicy.resetSet0}
+        </p>
+
+        <div class="row">
             <Input
                 typ="number"
                 bind:value={policy.valid_days}
@@ -202,7 +204,7 @@
             />
         </div>
 
-        <div class="flex gap-05">
+        <div class="btn flex gap-05">
             <Button type="submit">
                 {t.common.save}
             </Button>
@@ -223,5 +225,10 @@
 <style>
     .row {
         display: flex;
+        column-gap: 1rem;
+    }
+
+    .btn {
+        margin-top: 1rem;
     }
 </style>

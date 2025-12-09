@@ -155,9 +155,8 @@
     }
 
     .btn {
-        margin-left: -0.2rem;
         margin-top: -0.1rem;
-        color: hsla(var(--text) / 0.5);
+        color: hsla(var(--text) / 0.8);
         transition: color 150ms;
     }
 
@@ -169,6 +168,7 @@
         position: fixed;
         width: 0;
         margin-left: 1.5rem;
+        margin-top: 0.1rem;
         z-index: 2;
     }
 

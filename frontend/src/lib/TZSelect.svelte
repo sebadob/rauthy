@@ -22,27 +22,24 @@
 </script>
 
 <div class="tz">
-    <div class="opts">
-        <Options ariaLabel={t.common.timezone} {options} bind:value borderless withSearch />
-    </div>
     <div class="label">
         {t.common.timezone}
+    </div>
+    <div class="opts">
+        <Options ariaLabel={t.common.timezone} {options} bind:value withSearch />
     </div>
 </div>
 
 <style>
-    .tz {
-        padding-top: 0.5rem;
-    }
-
     .label {
-        margin-top: -0.25rem;
-        margin-left: 0.5rem;
-        color: hsl(var(--text) / 0.8);
+        margin-bottom: -0.3rem;
+        padding-left: 0.1rem;
+        padding-top: 0.1rem;
+        color: hsl(var(--text));
         font-size: 0.9rem;
     }
 
     .opts {
-        border-bottom: 1px solid hsl(var(--bg-high));
+        margin: 0.33rem 0;
     }
 </style>

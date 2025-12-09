@@ -42,55 +42,59 @@
 </script>
 
 <div class="container">
-    <div class="inputs">
-        <InputDate
-            {id}
-            {name}
-            bind:value
-            {label}
-            {errMsg}
-            {disabled}
-            {min}
-            {max}
-            {required}
-            {onEnter}
-            {onLeft}
-            {onRight}
-            {onUp}
-            {onDown}
-        />
-        {#if withTime}
-            <InputTime
-                name={timeName}
-                ariaLabel={label}
-                bind:value={timeValue}
-                errMsg={timeErrMsg}
-                min={timeMin}
-                max={timeMax}
+    <div class="inputs-wrapper">
+        <div class="inputs">
+            <InputDate
+                {id}
+                {name}
+                bind:value
+                {label}
+                {errMsg}
                 {disabled}
+                {min}
+                {max}
                 {required}
+                {onEnter}
+                {onLeft}
+                {onRight}
+                {onUp}
+                {onDown}
             />
+            {#if withTime}
+                <InputTime
+                    name={timeName}
+                    ariaLabel={label}
+                    bind:value={timeValue}
+                    errMsg={timeErrMsg}
+                    min={timeMin}
+                    max={timeMax}
+                    {disabled}
+                    {required}
+                />
+            {/if}
+        </div>
+        {#if withDelete}
+            <div class="delete">
+                <Button ariaLabel={t.common.delete} invisible onclick={reset}>
+                    <span title={t.common.delete}>
+                        <IconStop color="hsla(var(--error) / .8)" width="1.2rem" />
+                    </span>
+                </Button>
+            </div>
         {/if}
     </div>
-    {#if withDelete}
-        <div class="delete">
-            <Button ariaLabel={t.common.delete} invisible onclick={reset}>
-                <span title={t.common.delete}>
-                    <IconStop color="hsla(var(--error) / .8)" width="1.2rem" />
-                </span>
-            </Button>
-        </div>
-    {/if}
 </div>
 
 <style>
-    .container {
+    .inputs-wrapper {
         display: flex;
         gap: 0.25rem;
     }
 
     .delete {
-        margin-top: 0.85em;
+        display: flex;
+        align-items: end;
+        padding-bottom: 0.45rem;
     }
 
     .inputs {

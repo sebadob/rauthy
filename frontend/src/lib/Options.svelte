@@ -225,7 +225,8 @@
 
     .btn[data-border='true'] {
         padding: 0.15rem 0.33rem 0.3rem 0.5rem;
-        border: 1px solid hsl(var(--bg-high));
+        border: 1px solid hsla(var(--text) / 0.2);
+        border-radius: var(--border-radius);
     }
 
     .btnText {
@@ -240,7 +241,7 @@
     .optPopover {
         width: 100%;
         text-align: left;
-        padding: 0.25rem 0.5rem;
+        padding: 0.25rem 0.7rem;
         color: hsl(var(--text));
         font-weight: normal;
         border-radius: var(--border-radius);

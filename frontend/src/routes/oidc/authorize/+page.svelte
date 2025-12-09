@@ -81,6 +81,7 @@
     let mfaPurpose: undefined | MfaPurpose = $state();
 
     let isLoading = $state(false);
+    // let err = $state('some error message that it longer over multiple lines');
     let err = $state('');
     let loginAction = $state('');
     let csrfToken = $state('');
@@ -521,7 +522,7 @@
                     {/if}
                     {#if clientUri}
                         <a class="home" href={clientUri} aria-label="Client Home Page">
-                            <IconHome color="hsla(var(--text) / .4)" />
+                            <IconHome color="hsla(var(--text) / .9)" />
                         </a>
                     {/if}
                 </div>
@@ -709,14 +710,14 @@
             </div>
 
             <ThemeSwitch absolute />
-            <LangSelector absolute />
+            <LangSelector absolute borderless />
         </ContentCenter>
     </div>
 </Main>
 
 <style>
     .btn {
-        margin: 5px 0;
+        margin: 0.8rem 0 0.5rem 0;
         display: flex;
     }
 
@@ -800,7 +801,7 @@
 
     .reg {
         margin-top: 0.5rem;
-        color: hsla(var(--text) / 0.85);
+        color: var(--text);
     }
 
     .success {
