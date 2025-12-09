@@ -1,12 +1,13 @@
 # Kubernetes
 
-At the time of writing, there is no Helm Chart or Kustomize files available yet. The whole setup is pretty simple
-on purpose though, so it should not be a big deal to get it running inside Kubernetes.
+At the time of writing, there is no Helm Chart or Kustomize files available yet. The whole setup is
+pretty simple on purpose though, so it should not be a big deal to get it running inside Kubernetes.
 
 ## Single Instance
 
-Since Rauthy uses pretty aggressive caching for different reasons, you cannot just have a single deployment and
-scale up the replicas without a proper HA setup. How to deploy a HA version is described below.
+Since Rauthy uses pretty aggressive caching for different reasons, you cannot just have a single
+deployment and scale up the replicas without a proper HA setup. How to deploy a HA version is
+described below.
 
 The steps to deploy on Kubernetes are pretty simple.
 
@@ -16,7 +17,8 @@ The steps to deploy on Kubernetes are pretty simple.
 
 ### Create Namespace
 
-For the purpose of this documentation, we assume that Rauthy will be deployed in the `rauthy` namespace.  
+For the purpose of this documentation, we assume that Rauthy will be deployed in the `rauthy`
+namespace.  
 If this is not the case for you, change the following commands accordingly.
 
 ```
@@ -31,10 +33,10 @@ This documentation will manage the Kubernetes files in a folder called `rauthy`.
 mkdir rauthy && cd rauthy
 ```
 
-Create the config file, paste the [Reference Config](../config/config.md) and adjust it to your needs. We are putting
-the complete config in a K8s secret. Rauthy's config contains quite a few different secret values and it's just a lot
-simpler to maintain everything in a single secret, than splitting it into a `ConfigMap` and overwrite each secret
-manually.
+Create the config file, paste the [Reference Config](../config/config.md) and adjust it to your
+needs. We are putting the complete config in a K8s secret. Rauthy's config contains quite a few
+different secret values and it's just a lot simpler to maintain everything in a single secret, than
+splitting it into a `ConfigMap` and overwrite each secret manually.
 
 ```
 apiVersion: v1
@@ -48,13 +50,15 @@ stringData:
     PASTE CONFIG HERE - WATCH THE INDENTATION'
 ```
 
-Open the config with your favorite editor and paste the [Reference Config](../config/config.md) in place.  
+Open the config with your favorite editor and paste the [Reference Config](../config/config.md) in
+place.  
 Make sure to watch the indentation.
 
 ```admonish note
-I recommend to just always set `cluster.node_id_from = "k8s"` when deploying a StatefulSet. This will parse the Raft 
-NodeID automatically from the K8s Pod / Hostname and you don't have to worry about the `node_id`. For instance, a Pod
-named `rauthy-0` will be translated to `node_id = 1` automatically.
+I recommend to just always set `cluster.node_id_from = "k8s"` when deploying a StatefulSet. This 
+will parse the Raft NodeID automatically from the K8s Pod / Hostname and you don't have to worry 
+about the `node_id`. For instance, a Pod named `rauthy-0` will be translated to `node_id = 1` 
+automatically.
 ```
 
 There are some values that you need to generate on your own. These are:
@@ -62,16 +66,16 @@ There are some values that you need to generate on your own. These are:
 - `cluster.secret_raft` + `cluster.secret_api`
 - `encryption.keys` + `encryption.key_active`
 
-The secrets for the `cluster` can be just some long random alphanumeric values. They are used for authentication for the
-Hiqlite Raft + API layer. The encryption keys must be generated. More detailed explanation is in
-the [Encryption](../config/encryption.md) section. The tl;dr is:
+The secrets for the `cluster` can be just some long random alphanumeric values. They are used for
+authentication for the Hiqlite Raft + API layer. The encryption keys must be generated. More
+detailed explanation is in the [Encryption](../config/encryption.md) section. The tl;dr is:
 
 ```
 echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 ```
 
-Copy the output and add it to keys. The `key_active` will be the first part of the output until the first `/`. For
-instance:
+Copy the output and add it to keys. The `key_active` will be the first part of the output until the
+first `/`. For instance:
 
 ```toml
 [encryption]
@@ -79,14 +83,15 @@ keys = ["XLCcaQ/f2xmq/nxVFgJN0CN311miyvVlBxXOQISyw1nPEPOqiI="]
 key_active = "XLCcaQ"
 ```
 
-You can generate safe values for both `secret_raft` and `secret_api` in many ways. You can just provide a random
-alphanumeric value, which for instance:
+You can generate safe values for both `secret_raft` and `secret_api` in many ways. You can just
+provide a random alphanumeric value, which for instance:
 
 ```
 cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
 ```
 
-or you can use the above `openssl` command again, even though Hiqlite does not need or utilize base64:
+or you can use the above `openssl` command again, even though Hiqlite does not need or utilize
+base64:
 
 ```
 openssl rand -base64 48
@@ -95,11 +100,13 @@ openssl rand -base64 48
 If you plan on using S3 for backups, paste the proper values into `cluster.s3_*` values.
 
 ```admonish note
-It seems that in some environments, the above `openssl` command does not output proper values, which will make Rauthy
-panic on startup, when it checks the given values. If you run into that situation, you can generate them without 
-`openssl` as well, with e.g:
+It seems that in some environments, the above `openssl` command does not output proper values, which 
+will make Rauthy panic on startup, when it checks the given values. If you run into that situation, 
+you can generate them without `openssl` as well, with e.g:
 
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+<pre><code>
+echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"
+</code></pre>
 ```
 
 ### Create and apply the stateful set
@@ -119,14 +126,14 @@ metadata:
 spec:
   selector:
     app: rauthy
-  ports:
-    # chose whatever fits your needs here, you usually only need either http or https
-    - name: http
-      port: 8080
-      targetPort: 8080
-    - name: https
-      port: 8443
-      targetPort: 8443
+    ports:
+      # chose whatever fits your needs here, you usually only need either http or https
+      - name: http
+        port: 8080
+        targetPort: 8080
+      - name: https
+        port: 8443
+        targetPort: 8443
 ---
 # The headless service is used for the Raft Cluster setup, so Nodes 
 # can connect to each other without any load balancer in between.
@@ -138,6 +145,9 @@ metadata:
 spec:
   type: ClusterIP
   clusterIP: None
+  # Make sure to only publish them on the headless service 
+  # and NOT the one you are using via your reverse proxy!
+  publishNotReadyAddresses: true
   sessionAffinity: None
   selector:
     app: rauthy
@@ -226,22 +236,27 @@ spec:
           readinessProbe:
             httpGet:
               scheme: HTTP
-              # adjust if you change the Raft API port
+              # Hiqlite API port
               port: 8200
-              path: /ping
+              path: /ready
             initialDelaySeconds: 5
-            periodSeconds: 1
+            # Do NOT increase this period, because otherwise K8s may not catch
+            # a shutting down pod fast enough and may keep routing requests to
+            # it while is will be unable to handle them properly because of
+            # the shutdown.
+            periodSeconds: 3
+            # We may get a single failure during leader switches
+            failureThreshold: 2
           livenessProbe:
             httpGet:
-              # You may need to adjust this, if you decide to start in https only
-              # mode or use another port
               scheme: HTTP
+              # Rauthy API port
               port: 8080
-              #scheme: HTTPS
-              #port: 8443
               path: /auth/v1/health
-            initialDelaySeconds: 1
+            initialDelaySeconds: 60
             periodSeconds: 30
+            # We may get a single failure during leader switches
+            failureThreshold: 2
           resources:
             requests:
               # Tune the memory requests value carefully. Make sure, that the
@@ -250,6 +265,11 @@ spec:
               # The actual usage also heavily depends on the Memory Allocator
               # tuning. You can find more information in the Tuning section
               # in this book.
+              #
+              # A HA instance with Hiqlite enabled and without additional memory
+              # tuning will usually settle ~100mb idle memory being used.
+              # If you use an external Postgres, idle memory can go as low as
+              # ~30mb.
               memory: 64Mi
               # The CPU needs to be adjusted during runtime. This heavily
               # depends on your use case.
@@ -285,7 +305,8 @@ spec:
 
 ### Ingress
 
-This example assumes, that the deployment will run behind a Kubernetes ingress resource of your choice.
+This example assumes, that the deployment will run behind a Kubernetes ingress resource of your
+choice.
 
 It uses [Traefik](https://doc.traefik.io/traefik/) with the `IngressRoute` CRD.  
 Nevertheless, the ingress is really simple, and it should be very easy to adopt anything else.
@@ -339,10 +360,11 @@ Going to production does not need too many additional steps.
 
 #### TLS Certificates
 
-The thing you need will be valid TLS certificates, of course. To get these, there are a lot of existing mechanisms. If
-you use an internal Certificate Authority (CA), you do have you own tools to work with this anyway. If, however, you
-want to use something like [Let's Encrypt](https://letsencrypt.org/de/), I suggest to use the
-[cert-manager](https://cert-manager.io/), which is easy and straight forward to use.
+The thing you need will be valid TLS certificates, of course. To get these, there are a lot of
+existing mechanisms. If you use an internal Certificate Authority (CA), you do have you own tools to
+work with this anyway. If, however, you want to use something
+like [Let's Encrypt](https://letsencrypt.org/de/), I suggest to use
+the [cert-manager](https://cert-manager.io/), which is easy and straight forward to use.
 
 An example, how to add a certificate for the Traefik IngressRoute from above:
 
@@ -399,10 +421,10 @@ spec:
 
 #### Hiqlite Internal TLS
 
-You can of course also provide TLS certificates for the Hiqlite internal communication. Two independent networks are
-created: one for the Raft-Internal network traffic like heartbeats and data replication, and a second one for the
-"external" Hiqlite API. This is used by other Hiqlite cluster members for management purposes and to execute things
-like consistent queries on the leader node.
+You can of course also provide TLS certificates for the Hiqlite internal communication. Two
+independent networks are created: one for the Raft-Internal network traffic like heartbeats and data
+replication, and a second one for the "external" Hiqlite API. This is used by other Hiqlite cluster
+members for management purposes and to execute things like consistent queries on the leader node.
 
 You can provide TLS certificates for both of them independently via the following config variables:
 
@@ -427,7 +449,7 @@ tls_api_danger_tls_no_verify = true
 
 #### Additional steps
 
-There are a few more things to do when going into production, but these are the same for Kubernetes and Docker and will
-be explained in later chapters.
+There are a few more things to do when going into production, but these are the same for Kubernetes
+and Docker and will be explained in later chapters.
 
 You can now proceed with the [First Start](first_start.md) steps.
