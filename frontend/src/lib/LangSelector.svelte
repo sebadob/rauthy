@@ -12,7 +12,7 @@
         absolute,
         openTop = true,
         updateBackend,
-        borderless = false,
+        borderless = true,
     }: {
         absolute?: boolean;
         openTop?: boolean;
