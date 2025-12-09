@@ -61,7 +61,7 @@
     let err = $state('');
     let success = $state(false);
 
-    let userOrig: undefined | UserResponse;
+    let userOrig: undefined | UserResponse = $state(untrack(() => user));
     let isSelf = $derived(session.get()?.user_id === user.id);
 
     let email = $state('');
@@ -117,19 +117,40 @@
             : '',
     );
 
-    let isUnsaved = $derived(
-        email !== userOrig?.email ||
+    let isUnsaved = $derived.by(() => {
+        if (!user || !userOrig) {
+            return false;
+        }
+
+        let roles = rolesItems.filter(i => i.selected).map(i => i.name);
+        for (let role of roles) {
+            if (!userOrig.roles.includes(role)) {
+                return true;
+            }
+        }
+        for (let roleUser of userOrig.roles) {
+            if (!roles.includes(roleUser)) {
+                return true;
+            }
+        }
+
+        let groups = groupsItems.filter(i => i.selected).map(i => i.name);
+        for (let group of groups) {
+            if (!userOrig.groups || !userOrig.groups.includes(group)) {
+                return true;
+            }
+        }
+        for (let groupUser of userOrig.groups || []) {
+            if (!groups.includes(groupUser)) {
+                return true;
+            }
+        }
+
+        return (
+            email !== userOrig?.email ||
             givenName !== userOrig?.given_name ||
             familyName !== userOrig?.family_name ||
             language !== userOrig?.language ||
-            rolesItems
-                .filter(i => i.selected)
-                .map(i => i.name)
-                .join(',') !== userOrig?.roles?.join(',') ||
-            groupsItems
-                .filter(i => i.selected)
-                .map(i => i.name)
-                .join(',') !== userOrig?.groups?.join(',') ||
             enabled !== userOrig?.enabled ||
             emailVerified !== userOrig?.email_verified ||
             expires !== (!!userOrig?.user_expires || false) ||
@@ -139,8 +160,9 @@
             street !== userOrig?.user_values?.street ||
             zip !== (userOrig?.user_values?.zip || '') ||
             city !== userOrig?.user_values?.city ||
-            country !== userOrig?.user_values?.country,
-    );
+            country !== userOrig?.user_values?.country
+        );
+    });
 
     $effect(() => {
         if (user) {
