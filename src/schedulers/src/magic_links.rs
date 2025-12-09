@@ -57,9 +57,11 @@ AND password IS NULL AND webauthn_user_id IS NULL"#;
         DB::pg_execute(sql, &[&exp]).await?
     };
 
-    info!(
-        "Cleaned up {rows_affected} users which did not use their initial password reset magic link"
-    );
+    if rows_affected > 0 {
+        info!(
+            "Cleaned up {rows_affected} users which did not use their initial password reset magic link"
+        );
+    }
 
     // now we can just delete all expired magic links
     let sql = "DELETE FROM magic_links WHERE exp < $1";

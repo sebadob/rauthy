@@ -115,7 +115,9 @@ pub async fn jwks_cleanup() {
                 error!(?err, "deleting JWK from cache");
             }
         }
-        info!("Cleaned up old JWKs: {count}");
+        if count > 0 {
+            info!("Cleaned up old JWKs: {count}");
+        }
 
         // For some reason, the interval could `.tick()` multiple times,
         // if it finished too quickly.
