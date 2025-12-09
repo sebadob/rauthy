@@ -221,13 +221,13 @@
         font-weight: normal;
         font-size: 0.9rem;
         transition: all 150ms;
-        border: 2px solid hsla(var(--text) / 0.2);
-        border-radius: var(--border-radius);
+
     }
 
     .btn[data-border='true'] {
         padding: 0.15rem 0.33rem 0.3rem 0.5rem;
-        border: 1px solid hsl(var(--bg-high));
+        border: 2px solid hsla(var(--text) / 0.2);
+        border-radius: var(--border-radius);
     }
 
     .btnText {
