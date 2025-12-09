@@ -91,9 +91,8 @@
     }
 
     function oninput(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
-        if (touched) {
-            isValid();
-        }
+        touched = true;
+        isValid();
         onInput?.();
     }
 
