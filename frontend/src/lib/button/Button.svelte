@@ -1,6 +1,6 @@
 <script lang="ts">
     import { fade } from 'svelte/transition';
-    import type { Snippet } from 'svelte';
+    import { type Snippet, untrack } from 'svelte';
     import Loading from '$lib5/Loading.svelte';
 
     let {
@@ -72,7 +72,7 @@
                 return 'l1';
         }
     });
-    let showText = $state(!isLoading);
+    let showText = $state(untrack(() => !isLoading));
     let disabled = $derived(isDisabled || isLoading);
 
     $effect(() => {

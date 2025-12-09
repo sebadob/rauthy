@@ -29,14 +29,16 @@
     // We want to keep that logic inside this component instead of expecting
     // the parent to extract the information from the headers.
     pageSize = Number.parseInt(
-        firstFetchHeaders.get('x-page-size') || PAGE_SIZE_DEFAULT.toString(),
+        untrack(() => firstFetchHeaders.get('x-page-size')) || PAGE_SIZE_DEFAULT.toString(),
     ) as PageSize;
 
     let itemsTotal: undefined | null | number = $state();
     let pageSizeBefore = untrack(() => pageSize);
-    let pageCount = $state(Number.parseInt(firstFetchHeaders.get('x-page-count') || '1'));
+    let pageCount = $state(
+        Number.parseInt(untrack(() => firstFetchHeaders.get('x-page-count')) || '1'),
+    );
     let continuationToken: string | undefined | null = $state(
-        firstFetchHeaders.get('x-continuation-token'),
+        untrack(() => firstFetchHeaders.get('x-continuation-token')),
     );
     let page = $state(1);
 

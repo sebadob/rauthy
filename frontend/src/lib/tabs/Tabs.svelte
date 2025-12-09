@@ -1,5 +1,6 @@
 <script lang="ts">
     import Button from '$lib5/button/Button.svelte';
+    import { untrack } from 'svelte';
 
     let {
         tabs,
@@ -19,9 +20,11 @@
         onDown?: () => void;
     } = $props();
 
-    if (tabs.length > 0 && selected === '') {
-        selected = tabs[0];
-    }
+    untrack(() => {
+        if (tabs.length > 0 && selected === '') {
+            selected = tabs[0];
+        }
+    });
 
     let ref: undefined | HTMLDivElement = $state();
 

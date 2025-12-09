@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onDestroy } from 'svelte';
+    import { onDestroy, untrack } from 'svelte';
     import { fade } from 'svelte/transition';
     import type { Snippet } from 'svelte';
     import { Spring } from 'svelte/motion';
@@ -19,7 +19,7 @@
         children: Snippet;
     }>();
 
-    let title = $state(text);
+    let title = $state(untrack(() => text));
     let show = $state(false);
     let timer = $state<number | undefined>();
 

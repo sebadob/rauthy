@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
+    import { type Snippet, untrack } from 'svelte';
     import Button from '$lib5/button/Button.svelte';
     import Modal from '$lib5/Modal.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
@@ -22,7 +22,7 @@
 
     let ta = useI18nAdmin();
 
-    const levelModal = level === 1 ? 2 : 3;
+    const levelModal = untrack(() => (level === 1 ? 2 : 3));
     let showModal = $state(false);
 </script>
 

@@ -9,6 +9,7 @@
     import LabeledValue from '$lib5/LabeledValue.svelte';
     import type { RoleRequest, RoleResponse } from '$api/types/roles.ts';
     import { PATTERN_ROLE_SCOPE } from '$utils/patterns';
+    import { untrack } from 'svelte';
 
     let {
         role,
@@ -27,7 +28,7 @@
     let success = $state(false);
     let isRauthyAdmin = $derived(role.name === 'rauthy_admin');
 
-    let name = $state(role.name);
+    let name = $state(untrack(() => role.name));
 
     $effect(() => {
         if (role.id) {

@@ -5,6 +5,7 @@
     import Tooltip from '$lib5/Tooltip.svelte';
     import Options from '$lib5/Options.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { untrack } from 'svelte';
 
     let {
         ref = $bindable(),
@@ -22,8 +23,8 @@
 
     let ta = useI18nAdmin();
 
-    let selected = $state(options[0]);
-    let direction: 'up' | 'down' = $state(firstDirReverse ? 'down' : 'up');
+    let selected = $state(untrack(() => options[0]));
+    let direction: 'up' | 'down' = $state(untrack(() => (firstDirReverse ? 'down' : 'up')));
 
     $effect(() => {
         onChange(selected, direction);

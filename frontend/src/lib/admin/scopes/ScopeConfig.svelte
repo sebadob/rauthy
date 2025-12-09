@@ -13,6 +13,7 @@
     import type { SelectItem } from '$lib5/select_list/props.ts';
     import SelectList from '$lib5/select_list/SelectList.svelte';
     import { PATTERN_ROLE_SCOPE } from '$utils/patterns';
+    import { untrack } from 'svelte';
 
     let {
         attrs,
@@ -33,7 +34,7 @@
     let success = $state(false);
     let isDefault = $derived(isDefaultScope(scope.name));
 
-    let name = $state(scope.name);
+    let name = $state(untrack(() => scope.name));
     let itemsAccess: undefined | SelectItem[] = $state();
     let itemsId: undefined | SelectItem[] = $state();
 

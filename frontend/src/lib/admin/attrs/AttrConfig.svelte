@@ -13,6 +13,7 @@
     import { PATTERN_ATTR, PATTERN_ATTR_DESC } from '$utils/patterns';
     import CheckIcon from '$lib/CheckIcon.svelte';
     import { slide } from 'svelte/transition';
+    import { untrack } from 'svelte';
 
     let {
         attr,
@@ -34,10 +35,10 @@
     let err = $state('');
     let success = $state(false);
 
-    let name = $state(attr.name);
-    let desc = $state(attr.desc);
-    let defaultValue = $state(attr.default_value);
-    let userEditable = $state(attr.user_editable || false);
+    let name = $state(untrack(() => attr.name));
+    let desc = $state(untrack(() => attr.desc));
+    let defaultValue = $state(untrack(() => attr.default_value));
+    let userEditable = $state(untrack(() => attr.user_editable || false));
 
     let showMakeEditable = $state(false);
 

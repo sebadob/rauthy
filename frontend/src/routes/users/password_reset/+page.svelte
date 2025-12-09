@@ -1,6 +1,6 @@
 <script lang="ts">
     import Button from '$lib/button/Button.svelte';
-    import { IS_DEV, TPL_CLIENT_LOGO_UPDATED, TPL_RESTRICTED_EMAIL_DOMAIN } from '$utils/constants';
+    import { IS_DEV, TPL_CLIENT_LOGO_UPDATED } from '$utils/constants';
     import Input from '$lib/form/Input.svelte';
     import LangSelector from '$lib/LangSelector.svelte';
     import Main from '$lib/Main.svelte';
@@ -10,8 +10,6 @@
     import { useParam } from '$state/param.svelte.js';
     import ThemeSwitch from '$lib/ThemeSwitch.svelte';
     import Form from '$lib/form/Form.svelte';
-    import { PATTERN_USER_NAME } from '$utils/patterns';
-    import type { NewUserRegistrationRequest } from '$api/types/register.ts';
     import { fetchPost } from '$api/fetch';
     import ClientLogo from '$lib/ClientLogo.svelte';
     import { fetchSolvePow } from '$utils/pow';

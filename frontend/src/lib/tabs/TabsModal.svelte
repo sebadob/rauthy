@@ -1,5 +1,6 @@
 <script lang="ts">
     import Tabs from '$lib5/tabs/Tabs.svelte';
+    import { untrack } from 'svelte';
 
     let {
         tabs,
@@ -14,9 +15,11 @@
         width?: string;
     } = $props();
 
-    if (tabs.length > 0 && selected === '') {
-        selected = tabs[0];
-    }
+    untrack(() => {
+        if (tabs.length > 0 && selected === '') {
+            selected = tabs[0];
+        }
+    });
 </script>
 
 <div class="wrapper">

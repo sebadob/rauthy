@@ -9,6 +9,7 @@
     import LabeledValue from '$lib5/LabeledValue.svelte';
     import type { GroupResponse, GroupRequest } from '$api/types/groups.ts';
     import { PATTERN_GROUP } from '$utils/patterns';
+    import { untrack } from 'svelte';
 
     let {
         group,
@@ -25,7 +26,7 @@
 
     let err = $state('');
     let success = $state(false);
-    let name = $state(group.name);
+    let name = $state(untrack(() => group.name));
 
     $effect(() => {
         if (group.id) {

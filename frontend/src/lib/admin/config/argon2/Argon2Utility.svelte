@@ -11,6 +11,7 @@
     } from '$api/types/password_hashing.ts';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import type { Argon2ParamsResponse } from '$api/types/login_times.ts';
+    import { untrack } from 'svelte';
 
     let {
         params,
@@ -29,8 +30,8 @@
 
     let values = $state({
         targetTime: '1000',
-        mCost: params.m_cost.toString() || '32768',
-        pCost: params.p_cost.toString() || '2',
+        mCost: untrack(() => params.m_cost.toString() || '32768'),
+        pCost: untrack(() => params.p_cost.toString() || '2'),
     });
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {

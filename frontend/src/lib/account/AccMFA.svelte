@@ -1,6 +1,6 @@
 <script lang="ts">
     import Button from '$lib5/button/Button.svelte';
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import Input from '$lib5/form/Input.svelte';
     import { useI18n } from '$state/i18n.svelte.js';
     import { useSession } from '$state/session.svelte.js';
@@ -37,7 +37,7 @@
     let pwdErr = $state('');
     let msg = $state('');
     let showRegInput = $state(false);
-    let showDelete = $state(user.account_type === 'password');
+    let showDelete = $state(untrack(() => user.account_type) === 'password');
 
     let mfaPurpose: undefined | MfaPurpose = $state();
     let passkeyName = $state('');
