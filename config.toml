@@ -2251,7 +2251,7 @@ generate_self_signed = true
 #
 # default: false
 # overwritten by: USER_ENABLE_SELF_DELETE
-enable_self_delete = true
+#enable_self_delete = true
 
 [user_pictures]
 # The storage type for user pictures.

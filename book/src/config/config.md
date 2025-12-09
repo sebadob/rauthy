@@ -2,13 +2,13 @@
 
 This shows a full example config with (hopefully) every value nicely described.
 
-You can configure a lot here, but the most important variables you most-likely want to change when going into production
-are the following. Lines beginning with `!!!` are absolutely mandatory. The order matches their location in the
-reference config below.
+You can configure a lot here, but the most important variables you most-likely want to change when
+going into production are the following. Lines beginning with `!!!` are absolutely mandatory. The
+order matches their location in the reference config below.
 
 - `user_registration.enable`, `user_registration.domain_restriction`
 - `access.peer_ip_header_name` - when behind a CDN
-- the whole `[cluster]` + `[database]` + `[email]` sections
+- the whole `[cluster]` + `[database]` + `[email.*]` sections
 - `bootstrap.admin_email`
 - !!! `[encryption]`
 - `hashing.max_hash_threads` in combination with `server.http_workers`
@@ -17,10 +17,10 @@ reference config below.
 - !!! `webauthn.rp_id` + `webauthn.rp_origin` + `webauthn.rp_name`
 
 ```admonish caution
-When you go into production, make sure that you provide the included secrets / sensistive information in this
-file in an appropriate way. With docker, you can leave them inside this file (with proper access rights!), but when
-deploying with Kubernetes, either extract these values into Kubernetes secrets, or simply provide the whole config as
-one secret (my preferred approach).
+When you go into production, make sure that you provide the included secrets / sensistive 
+information in this file in an appropriate way. With docker, you can leave them inside this file 
+(with proper access rights!), but when deploying with Kubernetes, either extract these values into 
+Kubernetes secrets, or simply provide the whole config as one secret (my preferred approach).
 ```
 
 ```toml
@@ -1016,6 +1016,94 @@ smtp_url = 'localhost'
 # overwritten by: SMTP_DANGER_INSECURE
 #danger_insecure = false
 
+[email.jobs]
+
+# This section cares about email sending to users, which can
+# be done via the Admin UIs user page. These settings only
+# apply for custom emails sent via UI. All automatic mails like
+# a new user registration will be sent immediately.
+
+# If an open email job has not been updated for more than
+# `orphaned_seconds` seconds, it will be considered as orphaned.
+# In this case, the current cluster leader can pick up this
+# job and start after the last successful email sent.
+#
+# default: 300
+# overwritten by: EMAIL_JOBS_ORPHANED_SECONDS
+#orphaned_seconds = 300
+
+# The interval in seconds at which the scheduler for orphaned
+# or scheduled jobs should run and check. Smaller values
+# increase precision for scheduled jobs with sacrificing a bit
+# higher resource usage.
+#
+# default: 300
+# overwritten by: EMAIL_JOBS_SCHED_SECONDS
+#scheduler_interval_seconds = 300
+
+# Configures the batch size and delay between batches of users
+# for sending custom emails. The batch size configures the
+# batch of users being retrieved from the DB at once. This means,
+# if you have a filter on your email targets, the total amount
+# of emails sent can be lower of course. Users are filtered
+# on the client side to take the load off the DB.
+#
+# The default is pretty conservative to not have CPU and memory
+# spikes if there is a huge amount of users, and to not overwhelm
+# the SMTP server or reach rate limits.
+# Depending on the speed of your SMTP server, the conservative
+# default will handle ~5000 users in 1 hour. Even if it can
+# take a higher load, be careful with sending too quickly to not
+# trigger spam filters. Only increase throughput if needed.
+#
+# Note: If any error comes up during a batch, some users from this
+# very batch may get duplicate emails when it is retried after
+# being marked as orphaned.
+#
+# default: 3
+# overwritten by: EMAIL_JOBS_BATCH_SIZE
+#batch_size = 3
+#
+# Delay in ms between email batches. If you set this to 0,
+# Rauthy will send out emails as fast as possible. This
+# should be avoided, especially for high user counts.
+#
+# default: 2000
+# overwritten by: EMAIL_JOBS_BATCH_DELAY_MS
+#batch_delay_ms = 2000
+
+[email.tz_fmt]
+
+# The formatting of timestamps in emails can be configured
+# depending on the users' language.
+#
+# You can generally use all options from
+# https://docs.rs/chrono/0.4.42/chrono/format/strftime/index.html
+#
+# default: '%d.%m.%Y %T (%Z)'
+# overwritten by: TZ_FMT_DE
+#de = '%d.%m.%Y %T (%Z)'
+# default: '%m/%d/%Y %T (%Z)'
+# overwritten by: TZ_FMT_EN
+#en = '%m/%d/%Y %T (%Z)'
+# default: '%Y-%m-%d %T (%Z)'
+# overwritten by: TZ_FMT_KO
+#ko = '%Y-%m-%d %T (%Z)'
+# default: '%d.%m.%Y %T (%Z)'
+# overwritten by: TZ_FMT_NO
+#no = '%d.%m.%Y %T (%Z)'
+# default: '%d-%m-%Y %T (%Z)'
+# overwritten by: TZ_FMT_ZHHANS
+#zhhans = '%d-%m-%Y %T (%Z)'
+
+# If a user has no timezone set, you can configure a
+# fallback. This is useful for instance when you run a
+# regional deployment.
+#
+# default: 'UTC'
+# overwritten by: TZ_FALLBACK
+#tz_fallback = 'UTC'
+
 [encryption]
 # You need to define at least one valid encryption key.
 # These keys are used in various places, like for instance
@@ -1040,8 +1128,8 @@ smtp_url = 'localhost'
 #
 # overwritten by: ENC_KEYS - single String, \n separated values
 keys = [
-    'q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=',
-    'bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=',
+  'q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=',
+  'bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=',
 ]
 
 # This identifies the key ID from the `ENC_KEYS` list, that
@@ -1767,6 +1855,67 @@ admin_force_mfa = true
 # overwritten by: PAM_REMOTE_PASSWORD_TTL
 #remote_password_ttl = 120
 
+[pam.authorized_keys]
+
+# If set to `true`, a user with a linked PAM user can upload
+# public SSH keys via the account dashboard. This is disabled
+# by default, because the auto-expiring PAM user passwords are
+# the safer option.
+#
+# default: true
+# overwritten by: PAM_SSH_AUTHORIZED_KEYS_ENABLE
+#authorized_keys_enable = true
+
+# By default, even though these are "public" keys, the endpoint
+# to retrieve them quires authentication. This will be a `basic"
+# `Authentication` header in the form of `host_id:host_secret` of
+# any valid PAM host configured on Rauthy.
+# If you set it to `false`, the endpoint will be publicly available.
+# This is fine in the sense that you cannot leak any keys (they are
+# public keys anyway), but the endpoint could be abused for username
+# enumeration. Depending on the `include_comments` settings below,
+# you might even leak some more information that is not strictly
+# sensitive, but could be abused in some other way.
+#
+# default: true
+# overwritten by: PAM_SSH_AUTH_REQUIRED
+#auth_required = true
+
+# By default, SSH keys that have expired because of
+# `forced_key_expiry_days` below will be added to an internal
+# blacklist. This blacklist will be checked upon key add to
+# make sure keys were actually rotated and that not an old key
+# is added again.
+#
+# default: true
+# overwritten by: PAM_SSH_BLACKLIST_SSH_KEYS
+#blacklist_used_keys = true
+
+# Configure the days after which blacklisted SSH keys will be
+# cleaned up.
+#
+# default: 730
+# overwritten by: PAM_SSH_BLACKLIST_CLEANUP_DAYS
+#blacklist_cleanup_days = 730
+
+# You can include comments in the public response for the
+# `authorized_keys` for each user. This can be helpful for
+# debugging, but should generally be disabled to not
+# disclose any possibly somewhat "internal" information.
+#
+# default: false
+# overwritten by: PAM_SSH_INCLUDE_COMMENTS
+#include_comments = false
+
+# You can enforce an SSH key expiry in days. After this time,
+# users must generate new keys. This enforces a key rotation
+# with is usually overlooked especially for SSH keys.
+# Set to `0` to disable the forced expiry.
+#
+# default: 365
+# overwritten by: PAM_SSH_KEY_EXP_DAYS
+#forced_key_expiry_days = 365
+
 [pow]
 # The difficulty for a Proof-of-Work (PoW).
 # The default is 20, which is reasonable for modern processors.
@@ -2055,6 +2204,19 @@ key_path = 'tls/key.pem'
 # overwritten by: TOS_ACCEPT_TIMEOUT
 #accept_timeout = 900
 
+[user_delete]
+
+# You can enable user self-deletion via the Account Dashboard.
+# It is disabled by default, because especially if you use things like
+# SCIM, the deletion of a user might trigger a series of events which
+# will delete other important data as well, that might be linked to a
+# user account, and you want to clean up manually before a user is being
+# fully deleted.
+#
+# default: false
+# overwritten by: USER_ENABLE_SELF_DELETE
+#enable_self_delete = true
+
 [user_pictures]
 # The storage type for user pictures.
 # By default, they are saved inside the Database, which is not ideal.
@@ -2162,6 +2324,100 @@ storage_type = 'db'
 # default: false
 # overwritten by: USER_REG_OPEN_REDIRECT
 #allow_open_redirect = false
+
+[user_values]
+
+# In this section, you can configure the requirements for different
+# user values to adjust them to your needs. The `preferred_username`
+# as a special value provide some additional options.
+# The `email` is and always will be mandatory.
+#
+# A value of `hidden` will only hide these values for normal users
+# in the account dashboard. An admin will still see all values.
+#
+# You can set one of the following values:
+# - required
+# - optional
+# - hidden
+
+# default: 'required'
+#given_name = 'required'
+# default: 'optional'
+#family_name = 'optional'
+# default: 'optional'
+#birthdate = 'optional'
+# default: 'optional'
+#street = 'optional'
+# default: 'optional'
+#zip = 'optional'
+# default: 'optional'
+#city = 'optional'
+# default: 'optional'
+#country = 'optional'
+# default: 'optional'
+#phone = 'optional'
+# default: 'optional'
+#tz = 'optional'
+
+[user_values.preferred_username]
+
+# If the `preferred_username` is not set for a given user, the
+# `email` will be used as a fallback. This can happen, if it is
+# not set to `required`, or if you had it optional before and
+# then changed it, while the user may have not updated it yet
+# according to the new policy.
+#
+# one of: required, optional, hidden
+# default: 'optional'
+#preferred_username = 'optional'
+
+# The `preferred_username` is an unstable claim by the OIDC RFC.
+# This means it MUST NOT be trusted to be unique, be a stable
+# map / uid for a user, or anything like that. It is "just
+# another value" and should be treated like that.
+#
+# However, `preferred_username`s from Rauthy will always be
+# guaranteed to be unique. You can define if these usernames
+# are immutable once they are set, which is the default, or if
+# users can change them freely at any time.
+#
+# default: true
+#immutable = true
+
+# Provide an array of blacklisted names.
+#
+# CAUTION: Provide all these names as lowercase! The value
+#  submitted via API will be converted to lowercase and
+#  then compared to each entry in this list.
+#
+# default: ['admin', 'administrator', 'root']
+#blacklist = ['admin', 'administrator', 'root']
+
+# You can define the validation regex / pattern.
+#
+# The `pattern_html` it will be sent to the frontend as a
+# String value dynamically. It must be formatted in a way,
+# that it will work as a
+# [`pattern` attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/pattern)
+# after the conversion. If you are unsure if it works, check
+# your developer tools console. You will see an error log
+# if the conversion fails.
+# NOTE: These are NOT Javascript regexes!
+#
+# By default, the validation matches the Linux username regex,
+# but you may want to increase the minimum characters for
+# instance.
+#
+# default: '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
+#regex_rust = '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
+# default: '^[a-z][a-z0-9_\-]{1,61}$'
+#pattern_html = '^[a-z][a-z0-9_\-]{1,61}$'
+
+# If a user does not have a `preferred_username`, the `email`
+# can be used as a fallback value for the id token.
+#
+# default: true
+#email_fallback = true
 
 [webauthn]
 # The 'Relaying Party (RP) ID' - effective domain name.
