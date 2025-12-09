@@ -189,7 +189,8 @@
                 max="32"
                 width={inputWidth}
             />
-
+        </div>
+            <div class="row">
             <Input
                 typ="number"
                 bind:value={policy.valid_days}
@@ -202,7 +203,7 @@
             />
         </div>
 
-        <div class="flex gap-05">
+        <div class="btn flex gap-05">
             <Button type="submit">
                 {t.common.save}
             </Button>
@@ -223,5 +224,10 @@
 <style>
     .row {
         display: flex;
+        column-gap: 1rem;
+    }
+    
+    .btn {
+        margin-top: 1rem;
     }
 </style>
