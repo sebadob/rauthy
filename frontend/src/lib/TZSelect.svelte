@@ -40,7 +40,6 @@
     }
 
     .opts {
-        border-bottom: 1px solid hsl(var(--bg-high));
         margin: 0.33rem 0;
     }
 </style>
