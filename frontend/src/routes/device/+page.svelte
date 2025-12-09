@@ -128,7 +128,7 @@
                         pattern={PATTERN_ALNUM}
                     />
 
-                    <div>
+                    <div class="btn">
                         <Button onclick={() => onSubmit('pending')} {isLoading}>
                             {t.device.submit}
                         </Button>
@@ -179,6 +179,10 @@
 
     li {
         margin-left: 1rem;
+    }
+
+    .btn {
+        margin-top: 0.5rem;
     }
 
     .container {

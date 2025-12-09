@@ -111,7 +111,7 @@
     }
 </script>
 
-<div style:width>
+<div class="container" style:width>
     <div aria-live="assertive" class="label">
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
@@ -180,6 +180,10 @@
 </div>
 
 <style>
+    .container {
+        margin: 0.5rem 0;
+    }
+
     .input-row {
         display: flex;
         flex-direction: row;
@@ -192,9 +196,9 @@
 
     .label {
         width: 100%;
-        margin-bottom: -0.3rem;
+        margin-bottom: -0.35rem;
         padding-left: 0.1rem;
-        padding-top: 0.6rem;
+        /*padding-top: 0.6rem;*/
     }
 
     .error {

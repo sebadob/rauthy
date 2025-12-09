@@ -12,7 +12,7 @@
     import { useI18n } from '$state/i18n.svelte';
     import IconCheck from '$icons/IconCheck.svelte';
 
-    const inputWidth = '160px';
+    const inputWidth = '14rem';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -226,6 +226,7 @@
     .row {
         display: flex;
         column-gap: 1rem;
+        flex-wrap: wrap;
     }
 
     .btn {

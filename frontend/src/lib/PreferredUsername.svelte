@@ -78,6 +78,10 @@
 
 {#if config.preferred_username !== 'hidden'}
     <div class="container">
+        <div class="label font-label" data-required={required}>
+            {t.account.preferredUsername.preferredUsername}
+        </div>
+
         <div class="value" data-required={required && !preferred_username}>
             <div class="name">
                 {preferred_username || '-'}
@@ -160,14 +164,14 @@
                 {/if}
             </div>
         </div>
-
-        <div class="label" data-required={required}>
-            {t.account.preferredUsername.preferredUsername}
-        </div>
     </div>
 {/if}
 
 <style>
+    .btn {
+        margin-top: -0.25rem;
+    }
+
     .btnModal {
         margin-top: 1rem;
         display: flex;
@@ -180,7 +184,7 @@
     }
 
     .container {
-        margin: 0.75rem 0;
+        margin: 0.9rem 0;
     }
 
     .desc {
@@ -192,14 +196,14 @@
     }
 
     .immutableInfo {
+        margin-top: 0.15rem;
+        margin-right: 0.2rem;
         color: hsla(var(--text) / 0.5);
         transform: translateY(0.25rem);
     }
 
     .label {
-        margin-top: -0.25rem;
-        margin-left: 0.5rem;
-        color: hsl(var(--text) / 0.8);
+        margin: -0.25rem 0 0.1rem 0.1rem;
         font-size: 0.9rem;
     }
 
@@ -213,10 +217,12 @@
     }
 
     .value {
+        padding-top: 0.15rem;
         height: 2rem;
         display: flex;
         justify-content: space-between;
-        border-bottom: 1px solid hsl(var(--bg-high));
+        border: 1px solid hsl(var(--bg-high));
+        border-radius: var(--border-radius);
     }
 
     .value[data-required='true'] {

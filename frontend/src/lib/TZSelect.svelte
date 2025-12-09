@@ -34,12 +34,12 @@
     .label {
         margin-bottom: -0.3rem;
         padding-left: 0.1rem;
-        padding-top: 0.1rem;
+        padding-top: 0.15rem;
         color: hsl(var(--text));
         font-size: 0.9rem;
     }
 
     .opts {
-        margin: 0.33rem 0;
+        margin: 0.5rem 0;
     }
 </style>

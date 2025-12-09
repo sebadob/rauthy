@@ -20,6 +20,7 @@
         min = '1900-01-01',
         max = '2100-01-01',
         required,
+        openTop = false,
 
         onEnter,
         onLeft,
@@ -252,8 +253,8 @@
             <div class="absolute indicator">
                 <Popover
                     ariaLabel="Show Popover Example"
-                    offsetLeft="-7.5rem"
-                    offsetTop="-.2rem"
+                    offsetLeft="-7.4rem"
+                    offsetTop={openTop ? '-16rem' : '.1rem'}
                     bind:close
                     {onToggle}
                     btnInvisible
@@ -409,8 +410,7 @@
     .label {
         width: 100%;
         margin-bottom: -0.3rem;
-        padding-left: 0.1rem;
-        padding-top: 0.1rem;
+        padding: 0.1rem;
     }
 
     .month {

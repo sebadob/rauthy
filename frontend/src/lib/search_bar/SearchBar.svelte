@@ -177,14 +177,9 @@
     }
 
     .options {
-        padding: 0 0.3rem;
-        border-right: 1px solid hsl(var(--bg-high));
-        border-radius: 2px 0 0 2px;
-    }
-
-    .options :global(.btn) {
-        border: none;
-        border-radius: 2px 0 0 2px;
+        margin-left: 0.1rem;
         background: hsl(var(--bg-high));
+        border-right: 1px solid hsl(var(--bg-high));
+        border-radius: var(--border-radius) 0 0 var(--border-radius);
     }
 </style>

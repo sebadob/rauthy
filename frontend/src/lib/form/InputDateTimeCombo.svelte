@@ -31,6 +31,7 @@
 
         withDelete,
         withTime,
+        openTop = false,
     }: PropsInputDateCombo = $props();
 
     let t = useI18n();
@@ -59,6 +60,7 @@
                 {onRight}
                 {onUp}
                 {onDown}
+                {openTop}
             />
             {#if withTime}
                 <InputTime
@@ -70,6 +72,7 @@
                     max={timeMax}
                     {disabled}
                     {required}
+                    {openTop}
                 />
             {/if}
         </div>
