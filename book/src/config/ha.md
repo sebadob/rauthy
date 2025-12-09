@@ -2,44 +2,55 @@
 
 Rauthy is capable of running in a High Availability Mode (HA).
 
-Some values, like authentication codes for instance, do live in the cache only. Because of this, all instances create
-and share a single HA cache layer, which means at the same time, that you cannot just scale up the replicas infinitely
-without adjusting the config. The optimal amount of replicas for a HA mode would be 3, or if you need even higher
-resilience 5. More replicas should work just fine, but at some point, the write throughput will degrade.
+Some values, like authentication codes for instance, do live in the cache only. Because of this, all
+instances create and share a single HA cache layer, which means at the same time, that you cannot
+just scale up the replicas infinitely without adjusting the config. The optimal amount of replicas
+for a HA mode would be 3, or if you need even higher resilience 5. More replicas should work just
+fine, but at some point, the write throughput will degrade.
 
-The Cache layer uses [Hiqlite](https://github.com/sebadob/hiqlite). It uses the Raft algorithm under the hood to achieve
-consistency.
+The Cache layer uses [Hiqlite](https://github.com/sebadob/hiqlite). It uses the Raft algorithm under
+the hood to achieve consistency.
 
 ```admonish caution
-Even though everything is authenticated, you should not expose the
-Hiqlite ports to the public, if not really necessary for some reason. You configure these ports with the `cluster.nodes`
-config value.
+Even though everything is authenticated, you should not expose the Hiqlite ports to the public, if 
+not really necessary for some reason. You configure these ports with the `cluster.nodes` config 
+value.
+```
+
+```admonish note
+Some container runtimes will force-kill very quickly. When Rauthy is deployed as a HA cluster, it
+will usually take at least 15 seconds to do a graceful shutdown. Depending on the config and current
+cluster state (maybe there is a leader election ongoing and so on), it may take up to 25 - 30 
+seconds.
+
+<b>Makre sure to adjust your container config.</b>
 ```
 
 ## Configuration
 
-Earlier versions of Rauthy have been using [redhac](https://github.com/sebadob/redhac) for the HA cache layer. While
-`redhac` was working fine, it had a few design issues I wanted to get rid of. Since `v0.26.0`, Rauthy uses the
-above-mentioned [Hiqlite](https://github.com/sebadob/hiqlite) instead. You only need to configure a few variables.
+Earlier versions of Rauthy have been using [redhac](https://github.com/sebadob/redhac) for the HA
+cache layer. While `redhac` was working fine, it had a few design issues I wanted to get rid of.
+Since `v0.26.0`, Rauthy uses the above-mentioned [Hiqlite](https://github.com/sebadob/hiqlite)
+instead. You only need to configure a few variables.
 
 ```admonish caution
-Even when using Postgres as your DB of choice, in HA deployments, you should always provide persistent volumes to your 
-Rauthy Pods. One reason is that it smoothes out rolling releases, because even though you can keep the Cache Raft 
-in-memory only because it can handle these situations, even when using Postgres, Rauthy will create at least an empty 
-SQLite cache layer. If this loses state between restarts and they happen too fast for instance, this can end up in 
-crashes.
+Even when using Postgres as your DB of choice, in HA deployments, you should always provide 
+persistent volumes to your Rauthy Pods. One reason is that it smoothes out rolling releases, because 
+even though you can keep the Cache Raft in-memory only because it can handle these situations, even 
+when using Postgres, Rauthy will create at least an empty SQLite cache layer. If this loses state 
+between restarts and they happen too fast for instance, this can end up in crashes.
 
-It is also very recommended to persist the cache on disk anyway (which is the default), to keep things like not yet used 
-Auth Codes between restarts.
+It is also very recommended to persist the cache on disk anyway (which is the default), to keep 
+things like not yet used Auth Codes between restarts.
 ```
 
 ### `node_id`
 
-The `cluster.node_id` is mandatory, even for a single replica deployment with only a single node in `cluster.nodes`.
-If you deploy Rauthy as a StatefulSet inside Kubernetes, you can ignore this value and just set `HQL_NODE_ID_FROM`
-below. If you deploy anywhere else, or you are not using a StatefulSet, you need to set the `node_id_from` to tell
-Rauthy
-which node of the Raft cluster it should be.
+The `cluster.node_id` is mandatory, even for a single replica deployment with only a single node in
+`cluster.nodes`. If you deploy Rauthy as a StatefulSet inside Kubernetes, you can ignore this value
+and just set `HQL_NODE_ID_FROM` below. If you deploy anywhere else, or you are not using a
+StatefulSet, you need to set the `node_id_from` to tell Rauthy which node of the Raft cluster it
+should be.
 
 ```toml
 [cluster]
@@ -57,8 +68,8 @@ node_id = 1
 ### `node_id_from`
 
 If you deploy to Kubernetes as a StatefulSet, you should ignore the `cluster.node_id` and just set
-`cluster.node_id_from = "k8s"`. This will parse the correct NodeID from the Pod hostname, so you don't have to worry
-about it.
+`cluster.node_id_from = "k8s"`. This will parse the correct NodeID from the Pod hostname, so you
+don't have to worry about it.
 
 ```toml
 
@@ -73,8 +84,8 @@ node_id_from = "k8s"
 
 ### `nodes`
 
-This value defines the Raft members. It must be given even if you just deploy a single instance. The description from
-the reference config should be clear enough:
+This value defines the Raft members. It must be given even if you just deploy a single instance. The
+description from the reference config should be clear enough:
 
 ```toml
 [cluster]
@@ -86,17 +97,17 @@ the reference config should be clear enough:
 # default: ["1 localhost:8100 localhost:8200"]
 # overwritten by: HQL_NODES
 nodes = [
-    "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
+  "1 localhost:8100 localhost:8200",
+  #    "2 localhost:8101 localhost:8201",
+  #    "3 localhost:8102 localhost:8202",
 ]
 ```
 
 ### `secret_raft` + `secret_api`
 
-Since you need both `cluster.secret_raft` and `cluster.secret_api` in any case, there is nothing to change here. These
-define the secrets being used internally to authenticate against the Raft or the API server for `Hiqlite`.
-You can generate safe values with for instance
+Since you need both `cluster.secret_raft` and `cluster.secret_api` in any case, there is nothing to
+change here. These define the secrets being used internally to authenticate against the Raft or the
+API server for `Hiqlite`. You can generate safe values with for instance
 
 ```
 cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
@@ -104,9 +115,10 @@ cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
 
 ### TLS
 
-If you are using a service mesh like for instance [linkerd](https://linkerd.io/) which creates mTLS connections between
-all pods by default, you can use the HA cache with just plain HTTP, since `linkerd` will encapsulate the traffic anyway.
-In this case, there is nothing to do.
+If you are using a service mesh like for instance [linkerd](https://linkerd.io/) which creates mTLS
+connections between all pods by default, you can use the HA cache with just plain HTTP, since
+`linkerd` will encapsulate the traffic anyway. In this case, there is nothing to do.
 
-However, if you do not have encryption between pods by default, I would highly recommend, that you use [TLS](tls.md).
+However, if you do not have encryption between pods by default, I would highly recommend, that you
+use [TLS](tls.md).
 

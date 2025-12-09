@@ -169,12 +169,13 @@
                     <main>
                         <h1 id="high-availability"><a class="header" href="#high-availability">High Availability</a></h1>
 <p>Rauthy is capable of running in a High Availability Mode (HA).</p>
-<p>Some values, like authentication codes for instance, do live in the cache only. Because of this, all instances create
-and share a single HA cache layer, which means at the same time, that you cannot just scale up the replicas infinitely
-without adjusting the config. The optimal amount of replicas for a HA mode would be 3, or if you need even higher
-resilience 5. More replicas should work just fine, but at some point, the write throughput will degrade.</p>
-<p>The Cache layer uses <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>. It uses the Raft algorithm under the hood to achieve
-consistency.</p>
+<p>Some values, like authentication codes for instance, do live in the cache only. Because of this, all
+instances create and share a single HA cache layer, which means at the same time, that you cannot
+just scale up the replicas infinitely without adjusting the config. The optimal amount of replicas
+for a HA mode would be 3, or if you need even higher resilience 5. More replicas should work just
+fine, but at some point, the write throughput will degrade.</p>
+<p>The Cache layer uses <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>. It uses the Raft algorithm under
+the hood to achieve consistency.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -183,15 +184,31 @@ consistency.</p>
 <a class="admonition-anchor-link" href="#admonition-caution"></a>
 </div>
 <div>
-<p>Even though everything is authenticated, you should not expose the
-Hiqlite ports to the public, if not really necessary for some reason. You configure these ports with the <code>cluster.nodes</code>
-config value.</p>
+<p>Even though everything is authenticated, you should not expose the Hiqlite ports to the public, if
+not really necessary for some reason. You configure these ports with the <code>cluster.nodes</code> config
+value.</p>
+</div>
+</div>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
+</div>
+<div>
+<p>Some container runtimes will force-kill very quickly. When Rauthy is deployed as a HA cluster, it
+will usually take at least 15 seconds to do a graceful shutdown. Depending on the config and current
+cluster state (maybe there is a leader election ongoing and so on), it may take up to 25 - 30
+seconds.</p>
+<p><b>Makre sure to adjust your container config.</b></p>
 </div>
 </div>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<p>Earlier versions of Rauthy have been using <a href="https://github.com/sebadob/redhac">redhac</a> for the HA cache layer. While
-<code>redhac</code> was working fine, it had a few design issues I wanted to get rid of. Since <code>v0.26.0</code>, Rauthy uses the
-above-mentioned <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> instead. You only need to configure a few variables.</p>
+<p>Earlier versions of Rauthy have been using <a href="https://github.com/sebadob/redhac">redhac</a> for the HA
+cache layer. While <code>redhac</code> was working fine, it had a few design issues I wanted to get rid of.
+Since <code>v0.26.0</code>, Rauthy uses the above-mentioned <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>
+instead. You only need to configure a few variables.</p>
 <div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">
 <div class="admonition-title">
 <div id="admonition-caution-1-title">
@@ -200,21 +217,21 @@ above-mentioned <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> instead
 <a class="admonition-anchor-link" href="#admonition-caution-1"></a>
 </div>
 <div>
-<p>Even when using Postgres as your DB of choice, in HA deployments, you should always provide persistent volumes to your
-Rauthy Pods. One reason is that it smoothes out rolling releases, because even though you can keep the Cache Raft
-in-memory only because it can handle these situations, even when using Postgres, Rauthy will create at least an empty
-SQLite cache layer. If this loses state between restarts and they happen too fast for instance, this can end up in
-crashes.</p>
-<p>It is also very recommended to persist the cache on disk anyway (which is the default), to keep things like not yet used
-Auth Codes between restarts.</p>
+<p>Even when using Postgres as your DB of choice, in HA deployments, you should always provide
+persistent volumes to your Rauthy Pods. One reason is that it smoothes out rolling releases, because
+even though you can keep the Cache Raft in-memory only because it can handle these situations, even
+when using Postgres, Rauthy will create at least an empty SQLite cache layer. If this loses state
+between restarts and they happen too fast for instance, this can end up in crashes.</p>
+<p>It is also very recommended to persist the cache on disk anyway (which is the default), to keep
+things like not yet used Auth Codes between restarts.</p>
 </div>
 </div>
 <h3 id="node_id"><a class="header" href="#node_id"><code>node_id</code></a></h3>
-<p>The <code>cluster.node_id</code> is mandatory, even for a single replica deployment with only a single node in <code>cluster.nodes</code>.
-If you deploy Rauthy as a StatefulSet inside Kubernetes, you can ignore this value and just set <code>HQL_NODE_ID_FROM</code>
-below. If you deploy anywhere else, or you are not using a StatefulSet, you need to set the <code>node_id_from</code> to tell
-Rauthy
-which node of the Raft cluster it should be.</p>
+<p>The <code>cluster.node_id</code> is mandatory, even for a single replica deployment with only a single node in
+<code>cluster.nodes</code>. If you deploy Rauthy as a StatefulSet inside Kubernetes, you can ignore this value
+and just set <code>HQL_NODE_ID_FROM</code> below. If you deploy anywhere else, or you are not using a
+StatefulSet, you need to set the <code>node_id_from</code> to tell Rauthy which node of the Raft cluster it
+should be.</p>
 <pre><code class="language-toml">[cluster]
 # The node id must exist in the nodes and there must always be
 # at least a node with ID 1
@@ -228,8 +245,8 @@ node_id = 1
 </code></pre>
 <h3 id="node_id_from"><a class="header" href="#node_id_from"><code>node_id_from</code></a></h3>
 <p>If you deploy to Kubernetes as a StatefulSet, you should ignore the <code>cluster.node_id</code> and just set
-<code>cluster.node_id_from = "k8s"</code>. This will parse the correct NodeID from the Pod hostname, so you don't have to worry
-about it.</p>
+<code>cluster.node_id_from = "k8s"</code>. This will parse the correct NodeID from the Pod hostname, so you
+don't have to worry about it.</p>
 <pre><code class="language-toml">
 [cluster]
 # Can be set to 'k8s' to try to split off the node id from the hostname
@@ -240,8 +257,8 @@ about it.</p>
 node_id_from = "k8s"
 </code></pre>
 <h3 id="nodes"><a class="header" href="#nodes"><code>nodes</code></a></h3>
-<p>This value defines the Raft members. It must be given even if you just deploy a single instance. The description from
-the reference config should be clear enough:</p>
+<p>This value defines the Raft members. It must be given even if you just deploy a single instance. The
+description from the reference config should be clear enough:</p>
 <pre><code class="language-toml">[cluster]
 # All cluster member nodes. For a single instance deployment,
 # `"1 localhost:8100 localhost:8200"` will work just fine.
@@ -251,22 +268,23 @@ the reference config should be clear enough:</p>
 # default: ["1 localhost:8100 localhost:8200"]
 # overwritten by: HQL_NODES
 nodes = [
-    "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
+  "1 localhost:8100 localhost:8200",
+  #    "2 localhost:8101 localhost:8201",
+  #    "3 localhost:8102 localhost:8202",
 ]
 </code></pre>
 <h3 id="secret_raft--secret_api"><a class="header" href="#secret_raft--secret_api"><code>secret_raft</code> + <code>secret_api</code></a></h3>
-<p>Since you need both <code>cluster.secret_raft</code> and <code>cluster.secret_api</code> in any case, there is nothing to change here. These
-define the secrets being used internally to authenticate against the Raft or the API server for <code>Hiqlite</code>.
-You can generate safe values with for instance</p>
+<p>Since you need both <code>cluster.secret_raft</code> and <code>cluster.secret_api</code> in any case, there is nothing to
+change here. These define the secrets being used internally to authenticate against the Raft or the
+API server for <code>Hiqlite</code>. You can generate safe values with for instance</p>
 <pre><code>cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
 </code></pre>
 <h3 id="tls"><a class="header" href="#tls">TLS</a></h3>
-<p>If you are using a service mesh like for instance <a href="https://linkerd.io/">linkerd</a> which creates mTLS connections between
-all pods by default, you can use the HA cache with just plain HTTP, since <code>linkerd</code> will encapsulate the traffic anyway.
-In this case, there is nothing to do.</p>
-<p>However, if you do not have encryption between pods by default, I would highly recommend, that you use <a href="tls.html">TLS</a>.</p>
+<p>If you are using a service mesh like for instance <a href="https://linkerd.io/">linkerd</a> which creates mTLS
+connections between all pods by default, you can use the HA cache with just plain HTTP, since
+<code>linkerd</code> will encapsulate the traffic anyway. In this case, there is nothing to do.</p>
+<p>However, if you do not have encryption between pods by default, I would highly recommend, that you
+use <a href="tls.html">TLS</a>.</p>
 
                     </main>
 

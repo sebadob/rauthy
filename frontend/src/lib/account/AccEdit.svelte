@@ -175,6 +175,7 @@
                             bind:value={user.user_values.birthdate}
                             required={config.birthdate === 'required'}
                             withDelete
+                            openTop
                         />
                     {/if}
                     {#if config.tz !== 'hidden'}
@@ -307,6 +308,7 @@
 
 <style>
     .bottom {
+        margin-top: 0.35rem;
         display: flex;
         align-items: center;
         gap: 1rem;

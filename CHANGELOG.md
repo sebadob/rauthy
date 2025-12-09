@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.33.0
 
 ### Breaking
 
@@ -510,54 +510,54 @@ ports before ready, like so:
 apiVersion: v1
 kind: Service
 metadata:
-    name: rauthy-headless
+  name: rauthy-headless
 spec:
-    type: ClusterIP
-    clusterIP: None
-    # Make sure to only publish them on the headless service 
-    # and NOT the one you are using via your reverse proxy!
-    publishNotReadyAddresses: true
-    sessionAffinity: None
-    selector:
-        app: rauthy
-    ports:
-        -   name: hiqlite-raft
-            protocol: TCP
-            port: 8100
-            targetPort: 8100
-        -   name: hiqlite-api
-            protocol: TCP
-            port: 8200
-            targetPort: 8200
+  type: ClusterIP
+  clusterIP: None
+  # Make sure to only publish them on the headless service 
+  # and NOT the one you are using via your reverse proxy!
+  publishNotReadyAddresses: true
+  sessionAffinity: None
+  selector:
+    app: rauthy
+  ports:
+    - name: hiqlite-raft
+      protocol: TCP
+      port: 8100
+      targetPort: 8100
+    - name: hiqlite-api
+      protocol: TCP
+      port: 8200
+      targetPort: 8200
 ```
 
 Then you can make use of the new readiness check in the `StatefulSet`:
 
 ```yaml
 readinessProbe:
-    httpGet:
-        scheme: HTTP
-        # Hiqlite API port
-        port: 8200
-        path: /ready
-    initialDelaySeconds: 5
-    # Do NOT increase this period, because otherwise K8s may not catch
-    # a shutting down pod fast enough and may keep routing requests to
-    # it while is will be unable to handle them properly because of
-    # the shutdown.
-    periodSeconds: 3
-    # We may get a single failure during leader switches
-    failureThreshold: 2
+  httpGet:
+    scheme: HTTP
+    # Hiqlite API port
+    port: 8200
+    path: /ready
+  initialDelaySeconds: 5
+  # Do NOT increase this period, because otherwise K8s may not catch
+  # a shutting down pod fast enough and may keep routing requests to
+  # it while is will be unable to handle them properly because of
+  # the shutdown.
+  periodSeconds: 3
+  # We may get a single failure during leader switches
+  failureThreshold: 2
 livenessProbe:
-    httpGet:
-        scheme: HTTP
-        # Rauthy API port
-        port: 8080
-        path: /auth/v1/health
-    initialDelaySeconds: 60
-    periodSeconds: 30
-    # We may get a single failure during leader switches
-    failureThreshold: 2
+  httpGet:
+    scheme: HTTP
+    # Rauthy API port
+    port: 8080
+    path: /auth/v1/health
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  # We may get a single failure during leader switches
+  failureThreshold: 2
 ```
 
 Apart from that, the `hiqlite-wal` had a bug where the `last_purged_log_id` was overwritten with
@@ -3589,8 +3589,8 @@ different values now:
 
 ```rust
 struct HealthResponse {
-    db_healthy: bool,
-    cache_healthy: bool,
+  db_healthy: bool,
+  cache_healthy: bool,
 }
 ```
 
@@ -5891,11 +5891,11 @@ flow will be started:
 
 - A user changes the E-Mail in the Account view.
 - The E-Mail will not be updated immediately, but:
-    - A verification mail will be sent to the new address with an expiring magic link.
-    - After the user clicked the link in the mail, the new address will be verified.
+  - A verification mail will be sent to the new address with an expiring magic link.
+  - After the user clicked the link in the mail, the new address will be verified.
 - Once a user verifies the new E-Mail:
-    - The address will finally be updated in the users profile.
-    - Information E-Mails about the change will be sent to the old and the new address
+  - The address will finally be updated in the users profile.
+  - Information E-Mails about the change will be sent to the old and the new address
 
 #### `EMAIL_SUB_PREFIX` config variable
 
@@ -6003,9 +6003,9 @@ Webauthn / FIDO 2 updates and features coming in the near future.
 - Removed duplicate `sub` claims from JWT ID Tokens
   [a35db33](https://github.com/sebadob/rauthy/commit/a35db330ff7c6ee680a7d834f08a3db077e08073)
 - Small UI improvements:
-    - Show loading indicator when doing a password change
-    - The Loading animation was changes from JS to a CSS animation
-      [abd0a06](https://github.com/sebadob/rauthy/commit/abd0a06280de4fedef9028f142b6e844bf132d80)
+  - Show loading indicator when doing a password change
+  - The Loading animation was changes from JS to a CSS animation
+    [abd0a06](https://github.com/sebadob/rauthy/commit/abd0a06280de4fedef9028f142b6e844bf132d80)
 - Upgrades to actix-web 4.4 + rustls 0.21 (and all other minor upgrades)
   [070a453](https://github.com/sebadob/rauthy/commit/070a453aaa584ff8d024284de91477626fe5ea6c)
 
@@ -6041,10 +6041,10 @@ than the docker hub free tier is.
   [77886a9](https://github.com/sebadob/rauthy/commit/77886a958655b721e96c092df739627d0d5d9172)
   [1061fc2](https://github.com/sebadob/rauthy/commit/1061fc212bb684b153ae99f1439ea312091e32cd)
 - Update the users language in different places:
-    - Language switch in the Account page
-    - Fetch users chosen language from User Registration
-    - Selector from Registration in Admin UI
-      [5ade849](https://github.com/sebadob/rauthy/commit/5ade849dd5a0b139c73a61b8fefde03eff3036bf)
+  - Language switch in the Account page
+  - Fetch users chosen language from User Registration
+  - Selector from Registration in Admin UI
+    [5ade849](https://github.com/sebadob/rauthy/commit/5ade849dd5a0b139c73a61b8fefde03eff3036bf)
 
 ## v0.14.2
 

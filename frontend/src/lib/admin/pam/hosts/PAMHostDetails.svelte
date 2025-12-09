@@ -20,6 +20,7 @@
     import { useI18n } from '$state/i18n.svelte';
     import IconCheck from '$icons/IconCheck.svelte';
     import PAMHostSecret from '$lib/admin/pam/hosts/PAMHostSecret.svelte';
+    import { untrack } from 'svelte';
 
     let {
         hostSimple,
@@ -35,7 +36,7 @@
     let ta = useI18nAdmin();
 
     const widthAreas = 'min(min(100%, 40rem), calc(100dvw - .5rem))';
-    const groupNames = groups.filter(g => g.typ === 'host').map(g => g.name);
+    const groupNames = untrack(() => groups.filter(g => g.typ === 'host').map(g => g.name));
 
     let success = $state(false);
     let err = $state('');
@@ -43,7 +44,7 @@
     let url = $derived(`/auth/v1/pam/hosts/${hostSimple.id}`);
 
     let host: undefined | PamHostDetailsResponse = $state();
-    let groupName = $state(groups.find(g => g.id === host?.gid)?.name || '');
+    let groupName = $state(untrack(() => groups.find(g => g.id === host?.gid)?.name || ''));
 
     $effect(() => {
         fetchDetails();

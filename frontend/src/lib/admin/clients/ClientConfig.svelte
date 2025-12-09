@@ -28,6 +28,7 @@
     import { slide } from 'svelte/transition';
     import Options from '$lib5/Options.svelte';
     import InputPassword from '$lib/form/InputPassword.svelte';
+    import { untrack } from 'svelte';
 
     let {
         client = $bindable(),
@@ -87,22 +88,26 @@
     let authCodeLifetime: string = $state(client.auth_code_lifetime.toString());
 
     let scopes: SelectItem[] = $state(
-        scopesAll.map(name => {
-            let i: SelectItem = {
-                name,
-                selected: client.scopes.includes(name) || false,
-            };
-            return i;
-        }),
+        untrack(() =>
+            scopesAll.map(name => {
+                let i: SelectItem = {
+                    name,
+                    selected: client.scopes.includes(name) || false,
+                };
+                return i;
+            }),
+        ),
     );
     let defaultScopes: SelectItem[] = $state(
-        scopesAll.map(name => {
-            let i: SelectItem = {
-                name,
-                selected: client.default_scopes.includes(name) || false,
-            };
-            return i;
-        }),
+        untrack(() =>
+            scopesAll.map(name => {
+                let i: SelectItem = {
+                    name,
+                    selected: client.default_scopes.includes(name) || false,
+                };
+                return i;
+            }),
+        ),
     );
     let challenges = $state({
         plain: client.challenges?.includes('plain') || false,

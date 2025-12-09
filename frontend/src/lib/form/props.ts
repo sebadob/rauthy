@@ -8,6 +8,7 @@ export interface PropsInputDate {
     min?: string;
     max?: string;
     required?: boolean;
+    openTop?: boolean;
 
     onEnter?: () => void;
     onLeft?: () => void;
@@ -25,4 +26,5 @@ export interface PropsInputDateCombo extends PropsInputDate {
 
     withDelete?: boolean;
     withTime?: boolean;
+    openTop?: boolean;
 }

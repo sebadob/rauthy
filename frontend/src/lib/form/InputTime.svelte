@@ -19,6 +19,7 @@
         max = '23:59',
         required,
         width,
+        openTop = false,
 
         onEnter,
         onLeft,
@@ -37,6 +38,7 @@
         max?: string;
         required?: boolean;
         width?: string;
+        openTop?: boolean;
 
         onEnter?: () => void;
         onLeft?: () => void;
@@ -209,6 +211,12 @@
 </script>
 
 <div style:width>
+    <div aria-live="assertive" class="label">
+        <label for={id} class="font-label noselect" data-required={required}>
+            {label}
+        </label>
+    </div>
+
     <div class="flex">
         <input
             bind:this={refInput}
@@ -237,7 +245,7 @@
                 <Popover
                     ariaLabel="Show Popover Example"
                     offsetLeft="-3.8rem"
-                    offsetTop="-.2rem"
+                    offsetTop={openTop ? '-5rem' : '-.1rem'}
                     bind:close
                     {onToggle}
                     btnInvisible
@@ -279,16 +287,11 @@
         </div>
     </div>
 
-    <div class="label">
-        <label for={id} class="font-label noselect" data-required={required}>
-            {label}
-        </label>
-        {#if isErr}
-            <div class="error" transition:slide={{ duration: 150 }}>
-                {errMsg}
-            </div>
-        {/if}
-    </div>
+    {#if isErr}
+        <div class="error" transition:slide={{ duration: 150 }}>
+            {errMsg}
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -301,7 +304,6 @@
 
     label,
     .error {
-        line-height: 1.1rem;
         font-size: 0.9rem;
     }
 
@@ -311,9 +313,8 @@
 
     .label {
         width: 100%;
-        margin-top: -1.1rem;
-        padding: 0.5rem;
-        color: hsla(var(--text) / 0.8);
+        margin-bottom: -0.3rem;
+        padding: 0.1rem;
     }
 
     .colon {

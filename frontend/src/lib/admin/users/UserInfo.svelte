@@ -514,7 +514,7 @@
                                     ariaLabel={t.common.selectI18n}
                                     options={languages}
                                     bind:value={language}
-                                    borderless
+                                    offsetTop="-12rem"
                                 />
                             </LabeledValue>
                         </div>
@@ -603,6 +603,7 @@
                             withTime
                             min={fmtDateInput()}
                             required
+                            openTop
                         />
                     </div>
                 {/if}

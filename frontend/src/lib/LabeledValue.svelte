@@ -75,13 +75,13 @@
 
     .label {
         width: 100%;
-        margin-bottom: -0.3rem;
-        padding-left: 0rem;
+        margin-bottom: -0.4rem;
+        color: hsla(var(--text) / 0.9);
     }
 
     .input-noedit {
         border: none;
         background: none;
-        padding-left: 0rem;
+        padding-left: 0;
     }
 </style>

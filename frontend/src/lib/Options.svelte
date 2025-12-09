@@ -3,6 +3,7 @@
     import Button from '$lib5/button/Button.svelte';
     import SearchBar from '$lib5/search_bar/SearchBar.svelte';
     import IconChevronDown from '$icons/IconChevronDown.svelte';
+    import { untrack } from 'svelte';
 
     let {
         ref = $bindable(),
@@ -10,7 +11,7 @@
         options = [],
         name,
         value = $bindable(),
-        maxHeight = '20rem',
+        maxHeight = '16rem',
         offsetTop,
         offsetLeft,
         borderless = false,
@@ -47,7 +48,7 @@
     let refOptions: undefined | HTMLElement = $state();
     let close: undefined | (() => void) = $state();
 
-    let selected = $state(withSearch ? -1 : 0);
+    let selected = $state(untrack(() => withSearch) ? -1 : 0);
     let focusSearch: undefined | (() => void) = $state();
 
     let searchValue = $state('');

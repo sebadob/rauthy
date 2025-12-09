@@ -1,5 +1,6 @@
 <script lang="ts">
     import { slide } from 'svelte/transition';
+    import { untrack } from 'svelte';
 
     let {
         ref = $bindable(),
@@ -51,7 +52,7 @@
         onDown?: () => void;
     }>();
 
-    const re = pattern ? new RegExp(pattern, 'gm') : undefined;
+    const re = untrack(() => (pattern ? new RegExp(pattern, 'gm') : undefined));
 
     function onblur(
         event: FocusEvent & {

@@ -14,6 +14,7 @@
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';
     import { fetchPost } from '$api/fetch';
     import { slide } from 'svelte/transition';
+    import { untrack } from 'svelte';
 
     let {
         groups,
@@ -29,7 +30,7 @@
     let ref: undefined | HTMLInputElement = $state();
     let err = $state('');
 
-    const options = groups.filter(g => g.typ === 'host').map(g => g.name);
+    const options = untrack(() => groups.filter(g => g.typ === 'host').map(g => g.name));
     let groupName = $state(options[0]);
 
     let host: PamHostCreateRequest = $state({
