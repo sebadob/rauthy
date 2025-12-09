@@ -173,11 +173,6 @@
             />
         </div>
 
-        <p>
-            {ta.passwordPolicy.validityNew}<br />
-            {ta.passwordPolicy.resetSet0}
-        </p>
-
         <div class="row">
             <Input
                 typ="number"
@@ -190,6 +185,12 @@
                 width={inputWidth}
             />
         </div>
+
+        <p>
+            {ta.passwordPolicy.validityNew}<br />
+            {ta.passwordPolicy.resetSet0}
+        </p>
+
         <div class="row">
             <Input
                 typ="number"
