@@ -61,7 +61,6 @@
     let err = $state('');
     let success = $state(false);
 
-    // let userOrig: undefined | UserResponse;
     let userOrig: undefined | UserResponse = $state(untrack(() => user));
     let isSelf = $derived(session.get()?.user_id === user.id);
 
