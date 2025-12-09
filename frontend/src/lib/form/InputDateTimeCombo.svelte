@@ -93,8 +93,8 @@
 
     .delete {
         display: flex;
-        align-items: start;
-        padding-top: 0.9rem;
+        align-items: end;
+        padding-bottom: 0.4rem;
     }
 
     .inputs {
