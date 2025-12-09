@@ -225,7 +225,7 @@
 
     .btn[data-border='true'] {
         padding: 0.15rem 0.33rem 0.3rem 0.5rem;
-        border: 2px solid hsla(var(--text) / 0.2);
+        border: 1px solid hsla(var(--text) / 0.2);
         border-radius: var(--border-radius);
     }
 

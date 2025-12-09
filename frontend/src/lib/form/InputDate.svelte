@@ -396,7 +396,7 @@
     }
 
     .indicator {
-        top: -0.7rem;
+        top: -0.8rem;
         right: 0;
         padding: 2px 5px 0 5px;
     }
@@ -421,8 +421,8 @@
     /* Just to hide the native browser picker indicator */
     .patch {
         width: 2rem;
-        height: 1.8rem;
-        top: calc(-0.8rem - 1px);
+        height: 1.7rem;
+        top: calc(-0.9rem - 1px);
         right: 2px;
         background: hsl(var(--bg));
     }

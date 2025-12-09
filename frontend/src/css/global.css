@@ -318,7 +318,7 @@ input,
     font-size: 1.05rem;
     outline: none;
     transition: 150ms all;
-    border: 2px solid hsla(var(--text) / 0.2);
+    border: 1px solid hsla(var(--text) / 0.2);
     border-radius: var(--border-radius);
 }
 input {
