@@ -71,7 +71,7 @@ futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 hickory-resolver = "0.25.2"
-hiqlite = { version = "0.12", features = [
+hiqlite = { version = "0.12.1", features = [
     "cache", "counters", "dashboard", "listen_notify_local", "webpki-roots"
 ] }
 hiqlite-macros = { version = "0.12" }

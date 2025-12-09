@@ -2617,9 +2617,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69766535ef68338e9eb657ac03f8d73ea7cccdae837f0ec21db3d502a719ac56"
+checksum = "d9c2280e8e10321a1e81765daef44fd54b3cc7155a362c445e32db5483fb54c2"
 dependencies = [
  "argon2",
  "axum",
