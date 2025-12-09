@@ -210,7 +210,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.32.6
+          image: ghcr.io/sebadob/rauthy:0.33.0
           securityContext:
             # User ID 10001 is actually built into the container 
             # at the creation for better security
