@@ -190,7 +190,7 @@
                 width={inputWidth}
             />
         </div>
-            <div class="row">
+        <div class="row">
             <Input
                 typ="number"
                 bind:value={policy.valid_days}
@@ -226,7 +226,7 @@
         display: flex;
         column-gap: 1rem;
     }
-    
+
     .btn {
         margin-top: 1rem;
     }
