@@ -401,27 +401,29 @@ You should take a look at the <a href="getting_started/../config/config.html">Re
 additionally. A dedicated <em>Going into production</em> guide will be written in the future.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
 <h2 id="testing--local-evaluation"><a class="header" href="#testing--local-evaluation">Testing / Local Evaluation</a></h2>
-<p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on your localhost.
-The image contains a basic default config which is sufficient for local testing (don't use it in production, it
-contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.32.6
+<p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
+your localhost. The image contains a basic default config which is sufficient for local testing (
+don't use it in production, it contains hardcoded secrets).</p>
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.33.0
 </code></pre>
-<p>To proceed, go to <strong><a href="getting_started/first_start.html">First Start</a></strong>, or do the production setup below to have persistence.</p>
+<p>To proceed, go to <strong><a href="getting_started/first_start.html">First Start</a></strong>, or do the production setup below to have
+persistence.</p>
 <h2 id="testing--evaluation-with-e-mail"><a class="header" href="#testing--evaluation-with-e-mail">Testing / Evaluation with E-Mail</a></h2>
-<p>You can do anything you like with the default <code>admin@localhost</code> account. Rauthy does not have any special
-accounts. It is an account like any other. The only reason it is a Rauthy admin, is because it is assigned to the
-<code>rauthy_admin</code> role.</p>
-<p>If you like to test creating new accounts or password reset flows though, you need to have at least a minimal setup that
-is able to send E-Mails. The easiest way (works on localhost only) is the below <code>docker-compose.yaml</code>:</p>
+<p>You can do anything you like with the default <code>admin@localhost</code> account. Rauthy does not
+have any special accounts. It is an account like any other. The only reason it is a Rauthy admin, is
+because it is assigned to the <code>rauthy_admin</code> role.</p>
+<p>If you like to test creating new accounts or password reset flows though, you need to have at least
+a minimal setup that is able to send E-Mails. The easiest way (works on localhost only) is the below
+<code>docker-compose.yaml</code>:</p>
 <pre><code class="language-yaml">services:
 
   mailcrab:
     image: marlonb/mailcrab:latest
     ports:
       - "1080:1080"
-      
+
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.32.6
+    image: ghcr.io/sebadob/rauthy:0.33.0
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -437,11 +439,23 @@ is able to send E-Mails. The easiest way (works on localhost only) is the below 
 volumes:
   data:
 </code></pre>
-<p><em>Optional: Create <code>.env</code> file with <code>COMPOSE_PROJECT_NAME=myapp</code> for custom container/volume name prefix.</em></p>
+<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+<div class="admonition-title">
+<div id="admonition-hint-title">
+<p>Hint</p>
+</div>
+<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-hint"></a>
+</div>
+<div>
+<p>You can create a <code>.env</code> file with <code>COMPOSE_PROJECT_NAME=myapp</code> for custom container/volume name
+prefix.</p>
+</div>
+</div>
 <p>Save this into <code>docker-compose.yaml</code> and start with:</p>
 <pre><code>docker compose up -d
 </code></pre>
-<p>You then need the logs output from Rauthy to read the random password for the <code>admin@localhost</code> account:</p>
+<p>You then need the logs output from Rauthy to read the random password for the <code>admin@localhost</code>
+account:</p>
 <pre><code>docker compose logs -f rauthy
 </code></pre>
 <p>Any outgoing E-Mail will be caught by <code>mailcrab</code>, which can be accessed
@@ -450,12 +464,14 @@ When you are done testing, shut down with</p>
 <pre><code>docker compose down
 </code></pre>
 <h2 id="production-setup"><a class="header" href="#production-setup">Production Setup</a></h2>
-<p>For going to production or to test more in-depth, you need to create a config that matches your environment.</p>
-<p>The first thing you want to do is to add a volume mount for the database. The second thing is to provide a more
-appropriate config.</p>
-<p>Rauthy expects at least the very basics in a config file. Most other values could be set via ENV vars. It parses both,
-the config first and any env var that is set will overwrite a possibly existing one from the config. You can add
-environment variables to the startup command with the <code>-e</code> option.</p>
+<p>For going to production or to test more in-depth, you need to create a config that matches your
+environment.</p>
+<p>The first thing you want to do is to add a volume mount for the database. The second thing is to
+provide a more appropriate config.</p>
+<p>Rauthy expects at least the very basics in a config file. Most other values could be set via ENV
+vars. It parses both, the config first and any env var that is set will overwrite a possibly
+existing one from the config. You can add environment variables to the startup command with the <code>-e</code>
+option.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -464,20 +480,21 @@ environment variables to the startup command with the <code>-e</code> option.</p
 <a class="admonition-anchor-link" href="getting_started/docker.html#admonition-note"></a>
 </div>
 <div>
-<p>The following commands will work on Linux and Mac OS (even though not tested on Mac OS). Since I am no Windows user
-myself, I cannot provide tested commands in this case.</p>
+<p>The following commands will work on Linux and Mac OS (even though not tested on Mac OS). Since I am
+no Windows user myself, I cannot provide tested commands in this case.</p>
 </div>
 </div>
 <p><strong>1. We want to create a new directory for Rauthy's persistent data</strong></p>
 <pre><code>mkdir -p rauthy/data
 </code></pre>
 <p><strong>2. Add the new config file.</strong></p>
-<p>This documentation is in an early version and remote links are not available yet, they will be added at a later
-point. For now, create a new file and paste the <a href="getting_started/../config/config.html">reference config</a></p>
+<p>This documentation is in an early version and remote links are not available yet, they will be added
+at a later point. For now, create a new file and paste the <a href="getting_started/../config/config.html">reference config</a></p>
 <pre><code>vim rauthy/config.toml
 </code></pre>
 <p><strong>3. Access rights for the Database files</strong></p>
-<p>The Rauthy container by default runs everything with user:group <code>10001:10001</code> for security reasons.<br />
+<p>The Rauthy container by default runs everything with user:group <code>10001:10001</code> for security
+reasons.<br />
 To make this work with the default values, you have 2 options:</p>
 <ul>
 <li>Change the access rights:</li>
@@ -487,12 +504,13 @@ sudo chmod 0700 rauthy/data
 sudo chown -R 10001:10001 rauthy
 </code></pre>
 <ul>
-<li>The other solution, if you do not have sudo rights, would be to change the owner of the whole directory.</li>
+<li>The other solution, if you do not have sudo rights, would be to change the owner of the whole
+directory.</li>
 </ul>
 <pre><code>chmod a+w rauthy/data
 </code></pre>
-<p>This will make the directory writeable for everyone, so Rauthy can create the database files inside the container
-with <code>10001:10001</code> again.</p>
+<p>This will make the directory writeable for everyone, so Rauthy can create the database files inside
+the container with <code>10001:10001</code> again.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -501,41 +519,45 @@ with <code>10001:10001</code> again.</p>
 <a class="admonition-anchor-link" href="getting_started/docker.html#admonition-caution"></a>
 </div>
 <div>
-<p>The safest approach would be to change the owner and group for these files on the host system. This needs <code>sudo</code>
-to edit the config, which may be a bit annoying, but at the same time it makes sure, that you can only read
-the secrets inside it with <code>sudo</code> too.</p>
-<p>You should avoid making Rauthy's data world-accessible at all cost. <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> will
-take care of this automatically during sub-directory creation, but the config includes sensitive information.</p>
+<p>The safest approach would be to change the owner and group for these files on the host system. This
+needs <code>sudo</code> to edit the config, which may be a bit annoying, but at the same time it makes sure,
+that you can only read the secrets inside it with <code>sudo</code> too.</p>
+<p>You should avoid making Rauthy's data world-accessible at all cost.
+<a href="https://github.com/sebadob/hiqlite">Hiqlite</a> will take care of this automatically during
+sub-directory creation, but the config includes sensitive information.</p>
 </div>
 </div>
 <p><strong>4. Adopt the config to your liking.</strong></p>
-<p>Take a look at the <a href="getting_started/../config/config.html">reference config</a> and adopt everything to your needs, but to not break this
-example, be sure to not change <code>cluster.data_dir</code>.</p>
-<p>For an in-depth guide on a production ready config, check the <a href="getting_started/../config/production_config.html">Production Config</a>
-section.</p>
-<p>A <strong>mandatory step</strong> will be to generate proper encryption keys. Take a look at <a href="getting_started/../config/encryption.html">Encryption</a>.</p>
+<p>Take a look at the <a href="getting_started/../config/config.html">reference config</a> and adopt everything to your needs, but
+to not break this example, be sure to not change <code>cluster.data_dir</code>.</p>
+<p>For an in-depth guide on a production ready config, check
+the <a href="getting_started/../config/production_config.html">Production Config</a> section.</p>
+<p>A <strong>mandatory step</strong> will be to generate proper encryption keys. Take a look
+at <a href="getting_started/../config/encryption.html">Encryption</a>.</p>
 <p><strong>5. Start the container with volume mounts</strong></p>
 <pre><code>docker run -d \
     -v $(pwd)/rauthy/config.toml:/app/config.toml \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.32.6
+    ghcr.io/sebadob/rauthy:0.33.0
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
 <li><code>-v $(pwd)/rauthy/data:/app/data</code> mounts the volume for Hiqlite</li>
-<li><code>-p 8443:8443</code> needs to match your configured <code>server.port_http</code> or <code>server.port_https</code> of course. If you use a
-reverse proxy inside a docker network, you don't need to expose any port, but you need to make sure to set
-<code>server.scheme = "http"</code>, <code>server.proxy_mode = true</code> and the correct value for <code>server.trusted_proxies</code>.</li>
+<li><code>-p 8443:8443</code> needs to match your configured <code>server.port_http</code> or <code>server.port_https</code> of course.
+If you use a reverse proxy inside a docker network, you don't need to expose any port, but you
+need to make sure to set <code>server.scheme = "http"</code>, <code>server.proxy_mode = true</code> and the correct
+value for <code>server.trusted_proxies</code>.</li>
 </ul>
 <p><strong>6. You can now proceed with the <a href="getting_started/first_start.html">First Start</a> steps.</strong></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="kubernetes"><a class="header" href="#kubernetes">Kubernetes</a></h1>
-<p>At the time of writing, there is no Helm Chart or Kustomize files available yet. The whole setup is pretty simple
-on purpose though, so it should not be a big deal to get it running inside Kubernetes.</p>
+<p>At the time of writing, there is no Helm Chart or Kustomize files available yet. The whole setup is
+pretty simple on purpose though, so it should not be a big deal to get it running inside Kubernetes.</p>
 <h2 id="single-instance"><a class="header" href="#single-instance">Single Instance</a></h2>
-<p>Since Rauthy uses pretty aggressive caching for different reasons, you cannot just have a single deployment and
-scale up the replicas without a proper HA setup. How to deploy a HA version is described below.</p>
+<p>Since Rauthy uses pretty aggressive caching for different reasons, you cannot just have a single
+deployment and scale up the replicas without a proper HA setup. How to deploy a HA version is
+described below.</p>
 <p>The steps to deploy on Kubernetes are pretty simple.</p>
 <ol>
 <li>Create namespace</li>
@@ -543,7 +565,8 @@ scale up the replicas without a proper HA setup. How to deploy a HA version is d
 <li>Create and apply the stateful set</li>
 </ol>
 <h3 id="create-namespace"><a class="header" href="#create-namespace">Create Namespace</a></h3>
-<p>For the purpose of this documentation, we assume that Rauthy will be deployed in the <code>rauthy</code> namespace.<br />
+<p>For the purpose of this documentation, we assume that Rauthy will be deployed in the <code>rauthy</code>
+namespace.<br />
 If this is not the case for you, change the following commands accordingly.</p>
 <pre><code>kubectl create ns rauthy
 </code></pre>
@@ -551,10 +574,10 @@ If this is not the case for you, change the following commands accordingly.</p>
 <p>This documentation will manage the Kubernetes files in a folder called <code>rauthy</code>.</p>
 <pre><code>mkdir rauthy &amp;&amp; cd rauthy
 </code></pre>
-<p>Create the config file, paste the <a href="getting_started/../config/config.html">Reference Config</a> and adjust it to your needs. We are putting
-the complete config in a K8s secret. Rauthy's config contains quite a few different secret values and it's just a lot
-simpler to maintain everything in a single secret, than splitting it into a <code>ConfigMap</code> and overwrite each secret
-manually.</p>
+<p>Create the config file, paste the <a href="getting_started/../config/config.html">Reference Config</a> and adjust it to your
+needs. We are putting the complete config in a K8s secret. Rauthy's config contains quite a few
+different secret values and it's just a lot simpler to maintain everything in a single secret, than
+splitting it into a <code>ConfigMap</code> and overwrite each secret manually.</p>
 <pre><code>apiVersion: v1
 kind: Secret
 metadata:
@@ -565,7 +588,8 @@ stringData:
   config.toml: |
     PASTE CONFIG HERE - WATCH THE INDENTATION'
 </code></pre>
-<p>Open the config with your favorite editor and paste the <a href="getting_started/../config/config.html">Reference Config</a> in place.<br />
+<p>Open the config with your favorite editor and paste the <a href="getting_started/../config/config.html">Reference Config</a> in
+place.<br />
 Make sure to watch the indentation.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
@@ -575,9 +599,10 @@ Make sure to watch the indentation.</p>
 <a class="admonition-anchor-link" href="getting_started/k8s.html#admonition-note"></a>
 </div>
 <div>
-<p>I recommend to just always set <code>cluster.node_id_from = "k8s"</code> when deploying a StatefulSet. This will parse the Raft
-NodeID automatically from the K8s Pod / Hostname and you don't have to worry about the <code>node_id</code>. For instance, a Pod
-named <code>rauthy-0</code> will be translated to <code>node_id = 1</code> automatically.</p>
+<p>I recommend to just always set <code>cluster.node_id_from = "k8s"</code> when deploying a StatefulSet. This
+will parse the Raft NodeID automatically from the K8s Pod / Hostname and you don't have to worry
+about the <code>node_id</code>. For instance, a Pod named <code>rauthy-0</code> will be translated to <code>node_id = 1</code>
+automatically.</p>
 </div>
 </div>
 <p>There are some values that you need to generate on your own. These are:</p>
@@ -585,22 +610,23 @@ named <code>rauthy-0</code> will be translated to <code>node_id = 1</code> autom
 <li><code>cluster.secret_raft</code> + <code>cluster.secret_api</code></li>
 <li><code>encryption.keys</code> + <code>encryption.key_active</code></li>
 </ul>
-<p>The secrets for the <code>cluster</code> can be just some long random alphanumeric values. They are used for authentication for the
-Hiqlite Raft + API layer. The encryption keys must be generated. More detailed explanation is in
-the <a href="getting_started/../config/encryption.html">Encryption</a> section. The tl;dr is:</p>
+<p>The secrets for the <code>cluster</code> can be just some long random alphanumeric values. They are used for
+authentication for the Hiqlite Raft + API layer. The encryption keys must be generated. More
+detailed explanation is in the <a href="getting_started/../config/encryption.html">Encryption</a> section. The tl;dr is:</p>
 <pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 </code></pre>
-<p>Copy the output and add it to keys. The <code>key_active</code> will be the first part of the output until the first <code>/</code>. For
-instance:</p>
+<p>Copy the output and add it to keys. The <code>key_active</code> will be the first part of the output until the
+first <code>/</code>. For instance:</p>
 <pre><code class="language-toml">[encryption]
 keys = ["XLCcaQ/f2xmq/nxVFgJN0CN311miyvVlBxXOQISyw1nPEPOqiI="]
 key_active = "XLCcaQ"
 </code></pre>
-<p>You can generate safe values for both <code>secret_raft</code> and <code>secret_api</code> in many ways. You can just provide a random
-alphanumeric value, which for instance:</p>
+<p>You can generate safe values for both <code>secret_raft</code> and <code>secret_api</code> in many ways. You can just
+provide a random alphanumeric value, which for instance:</p>
 <pre><code>cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
 </code></pre>
-<p>or you can use the above <code>openssl</code> command again, even though Hiqlite does not need or utilize base64:</p>
+<p>or you can use the above <code>openssl</code> command again, even though Hiqlite does not need or utilize
+base64:</p>
 <pre><code>openssl rand -base64 48
 </code></pre>
 <p>If you plan on using S3 for backups, paste the proper values into <code>cluster.s3_*</code> values.</p>
@@ -612,10 +638,12 @@ alphanumeric value, which for instance:</p>
 <a class="admonition-anchor-link" href="getting_started/k8s.html#admonition-note-1"></a>
 </div>
 <div>
-<p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which will make Rauthy
-panic on startup, when it checks the given values. If you run into that situation, you can generate them without
-<code>openssl</code> as well, with e.g:</p>
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+<p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which
+will make Rauthy panic on startup, when it checks the given values. If you run into that situation,
+you can generate them without <code>openssl</code> as well, with e.g:</p>
+<pre><code>
+echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"
+</code></pre>
 </div>
 </div>
 <h3 id="create-and-apply-the-stateful-set"><a class="header" href="#create-and-apply-the-stateful-set">Create and apply the stateful set</a></h3>
@@ -630,14 +658,14 @@ metadata:
 spec:
   selector:
     app: rauthy
-  ports:
-    # chose whatever fits your needs here, you usually only need either http or https
-    - name: http
-      port: 8080
-      targetPort: 8080
-    - name: https
-      port: 8443
-      targetPort: 8443
+    ports:
+      # chose whatever fits your needs here, you usually only need either http or https
+      - name: http
+        port: 8080
+        targetPort: 8080
+      - name: https
+        port: 8443
+        targetPort: 8443
 ---
 # The headless service is used for the Raft Cluster setup, so Nodes 
 # can connect to each other without any load balancer in between.
@@ -649,6 +677,9 @@ metadata:
 spec:
   type: ClusterIP
   clusterIP: None
+  # Make sure to only publish them on the headless service 
+  # and NOT the one you are using via your reverse proxy!
+  publishNotReadyAddresses: true
   sessionAffinity: None
   selector:
     app: rauthy
@@ -711,7 +742,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.32.6
+          image: ghcr.io/sebadob/rauthy:0.33.0
           securityContext:
             # User ID 10001 is actually built into the container 
             # at the creation for better security
@@ -737,22 +768,27 @@ spec:
           readinessProbe:
             httpGet:
               scheme: HTTP
-              # adjust if you change the Raft API port
+              # Hiqlite API port
               port: 8200
-              path: /ping
+              path: /ready
             initialDelaySeconds: 5
-            periodSeconds: 1
+            # Do NOT increase this period, because otherwise K8s may not catch
+            # a shutting down pod fast enough and may keep routing requests to
+            # it while is will be unable to handle them properly because of
+            # the shutdown.
+            periodSeconds: 3
+            # We may get a single failure during leader switches
+            failureThreshold: 2
           livenessProbe:
             httpGet:
-              # You may need to adjust this, if you decide to start in https only
-              # mode or use another port
               scheme: HTTP
+              # Rauthy API port
               port: 8080
-              #scheme: HTTPS
-              #port: 8443
               path: /auth/v1/health
-            initialDelaySeconds: 1
+            initialDelaySeconds: 60
             periodSeconds: 30
+            # We may get a single failure during leader switches
+            failureThreshold: 2
           resources:
             requests:
               # Tune the memory requests value carefully. Make sure, that the
@@ -761,6 +797,11 @@ spec:
               # The actual usage also heavily depends on the Memory Allocator
               # tuning. You can find more information in the Tuning section
               # in this book.
+              #
+              # A HA instance with Hiqlite enabled and without additional memory
+              # tuning will usually settle ~100mb idle memory being used.
+              # If you use an external Postgres, idle memory can go as low as
+              # ~30mb.
               memory: 64Mi
               # The CPU needs to be adjusted during runtime. This heavily
               # depends on your use case.
@@ -794,7 +835,8 @@ spec:
         #storageClassName: provideIfNeeded
 </code></pre>
 <h3 id="ingress"><a class="header" href="#ingress">Ingress</a></h3>
-<p>This example assumes, that the deployment will run behind a Kubernetes ingress resource of your choice.</p>
+<p>This example assumes, that the deployment will run behind a Kubernetes ingress resource of your
+choice.</p>
 <p>It uses <a href="https://doc.traefik.io/traefik/">Traefik</a> with the <code>IngressRoute</code> CRD.<br />
 Nevertheless, the ingress is really simple, and it should be very easy to adopt anything else.</p>
 <p>Create the <code>ingress.yaml</code></p>
@@ -828,10 +870,11 @@ spec:
 <h3 id="config"><a class="header" href="#config">Config</a></h3>
 <p>Going to production does not need too many additional steps.</p>
 <h4 id="tls-certificates"><a class="header" href="#tls-certificates">TLS Certificates</a></h4>
-<p>The thing you need will be valid TLS certificates, of course. To get these, there are a lot of existing mechanisms. If
-you use an internal Certificate Authority (CA), you do have you own tools to work with this anyway. If, however, you
-want to use something like <a href="https://letsencrypt.org/de/">Let's Encrypt</a>, I suggest to use the
-<a href="https://cert-manager.io/">cert-manager</a>, which is easy and straight forward to use.</p>
+<p>The thing you need will be valid TLS certificates, of course. To get these, there are a lot of
+existing mechanisms. If you use an internal Certificate Authority (CA), you do have you own tools to
+work with this anyway. If, however, you want to use something
+like <a href="https://letsencrypt.org/de/">Let's Encrypt</a>, I suggest to use
+the <a href="https://cert-manager.io/">cert-manager</a>, which is easy and straight forward to use.</p>
 <p>An example, how to add a certificate for the Traefik IngressRoute from above:</p>
 <pre><code class="language-yaml">apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
@@ -880,10 +923,10 @@ spec:
           port: 8080
 </code></pre>
 <h4 id="hiqlite-internal-tls"><a class="header" href="#hiqlite-internal-tls">Hiqlite Internal TLS</a></h4>
-<p>You can of course also provide TLS certificates for the Hiqlite internal communication. Two independent networks are
-created: one for the Raft-Internal network traffic like heartbeats and data replication, and a second one for the
-"external" Hiqlite API. This is used by other Hiqlite cluster members for management purposes and to execute things
-like consistent queries on the leader node.</p>
+<p>You can of course also provide TLS certificates for the Hiqlite internal communication. Two
+independent networks are created: one for the Raft-Internal network traffic like heartbeats and data
+replication, and a second one for the "external" Hiqlite API. This is used by other Hiqlite cluster
+members for management purposes and to execute things like consistent queries on the leader node.</p>
 <p>You can provide TLS certificates for both of them independently via the following config variables:</p>
 <pre><code class="language-toml">[cluster]
 # If given, these keys / certificates will be used to establish
@@ -903,8 +946,8 @@ tls_api_cert = "tls/tls.crt"
 tls_api_danger_tls_no_verify = true
 </code></pre>
 <h4 id="additional-steps"><a class="header" href="#additional-steps">Additional steps</a></h4>
-<p>There are a few more things to do when going into production, but these are the same for Kubernetes and Docker and will
-be explained in later chapters.</p>
+<p>There are a few more things to do when going into production, but these are the same for Kubernetes
+and Docker and will be explained in later chapters.</p>
 <p>You can now proceed with the <a href="getting_started/first_start.html">First Start</a> steps.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="first-start"><a class="header" href="#first-start">First Start</a></h1>
 <h2 id="initial-admin-password-and-login"><a class="header" href="#initial-admin-password-and-login">Initial admin password and login</a></h2>
@@ -2681,12 +2724,13 @@ Keep in mind, that the <code>pow.exp</code> should be a high as necessary but al
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="high-availability"><a class="header" href="#high-availability">High Availability</a></h1>
 <p>Rauthy is capable of running in a High Availability Mode (HA).</p>
-<p>Some values, like authentication codes for instance, do live in the cache only. Because of this, all instances create
-and share a single HA cache layer, which means at the same time, that you cannot just scale up the replicas infinitely
-without adjusting the config. The optimal amount of replicas for a HA mode would be 3, or if you need even higher
-resilience 5. More replicas should work just fine, but at some point, the write throughput will degrade.</p>
-<p>The Cache layer uses <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>. It uses the Raft algorithm under the hood to achieve
-consistency.</p>
+<p>Some values, like authentication codes for instance, do live in the cache only. Because of this, all
+instances create and share a single HA cache layer, which means at the same time, that you cannot
+just scale up the replicas infinitely without adjusting the config. The optimal amount of replicas
+for a HA mode would be 3, or if you need even higher resilience 5. More replicas should work just
+fine, but at some point, the write throughput will degrade.</p>
+<p>The Cache layer uses <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>. It uses the Raft algorithm under
+the hood to achieve consistency.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -2695,15 +2739,31 @@ consistency.</p>
 <a class="admonition-anchor-link" href="config/ha.html#admonition-caution"></a>
 </div>
 <div>
-<p>Even though everything is authenticated, you should not expose the
-Hiqlite ports to the public, if not really necessary for some reason. You configure these ports with the <code>cluster.nodes</code>
-config value.</p>
+<p>Even though everything is authenticated, you should not expose the Hiqlite ports to the public, if
+not really necessary for some reason. You configure these ports with the <code>cluster.nodes</code> config
+value.</p>
+</div>
+</div>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="config/ha.html#admonition-note"></a>
+</div>
+<div>
+<p>Some container runtimes will force-kill very quickly. When Rauthy is deployed as a HA cluster, it
+will usually take at least 15 seconds to do a graceful shutdown. Depending on the config and current
+cluster state (maybe there is a leader election ongoing and so on), it may take up to 25 - 30
+seconds.</p>
+<p><b>Makre sure to adjust your container config.</b></p>
 </div>
 </div>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<p>Earlier versions of Rauthy have been using <a href="https://github.com/sebadob/redhac">redhac</a> for the HA cache layer. While
-<code>redhac</code> was working fine, it had a few design issues I wanted to get rid of. Since <code>v0.26.0</code>, Rauthy uses the
-above-mentioned <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> instead. You only need to configure a few variables.</p>
+<p>Earlier versions of Rauthy have been using <a href="https://github.com/sebadob/redhac">redhac</a> for the HA
+cache layer. While <code>redhac</code> was working fine, it had a few design issues I wanted to get rid of.
+Since <code>v0.26.0</code>, Rauthy uses the above-mentioned <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>
+instead. You only need to configure a few variables.</p>
 <div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">
 <div class="admonition-title">
 <div id="admonition-caution-1-title">
@@ -2712,21 +2772,21 @@ above-mentioned <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> instead
 <a class="admonition-anchor-link" href="config/ha.html#admonition-caution-1"></a>
 </div>
 <div>
-<p>Even when using Postgres as your DB of choice, in HA deployments, you should always provide persistent volumes to your
-Rauthy Pods. One reason is that it smoothes out rolling releases, because even though you can keep the Cache Raft
-in-memory only because it can handle these situations, even when using Postgres, Rauthy will create at least an empty
-SQLite cache layer. If this loses state between restarts and they happen too fast for instance, this can end up in
-crashes.</p>
-<p>It is also very recommended to persist the cache on disk anyway (which is the default), to keep things like not yet used
-Auth Codes between restarts.</p>
+<p>Even when using Postgres as your DB of choice, in HA deployments, you should always provide
+persistent volumes to your Rauthy Pods. One reason is that it smoothes out rolling releases, because
+even though you can keep the Cache Raft in-memory only because it can handle these situations, even
+when using Postgres, Rauthy will create at least an empty SQLite cache layer. If this loses state
+between restarts and they happen too fast for instance, this can end up in crashes.</p>
+<p>It is also very recommended to persist the cache on disk anyway (which is the default), to keep
+things like not yet used Auth Codes between restarts.</p>
 </div>
 </div>
 <h3 id="node_id"><a class="header" href="#node_id"><code>node_id</code></a></h3>
-<p>The <code>cluster.node_id</code> is mandatory, even for a single replica deployment with only a single node in <code>cluster.nodes</code>.
-If you deploy Rauthy as a StatefulSet inside Kubernetes, you can ignore this value and just set <code>HQL_NODE_ID_FROM</code>
-below. If you deploy anywhere else, or you are not using a StatefulSet, you need to set the <code>node_id_from</code> to tell
-Rauthy
-which node of the Raft cluster it should be.</p>
+<p>The <code>cluster.node_id</code> is mandatory, even for a single replica deployment with only a single node in
+<code>cluster.nodes</code>. If you deploy Rauthy as a StatefulSet inside Kubernetes, you can ignore this value
+and just set <code>HQL_NODE_ID_FROM</code> below. If you deploy anywhere else, or you are not using a
+StatefulSet, you need to set the <code>node_id_from</code> to tell Rauthy which node of the Raft cluster it
+should be.</p>
 <pre><code class="language-toml">[cluster]
 # The node id must exist in the nodes and there must always be
 # at least a node with ID 1
@@ -2740,8 +2800,8 @@ node_id = 1
 </code></pre>
 <h3 id="node_id_from"><a class="header" href="#node_id_from"><code>node_id_from</code></a></h3>
 <p>If you deploy to Kubernetes as a StatefulSet, you should ignore the <code>cluster.node_id</code> and just set
-<code>cluster.node_id_from = "k8s"</code>. This will parse the correct NodeID from the Pod hostname, so you don't have to worry
-about it.</p>
+<code>cluster.node_id_from = "k8s"</code>. This will parse the correct NodeID from the Pod hostname, so you
+don't have to worry about it.</p>
 <pre><code class="language-toml">
 [cluster]
 # Can be set to 'k8s' to try to split off the node id from the hostname
@@ -2752,8 +2812,8 @@ about it.</p>
 node_id_from = "k8s"
 </code></pre>
 <h3 id="nodes"><a class="header" href="#nodes"><code>nodes</code></a></h3>
-<p>This value defines the Raft members. It must be given even if you just deploy a single instance. The description from
-the reference config should be clear enough:</p>
+<p>This value defines the Raft members. It must be given even if you just deploy a single instance. The
+description from the reference config should be clear enough:</p>
 <pre><code class="language-toml">[cluster]
 # All cluster member nodes. For a single instance deployment,
 # `"1 localhost:8100 localhost:8200"` will work just fine.
@@ -2763,22 +2823,23 @@ the reference config should be clear enough:</p>
 # default: ["1 localhost:8100 localhost:8200"]
 # overwritten by: HQL_NODES
 nodes = [
-    "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
+  "1 localhost:8100 localhost:8200",
+  #    "2 localhost:8101 localhost:8201",
+  #    "3 localhost:8102 localhost:8202",
 ]
 </code></pre>
 <h3 id="secret_raft--secret_api"><a class="header" href="#secret_raft--secret_api"><code>secret_raft</code> + <code>secret_api</code></a></h3>
-<p>Since you need both <code>cluster.secret_raft</code> and <code>cluster.secret_api</code> in any case, there is nothing to change here. These
-define the secrets being used internally to authenticate against the Raft or the API server for <code>Hiqlite</code>.
-You can generate safe values with for instance</p>
+<p>Since you need both <code>cluster.secret_raft</code> and <code>cluster.secret_api</code> in any case, there is nothing to
+change here. These define the secrets being used internally to authenticate against the Raft or the
+API server for <code>Hiqlite</code>. You can generate safe values with for instance</p>
 <pre><code>cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
 </code></pre>
 <h3 id="tls-1"><a class="header" href="#tls-1">TLS</a></h3>
-<p>If you are using a service mesh like for instance <a href="https://linkerd.io/">linkerd</a> which creates mTLS connections between
-all pods by default, you can use the HA cache with just plain HTTP, since <code>linkerd</code> will encapsulate the traffic anyway.
-In this case, there is nothing to do.</p>
-<p>However, if you do not have encryption between pods by default, I would highly recommend, that you use <a href="config/tls.html">TLS</a>.</p>
+<p>If you are using a service mesh like for instance <a href="https://linkerd.io/">linkerd</a> which creates mTLS
+connections between all pods by default, you can use the HA cache with just plain HTTP, since
+<code>linkerd</code> will encapsulate the traffic anyway. In this case, there is nothing to do.</p>
+<p>However, if you do not have encryption between pods by default, I would highly recommend, that you
+use <a href="config/tls.html">TLS</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bootstrapping"><a class="header" href="#bootstrapping">Bootstrapping</a></h1>
 <p>Rauthy supports some basic bootstrapping functionality to make it easier to use in some kind of automated environment.</p>
 <h2 id="admin-user"><a class="header" href="#admin-user">Admin User</a></h2>
