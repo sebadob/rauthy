@@ -353,6 +353,10 @@ input:disabled {
     cursor: not-allowed;
 }
 
+pre {
+    background: hsl(var(--bg-high));
+}
+
 .html-render {
     display: block;
     line-height: 1.5rem;
