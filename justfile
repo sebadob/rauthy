@@ -382,11 +382,10 @@ build-wasm:
     rm -rf ../../frontend/src/wasm/*
 
     wasm-pack build -d ../../frontend/src/wasm/spow --no-pack --out-name spow --features spow
-    #    wasm-pack build -d ../../frontend/src/wasm/spow --no-pack --out-name spow --features spow
     wasm-pack build -d ../../frontend/src/wasm/md --no-pack --out-name md --features md
 
 # Build the final container image.
-build image="ghcr.io/sebadob/rauthy" push="push": build-ui
+build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -498,7 +497,6 @@ release:
 
 # publishes the application images - full pipeline incl clippy and testing you can provide a custom image name as variable
 publish: build-docs fmt test-hiqlite test-postgres build archive-ui
-#publish: build-docs fmt is-clean test-hiqlite test-postgres build archive-ui
 
 # publishes the application images - full pipeline incl clippy and testing
 publish-latest:
