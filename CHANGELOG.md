@@ -4,6 +4,18 @@
 
 ### Breaking
 
+#### JWKS rotate / cleanup scheduler
+
+The JWKS rotate scheduler was not started on some of the last versions when it should have. For
+this reason, depending on which version you were running and for how long, the cleanup scheduler
+might clean up "too much". It is advisable to trigger a manual JWKS rotation before doing the
+upgrade:
+
+Admin UI -> Config -> JWKS -> Rotate Keys
+
+At least if you see errors after the upgrade with something like "kid not found" when trying to
+fetch public keys for validation, you need to rotate manually once.
+
 #### `preferred_username` in Tokens
 
 The `preferred_username` was always added to both `access_token` and `id_token` and it always
@@ -16,7 +28,7 @@ this claim depends on your configuration. For more details, check the "`preferre
 Because of these changes, the `email` will not show up as the `username` in the response from the
 OAuth2 `/introspect` endpoint as well.
 
-> Note: If you are using the `rauthy-client`, make sure to upgrade it to `0.11.0` beforehand.
+> Note: If you are using the `rauthy-client`, make sure to upgrade it to `0.11` beforehand.
 
 #### User Request and Response API data
 
@@ -372,6 +384,14 @@ batch_delay_ms = 2000
 
 [#1247](https://github.com/sebadob/rauthy/pull/1247)
 
+#### UI Improvements
+
+The UI received some updates and improvements.
+
+[#1230](https://github.com/sebadob/rauthy/pull/1230)
+[#1268](https://github.com/sebadob/rauthy/pull/1268)
+[#1269](https://github.com/sebadob/rauthy/pull/1269)
+
 #### Customize Timestamp formatting in E-Mails
 
 You can now customize how the timestamp in E-Mails will be formatted. In combination with the new
@@ -469,9 +489,90 @@ https://iam.example.com/auth/v1/oidc/certs?skip_okp=true
 
 [#1263](https://github.com/sebadob/rauthy/pull/1263)
 
+#### HA Stability Improvements
+
+The work was done in [hiqlite](https://github.com/sebadob/hiqlite), but with the updates, Rauthys
+stability in HA deployments was improved quite a bit.
+
+The `cluster.shutdown_delay_millis` config option was removed. It is not necessary to set it
+manually anymore. Instead, more automatic detection is being applied and a necessary delay to smooth
+out rolling releases or make sure the readiness of a container is being caught is added without the
+need for additional config.
+
+Apart from that, lots of improvements have been made to rolling releases and how WebSocket
+re-connects and node startups are being handled in general. There is a new `/ready` endpoint on the
+public API as well. It can be used in e.g. Kubernetes to smooth out rolling releases and detect a
+pod shutdown before it becomes unable to handle Raft requests. To do so, it is important however to
+not have too high `periodSeconds`, and the `headless` service needs to `publishNotReadyAddresses`
+ports before ready, like so:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+    name: rauthy-headless
+spec:
+    type: ClusterIP
+    clusterIP: None
+    # Make sure to only publish them on the headless service 
+    # and NOT the one you are using via your reverse proxy!
+    publishNotReadyAddresses: true
+    sessionAffinity: None
+    selector:
+        app: rauthy
+    ports:
+        -   name: hiqlite-raft
+            protocol: TCP
+            port: 8100
+            targetPort: 8100
+        -   name: hiqlite-api
+            protocol: TCP
+            port: 8200
+            targetPort: 8200
+```
+
+Then you can make use of the new readiness check in the `StatefulSet`:
+
+```yaml
+readinessProbe:
+    httpGet:
+        scheme: HTTP
+        # Hiqlite API port
+        port: 8200
+        path: /ready
+    initialDelaySeconds: 5
+    # Do NOT increase this period, because otherwise K8s may not catch
+    # a shutting down pod fast enough and may keep routing requests to
+    # it while is will be unable to handle them properly because of
+    # the shutdown.
+    periodSeconds: 3
+    # We may get a single failure during leader switches
+    failureThreshold: 2
+livenessProbe:
+    httpGet:
+        scheme: HTTP
+        # Rauthy API port
+        port: 8080
+        path: /auth/v1/health
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    # We may get a single failure during leader switches
+    failureThreshold: 2
+```
+
+Apart from that, the `hiqlite-wal` had a bug where the `last_purged_log_id` was overwritten with
+`None` during a log truncation, even if it had a value from a log purge before. If the node
+restarted before another log purge fixed it, it would result in an error during startup. The new
+version includes a check + fix, if you start up an instance with a data set that currently has this
+issue.
+
+> NOTE: Rauthys shutdown in HA deployments can take up to 30 seconds when done gracefully, depending
+> on the config and the current state the cluster is in. Some container runtimes may force-kill a
+> container after only a few seconds by default. Make sure to adjust that timeout.
+
 ### Bugfix
 
-- With a bigger internal code migration and cleanup some time ago, a few house keeping schedulers
+- With a bigger internal code migration and cleanup some time ago, a few housekeeping schedulers
   got lost and were not started anymore.
   [#1247](https://github.com/sebadob/rauthy/pull/1247)
 - The UI for the `device_code` flow had a wrong value for the `user_code_length` inserted via
