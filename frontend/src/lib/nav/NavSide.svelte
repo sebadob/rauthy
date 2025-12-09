@@ -302,6 +302,11 @@
         min-height: 0;
     }
 
+    nav[aria-hidden='true'] .scrollable-content,
+    nav[aria-hidden='true'] .bottom {
+        display: none;
+    }
+
     nav[data-compact='true'] {
         width: 4rem;
     }
@@ -313,7 +318,8 @@
     }
 
     nav[aria-hidden='true'] {
-        width: 3rem;
+        width: 0;
+        overflow: visible;
     }
 
     nav[aria-hidden='true'] .nav-container {
