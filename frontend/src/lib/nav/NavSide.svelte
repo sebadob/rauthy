@@ -254,7 +254,7 @@
                 {:else}
                     <div class="flex gap-05">
                         <ThemeSwitch />
-                        <LangSelector openTop borderless/>
+                        <LangSelector openTop borderless />
                         {@render toLogout()}
                     </div>
                     <div class="version">

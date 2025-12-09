@@ -17,7 +17,7 @@
         absolute?: boolean;
         openTop?: boolean;
         updateBackend?: boolean;
-        borderless?: boolean,
+        borderless?: boolean;
     } = $props();
 
     const cookieAttrs = ';Path=/;SameSite=Lax;Max-Age=157680000';
@@ -69,7 +69,7 @@
         <Options
             ariaLabel={t.common.selectI18n}
             options={languages}
-            borderless={borderless}
+            {borderless}
             bind:value={selected}
             {offsetTop}
             {offsetLeft}

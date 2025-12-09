@@ -181,7 +181,7 @@
         border-right: 1px solid hsl(var(--bg-high));
         border-radius: 2px 0 0 2px;
     }
-    
+
     .options :global(.btn) {
         border: none;
         border-radius: 2px 0 0 2px;

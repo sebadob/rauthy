@@ -221,7 +221,6 @@
         font-weight: normal;
         font-size: 0.9rem;
         transition: all 150ms;
-
     }
 
     .btn[data-border='true'] {
