@@ -614,9 +614,9 @@ checksum = "5f093eed78becd229346bf859eec0aa4dd7ddde0757287b2b4107a1f09c80002"
 
 [[package]]
 name = "async-compression"
-version = "0.4.34"
+version = "0.4.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e86f6d3dc9dc4352edeea6b8e499e13e3f5dc3b964d7ca5fd411415a3498473"
+checksum = "07a926debf178f2d355197f9caddb08e54a9329d44748034bba349c5848cb519"
 dependencies = [
  "compression-codecs",
  "compression-core",
@@ -874,12 +874,13 @@ dependencies = [
 
 [[package]]
 name = "axum-server"
-version = "0.7.3"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1ab4a3ec9ea8a657c72d99a03a824af695bd0fb5ec639ccbd9cd3543b41a5f9"
+checksum = "b1df331683d982a0b9492b38127151e6453639cd34926eb9c07d4cd8c6d22bfc"
 dependencies = [
  "arc-swap",
  "bytes",
+ "either",
  "fs-err",
  "http 1.4.0",
  "http-body",
@@ -887,7 +888,6 @@ dependencies = [
  "hyper-util",
  "pin-project-lite",
  "rustls",
- "rustls-pemfile",
  "rustls-pki-types",
  "tokio",
  "tokio-rustls",
@@ -930,9 +930,9 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
 name = "base64ct"
-version = "1.8.0"
+version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55248b47b0caf0546f7988906588779981c43bb1bc9d0c44087278f80cdb44ba"
+checksum = "0e050f626429857a27ddccb31e0aca21356bfa709c04041aefddac081a8f068a"
 
 [[package]]
 name = "base64urlsafedata"
@@ -1141,9 +1141,9 @@ checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
 name = "cc"
-version = "1.2.48"
+version = "1.2.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c481bdbf0ed3b892f6f806287d72acd515b352a4ec27a208489b8c1bc839633a"
+checksum = "90583009037521a116abf44494efecd645ba48b6622457080f080b85544e2215"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -1309,9 +1309,9 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
 name = "compression-codecs"
-version = "0.4.33"
+version = "0.4.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "302266479cb963552d11bd042013a58ef1adc56768016c8b82b4199488f2d4ad"
+checksum = "34a3cbbb8b6eca96f3a5c4bf6938d5b27ced3675d69f95bb51948722870bc323"
 dependencies = [
  "brotli",
  "compression-core",
@@ -1550,7 +1550,7 @@ dependencies = [
  "bytes",
  "chacha20poly1305",
  "dotenvy",
- "flume",
+ "flume 0.11.1",
  "futures",
  "lazy_static",
  "rand 0.9.2",
@@ -2082,6 +2082,9 @@ name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
+dependencies = [
+ "getrandom 0.2.16",
+]
 
 [[package]]
 name = "fastwebsockets"
@@ -2169,6 +2172,18 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "nanorand",
+ "spin",
+]
+
+[[package]]
+name = "flume"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e139bc46ca777eb5efaf62df0ab8cc5fd400866427e56c68b22e414e53bd3be"
+dependencies = [
+ "fastrand",
+ "futures-core",
+ "futures-sink",
  "spin",
 ]
 
@@ -2602,8 +2617,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite"
-version = "0.11.1"
-source = "git+https://github.com/sebadob/hiqlite.git#4fc6d71ba9be3a5276c07f5e4bc3d4f4ebb12f56"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69766535ef68338e9eb657ac03f8d73ea7cccdae837f0ec21db3d502a719ac56"
 dependencies = [
  "argon2",
  "axum",
@@ -2617,7 +2633,7 @@ dependencies = [
  "deadpool",
  "dotenvy",
  "fastwebsockets",
- "flume",
+ "flume 0.12.0",
  "futures-util",
  "getrandom 0.3.4",
  "hex",
@@ -2656,8 +2672,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite-macros"
-version = "0.11.0"
-source = "git+https://github.com/sebadob/hiqlite.git#4fc6d71ba9be3a5276c07f5e4bc3d4f4ebb12f56"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb48e5e45008eceb6e2f5f8c7413ac409b445ca1e4e3536109e97b51f78e3d9a"
 dependencies = [
  "hiqlite",
  "rust-embed",
@@ -2665,13 +2682,14 @@ dependencies = [
 
 [[package]]
 name = "hiqlite-wal"
-version = "0.11.0"
-source = "git+https://github.com/sebadob/hiqlite.git#4fc6d71ba9be3a5276c07f5e4bc3d4f4ebb12f56"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7df41366294b6fdc118ca897b4852cdd38d3739577dd5106e11f53c0267a9c8e"
 dependencies = [
  "bincode",
  "byteorder",
  "crc",
- "flume",
+ "flume 0.12.0",
  "fs4",
  "memmap2",
  "openraft",
@@ -3587,9 +3605,9 @@ dependencies = [
 
 [[package]]
 name = "minicov"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f27fe9f1cc3c22e1687f9446c2083c4c5fc7f0bcf1c7a86bdbded14985895b4b"
+checksum = "4869b6a491569605d66d3952bcdf03df789e5b536e5f0cf7758a7f08a55ae24d"
 dependencies = [
  "cc",
  "walkdir",
@@ -4371,7 +4389,7 @@ version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "219cb19e96be00ab2e37d6e299658a0cfa83e52429179969b0f0121b4ac46983"
 dependencies = [
- "toml_edit 0.23.7",
+ "toml_edit 0.23.9",
 ]
 
 [[package]]
@@ -4491,9 +4509,9 @@ checksum = "007d8adb5ddab6f8e3f491ac63566a7d5002cc7ed73901f72057943fa71ae1ae"
 
 [[package]]
 name = "pxfm"
-version = "0.1.26"
+version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3502d6155304a4173a5f2c34b52b7ed0dd085890326cb50fd625fdf39e86b3b"
+checksum = "7186d3822593aa4393561d186d1393b3923e9d6163d3fbfd6e825e3e6cf3e6a8"
 dependencies = [
  "num-traits",
 ]
@@ -4657,14 +4675,14 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "actix-web",
  "actix-web-prom",
  "chrono",
  "dotenvy",
  "ed25519-compact",
- "flume",
+ "flume 0.12.0",
  "josekit",
  "num_cpus",
  "openssl",
@@ -4700,7 +4718,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "actix-web",
  "hiqlite",
@@ -4719,7 +4737,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "actix-web",
  "ammonia",
@@ -4729,7 +4747,7 @@ dependencies = [
  "brotli",
  "chrono",
  "cidr",
- "flume",
+ "flume 0.12.0",
  "gethostname",
  "libflate",
  "openssl",
@@ -4749,7 +4767,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-data"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -4772,7 +4790,7 @@ dependencies = [
  "dotenvy",
  "ed25519-compact",
  "flate2",
- "flume",
+ "flume 0.12.0",
  "futures",
  "futures-util",
  "hex",
@@ -4834,7 +4852,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4871,7 +4889,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4907,7 +4925,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "chrono",
  "openssl",
@@ -4924,7 +4942,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4940,7 +4958,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "async-trait",
  "openssl",
@@ -4956,7 +4974,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4976,7 +4994,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "actix-web",
  "atrium-api",
@@ -5002,7 +5020,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-wasm-modules"
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 dependencies = [
  "ammonia",
  "console_error_panic_hook",
@@ -5153,11 +5171,10 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.12.24"
+version = "0.12.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d0946410b9f7b082a427e4ef5c8ff541a88b357bc6c637c40db3a68ac70a36f"
+checksum = "b6eff9328d40131d43bd911d42d79eb6a47312002a4daefc9e37f17e74a7701a"
 dependencies = [
- "async-compression",
  "base64 0.22.1",
  "bytes",
  "futures-core",
@@ -5640,7 +5657,7 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "dotenvy",
- "flume",
+ "flume 0.11.1",
  "futures-util",
  "hex",
  "hmac",
@@ -5991,9 +6008,9 @@ dependencies = [
 
 [[package]]
 name = "simd-adler32"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
+checksum = "e320a6c5ad31d271ad523dcf3ad13e2767ad8b1cb8f047f75a8aeaf8da139da2"
 
 [[package]]
 name = "simdutf8"
@@ -6620,9 +6637,9 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
-version = "0.23.7"
+version = "0.23.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6485ef6d0d9b5d0ec17244ff7eb05310113c3f316f2d14200d4de56b3cb98f8d"
+checksum = "5d7cbc3b4b49633d57a0509303158ca50de80ae32c265093b24c414705807832"
 dependencies = [
  "indexmap",
  "toml_datetime 0.7.3",
@@ -6669,17 +6686,22 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.6.7"
+version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9cf146f99d442e8e68e585f5d798ccd3cad9a7835b917e09728880a862706456"
+checksum = "d4e6559d53cc268e5031cd8429d05415bc4cb4aefc4aa5d6cc35fbf5b924a1f8"
 dependencies = [
+ "async-compression",
  "bitflags 2.10.0",
  "bytes",
+ "futures-core",
  "futures-util",
  "http 1.4.0",
  "http-body",
+ "http-body-util",
  "iri-string",
  "pin-project-lite",
+ "tokio",
+ "tokio-util",
  "tower",
  "tower-layer",
  "tower-service",
@@ -7928,9 +7950,9 @@ checksum = "111f7d9820f05fd715df3144e254d6fc02ee4088b0644c0ffd0efc9e6d9d2773"
 
 [[package]]
 name = "zune-jpeg"
-version = "0.5.5"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc6fb7703e32e9a07fb3f757360338b3a567a5054f21b5f52a666752e333d58e"
+checksum = "f520eebad972262a1dde0ec455bce4f8b298b1e5154513de58c114c4c54303e8"
 dependencies = [
  "zune-core",
 ]

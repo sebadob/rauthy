@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.33.0-beta5"
+version = "0.33.0-beta7"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -26,9 +26,9 @@ lto = false
 strip = false
 
 [patch.crates-io]
-hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
-hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
-hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
+#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+#hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
+#hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
 
 [workspace.dependencies]
 accept-language = "3"
@@ -65,16 +65,16 @@ deadpool-postgres = "0.14"
 dotenvy = "0.15"
 ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
 flate2 = "1.1"
-flume = "0.11"
+flume = "0.12"
 futures = "0.3"
 futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 hickory-resolver = "0.25.2"
-hiqlite = { version = "0.11.1", features = [
+hiqlite = { version = "0.12", features = [
     "cache", "counters", "dashboard", "listen_notify_local", "webpki-roots"
 ] }
-hiqlite-macros = { version = "0.11" }
+hiqlite-macros = { version = "0.12" }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
