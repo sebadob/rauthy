@@ -21,6 +21,10 @@ export async function handle({ event, resolve }) {
         return new Response('{}');
     }
 
+    if (path === '/auth/v1/clients/rauthy/logo') {
+        return new Response(null);
+    }
+
     if (path === '/auth/v1/i18n_email/%7B%7Blang%7D%7D') {
         // fixes static UI compilation.
         return new Response('{}');
