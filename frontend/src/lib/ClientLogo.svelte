@@ -18,7 +18,7 @@
 </script>
 
 <div class="logo">
-    {#if showDefault || updated === undefined}
+    {#if showDefault}
         <RauthyLogo width="100%" />
     {:else}
         <img

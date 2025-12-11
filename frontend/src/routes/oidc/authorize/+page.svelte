@@ -43,13 +43,7 @@
     import { fetchSolvePow } from '$utils/pow';
     import { generatePKCE } from '$utils/pkce';
     import { PATTERN_ATPROTO_ID } from '$utils/patterns';
-    import type {
-        ToSAwaitLoginResponse,
-        ToSLatestResponse,
-        ToSUserAcceptRequest,
-        ToSUserAcceptResponse,
-    } from '$api/types/tos';
-    import Modal from '$lib/Modal.svelte';
+    import type { ToSAwaitLoginResponse, ToSLatestResponse } from '$api/types/tos';
     import TosAccept from '$lib/TosAccept.svelte';
 
     const inputWidth = '18rem';
@@ -81,7 +75,6 @@
     let mfaPurpose: undefined | MfaPurpose = $state();
 
     let isLoading = $state(false);
-    // let err = $state('some error message that it longer over multiple lines');
     let err = $state('');
     let loginAction = $state('');
     let csrfToken = $state('');
