@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.33.1
+
+### Bugfix
+
+- The new feature "Rauthy Logo as client fallback" from `v0.33.0` was working fine for the branding
+  page, but not during `/authorize`.
+  [#1276](https://github.com/sebadob/rauthy/pull/1276)
+
 ## v0.33.0
 
 ### Breaking
@@ -120,9 +128,9 @@ blacklist_cleanup_days = 730
 # debugging, but should generally be disabled to not
 # disclose any possibly somewhat "internal" information.
 #
-# default: false
+# default: true
 # overwritten by: PAM_SSH_INCLUDE_COMMENTS
-include_comments = false
+include_comments = true
 
 # You can enforce an SSH key expiry in days. After this time,
 # users must generate new keys. This enforces a key rotation
