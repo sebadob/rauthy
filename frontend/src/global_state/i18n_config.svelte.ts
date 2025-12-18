@@ -9,14 +9,8 @@ export function useI18nConfig() {
         fetchGet<I18nConfigResponse>('/auth/v1/i18n_config').then(res => {
             if (res.body) {
                 let cfg = res.body;
-                cfg.common = res.body.common.map(l => {
-                    // @ts-ignore
-                    if (l === 'zhhans') {
-                        return 'zh';
-                    } else {
-                        return l;
-                    }
-                });
+                cfg.common = res.body.common.map(map_language);
+                cfg.admin = res.body.admin.map(map_language);
                 _config = cfg;
             }
         });
@@ -30,4 +24,9 @@ export function useI18nConfig() {
             return _config?.common;
         },
     };
+}
+
+const map_language = (l: Language): Language => {
+    // @ts-ignore
+    return l === 'zhhans' ? 'zh' : l;
 }
