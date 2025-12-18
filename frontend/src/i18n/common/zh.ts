@@ -216,10 +216,8 @@ export const I18nZh: I18n = {
         errorReg: '开始注册过程时出现错误。',
         lastUsed: '最后使用',
         noKey: '此插槽没有已注册的安全密钥',
-        reAuthenticatePasskey:
-            '在您可以修改通行密钥之前，您需要使用已注册的通行密钥进行认证：',
-        reAuthenticatePwd:
-            '在您可以修改通行密钥之前，您需要使用密码重新认证。',
+        reAuthenticatePasskey: '在您可以修改通行密钥之前，您需要使用已注册的通行密钥进行认证：',
+        reAuthenticatePwd: '在您可以修改通行密钥之前，您需要使用密码重新认证。',
         register: '注册',
         registerNew: '注册新密钥',
         registerd: '已注册',
