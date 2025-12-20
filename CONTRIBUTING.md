@@ -52,8 +52,9 @@ To work with this project, you need to have the following tools available on you
 
 ### Building from source
 
-If you only care about building from source and don't need any testing or development, you need to do 2 things:
+If you only care about building from source and don't need any testing or development, you need to do 3 things:
 
+- `just setup`
 - `just build-ui`
 - `cargo build --release`
 
