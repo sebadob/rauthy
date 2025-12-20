@@ -29,4 +29,4 @@ export function useI18nConfig() {
 const map_language = (l: Language): Language => {
     // @ts-ignore
     return l === 'zhhans' ? 'zh' : l;
-}
+};

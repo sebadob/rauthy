@@ -11,7 +11,7 @@ export let I18nAdminZh: I18nAdmin = {
         generate3: `API密钥必须在HTTP <code>Authorization</code>
             请求头中按以下格式提供：`,
         generate4: '您可以使用以下<code>curl</code>请求来测试您的新密钥：',
-        generate5: "如果您没有安装<code>jq</code>且上述命令失败：",
+        generate5: '如果您没有安装<code>jq</code>且上述命令失败：',
         keyName: '密钥名称',
         limitedValidity: '有限有效期',
     },
@@ -204,8 +204,7 @@ export let I18nAdminZh: I18nAdmin = {
             Argon2ID目前是最安全的密码哈希算法。要充分发挥其潜力，
             必须针对每个部署进行调整。`,
         },
-        openapi:
-            "如果您想集成外部应用程序并使用Rauthy的API，请查看",
+        openapi: '如果您想集成外部应用程序并使用Rauthy的API，请查看',
         openapiNote: `根据后端配置，Swagger UI可能在此时不公开暴露。
             但它默认可通过内部指标HTTP服务器获得，以免暴露任何信息。`,
         source: '源代码可以在这里找到',
@@ -434,8 +433,7 @@ export let I18nAdminZh: I18nAdmin = {
             进行全新的注册。`,
         noMfaKeys: '此用户没有注册的通行密钥。',
         pkOnly1: '这是一个仅通行密钥账户。',
-        pkOnly2:
-            '这意味着该用户使用无密码登录，根本没有设置密码。',
+        pkOnly2: '这意味着该用户使用无密码登录，根本没有设置密码。',
         pkOnly3: `如果此用户丢失了所有通行密钥，可以完全重置账户并发送新的密码重置邮件。
             为此，请导航到'MFA'选项卡并删除所有现有的通行密钥。`,
         pwdNoInit: '用户尚未执行初始密码重置。',
