@@ -216,7 +216,7 @@
 
     .innerPhone {
         width: 100vw;
-        max-height: calc(100dvh - 8.5rem);
+        max-height: calc(100dvh - 10rem);
         overflow-y: auto;
     }
 
