@@ -250,7 +250,7 @@ export const I18nDe: I18n = {
         test: 'Test',
         testError: 'Fehler beim Starten des Tests',
         testSuccess: 'Test erfolgreich',
-        docLinkText: '',
+        docLinkText: 'die Dokumentation zu Passkeys',
     },
     pagination: {
         entries: 'Einträge',

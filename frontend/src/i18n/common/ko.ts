@@ -237,7 +237,7 @@ export const I18nKo: I18n = {
         test: '테스트',
         testError: '테스트 시작 중 오류 발생',
         testSuccess: '테스트 성공',
-        docLinkText: '',
+        docLinkText: 'the documentation about Passkeys',
     },
     pagination: {
         entries: '표시 개수',
