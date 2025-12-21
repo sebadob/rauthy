@@ -308,7 +308,7 @@
     }
 
     .label {
-        height: 1.8rem;
+        height: 1.75rem;
         width: 100%;
         margin-bottom: -0.3rem;
         padding: 0.1rem;

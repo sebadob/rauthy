@@ -189,6 +189,7 @@
 
 <style>
     .container {
+        max-height: calc(100dvh - 5.5rem);
         margin-top: 0.5rem;
         display: flex;
         flex-direction: column;
