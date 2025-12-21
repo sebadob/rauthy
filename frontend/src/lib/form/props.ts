@@ -3,6 +3,7 @@ export interface PropsInputDate {
     name?: string;
     value?: string | null;
     label?: string;
+    labelTime?: string;
     errMsg?: string;
     disabled?: boolean;
     min?: string;

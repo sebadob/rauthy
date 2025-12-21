@@ -12,6 +12,7 @@
         name,
         value = $bindable(fmtDateInput()),
         label = '',
+        labelTime = '',
         errMsg = '',
         disabled,
         min = '1900-01-01',
@@ -66,6 +67,7 @@
                 <InputTime
                     name={timeName}
                     ariaLabel={label}
+                    label={labelTime}
                     bind:value={timeValue}
                     errMsg={timeErrMsg}
                     min={timeMin}

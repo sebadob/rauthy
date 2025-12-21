@@ -172,13 +172,16 @@
         {:else}
             {#snippet row(entry: BlacklistedIp)}
                 <div class="blacklisted">
-                    <Button invisible onclick={() => navigator.clipboard.writeText(entry.ip)}>
-                        <div class="ip">
-                            <Tooltip text={t.common.copyToClip}>
-                                {entry.ip}
-                            </Tooltip>
-                        </div>
-                    </Button>
+                    <div>
+                        <Button invisible onclick={() => navigator.clipboard.writeText(entry.ip)}>
+                            <div class="ip">
+                                <Tooltip text={t.common.copyToClip}>
+                                    {entry.ip}
+                                </Tooltip>
+                            </div>
+                        </Button>
+                    </div>
+
                     <div class="date">
                         {formatDateFromTs(entry.exp)}
                     </div>
@@ -259,7 +262,6 @@
     }
 
     .ip {
-        margin-bottom: -0.15rem;
         text-align: left;
         cursor: copy;
     }

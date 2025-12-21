@@ -268,7 +268,7 @@
 
 <style>
     nav {
-        width: 13.5rem;
+        width: 14rem;
         height: 100dvh;
         background: hsl(var(--bg));
         z-index: 101;
