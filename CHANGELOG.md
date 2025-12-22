@@ -12,10 +12,10 @@ well.
 [#1278](https://github.com/sebadob/rauthy/pull/1278)
 [#1279](https://github.com/sebadob/rauthy/pull/1279)
 
-#### Hiqlite trigegr backup via API
+#### Hiqlite trigger backup via API
 
-While fixing the "not local backup with no S3 config" bug mentioned below
-in [Hiqlite](https://github.com/sebadob/hiqlite), a small featre was added. It is now possible to
+While fixing the "no local backup with no S3 config" bug mentioned below
+in [Hiqlite](https://github.com/sebadob/hiqlite), a small feature was added. It is now possible to
 trigger the creation of a backup manually via direct API call, in addition to using the Rauthy Admin
 UI or relying on the cron job. It is a simple `POST` request to the Hiqlite API (port 8200 by
 default) using the API secret, like so:
