@@ -226,7 +226,7 @@ setting for very quick and easy local testing and taking a first look. By settin
 a demo config is being loaded at startup.
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.33.1
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.33.2
 ```
 
 > [!CAUTION]
@@ -252,7 +252,7 @@ If you want to contribute to this repository, please take a look at
 
 ## Funding
 
-This project is funded through [NGI Zero Core](https://nlnet.nl/core), a fund established
+This project was funded through [NGI Zero Core](https://nlnet.nl/core), a fund established
 by [NLnet](https://nlnet.nl) with financial support from the European
 Commission's [Next Generation Internet](https://ngi.eu) program. Learn more at
 the [NLnet project page](https://nlnet.nl/project/Rauthy).

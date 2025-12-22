@@ -41,7 +41,7 @@ dependencies = [
  "brotli",
  "bytes",
  "bytestring",
- "derive_more 2.1.0",
+ "derive_more 2.1.1",
  "encoding_rs",
  "flate2",
  "foldhash 0.1.5",
@@ -214,7 +214,7 @@ dependencies = [
  "bytestring",
  "cfg-if",
  "cookie 0.16.2",
- "derive_more 2.1.0",
+ "derive_more 2.1.1",
  "encoding_rs",
  "foldhash 0.1.5",
  "futures-core",
@@ -267,7 +267,7 @@ dependencies = [
  "bytes",
  "bytestring",
  "csv",
- "derive_more 2.1.0",
+ "derive_more 2.1.1",
  "form_urlencoded",
  "futures-core",
  "futures-util",
@@ -1874,11 +1874,11 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "2.1.0"
+version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10b768e943bed7bf2cab53df09f4bc34bfd217cdb57d971e769874c9a6710618"
+checksum = "d751e9e49156b02b44f9c1815bcb94b984cdcc4396ecc32521c739452808b134"
 dependencies = [
- "derive_more-impl 2.1.0",
+ "derive_more-impl 2.1.1",
 ]
 
 [[package]]
@@ -1895,9 +1895,9 @@ dependencies = [
 
 [[package]]
 name = "derive_more-impl"
-version = "2.1.0"
+version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d286bfdaf75e988b4a78e013ecd79c581e06399ab53fbacd2d916c2f904f30b"
+checksum = "799a97264921d8623a957f6c3b9011f3b5492f557bbb7a5a19b7fa6d06ba8dcb"
 dependencies = [
  "convert_case 0.10.0",
  "proc-macro2",
@@ -4725,7 +4725,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4768,7 +4768,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "actix-web",
  "hiqlite",
@@ -4787,7 +4787,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "actix-web",
  "ammonia",
@@ -4817,7 +4817,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-data"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -4902,7 +4902,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4939,7 +4939,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4975,7 +4975,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "chrono",
  "openssl",
@@ -4992,7 +4992,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5008,7 +5008,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "async-trait",
  "openssl",
@@ -5024,7 +5024,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5044,7 +5044,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "actix-web",
  "atrium-api",
@@ -5070,7 +5070,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-wasm-modules"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "ammonia",
  "console_error_panic_hook",
