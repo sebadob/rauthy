@@ -63,12 +63,8 @@ async fn sender_test_debug(mut rx: mpsc::Receiver<EMail>) {
     warn!("SMTP_URL is not configured or test mode is set, cannot send out any E-Mails!");
 
     loop {
-        let req = rx.recv().await;
-        if req.is_some() {
-            debug!(
-                "New E-Mail for address: {:?}",
-                req.as_ref().unwrap().address
-            );
+        if let Some(email) = rx.recv().await {
+            debug!("New E-Mail for address: {}", email.address);
         } else {
             warn!("Received 'None' in email 'sender' - exiting");
             return;

@@ -1,5 +1,36 @@
 # Changelog
 
+## v0.33.2
+
+### Changes
+
+#### Updated I18n
+
+Translations for `zh` / `zhhans` have been updated, and `zh` is available for the Admin UI now as
+well.
+
+[#1278](https://github.com/sebadob/rauthy/pull/1278)
+[#1279](https://github.com/sebadob/rauthy/pull/1279)
+
+#### Hiqlite trigegr backup via API
+
+While fixing the "not local backup with no S3 config" bug mentioned below
+in [Hiqlite](https://github.com/sebadob/hiqlite), a small featre was added. It is now possible to
+trigger the creation of a backup manually via direct API call, in addition to using the Rauthy Admin
+UI or relying on the cron job. It is a simple `POST` request to the Hiqlite API (port 8200 by
+default) using the API secret, like so:
+
+```bash
+curl -i -XPOST -H 'X-API-SECRET: SuperSecureSecret1337' localhost:8200/backup
+```
+
+### Bugfixes
+
+- [Hiqlite](https://github.com/sebadob/hiqlite) had a bug where the backup cron job was not started
+  if no S3 config was given as well. It was bumped to the latest version which includes a fix.
+- The UI had some smaller CSS issues here and there after the recent updates.
+  [#1283](https://github.com/sebadob/rauthy/pull/1283)
+
 ## v0.33.1
 
 ### Bugfix
