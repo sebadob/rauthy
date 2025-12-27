@@ -310,7 +310,7 @@
     .label {
         height: 1.75rem;
         width: 100%;
-        margin-bottom: -0.3rem;
+        margin-bottom: -0.37rem;
         padding: 0.1rem;
         flex-wrap: wrap;
     }

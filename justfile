@@ -19,7 +19,7 @@ container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
 test_env_vars := "PUB_URL=localhost:8081 RP_ORIGIN=http://localhost:8081"
-jemalloc_conf := "JEMALLOC_SYS_WITH_MALLOC_CONF=abort_conf:true,narenas:8,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000"
+jemalloc_conf := "MALLOC_CONF=abort_conf:true,narenas:8,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000"
 postgres := "HIQLITE=false"
 
 [private]
@@ -417,6 +417,7 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
         -v {{ invocation_directory() }}/:/work/ \
         -w /work \
         -e {{ jemalloc_conf }} \
+        -e JEMALLOC_SYS_WITH_LG_PAGE=16 \
         {{ map_docker_user }} \
         {{ builder_image }}:{{ builder_tag_date }} \
         cargo build --release --target aarch64-unknown-linux-gnu
