@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.33.2"
+version = "0.33.3"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -40,7 +40,7 @@ actix-web-prom = "0.10"
 ammonia = "4.1"
 arc-swap = "1.7"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
-askama = "0.14"
+askama = "0.15"
 async-trait = "0.1.74"
 atrium-api = "0.25.3"
 atrium-common = "0.1.2"
