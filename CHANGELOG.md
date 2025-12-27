@@ -12,6 +12,8 @@ Raspberry Pi 5's default kernel, and other 64k kernels. This might increase the 
 
 This is for `arm64` only, since `x86_64` has fixed 4k page sizes.
 
+[#1288](https://github.com/sebadob/rauthy/pull/1288)
+
 ## v0.33.2
 
 ### Changes
