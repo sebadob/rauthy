@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.33.3
+
+### Changes
+
+#### Default kernel page size on arm64
+
+Support for kernel page sizes up to 64K on `arm64` was added. This makes it possible to run on e.g.
+Raspberry Pi 5's default kernel, and other 64k kernels. This might increase the memory usage on 4k
+`arm64` devices a tiny bit, but should improve efficiency and performance on 64k kernels.
+
+This is for `arm64` only, since `x86_64` has fixed 4k page sizes.
+
 ## v0.33.2
 
 ### Changes
@@ -27,7 +39,7 @@ curl -i -XPOST -H 'X-API-SECRET: SuperSecureSecret1337' localhost:8200/backup
 ### Bugfixes
 
 - [Hiqlite](https://github.com/sebadob/hiqlite) had a bug where the backup cron job was not started
-  if no S3 config was given as well. It was bumped to the latest version which includes a fix.
+  if no S3 config was given. It was bumped to the latest version which includes a fix.
 - The UI had some smaller CSS issues here and there after the recent updates.
   [#1283](https://github.com/sebadob/rauthy/pull/1283)
 
