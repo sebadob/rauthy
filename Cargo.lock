@@ -530,9 +530,9 @@ checksum = "9dbc3a507a82b17ba0d98f6ce8fd6954ea0c8152e98009d36a40d8dcc8ce078a"
 
 [[package]]
 name = "askama"
-version = "0.15.0"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21c01049339e624573a8027fe9392219f64d315a0ad24712b469611b3138f042"
+checksum = "bb7125972258312e79827b60c9eb93938334100245081cf701a2dee981b17427"
 dependencies = [
  "askama_macros",
  "itoa",
@@ -543,9 +543,9 @@ dependencies = [
 
 [[package]]
 name = "askama_derive"
-version = "0.15.0"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e393a25182a000666df345c2bdaa9ab6b0c243974ec7d29e377d6feea651778d"
+checksum = "8ba5e7259a1580c61571e3116ebaaa01e3c001b2132b17c4cc5c70780ca3e994"
 dependencies = [
  "askama_parser",
  "basic-toml",
@@ -560,18 +560,18 @@ dependencies = [
 
 [[package]]
 name = "askama_macros"
-version = "0.15.0"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e8bb77385d2954705452516f99511835be34b4c4a15a70800623b91406b1db9"
+checksum = "236ce20b77cb13506eaf5024899f4af6e12e8825f390bd943c4c37fd8f322e46"
 dependencies = [
  "askama_derive",
 ]
 
 [[package]]
 name = "askama_parser"
-version = "0.15.0"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb6401aa356822013db13e8f756011cd5042e7e61d37456bb8b7ef26feb8ebca"
+checksum = "f3c63392767bb2df6aa65a6e1e3b80fd89bb7af6d58359b924c0695620f1512e"
 dependencies = [
  "rustc-hash",
  "serde",
@@ -3190,9 +3190,9 @@ checksum = "cf370abdafd54d13e54a620e8c3e1145f28e46cc9d704bc6d94414559df41763"
 
 [[package]]
 name = "iri-string"
-version = "0.7.9"
+version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f867b9d1d896b67beb18518eda36fdb77a32ea590de864f1325b294a6d14397"
+checksum = "c91338f0783edbd6195decb37bae672fd3b165faffb89bf7b9e6942f8b1a731a"
 dependencies = [
  "memchr",
  "serde",
@@ -4338,9 +4338,9 @@ dependencies = [
 
 [[package]]
 name = "portable-atomic"
-version = "1.12.0"
+version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f59e70c4aef1e55797c2e8fd94a4f2a973fc972cfde0e0b05f683667b0cd39dd"
+checksum = "f89776e4d69bb58bc6993e99ffa1d11f228b839984854c7daeb5d37f87cbe950"
 
 [[package]]
 name = "postgres-derive"
@@ -4479,9 +4479,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.103"
+version = "1.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ee95bc4ef87b8d5ba32e8b7714ccc834865276eab0aed5c9958d00ec45f49e8"
+checksum = "9695f8df41bb4f3d222c95a67532365f569318332d03d5f3f67f37b20e6ebdf0"
 dependencies = [
  "unicode-ident",
 ]
@@ -4738,7 +4738,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4781,7 +4781,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "actix-web",
  "hiqlite",
@@ -4800,7 +4800,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "actix-web",
  "ammonia",
@@ -4830,7 +4830,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-data"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -4915,7 +4915,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4952,7 +4952,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4988,7 +4988,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "chrono",
  "openssl",
@@ -5005,7 +5005,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5021,7 +5021,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "async-trait",
  "openssl",
@@ -5037,7 +5037,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5057,7 +5057,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "actix-web",
  "atrium-api",
@@ -5083,7 +5083,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-wasm-modules"
-version = "0.33.3"
+version = "0.33.4"
 dependencies = [
  "ammonia",
  "console_error_panic_hook",
@@ -7932,9 +7932,9 @@ dependencies = [
 
 [[package]]
 name = "zeroize_derive"
-version = "1.4.2"
+version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
+checksum = "85a5b4158499876c763cb03bc4e49185d3cccbabb15b33c627f7884f43db852e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7996,9 +7996,9 @@ checksum = "40990edd51aae2c2b6907af74ffb635029d5788228222c4bb811e9351c0caad3"
 
 [[package]]
 name = "zmij"
-version = "1.0.0"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6d6085d62852e35540689d1f97ad663e3971fc19cf5eceab364d62c646ea167"
+checksum = "e9747e91771f56fd7893e1164abd78febd14a670ceec257caad15e051de35f06"
 
 [[package]]
 name = "zopfli"
