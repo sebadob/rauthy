@@ -23,6 +23,11 @@ unnecessary memory allocations.
 - The `preferred_username` was not set correctly on the `/userinfo` endpoint. It still had the old
   behavior (pre v0.33) and it always contained the `email`.
   [#1291](https://github.com/sebadob/rauthy/pull/1291)
+- With the added support for 16k / 64k kernels on `arm64`, a conflict for the `MALLOC_CONF` was
+  discovered. To resolve it, the value is not set during build time anymore, but was added as an
+  `ENV` var with a default value to the final release container. It can be overwritten as it was
+  the case before.
+  [#1293](https://github.com/sebadob/rauthy/pull/1293)
 
 ## v0.33.3
 
