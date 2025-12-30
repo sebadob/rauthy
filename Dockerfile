@@ -21,5 +21,4 @@ COPY --chown=$TARGET_USER ./config-local-test.toml ./config-local-test.toml
 COPY --chown=$TARGET_USER ./out/empty/ ./data
 COPY --chown=$TARGET_USER ./out/empty/ ./tls
 
-
 CMD ["/app/rauthy"]

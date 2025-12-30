@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.12.0
+
+The `timezone` is now available for `ScimUser`, when used in combination with Rauthy v0.34.4+.
+Apart from that, there was a bump in MSRV to `1.87.0`.
+
 ## v0.11.0
 
 ### Breaking

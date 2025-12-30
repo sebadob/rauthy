@@ -95,6 +95,8 @@ pub struct ScimUser {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locale: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub timezone: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub active: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub emails: Option<Vec<ScimValue>>,
@@ -128,6 +130,7 @@ impl Default for ScimUser {
             display_name: None,
             preferred_language: None,
             locale: None,
+            timezone: None,
             active: None,
             emails: None,
             phone_numbers: None,
