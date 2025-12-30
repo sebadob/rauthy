@@ -128,6 +128,8 @@ pub struct ScimUser {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locale: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub timezone: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub active: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub emails: Option<Vec<ScimValue>>,
@@ -161,6 +163,7 @@ impl Default for ScimUser {
             display_name: None,
             preferred_language: None,
             locale: None,
+            timezone: None,
             active: None,
             emails: None,
             phone_numbers: None,
@@ -195,15 +198,17 @@ impl ScimUser {
         } else {
             None
         };
-        let (picture_uri, preferred_language, locale) = if client_scopes.contains("profile") {
-            (
-                user.picture_uri(),
-                Some(user.language.as_str().to_string()),
-                Some(user.language.as_str().to_string()),
-            )
-        } else {
-            (None, None, None)
-        };
+        let (picture_uri, preferred_language, locale, timezone) =
+            if client_scopes.contains("profile") {
+                (
+                    user.picture_uri(),
+                    Some(user.language.as_str().to_string()),
+                    Some(user.language.as_str().to_string()),
+                    values.tz,
+                )
+            } else {
+                (None, None, None, None)
+            };
         let phone_numbers = if client_scopes.contains("phone") {
             values.phone.map(|no| {
                 vec![ScimValue {
@@ -234,6 +239,7 @@ impl ScimUser {
             display_name: Some(user.email.clone()),
             preferred_language,
             locale,
+            timezone,
             active: Some(user.enabled),
             emails: Some(vec![ScimValue {
                 value: user.email,
