@@ -1,10 +1,10 @@
 [package]
 name = "rauthy-client"
-version = "0.11.1"
+version = "0.12.0"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
-rust-version = "1.85.0"
+rust-version = "1.87.0"
 categories = ["web-programming"]
 keywords = ["rauthy", "rauthy-client", "oidc"]
 description = "Client for the Rauthy OIDC IAM project"
