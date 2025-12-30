@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.11.1
+
+The `timezone` is now available for `ScimUser`, when used in combination with Rauthy v0.34.4+.
+
 ## v0.11.0
 
 ### Breaking
