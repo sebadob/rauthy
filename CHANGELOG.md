@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.33.4
+
+### Changes
+
+#### `timezone` for SCIM
+
+The `ScimUser` now also contains the `timezone` (with `profile` scope), which was added in v0.33.0.
+
+[#1292](https://github.com/sebadob/rauthy/pull/1292)
+
+#### `zoneinfo` via `/userinfo`
+
+While fixing the `preferred_username` bug on the `/userinfo` endpoint, the `zoneinfo` was added to
+the response, which is a new value since `0.33.0` as well. There was also a slight rework of the
+logic to get rid of a few unnecessary memory allocations.
+
+[#1291](https://github.com/sebadob/rauthy/pull/1291)
+
+### Bugfix
+
+- The `preferred_username` was not set correctly on the `/userinfo` endpoint. It still had the old
+  behavior (pre v0.33) and it always contained the `email`.
+  [#1291](https://github.com/sebadob/rauthy/pull/1291)
+
 ## v0.33.3
 
 ### Changes
