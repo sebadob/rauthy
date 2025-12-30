@@ -210,7 +210,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.33.3
+          image: ghcr.io/sebadob/rauthy:0.33.4
           securityContext:
             capabilities:
               drop:
