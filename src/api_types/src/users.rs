@@ -487,6 +487,10 @@ pub struct Userinfo {
     pub birthdate: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locale: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub picture: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub zoneinfo: Option<String>,
 
     // scope: phone
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -116,6 +116,8 @@ pub async fn get_userinfo(
         family_name: None,
         locale: None,
         birthdate: None,
+        picture: None,
+        zoneinfo: None,
 
         // scope: phone
         phone: None,
@@ -124,52 +126,49 @@ pub async fn get_userinfo(
         webid,
     };
 
-    if scope.contains("email") {
-        userinfo.email = Some(user.email.clone());
+    let has_email = scope.contains("email");
+    let has_profile = scope.contains("profile");
+    let has_addr = scope.contains("address");
+    let has_phone = scope.contains("phone");
+
+    if (has_profile || has_addr || has_phone)
+        && let Some(values) = UserValues::find(&user.id).await?
+    {
+        if has_addr {
+            userinfo.address = AddressClaim::try_build(&user, &values).map(|claim| claim.into());
+        }
+
+        if has_profile {
+            userinfo.birthdate = values.birthdate;
+            userinfo.zoneinfo = values.tz;
+
+            if let Some(username) = values.preferred_username {
+                userinfo.preferred_username = Some(username);
+            } else if RauthyConfig::get()
+                .vars
+                .user_values
+                .preferred_username
+                .email_fallback
+            {
+                userinfo.preferred_username = userinfo.email.clone();
+            }
+        }
+
+        if has_phone {
+            userinfo.phone = values.phone;
+        }
+    }
+
+    if has_email {
+        userinfo.email = Some(user.email);
         userinfo.email_verified = Some(user.email_verified);
     }
 
-    let mut user_values = None;
-    let mut user_values_fetched = false;
-
-    if scope.contains("profile") {
-        userinfo.preferred_username = Some(user.email.clone());
-        userinfo.given_name = Some(user.given_name.clone());
-        userinfo.family_name = user.family_name.clone();
+    if has_profile {
+        userinfo.given_name = Some(user.given_name);
+        userinfo.family_name = user.family_name;
         userinfo.locale = Some(user.language.to_string());
-
-        user_values = UserValues::find(&user.id).await?;
-        user_values_fetched = true;
-
-        if let Some(values) = &user_values
-            && let Some(birthdate) = &values.birthdate
-        {
-            userinfo.birthdate = Some(birthdate.clone());
-        }
-    }
-
-    if scope.contains("address") {
-        if !user_values_fetched {
-            user_values = UserValues::find(&user.id).await?;
-            user_values_fetched = true;
-        }
-
-        if let Some(values) = &user_values {
-            userinfo.address = AddressClaim::try_build(&user, values).map(|claim| claim.into());
-        }
-    }
-
-    if scope.contains("phone") {
-        if !user_values_fetched {
-            user_values = UserValues::find(&user.id).await?;
-            // user_values_fetched = true;
-        }
-
-        if let Some(values) = &user_values
-            && let Some(phone) = &values.phone
-        {
-            userinfo.phone = Some(phone.clone());
-        }
+        userinfo.picture = user.picture_id;
     }
 
     Ok((userinfo, cors_header))
