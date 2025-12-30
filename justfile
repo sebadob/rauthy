@@ -402,7 +402,6 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
         -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
         -v {{ invocation_directory() }}/:/work/ \
         -w /work \
-        -e {{ jemalloc_conf }} \
         {{ map_docker_user }} \
         {{ builder_image }}:{{ builder_tag_date }} \
         cargo build --release --target x86_64-unknown-linux-gnu
@@ -416,7 +415,6 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
         -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
         -v {{ invocation_directory() }}/:/work/ \
         -w /work \
-        -e {{ jemalloc_conf }} \
         -e JEMALLOC_SYS_WITH_LG_PAGE=16 \
         {{ map_docker_user }} \
         {{ builder_image }}:{{ builder_tag_date }} \
