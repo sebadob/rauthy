@@ -133,7 +133,6 @@ pub async fn get_userinfo(
     let mut user_values_fetched = false;
 
     if scope.contains("profile") {
-        userinfo.preferred_username = Some(user.email.clone());
         userinfo.given_name = Some(user.given_name.clone());
         userinfo.family_name = user.family_name.clone();
         userinfo.locale = Some(user.language.to_string());
@@ -141,10 +140,19 @@ pub async fn get_userinfo(
         user_values = UserValues::find(&user.id).await?;
         user_values_fetched = true;
 
-        if let Some(values) = &user_values
-            && let Some(birthdate) = &values.birthdate
+        if let Some(values) = &user_values {
+            userinfo.birthdate = values.birthdate.clone();
+            userinfo.preferred_username = values.preferred_username.clone();
+        }
+
+        if RauthyConfig::get()
+            .vars
+            .user_values
+            .preferred_username
+            .email_fallback
+            && userinfo.preferred_username.is_none()
         {
-            userinfo.birthdate = Some(birthdate.clone());
+            userinfo.preferred_username = Some(user.email.clone());
         }
     }
 
