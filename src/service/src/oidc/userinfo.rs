@@ -116,6 +116,8 @@ pub async fn get_userinfo(
         family_name: None,
         locale: None,
         birthdate: None,
+        picture: None,
+        zoneinfo: None,
 
         // scope: phone
         phone: None,
@@ -138,6 +140,7 @@ pub async fn get_userinfo(
 
         if has_profile {
             userinfo.birthdate = values.birthdate;
+            userinfo.zoneinfo = values.tz;
 
             if let Some(username) = values.preferred_username {
                 userinfo.preferred_username = Some(username);
@@ -165,6 +168,7 @@ pub async fn get_userinfo(
         userinfo.given_name = Some(user.given_name);
         userinfo.family_name = user.family_name;
         userinfo.locale = Some(user.language.to_string());
+        userinfo.picture = user.picture_id;
     }
 
     Ok((userinfo, cors_header))
