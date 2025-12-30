@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.33.4
+
+### Changes
+
+#### `timezone` for SCIM
+
+The `ScimUser` now also contains the `timezone` (with `profile` scope), which was added in v0.33.0.
+
+[#1292](https://github.com/sebadob/rauthy/pull/1292)
+
+#### `picture` + `zoneinfo` via `/userinfo`
+
+While fixing the `preferred_username` bug on the `/userinfo` endpoint, the `picture` and `zoneinfo`
+were added to the response. There was also a slight rework of the logic to get rid of a few
+unnecessary memory allocations.
+
+[#1291](https://github.com/sebadob/rauthy/pull/1291)
+
+### Bugfix
+
+- The `preferred_username` was not set correctly on the `/userinfo` endpoint. It still had the old
+  behavior (pre v0.33) and it always contained the `email`.
+  [#1291](https://github.com/sebadob/rauthy/pull/1291)
+- With the added support for 16k / 64k kernels on `arm64`, a conflict for the `MALLOC_CONF` was
+  discovered. To resolve it, the value is not set during build time anymore, but was added as an
+  `ENV` var with a default value to the final release container. It can be overwritten as it was
+  the case before.
+  [#1293](https://github.com/sebadob/rauthy/pull/1293)
+
 ## v0.33.3
 
 ### Changes
