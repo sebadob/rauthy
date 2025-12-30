@@ -10,11 +10,11 @@ The `ScimUser` now also contains the `timezone` (with `profile` scope), which wa
 
 [#1292](https://github.com/sebadob/rauthy/pull/1292)
 
-#### `zoneinfo` via `/userinfo`
+#### `picture` + `zoneinfo` via `/userinfo`
 
-While fixing the `preferred_username` bug on the `/userinfo` endpoint, the `zoneinfo` was added to
-the response, which is a new value since `0.33.0` as well. There was also a slight rework of the
-logic to get rid of a few unnecessary memory allocations.
+While fixing the `preferred_username` bug on the `/userinfo` endpoint, the `picture` and `zoneinfo`
+were added to the response. There was also a slight rework of the logic to get rid of a few
+unnecessary memory allocations.
 
 [#1291](https://github.com/sebadob/rauthy/pull/1291)
 
