@@ -5664,9 +5664,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.35"
+version = "0.23.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "533f54bc6a7d4f647e46ad909549eda97bf5afc1585190ef692b4286b198bd8f"
+checksum = "c665f33d38cea657d9614f766881e4d510e0eda4239891eea56b4cadcf01801b"
 dependencies = [
  "aws-lc-rs",
  "log",
@@ -6490,14 +6490,14 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tls-hot-reload"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82563639ed857de11a5eb59fba1bd99ba238b578edc4741569ea6ec55c2e29ec"
+checksum = "39021aa3e0a0c673f3a35fac03b7a50b162815c9dce0bb1dd478eb01e2040c91"
 dependencies = [
  "arc-swap",
  "notify",
  "rustls",
- "rustls-pemfile",
+ "rustls-pki-types",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
