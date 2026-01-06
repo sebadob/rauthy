@@ -134,7 +134,7 @@ tikv-jemallocator = { version = "0.6", features = [
 time = { version = "0.3", features = [
     "formatting", "local-offset", "macros", "parsing", "serde"
 ] }
-tls-hot-reload = "0.1"
+tls-hot-reload = "0.2"
 toml = "0.9"
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = [
