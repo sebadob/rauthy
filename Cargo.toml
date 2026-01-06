@@ -106,7 +106,7 @@ reqwest = { version = "0.12.3", default-features = false, features = [
 ring = "0.17.13"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
-rsa = { version = "0.9.3", features = ["serde", "sha2"] }
+rsa = { version = "0.9.10", features = ["serde", "sha2"] }
 ruma-client = { version = "0.16.0", features = [
     "client-api", "reqwest-rustls-webpki-roots"
 ] }
