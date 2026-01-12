@@ -17,6 +17,7 @@ impl I18nEmailLoginLocation<'_> {
             Language::En => Self::build_en(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
+            Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
         }
     }
@@ -64,6 +65,17 @@ impl I18nEmailLoginLocation<'_> {
                 oppdatere dine påloggingsopplysninger!",
             revoke_link: "Tilbakekall tilgang",
             account_link: "Kontodashboard",
+        }
+    }
+
+    fn build_uk() -> Self {
+        Self {
+            subject: "Попередження безпеки",
+            unknown_location: "Вхід з невідомого місця",
+            if_invalid: "Якщо це були не ви, вам слід негайно відкликати доступ та оновити \
+                свої облікові дані!",
+            revoke_link: "Відкликати доступ",
+            account_link: "Панель акаунта",
         }
     }
 

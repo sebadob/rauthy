@@ -1106,6 +1106,9 @@ ko = '%Y-%m-%d %T (%Z)'
 # default: '%d.%m.%Y %T (%Z)'
 # overwritten by: TZ_FMT_NO
 no = '%d.%m.%Y %T (%Z)'
+# default: '%d.%m.%Y %T (%Z)'
+# overwritten by: TZ_FMT_UK
+uk = '%d.%m.%Y %T (%Z)'
 # default: '%d-%m-%Y %T (%Z)'
 # overwritten by: TZ_FMT_ZHHANS
 zhhans = '%d-%m-%Y %T (%Z)'
@@ -1729,13 +1732,13 @@ MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de zhhans ko nb
+# Available Options: en de ko nb uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['de', 'en', 'ko', 'nb', 'zhhans']
+filter_lang_common = ['de', 'en', 'ko', 'nb', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de ko nb zhhans
+# Available Options: en de ko nb uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['de', 'en', 'ko', 'nb', 'zhhans']
+filter_lang_admin = ['en', 'de', 'ko', 'nb', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
@@ -2169,7 +2172,7 @@ log = true
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de ko zh_hans
+# one of: en de ko uk zh_hans
 lang = 'en'
 # pme of: password_new, password_reset
 typ = 'password_new'

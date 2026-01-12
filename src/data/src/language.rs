@@ -15,13 +15,15 @@ pub enum Language {
     En,
     Ko,
     Nb,
+    Uk,
     ZhHans,
 }
 
 impl Language {
-    fn all_available<'a>() -> [&'a str; 10] {
+    fn all_available<'a>() -> [&'a str; 12] {
         [
-            "en", "en-US", "de", "de-DE", "ko", "nb", "nb-NO", "no-NO", "zh", "zh-Hans",
+            "en", "en-US", "de", "de-DE", "ko", "nb", "nb-NO", "no-NO", "uk", "uk-UA", "zh",
+            "zh-Hans",
         ]
     }
 
@@ -32,6 +34,7 @@ impl Language {
             Language::En => "en",
             Language::Ko => "ko",
             Language::Nb => "nb",
+            Language::Uk => "uk",
             Language::ZhHans => "zhhans",
         }
     }
@@ -62,6 +65,7 @@ impl From<&str> for Language {
             "de" | "de-DE" => Self::De,
             "ko" | "ko-KR" => Self::Ko,
             "nb" | "nb-NO" | "no-NO" => Self::Nb,
+            "uk" | "uk-UA" => Self::Uk,
             "zh" | "zhhans" | "zh-hans" | "zh-Hans" => Self::ZhHans,
             _ => Self::default(),
         }
@@ -103,6 +107,7 @@ impl From<rauthy_api_types::generic::Language> for Language {
             rauthy_api_types::generic::Language::En => Self::En,
             rauthy_api_types::generic::Language::Ko => Self::Ko,
             rauthy_api_types::generic::Language::Nb => Self::Nb,
+            rauthy_api_types::generic::Language::Uk => Self::Uk,
             rauthy_api_types::generic::Language::ZhHans => Self::ZhHans,
         }
     }
@@ -115,6 +120,7 @@ impl From<Language> for rauthy_api_types::generic::Language {
             Language::En => Self::En,
             Language::Ko => Self::Ko,
             Language::Nb => Self::Nb,
+            Language::Uk => Self::Uk,
             Language::ZhHans => Self::ZhHans,
         }
     }

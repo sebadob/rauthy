@@ -39,6 +39,7 @@ fn email_ts_prettify_with(
         Language::En => config.en.as_ref(),
         Language::Ko => config.ko.as_ref(),
         Language::Nb => config.no.as_ref(),
+        Language::Uk => config.uk.as_ref(),
         Language::ZhHans => config.zhhans.as_ref(),
     };
 

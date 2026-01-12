@@ -154,6 +154,7 @@ impl WellKnown {
         let ui_locales_supported = vec![
             "de".to_string(),
             "en".to_string(),
+            "uk".to_string(),
             "zh-hans".to_string(),
             "ko".to_string(),
         ];

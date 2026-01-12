@@ -18,6 +18,7 @@ impl I18nEmailChangeInfoNew<'_> {
             Language::En => Self::build_en(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
+            Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
         }
     }
@@ -65,6 +66,17 @@ impl I18nEmailChangeInfoNew<'_> {
             validity: "Denne lenken er kun gyldig i en kort periode av sikkerhetsgrunner.",
             expires: "Lenken utløper:",
             button_text: "Bekreft epost",
+        }
+    }
+
+    fn build_uk() -> Self {
+        Self {
+            subject: "Запит на зміну E-mail",
+            header: "Запит на зміну E-mail для",
+            click_link: "Натисніть посилання нижче, щоб підтвердити вашу E-mail адресу.",
+            validity: "З міркувань безпеки це посилання дійсне лише протягом короткого часу.",
+            expires: "Посилання дійсне до:",
+            button_text: "Підтвердити E-mail",
         }
     }
 
