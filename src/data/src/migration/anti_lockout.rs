@@ -35,10 +35,11 @@ pub async fn anti_lockout() -> Result<(), ErrorResponse> {
         (format!("{issuer}/oidc/callback"), None)
     };
 
-    // we will actually skip non-mandatory values in the query below
+    let cl = Client::find("rauthy".to_string()).await?;
+
     let rauthy = Client {
         id: "rauthy".to_string(),
-        name: Some("Rauthy".to_string()),
+        name: Some(cl.name.unwrap_or_else(|| "Rauthy".to_string())),
         enabled: true,
         confidential: false,
         secret: None,
