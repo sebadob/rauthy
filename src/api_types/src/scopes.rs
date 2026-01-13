@@ -7,8 +7,8 @@ use validator::Validate;
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct ScopeRequest {
-    /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
-    #[validate(regex(path = "*RE_ROLES_SCOPES", code = "^[a-z0-9-_/,:*]{2,64}$"))]
+    /// Validation: `^[a-z0-9-_/,:*.]{2,64}$`
+    #[validate(regex(path = "*RE_ROLES_SCOPES", code = "^[a-z0-9-_/,:*.]{2,64}$"))]
     pub scope: String,
     /// Validation: `^[a-zA-Z0-9-_/]{2,128}$`
     #[validate(custom(function = "validate_vec_attr"))]
