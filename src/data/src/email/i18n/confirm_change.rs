@@ -15,6 +15,7 @@ impl I18nEmailConfirmChange<'_> {
             Language::En => Self::build_en(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
+            Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
         }
     }
@@ -50,6 +51,14 @@ impl I18nEmailConfirmChange<'_> {
             subject: "이메일 변경이 승인되었습니다:",
             msg: "이메일 주소가 다음 주소로 성공적으로 변경되었습니다:",
             msg_from_admin: "이 작업은 관리자가 수행했습니다.",
+        }
+    }
+
+    fn build_uk() -> Self {
+        Self {
+            subject: "Зміну E-mail підтверджено для",
+            msg: "Вашу адресу E-mail було успішно змінено на:",
+            msg_from_admin: "Цю дію було виконано адміністратором.",
         }
     }
 

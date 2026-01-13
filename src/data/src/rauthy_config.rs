@@ -396,6 +396,7 @@ impl Default for Vars {
                     en: "%m/%d/%Y %T (%Z)".into(),
                     ko: "%Y-%m-%d %T (%Z)".into(),
                     no: "%d.%m.%Y %T (%Z)".into(),
+                    uk: "%d.%m.%Y %T (%Z)".into(),
                     zhhans: "%d-%m-%Y %T (%Z)".into(),
                     tz_fallback: "UTC".into(),
                 },
@@ -499,9 +500,16 @@ impl Default for Vars {
                     "de".into(),
                     "ko".into(),
                     "nb".into(),
+                    "uk".into(),
                     "zhhans".into(),
                 ],
-                filter_lang_admin: vec!["en".into(), "de".into(), "ko".into(), "nb".into()],
+                filter_lang_admin: vec![
+                    "en".into(),
+                    "de".into(),
+                    "ko".into(),
+                    "nb".into(),
+                    "uk".into(),
+                ],
             },
             lifetimes: VarsLifetimes {
                 refresh_token_grace_time: 5,
@@ -617,6 +625,21 @@ impl Default for Vars {
                     footer: None,
                     button_text_request_new: None,
                 },
+                password_new_uk: VarsTemplate {
+                    subject: "Новий пароль".into(),
+                    header: "Новий пароль для".into(),
+                    text: None,
+                    click_link:
+                        "Натисніть посилання нижче, щоб перейти до форми встановлення пароля."
+                            .into(),
+                    validity:
+                        "З міркувань безпеки це посилання дійсне лише протягом короткого часу."
+                            .into(),
+                    expires: "Посилання дійсне до:".into(),
+                    button: "Встановити пароль".into(),
+                    footer: None,
+                    button_text_request_new: None,
+                },
                 password_new_zhhans: VarsTemplate {
                     subject: "새 비밀번호".into(),
                     header: "새 비밀번호를 설정해 주세요:".into(),
@@ -681,6 +704,22 @@ impl Default for Vars {
                     button: "Tilbakestill passord".into(),
                     footer: Some("Hvis lenken har utløpt, kan du be om en ny.".into()),
                     button_text_request_new: Some("Be om ny lenke".into()),
+                },
+                password_reset_uk: VarsTemplate {
+                    subject: "Запит на скидання пароля".into(),
+                    header: "Запит на скидання пароля для".into(),
+                    text: None,
+                    click_link: "Натисніть посилання нижче, щоб перейти до форми скидання пароля."
+                        .into(),
+                    validity:
+                        "З міркувань безпеки це посилання дійсне лише протягом короткого часу."
+                            .into(),
+                    expires: "Посилання дійсне до:".into(),
+                    button: "Скинути пароль".into(),
+                    footer: Some(
+                        "Якщо термін дії посилання минув, ви можете запросити нове.".into(),
+                    ),
+                    button_text_request_new: Some("Запросити нове посилання".into()),
                 },
                 password_reset_zhhans: VarsTemplate {
                     subject: "비밀번호 초기화 요청".into(),
@@ -2420,6 +2459,13 @@ impl Vars {
                         self.templates.password_reset_nb.clone()
                     }
                 }
+                "uk" => {
+                    if is_password_new {
+                        self.templates.password_new_uk.clone()
+                    } else {
+                        self.templates.password_reset_uk.clone()
+                    }
+                }
                 "zh_hans" => {
                     if is_password_new {
                         self.templates.password_new_zhhans.clone()
@@ -2479,6 +2525,13 @@ impl Vars {
                         self.templates.password_reset_ko = tpl;
                     }
                 }
+                "uk" => {
+                    if is_password_new {
+                        self.templates.password_new_uk = tpl;
+                    } else {
+                        self.templates.password_reset_uk = tpl;
+                    }
+                }
                 "zh_hans" => {
                     if is_password_new {
                         self.templates.password_new_zhhans = tpl;
@@ -2487,7 +2540,9 @@ impl Vars {
                     }
                 }
                 _ => {
-                    panic!("Invalid value for `templates.lang`, allowed are: en de ko nb zh_hans")
+                    panic!(
+                        "Invalid value for `templates.lang`, allowed are: en de ko nb uk zh_hans"
+                    )
                 }
             }
         }
@@ -2964,6 +3019,7 @@ pub struct VarsEmailTzFmt {
     pub en: Cow<'static, str>,
     pub ko: Cow<'static, str>,
     pub no: Cow<'static, str>,
+    pub uk: Cow<'static, str>,
     pub zhhans: Cow<'static, str>,
     pub tz_fallback: Cow<'static, str>,
 }
@@ -3169,12 +3225,14 @@ pub struct VarsTemplates {
     pub password_new_en: VarsTemplate,
     pub password_new_ko: VarsTemplate,
     pub password_new_nb: VarsTemplate,
+    pub password_new_uk: VarsTemplate,
     pub password_new_zhhans: VarsTemplate,
 
     pub password_reset_de: VarsTemplate,
     pub password_reset_en: VarsTemplate,
     pub password_reset_ko: VarsTemplate,
     pub password_reset_nb: VarsTemplate,
+    pub password_reset_uk: VarsTemplate,
     pub password_reset_zhhans: VarsTemplate,
 }
 

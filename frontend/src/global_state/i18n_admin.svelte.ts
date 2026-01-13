@@ -4,6 +4,7 @@ import { I18nAdminDe } from '../i18n/admin/de';
 import { I18nAdminEn } from '../i18n/admin/en';
 import { I18nAdminKo } from '../i18n/admin/ko';
 import { I18nAdminNb } from '../i18n/admin/nb';
+import { I18nAdminUk } from '../i18n/admin/uk';
 import { I18nAdminZh } from '../i18n/admin/zh';
 
 // This hack makes typescript happy and is fine as long as
@@ -31,6 +32,7 @@ const i18nMap: Record<string, I18nAdmin> = {
     en: I18nAdminEn,
     ko: I18nAdminKo,
     nb: I18nAdminNb,
+    uk: I18nAdminUk,
     zh: I18nAdminZh,
 };
 

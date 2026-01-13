@@ -17,6 +17,7 @@ impl I18nEmailResetInfo<'_> {
             Language::En => Self::build_en(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
+            Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
         }
     }
@@ -59,6 +60,16 @@ impl I18nEmailResetInfo<'_> {
             expires_2: "utløper snart:",
             update: "Du kan oppdatere det her:",
             button_text: "Oppdater passord",
+        }
+    }
+
+    fn build_uk() -> Self {
+        Self {
+            subject: "Термін дії пароля скоро закінчиться",
+            expires_1: "Термін дії вашого пароля для",
+            expires_2: " скоро закінчиться:",
+            update: "Ви можете оновити його тут:",
+            button_text: "Оновити пароль",
         }
     }
 

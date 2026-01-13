@@ -39,6 +39,7 @@ impl I18nEmailReset<'_> {
             Language::En => Self::from(&tpls.password_reset_en),
             Language::Ko => Self::from(&tpls.password_reset_ko),
             Language::Nb => Self::from(&tpls.password_reset_nb),
+            Language::Uk => Self::from(&tpls.password_reset_uk),
             Language::ZhHans => Self::from(&tpls.password_reset_zhhans),
         }
     }

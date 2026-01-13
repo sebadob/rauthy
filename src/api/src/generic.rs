@@ -43,8 +43,8 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
     let common = RauthyConfig::get().vars.i18n.filter_lang_common
         .iter()
         .map(|v| {
-                if !["de", "en", "ko", "nb", "zhhans"].contains(&v.as_ref()) {
-                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de ko nb zhhans\nfound: {v}");
+                if !["de", "en", "ko", "nb", "uk", "zhhans"].contains(&v.as_ref()) {
+                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de ko nb uk zhhans\nfound: {v}");
                 }
                 Language::from(v.as_ref()).into()
         })
@@ -56,9 +56,9 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
         .filter_lang_admin
         .iter()
         .map(|v| {
-            if !["de", "en", "ko", "nb", "zhhans"].contains(&v.as_ref()) {
+            if !["de", "en", "ko", "nb", "uk", "zhhans"].contains(&v.as_ref()) {
                 panic!(
-                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de ko nb zhhans\nfound: {v}",
+                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de ko nb uk zhhans\nfound: {v}",
                 );
             }
             Language::from(v.as_ref()).into()
