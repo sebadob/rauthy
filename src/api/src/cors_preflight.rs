@@ -4,13 +4,17 @@ use actix_web::http::header::{
 };
 use actix_web::{HttpResponse, options};
 
+static ALLOW_HEADERS_WITH_AUTH: &str =
+    "Authorization, Accept, Accept-Language, Content-Type, Range";
+
 #[options("/clients_dyn")]
 pub async fn options_clients_dyn() -> HttpResponse {
     HttpResponse::NoContent()
         .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
         .insert_header((ACCESS_CONTROL_ALLOW_METHODS, "POST, OPTIONS"))
         .insert_header((ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
-        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, "Authorization"))
+        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, ALLOW_HEADERS_WITH_AUTH))
+        .insert_header((ACCESS_CONTROL_MAX_AGE, "31536000"))
         .finish()
 }
 
@@ -20,7 +24,7 @@ pub async fn options_authorize() -> HttpResponse {
         .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
         .insert_header((ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, OPTIONS"))
         .insert_header((ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
-        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, "Authorization"))
+        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, ALLOW_HEADERS_WITH_AUTH))
         .finish()
 }
 
@@ -48,7 +52,7 @@ pub async fn options_logout() -> HttpResponse {
         .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
         .insert_header((ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, OPTIONS"))
         .insert_header((ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
-        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, "Authorization"))
+        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, ALLOW_HEADERS_WITH_AUTH))
         .finish()
 }
 
@@ -58,7 +62,7 @@ pub async fn options_token() -> HttpResponse {
         .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
         .insert_header((ACCESS_CONTROL_ALLOW_METHODS, "POST, OPTIONS"))
         .insert_header((ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
-        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, "Authorization"))
+        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, ALLOW_HEADERS_WITH_AUTH))
         .finish()
 }
 
@@ -68,7 +72,7 @@ pub async fn options_introspect() -> HttpResponse {
         .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
         .insert_header((ACCESS_CONTROL_ALLOW_METHODS, "POST, OPTIONS"))
         .insert_header((ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
-        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, "Authorization"))
+        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, ALLOW_HEADERS_WITH_AUTH))
         .insert_header((ACCESS_CONTROL_MAX_AGE, "31536000"))
         .finish()
 }
@@ -79,7 +83,7 @@ pub async fn options_userinfo() -> HttpResponse {
         .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
         .insert_header((ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, OPTIONS"))
         .insert_header((ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
-        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, "Authorization"))
+        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, ALLOW_HEADERS_WITH_AUTH))
         .insert_header((ACCESS_CONTROL_MAX_AGE, "31536000"))
         .finish()
 }
