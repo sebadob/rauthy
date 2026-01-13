@@ -46,7 +46,7 @@ pub static RE_LINUX_HOSTNAME: LazyLock<Regex> =
 pub static RE_LINUX_USERNAME: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z][a-z0-9_-]{1,61}$").unwrap());
 pub static RE_ROLES_SCOPES: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z0-9-_/,:*]{2,64}$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-z0-9-_/,:*.]{2,64}$").unwrap());
 pub static RE_GROUPS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/,:*\s]{2,64}$").unwrap());
 pub static RE_LOWERCASE: LazyLock<Regex> =
@@ -59,7 +59,7 @@ pub static RE_ORIGIN: OnceLock<Regex> = OnceLock::new();
 pub static RE_PHONE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+[0-9]{0,32}$").unwrap());
 pub static RE_PREFERRED_USERNAME: OnceLock<Regex> = OnceLock::new();
 pub static RE_SCOPE_SPACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z0-9-_/:\s*]{0,512}$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-z0-9-_/:\s*.]{0,512}$").unwrap());
 pub static RE_SEARCH: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+$").unwrap());
 pub static RE_STREET: LazyLock<Regex> =
