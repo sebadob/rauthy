@@ -64,6 +64,7 @@ use utoipa::{OpenApi, openapi};
         clients::delete_client_logo,
         clients::get_client_secret,
         clients::post_clients,
+        clients::post_clients_dyn,
         clients::put_clients,
         clients::put_generate_client_secret,
         clients::delete_client,

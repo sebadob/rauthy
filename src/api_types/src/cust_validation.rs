@@ -158,7 +158,7 @@ pub fn validate_vec_roles(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
         if !RE_ROLES_SCOPES.is_match(v) {
-            err = Some("^[a-z0-9-_/,:*.]{2,64}$");
+            err = Some("^[a-zA-Z0-9-_/,:*.]{2,64}$");
         }
     });
     if let Some(e) = err {
@@ -172,7 +172,7 @@ pub fn validate_vec_scopes(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
         if !RE_ROLES_SCOPES.is_match(v) {
-            err = Some("^[a-z0-9-_/,:*.]{2,64}$");
+            err = Some("^[a-zA-Z0-9-_/,:*.]{2,64}$");
         }
     });
     if let Some(e) = err {

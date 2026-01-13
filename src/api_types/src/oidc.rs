@@ -44,8 +44,8 @@ pub struct AuthRequest {
     /// Validation: `[a-z0-9-_/]{2,128}`
     #[validate(regex(path = "*RE_LOWERCASE", code = "[a-z0-9-_/]{2,128}"))]
     pub response_type: String,
-    /// Validation: `[a-z0-9-_/:\s*]{0,512}`
-    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
+    /// Validation: `[a-zA-Z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
     #[serde(default = "default_scope")]
     pub scope: String,
     /// Validation: max length 2048
@@ -190,8 +190,8 @@ pub struct DeviceGrantRequest {
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub client_secret: Option<String>,
-    /// Validation: `[a-z0-9-_/:\s*]{0,512}`
-    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
+    /// Validation: `[a-zA-Z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
     pub scope: Option<String>,
 }
 
