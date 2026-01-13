@@ -104,8 +104,8 @@ pub struct EphemeralClientRequest {
     /// Validation: `60 <= access_token_lifetime <= 86400`
     #[validate(range(min = 60, max = 86400))]
     pub default_max_age: Option<i32>,
-    /// Validation: `[a-z0-9-_/:\s*]{0,512}`
-    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
+    /// Validation: `[a-zA-Z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
     pub scope: Option<String>,
     pub require_auth_time: Option<bool>,
 

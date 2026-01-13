@@ -54,8 +54,8 @@ pub struct ProviderRequest {
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub client_secret: Option<String>,
-    /// Validation: `[a-z0-9-_/:\s*]{0,512}`
-    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
+    /// Validation: `[a-zA-Z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
     pub scope: String,
 
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
