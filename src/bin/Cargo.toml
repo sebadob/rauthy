@@ -28,12 +28,9 @@ num_cpus = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
 prometheus = { workspace = true }
-rcgen = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
 rustls = { workspace = true }
-rustls-pki-types = { workspace = true }
-rustls-pemfile = { workspace = true }
 serde_json = { workspace = true }
 spow = { workspace = true }
 time = { workspace = true }
