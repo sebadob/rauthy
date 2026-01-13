@@ -4,6 +4,16 @@ use actix_web::http::header::{
 };
 use actix_web::{HttpResponse, options};
 
+#[options("/clients_dyn")]
+pub async fn options_clients_dyn() -> HttpResponse {
+    HttpResponse::NoContent()
+        .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
+        .insert_header((ACCESS_CONTROL_ALLOW_METHODS, "POST, OPTIONS"))
+        .insert_header((ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
+        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, "Authorization"))
+        .finish()
+}
+
 #[options("/oidc/authorize")]
 pub async fn options_authorize() -> HttpResponse {
     HttpResponse::NoContent()

@@ -289,6 +289,7 @@ fn api_services() -> actix_web::Scope {
                 .service(blacklist::get_blacklist)
                 .service(blacklist::post_blacklist)
                 .service(blacklist::delete_blacklist)
+                .service(cors_preflight::options_clients_dyn)
                 .service(cors_preflight::options_authorize)
                 .service(cors_preflight::options_certs)
                 .service(cors_preflight::options_certs_by_kid)
