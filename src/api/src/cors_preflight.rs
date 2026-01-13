@@ -4,8 +4,8 @@ use actix_web::http::header::{
 };
 use actix_web::{HttpResponse, options};
 
-static ALLOW_HEADERS_WITH_AUTH: &str =
-    "Authorization, Accept, Accept-Language, Content-Type, Range";
+static ALLOW_HEADERS_WITH_AUTH: &str = "Accept, Accept-Language, Content-Type, Range, \
+    Authorization, Sec-Fetch-Site, Sec-Fetch-Dest, Sec-Fetch-Mode";
 
 #[options("/clients_dyn")]
 pub async fn options_clients_dyn() -> HttpResponse {
