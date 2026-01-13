@@ -63,7 +63,7 @@ pub async fn anti_lockout() -> Result<(), ErrorResponse> {
     };
     debug!(client = ?rauthy, "Rauthy client anti-lockout");
 
-    // we are using a txn h ere to be able to re-use the already written update queries for the client
+    // we are using a txn here to be able to re-use the already written update queries for the client
     if is_hiqlite() {
         let mut txn = Vec::with_capacity(1);
         rauthy.save_txn_append(&mut txn);
