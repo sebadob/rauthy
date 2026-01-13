@@ -55,6 +55,10 @@ where
 
         Box::pin(async move {
             if let Some(site) = req.headers().get("sec-fetch-site") {
+                if req.method() == Method::OPTIONS {
+                    return service.call(req).await;
+                }
+
                 let site = site.to_str().unwrap_or_default();
 
                 // same origin is always allowed
@@ -133,6 +137,7 @@ fn is_path_csrf_exception(path: &str) -> bool {
                 || path == "/oidc/token"
                 || path == "/oidc/logout"
                 // no issue with CORS
+                || path == "/clients_dyn"
                 || path == "/oidc/userinfo"
                 || path == "/users/register"
                 || path == "/pow"

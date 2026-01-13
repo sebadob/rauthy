@@ -24,7 +24,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::oidc::{helpers, logout};
 use rauthy_service::{client, forward_auth};
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use validator::Validate;
 
 /// Returns all existing OIDC clients with all their information, except for the client secrets.
@@ -171,6 +171,7 @@ pub async fn post_clients_dyn(
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !RauthyConfig::get().vars.dynamic_clients.enable {
+        warn!("Dynamic Clients are disabled - rejecting request");
         return Ok(HttpResponse::NotFound().finish());
     }
     payload.validate()?;
