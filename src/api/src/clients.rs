@@ -1,6 +1,6 @@
 use crate::{ReqPrincipal, content_len_limit};
 use actix_web::http::header::{
-    ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_SECURITY_POLICY, CONTENT_TYPE,
+    ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_SECURITY_POLICY, CONTENT_TYPE, ORIGIN,
     WWW_AUTHENTICATE,
 };
 use actix_web::web::{Json, Query};
@@ -192,12 +192,20 @@ pub async fn post_clients_dyn(
         ClientDyn::rate_limit_ip(ip).await?;
     }
 
-    Client::create_dynamic(payload).await.map(|resp| {
-        HttpResponse::Created()
-            // The registration should be possible from another Web UI by RFC
-            .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
-            .json(resp)
-    })
+    let origin_header = req
+        .headers()
+        .get(ORIGIN)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+
+    Client::create_dynamic(payload, origin_header)
+        .await
+        .map(|resp| {
+            HttpResponse::Created()
+                // The registration should be possible from another Web UI by RFC
+                .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
+                .json(resp)
+        })
 }
 
 /// GET a dynamic OIDC client

@@ -26,6 +26,7 @@ use reqwest::Url;
 use reqwest::header::CONTENT_TYPE;
 use serde::{Deserialize, Serialize};
 use std::cmp::min;
+use std::collections::HashSet;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
@@ -236,13 +237,14 @@ $18, $19, $20, $21, $22)"#;
 
     pub async fn create_dynamic(
         client_req: DynamicClientRequest,
+        origin_header: Option<String>,
     ) -> Result<DynamicClientResponse, ErrorResponse> {
         let token_endpoint_auth_method = client_req
             .token_endpoint_auth_method
             .clone()
             .unwrap_or_else(|| "client_secret_basic".to_string());
 
-        let client = Self::try_from_dyn_reg(client_req)?;
+        let client = Self::try_from_dyn_reg(client_req, origin_header)?;
 
         let created = Utc::now().timestamp();
         let (_secret_plain, registration_token) = Self::generate_new_secret()?;
@@ -693,7 +695,7 @@ VALUES ($1, $2, $3, $4)"#;
             .clone()
             .unwrap_or_else(|| "client_secret_basic".to_string());
 
-        let mut new_client = Self::try_from_dyn_reg(client_req)?;
+        let mut new_client = Self::try_from_dyn_reg(client_req, None)?;
         let current = Self::find(client_dyn.id.clone()).await?;
         if !current.is_dynamic() {
             return Err(ErrorResponse::new(
@@ -707,6 +709,7 @@ VALUES ($1, $2, $3, $4)"#;
         new_client.force_mfa = current.force_mfa;
         new_client.scopes = current.scopes;
         new_client.default_scopes = current.default_scopes;
+        new_client.allowed_origins = current.allowed_origins;
 
         client_dyn.token_endpoint_auth_method = token_endpoint_auth_method;
         client_dyn.last_used = Some(Utc::now().timestamp());
@@ -1609,7 +1612,10 @@ impl TryFrom<NewClientRequest> for Client {
 }
 
 impl Client {
-    fn try_from_dyn_reg(req: DynamicClientRequest) -> Result<Self, ErrorResponse> {
+    fn try_from_dyn_reg(
+        req: DynamicClientRequest,
+        origin_header: Option<String>,
+    ) -> Result<Self, ErrorResponse> {
         let id = format!("dyn${}", get_rand(16));
 
         let confidential = req.token_endpoint_auth_method.as_deref() != Some("none");
@@ -1632,6 +1638,27 @@ impl Client {
             .id_token_signed_response_alg
             .unwrap_or_default()
             .to_string();
+        let allowed_origins = origin_header.and_then(|_| {
+            let origins = req
+                .redirect_uris
+                .iter()
+                .filter_map(|uri| {
+                    Url::parse(uri).ok().and_then(|url| {
+                        let origin = url.origin().unicode_serialization();
+                        if origin != "null" {
+                            Some(origin.trim_end_matches('/').to_string())
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .collect::<HashSet<_>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(",");
+
+            (!origins.is_empty()).then_some(origins)
+        });
 
         Ok(Self {
             id,
@@ -1642,7 +1669,7 @@ impl Client {
             secret_kid,
             redirect_uris: req.redirect_uris.join(","),
             post_logout_redirect_uris: req.post_logout_redirect_uri.filter(|uri| !uri.is_empty()),
-            allowed_origins: None,
+            allowed_origins,
             flows_enabled: req.grant_types.join(","),
             access_token_alg,
             id_token_alg,
@@ -1653,7 +1680,7 @@ impl Client {
                     .default_token_lifetime,
                 i32::MAX as u32,
             ) as i32,
-            challenge: confidential.then_some("S256".to_string()),
+            challenge: (!confidential).then_some("S256".to_string()),
             force_mfa: false,
             client_uri: req.client_uri,
             contacts: req.contacts.map(|c| c.join(",")).filter(|c| !c.is_empty()),
