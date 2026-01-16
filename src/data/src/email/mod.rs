@@ -58,6 +58,7 @@ mod tests {
             en: "%m/%d/%Y %T (%Z)".into(),
             ko: "%Y-%m-%d %T (%Z)".into(),
             no: "%d.%m.%Y %T (%Z)".into(),
+            uk: "%d.%m.%Y %T (%Z)".into(),
             zhhans: "%d-%m-%Y %T (%Z)".into(),
             tz_fallback: "UTC".into(),
         };
