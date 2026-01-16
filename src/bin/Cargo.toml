@@ -38,6 +38,7 @@ tls-hot-reload = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
+serde = { workspace = true }
 
 # jemalloc does not work properly on msvc targets
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
