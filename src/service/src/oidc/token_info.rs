@@ -29,10 +29,8 @@ pub async fn get_token_info(
     }
     let claims = serde_json::from_slice::<JwtCommonClaims>(&buf)?;
 
-    if let Some(sub) = claims.sub
-        && let Some(jti) = claims.jti
-    {
-        RevokedToken::validate_not_revoked(sub, jti).await?;
+    if let Some(jti) = claims.jti {
+        RevokedToken::validate_not_revoked(jti).await?;
     }
 
     if claims.aud.is_empty() {

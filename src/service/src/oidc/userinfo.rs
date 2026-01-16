@@ -34,8 +34,9 @@ pub async fn get_userinfo(
             "Not a user token",
         ));
     };
+
     if let Some(jti) = claims.jti
-        && RevokedToken::validate_not_revoked(sub, jti).await.is_err()
+        && RevokedToken::validate_not_revoked(jti).await.is_err()
     {
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("token-revoked".to_string()),
