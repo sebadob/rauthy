@@ -286,6 +286,13 @@ impl TokenRequest {
     }
 }
 
+#[derive(Deserialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct TokenRevocationRequest {
+    pub token: String,
+    pub token_type_hint: Option<String>,
+}
+
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct TokenValidationRequest {

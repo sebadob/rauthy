@@ -477,6 +477,7 @@ fn api_services() -> actix_web::Scope {
                 .service(scopes::put_scope)
                 .service(scopes::delete_scope)
                 .service(oidc::post_token)
+                .service(oidc::post_token_revoke)
                 .service(oidc::post_token_introspect)
                 .service(oidc::get_userinfo)
                 .service(oidc::post_userinfo)

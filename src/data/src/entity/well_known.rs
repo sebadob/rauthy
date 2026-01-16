@@ -20,6 +20,7 @@ pub struct WellKnown {
     pub device_authorization_endpoint: String,
     pub token_endpoint: String,
     pub introspection_endpoint: String,
+    pub revocation_endpoint: String,
     pub userinfo_endpoint: String,
     pub end_session_endpoint: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -88,6 +89,7 @@ impl WellKnown {
         let device_authorization_endpoint = format!("{issuer}/oidc/device");
         let token_endpoint = format!("{issuer}/oidc/token");
         let introspection_endpoint = format!("{issuer}/oidc/introspect");
+        let revocation_endpoint = format!("{issuer}/oidc/token/revoke");
         let userinfo_endpoint = format!("{issuer}/oidc/userinfo");
         let registration_endpoint = RauthyConfig::get()
             .vars
@@ -105,6 +107,7 @@ impl WellKnown {
             device_authorization_endpoint,
             token_endpoint,
             introspection_endpoint,
+            revocation_endpoint,
             userinfo_endpoint,
             end_session_endpoint,
             registration_endpoint,

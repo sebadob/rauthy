@@ -17,6 +17,7 @@ mod grant_types;
 pub mod helpers;
 pub mod logout;
 pub mod token_info;
+pub mod token_revocation;
 pub mod userinfo;
 pub mod validation;
 

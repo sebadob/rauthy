@@ -38,6 +38,7 @@ pub mod pow;
 pub mod principal;
 pub mod refresh_tokens;
 pub mod refresh_tokens_devices;
+pub mod revoked_tokens;
 pub mod roles;
 pub mod scim_types;
 pub mod scopes;
