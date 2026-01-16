@@ -10,18 +10,25 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
+use tracing::warn;
 
 #[inline(always)]
 pub async fn handle_token_revocation(
     req: HttpRequest,
     payload: TokenRevocationRequest,
 ) -> Result<(), ErrorResponse> {
-    let Some(auth_header) = req.headers().get(header::AUTHORIZATION).map(|h| {
-        h.to_str()
-            .unwrap_or_default()
-            .strip_prefix("Basic ")
-            .unwrap_or("")
-    }) else {
+    let auth_header = if let Some(h) = req.headers().get(header::AUTHORIZATION) {
+        let v = h.to_str().unwrap_or_default();
+        if let Some(auth) = v.strip_prefix("Basic ") {
+            auth
+        } else {
+            warn!("Unexpected AUTHORIZATION header: {}", v);
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "unexpected AUTHORIZATION header",
+            ));
+        }
+    } else {
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
             "missing Authorization header",
