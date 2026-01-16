@@ -291,6 +291,8 @@ impl TokenRequest {
 pub struct TokenRevocationRequest {
     pub token: String,
     pub token_type_hint: Option<String>,
+    pub client_id: Option<String>,
+    pub client_secret: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

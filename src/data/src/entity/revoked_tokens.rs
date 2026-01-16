@@ -47,26 +47,37 @@ impl RevokedToken {
         Ok(())
     }
 
-    pub async fn upsert(self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+    /// Either upserts `self`, if `exp` is in the future, or deletes it, if expired already.
+    pub async fn upsert_or_delete(self) -> Result<(), ErrorResponse> {
+        let now_plus_1 = Utc::now().add(chrono::Duration::minutes(1)).timestamp();
+
+        if self.exp < now_plus_1 {
+            let sql = "DELETE FROM revoked_tokens WHERE jti = $1";
+            if is_hiqlite() {
+                DB::hql().execute(sql, params!(self.jti)).await?;
+            } else {
+                DB::pg_execute(sql, &[&self.jti]).await?;
+            }
+        } else {
+            let sql = r#"
 INSERT INTO revoked_tokens (jti, exp)
 VALUES ($1, $2)
 ON CONFLICT (jti) DO UPDATE
 SET exp = $2
 "#;
-
-        if is_hiqlite() {
-            DB::hql().execute(sql, params!(self.jti, self.exp)).await?;
-        } else {
-            DB::pg_execute(sql, &[&self.jti, &self.exp]).await?;
-        }
+            if is_hiqlite() {
+                DB::hql().execute(sql, params!(self.jti, self.exp)).await?;
+            } else {
+                DB::pg_execute(sql, &[&self.jti, &self.exp]).await?;
+            }
+        };
 
         Ok(())
     }
 
     #[inline]
     pub async fn validate_not_revoked(jti: &str) -> Result<(), ErrorResponse> {
-        let sql = "SELECT 1 FROM revoked_tokens WHERE jti = $1";
+        let sql = "SELECT * FROM revoked_tokens WHERE jti = $1";
 
         let opt: Option<Self> = if is_hiqlite() {
             DB::hql().query_map_optional(sql, params!(jti)).await?

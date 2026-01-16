@@ -151,7 +151,7 @@ impl TokenSet {
             None
         };
 
-        let jti = secure_random_alnum(24);
+        let jti = secure_random_alnum(32);
 
         let now = Utc::now().timestamp();
         let mut claims_new_impl = JwtAccessClaims {

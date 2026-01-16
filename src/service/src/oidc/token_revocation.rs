@@ -10,41 +10,43 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
-use tracing::warn;
 
 #[inline(always)]
 pub async fn handle_token_revocation(
     req: HttpRequest,
     payload: TokenRevocationRequest,
 ) -> Result<(), ErrorResponse> {
-    let auth_header = if let Some(h) = req.headers().get(header::AUTHORIZATION) {
-        let v = h.to_str().unwrap_or_default();
-        if let Some(auth) = v.strip_prefix("Basic ") {
-            auth
+    let (client_id, client_secret) = {
+        if let Some(h) = req.headers().get(header::AUTHORIZATION) {
+            let decoded =
+                if let Some(auth_header) = h.to_str().unwrap_or_default().strip_prefix("Basic ") {
+                    String::from_utf8(base64_decode(auth_header)?)?
+                } else {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Unauthorized,
+                        "unexpected AUTHORIZATION header",
+                    ));
+                };
+            let Some((client_id, client_secret)) = decoded.split_once(':') else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Bad Authorization header",
+                ));
+            };
+            (client_id.to_string(), client_secret.to_string())
+        } else if let Some(client_id) = payload.client_id {
+            (client_id, payload.client_secret.unwrap_or_default())
         } else {
-            warn!("Unexpected AUTHORIZATION header: {}", v);
             return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "unexpected AUTHORIZATION header",
+                ErrorResponseType::Unauthorized,
+                "client_id neither in Authorization header nor in body",
             ));
         }
-    } else {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            "missing Authorization header",
-        ));
-    };
-    let decoded = String::from_utf8(base64_decode(auth_header)?)?;
-    let Some((client_id, client_secret)) = decoded.split_once(':') else {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "Bad Authorization header",
-        ));
     };
 
-    let client = Client::find_maybe_ephemeral(client_id.to_string()).await?;
+    let client = Client::find_maybe_ephemeral(client_id).await?;
     if client.confidential {
-        client.validate_secret(client_secret, &req).await?;
+        client.validate_secret(&client_secret, &req).await?;
     }
 
     let is_refresh_token = payload.token_type_hint.as_deref() == Some("refresh_token");
@@ -131,7 +133,7 @@ pub async fn handle_token_revocation(
     };
 
     if let Some(token) = revoked_token {
-        token.upsert().await?;
+        token.upsert_or_delete().await?;
     }
 
     Ok(())
