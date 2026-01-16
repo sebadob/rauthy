@@ -65,7 +65,7 @@ SET exp = $2
     }
 
     #[inline]
-    pub async fn validate_not_revoked(user_id: String, jti: String) -> Result<(), ErrorResponse> {
+    pub async fn validate_not_revoked(user_id: &str, jti: &str) -> Result<(), ErrorResponse> {
         let sql = "SELECT 1 FROM revoked_tokens WHERE user_id = $1 AND jti = $2";
 
         let opt: Option<Self> = if is_hiqlite() {

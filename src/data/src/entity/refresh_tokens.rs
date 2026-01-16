@@ -91,16 +91,6 @@ impl RefreshToken {
         Ok(())
     }
 
-    pub async fn delete_by_jti(access_token_jti: String) -> Result<(), ErrorResponse> {
-        let sql = "DELETE FROM refresh_tokens WHERE access_token_jti = $1";
-        if is_hiqlite() {
-            DB::hql().execute(sql, params!(access_token_jti)).await?;
-        } else {
-            DB::pg_execute(sql, &[&access_token_jti]).await?;
-        }
-        Ok(())
-    }
-
     pub async fn delete_by_sid(session_id: String) -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM refresh_tokens WHERE session_id = $1";
         if is_hiqlite() {
@@ -157,17 +147,6 @@ impl RefreshToken {
         } else {
             DB::pg_execute(sql, &[&user_id]).await?;
         }
-        Ok(())
-    }
-
-    pub async fn invalidate_all_for_user(user_id: &str) -> Result<(), ErrorResponse> {
-        let sql = "DELETE FROM refresh_tokens WHERE user_id = $1";
-        if is_hiqlite() {
-            DB::hql().execute(sql, params!(user_id)).await?;
-        } else {
-            DB::pg_execute(sql, &[&user_id]).await?;
-        }
-
         Ok(())
     }
 

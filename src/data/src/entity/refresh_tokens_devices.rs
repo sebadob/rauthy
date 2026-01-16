@@ -105,17 +105,17 @@ impl RefreshTokenDevice {
         Ok(())
     }
 
-    pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
-        let now = Utc::now().timestamp();
-        let sql = "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2";
-        if is_hiqlite() {
-            DB::hql().execute(sql, params!(now, user_id)).await?;
-        } else {
-            DB::pg_execute(sql, &[&now, &user_id]).await?;
-        }
-
-        Ok(())
-    }
+    // pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
+    //     let now = Utc::now().timestamp();
+    //     let sql = "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2";
+    //     if is_hiqlite() {
+    //         DB::hql().execute(sql, params!(now, user_id)).await?;
+    //     } else {
+    //         DB::pg_execute(sql, &[&now, &user_id]).await?;
+    //     }
+    //
+    //     Ok(())
+    // }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
