@@ -187,7 +187,7 @@ impl RefreshToken {
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT(id) DO UPDATE
-SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7 access_token_jti = $8"#;
+SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_jti = $8"#;
 
         if is_hiqlite() {
             DB::hql()
