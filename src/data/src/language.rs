@@ -27,7 +27,7 @@ impl Language {
         ]
     }
 
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &'static str {
         // must return results that work with serde::Deserialize from lowercase
         match self {
             Language::De => "de",

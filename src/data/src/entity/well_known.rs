@@ -1,13 +1,17 @@
 use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
+use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use rauthy_common::constants::{CACHE_TTL_APP, GRANT_TYPE_DEVICE_CODE};
 use rauthy_error::ErrorResponse;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use strum::IntoEnumIterator;
 use utoipa::ToSchema;
 
-/// The struct for the `.well-known` endpoint for automatic OIDC discovery
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+/// The struct for the `.well-known` endpoint for automatic OIDC discovery.
+///
+/// An update on this struct needs an update in `src/bin/tests/handler_generic.rs` as well.
+#[derive(Clone, Debug, Serialize, ToSchema)]
 pub struct WellKnown {
     pub issuer: String,
     pub authorization_endpoint: String,
@@ -21,23 +25,23 @@ pub struct WellKnown {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub registration_endpoint: Option<String>,
     pub jwks_uri: String,
-    pub grant_types_supported: Vec<String>,
-    pub response_types_supported: Vec<String>,
-    pub subject_types_supported: Vec<String>,
-    pub id_token_signing_alg_values_supported: Vec<String>,
-    pub token_endpoint_auth_methods_supported: Vec<String>,
-    pub token_endpoint_auth_signing_alg_values_supported: Vec<String>,
-    pub claims_supported: Vec<String>,
-    pub claim_types_supported: Vec<String>,
+    pub grant_types_supported: [&'static str; 5],
+    pub response_types_supported: [&'static str; 1],
+    pub subject_types_supported: [&'static str; 1],
+    pub id_token_signing_alg_values_supported: [&'static str; 4],
+    pub token_endpoint_auth_methods_supported: [&'static str; 2],
+    pub token_endpoint_auth_signing_alg_values_supported: [&'static str; 4],
+    pub claims_supported: [&'static str; 12],
+    pub claim_types_supported: [&'static str; 3],
     pub scopes_supported: Vec<String>,
-    pub code_challenge_methods_supported: Vec<String>,
-    pub dpop_signing_alg_values_supported: Vec<String>,
-    pub service_documentation: String,
-    pub ui_locales_supported: Vec<String>,
+    pub code_challenge_methods_supported: [&'static str; 2],
+    pub dpop_signing_alg_values_supported: [&'static str; 4],
+    pub service_documentation: &'static str,
+    pub ui_locales_supported: Vec<&'static str>,
     pub claims_parameter_supported: bool,
 }
 
-const IDX: &str = ".well-known";
+static IDX: &str = ".well-known";
 
 impl WellKnown {
     pub async fn json() -> Result<String, ErrorResponse> {
@@ -92,72 +96,6 @@ impl WellKnown {
             .then_some(format!("{issuer}/clients_dyn"));
         let end_session_endpoint = format!("{issuer}/oidc/logout");
         let jwks_uri = format!("{issuer}/oidc/certs");
-        let grant_types_supported = vec![
-            "authorization_code".to_string(),
-            "client_credentials".to_string(),
-            "password".to_string(),
-            "refresh_token".to_string(),
-            GRANT_TYPE_DEVICE_CODE.to_string(),
-        ];
-        let response_types_supported = vec!["code".to_string()];
-        let subject_types_supported = vec!["public".to_string()];
-        let id_token_signing_alg_values_supported = vec![
-            "RS256".to_string(),
-            "RS384".to_string(),
-            "RS512".to_string(),
-            "EdDSA".to_string(),
-        ];
-        let token_endpoint_auth_methods_supported = vec![
-            "client_secret_post".to_string(),
-            "client_secret_basic".to_string(),
-        ];
-        let token_endpoint_auth_signing_alg_values_supported = vec![
-            "RS256".to_string(),
-            "RS384".to_string(),
-            "RS512".to_string(),
-            "EdDSA".to_string(),
-        ];
-        let claims_supported = vec![
-            "iss".to_string(),
-            "azp".to_string(),
-            "amr".to_string(),
-            "sub".to_string(),
-            "preferred_username".to_string(),
-            "email".to_string(),
-            "email_verified".to_string(),
-            "given_name".to_string(),
-            "family_name".to_string(),
-            "roles".to_string(),
-            "groups".to_string(),
-            "custom".to_string(),
-        ];
-        let claim_types_supported = vec![
-            "normal".to_string(),
-            "aggregated".to_string(),
-            "distributed".to_string(),
-        ];
-        // TODO to not confuse users when static clients will not be able to use the scope,
-        //  `webid` should be added manually in the UI to make it fully work for ephemeral as
-        //  well as for static clients.
-        // if *ENABLE_WEB_ID {
-        //     claims_supported.push("webid".to_string());
-        // }
-        let code_challenge_methods_supported = vec!["plain".to_string(), "S256".to_string()];
-        let dpop_signing_alg_values_supported = vec![
-            "RS256".to_string(),
-            "RS384".to_string(),
-            "RS512".to_string(),
-            "EdDSA".to_string(),
-        ];
-
-        let service_documentation = "https://sebadob.github.io/rauthy/".to_string();
-        let ui_locales_supported = vec![
-            "de".to_string(),
-            "en".to_string(),
-            "uk".to_string(),
-            "zh-hans".to_string(),
-            "ko".to_string(),
-        ];
 
         WellKnown {
             issuer: String::from(issuer),
@@ -171,19 +109,38 @@ impl WellKnown {
             end_session_endpoint,
             registration_endpoint,
             jwks_uri,
-            grant_types_supported,
-            response_types_supported,
-            subject_types_supported,
-            id_token_signing_alg_values_supported,
-            token_endpoint_auth_methods_supported,
-            token_endpoint_auth_signing_alg_values_supported,
-            claims_supported,
-            claim_types_supported,
+            grant_types_supported: [
+                "authorization_code",
+                "client_credentials",
+                "password",
+                "refresh_token",
+                GRANT_TYPE_DEVICE_CODE,
+            ],
+            response_types_supported: ["code"],
+            subject_types_supported: ["public"],
+            id_token_signing_alg_values_supported: ["RS256", "RS384", "RS512", "EdDSA"],
+            token_endpoint_auth_methods_supported: ["client_secret_post", "client_secret_basic"],
+            token_endpoint_auth_signing_alg_values_supported: ["RS256", "RS384", "RS512", "EdDSA"],
+            claims_supported: [
+                "iss",
+                "azp",
+                "amr",
+                "sub",
+                "preferred_username",
+                "email",
+                "email_verified",
+                "given_name",
+                "family_name",
+                "roles",
+                "groups",
+                "custom",
+            ],
+            claim_types_supported: ["normal", "aggregated", "distributed"],
             scopes_supported,
-            code_challenge_methods_supported,
-            dpop_signing_alg_values_supported,
-            service_documentation,
-            ui_locales_supported,
+            code_challenge_methods_supported: ["plain", "S256"],
+            dpop_signing_alg_values_supported: ["RS256", "RS384", "RS512", "EdDSA"],
+            service_documentation: "https://sebadob.github.io/rauthy/",
+            ui_locales_supported: Language::iter().map(|l| l.as_str()).collect(),
             claims_parameter_supported: true,
         }
     }
