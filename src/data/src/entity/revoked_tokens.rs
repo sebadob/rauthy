@@ -65,15 +65,13 @@ SET exp = $2
     }
 
     #[inline]
-    pub async fn validate_not_revoked(user_id: &str, jti: &str) -> Result<(), ErrorResponse> {
-        let sql = "SELECT 1 FROM revoked_tokens WHERE user_id = $1 AND jti = $2";
+    pub async fn validate_not_revoked(jti: &str) -> Result<(), ErrorResponse> {
+        let sql = "SELECT 1 FROM revoked_tokens WHERE jti = $1";
 
         let opt: Option<Self> = if is_hiqlite() {
-            DB::hql()
-                .query_map_optional(sql, params!(user_id, jti))
-                .await?
+            DB::hql().query_map_optional(sql, params!(jti)).await?
         } else {
-            DB::pg_query_opt(sql, &[&user_id, &jti]).await?
+            DB::pg_query_opt(sql, &[&jti]).await?
         };
 
         if opt.is_none() {
