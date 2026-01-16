@@ -34,8 +34,13 @@ pub async fn get_userinfo(
             "Not a user token",
         ));
     };
-    if let Some(jti) = claims.jti {
-        RevokedToken::validate_not_revoked(sub, jti).await?;
+    if let Some(jti) = claims.jti
+        && let Err(err) = RevokedToken::validate_not_revoked(sub, jti).await
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("token-revoked".to_string()),
+            "The token has been revoked",
+        ));
     }
 
     let scope = claims.scope.unwrap_or_else(|| Cow::from("openid"));
