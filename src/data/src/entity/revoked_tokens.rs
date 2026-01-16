@@ -4,6 +4,7 @@ use hiqlite_macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::ops::Add;
+use tracing::debug;
 
 pub struct RevokedToken {
     pub jti: String,
@@ -33,10 +34,14 @@ impl RevokedToken {
         let sql = "DELETE FROM revoked_tokens WHERE exp < $1";
         let now_plus_1 = Utc::now().add(chrono::Duration::minutes(1)).timestamp();
 
-        if is_hiqlite() {
-            DB::hql().execute(sql, params!(now_plus_1)).await?;
+        let rows_affected = if is_hiqlite() {
+            DB::hql().execute(sql, params!(now_plus_1)).await?
         } else {
-            DB::pg_execute(sql, &[&now_plus_1]).await?;
+            DB::pg_execute(sql, &[&now_plus_1]).await?
+        };
+
+        if rows_affected > 0 {
+            debug!("Cleaned up {rows_affected} expired revoked tokens");
         }
 
         Ok(())
