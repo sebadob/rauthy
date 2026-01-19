@@ -11,6 +11,7 @@ use tracing::debug;
 pub struct IssuedToken {
     pub jti: String,
     pub user_id: Option<String>,
+    pub did: Option<String>,
     pub sid: Option<String>,
     pub exp: i64,
     pub revoked: Option<bool>,
@@ -21,6 +22,7 @@ impl From<hiqlite::Row<'_>> for IssuedToken {
         Self {
             jti: row.get("jti"),
             user_id: row.get("user_id"),
+            did: row.get("did"),
             sid: row.get("sid"),
             exp: row.get("exp"),
             revoked: row.get("revoked"),
@@ -33,6 +35,7 @@ impl From<tokio_postgres::Row> for IssuedToken {
         Self {
             jti: row.get("jti"),
             user_id: row.get("user_id"),
+            did: row.get("did"),
             sid: row.get("sid"),
             exp: row.get("exp"),
             revoked: row.get("revoked"),
@@ -60,7 +63,8 @@ impl IssuedToken {
 
     pub async fn create(
         user_id: Option<&str>,
-        sid: Option<&str>,
+        did: Option<&str>,
+        sid: Option<String>,
         exp: i64,
     ) -> Result<Self, ErrorResponse> {
         // Even though the chance is tiny, we want to handle PK
@@ -69,7 +73,8 @@ impl IssuedToken {
             let slf = Self {
                 jti: secure_random_alnum(12),
                 user_id: user_id.map(String::from),
-                sid: sid.map(String::from),
+                did: did.map(String::from),
+                sid: sid.clone(),
                 exp,
                 revoked: None,
             };
@@ -84,15 +89,22 @@ impl IssuedToken {
     #[inline]
     async fn insert(&self) -> Result<(), ErrorResponse> {
         let sql = r#"
-INSERT INTO issued_tokens (jti, user_id, sid, exp)
-VALUES ($1, $2, $3, $4)
+INSERT INTO issued_tokens (jti, user_id, did, sid, exp)
+VALUES ($1, $2, $3, $4, $5)
 "#;
         if is_hiqlite() {
             DB::hql()
-                .execute(sql, params!(&self.jti, &self.user_id, &self.sid, self.exp))
+                .execute(
+                    sql,
+                    params!(&self.jti, &self.user_id, &self.did, &self.sid, self.exp),
+                )
                 .await?;
         } else {
-            DB::pg_execute(sql, &[&self.jti, &self.user_id, &self.sid, &self.exp]).await?;
+            DB::pg_execute(
+                sql,
+                &[&self.jti, &self.user_id, &self.did, &self.sid, &self.exp],
+            )
+            .await?;
         }
 
         Ok(())
@@ -117,6 +129,18 @@ VALUES ($1, $2, $3, $4)
             DB::hql().execute(sql, params!(true)).await?;
         } else {
             DB::pg_execute(sql, &[&true]).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn revoke_for_device(did: &str) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE issued_tokens SET revoked = $1 WHERE did = $2";
+
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(true, did)).await?;
+        } else {
+            DB::pg_execute(sql, &[&true, &did]).await?;
         }
 
         Ok(())

@@ -191,6 +191,48 @@ cookie_set_path = true
 # overwritten by: TOKEN_LEN_LIMIT
 token_len_limit = 4096
 
+# Revoke JWT access tokens if a user does a dedicated logout from the
+# account dashboard via the logout button, or when a logout is being
+# triggered from a client.
+# In most situations, you want your tokens to be able to live longer
+# than a session on Rauthy, especially refresh tokens, or access tokens
+# issues to headless devices via the `device_code` flow.
+#
+# !!! CAUTION !!!
+# JWT token revocation is a myth and doesn't exist. You can only
+# blacklist, but not revoke them, even though that's the official term
+# used in the RFC. Token revocation does only work, when a client
+# validates tokens against the `/introspection` or `/userinfo`
+# endpoints, but they will still be valid, if a client just validates
+# via public keys!
+#
+# The default value of `false` makes the most sense, because token
+# revocation is NOT reliable on its own! It only works with the
+# "correct" implementation on the client side, which also involves
+# a lot more resource and traffic usage!
+#
+# If a session is being force-deleted or a user is force-logged-out
+# via the AdminUI, tokens will always be revoked, which makes the
+# most sense.
+#
+# default: false
+# overwritten by: TOKEN_REVOKE_ON_LOGOUT
+token_revoke_on_logout = true
+
+# If set to true, tokens issued via the `device_code` flow will be
+# revoked, when user is being force-logged-out via the Admin UI.
+# These tokens are usually used on headless IoT devices or for CLIs
+# on remote servers, and logging these back in can be a lot more
+# work than the default logins via browser.
+#
+# This values will only be respected, if `token_revoke_on_logout` is
+# set to `true` as well. Otherwise, tokens will only be revoked
+# via the dedicated `recovation_endpoint`.
+#
+# default: false
+# overwritten by: TOKEN_REVOKE_DEVICE_TOKENS
+token_revoke_device_tokens = true
+
 # If set to `true`, the `/auth/v1/whoami` endpoint will return all
 # request headers. Only the `Cookie` and Rauthys internal CSRF headers
 # will be hidden. Since this has the potential to leak sensitive

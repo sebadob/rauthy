@@ -4,6 +4,7 @@ CREATE TABLE issued_tokens
         CONSTRAINT issued_tokens_pk
             PRIMARY KEY,
     user_id VARCHAR,
+    did     VARCHAR,
     sid     VARCHAR,
     exp     BIGINT  NOT NULL,
     revoked BOOL

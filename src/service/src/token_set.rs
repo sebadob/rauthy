@@ -130,6 +130,7 @@ impl TokenSet {
         lifetime: i64,
         scope: Option<TokenScopes>,
         scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
+        sid: Option<SessionId>,
         device_code_flow: DeviceCodeFlow,
     ) -> Result<(AccessTokenJti, String), ErrorResponse> {
         let did = match device_code_flow {
@@ -156,7 +157,8 @@ impl TokenSet {
         let now = Utc::now().timestamp();
         let exp = now + lifetime;
 
-        let issued_token = IssuedToken::create(user_id, exp).await?;
+        let issued_token =
+            IssuedToken::create(user_id, did.as_deref(), sid.map(|sid| sid.0), exp).await?;
 
         let mut claims_new_impl = JwtAccessClaims {
             common: JwtCommonClaims {
@@ -463,6 +465,7 @@ impl TokenSet {
             client.access_token_lifetime as i64,
             None,
             None,
+            None,
             DeviceCodeFlow::No,
         )
         .await?;
@@ -576,6 +579,7 @@ impl TokenSet {
             lifetime,
             Some(TokenScopes(scope.clone())),
             customs_access,
+            sid.clone(),
             device_code_flow.clone(),
         )
         .await?;

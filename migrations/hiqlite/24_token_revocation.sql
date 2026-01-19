@@ -4,6 +4,7 @@ CREATE TABLE issued_tokens
         CONSTRAINT issued_tokens_pk
             PRIMARY KEY,
     user_id TEXT,
+    did     TEXT,
     sid     TEXT,
     exp     INTEGER NOT NULL,
     revoked INTEGER
