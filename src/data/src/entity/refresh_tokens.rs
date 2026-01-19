@@ -15,6 +15,7 @@ pub struct RefreshToken {
     pub scope: Option<String>,
     pub is_mfa: bool,
     pub session_id: Option<String>,
+    pub access_token_jti: Option<String>,
 }
 
 impl Debug for RefreshToken {
@@ -29,7 +30,7 @@ impl Debug for RefreshToken {
             self.exp,
             self.scope,
             self.is_mfa,
-            self.session_id
+            self.session_id.as_ref().map(|sid| &sid[..5]),
         )
     }
 }
@@ -44,12 +45,14 @@ impl From<tokio_postgres::Row> for RefreshToken {
             scope: row.get("scope"),
             is_mfa: row.get("is_mfa"),
             session_id: row.get("session_id"),
+            access_token_jti: row.get("access_token_jti"),
         }
     }
 }
 
 // CRUD
 impl RefreshToken {
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         id: String,
         user_id: String,
@@ -61,6 +64,7 @@ impl RefreshToken {
         //  token not really is, because it can be given without user interaction.
         is_mfa: bool,
         session_id: Option<String>,
+        access_token_jti: Option<String>,
     ) -> Result<Self, ErrorResponse> {
         let rt = Self {
             id,
@@ -70,16 +74,17 @@ impl RefreshToken {
             scope,
             is_mfa,
             session_id,
+            access_token_jti,
         };
 
         rt.save().await?;
         Ok(rt)
     }
 
-    pub async fn delete(self) -> Result<(), ErrorResponse> {
+    pub async fn delete(&self) -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM refresh_tokens WHERE id = $1";
         if is_hiqlite() {
-            DB::hql().execute(sql, params!(self.id)).await?;
+            DB::hql().execute(sql, params!(self.id.clone())).await?;
         } else {
             DB::pg_execute(sql, &[&self.id]).await?;
         }
@@ -104,6 +109,23 @@ impl RefreshToken {
             DB::pg_query(sql, &[], 0).await?
         };
         Ok(res)
+    }
+
+    pub async fn find_by_user_id_jti(
+        user_id: &str,
+        access_token_jti: &str,
+    ) -> Result<Option<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM refresh_tokens WHERE user_id = $1 AND access_token_jti = $2";
+
+        let slf = if is_hiqlite() {
+            DB::hql()
+                .query_as_optional(sql, params!(user_id, access_token_jti))
+                .await?
+        } else {
+            DB::pg_query_opt(sql, &[&user_id, &access_token_jti]).await?
+        };
+
+        Ok(slf)
     }
 
     pub async fn invalidate_all() -> Result<(), ErrorResponse> {
@@ -131,6 +153,7 @@ impl RefreshToken {
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
         let sql = "SELECT * FROM refresh_tokens WHERE id = $1 AND exp > $2";
+
         let slf: Self = if is_hiqlite() {
             DB::hql()
                 .query_as_one(sql, params!(id, now))
@@ -143,14 +166,28 @@ impl RefreshToken {
                 ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
             })?
         };
+
+        Ok(slf)
+    }
+
+    pub async fn find_opt(id: &str) -> Result<Option<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM refresh_tokens WHERE id = $1";
+
+        let slf = if is_hiqlite() {
+            DB::hql().query_as_optional(sql, params!(id)).await?
+        } else {
+            DB::pg_query_opt(sql, &[&id]).await?
+        };
+
         Ok(slf)
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let sql = r#"
-INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7"#;
+INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+ON CONFLICT(id) DO UPDATE
+SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_jti = $8"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -163,7 +200,8 @@ ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, sess
                         self.exp,
                         self.scope.clone(),
                         self.is_mfa,
-                        self.session_id.clone()
+                        self.session_id.clone(),
+                        self.access_token_jti.clone()
                     ),
                 )
                 .await?;
@@ -178,22 +216,10 @@ ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5, sess
                     &self.scope,
                     &self.is_mfa,
                     &self.session_id,
+                    &self.access_token_jti,
                 ],
             )
             .await?;
-        }
-
-        Ok(())
-    }
-}
-
-impl RefreshToken {
-    pub async fn invalidate_all_for_user(user_id: &str) -> Result<(), ErrorResponse> {
-        let sql = "DELETE FROM refresh_tokens WHERE user_id = $1";
-        if is_hiqlite() {
-            DB::hql().execute(sql, params!(user_id)).await?;
-        } else {
-            DB::pg_execute(sql, &[&user_id]).await?;
         }
 
         Ok(())

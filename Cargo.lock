@@ -4765,6 +4765,7 @@ dependencies = [
  "reqwest",
  "ring",
  "rustls",
+ "serde",
  "serde_json",
  "spow",
  "tikv-jemallocator",

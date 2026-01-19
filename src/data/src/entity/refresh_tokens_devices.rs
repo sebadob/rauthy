@@ -15,18 +15,21 @@ pub struct RefreshTokenDevice {
     pub nbf: i64,
     pub exp: i64,
     pub scope: Option<String>,
+    pub access_token_jti: Option<String>,
 }
 
 impl Debug for RefreshTokenDevice {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "RefreshTokenDevice {{ id: {}(...), device_id: {}, nbf: {}, exp: {}, scope: {:?} }}",
+            "RefreshTokenDevice {{ id: {}(...), device_id: {}, nbf: {}, exp: {}, scope: {:?}, \
+            access_token_jti: {:?} }}",
             &self.id[..5],
             self.device_id,
             self.nbf,
             self.exp,
             self.scope,
+            self.access_token_jti,
         )
     }
 }
@@ -40,6 +43,7 @@ impl From<tokio_postgres::Row> for RefreshTokenDevice {
             nbf: row.get("nbf"),
             exp: row.get("exp"),
             scope: row.get("scope"),
+            access_token_jti: row.get("access_token_jti"),
         }
     }
 }
@@ -53,6 +57,7 @@ impl RefreshTokenDevice {
         nbf: i64,
         exp: i64,
         scope: Option<String>,
+        access_token_jti: Option<String>,
     ) -> Result<Self, ErrorResponse> {
         let rt = Self {
             id,
@@ -61,16 +66,17 @@ impl RefreshTokenDevice {
             nbf,
             exp,
             scope,
+            access_token_jti,
         };
 
         rt.save().await?;
         Ok(rt)
     }
 
-    pub async fn delete(self) -> Result<(), ErrorResponse> {
+    pub async fn delete(&self) -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM refresh_tokens_devices WHERE id = $1";
         if is_hiqlite() {
-            DB::hql().execute(sql, params!(self.id)).await?;
+            DB::hql().execute(sql, params!(self.id.clone())).await?;
         } else {
             DB::pg_execute(sql, &[&self.id]).await?;
         }
@@ -99,21 +105,22 @@ impl RefreshTokenDevice {
         Ok(())
     }
 
-    pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
-        let now = Utc::now().timestamp();
-        let sql = "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2";
-        if is_hiqlite() {
-            DB::hql().execute(sql, params!(now, user_id)).await?;
-        } else {
-            DB::pg_execute(sql, &[&now, &user_id]).await?;
-        }
-
-        Ok(())
-    }
+    // pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
+    //     let now = Utc::now().timestamp();
+    //     let sql = "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2";
+    //     if is_hiqlite() {
+    //         DB::hql().execute(sql, params!(now, user_id)).await?;
+    //     } else {
+    //         DB::pg_execute(sql, &[&now, &user_id]).await?;
+    //     }
+    //
+    //     Ok(())
+    // }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
         let sql = "SELECT * FROM refresh_tokens_devices WHERE id = $1 AND exp > $2";
+
         if is_hiqlite() {
             DB::hql()
                 .query_as_one(sql, params!(id, now))
@@ -132,6 +139,36 @@ impl RefreshTokenDevice {
                 )
             })
         }
+    }
+
+    pub async fn find_opt(id: &str) -> Result<Option<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM refresh_tokens_devices WHERE id = $1";
+
+        let slf = if is_hiqlite() {
+            DB::hql().query_as_optional(sql, params!(id)).await?
+        } else {
+            DB::pg_query_opt(sql, &[&id]).await?
+        };
+
+        Ok(slf)
+    }
+
+    pub async fn find_by_user_id_jti(
+        user_id: &str,
+        jti: &str,
+    ) -> Result<Option<Self>, ErrorResponse> {
+        let sql =
+            "SELECT * FROM refresh_tokens_devices WHERE user_id = $1 AND access_token_jti = $2";
+
+        let slf = if is_hiqlite() {
+            DB::hql()
+                .query_as_optional(sql, params!(user_id, jti))
+                .await?
+        } else {
+            DB::pg_query_opt(sql, &[&user_id, &jti]).await?
+        };
+
+        Ok(slf)
     }
 
     pub async fn invalidate_all_for_device(device_id: &str) -> Result<(), ErrorResponse> {
@@ -159,10 +196,10 @@ impl RefreshTokenDevice {
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let sql = r#"
 INSERT INTO refresh_tokens_devices
-(id, device_id, user_id, nbf, exp, scope)
-VALUES ($1, $2, $3, $4, $5, $6)
+(id, device_id, user_id, nbf, exp, scope, access_token_jti)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT(id) DO UPDATE
-SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6"#;
+SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6, access_token_jti = $7"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -174,7 +211,8 @@ SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6"#;
                         self.user_id.clone(),
                         self.nbf,
                         self.exp,
-                        self.scope.clone()
+                        self.scope.clone(),
+                        self.access_token_jti.clone()
                     ),
                 )
                 .await?;
@@ -188,6 +226,7 @@ SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6"#;
                     &self.nbf,
                     &self.exp,
                     &self.scope,
+                    &self.access_token_jti,
                 ],
             )
             .await?;

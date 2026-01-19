@@ -4,6 +4,7 @@ use actix_web::http::header::{HeaderName, HeaderValue};
 use rauthy_api_types::users::Userinfo;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::devices::DeviceEntity;
+use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_data::entity::webids::WebId;
@@ -27,22 +28,29 @@ pub async fn get_userinfo(
     .await?;
     let claims = serde_json::from_slice::<JwtCommonClaims>(&buf)?;
 
-    if claims.sub.is_none() {
+    let Some(sub) = claims.sub else {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Not a user token",
         ));
+    };
+
+    if let Some(jti) = claims.jti
+        && IssuedToken::validate_not_revoked(jti).await.is_err()
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("token-revoked".to_string()),
+            "The token has been revoked",
+        ));
     }
 
     let scope = claims.scope.unwrap_or_else(|| Cow::from("openid"));
-    let user = User::find(claims.sub.unwrap().to_string())
-        .await
-        .map_err(|_| {
-            ErrorResponse::new(
-                ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
-                "The user has not been found",
-            )
-        })?;
+    let user = User::find(sub.to_string()).await.map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
+            "The user has not been found",
+        )
+    })?;
 
     // reject the request if user has been disabled, even when the token is still valid
     if !user.enabled || user.check_expired().is_err() {

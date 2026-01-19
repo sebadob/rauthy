@@ -12,7 +12,7 @@ use rauthy_api_types::oidc::{
     AuthRequest, CertsParams, DeviceAcceptedRequest, DeviceCodeResponse, DeviceGrantRequest,
     DeviceVerifyRequest, DeviceVerifyResponse, JWKSCerts, JWKSPublicKeyCerts, LoginRefreshRequest,
     LoginRequest, LogoutRequest, OAuth2ErrorResponse, OAuth2ErrorTypeResponse, SessionInfoResponse,
-    TokenInfo, TokenRequest, TokenValidationRequest,
+    TokenInfo, TokenRequest, TokenRevocationRequest, TokenValidationRequest,
 };
 use rauthy_api_types::sessions::SessionState;
 use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
@@ -45,7 +45,7 @@ use rauthy_data::html::templates::{
 use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_service::oidc::{authorize, logout, token_info, userinfo, validation};
+use rauthy_service::oidc::{authorize, logout, token_info, token_revocation, userinfo, validation};
 use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
@@ -674,7 +674,7 @@ pub async fn get_logout(
         logout::post_logout_handle(req, params, None).await
     } else if let Some(principal) = principal {
         // If we get any logout errors, maybe because there is no session anymore or whatever happens,
-        // just redirect to rauthy's root page, since the user is not logged-in anyway anymore.
+        // just redirect to Rauthys root page, since the user is not logged-in anyway anymore.
         if principal.validate_session_auth().is_err() {
             return Ok(HttpResponse::build(StatusCode::from_u16(302).unwrap())
                 .insert_header(("location", "/auth/v1/"))
@@ -960,6 +960,26 @@ pub async fn post_token(
     };
 
     login_delay::handle_login_delay(ip, start, res, has_password_been_hashed).await
+}
+
+#[utoipa::path(
+    post,
+    path = "/oidc/token/revoke",
+    tag = "oidc",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[post("/oidc/token/revoke")]
+pub async fn post_token_revoke(
+    req: HttpRequest,
+    Form(payload): Form<TokenRevocationRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    token_revocation::handle_token_revocation(req, payload).await?;
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// The token introspection endpoint for OAuth2

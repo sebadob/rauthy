@@ -1,7 +1,9 @@
 use chrono::Utc;
+use cryptr::utils::secure_random_alnum;
 use rauthy_api_types::oidc::JktClaim;
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
@@ -22,6 +24,8 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::str::FromStr;
 use utoipa::ToSchema;
+
+pub struct AccessTokenJti(String);
 
 pub enum AtHashAlg {
     Sha256,
@@ -118,7 +122,6 @@ pub struct TokenSet {
 
 impl TokenSet {
     /// Builds the access token for a user after all validation has been successful
-    // too many arguments is not an issue - params cannot be mistaken because of enum wrappers
     #[allow(clippy::too_many_arguments, clippy::type_complexity)]
     pub async fn build_access_token(
         user: Option<&User>,
@@ -127,8 +130,9 @@ impl TokenSet {
         lifetime: i64,
         scope: Option<TokenScopes>,
         scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
+        sid: Option<SessionId>,
         device_code_flow: DeviceCodeFlow,
-    ) -> Result<String, ErrorResponse> {
+    ) -> Result<(AccessTokenJti, String), ErrorResponse> {
         let did = match device_code_flow {
             DeviceCodeFlow::Yes(did) => Some(did),
             DeviceCodeFlow::No => None,
@@ -149,14 +153,20 @@ impl TokenSet {
             None
         };
 
+        let user_id = user.map(|u| u.id.as_str());
         let now = Utc::now().timestamp();
+        let exp = now + lifetime;
+
+        let issued_token =
+            IssuedToken::create(user_id, did.as_deref(), sid.map(|sid| sid.0), exp).await?;
+
         let mut claims_new_impl = JwtAccessClaims {
             common: JwtCommonClaims {
                 iat: now,
                 nbf: now,
-                exp: now + lifetime,
+                exp,
                 iss: &RauthyConfig::get().issuer,
-                jti: None,
+                jti: Some(&issued_token.jti),
                 aud: Cow::Borrowed(client.id.as_str()),
                 sub: user.map(|u| u.id.as_str()),
                 typ: JwtTokenType::Bearer,
@@ -196,7 +206,9 @@ impl TokenSet {
 
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.access_token_alg)?;
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
-        JwtToken::build(&kp, &claims_new_impl)
+        let token = JwtToken::build(&kp, &claims_new_impl)?;
+
+        Ok((AccessTokenJti(issued_token.jti), token))
     }
 
     /// Builds the id token for a user after all validation has been successful
@@ -355,6 +367,7 @@ impl TokenSet {
         is_mfa: bool,
         device_code_flow: DeviceCodeFlow,
         sid: Option<SessionId>,
+        jti: AccessTokenJti,
     ) -> Result<String, ErrorResponse> {
         let did = if let DeviceCodeFlow::Yes(device_id) = device_code_flow {
             Some(device_id)
@@ -382,7 +395,9 @@ impl TokenSet {
                     nbf,
                     exp,
                     iss: &RauthyConfig::get().issuer,
-                    jti: None,
+                    // jti is not really used for any validation, it just exists
+                    // to bring a bit more randomness into the claims
+                    jti: Some(&secure_random_alnum(8)),
                     aud: Cow::Borrowed(client.id.as_str()),
                     sub: None,
                     typ: JwtTokenType::Refresh,
@@ -414,6 +429,7 @@ impl TokenSet {
                 nbf,
                 exp,
                 scope.map(|s| s.0),
+                Some(jti.0),
             )
             .await?;
         } else {
@@ -425,6 +441,7 @@ impl TokenSet {
                 scope.map(|s| s.0),
                 is_mfa,
                 sid.map(|s| s.0),
+                Some(jti.0),
             )
             .await?;
         }
@@ -441,11 +458,12 @@ impl TokenSet {
         } else {
             JwtTokenType::Bearer
         };
-        let access_token = Self::build_access_token(
+        let (_jti, access_token) = Self::build_access_token(
             None,
             client,
             dpop_fingerprint,
             client.access_token_lifetime as i64,
+            None,
             None,
             None,
             DeviceCodeFlow::No,
@@ -554,13 +572,14 @@ impl TokenSet {
         } else {
             JwtTokenType::Bearer
         };
-        let access_token = Self::build_access_token(
+        let (jti, access_token) = Self::build_access_token(
             Some(user),
             client,
             dpop_fingerprint.clone(),
             lifetime,
             Some(TokenScopes(scope.clone())),
             customs_access,
+            sid.clone(),
             device_code_flow.clone(),
         )
         .await?;
@@ -595,6 +614,7 @@ impl TokenSet {
                     user.has_webauthn_enabled(),
                     device_code_flow,
                     sid,
+                    jti,
                 )
                 .await?,
             )

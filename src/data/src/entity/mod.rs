@@ -25,6 +25,7 @@ pub mod forward_auth;
 pub mod groups;
 pub mod ip_blacklist;
 pub mod ip_rate_limit;
+pub mod issued_tokens;
 pub mod jwk;
 pub mod jwk_token_validation;
 pub mod login_locations;

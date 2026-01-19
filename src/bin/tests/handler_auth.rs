@@ -10,7 +10,8 @@ use josekit::jwk;
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::UpdateClientRequest;
 use rauthy_api_types::oidc::{
-    JktClaim, JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest, TokenValidationRequest,
+    JktClaim, JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest, TokenRevocationRequest,
+    TokenValidationRequest,
 };
 use rauthy_common::constants::{
     APPLICATION_JSON, DPOP_TOKEN_ENDPOINT, HEADER_DPOP_NONCE, TOKEN_DPOP,
@@ -391,10 +392,7 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
     assert!(ts.id_token.is_none());
     assert!(ts.refresh_token.is_none());
 
-    let payload = TokenValidationRequest {
-        token: ts.access_token.clone(),
-    };
-    validate_token(&ts.access_token, payload, None).await?;
+    validate_token(ts.access_token.clone(), None).await?;
 
     Ok(())
 }
@@ -541,10 +539,7 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     assert_eq!(ts.expires_in, 60);
 
     // validate against the backend
-    let payload = TokenValidationRequest {
-        token: ts.access_token.to_owned(),
-    };
-    validate_token(&ts.access_token, payload, None).await?;
+    validate_token(ts.access_token.to_owned(), None).await?;
 
     // make sure `auth_time` is handled properly
     let auth_time_refresh = auth_time_from_token(ts.refresh_token.as_ref().unwrap());
@@ -702,12 +697,8 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
 
     let ts = res.json::<TokenSet>().await?;
     assert_eq!(ts.token_type, JwtTokenType::DPoP);
-    let payload = TokenValidationRequest {
-        token: ts.access_token.to_owned(),
-    };
     validate_token(
-        &ts.access_token,
-        payload,
+        ts.access_token.to_owned(),
         Some(JktClaim { jkt: &fingerprint }),
     )
     .await?;
@@ -746,12 +737,8 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
 
     let ts = res.json::<TokenSet>().await?;
     assert_eq!(ts.token_type, JwtTokenType::DPoP);
-    let payload = TokenValidationRequest {
-        token: ts.access_token.to_owned(),
-    };
     validate_token(
-        &ts.access_token,
-        payload,
+        ts.access_token.to_owned(),
         Some(JktClaim { jkt: &fingerprint }),
     )
     .await?;
@@ -1004,23 +991,7 @@ async fn test_token_introspection() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
 
-    // get a token to validate
-    let url_token = format!("{}/oidc/token", backend_url);
-    let body = TokenRequest {
-        grant_type: "password".to_string(),
-        code: None,
-        redirect_uri: None,
-        client_id: Some(CLIENT_ID.to_string()),
-        client_secret: Some(CLIENT_SECRET.to_string()),
-        code_verifier: None,
-        device_code: None,
-        username: Some(USERNAME.to_string()),
-        password: Some(PASSWORD.to_string()),
-        refresh_token: None,
-    };
-    let res = client.post(&url_token).form(&body).send().await?;
-    assert!(res.status().is_success());
-    let ts = res.json::<TokenSet>().await?;
+    let ts = fetch_token_set().await;
 
     // make sure introspection is fine
     let mut payload = TokenValidationRequest {
@@ -1076,28 +1047,153 @@ async fn test_token_introspection() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[tokio::test]
+async fn test_token_revocation() -> Result<(), Box<dyn Error>> {
+    let mut ts = fetch_token_set().await;
+
+    // our access token must have the `jti` set
+    let jti = jti_from_token(&ts.access_token);
+    assert!(!jti.is_empty());
+
+    // make sure introspection is fine
+    validate_token(ts.access_token.clone(), None).await.unwrap();
+
+    // revoke the token
+    let url_revoke = format!("{}/oidc/token/revoke", get_backend_url());
+    let mut payload = TokenRevocationRequest {
+        token: ts.access_token.clone(),
+        token_type_hint: None,
+        client_id: None,
+        client_secret: None,
+    };
+    // it should fail without client auth
+    let res = reqwest::Client::new()
+        .post(&url_revoke)
+        .form(&payload)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status().as_u16(), 401);
+
+    let s: Option<String> = None;
+    let res = reqwest::Client::new()
+        .post(&url_revoke)
+        .basic_auth(CLIENT_ID.to_string(), s)
+        .form(&payload)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status().as_u16(), 401);
+
+    let res = reqwest::Client::new()
+        .post(&url_revoke)
+        .basic_auth(CLIENT_ID.to_string(), Some(CLIENT_SECRET.to_string()))
+        .form(&payload)
+        .send()
+        .await
+        .unwrap();
+    assert!(res.status().is_success());
+
+    let res = validate_token_request(ts.access_token.clone())
+        .await
+        .unwrap();
+    assert!(!res.status().is_success());
+    let err = res.json::<ErrorResponse>().await?;
+    assert_eq!(err.error, ErrorResponseType::Unauthorized);
+    assert_eq!(err.message, "token was revoked");
+
+    // make sure it works for the userinfo in the same way
+    let res = reqwest::Client::new()
+        .get(&format!("{}/oidc/userinfo", get_backend_url()))
+        .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
+        .send()
+        .await?;
+    assert!(!res.status().is_success());
+    let err = res.json::<ErrorResponse>().await?;
+    assert_eq!(
+        err.error,
+        ErrorResponseType::WWWAuthenticate("token-revoked".to_string())
+    );
+    assert_eq!(err.message, "The token has been revoked");
+
+    // test with client credentials in body instead of auth header
+    ts = fetch_token_set().await;
+
+    validate_token(ts.access_token.clone(), None).await?;
+
+    payload.token = ts.access_token.clone();
+    payload.client_id = Some(CLIENT_ID.to_string());
+    payload.client_secret = Some(CLIENT_SECRET.to_string());
+    let res = reqwest::Client::new()
+        .post(&url_revoke)
+        .form(&payload)
+        .send()
+        .await
+        .unwrap();
+    assert!(res.status().is_success());
+
+    let res = validate_token_request(ts.access_token.clone())
+        .await
+        .unwrap();
+    assert!(!res.status().is_success());
+    let err = res.json::<ErrorResponse>().await?;
+    assert_eq!(err.error, ErrorResponseType::Unauthorized);
+    assert_eq!(err.message, "token was revoked");
+
+    Ok(())
+}
+
+async fn fetch_token_set() -> TokenSet {
+    let url_token = format!("{}/oidc/token", get_backend_url());
+    let body = TokenRequest {
+        grant_type: "password".to_string(),
+        code: None,
+        redirect_uri: None,
+        client_id: Some(CLIENT_ID.to_string()),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        code_verifier: None,
+        device_code: None,
+        username: Some(USERNAME.to_string()),
+        password: Some(PASSWORD.to_string()),
+        refresh_token: None,
+    };
+    let res = reqwest::Client::new()
+        .post(&url_token)
+        .form(&body)
+        .send()
+        .await
+        .unwrap();
+    assert!(res.status().is_success());
+    res.json::<TokenSet>().await.unwrap()
+}
+
 fn auth_time_from_token(id_token: &str) -> i64 {
-    let (_, rest) = id_token.split_once('.').unwrap_or(("", ""));
-    let (claims_b64, _) = rest.split_once('.').unwrap_or(("", ""));
-    let bytes = base64_url_no_pad_decode(claims_b64).unwrap();
-    let s = String::from_utf8_lossy(&bytes);
-    let claims = serde_json::from_str::<serde_json::Value>(s.as_ref()).unwrap();
+    let claims = token_claims(id_token);
     let at = claims.get("auth_time").unwrap();
     at.as_i64().unwrap()
 }
 
+fn jti_from_token(token: &str) -> String {
+    let claims = token_claims(token);
+    let at = claims.get("jti").unwrap();
+    at.as_str().unwrap().to_string()
+}
+
+fn token_claims(token: &str) -> serde_json::Value {
+    let (_, rest) = token.split_once('.').unwrap_or(("", ""));
+    let (claims_b64, _) = rest.split_once('.').unwrap_or(("", ""));
+    let bytes = base64_url_no_pad_decode(claims_b64).unwrap();
+    let s = String::from_utf8_lossy(&bytes);
+    serde_json::from_str::<serde_json::Value>(s.as_ref()).unwrap()
+}
+
 async fn validate_token(
-    access_token: &str,
-    payload: TokenValidationRequest,
+    // access_token: &str,
+    // payload: TokenValidationRequest,
+    token: String,
     expected_cnf: Option<JktClaim<'_>>,
 ) -> Result<(), Box<dyn Error>> {
-    let url_valid = format!("{}/oidc/introspect", get_backend_url());
-    let res = reqwest::Client::new()
-        .post(&url_valid)
-        .header(AUTHORIZATION, format!("Bearer {}", access_token))
-        .form(&payload)
-        .send()
-        .await?;
+    let res = validate_token_request(token).await?;
     assert_eq!(res.status(), 200);
     let text = res.text().await?;
     let info = serde_json::from_str::<TokenInfo>(&text)?;
@@ -1108,4 +1204,14 @@ async fn validate_token(
         assert!(info.cnf.is_none());
     }
     Ok(())
+}
+
+async fn validate_token_request(token: String) -> Result<reqwest::Response, Box<dyn Error>> {
+    let res = reqwest::Client::new()
+        .post(&format!("{}/oidc/introspect", get_backend_url()))
+        .header(AUTHORIZATION, format!("Bearer {}", token))
+        .form(&TokenValidationRequest { token })
+        .send()
+        .await?;
+    Ok(res)
 }

@@ -9,6 +9,7 @@ use rauthy_common::http_client;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::failed_backchannel_logout::FailedBackchannelLogout;
+use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::sessions::Session;
@@ -145,16 +146,32 @@ pub async fn post_logout_handle(
             ));
         };
 
+    let token_revoke = RauthyConfig::get().vars.access.token_revoke_on_logout;
+
     let sid = session.as_ref().map(|s| s.id.clone());
     if let Some(session) = session {
         let uid = session.user_id.clone();
-        RefreshToken::delete_by_sid(session.id.clone()).await?;
+        if token_revoke {
+            RefreshToken::delete_by_sid(session.id.clone()).await?;
+            IssuedToken::revoke_for_session(
+                &session.id,
+                RauthyConfig::get().vars.access.token_revoke_device_tokens,
+            )
+            .await?;
+        }
         session.delete().await?;
         execute_backchannel_logout(sid.clone(), uid).await?;
     }
 
     if let Some(user) = user {
-        RefreshToken::invalidate_for_user(&user.id).await?;
+        if token_revoke {
+            RefreshToken::invalidate_for_user(&user.id).await?;
+            IssuedToken::revoke_for_user(
+                &user.id,
+                RauthyConfig::get().vars.access.token_revoke_device_tokens,
+            )
+            .await?;
+        }
         Session::invalidate_for_user(&user.id).await?;
         execute_backchannel_logout(None, Some(user.id)).await?;
     }

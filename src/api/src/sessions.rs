@@ -6,6 +6,7 @@ use rauthy_api_types::sessions::SessionResponse;
 use rauthy_data::entity;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::continuation_token::ContinuationToken;
+use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
@@ -124,6 +125,7 @@ pub async fn delete_sessions(principal: ReqPrincipal) -> Result<HttpResponse, Er
 
     Session::invalidate_all().await?;
     RefreshToken::invalidate_all().await?;
+    IssuedToken::revoke_all().await?;
 
     // This task should run async in the background, as it could take quite a long time to finish.
     task::spawn(async move {
@@ -165,8 +167,10 @@ pub async fn delete_sessions_for_user(
 
     let uid = path.into_inner();
     let user = User::find(uid).await?;
+
     Session::invalidate_for_user(&user.id).await?;
     RefreshToken::invalidate_for_user(&user.id).await?;
+    IssuedToken::revoke_for_user(&user.id, true).await?;
     logout::execute_backchannel_logout(None, Some(user.id)).await?;
 
     Event::force_logout(user.email).send().await?;
@@ -203,6 +207,7 @@ pub async fn delete_session_by_id(
 
     session.delete().await?;
     RefreshToken::delete_by_sid(sid.clone()).await?;
+    IssuedToken::revoke_for_session(&sid, true).await?;
     logout::execute_backchannel_logout(Some(sid), uid).await?;
 
     Ok(HttpResponse::Ok().finish())
