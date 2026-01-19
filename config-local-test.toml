@@ -1,3 +1,7 @@
+[access]
+token_revoke_on_logout = true
+token_revoke_device_tokens = true
+
 [auth_headers]
 enable = true
 

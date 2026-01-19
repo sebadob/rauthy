@@ -220,14 +220,15 @@ token_len_limit = 4096
 token_revoke_on_logout = true
 
 # If set to true, tokens issued via the `device_code` flow will be
-# revoked, when user is being force-logged-out via the Admin UI.
+# revoked during `/logout`.
 # These tokens are usually used on headless IoT devices or for CLIs
 # on remote servers, and logging these back in can be a lot more
 # work than the default logins via browser.
 #
-# This values will only be respected, if `token_revoke_on_logout` is
+# This value will only be respected, if `token_revoke_on_logout` is
 # set to `true` as well. Otherwise, tokens will only be revoked
-# via the dedicated `recovation_endpoint` or forced logout from an admin.
+# via the dedicated `recovation_endpoint` or forced logout from an
+# admin.
 #
 # default: false
 # overwritten by: TOKEN_REVOKE_DEVICE_TOKENS
