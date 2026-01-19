@@ -10,10 +10,10 @@ mod dyn_clients;
 mod email_jobs;
 mod events;
 mod ip_geo_db;
+mod issued_tokens;
 mod jwks;
 mod magic_links;
 mod passwords;
-mod revoked_tokens;
 mod scim_tasks;
 mod sessions;
 mod tokens;
@@ -39,7 +39,7 @@ pub fn spawn() {
     tokio::spawn(jwks::jwks_auto_rotate());
     tokio::spawn(jwks::jwks_cleanup());
     tokio::spawn(passwords::password_expiry_checker());
-    tokio::spawn(revoked_tokens::cleanup_revoked_tokens());
+    tokio::spawn(issued_tokens::cleanup_issued_tokens());
     tokio::spawn(users::user_expiry_checker());
     tokio::spawn(app_version::app_version_check());
 }

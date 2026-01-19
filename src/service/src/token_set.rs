@@ -3,6 +3,7 @@ use cryptr::utils::secure_random_alnum;
 use rauthy_api_types::oidc::JktClaim;
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
@@ -151,16 +152,19 @@ impl TokenSet {
             None
         };
 
-        let jti = secure_random_alnum(32);
-
+        let user_id = user.map(|u| u.id.as_str());
         let now = Utc::now().timestamp();
+        let exp = now + lifetime;
+
+        let issued_token = IssuedToken::create(user_id, exp).await?;
+
         let mut claims_new_impl = JwtAccessClaims {
             common: JwtCommonClaims {
                 iat: now,
                 nbf: now,
-                exp: now + lifetime,
+                exp,
                 iss: &RauthyConfig::get().issuer,
-                jti: Some(&jti),
+                jti: Some(&issued_token.jti),
                 aud: Cow::Borrowed(client.id.as_str()),
                 sub: user.map(|u| u.id.as_str()),
                 typ: JwtTokenType::Bearer,
@@ -202,7 +206,7 @@ impl TokenSet {
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
         let token = JwtToken::build(&kp, &claims_new_impl)?;
 
-        Ok((AccessTokenJti(jti), token))
+        Ok((AccessTokenJti(issued_token.jti), token))
     }
 
     /// Builds the id token for a user after all validation has been successful

@@ -1,13 +1,15 @@
-CREATE TABLE revoked_tokens
+CREATE TABLE issued_tokens
 (
-    jti VARCHAR NOT NULL
-        CONSTRAINT revoked_tokens_pk
+    jti     VARCHAR NOT NULL
+        CONSTRAINT issued_tokens_pk
             PRIMARY KEY,
-    exp BIGINT  NOT NULL
+    user_id VARCHAR,
+    exp     BIGINT  NOT NULL,
+    revoked BOOL
 );
 
-CREATE INDEX revoked_tokens_exp_index
-    ON revoked_tokens (exp);
+CREATE INDEX issued_tokens_exp_index
+    ON issued_tokens (exp);
 
 ALTER TABLE refresh_tokens
     ADD access_token_jti VARCHAR;

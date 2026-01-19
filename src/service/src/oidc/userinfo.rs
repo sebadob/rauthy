@@ -4,7 +4,7 @@ use actix_web::http::header::{HeaderName, HeaderValue};
 use rauthy_api_types::users::Userinfo;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::devices::DeviceEntity;
-use rauthy_data::entity::revoked_tokens::RevokedToken;
+use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_data::entity::webids::WebId;
@@ -36,7 +36,7 @@ pub async fn get_userinfo(
     };
 
     if let Some(jti) = claims.jti
-        && RevokedToken::validate_not_revoked(jti).await.is_err()
+        && IssuedToken::validate_not_revoked(jti).await.is_err()
     {
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("token-revoked".to_string()),

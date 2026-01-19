@@ -3,10 +3,9 @@ use actix_web::http::header;
 use rauthy_api_types::oidc::TokenRevocationRequest;
 use rauthy_common::utils::base64_decode;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
-use rauthy_data::entity::revoked_tokens::RevokedToken;
-use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
@@ -73,40 +72,21 @@ pub async fn handle_token_revocation(
         ));
     }
 
-    let mut revoked_token: Option<RevokedToken> = None;
+    // let mut revoked_token: Option<RevokedToken> = None;
     if is_refresh_token {
-        // by default, the `nbf` for refresh tokens will be
-        // exactly 60 seconds before the access token expires
-        let disable_nbf = RauthyConfig::get().vars.access.disable_refresh_token_nbf;
         let (_, validation_str) = payload.token.split_at(payload.token.len() - 49);
 
         if claims.did.is_some() {
             if let Some(rt) = RefreshTokenDevice::find_opt(validation_str).await? {
                 rt.delete().await?;
-
                 if let Some(jti) = rt.access_token_jti {
-                    revoked_token = Some(RevokedToken {
-                        jti,
-                        exp: if disable_nbf {
-                            rt.exp + 10
-                        } else {
-                            rt.nbf + 70
-                        },
-                    });
+                    IssuedToken::revoke(jti).await?;
                 }
             }
         } else if let Some(rt) = RefreshToken::find_opt(validation_str).await? {
             rt.delete().await?;
-
             if let Some(jti) = rt.access_token_jti {
-                revoked_token = Some(RevokedToken {
-                    jti,
-                    exp: if disable_nbf {
-                        rt.exp + 10
-                    } else {
-                        rt.nbf + 70
-                    },
-                });
+                IssuedToken::revoke(jti).await?;
             }
         }
     } else {
@@ -116,10 +96,7 @@ pub async fn handle_token_revocation(
             return Ok(());
         };
 
-        revoked_token = Some(RevokedToken {
-            jti: jti.to_string(),
-            exp: claims.exp + 10,
-        });
+        IssuedToken::revoke(jti.to_string()).await?;
 
         if let Some(user_id) = claims.sub {
             if claims.did.is_some() {
@@ -131,10 +108,6 @@ pub async fn handle_token_revocation(
             }
         }
     };
-
-    if let Some(token) = revoked_token {
-        token.upsert_or_delete().await?;
-    }
 
     Ok(())
 }

@@ -1099,7 +1099,7 @@ async fn test_token_revocation() -> Result<(), Box<dyn Error>> {
         .unwrap();
     assert!(!res.status().is_success());
     let err = res.json::<ErrorResponse>().await?;
-    assert_eq!(err.error, ErrorResponseType::Forbidden);
+    assert_eq!(err.error, ErrorResponseType::Unauthorized);
     assert_eq!(err.message, "token was revoked");
 
     // make sure it works for the userinfo in the same way
@@ -1137,7 +1137,7 @@ async fn test_token_revocation() -> Result<(), Box<dyn Error>> {
         .unwrap();
     assert!(!res.status().is_success());
     let err = res.json::<ErrorResponse>().await?;
-    assert_eq!(err.error, ErrorResponseType::Forbidden);
+    assert_eq!(err.error, ErrorResponseType::Unauthorized);
     assert_eq!(err.message, "token was revoked");
 
     Ok(())
