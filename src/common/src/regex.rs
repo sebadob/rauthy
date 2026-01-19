@@ -29,7 +29,7 @@ pub static RE_CODE_CHALLENGE: LazyLock<Regex> =
 pub static RE_CODE_VERIFIER: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~+/=]+$").unwrap());
 pub static RE_CONTACT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9+.@/:]{0,48}$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9+.@/:-]{0,48}$").unwrap());
 pub static RE_CSS_VALUE_LOOSE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-,.#()%/\s]+$").unwrap());
 pub static RE_DATE_STR: LazyLock<Regex> =
