@@ -49,7 +49,7 @@ pub fn validate_vec_contact(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
         if !RE_CONTACT.is_match(v) {
-            err = Some("^[a-zA-Z0-9\\+.@/]{0,48}$");
+            err = Some("^[a-zA-Z0-9\\+.@/-]{0,48}$");
         }
     });
     if let Some(e) = err {
