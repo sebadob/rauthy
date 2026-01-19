@@ -1,4 +1,4 @@
-// Copyright 2025 Sebastian Dobe <sebastiandobe@mailbox.org>
+// Copyright 2026 Sebastian Dobe <sebastiandobe@mailbox.org>
 
 use crate::logging::setup_logging;
 use rauthy_common::constants::{BUILD_TIME, RAUTHY_VERSION};
@@ -20,7 +20,11 @@ use tokio::sync::mpsc;
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
-#[cfg(all(feature = "jemalloc", not(target_env = "msvc")))]
+#[cfg(all(
+    feature = "jemalloc",
+    not(target_env = "msvc"),
+    not(target_os = "openbsd")
+))]
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 

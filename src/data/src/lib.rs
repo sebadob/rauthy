@@ -1,4 +1,4 @@
-// Copyright 2025 Sebastian Dobe <sebastiandobe@mailbox.org>
+// Copyright 2026 Sebastian Dobe <sebastiandobe@mailbox.org>
 
 use crate::entity::sessions::Session;
 use actix_web::http::header::{HeaderName, HeaderValue};
