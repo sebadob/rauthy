@@ -666,7 +666,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
 pub async fn login_locations(data_before: Vec<LoginLocation>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM login_locations";
     let sql_2 = r#"
-INSERT INTO login_locations (user_id, ip, last_seen, user_agent, location, browser_id)
+INSERT INTO login_locations (user_id, browser_id, ip, last_seen, user_agent, location)
 VALUES ($1, $2, $3, $4, $5, $6)"#;
 
     if is_hiqlite() {
@@ -678,11 +678,11 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
                     sql_2,
                     params!(
                         b.user_id,
+                        b.browser_id,
                         b.ip,
                         b.last_seen,
                         b.user_agent,
-                        b.location,
-                        b.browser_id
+                        b.location
                     ),
                 )
                 .await?;
@@ -694,11 +694,11 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
                 sql_2,
                 &[
                     &b.user_id,
+                    &b.browser_id,
                     &b.ip,
                     &b.last_seen,
                     &b.user_agent,
                     &b.location,
-                    &b.browser_id,
                 ],
             )
             .await?;
