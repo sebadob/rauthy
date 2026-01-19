@@ -147,6 +147,7 @@
             // Make sure to create a session manually during dev.
             // In prod, it will be handled automatically during the GET already.
             createSessionDev();
+            browserIdDev();
         } else if (csrfToken) {
             saveCsrfToken(csrfToken);
         }
@@ -159,6 +160,10 @@
         } else {
             console.error(res.error);
         }
+    }
+
+    async function browserIdDev() {
+        await fetchPost('/auth/v1/dev/browser_id');
     }
 
     async function fetchTos() {

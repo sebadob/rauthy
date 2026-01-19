@@ -16,6 +16,7 @@ use rauthy_common::constants::{
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::continuation_token::ContinuationToken;
@@ -1375,6 +1376,7 @@ pub async fn post_webauthn_auth_start(
 pub async fn post_webauthn_auth_finish(
     id: web::Path<String>,
     req: HttpRequest,
+    browser_id: BrowserId,
     Json(payload): Json<WebauthnAuthFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
@@ -1386,7 +1388,7 @@ pub async fn post_webauthn_auth_finish(
     // This here will simply fail, if the secret code from the /start does not exist
     // -> indirect validation through exising code.
 
-    let res = webauthn::auth_finish(id, &req, payload).await?;
+    let res = webauthn::auth_finish(id, &req, browser_id, payload).await?;
     Ok(res.into_response())
 }
 

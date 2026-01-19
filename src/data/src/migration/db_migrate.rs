@@ -298,6 +298,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
                 last_seen: row.get("last_seen")?,
                 user_agent: row.get("user_agent")?,
                 location: row.get("location")?,
+                browser_id: row.get("browser_id")?,
             })
         })?
         .map(|r| r.unwrap())
