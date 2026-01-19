@@ -14,27 +14,27 @@ use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::net::IpAddr;
 use tokio::task;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 #[derive(Debug)]
 pub struct LoginLocation {
     pub user_id: String,
+    pub browser_id: String,
     pub ip: String,
     pub last_seen: i64,
     pub user_agent: String,
     pub location: Option<String>,
-    pub browser_id: Option<String>,
 }
 
 impl From<hiqlite::Row<'_>> for LoginLocation {
     fn from(mut row: hiqlite::Row<'_>) -> Self {
         Self {
             user_id: row.get("user_id"),
+            browser_id: row.get("browser_id"),
             ip: row.get("ip"),
             last_seen: row.get("last_seen"),
             user_agent: row.get("user_agent"),
             location: row.get("location"),
-            browser_id: row.get("browser_id"),
         }
     }
 }
@@ -43,11 +43,11 @@ impl From<tokio_postgres::Row> for LoginLocation {
     fn from(row: tokio_postgres::Row) -> Self {
         Self {
             user_id: row.get("user_id"),
+            browser_id: row.get("browser_id"),
             ip: row.get("ip"),
             last_seen: row.get("last_seen"),
             user_agent: row.get("user_agent"),
             location: row.get("location"),
-            browser_id: row.get("browser_id"),
         }
     }
 }
@@ -55,41 +55,43 @@ impl From<tokio_postgres::Row> for LoginLocation {
 impl LoginLocation {
     pub async fn insert(
         user_id: String,
+        browser_id: BrowserId,
         ip: IpAddr,
         user_agent: String,
         location: Option<String>,
-        browser_id: BrowserId,
     ) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
         let ip = ip.to_string();
-        let browser_id = browser_id.inner();
+        let browser_id = browser_id.inner().unwrap_or_default();
 
         let sql = r#"
-INSERT INTO login_locations (user_id, ip, last_seen, user_agent, location, browser_id)
+INSERT INTO login_locations (user_id, browser_id, ip, last_seen, user_agent, location)
 VALUES ($1, $2, $3, $4, $5, $6)"#;
+
+        warn!("{sql}\nbrowser_id: {}, ip: {}", browser_id, ip,);
 
         if is_hiqlite() {
             DB::hql()
                 .execute(
                     sql,
-                    params!(&user_id, &ip, now, &user_agent, &location, &browser_id),
+                    params!(&user_id, &browser_id, &ip, now, &user_agent, &location),
                 )
                 .await?;
         } else {
             DB::pg_execute(
                 sql,
-                &[&user_id, &ip, &now, &user_agent, &location, &browser_id],
+                &[&user_id, &browser_id, &ip, &now, &user_agent, &location],
             )
             .await?;
         }
 
         Ok(Self {
             user_id,
+            browser_id,
             ip,
             last_seen: now,
             user_agent,
             location,
-            browser_id,
         })
     }
 
@@ -166,19 +168,26 @@ WHERE user_id = $4 AND browser_id = $5"#;
         Ok(())
     }
 
-    pub async fn update_last_seen(self) -> Result<(), ErrorResponse> {
+    pub async fn update_by_ip(self, location: Option<String>) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
         let sql = r#"
 UPDATE login_locations
-SET last_seen = $1
-WHERE user_id = $2 AND ip = $3"#;
+SET last_seen = $1, location = $2
+WHERE user_id = $3 AND browser_id = $4 AND ip = $5"#;
 
         if is_hiqlite() {
             DB::hql()
-                .execute(sql, params!(now, self.user_id, self.ip))
+                .execute(
+                    sql,
+                    params!(now, location, self.user_id, self.browser_id, self.ip),
+                )
                 .await?;
         } else {
-            DB::pg_execute(sql, &[&now, &self.user_id, &self.ip]).await?;
+            DB::pg_execute(
+                sql,
+                &[&now, &location, &self.user_id, &self.browser_id, &self.ip],
+            )
+            .await?;
         }
 
         Ok(())
@@ -248,7 +257,7 @@ impl LoginLocation {
             }
         } else if let Some(slf) = Self::find_by_ip(user.id.clone(), ip).await? {
             debug!("Login from IP {ip} for user {} is known", user.id);
-            slf.update_last_seen().await?;
+            slf.update_by_ip(location).await?;
             return Ok(());
         }
 
@@ -257,7 +266,7 @@ impl LoginLocation {
             user.email
         );
 
-        let slf = Self::insert(user.id.clone(), ip, user_agent, location, browser_id).await?;
+        let slf = Self::insert(user.id.clone(), browser_id, ip, user_agent, location).await?;
         if let Err(err) = Event::new_login_location(&user, &slf).send().await {
             error!(?err, "Error generating event for NewLoginLocation");
         }

@@ -54,12 +54,6 @@ async fn check_app_version(last_version_notification: &mut Option<Version>) {
                 } else {
                     info!("A new Rauthy App Version is available: {latest_version}");
 
-                    if let Err(err) =
-                        LatestAppVersion::upsert(latest_version.clone(), url.clone()).await
-                    {
-                        error!(?err, "Error saving LatestAppVersion into DB");
-                    }
-
                     RauthyConfig::get()
                         .tx_events
                         .send_async(Event::new_rauthy_version(url))
