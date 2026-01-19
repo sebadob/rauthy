@@ -301,6 +301,7 @@ impl Default for Vars {
                 peer_ip_header_name: None,
                 cookie_mode: CookieMode::Host,
                 cookie_set_path: true,
+                client_credentials_map_sub: false,
                 token_len_limit: 4096,
                 token_revoke_on_logout: false,
                 token_revoke_device_tokens: false,
@@ -961,6 +962,14 @@ impl Vars {
         }
         if let Some(v) = t_bool(&mut table, "access", "cookie_set_path", "COOKIE_SET_PATH") {
             self.access.cookie_set_path = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "access",
+            "client_credentials_map_sub",
+            "CLIENT_CREDENTIALS_MAP_SUB",
+        ) {
+            self.access.client_credentials_map_sub = v;
         }
         if let Some(v) = t_u32(&mut table, "access", "token_len_limit", "TOKEN_LEN_LIMIT") {
             self.access.token_len_limit = v;
@@ -2916,6 +2925,7 @@ pub struct VarsAccess {
     pub peer_ip_header_name: Option<String>,
     pub cookie_mode: CookieMode,
     pub cookie_set_path: bool,
+    pub client_credentials_map_sub: bool,
     pub token_len_limit: u32,
     pub token_revoke_on_logout: bool,
     pub token_revoke_device_tokens: bool,
