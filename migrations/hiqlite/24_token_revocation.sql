@@ -13,6 +13,12 @@ CREATE TABLE issued_tokens
 CREATE INDEX issued_tokens_jti_index
     ON issued_tokens (jti);
 
+CREATE INDEX issued_tokens_user_id_index
+    ON issued_tokens (user_id);
+
+CREATE INDEX issued_tokens_sid_index
+    ON issued_tokens (sid);
+
 CREATE INDEX issued_tokens_exp_index
     ON issued_tokens (exp);
 
