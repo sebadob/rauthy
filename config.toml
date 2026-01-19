@@ -191,9 +191,9 @@ cookie_set_path = true
 # overwritten by: TOKEN_LEN_LIMIT
 token_len_limit = 4096
 
-# Revoke JWT access tokens if a user does a dedicated logout from the
-# account dashboard via the logout button, or when a logout is being
-# triggered from a client.
+# Revoke JWT access + refresh tokens if a user does a dedicated logout
+# from the account dashboard via the logout button, or when a
+# (backchannel) logout is being triggered from a client.
 # In most situations, you want your tokens to be able to live longer
 # than a session on Rauthy, especially refresh tokens, or access tokens
 # issues to headless devices via the `device_code` flow.
@@ -227,7 +227,7 @@ token_revoke_on_logout = true
 #
 # This values will only be respected, if `token_revoke_on_logout` is
 # set to `true` as well. Otherwise, tokens will only be revoked
-# via the dedicated `recovation_endpoint`.
+# via the dedicated `recovation_endpoint` or forced logout from an admin.
 #
 # default: false
 # overwritten by: TOKEN_REVOKE_DEVICE_TOKENS

@@ -170,7 +170,7 @@ pub async fn delete_sessions_for_user(
 
     Session::invalidate_for_user(&user.id).await?;
     RefreshToken::invalidate_for_user(&user.id).await?;
-    IssuedToken::revoke_for_user(&user.id).await?;
+    IssuedToken::revoke_for_user(&user.id, true).await?;
     logout::execute_backchannel_logout(None, Some(user.id)).await?;
 
     Event::force_logout(user.email).send().await?;
@@ -207,7 +207,7 @@ pub async fn delete_session_by_id(
 
     session.delete().await?;
     RefreshToken::delete_by_sid(sid.clone()).await?;
-    IssuedToken::revoke_for_session(&sid).await?;
+    IssuedToken::revoke_for_session(&sid, true).await?;
     logout::execute_backchannel_logout(Some(sid), uid).await?;
 
     Ok(HttpResponse::Ok().finish())

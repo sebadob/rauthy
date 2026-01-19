@@ -674,7 +674,7 @@ pub async fn get_logout(
         logout::post_logout_handle(req, params, None).await
     } else if let Some(principal) = principal {
         // If we get any logout errors, maybe because there is no session anymore or whatever happens,
-        // just redirect to rauthy's root page, since the user is not logged-in anyway anymore.
+        // just redirect to Rauthys root page, since the user is not logged-in anyway anymore.
         if principal.validate_session_auth().is_err() {
             return Ok(HttpResponse::build(StatusCode::from_u16(302).unwrap())
                 .insert_header(("location", "/auth/v1/"))

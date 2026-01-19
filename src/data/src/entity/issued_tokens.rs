@@ -146,8 +146,15 @@ VALUES ($1, $2, $3, $4, $5)
         Ok(())
     }
 
-    pub async fn revoke_for_user(user_id: &str) -> Result<(), ErrorResponse> {
-        let sql = "UPDATE issued_tokens SET revoked = $1 WHERE user_id = $2";
+    pub async fn revoke_for_user(
+        user_id: &str,
+        include_device_tokens: bool,
+    ) -> Result<(), ErrorResponse> {
+        let sql = if include_device_tokens {
+            "UPDATE issued_tokens SET revoked = $1 WHERE user_id = $2"
+        } else {
+            "UPDATE issued_tokens SET revoked = $1 WHERE user_id = $2 AND did IS NULL"
+        };
 
         if is_hiqlite() {
             DB::hql().execute(sql, params!(true, user_id)).await?;
@@ -158,8 +165,15 @@ VALUES ($1, $2, $3, $4, $5)
         Ok(())
     }
 
-    pub async fn revoke_for_session(sid: &str) -> Result<(), ErrorResponse> {
-        let sql = "UPDATE issued_tokens SET revoked = $1 WHERE sid = $2";
+    pub async fn revoke_for_session(
+        sid: &str,
+        include_device_tokens: bool,
+    ) -> Result<(), ErrorResponse> {
+        let sql = if include_device_tokens {
+            "UPDATE issued_tokens SET revoked = $1 WHERE sid = $2"
+        } else {
+            "UPDATE issued_tokens SET revoked = $1 WHERE sid = $2 AND did IS NULL"
+        };
 
         if is_hiqlite() {
             DB::hql().execute(sql, params!(true, sid)).await?;
