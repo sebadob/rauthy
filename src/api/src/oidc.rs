@@ -2,7 +2,7 @@ use crate::{ReqPrincipal, map_auth_step};
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS,
-    CONTENT_TYPE, HeaderValue,
+    CONTENT_TYPE, HeaderName, HeaderValue,
 };
 use actix_web::http::{StatusCode, header};
 use actix_web::web::{Form, Json, Query};
@@ -27,6 +27,7 @@ use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderTemplate, NewFederatedUserCreated,
 };
+use rauthy_data::entity::browser_id::{BrowserId, BrowserIdSetNew};
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::devices::DeviceAuthCode;
 use rauthy_data::entity::fed_cm::FedCMLoginStatus;
@@ -73,11 +74,13 @@ use validator::Validate;
 pub async fn get_authorize(
     req: HttpRequest,
     accept_encoding: web::Header<header::AcceptEncoding>,
+    browser_id: BrowserId,
     Query(params): Query<AuthRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     params.validate()?;
 
+    let principal = principal.into_inner();
     let lang = Language::try_from(&req).unwrap_or_default();
 
     let (client, origin_header) = match validation::validate_auth_req_param(
@@ -179,41 +182,52 @@ pub async fn get_authorize(
         templates.push(HtmlTemplate::LoginAction(FrontendAction::Refresh));
 
         let body = AuthorizeHtml::build(&lang, &client.id, theme_ts, &templates);
-
-        if let Some(o) = origin_header {
-            return Ok(HttpResponse::Ok()
-                .insert_header(o)
-                .insert_header(HEADER_HTML)
-                .body(body));
-        }
-        return Ok(HttpResponse::Ok().append_header(HEADER_HTML).body(body));
-    }
-    // check if we can re-use a still valid session or need to create a new one
-    let session = if let Some(session) = &principal.session {
-        match principal.validate_session_auth_or_init() {
-            Ok(_) => session.clone(),
-            Err(_) => Session::new(
+        build_authorize_resp(accept_encoding, body, None, origin_header, browser_id)
+    } else {
+        // check if we can re-use a still valid session or need to create a new one
+        let session = if principal.session.is_some() {
+            if principal.validate_session_auth_or_init().is_ok() {
+                principal.session.unwrap()
+            } else {
+                Session::new(
+                    RauthyConfig::get().vars.lifetimes.session_lifetime,
+                    Some(real_ip_from_req(&req)?),
+                )
+            }
+        } else {
+            Session::new(
                 RauthyConfig::get().vars.lifetimes.session_lifetime,
                 Some(real_ip_from_req(&req)?),
-            ),
+            )
+        };
+
+        if let Err(err) = session.upsert().await {
+            let status = err.status_code();
+            let body = Error1Html::build(&lang, theme_ts, status, err.message);
+            return Ok(ErrorHtml::response(body, status));
         }
-    } else {
-        Session::new(
-            RauthyConfig::get().vars.lifetimes.session_lifetime,
-            Some(real_ip_from_req(&req)?),
+
+        templates.push(HtmlTemplate::CsrfToken(session.csrf_token.clone()));
+        templates.push(HtmlTemplate::LoginAction(action));
+
+        let body = AuthorizeHtml::build(&lang, &client.id, theme_ts, &templates);
+        build_authorize_resp(
+            accept_encoding,
+            body,
+            Some(&session),
+            origin_header,
+            browser_id,
         )
-    };
-
-    if let Err(err) = session.upsert().await {
-        let status = err.status_code();
-        let body = Error1Html::build(&lang, theme_ts, status, err.message);
-        return Ok(ErrorHtml::response(body, status));
     }
+}
 
-    templates.push(HtmlTemplate::CsrfToken(session.csrf_token.clone()));
-    templates.push(HtmlTemplate::LoginAction(action));
-
-    let body = AuthorizeHtml::build(&lang, &client.id, theme_ts, &templates);
+fn build_authorize_resp(
+    accept_encoding: web::Header<header::AcceptEncoding>,
+    body: String,
+    session: Option<&Session>,
+    origin_header: Option<(HeaderName, HeaderValue)>,
+    browser_id: BrowserId,
+) -> Result<HttpResponse, ErrorResponse> {
     let (body_bytes, encoding) = if accept_encoding.contains(&"br".parse().unwrap()) {
         (compress_br_dyn(body.as_bytes())?, "br")
     } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
@@ -222,11 +236,23 @@ pub async fn get_authorize(
         (body.as_bytes().to_vec(), "none")
     };
 
-    let cookie = session.client_cookie();
-    if let Some(o) = origin_header {
-        return Ok(HttpResponse::Ok()
-            .cookie(cookie)
-            .insert_header(o)
+    let mut builder = HttpResponse::Ok();
+    builder
+        .insert_header(HEADER_HTML)
+        .insert_header(("content-encoding", encoding));
+
+    if browser_id.needs_set_new() == BrowserIdSetNew::Yes {
+        builder.cookie(BrowserId::new_cookie());
+    }
+    if let Some(session) = session {
+        builder.cookie(session.client_cookie());
+        if RauthyConfig::get().vars.fedcm.experimental_enable {
+            builder.cookie(session.client_cookie_fed_cm());
+        }
+    }
+    if let Some(origin) = origin_header {
+        builder
+            .insert_header(origin)
             .insert_header((
                 ACCESS_CONTROL_ALLOW_METHODS,
                 HeaderValue::from_static("GET"),
@@ -234,26 +260,10 @@ pub async fn get_authorize(
             .insert_header((
                 ACCESS_CONTROL_ALLOW_CREDENTIALS,
                 HeaderValue::from_static("true"),
-            ))
-            .insert_header(HEADER_HTML)
-            .insert_header(("content-encoding", encoding))
-            .body(body_bytes));
+            ));
     }
 
-    if RauthyConfig::get().vars.fedcm.experimental_enable {
-        Ok(HttpResponse::build(StatusCode::OK)
-            .cookie(session.client_cookie_fed_cm())
-            .cookie(cookie)
-            .insert_header(HEADER_HTML)
-            .insert_header(("content-encoding", encoding))
-            .body(body_bytes))
-    } else {
-        Ok(HttpResponse::build(StatusCode::OK)
-            .cookie(cookie)
-            .insert_header(HEADER_HTML)
-            .insert_header(("content-encoding", encoding))
-            .body(body_bytes))
-    }
+    Ok(builder.body(body_bytes))
 }
 
 /// POST login credentials to proceed with the authorization_code flow
@@ -285,8 +295,9 @@ pub async fn post_authorize(
     req: HttpRequest,
     Json(payload): Json<LoginRequest>,
     principal: ReqPrincipal,
+    browser_id: BrowserId,
 ) -> Result<HttpResponse, ErrorResponse> {
-    post_authorize_handle(req, payload, principal).await
+    post_authorize_handle(req, payload, principal, browser_id).await
 }
 
 // extracted to be easily usable by post_dev_only_endpoints()
@@ -295,6 +306,7 @@ pub async fn post_authorize_handle(
     req: HttpRequest,
     payload: LoginRequest,
     principal: ReqPrincipal,
+    browser_id: BrowserId,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
@@ -317,6 +329,7 @@ pub async fn post_authorize_handle(
         &mut has_password_been_hashed,
         &mut add_login_delay,
         &mut user_needs_mfa,
+        browser_id,
     )
     .await
     {
@@ -924,6 +937,7 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
 #[tracing::instrument(level = "debug", skip_all, fields(grant_type = payload.grant_type))]
 pub async fn post_token(
     req: HttpRequest,
+    browser_id: BrowserId,
     Form(payload): Form<TokenRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
@@ -940,7 +954,7 @@ pub async fn post_token(
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let has_password_been_hashed = payload.grant_type == "password";
 
-    let res = match oidc::get_token_set(payload, req).await {
+    let res = match oidc::get_token_set(payload, browser_id, req).await {
         Ok((token_set, headers)) => {
             let mut builder = HttpResponseBuilder::new(StatusCode::OK);
             for h in headers {

@@ -105,23 +105,26 @@ pub async fn map_auth_step(
 
     match auth_step {
         AuthStep::LoggedIn(res) => {
-            let mut resp = HttpResponse::Accepted()
+            let mut builder = HttpResponse::Accepted();
+            builder
                 .insert_header(fed_cm_header)
                 .insert_header(res.header_loc)
-                .insert_header(res.header_csrf)
-                .finish();
-            if let Some((name, value)) = res.header_origin {
-                resp.headers_mut().insert(name, value);
-                resp.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_METHODS,
-                    HeaderValue::from_static("POST"),
-                );
-                resp.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                    HeaderValue::from_static("true"),
-                );
+                .insert_header(res.header_csrf);
+
+            if let Some(origin) = res.header_origin {
+                builder
+                    .insert_header(origin)
+                    .insert_header((
+                        ACCESS_CONTROL_ALLOW_METHODS,
+                        HeaderValue::from_static("POST"),
+                    ))
+                    .insert_header((
+                        ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        HeaderValue::from_static("true"),
+                    ));
             }
-            Ok(resp)
+
+            Ok(builder.finish())
         }
 
         AuthStep::AwaitToSAccept(res) => {
@@ -129,42 +132,39 @@ pub async fn map_auth_step(
             // would expect it during downloads, but it makes the checks in the UI a lot more
             // resilient, when we have a dedicated code for each possible situation we need to
             // handle.
-            let mut resp = HttpResponseBuilder::new(StatusCode::from_u16(206).unwrap())
+            let mut builder = HttpResponseBuilder::new(StatusCode::from_u16(206).unwrap());
+            builder
                 .insert_header(fed_cm_header)
-                .insert_header(res.header_csrf)
-                .json(&ToSAwaitLoginResponse {
-                    tos_await_code: res.code,
-                    user_id: Some(res.user_id),
-                    force_accept: (new_user_created == NewFederatedUserCreated::Yes)
-                        .then_some(true),
-                });
-            if let Some((name, value)) = res.header_origin {
-                resp.headers_mut().insert(name, value);
-                resp.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_METHODS,
-                    HeaderValue::from_static("POST"),
-                );
-                resp.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                    HeaderValue::from_static("true"),
-                );
+                .insert_header(res.header_csrf);
+
+            if let Some(origin) = res.header_origin {
+                builder
+                    .insert_header(origin)
+                    .insert_header((
+                        ACCESS_CONTROL_ALLOW_METHODS,
+                        HeaderValue::from_static("POST"),
+                    ))
+                    .insert_header((
+                        ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        HeaderValue::from_static("true"),
+                    ));
             }
-            Ok(resp)
+
+            Ok(builder.json(&ToSAwaitLoginResponse {
+                tos_await_code: res.code,
+                user_id: Some(res.user_id),
+                force_accept: (new_user_created == NewFederatedUserCreated::Yes).then_some(true),
+            }))
         }
 
         AuthStep::AwaitWebauthn(res) => {
-            let body = WebauthnLoginResponse {
-                code: res.code,
-                user_id: res.user_id,
-                exp: res.exp,
-            };
-            let mut resp = HttpResponse::Ok()
+            let mut builder = HttpResponse::Ok();
+            builder
                 .insert_header(fed_cm_header)
-                .insert_header(res.header_csrf)
-                .json(&body);
+                .insert_header(res.header_csrf);
 
-            if let Some((name, value)) = res.header_origin {
-                resp.headers_mut().insert(name, value);
+            if let Some(origin) = res.header_origin {
+                builder.insert_header(origin);
             }
 
             // if there is no mfa_cookie present, set a new one
@@ -172,31 +172,23 @@ pub async fn map_auth_step(
                 WebauthnCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
             {
                 if mfa_cookie.email != res.email {
-                    add_req_mfa_cookie(&mut resp, res.email.clone())?;
+                    builder.cookie(WebauthnCookie::new(res.email.clone()).build()?);
                 }
             } else {
-                add_req_mfa_cookie(&mut resp, res.email.clone())?;
+                builder.cookie(WebauthnCookie::new(res.email.clone()).build()?);
             }
 
-            Ok(resp)
+            Ok(builder.json(&WebauthnLoginResponse {
+                code: res.code,
+                user_id: res.user_id,
+                exp: res.exp,
+            }))
         }
 
         AuthStep::ProviderLink => Ok(HttpResponse::NoContent()
             .insert_header(fed_cm_header)
             .finish()),
     }
-}
-
-#[inline]
-fn add_req_mfa_cookie(resp: &mut HttpResponse, email: String) -> Result<(), ErrorResponse> {
-    let binding = WebauthnCookie::new(email);
-    let cookie = binding.build()?;
-
-    if let Err(err) = resp.add_cookie(&cookie) {
-        error!("Error adding mfa cookie in 'map_auth_step' : {}", err);
-    }
-
-    Ok(())
 }
 
 /// Throws an error if the `content-length` exceeds the given size in MB.

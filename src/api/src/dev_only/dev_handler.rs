@@ -6,6 +6,7 @@ use futures::StreamExt;
 use rauthy_api_types::auth_providers::ProviderCallbackRequest;
 use rauthy_api_types::oidc::{LoginRequest, LogoutRequest};
 use rauthy_api_types::users::NewUserRegistrationRequest;
+use rauthy_data::entity::browser_id::{BrowserId, BrowserIdSetNew};
 use rauthy_data::entity::principal::Principal;
 use rauthy_data::html::templates::HtmlTemplate;
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -39,6 +40,7 @@ pub async fn get_template(
 pub async fn post_dev_only_endpoints(
     typ: web::Path<String>,
     req: HttpRequest,
+    browser_id: BrowserId,
     mut payload: web::Payload,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !RauthyConfig::get().vars.dev.dev_mode {
@@ -63,7 +65,7 @@ pub async fn post_dev_only_endpoints(
         "authorize" => {
             let payload = serde_json::from_slice::<LoginRequest>(bytes)?;
             let principal = web::ReqData::<Principal>::extract(&req).await?;
-            oidc::post_authorize_handle(req, payload, principal).await
+            oidc::post_authorize_handle(req, payload, principal, browser_id).await
         }
         "backchannel_logout" => {
             // This endpoint is only used in integration tests.
@@ -82,6 +84,13 @@ pub async fn post_dev_only_endpoints(
             fs::create_dir_all(dir).await?;
             fs::write(format!("{dir}/logout_token"), params.logout_token.unwrap()).await?;
             Ok(HttpResponse::Ok().finish())
+        }
+        "browser_id" => {
+            if browser_id.needs_set_new() == BrowserIdSetNew::Yes {
+                Ok(HttpResponse::Ok().cookie(BrowserId::new_cookie()).finish())
+            } else {
+                Ok(HttpResponse::Ok().finish())
+            }
         }
         "logout" => {
             let params = serde_urlencoded::from_bytes::<LogoutRequest>(bytes)?;

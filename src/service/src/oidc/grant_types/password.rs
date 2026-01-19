@@ -8,6 +8,7 @@ use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::real_ip_from_req;
+use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_dyn::ClientDyn;
 use rauthy_data::entity::dpop_proof::DPoPProof;
@@ -23,6 +24,7 @@ use tracing::{info, warn};
 #[tracing::instrument(skip_all, fields(client_id = req_data.client_id, username = req_data.username))]
 pub async fn grant_type_password(
     req: HttpRequest,
+    browser_id: BrowserId,
     req_data: TokenRequest,
 ) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
     if req_data.username.is_none() {
@@ -127,7 +129,7 @@ pub async fn grant_type_password(
 
             UserLoginState::insert(user.id.clone(), client.id, None).await?;
 
-            LoginLocation::spawn_background_check(user, &req)?;
+            LoginLocation::spawn_background_check(user, &req, browser_id)?;
 
             Ok((ts, headers))
         }

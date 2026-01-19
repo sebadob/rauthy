@@ -7,6 +7,7 @@ pub mod app_version;
 pub mod atproto;
 pub mod auth_codes;
 pub mod auth_providers;
+pub mod browser_id;
 pub mod ca_self_signed;
 pub mod clients;
 pub mod clients_dyn;

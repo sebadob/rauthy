@@ -18,6 +18,7 @@ use rauthy_api_types::users::{MfaPurpose, WebauthnAuthStartResponse};
 use rauthy_common::constants::{PAM_WHEEL_ID, PAM_WHEEL_NAME};
 use rauthy_common::utils::base64_decode;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::pam::authorized_keys::AuthorizedKey;
 use rauthy_data::entity::pam::group_user_links::PamGroupUserLink;
 use rauthy_data::entity::pam::groups::{PamGroup, PamGroupType};
@@ -755,7 +756,8 @@ pub async fn post_mfa_finish(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let resp = webauthn::auth_finish(payload.user_id, &req, payload.data).await?;
+    let resp =
+        webauthn::auth_finish(payload.user_id, &req, BrowserId::default(), payload.data).await?;
     Ok(resp.into_response())
 }
 

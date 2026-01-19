@@ -8,6 +8,7 @@ use rauthy_common::utils::get_rand;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use rauthy_data::entity::auth_providers::ProviderMfaLogin;
+use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::sessions::Session;
@@ -25,6 +26,7 @@ pub async fn post_authorize(
     has_password_been_hashed: &mut bool,
     add_login_delay: &mut bool,
     user_needs_mfa: &mut bool,
+    browser_id: BrowserId,
 ) -> Result<AuthStep, ErrorResponse> {
     *add_login_delay = true;
 
@@ -89,7 +91,7 @@ pub async fn post_authorize(
         // is later on unable to fully compromise an account when MFA is missing. However, this is
         // not really a false positive. We want to inform a user even if only the password got
         // stolen, so that users change them even without full account compromise.
-        LoginLocation::spawn_background_check(user.clone(), req)?;
+        LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
 
         // update user info
         // in case of webauthn login, the info will be updated in the oidc finish step

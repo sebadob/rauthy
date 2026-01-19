@@ -1,6 +1,7 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::auth_codes::AuthCodeToSAwait;
+use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::users::{AccountType, User};
@@ -824,6 +825,7 @@ pub async fn auth_start(
 pub async fn auth_finish(
     user_id: String,
     req: &HttpRequest,
+    browser_id: BrowserId,
     payload: WebauthnAuthFinishRequest,
 ) -> Result<WebauthnAdditionalData, ErrorResponse> {
     let auth_data = WebauthnData::find(payload.code).await?;
@@ -853,7 +855,7 @@ pub async fn auth_finish(
             }
             let uid = user.id.clone();
 
-            LoginLocation::spawn_background_check(user.clone(), req)?;
+            LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
 
             if auth_result.needs_update() {
                 for mut pk_entity in pks {
