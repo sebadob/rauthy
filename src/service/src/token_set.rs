@@ -160,6 +160,14 @@ impl TokenSet {
         let issued_token =
             IssuedToken::create(user_id, did.as_deref(), sid.map(|sid| sid.0), exp).await?;
 
+        let sub = if let Some(user) = user {
+            Some(user.id.as_str())
+        } else if RauthyConfig::get().vars.access.client_credentials_map_sub {
+            Some(client.id.as_str())
+        } else {
+            None
+        };
+
         let mut claims_new_impl = JwtAccessClaims {
             common: JwtCommonClaims {
                 iat: now,
@@ -168,7 +176,7 @@ impl TokenSet {
                 iss: &RauthyConfig::get().issuer,
                 jti: Some(&issued_token.jti),
                 aud: Cow::Borrowed(client.id.as_str()),
-                sub: user.map(|u| u.id.as_str()),
+                sub,
                 typ: JwtTokenType::Bearer,
                 azp: &client.id,
                 scope: Some(scope),

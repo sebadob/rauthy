@@ -177,6 +177,24 @@ cookie_mode = 'danger-insecure'
 # overwritten by: COOKIE_SET_PATH
 cookie_set_path = true
 
+# The `sub` claim should only contain End-User IDs. Therefore, it will
+# be `null` for the `client_credentials` flow. However, some applications
+# need the `sub` claim to contain the `client_id` in such a case for
+# whatever reason (it exists in `azp` / `aud` already anyway). You can
+# enable this setting here.
+#
+# CAUTION:
+# Theoretically, it is possible to create a client with an Id that
+# matches a user ID (if one with no uppercase chars was generated).
+# If this is the case, it is NOT possible to distinguish between
+# a user and a client token in such a scenario!
+# The chance that an ID for a user without an uppercase char exists
+# is almost 0, but it exists.
+#
+# default: false
+# overwritten by: CLIENT_CREDENTIALS_MAP_SUB
+client_credentials_map_sub = true
+
 # Sets the limit in characters for the maximum JWT token length that
 # will be accepted when validating it. The default of 4096 is high
 # enough that you should never worry about this value. A typical
