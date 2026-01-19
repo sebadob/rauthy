@@ -1,7 +1,8 @@
+// Copyright 2026 Sebastian Dobe <sebastiandobe@mailbox.org>
+
 use std::time::Duration;
 use tokio::time;
 use tracing::info;
-
 mod app_version;
 mod authorized_keys;
 mod backchannel_logout;

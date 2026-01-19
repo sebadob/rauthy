@@ -1,3 +1,5 @@
+// Copyright 2026 Sebastian Dobe <sebastiandobe@mailbox.org>
+
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};

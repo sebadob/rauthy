@@ -1,3 +1,5 @@
+// Copyright 2026 Sebastian Dobe <sebastiandobe@mailbox.org>
+
 #[cfg(feature = "md")]
 pub mod markdown;
 
