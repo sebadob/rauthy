@@ -56,7 +56,9 @@ impl ResponseError for ErrorResponse {
             ErrorResponseType::BadRequest | ErrorResponseType::UseDpopNonce(_) => {
                 StatusCode::BAD_REQUEST
             }
-            ErrorResponseType::Blocked | ErrorResponseType::Forbidden => StatusCode::FORBIDDEN,
+            ErrorResponseType::Blocked
+            | ErrorResponseType::Forbidden
+            | ErrorResponseType::PasswordRefresh => StatusCode::FORBIDDEN,
             ErrorResponseType::MfaRequired | ErrorResponseType::NotAccepted => {
                 StatusCode::NOT_ACCEPTABLE
             }

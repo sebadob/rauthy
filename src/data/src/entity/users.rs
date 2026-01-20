@@ -1997,7 +1997,7 @@ impl User {
         }
 
         if let Some(exp) = self.password_expires
-            && exp < OffsetDateTime::now_utc().unix_timestamp()
+            && exp < Utc::now().timestamp()
         {
             if !self.enabled {
                 return Err(ErrorResponse::new(
@@ -2022,7 +2022,7 @@ impl User {
 
                 Err(ErrorResponse::new(
                     ErrorResponseType::PasswordRefresh,
-                    "The password has expired. A reset E-Mail has been sent out.",
+                    "The password has expired. A reset E-Mail was sent.",
                 ))
             } else {
                 Err(ErrorResponse::new(

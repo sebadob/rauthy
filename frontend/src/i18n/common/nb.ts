@@ -173,6 +173,7 @@ export const I18nNb: I18n = {
         mfaAck: 'Bekreftet',
         orLoginWith: 'eller logg inn med',
         password: 'Passord',
+        passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: 'Glemt passord?',
         passwordRequest: 'Be om tilbakestilling',
         passwordRequired: 'Passord er påkrevd',

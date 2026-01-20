@@ -180,6 +180,7 @@ export const I18nUk: I18n = {
         mfaAck: 'Підтверджено',
         orLoginWith: 'або увійдіть за допомогою',
         password: 'Пароль',
+        passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: 'Забули пароль?',
         passwordRequest: 'Надіслати запит',
         passwordRequired: "Пароль обов'язковий",

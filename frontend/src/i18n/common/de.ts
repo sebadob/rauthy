@@ -180,6 +180,8 @@ export const I18nDe: I18n = {
         mfaAck: 'Bestätigt',
         orLoginWith: 'oder einloggen mit',
         password: 'Password',
+        passwordExpired:
+            'Passwort is abgelaufen. Eine E-Mail mit einem Reset-Link wurde verschickt.',
         passwordForgotten: 'Password vergessen?',
         passwordRequest: 'Anfordern',
         passwordRequired: 'Password ist notwendig',

@@ -53,7 +53,7 @@ use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 use validator::Validate;
 
 /// OIDC Authorization HTML
@@ -345,9 +345,14 @@ pub async fn post_authorize_handle(
                 return Err(err);
             }
 
+            if let ErrorResponseType::PasswordRefresh = err.error {
+                info!("User password has expired");
+                return Err(err);
+            }
+
             if let ErrorResponseType::Forbidden = err.error {
-                // We only get a forbidden if there is a mismatch in group prefix restriction and
-                // we can return the "true" error directly for best UX.
+                // We only get a forbidden if there is a mismatch in group prefix restriction,
+                // and we can return the "true" error directly for best UX.
                 error!("User login with not matching client group prefix");
                 return Err(err);
             }

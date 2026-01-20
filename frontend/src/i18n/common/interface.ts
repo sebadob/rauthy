@@ -141,6 +141,7 @@ export interface I18n {
         mfaAck: string;
         orLoginWith: string;
         password: string;
+        passwordExpired: string;
         passwordForgotten: string;
         passwordRequest: string;
         passwordRequired: string;
