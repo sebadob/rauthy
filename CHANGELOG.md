@@ -1,5 +1,200 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Less login location check noise
+
+The logic behind the "login from new location" emails was reworked. Up until now, the location was
+compared via `user_id` + `ip`. However, if you IP changes quite often, you will receive many of
+these emails with no real benefit.
+
+To counter this, you will now get a new Cookie during `GET /authorize`. This cookie will live for 5
+years and contain a random String with a "Browser ID". If Rauthy can find such a Browser ID during
+login, the index for the location check will be `user_id` + `browser_id`, which will not generate
+new warning emails, if your IP changes (as long as you don't delete cookies all the time). The IP
+will only be used as a fallback in situations, where this Browser ID cannot be found in a cookie.
+
+> This change needed a rework of the database table. To make this possible, the old table with login
+> locations will be dropped and a new one with a proper compound key will be created. This means you
+> will get new login location emails with this version after the very first login, even when your IP
+> has not changed.
+
+[#1335](https://github.com/sebadob/rauthy/pull/1335)
+
+#### Token Revocation
+
+Only because of compatibility issues with Matrix "next-gen auth", Rauthy now provided a token
+revocation endpoint, which is also published via `/.well-known/openid-configuration`.
+
+```toml
+[access]
+# Revoke JWT access + refresh tokens if a user does a dedicated logout
+# from the account dashboard via the logout button, or when a
+# (backchannel) logout is being triggered from a client.
+# In most situations, you want your tokens to be able to live longer
+# than a session on Rauthy, especially refresh tokens, or access tokens
+# issues to headless devices via the `device_code` flow.
+#
+# !!! CAUTION !!!
+# JWT token revocation is a myth and doesn't exist. You can only
+# blacklist, but not revoke them, even though that's the official term
+# used in the RFC. Token revocation does only work, when a client
+# validates tokens against the `/introspection` or `/userinfo`
+# endpoints, but they will still be valid, if a client just validates
+# via public keys!
+#
+# The default value of `false` makes the most sense, because token
+# revocation is NOT reliable on its own! It only works with the
+# "correct" implementation on the client side, which also involves
+# a lot more resource and traffic usage!
+#
+# If a session is being force-deleted or a user is force-logged-out
+# via the AdminUI, tokens will always be revoked, which makes the
+# most sense.
+#
+# default: false
+# overwritten by: TOKEN_REVOKE_ON_LOGOUT
+token_revoke_on_logout = false
+
+# If set to true, tokens issued via the `device_code` flow will be
+# revoked during `/logout`.
+# These tokens are usually used on headless IoT devices or for CLIs
+# on remote servers, and logging these back in can be a lot more
+# work than the default logins via browser.
+#
+# This value will only be respected, if `token_revoke_on_logout` is
+# set to `true` as well. Otherwise, tokens will only be revoked
+# via the dedicated `recovation_endpoint` or forced logout from an
+# admin.
+#
+# default: false
+# overwritten by: TOKEN_REVOKE_DEVICE_TOKENS
+token_revoke_device_tokens = false
+```
+
+> **Sidenote:**
+>
+> JWT Token Revocation is a myth! It does not exist. You cannot revoke JWT tokens by design. Once
+> they are created and signed, there is no way to revoke them. The only thing you can do is to
+> blacklist them! Rauthy now keeps track of each single `access_token` via its `jti`, and checks
+> the database during `/introspect` and `/userinfo`.
+>
+> **BUT**:  
+> Token Revocation does only work, when the tokens are checked against Rauthys API! If a client
+> validates them via public keys, it is IMPOSSIBLE to "revoke" them. They will be valid until the
+> `exp` claim is in the past, which makes the whole term "token revocation" complete nonsense (for
+> JWT tokens, which are the default in almost all cases these days).
+>
+> **DO NOT RELY ON TOKEN REVOCATION!**  
+> This feature only exists for compatibility!
+
+[#1328](https://github.com/sebadob/rauthy/pull/1328)
+
+#### Custom Root CA for SMTP
+
+You can now provide a custom Root CA certificate for SMTP connections.
+
+```toml
+[email]
+# You can provide a custom Root Certificate in PEM format here,
+# which then will be used for SMTP connections.
+#
+# default: not set
+# overwritten by: SMTP_ROOT_CA
+root_ca = """
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+"""
+```
+
+[#1336](https://github.com/sebadob/rauthy/pull/1336)
+
+#### "Password Expired" during login
+
+When you missed the E-Mail notification about a soon expiring password, and you did not renew it in
+advance, you will now get a warning inside the login form, which notifies you about an expired
+password.
+
+Beforehand, you would only see "invalid credentials", even though they were correct, only expired.
+If now the password has expired and the given one matched the expired password, a new reset email
+will be sent out and you will see the proper message in the login form.
+
+[#1337](https://github.com/sebadob/rauthy/pull/1337)
+
+#### `rauthy` Client Name customizable
+
+Usually, if you update anything for the `rauthy` client via the Admin UI, all values will be
+reverted with the next restart as part of the anti-lockout rule. However, the Client Name is only
+a UX improvement. If you update it now, it will excluded from the anti-lockout rule and kept between
+restarts.
+
+[#1309](https://github.com/sebadob/rauthy/pull/1309)
+
+#### Additional characters for roles / scopes
+
+Roles and scopes are allowed to have `.` and UPPERCASE characters from now on. This makes it
+possible to use namespaced scopes, and the uppercase characters provide compatibility for Element
+Web / Matrix "next-gen auth".
+
+[#1313](https://github.com/sebadob/rauthy/pull/1313)
+[#1315](https://github.com/sebadob/rauthy/pull/1315)
+
+#### `client_id` as `sub`
+
+When you retrieve an `access_token` via `client_credentials` flow, the `sub` claim would be `null`,
+because it should only contain End-User IDs by RFC. For some weird reason, there are applications
+out there expecing the `sub` claim set to the `client_id` in such cases, even though this
+information could be taken from either `azp` or `aud` claims.
+
+You now have the possibility to set the `sub` to the `client_id` in such cases. Because it's against
+the RFC and there is a (very tiny) change of misuse, it is opt-in:
+
+```toml
+[access]
+# The `sub` claim should only contain End-User IDs. Therefore, it will
+# be `null` for the `client_credentials` flow. However, some applications
+# need the `sub` claim to contain the `client_id` in such a case for
+# whatever reason (it exists in `azp` / `aud` already anyway). You can
+# enable this setting here.
+#
+# CAUTION:
+# Theoretically, it is possible to create a client with an Id that
+# matches a user ID (if one with no uppercase chars was generated).
+# If this is the case, it is NOT possible to distinguish between
+# a user and a client token in such a scenario!
+# The chance that an ID for a user without an uppercase char exists
+# is almost 0, but it exists.
+#
+# default: false
+# overwritten by: CLIENT_CREDENTIALS_MAP_SUB
+client_credentials_map_sub = false
+```
+
+[#1334](https://github.com/sebadob/rauthy/pull/1334)
+
+#### I18n - Ukrainian Translations
+
+Ukrainian Translations are now available for Email, Common UI and Admin UI.
+
+[#1307](https://github.com/sebadob/rauthy/pull/1307)
+
+### Bugfix
+
+- When trying to use Dynamic Clients via an external UI (like e.g. Matrix Element), some headers
+  and preflight checks were failing because of missing headers.
+  [#1312](https://github.com/sebadob/rauthy/pull/1312)
+  [#1314](https://github.com/sebadob/rauthy/pull/1314)
+- The PKCE requirement for Dynamic Clients was inverted and not set as expected for public clients.
+  [#1316](https://github.com/sebadob/rauthy/pull/1316)
+- `jemallocator` is incompatible with `openbsd`.
+  [#1332](https://github.com/sebadob/rauthy/pull/1332)
+- The `@` character was missing in the validation regex for URLs.
+  [#1330](https://github.com/sebadob/rauthy/pull/1330)
+  [#1340](https://github.com/sebadob/rauthy/pull/1340)
+
 ## v0.33.4
 
 ### Changes
