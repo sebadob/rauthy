@@ -174,6 +174,7 @@ export const I18nEn: I18n = {
         mfaAck: 'Acknowledged',
         orLoginWith: 'or login with',
         password: 'Password',
+        passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: 'Password forgotten?',
         passwordRequest: 'Request',
         passwordRequired: 'Password is required',

@@ -162,6 +162,7 @@ export const I18nZh: I18n = {
         mfaAck: '已确认',
         orLoginWith: '或使用其他方式登录：',
         password: '密码',
+        passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: '忘记密码？',
         passwordRequest: '请求',
         passwordRequired: '密码必填。',

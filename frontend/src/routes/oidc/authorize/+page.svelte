@@ -323,8 +323,11 @@
         } else if (res.status === 403) {
             if (res.error?.message.includes('contact your Administrator')) {
                 err = t.authorize.clientGroupPrefixForbidden;
+            } else if (res.error?.error === 'PasswordRefresh') {
+                err = t.authorize.passwordExpired;
             } else {
-                // This should really never happen. Forbidden is only returned for group prefix mismatch.
+                // This should really never happen. Forbidden is only returned for g
+                // roup prefix mismatch otherwise.
                 err = res.error?.message || '';
             }
         } else if (res.status === 406) {

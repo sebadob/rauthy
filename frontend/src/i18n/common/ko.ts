@@ -169,6 +169,7 @@ export const I18nKo: I18n = {
         mfaAck: '확인되었습니다.',
         orLoginWith: '또는 다음으로 로그인',
         password: '비밀번호',
+        passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: '비밀번호를 잊으셨나요?',
         passwordRequest: '요청',
         passwordRequired: '비밀번호는 필수입니다.',
