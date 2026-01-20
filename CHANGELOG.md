@@ -183,8 +183,8 @@ Ukrainian Translations are now available for Email, Common UI and Admin UI.
 
 ### Bugfix
 
-- When trying to use Dynamic Clients via an external UI (like e.g. Matrix Element), some headers
-  and preflight checks were failing because of missing headers.
+- When trying to use Dynamic Clients via an external UI (like e.g. Matrix Element), some CORS
+  preflight checks were failing because of missing headers.
   [#1312](https://github.com/sebadob/rauthy/pull/1312)
   [#1314](https://github.com/sebadob/rauthy/pull/1314)
 - The PKCE requirement for Dynamic Clients was inverted and not set as expected for public clients.

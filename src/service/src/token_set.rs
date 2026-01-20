@@ -397,6 +397,8 @@ impl TokenSet {
         };
 
         let token = {
+            let jti = secure_random_alnum(8);
+
             let claims = rauthy_jwt::claims::JwtRefreshClaims {
                 common: JwtCommonClaims {
                     iat: now,
@@ -405,7 +407,7 @@ impl TokenSet {
                     iss: &RauthyConfig::get().issuer,
                     // jti is not really used for any validation, it just exists
                     // to bring a bit more randomness into the claims
-                    jti: Some(&secure_random_alnum(8)),
+                    jti: Some(&jti),
                     aud: Cow::Borrowed(client.id.as_str()),
                     sub: None,
                     typ: JwtTokenType::Refresh,
