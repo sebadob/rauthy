@@ -10,6 +10,7 @@ use crate::entity::email_jobs::EmailJob;
 use crate::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use crate::entity::failed_scim_tasks::FailedScimTask;
 use crate::entity::groups::Group;
+use crate::entity::issued_tokens::IssuedToken;
 use crate::entity::jwk::Jwk;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
@@ -617,6 +618,35 @@ pub async fn groups(data_before: Vec<Group>) -> Result<(), ErrorResponse> {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
             DB::pg_execute(sql_2, &[&b.id, &b.name]).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn issued_tokens(data_before: Vec<IssuedToken>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM issued_tokens";
+    let sql_2 = r#"
+INSERT INTO issued_tokens (jti, user_id, did, sid, exp, revoked)
+VALUES ($1, $2, $3, $4, $5, $6)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(b.jti, b.user_id, b.did, b.sid, b.exp, b.revoked),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(
+                sql_2,
+                &[&b.jti, &b.user_id, &b.did, &b.sid, &b.exp, &b.revoked],
+            )
+            .await?;
         }
     }
     Ok(())

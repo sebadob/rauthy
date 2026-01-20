@@ -11,6 +11,7 @@ use crate::entity::email_jobs::{EmailContentType, EmailJob, EmailJobFilter, Emai
 use crate::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use crate::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
 use crate::entity::groups::Group;
+use crate::entity::issued_tokens::IssuedToken;
 use crate::entity::jwk::Jwk;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
@@ -294,11 +295,11 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .query_map([], |row| {
             Ok(LoginLocation {
                 user_id: row.get("user_id")?,
+                browser_id: row.get("browser_id")?,
                 ip: row.get("ip")?,
                 last_seen: row.get("last_seen")?,
                 user_agent: row.get("user_agent")?,
                 location: row.get("location")?,
-                browser_id: row.get("browser_id")?,
             })
         })?
         .map(|r| r.unwrap())
@@ -525,6 +526,24 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .map(|r| r.unwrap())
         .collect_vec();
     inserts::ssh_auth_keys_used(before).await?;
+
+    // ISSUED TOKENS
+    debug!("Migrating table: issued_tokens");
+    let mut stmt = conn.prepare("SELECT * FROM issued_tokens")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(IssuedToken {
+                jti: row.get("jti")?,
+                user_id: row.get("user_id")?,
+                did: row.get("did")?,
+                sid: row.get("sid")?,
+                exp: row.get("exp")?,
+                revoked: row.get("revoked")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::issued_tokens(before).await?;
 
     Ok(())
 }
@@ -844,6 +863,11 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
         })
         .collect::<Vec<_>>();
     inserts::ssh_auth_keys_used(before).await?;
+
+    // ISSUED TOKENS
+    debug!("Migrating table: issued_tokens");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM issued_tokens", &[], 0).await?;
+    inserts::issued_tokens(before).await?;
 
     Ok(())
 }
