@@ -65,7 +65,7 @@ pub static RE_SEARCH: LazyLock<Regex> =
 pub static RE_STREET: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-.\s]{0,48}$").unwrap());
 pub static RE_URI: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+$").unwrap());
 pub static RE_USER_NAME: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[a-zA-Z0-9À-ɏ-'\s\x{3041}-\x{3096}\x{30A0}-\x{30FF}\x{3400}-\x{4DB5}\x{4E00}-\x{9FCB}\x{F900}-\x{FA6A}\x{2E80}-\x{2FD5}\x{FF66}-\x{FF9F}\x{FFA1}-\x{FFDC}\x{31F0}-\x{31FF}]{1,32}$").unwrap()
 });

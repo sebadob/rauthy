@@ -21,8 +21,8 @@ pub struct DynamicClientRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
     pub client_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub client_uri: Option<String>,
     /// Validation: `Vec<^[a-zA-Z0-9\+.@/-]{0,48}$>`
     #[validate(custom(function = "validate_vec_contact"))]
@@ -67,10 +67,10 @@ pub struct DynamicClientRequest {
     // - default_acr_values
     // - initiate_login_uri
     // - request_uris (may come in the future with `request_uri` during login)
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub post_logout_redirect_uri: Option<String>,
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub backchannel_logout_uri: Option<String>,
 }
 
@@ -86,8 +86,8 @@ pub struct EphemeralClientRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
     pub client_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub client_uri: Option<String>,
     /// Validation: `Vec<^[a-zA-Z0-9\+.@/-]{0,48}$>`
     #[validate(custom(function = "validate_vec_contact"))]
@@ -183,13 +183,13 @@ pub struct UpdateClientRequest {
     #[validate(custom(function = "validate_vec_challenge"))]
     pub challenges: Option<Vec<String>>,
     pub force_mfa: bool,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub client_uri: Option<String>,
     /// Validation: `Vec<^[a-zA-Z0-9\+.@/-]{0,48}$>`
     #[validate(custom(function = "validate_vec_contact"))]
     pub contacts: Option<Vec<String>>,
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub backchannel_logout_uri: Option<String>,
     /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
     #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
@@ -209,11 +209,11 @@ pub struct ClientSecretRequest {
 #[derive(Serialize, Deserialize, ToSchema, Validate)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct ScimClientRequestResponse {
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub bearer_token: String,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub base_uri: String,
     pub sync_groups: bool,
     /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
