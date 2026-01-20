@@ -250,12 +250,12 @@ async fn connect_test_smtp(
 
     if let Some(root_ca) = &RauthyConfig::get().vars.email.root_ca {
         let cert = client::Certificate::from_pem(root_ca.as_bytes())
-            .expect("Invalid 'root_ca' for SMTP connection");
+            .expect("Invalid `email.root_ca` for SMTP connections");
 
         let params = client::TlsParameters::builder(smtp_url.to_string())
             .add_root_certificate(cert)
             .build_rustls()
-            .expect("Cannot build TLS parameters with custom `email.root_ca`.");
+            .expect("Cannot build TLS parameters with custom `email.root_ca`");
 
         builder = builder.tls(client::Tls::Required(params));
     }
@@ -277,7 +277,7 @@ async fn connect_test_smtp(
                 error!(smtp_url, "Could not connect via STARTTLS");
             }
             Err(err) => {
-                warn!(
+                error!(
                     smtp_url,
                     ?err,
                     "Could not connect via STARTTLS. Check credentials",
@@ -291,10 +291,10 @@ async fn connect_test_smtp(
                 return Ok(conn);
             }
             Ok(false) => {
-                warn!("Could not connect to {} via TLS.", smtp_url,);
+                error!("Could not connect to {} via TLS.", smtp_url,);
             }
             Err(err) => {
-                warn!(
+                error!(
                     ?err,
                     "Could not connect to {smtp_url} via TLS. Check credentials"
                 );
@@ -319,7 +319,7 @@ async fn conn_test_smtp_insecure(
         .build();
     match conn.test_connection().await {
         Ok(true) => {
-            warn!(
+            info!(
                 smtp_url,
                 port, "Successfully connected to INSECURE SMTP relay ",
             );

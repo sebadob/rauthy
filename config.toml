@@ -1079,11 +1079,11 @@ connect_retries = 3
 #
 # default: not set
 # overwritten by: SMTP_ROOT_CA
-#root_ca = """
-#-----BEGIN CERTIFICATE-----
-#...
-#-----END CERTIFICATE-----
-#"""
+root_ca = """
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+"""
 
 # Can be set to `true` to skip trying a real TLS connection
 # via SMTP and use STARTTLS directly.
