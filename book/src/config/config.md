@@ -1067,6 +1067,17 @@ smtp_url = 'localhost'
 # overwritten by: SMTP_CONNECT_RETRIES
 #connect_retries = 3
 
+# You can provide a custom Root Certificate in PEM format here,
+# which then will be used for SMTP connections.
+#
+# default: not set
+# overwritten by: SMTP_ROOT_CA
+#root_ca = """
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#"""
+
 # You can set this to `true` to allow an unencrypted and
 # unauthenticated SMTP connection to an SMTP relay on your localhost
 # or for development purposes.

@@ -3,8 +3,8 @@ use crate::email::mailer_microsoft_graph::sender_microsoft_graph;
 use crate::email::smtp_oauth_token::SmtpOauthToken;
 use crate::rauthy_config::RauthyConfig;
 use lettre::message::{MultiPart, SinglePart};
-use lettre::transport::smtp::authentication;
 use lettre::transport::smtp::authentication::Mechanism;
+use lettre::transport::smtp::{authentication, client};
 use lettre::{AsyncSmtpTransport, AsyncTransport, Tokio1Executor, message};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Deserialize;
@@ -236,57 +236,69 @@ async fn connect_test_smtp(
         authentication::Credentials::new(username, password)
     };
 
-    if !vars.starttls_only {
-        let mut builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
-            .expect("Connection Error with 'SMTP_URL'");
-        if let Some(port) = smtp_port {
-            builder = builder.port(port);
-        }
-        let conn = builder
-            .authentication(mechanisms.clone())
-            .credentials(creds.clone())
-            .timeout(Some(Duration::from_secs(10)))
-            .build();
-        warn!("SMTP connection opened");
+    let mut builder = if vars.starttls_only {
+        AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(smtp_url)
+            .expect("Connection Error with 'SMTP_URL'")
+    } else {
+        AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
+            .expect("Connection Error with 'SMTP_URL'")
+    };
 
+    if let Some(port) = smtp_port {
+        builder = builder.port(port);
+    }
+
+    if let Some(root_ca) = &RauthyConfig::get().vars.email.root_ca {
+        let cert = client::Certificate::from_pem(root_ca.as_bytes())
+            .expect("Invalid 'root_ca' for SMTP connection");
+
+        let params = client::TlsParameters::builder(smtp_url.to_string())
+            .add_root_certificate(cert)
+            .build_rustls()
+            .expect("Cannot build TLS parameters with custom `email.root_ca`.");
+
+        builder = builder.tls(client::Tls::Required(params));
+    }
+
+    let conn = builder
+        .authentication(mechanisms.clone())
+        .credentials(creds.clone())
+        .timeout(Some(Duration::from_secs(10)))
+        .build();
+    info!("SMTP connection opened");
+
+    if vars.starttls_only {
+        match conn.test_connection().await {
+            Ok(true) => {
+                info!(smtp_url, "Successfully connected via STARTTLS");
+                return Ok(conn);
+            }
+            Ok(false) => {
+                error!(smtp_url, "Could not connect via STARTTLS");
+            }
+            Err(err) => {
+                warn!(
+                    smtp_url,
+                    ?err,
+                    "Could not connect via STARTTLS. Check credentials",
+                );
+            }
+        }
+    } else {
         match conn.test_connection().await {
             Ok(true) => {
                 info!("Successfully connected to {smtp_url} via TLS");
                 return Ok(conn);
             }
             Ok(false) => {
-                warn!(
-                    "Could not connect to {} via TLS. Trying downgrade to STARTTLS",
-                    smtp_url,
-                );
+                warn!("Could not connect to {} via TLS.", smtp_url,);
             }
             Err(err) => {
-                warn!(?err, "Could not connect to {smtp_url} via TLS");
+                warn!(
+                    ?err,
+                    "Could not connect to {smtp_url} via TLS. Check credentials"
+                );
             }
-        }
-    }
-
-    let mut builder = AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(smtp_url)
-        .expect("Connection Error with 'SMTP_URL'");
-    if let Some(port) = smtp_port {
-        builder = builder.port(port);
-    }
-    let conn = builder
-        .authentication(mechanisms)
-        .credentials(creds)
-        .timeout(Some(Duration::from_secs(10)))
-        .build();
-
-    match conn.test_connection().await {
-        Ok(true) => {
-            info!(smtp_url, "Successfully connected via STARTTLS");
-            return Ok(conn);
-        }
-        Ok(false) => {
-            error!(smtp_url, "Could not connect via STARTTLS either");
-        }
-        Err(err) => {
-            warn!(smtp_url, ?err, "Could not connect via STARTTLS either",);
         }
     }
 

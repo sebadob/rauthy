@@ -392,6 +392,7 @@ impl Default for Vars {
                 xoauth_client_secret: None,
                 xoauth_scope: None,
                 microsoft_graph_uri: None,
+                root_ca: None,
                 starttls_only: false,
                 danger_insecure: false,
                 tz_fmt: VarsEmailTzFmt {
@@ -1342,29 +1343,19 @@ impl Vars {
     fn parse_email(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "email");
 
-        if let Some(v) = t_str(
+        self.email.rauthy_admin_email = t_str(
             &mut table,
             "email",
             "rauthy_admin_email",
             "RAUTHY_ADMIN_EMAIL",
-        ) {
-            self.email.rauthy_admin_email = Some(v);
-        }
+        );
         if let Some(v) = t_str(&mut table, "email", "sub_prefix", "EMAIL_SUB_PREFIX") {
             self.email.sub_prefix = v.into();
         }
-        if let Some(v) = t_str(&mut table, "email", "smtp_url", "SMTP_URL") {
-            self.email.smtp_url = Some(v);
-        }
-        if let Some(v) = t_u16(&mut table, "email", "smtp_port", "SMTP_PORT") {
-            self.email.smtp_port = Some(v);
-        }
-        if let Some(v) = t_str(&mut table, "email", "smtp_username", "SMTP_USERNAME") {
-            self.email.smtp_username = Some(v);
-        }
-        if let Some(v) = t_str(&mut table, "email", "smtp_password", "SMTP_PASSWORD") {
-            self.email.smtp_password = Some(v);
-        }
+        self.email.smtp_url = t_str(&mut table, "email", "smtp_url", "SMTP_URL");
+        self.email.smtp_port = t_u16(&mut table, "email", "smtp_port", "SMTP_PORT");
+        self.email.smtp_username = t_str(&mut table, "email", "smtp_username", "SMTP_USERNAME");
+        self.email.smtp_password = t_str(&mut table, "email", "smtp_password", "SMTP_PASSWORD");
         if let Some(v) = t_str(&mut table, "email", "smtp_from", "SMTP_FROM") {
             self.email.smtp_from = v.into();
         }
@@ -1376,41 +1367,32 @@ impl Vars {
         ) {
             self.email.connect_retries = v;
         }
+        self.email.root_ca = t_str(&mut table, "email", "root_ca", "SMTP_ROOT_CA");
         if let Some(v) = t_str(&mut table, "email", "smtp_conn_mode", "SMTP_CONN_MODE") {
             self.email.smtp_conn_mode = SmtpConnMode::from(v.as_str());
         }
 
-        if let Some(v) = t_str(&mut table, "email", "xoauth_url", "SMTP_XOAUTH2_URL") {
-            self.email.xoauth_url = Some(v);
-        }
-        if let Some(v) = t_str(
+        self.email.xoauth_url = t_str(&mut table, "email", "xoauth_url", "SMTP_XOAUTH2_URL");
+        self.email.xoauth_client_id = t_str(
             &mut table,
             "email",
             "xoauth_client_id",
             "SMTP_XOAUTH2_CLIENT_ID",
-        ) {
-            self.email.xoauth_client_id = Some(v);
-        }
-        if let Some(v) = t_str(
+        );
+        self.email.xoauth_client_secret = t_str(
             &mut table,
             "email",
             "xoauth_client_secret",
             "SMTP_XOAUTH2_CLIENT_SECRET",
-        ) {
-            self.email.xoauth_client_secret = Some(v);
-        }
-        if let Some(v) = t_str(&mut table, "email", "xoauth_scope", "SMTP_XOAUTH2_SCOPE") {
-            self.email.xoauth_scope = Some(v);
-        }
+        );
+        self.email.xoauth_scope = t_str(&mut table, "email", "xoauth_scope", "SMTP_XOAUTH2_SCOPE");
 
-        if let Some(v) = t_str(
+        self.email.microsoft_graph_uri = t_str(
             &mut table,
             "email",
             "microsoft_graph_uri",
             "SMTP_MICROSOFT_GRAPH_URI",
-        ) {
-            self.email.microsoft_graph_uri = Some(v);
-        }
+        );
 
         if let Some(v) = t_bool(&mut table, "email", "starttls_only", "SMTP_STARTTLS_ONLY") {
             self.email.starttls_only = v;
@@ -3030,6 +3012,7 @@ pub struct VarsEmail {
     pub xoauth_client_secret: Option<String>,
     pub xoauth_scope: Option<String>,
     pub microsoft_graph_uri: Option<String>,
+    pub root_ca: Option<String>,
     pub starttls_only: bool,
     pub danger_insecure: bool,
     pub tz_fmt: VarsEmailTzFmt,

@@ -1074,6 +1074,17 @@ smtp_from = 'Rauthy <rauthy@localhost>'
 # overwritten by: SMTP_CONNECT_RETRIES
 connect_retries = 3
 
+# You can provide a custom Root Certificate in PEM format here,
+# which then will be used for SMTP connections.
+#
+# default: not set
+# overwritten by: SMTP_ROOT_CA
+#root_ca = """
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#"""
+
 # Can be set to `true` to skip trying a real TLS connection
 # via SMTP and use STARTTLS directly.
 #
