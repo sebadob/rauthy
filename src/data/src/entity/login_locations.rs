@@ -14,7 +14,7 @@ use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::net::IpAddr;
 use tokio::task;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 #[derive(Debug)]
 pub struct LoginLocation {
@@ -67,8 +67,6 @@ impl LoginLocation {
         let sql = r#"
 INSERT INTO login_locations (user_id, browser_id, ip, last_seen, user_agent, location)
 VALUES ($1, $2, $3, $4, $5, $6)"#;
-
-        warn!("{sql}\nbrowser_id: {}, ip: {}", browser_id, ip,);
 
         if is_hiqlite() {
             DB::hql()
