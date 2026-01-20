@@ -1099,8 +1099,8 @@ pub async fn recent_passwords(
 pub async fn refresh_tokens(data_before: Vec<RefreshToken>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM refresh_tokens";
     let sql_2 = r#"
-INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1115,7 +1115,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
                         b.exp,
                         b.scope,
                         b.is_mfa,
-                        b.session_id
+                        b.session_id,
+                        b.access_token_jti
                     ),
                 )
                 .await?;
@@ -1133,6 +1134,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
                     &b.scope,
                     &b.is_mfa,
                     &b.session_id,
+                    &b.access_token_jti,
                 ],
             )
             .await?;
@@ -1147,8 +1149,8 @@ pub async fn refresh_tokens_devices(
     let sql_1 = "DELETE FROM refresh_tokens_devices";
     let sql_2 = r#"
 INSERT INTO refresh_tokens_devices
-(id, device_id, user_id, nbf, exp, scope)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+(id, device_id, user_id, nbf, exp, scope, access_token_jti)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1156,7 +1158,15 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::hql()
                 .execute(
                     sql_2,
-                    params!(b.id, b.device_id, b.user_id, b.nbf, b.exp, b.scope),
+                    params!(
+                        b.id,
+                        b.device_id,
+                        b.user_id,
+                        b.nbf,
+                        b.exp,
+                        b.scope,
+                        b.access_token_jti
+                    ),
                 )
                 .await?;
         }
@@ -1165,7 +1175,15 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         for b in data_before {
             DB::pg_execute(
                 sql_2,
-                &[&b.id, &b.device_id, &b.user_id, &b.nbf, &b.exp, &b.scope],
+                &[
+                    &b.id,
+                    &b.device_id,
+                    &b.user_id,
+                    &b.nbf,
+                    &b.exp,
+                    &b.scope,
+                    &b.access_token_jti,
+                ],
             )
             .await?;
         }
