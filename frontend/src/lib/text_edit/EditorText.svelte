@@ -46,7 +46,7 @@
         role="textbox"
         tabindex="0"
         class="edit"
-        contenteditable
+        contenteditable="plaintext-only"
         bind:innerText={content}
         onkeyup={onKeyUp}
         onmouseup={onMoueUp}

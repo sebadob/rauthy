@@ -157,7 +157,7 @@
             class="edit font-mono"
             aria-label={ta.editor.textArea}
             bind:innerText={markdown}
-            contenteditable
+            contenteditable="plaintext-only"
             spellcheck="false"
             {onblur}
         >
