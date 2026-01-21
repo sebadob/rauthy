@@ -1,5 +1,4 @@
 use actix_web::{HttpResponse, get, post};
-use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_error::ErrorResponse;
 
 #[cfg(debug_assertions)]
@@ -36,7 +35,7 @@ pub async fn get_template() -> Result<HttpResponse, ErrorResponse> {
 pub async fn post_dev_only_endpoints(
     typ: actix_web::web::Path<String>,
     req: actix_web::HttpRequest,
-    browser_id: BrowserId,
+    browser_id: rauthy_data::entity::browser_id::BrowserId,
     payload: actix_web::web::Payload,
 ) -> Result<HttpResponse, ErrorResponse> {
     dev_handler::post_dev_only_endpoints(typ, req, browser_id, payload).await
