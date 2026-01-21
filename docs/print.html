@@ -404,7 +404,7 @@ additionally. A dedicated <em>Going into production</em> guide will be written i
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
 your localhost. The image contains a basic default config which is sufficient for local testing (
 don't use it in production, it contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.33.4
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.34.0
 </code></pre>
 <p>To proceed, go to <strong><a href="getting_started/first_start.html">First Start</a></strong>, or do the production setup below to have
 persistence.</p>
@@ -423,7 +423,7 @@ a minimal setup that is able to send E-Mails. The easiest way (works on localhos
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.33.4
+    image: ghcr.io/sebadob/rauthy:0.34.0
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -540,7 +540,7 @@ at <a href="getting_started/../config/encryption.html">Encryption</a>.</p>
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.33.4
+    ghcr.io/sebadob/rauthy:0.34.0
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
@@ -742,7 +742,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.33.4
+          image: ghcr.io/sebadob/rauthy:0.34.0
           securityContext:
             capabilities:
               drop:
@@ -5214,6 +5214,24 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: COOKIE_SET_PATH
 #cookie_set_path = true
 
+# The `sub` claim should only contain End-User IDs. Therefore, it will
+# be `null` for the `client_credentials` flow. However, some applications
+# need the `sub` claim to contain the `client_id` in such a case for
+# whatever reason (it exists in `azp` / `aud` already anyway). You can
+# enable this setting here.
+#
+# CAUTION:
+# Theoretically, it is possible to create a client with an Id that
+# matches a user ID (if one with no uppercase chars was generated).
+# If this is the case, it is NOT possible to distinguish between
+# a user and a client token in such a scenario!
+# The chance that an ID for a user without an uppercase char exists
+# is almost 0, but it exists.
+#
+# default: false
+# overwritten by: CLIENT_CREDENTIALS_MAP_SUB
+#client_credentials_map_sub = false
+
 # Sets the limit in characters for the maximum JWT token length that
 # will be accepted when validating it. The default of 4096 is high
 # enough that you should never worry about this value. A typical
@@ -5227,6 +5245,49 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # default: 4096
 # overwritten by: TOKEN_LEN_LIMIT
 #token_len_limit = 4096
+
+# Revoke JWT access + refresh tokens if a user does a dedicated logout
+# from the account dashboard via the logout button, or when a
+# (backchannel) logout is being triggered from a client.
+# In most situations, you want your tokens to be able to live longer
+# than a session on Rauthy, especially refresh tokens, or access tokens
+# issues to headless devices via the `device_code` flow.
+#
+# !!! CAUTION !!!
+# JWT token revocation is a myth and doesn't exist. You can only
+# blacklist, but not revoke them, even though that's the official term
+# used in the RFC. Token revocation does only work, when a client
+# validates tokens against the `/introspection` or `/userinfo`
+# endpoints, but they will still be valid, if a client just validates
+# via public keys!
+#
+# The default value of `false` makes the most sense, because token
+# revocation is NOT reliable on its own! It only works with the
+# "correct" implementation on the client side, which also involves
+# a lot more resource and traffic usage!
+#
+# If a session is being force-deleted or a user is force-logged-out
+# via the AdminUI, tokens will always be revoked, which makes the
+# most sense.
+#
+# default: false
+# overwritten by: TOKEN_REVOKE_ON_LOGOUT
+#token_revoke_on_logout = false
+
+# If set to true, tokens issued via the `device_code` flow will be
+# revoked during `/logout`.
+# These tokens are usually used on headless IoT devices or for CLIs
+# on remote servers, and logging these back in can be a lot more
+# work than the default logins via browser.
+#
+# This value will only be respected, if `token_revoke_on_logout` is
+# set to `true` as well. Otherwise, tokens will only be revoked
+# via the dedicated `recovation_endpoint` or forced logout from an
+# admin.
+#
+# default: false
+# overwritten by: TOKEN_REVOKE_DEVICE_TOKENS
+#token_revoke_device_tokens = false
 
 # If set to `true`, the `/auth/v1/whoami` endpoint will return all
 # request headers. Only the `Cookie` and Rauthys internal CSRF headers
@@ -6057,6 +6118,17 @@ smtp_url = 'localhost'
 # overwritten by: SMTP_CONNECT_RETRIES
 #connect_retries = 3
 
+# You can provide a custom Root Certificate in PEM format here,
+# which then will be used for SMTP connections.
+#
+# default: not set
+# overwritten by: SMTP_ROOT_CA
+#root_ca = """
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#"""
+
 # You can set this to `true` to allow an unencrypted and
 # unauthenticated SMTP connection to an SMTP relay on your localhost
 # or for development purposes.
@@ -6143,6 +6215,9 @@ smtp_url = 'localhost'
 # default: '%d.%m.%Y %T (%Z)'
 # overwritten by: TZ_FMT_NO
 #no = '%d.%m.%Y %T (%Z)'
+# default: '%d.%m.%Y %T (%Z)'
+# overwritten by: TZ_FMT_UK
+#uk = '%d.%m.%Y %T (%Z)'
 # default: '%d-%m-%Y %T (%Z)'
 # overwritten by: TZ_FMT_ZHHANS
 #zhhans = '%d-%m-%Y %T (%Z)'
@@ -6746,13 +6821,13 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de ko nb zhhans
+# Available Options: en de ko nb uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'ko', 'nb', 'zhhans']
+filter_lang_common = ['en', 'de', 'ko', 'nb', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de ko nb zhhans
+# Available Options: en de ko nb uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'ko', 'nb', 'zhhans']
+filter_lang_admin = ['en', 'de', 'ko', 'nb', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
@@ -7186,7 +7261,7 @@ swagger_ui_enable = false
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de ko zh_hans
+# one of: en de ko uk zh_hans
 #lang = 'en'
 
 # pme of: password_new, password_reset

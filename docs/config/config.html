@@ -336,6 +336,24 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: COOKIE_SET_PATH
 #cookie_set_path = true
 
+# The `sub` claim should only contain End-User IDs. Therefore, it will
+# be `null` for the `client_credentials` flow. However, some applications
+# need the `sub` claim to contain the `client_id` in such a case for
+# whatever reason (it exists in `azp` / `aud` already anyway). You can
+# enable this setting here.
+#
+# CAUTION:
+# Theoretically, it is possible to create a client with an Id that
+# matches a user ID (if one with no uppercase chars was generated).
+# If this is the case, it is NOT possible to distinguish between
+# a user and a client token in such a scenario!
+# The chance that an ID for a user without an uppercase char exists
+# is almost 0, but it exists.
+#
+# default: false
+# overwritten by: CLIENT_CREDENTIALS_MAP_SUB
+#client_credentials_map_sub = false
+
 # Sets the limit in characters for the maximum JWT token length that
 # will be accepted when validating it. The default of 4096 is high
 # enough that you should never worry about this value. A typical
@@ -349,6 +367,49 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # default: 4096
 # overwritten by: TOKEN_LEN_LIMIT
 #token_len_limit = 4096
+
+# Revoke JWT access + refresh tokens if a user does a dedicated logout
+# from the account dashboard via the logout button, or when a
+# (backchannel) logout is being triggered from a client.
+# In most situations, you want your tokens to be able to live longer
+# than a session on Rauthy, especially refresh tokens, or access tokens
+# issues to headless devices via the `device_code` flow.
+#
+# !!! CAUTION !!!
+# JWT token revocation is a myth and doesn't exist. You can only
+# blacklist, but not revoke them, even though that's the official term
+# used in the RFC. Token revocation does only work, when a client
+# validates tokens against the `/introspection` or `/userinfo`
+# endpoints, but they will still be valid, if a client just validates
+# via public keys!
+#
+# The default value of `false` makes the most sense, because token
+# revocation is NOT reliable on its own! It only works with the
+# "correct" implementation on the client side, which also involves
+# a lot more resource and traffic usage!
+#
+# If a session is being force-deleted or a user is force-logged-out
+# via the AdminUI, tokens will always be revoked, which makes the
+# most sense.
+#
+# default: false
+# overwritten by: TOKEN_REVOKE_ON_LOGOUT
+#token_revoke_on_logout = false
+
+# If set to true, tokens issued via the `device_code` flow will be
+# revoked during `/logout`.
+# These tokens are usually used on headless IoT devices or for CLIs
+# on remote servers, and logging these back in can be a lot more
+# work than the default logins via browser.
+#
+# This value will only be respected, if `token_revoke_on_logout` is
+# set to `true` as well. Otherwise, tokens will only be revoked
+# via the dedicated `recovation_endpoint` or forced logout from an
+# admin.
+#
+# default: false
+# overwritten by: TOKEN_REVOKE_DEVICE_TOKENS
+#token_revoke_device_tokens = false
 
 # If set to `true`, the `/auth/v1/whoami` endpoint will return all
 # request headers. Only the `Cookie` and Rauthys internal CSRF headers
@@ -1178,6 +1239,17 @@ smtp_url = 'localhost'
 # default: 3
 # overwritten by: SMTP_CONNECT_RETRIES
 #connect_retries = 3
+
+# You can provide a custom Root Certificate in PEM format here,
+# which then will be used for SMTP connections.
+#
+# default: not set
+# overwritten by: SMTP_ROOT_CA
+#root_ca = """
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#"""
 
 # You can set this to `true` to allow an unencrypted and
 # unauthenticated SMTP connection to an SMTP relay on your localhost

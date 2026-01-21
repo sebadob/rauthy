@@ -8,9 +8,9 @@ Rauthy - Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2
 > This application received an independent security audit
 > from [Radically Open Security](https://www.radicallyopensecurity.com/)
 > ([Frank Plattel](https://github.com/Sp0Q1) and [Morgan Hill](https://github.com/pcwizz)) as part
-> of the [NGI Zero Core](https://nlnet.nl/core) funding. There were some findings, that were
-> addressed in `v0.32.1`. The full report can be
-> found [here](https://raw.githubusercontent.com/sebadob/rauthy/refs/heads/main/assets/security_audit_report_v0.32.pdf).
+> of the [NGI Zero Core](https://nlnet.nl/core) funding. There were some findings that were
+> addressed in `v0.32.1`. The full report can be found
+> [here](https://raw.githubusercontent.com/sebadob/rauthy/refs/heads/main/assets/security_audit_report_v0.32.pdf).
 
 ## What it is
 
@@ -226,7 +226,7 @@ setting for very quick and easy local testing and taking a first look. By settin
 a demo config is being loaded at startup.
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.33.4
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.34.0
 ```
 
 > [!CAUTION]

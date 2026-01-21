@@ -189,21 +189,26 @@ pub async fn cookie_csrf_headers_from_res_direct(
 
 /// extractor from the `/oidc/authorize` html
 pub async fn cookie_csrf_headers_from_res(res: Response) -> Result<HeaderMap, Box<dyn Error>> {
-    let cookie = res.headers().get(header::SET_COOKIE).unwrap();
-    let (session_cookie, _) = cookie.to_str()?.split_once(';').unwrap();
-    println!("Extracted session cookie: {:?}", session_cookie);
-    let mut headers = HeaderMap::new();
-    headers.append(header::COOKIE, HeaderValue::from_str(&session_cookie)?);
+    for cookie in res.headers().get_all(header::SET_COOKIE) {
+        let (cookie, _) = cookie.to_str()?.split_once(';').unwrap();
+        if cookie.starts_with("__Host-RauthySession=") {
+            println!("Extracted session cookie: {:?}", cookie);
+            let mut headers = HeaderMap::new();
+            headers.append(header::COOKIE, HeaderValue::from_str(&cookie)?);
 
-    let content = res.text().await?;
-    let (_, content_split) = content
-        .split_once("<template id=\"tpl_csrf_token\">")
-        .unwrap();
-    let (csrf_token, _) = content_split.split_once("</template>").unwrap();
-    println!("Extracted CSRF Token: {}", csrf_token);
-    headers.append(CSRF_HEADER, HeaderValue::from_str(csrf_token)?);
+            let content = res.text().await?;
+            let (_, content_split) = content
+                .split_once("<template id=\"tpl_csrf_token\">")
+                .unwrap();
+            let (csrf_token, _) = content_split.split_once("</template>").unwrap();
+            println!("Extracted CSRF Token: {}", csrf_token);
+            headers.append(CSRF_HEADER, HeaderValue::from_str(csrf_token)?);
 
-    Ok(headers)
+            return Ok(headers);
+        }
+    }
+
+    panic!("Error extracting session cookie");
 }
 
 pub fn code_state_from_headers(res: Response) -> Result<(String, Option<String>), Box<dyn Error>> {

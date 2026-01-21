@@ -7,7 +7,7 @@
 #### Less login location check noise
 
 The logic behind the "login from new location" emails was reworked. Up until now, the location was
-compared via `user_id` + `ip`. However, if you IP changes quite often, you will receive many of
+compared via `user_id` + `ip`. However, if your IP changes quite often, you will receive many of
 these emails with no real benefit.
 
 To counter this, you will now get a new Cookie during `GET /authorize`. This cookie will live for 5
@@ -194,6 +194,8 @@ Ukrainian Translations are now available for Email, Common UI and Admin UI.
 - The `@` character was missing in the validation regex for URLs.
   [#1330](https://github.com/sebadob/rauthy/pull/1330)
   [#1340](https://github.com/sebadob/rauthy/pull/1340)
+- The text / md editors in the UI sometimes inserted double newlines on Enter.
+  [#1343](https://github.com/sebadob/rauthy/pull/1343)
 
 ## v0.33.4
 
