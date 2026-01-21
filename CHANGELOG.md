@@ -194,6 +194,8 @@ Ukrainian Translations are now available for Email, Common UI and Admin UI.
 - The `@` character was missing in the validation regex for URLs.
   [#1330](https://github.com/sebadob/rauthy/pull/1330)
   [#1340](https://github.com/sebadob/rauthy/pull/1340)
+- The text / md editors in the UI sometimes inserted double newlines on Enter.
+  [#1343](https://github.com/sebadob/rauthy/pull/1343)
 
 ## v0.33.4
 
