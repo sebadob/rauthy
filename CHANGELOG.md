@@ -7,7 +7,7 @@
 #### Less login location check noise
 
 The logic behind the "login from new location" emails was reworked. Up until now, the location was
-compared via `user_id` + `ip`. However, if you IP changes quite often, you will receive many of
+compared via `user_id` + `ip`. However, if your IP changes quite often, you will receive many of
 these emails with no real benefit.
 
 To counter this, you will now get a new Cookie during `GET /authorize`. This cookie will live for 5
