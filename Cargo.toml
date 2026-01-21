@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.33.4"
+version = "0.34.0"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -100,6 +100,7 @@ rand_core = { version = "0.9", features = ["std"] }
 rcgen = "0.14.3"
 refinery = { version = "0.9", features = ["tokio-postgres"] }
 regex = "1"
+# upgrade blocked by ruma-client
 reqwest = { version = "0.12.3", default-features = false, features = [
     "json", "rustls-tls"
 ] }
@@ -107,7 +108,7 @@ ring = "0.17.13"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rsa = { version = "0.9.10", features = ["serde", "sha2"] }
-ruma-client = { version = "0.16.0", features = [
+ruma-client = { version = "0.17", features = [
     "client-api", "reqwest-rustls-webpki-roots"
 ] }
 rusqlite = "0.37"
