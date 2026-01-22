@@ -19,7 +19,7 @@ PAM. It aims to be simple to both set up and operate, with very secure defaults 
 options, if you need the flexibility. It puts heavy emphasis on Passkeys and a very strong security
 in general. The project is written in Rust to be as memory efficient, secure and fast as possible,
 and it can run on basically any hardware. If you need Single Sign-On support for IoT or headless CLI
-tools, it's got you covered as well.  
+tools, it's got you covered as well.\
 You get High-Availability, client branding, UI translation, a nice Admin UI, Events and Auditing,
 and many more features. By default, it runs on top of [Hiqlite](https://github.com/sebadob/hiqlite)
 and does not depend on an external database (Postgres as an alternative) to make it even simpler to
@@ -146,7 +146,7 @@ here: [rauthy-pam-nss](https://github.com/sebadob/rauthy-pam-nss).
 ### Scales to millions of users
 
 Rauthy has no issue handling even millions of users. Everything keeps being fast and responsive,
-apart from the search function for users in der Admin UI when you reach the 10+ million users, where
+apart from the search function for users in the Admin UI when you reach the 10+ million users, where
 searching usually takes ~3 seconds (depending on your server of course).   
 The only limiting factor at that point will be your configuration and needs for password hashing
 security. It really depends on how many resources you want to use for hashing (more resources ==
