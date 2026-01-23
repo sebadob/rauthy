@@ -60,7 +60,6 @@ pub async fn get_token_info(
 
     buf.clear();
     let client = check_client_auth(req, client_id, &mut buf).await?;
-    client.validate_enabled()?;
     let cors_header = client.get_validated_origin_header(req)?;
 
     Ok((info, cors_header))
@@ -74,19 +73,14 @@ async fn check_client_auth(
 ) -> Result<Client, ErrorResponse> {
     debug_assert!(buf.is_empty());
 
-    let client = Client::find(client_id).await.map_err(|_| {
-        ErrorResponse::new(
-            ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),
-            "client does not exist anymore",
-        )
-    })?;
+    let claims_client = find_enabled_client(client_id).await?;
 
     if RauthyConfig::get()
         .vars
         .access
         .danger_disable_introspect_auth
     {
-        return Ok(client);
+        return Ok(claims_client);
     }
 
     let Some(header_value) = req.headers().get(AUTHORIZATION) else {
@@ -97,41 +91,58 @@ async fn check_client_auth(
     };
     let header = header_value.to_str().unwrap_or_default();
 
-    if !client.enabled {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
-            "client has been disabled",
-        ));
-    }
-
     if let Some(token) = header.strip_prefix("Bearer ") {
         JwtToken::validate_claims_into(token, Some(JwtTokenType::Bearer), 0, buf).await?;
-        // Just make sure it deserializes fine
-        serde_json::from_slice::<JwtAccessClaims>(buf)?;
-        Ok(client)
+        let claims = serde_json::from_slice::<JwtAccessClaims>(buf)?;
+
+        // If a different client was used for authentication, make sure it exists and is enabled.
+        if claims.common.azp != claims_client.id {
+            let client = find_enabled_client(claims.common.azp.to_string()).await?;
+            // no need to validate the secret - the valid token was the authentication
+            Ok(client)
+        } else {
+            Ok(claims_client)
+        }
     } else if let Some(basic) = header.strip_prefix("Basic ") {
         base64_decode_buf(basic, buf)?;
         let decoded = String::from_utf8_lossy(buf);
-        let Some((id, secret)) = decoded.split_once(':') else {
+        let Some((id_header, secret)) = decoded.split_once(':') else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("invalid-authorization-header".to_string()),
                 "invalid Authorization header: cannot split into client_id:client_secret",
             ));
         };
 
-        if id != client.id {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::WWWAuthenticate("invalid-client-id".to_string()),
-                "'client_id' from token does not match the one from the Authorization header",
-            ));
-        }
-
+        let client = if id_header != claims_client.id {
+            find_enabled_client(id_header.to_string()).await?
+        } else {
+            claims_client
+        };
         client.validate_secret(secret, req).await?;
+
         Ok(client)
     } else {
         Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("invalid-authorization-header".to_string()),
             "invalid AUTHORIZATION header",
+        ))
+    }
+}
+
+#[inline]
+async fn find_enabled_client(id: String) -> Result<Client, ErrorResponse> {
+    let client = Client::find(id).await.map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),
+            "client does not exist anymore",
+        )
+    })?;
+    if client.enabled {
+        Ok(client)
+    } else {
+        Err(ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
+            "client has been disabled",
         ))
     }
 }
