@@ -1,6 +1,14 @@
 # Changelog
 
-## UNRELEASED
+## v0.34.1
+
+### Bugfix
+
+- It was not possible to use `/introspect` with a client that differs from the one in the access
+  token claims.
+  [#1349](https://github.com/sebadob/rauthy/pull/1349)
+
+## v0.34.0
 
 ### Changes
 
