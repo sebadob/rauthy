@@ -457,6 +457,7 @@ impl OidcTokenSet {
                                         .expect("internal send to not fail");
 
                                     if let Some(rt) = ts.refresh_token {
+                                        info!("Rauthy token refreshed successfully");
                                         refresh_token = rt;
                                         refresh_claims =
                                             OidcTokenSet::danger_claims_unvalidated(&refresh_token)
