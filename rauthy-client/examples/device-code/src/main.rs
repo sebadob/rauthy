@@ -63,5 +63,8 @@ async fn main() -> Result<(), RauthyError> {
     let _access_token = OidcTokenSet::access_token().await?;
     let _id_token = OidcTokenSet::id_token().await?;
 
+    println!("Sleeping now to show token refresh.");
+    tokio::time::sleep(tokio::time::Duration::from_secs(600)).await;
+
     Ok(())
 }
