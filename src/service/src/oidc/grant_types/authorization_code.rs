@@ -144,7 +144,7 @@ pub async fn grant_type_authorization_code(
             let hash = digest::digest(&digest::SHA256, req_data.code_verifier.unwrap().as_bytes());
             let hash_base64 = base64_url_encode(hash.as_ref());
 
-            if !code.challenge.as_ref().unwrap().eq(&hash_base64) {
+            if code.challenge != Some(hash_base64) {
                 warn!("'code_verifier' does not match the challenge");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
@@ -169,8 +169,7 @@ pub async fn grant_type_authorization_code(
     .await?;
 
     // update session metadata
-    if code.session_id.is_some() {
-        let sid = code.session_id.as_ref().unwrap().clone();
+    if let Some(sid) = code.session_id.clone() {
         let mut session = Session::find(sid).await?;
 
         session.last_seen = Utc::now().timestamp();

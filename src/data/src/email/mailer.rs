@@ -89,6 +89,7 @@ async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<EMail>) {
             let to = format!("{} <{}>", req.recipient_name, req.address);
 
             let email = if req.html.is_some() && req.text.is_some() {
+                #[allow(clippy::unnecessary_unwrap)]
                 lettre::Message::builder()
                     .from(from.clone())
                     .to(to.parse().unwrap())

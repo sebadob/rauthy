@@ -1246,7 +1246,7 @@ impl Client {
         code_challenge: &Option<String>,
         code_challenge_method: &Option<String>,
     ) -> Result<(), ErrorResponse> {
-        if self.challenge.is_some() {
+        if let Some(methods_allowed) = &self.challenge {
             if code_challenge.is_none() {
                 trace!("'code_challenge' is missing");
                 return Err(ErrorResponse::new(
@@ -1255,23 +1255,22 @@ impl Client {
                 ));
             }
 
-            if code_challenge_method.is_none() {
+            let Some(method) = code_challenge_method else {
                 trace!("'code_challenge_method' is missing");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "'code_challenge_method' is missing",
                 ));
-            }
+            };
 
-            let method = code_challenge_method.as_ref().unwrap();
-            if !self.challenge.as_ref().unwrap().contains(method) {
+            if methods_allowed.contains(method) {
+                Ok(())
+            } else {
                 trace!("given code_challenge_method is not allowed");
                 Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     format!("code_challenge_method '{method}' is not allowed"),
                 ))
-            } else {
-                Ok(())
             }
         } else if code_challenge.is_some() || code_challenge_method.is_some() {
             trace!("'code_challenge' not enabled for this client");
