@@ -421,14 +421,20 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
         cargo build --release --target aarch64-unknown-linux-gnu
     cp target/aarch64-unknown-linux-gnu/release/rauthy out/rauthy_arm64
 
+    NOW=$(date --rfc-3339=seconds)
+
     if [[ {{ push }} == "push" ]]; then
         {{ docker }} buildx build \
+            --build-arg CREATED=$NOW \
+            --build-arg VERSION=$TAG \
             -t {{ image }}:$TAG \
             --platform linux/amd64,linux/arm64 \
             --push \
             .
     else
         {{ docker }} buildx build \
+            --build-arg CREATED=$NOW \
+            --build-arg VERSION=$TAG \
             -t {{ image }}:$TAG \
             --platform linux/amd64,linux/arm64 \
             --load \
