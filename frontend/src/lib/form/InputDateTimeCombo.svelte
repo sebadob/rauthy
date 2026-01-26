@@ -75,6 +75,7 @@
                     {disabled}
                     {required}
                     {openTop}
+                    noEmptyLabelHeight={!label && !labelTime}
                 />
             {/if}
         </div>

@@ -20,6 +20,7 @@
         required,
         width,
         openTop = false,
+        noEmptyLabelHeight = false,
 
         onEnter,
         onLeft,
@@ -39,6 +40,7 @@
         required?: boolean;
         width?: string;
         openTop?: boolean;
+        noEmptyLabelHeight?: boolean;
 
         onEnter?: () => void;
         onLeft?: () => void;
@@ -211,7 +213,11 @@
 </script>
 
 <div style:width>
-    <div aria-live="assertive" class="label">
+    <div
+        aria-live="assertive"
+        class="label"
+        style:height={noEmptyLabelHeight ? 'inherit' : '1.75rem'}
+    >
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
         </label>
@@ -308,7 +314,7 @@
     }
 
     .label {
-        height: 1.75rem;
+        /*height: 1.75rem;*/
         width: 100%;
         margin-bottom: -0.37rem;
         padding: 0.1rem;
