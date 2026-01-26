@@ -2487,7 +2487,7 @@ tz = 'optional'
 #
 # one of: required, optional, hidden
 # default: 'optional'
-preferred_username = 'optional'
+preferred_username = 'required'
 
 # The `preferred_username` is an unstable claim by the OIDC RFC.
 # This means it MUST NOT be trusted to be unique, be a stable

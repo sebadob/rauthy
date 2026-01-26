@@ -285,7 +285,8 @@ export const I18nKo: I18n = {
             현재 패스키를 잃어버리면, 이메일을 통하여 비밀번호 초기화할 수 없습니다.`,
     },
     register: {
-        alreadyRegistered: '이미 등록된 이메일입니다.',
+        alreadyRegisteredEmail: '이미 등록된 이메일입니다.',
+        alreadyRegisteredUsername: 'Username is already taken',
         domainAllowed: '허용된 도메인:',
         domainErr: '허용되지 않은 이메일의 도메인입니다.',
         domainRestricted: '이메일의 도메인이 제한되어 있습니다.',

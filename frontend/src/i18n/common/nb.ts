@@ -291,7 +291,8 @@ export const I18nNb: I18n = {
             tilfelle den nåværende passkeyen blir borte.`,
     },
     register: {
-        alreadyRegistered: 'E-posten er allerede registrert',
+        alreadyRegisteredEmail: 'E-posten er allerede registrert',
+        alreadyRegisteredUsername: 'Username is already taken',
         domainAllowed: 'Tillatt domene:',
         domainErr: 'E-postdomene er ikke tillatt',
         domainRestricted: 'E-postdomener er begrenset',
