@@ -34,6 +34,7 @@
     let tos: ToSResponse[] = $state([]);
     let editorMode: 'HTML' | 'Text' | 'Markdown' = $state('Markdown');
     let newToSContent = $state('');
+    let newToSContentRaw = $state('');
     let optUntil = $state(false);
     let optUntilDate = $state(fmtDateInput());
     let optUntilTime = $state(fmtTimeInput());
@@ -183,6 +184,16 @@
     >
         {ta.tos.addNewToS}
     </Button>
+    <Button
+        ariaLabel={ta.tos.addNewToSFromCurrent}
+        level={isModalOpen ? 2 : 1}
+        onclick={() => {
+            newToSContentRaw = selectedIdx > -1 && tos.length > 0 ? tos[selectedIdx].content : '';
+            showModalAddNew = true;
+        }}
+    >
+        {ta.tos.addNewToSFromCurrent}
+    </Button>
     {#if tos.length > 0}
         <Button
             ariaLabel={ta.tos.checkStatus}
@@ -255,6 +266,7 @@
         <div class="editor">
             <EditorInteractive
                 bind:mode={editorMode}
+                bind:contentRaw={newToSContentRaw}
                 bind:sanitizedValue={newToSContent}
                 height="max(calc(100dvh - 20rem), 30rem)"
             />
@@ -366,6 +378,7 @@
     .stat {
         display: grid;
         grid-template-columns: 11rem 1fr;
+        column-gap: 1rem;
     }
 
     .status {
