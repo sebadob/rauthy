@@ -17,6 +17,7 @@
     import LabeledValue from '$lib/LabeledValue.svelte';
     import Options from '$lib/Options.svelte';
     import EditorInteractive from '$lib/text_edit/EditorInteractive.svelte';
+    import MarkdownRenderer from '$lib/text_edit/md/MarkdownRenderer.svelte';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -33,7 +34,6 @@
     let noneExist = $state(false);
     let tos: ToSResponse[] = $state([]);
     let editorMode: 'HTML' | 'Text' | 'Markdown' = $state('Markdown');
-    let newToSContent = $state('');
     let newToSContentRaw = $state('');
     let optUntil = $state(false);
     let optUntilDate = $state(fmtDateInput());
@@ -143,8 +143,8 @@
     async function saveToS() {
         error = '';
 
-        let content = newToSContent.trim();
-        if (!newToSContent || content.length === 0) {
+        let content = newToSContentRaw.trim();
+        if (content.length === 0) {
             return;
         }
 
@@ -184,16 +184,18 @@
     >
         {ta.tos.addNewToS}
     </Button>
-    <Button
-        ariaLabel={ta.tos.addNewToSFromCurrent}
-        level={isModalOpen ? 2 : 1}
-        onclick={() => {
-            newToSContentRaw = selectedIdx > -1 && tos.length > 0 ? tos[selectedIdx].content : '';
-            showModalAddNew = true;
-        }}
-    >
-        {ta.tos.addNewToSFromCurrent}
-    </Button>
+    {#if selectedIdx > -1 && tos.length > 0}
+        <Button
+            ariaLabel={ta.tos.addNewToSFromCurrent}
+            level={isModalOpen ? 2 : 1}
+            onclick={() => {
+                newToSContentRaw = tos[selectedIdx].content;
+                showModalAddNew = true;
+            }}
+        >
+            {ta.tos.addNewToSFromCurrent}
+        </Button>
+    {/if}
     {#if tos.length > 0}
         <Button
             ariaLabel={ta.tos.checkStatus}
@@ -229,7 +231,7 @@
 
         <div class="html-render">
             {#if active.is_html}
-                {@html active.content}
+                <MarkdownRenderer markdown={active.content} />
             {:else}
                 {active.content}
             {/if}
@@ -267,7 +269,6 @@
             <EditorInteractive
                 bind:mode={editorMode}
                 bind:contentRaw={newToSContentRaw}
-                bind:sanitizedValue={newToSContent}
                 height="max(calc(100dvh - 20rem), 30rem)"
             />
         </div>
@@ -279,7 +280,7 @@
         <Button
             ariaLabel={t.common.save}
             onclick={saveToS}
-            isDisabled={!newToSContent || newToSContent.trim().length === 0}
+            isDisabled={newToSContentRaw.trim().length === 0}
         >
             {t.common.save}
         </Button>

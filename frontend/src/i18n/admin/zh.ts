@@ -403,7 +403,7 @@ export let I18nAdminZh: I18nAdmin = {
     tos: {
         accepted: '已接受',
         addNewToS: '添加新服务条款',
-        addNewToSFromCurrent: 'New ToS from template',
+        addNewToSFromCurrent: 'New ToS from selected',
         added: '已添加',
         checkStatus: '检查用户状态',
         immutable: `注意：添加新服务条款后，它们是不可变的且无法删除！`,

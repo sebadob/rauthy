@@ -430,7 +430,7 @@ export let I18nAdminUk: I18nAdmin = {
     tos: {
         accepted: 'Прийнято',
         addNewToS: 'Додати нові Умови користування',
-        addNewToSFromCurrent: 'New ToS from template',
+        addNewToSFromCurrent: 'New ToS from selected',
         added: 'Додано',
         checkStatus: 'Перевірити статус користувачів',
         immutable: `УВАГА: Додані Умови користування є незмінними, їх неможливо буде видалити!`,

@@ -11,6 +11,7 @@
     import { onMount } from 'svelte';
     import { formatDateFromTs } from '$utils/helpers';
     import type { WebauthnLoginResponse } from '$api/types/authorize';
+    import MarkdownRenderer from '$lib/text_edit/md/MarkdownRenderer.svelte';
 
     let {
         tos,
@@ -121,7 +122,7 @@
         <h1>{t.tos.tos}</h1>
         <div bind:this={refToS} class="tosContent html-render" onscrollend={onScrollEndToS}>
             {#if tos.is_html}
-                {@html tos.content}
+                <MarkdownRenderer markdown={tos.content} />
             {:else}
                 {tos.content}
             {/if}

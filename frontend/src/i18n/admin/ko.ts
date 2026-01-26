@@ -409,7 +409,7 @@ export let I18nAdminKo: I18nAdmin = {
     tos: {
         accepted: 'Accepted',
         addNewToS: 'New ToS',
-        addNewToSFromCurrent: 'New ToS from template',
+        addNewToSFromCurrent: 'New ToS from selected',
         added: 'Added',
         checkStatus: 'Check user status',
         immutable: `CAUTION: After adding new Terms of Service, they are immutable and cannot be 
