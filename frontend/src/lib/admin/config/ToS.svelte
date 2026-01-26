@@ -256,7 +256,7 @@
             <EditorInteractive
                 bind:mode={editorMode}
                 bind:sanitizedValue={newToSContent}
-                height="min(60dvh, 40rem)"
+                height="max(calc(100dvh - 20rem), 30rem)"
             />
         </div>
 
