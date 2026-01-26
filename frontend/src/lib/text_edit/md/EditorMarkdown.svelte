@@ -19,15 +19,11 @@
 
     let {
         markdown = $bindable(),
-        height = '50rem',
         withPreview = false,
-        // showImageButton,
         onblur,
     }: {
         markdown: string;
-        height?: string;
         withPreview?: boolean;
-        // showImageButton?: boolean,
         onblur?: () => void;
     } = $props();
 
@@ -50,7 +46,7 @@
     });
 </script>
 
-<div role="none" class="editor" style:height onclick={() => ref?.focus()}>
+<div role="none" class="editor" onclick={() => ref?.focus()}>
     <div class="toolbar">
         <div>
             {#if withPreview}
@@ -148,7 +144,9 @@
     </div>
 
     {#if preview}
-        <MarkdownRenderer />
+        <div class="renderer">
+            <MarkdownRenderer />
+        </div>
     {:else}
         <div
             role="textbox"
@@ -160,9 +158,7 @@
             contenteditable="plaintext-only"
             spellcheck="false"
             {onblur}
-        >
-            <!--{onkeydown}-->
-        </div>
+        ></div>
     {/if}
 </div>
 
@@ -172,17 +168,27 @@
     }
 
     .edit {
+        height: 100%;
         padding: 0.5rem;
         outline: none;
+        border-radius: var(--border-radius);
         overflow-y: auto;
     }
 
     .editor {
+        height: 100%;
         display: flex;
         flex-direction: column;
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
         cursor: text;
+    }
+
+    .renderer {
+        height: 100%;
+        padding: 0.5rem;
+        overflow-y: auto;
+        border-radius: 0 0 var(--border-radius) var(--border-radius);
     }
 
     .toolbar {

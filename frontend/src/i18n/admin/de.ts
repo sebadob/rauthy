@@ -437,7 +437,8 @@ export let I18nAdminDe: I18nAdmin = {
     },
     tos: {
         accepted: 'Akzeptiert',
-        addNewToS: 'Neue AGB hinzufügen',
+        addNewToS: 'Neue AGB',
+        addNewToSFromCurrent: 'Neue AGB von Ausgewählter',
         added: 'Hinzugefügt',
         checkStatus: 'Benutzer Status prüfen',
         immutable: `ACHTUNG: Nach dem Hinzufügen sind AGB unveränderlich und können auch nicht wieder 
