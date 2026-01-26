@@ -276,7 +276,8 @@ export const I18nZh: I18n = {
             您将无法通过电子邮件进行密码重置。`,
     },
     register: {
-        alreadyRegistered: '电子邮件地址已被注册',
+        alreadyRegisteredEmail: '电子邮件地址已被注册',
+        alreadyRegisteredUsername: 'Username is already taken',
         domainAllowed: '允许的域名：',
         domainErr: '此电子邮件域名不被允许',
         domainRestricted: '电子邮件域名被限制',

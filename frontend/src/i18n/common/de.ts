@@ -303,7 +303,8 @@ export const I18nDe: I18n = {
             kommt.`,
     },
     register: {
-        alreadyRegistered: 'E-Mail is bereits registriert',
+        alreadyRegisteredEmail: 'E-Mail is bereits registriert',
+        alreadyRegisteredUsername: 'Benutzername is bereits vergeben',
         domainAllowed: 'Erlaubte Domain:',
         domainErr: 'E-Mail Domain ist nicht erlaubt',
         domainRestricted: 'E-Mail Domains sind beschränkt',

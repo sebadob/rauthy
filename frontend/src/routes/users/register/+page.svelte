@@ -158,7 +158,11 @@
         if (res.error) {
             let error = res.error.message || 'Error';
             if (error.includes('UNIQUE constraint')) {
-                err = t.register.alreadyRegistered;
+                if (error.includes('email')) {
+                    err = t.register.alreadyRegisteredEmail;
+                } else {
+                    err = t.register.alreadyRegisteredUsername;
+                }
             } else {
                 err = error;
             }

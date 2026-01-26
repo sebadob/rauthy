@@ -300,7 +300,8 @@ export const I18nUk: I18n = {
             скористатися функцією скидання пароля через E-Mail\nу випадку втрати поточного ключа.`,
     },
     register: {
-        alreadyRegistered: 'Акаунт з таким E-Mail вже зареєстровано',
+        alreadyRegisteredEmail: 'Акаунт з таким E-Mail вже зареєстровано',
+        alreadyRegisteredUsername: 'Username is already taken',
         domainAllowed: 'Дозволений домен:',
         domainErr: 'Домен E-Mail не є дозволеним',
         domainRestricted: 'Домени E-Mail обмежені',

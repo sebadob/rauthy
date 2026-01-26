@@ -294,7 +294,8 @@ export const I18nEn: I18n = {
             E-Mail in case you lose your current key.`,
     },
     register: {
-        alreadyRegistered: 'E-Mail is already registered',
+        alreadyRegisteredEmail: 'E-Mail is already registered',
+        alreadyRegisteredUsername: 'Username is already taken',
         domainAllowed: 'Allowed domain:',
         domainErr: 'E-Mail domain not allowed',
         domainRestricted: 'E-Mail domains are restricted',
