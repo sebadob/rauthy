@@ -256,20 +256,19 @@ impl MagicLink {
         with_csrf: bool,
     ) -> Result<(), ErrorResponse> {
         // binding cookie
-        if self.cookie.is_some() {
+        if let Some(cookie_slf) = &self.cookie {
             let err = ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "The requested password reset link is already tied to another session",
             );
 
-            let cookie_opt = ApiCookie::from_req(req, PWD_RESET_COOKIE);
             let cookie_binding = RauthyConfig::get()
                 .vars
                 .access
                 .password_reset_cookie_binding;
-            if let Some(cookie) = cookie_opt {
+            if let Some(cookie) = ApiCookie::from_req(req, PWD_RESET_COOKIE) {
                 // the extracted cookie from the request starts with 'rauthy-pwd-reset='
-                if !cookie.ends_with(self.cookie.as_ref().unwrap()) {
+                if !cookie.ends_with(cookie_slf) {
                     if cookie_binding {
                         return Err(err);
                     } else {

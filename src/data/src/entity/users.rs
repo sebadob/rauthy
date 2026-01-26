@@ -1779,15 +1779,11 @@ impl User {
 
     #[inline]
     pub fn get_groups(&self) -> Vec<String> {
-        let mut res = Vec::new();
-        if self.groups.is_some() {
-            self.groups
-                .as_ref()
-                .unwrap()
-                .split(',')
-                .for_each(|g| res.push(g.trim().to_owned()));
+        if let Some(groups) = &self.groups {
+            groups.split(',').map(String::from).collect::<Vec<_>>()
+        } else {
+            Vec::default()
         }
-        res
     }
 
     #[inline]
@@ -1940,11 +1936,10 @@ impl User {
     }
 
     pub fn push_group(&mut self, group: &str) {
-        if self.groups.is_some() {
-            let g = self.groups.as_ref().unwrap();
-            self.groups = Some(format!("{g},{group}"));
+        if let Some(groups) = &self.groups {
+            self.groups = Some(format!("{groups},{group}"));
         } else {
-            self.groups = Some(group.to_owned());
+            self.groups = Some(group.to_string());
         }
     }
 

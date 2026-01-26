@@ -58,7 +58,7 @@ pub async fn get_logout_html(
     let claims = serde_json::from_slice::<JwtIdClaims>(&buf)?;
 
     // from here on, the token_hint contains a valid ID token -> skip the logout confirmation
-    if logout_request.post_logout_redirect_uri.is_some() {
+    if let Some(target) = logout_request.post_logout_redirect_uri {
         // unwrap is safe since the token is valid already
         let client = Client::find(claims.common.azp.to_string()).await?;
         if client.post_logout_redirect_uris.is_none() {
@@ -68,7 +68,6 @@ pub async fn get_logout_html(
             ));
         }
 
-        let target = logout_request.post_logout_redirect_uri.unwrap();
         let uri_vec = client.get_post_logout_uris();
 
         let valid_redirect = uri_vec.as_ref().unwrap().iter().any(|uri| {
