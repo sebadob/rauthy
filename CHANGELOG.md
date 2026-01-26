@@ -1,5 +1,38 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Create new ToS improvements
+
+You will now have an additional button in the Admin UI, which lets you create a new ToS from the
+currently selected one as a template.
+
+When you added a ToS to Rauthy, it would save a pre-rendered and sanitized HTML from the given
+markdown input, which will then be served to any user that needs to accept the ToS on login.
+However, this made it impossible to add this new feature. If you wanted to do just a small change,
+you needed to provide the full ToS from scratch. You can write HTML directly in the markdown editor,
+but this is of course not the best UX.
+
+This feature will of course not work for any already added, pre-rendered HTML ToS, but it will for
+all future ones. Rauthy will now save the raw markdown and render it to HTML dynamically.
+
+In addition, content negotiation was added to the `/auth/v1/tos/latest` endpoint. When the client
+`Accept`s `text/html`, Rauthy will dynamically render a full HTML page instead of returning JSON.
+This could be used to provide external links to Rauthys ToS.
+
+[#1356](https://github.com/sebadob/rauthy/pull/1356)
+
+### Bugfix
+
+- With the rework of login location checks, the refresh tokens for the `device_code` flow stopped
+  working when using Hiqlite as the database, because of a deserialization issue.
+  [#1352](https://github.com/sebadob/rauthy/pull/1352)
+- When the `preferred_username` was set to required, and the registration was open, a misleading
+  error message was displayed, if the username was already taken.
+  [#1355](https://github.com/sebadob/rauthy/pull/1355)
+
 ## v0.34.1
 
 ### Bugfix
