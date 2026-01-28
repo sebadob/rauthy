@@ -285,6 +285,7 @@ pub(crate) async fn finish_authorize(
                     .header_origin
                     .as_ref()
                     .map(|(_, v)| v.to_str().unwrap().to_string()),
+                needs_user_update,
             };
             code_await.save().await?;
 

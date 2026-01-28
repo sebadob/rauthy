@@ -600,9 +600,6 @@ impl WebauthnAdditionalData {
                     header::LOCATION,
                     HeaderValue::from_str(&login_req.header_loc).unwrap(),
                 );
-                // let body = WebauthnLoginFinishResponse {
-                //     loc: login_req.header_loc,
-                // };
 
                 let mut builder = if login_req.needs_user_update {
                     HttpResponse::ResetContent()
@@ -612,9 +609,6 @@ impl WebauthnAdditionalData {
                     builder
                 };
 
-                // let mut res = HttpResponse::Accepted()
-                //     .insert_header(header_loc)
-                //     .json(body);
                 if let Some(value) = login_req.header_origin {
                     builder.insert_header((
                         header::ACCESS_CONTROL_ALLOW_ORIGIN,
@@ -921,6 +915,7 @@ pub async fn auth_finish(
                         auth_code_lifetime: tos_data.auth_code_lifetime,
                         header_loc: data.header_loc,
                         header_origin: data.header_origin.clone(),
+                        needs_user_update: data.needs_user_update,
                     };
                     code_await.save().await?;
 
