@@ -1,6 +1,13 @@
 <script lang="ts">
     import Button from '$lib5/button/Button.svelte';
-    import { IS_DEV, TPL_RESTRICTED_EMAIL_DOMAIN, TPL_USER_VALUES_CONFIG } from '$utils/constants';
+    import {
+        IS_DEV,
+        PKCE_VERIFIER,
+        REDIRECT_URI,
+        TPL_AUTH_PROVIDERS,
+        TPL_RESTRICTED_EMAIL_DOMAIN,
+        TPL_USER_VALUES_CONFIG,
+    } from '$utils/constants';
     import Input from '$lib5/form/Input.svelte';
     import LangSelector from '$lib5/LangSelector.svelte';
     import Main from '$lib5/Main.svelte';
@@ -26,6 +33,13 @@
     import InputDateTimeCombo from '$lib/form/InputDateTimeCombo.svelte';
     import TZSelect from '$lib/TZSelect.svelte';
     import type { UserValuesRequest } from '$api/types/user';
+    import type { AuthProviderTemplate } from '$api/templates/AuthProvider';
+    import ButtonAuthProvider from '$lib/ButtonAuthProvider.svelte';
+    import { generateNonce, generatePKCE } from '$utils/pkce';
+    import type { ProviderLoginRequest } from '$api/types/auth_provider';
+    import { execProviderLogin } from '$utils/login';
+    import { genKey, saveCsrfToken } from '$utils/helpers';
+    import type { SessionInfoResponse } from '$api/types/session';
 
     let t = useI18n();
 
@@ -34,6 +48,8 @@
     let restrictedDomain = $state('');
     let config: undefined | UserValuesConfig = $state();
     let redirectUri = useParam('redirect_uri');
+    let providers: AuthProviderTemplate[] = $state([]);
+
     let isLoading = $state(false);
     let err = $state('');
     let success = $state(false);
@@ -112,6 +128,17 @@
         }
     });
 
+    async function createSession() {
+        let res = await fetchPost<SessionInfoResponse>('/auth/v1/oidc/session');
+        if (res.status === 200) {
+            // noop - 200 means we already have a valid session
+        } else if (res.body?.csrf_token) {
+            saveCsrfToken(res.body.csrf_token);
+        } else {
+            console.error(res.error);
+        }
+    }
+
     async function fetchTos() {
         tos = undefined;
         noTosExists = false;
@@ -122,6 +149,43 @@
         } else if (res.status === 204) {
             noTosExists = true;
         }
+    }
+
+    async function providerLogin(id: string) {
+        let pkce = await generatePKCE();
+        if (!pkce) {
+            return;
+        }
+
+        // PKCE + nonce for the account login AFTER the provider login succeeds
+        localStorage.setItem(PKCE_VERIFIER, pkce.verifier);
+        // If we were able to generate PKCE, nonce generation will always succeed as well.
+        // `genKey()` is just a fallback to make TS happy.
+        let nonce = generateNonce() || genKey(64);
+        const redirect_uri = `${window.location.origin}${REDIRECT_URI}`;
+
+        isLoading = true;
+
+        let payload: ProviderLoginRequest = {
+            email: undefined,
+            client_id: 'rauthy',
+            redirect_uri,
+            scopes: ['openid', 'profile', 'email'],
+            state: 'account',
+            nonce,
+            code_challenge: pkce.challenge,
+            code_challenge_method: 'S256',
+            provider_id: id,
+            pkce_challenge: '',
+            pow: '',
+        };
+
+        // provider login will fail without a session in at least init state
+        await createSession();
+
+        let errMsg = await execProviderLogin(payload);
+        err = errMsg || '';
+        isLoading = false;
     }
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
@@ -186,6 +250,7 @@
 
 <Template id={TPL_RESTRICTED_EMAIL_DOMAIN} bind:value={restrictedDomain} />
 <Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
+<Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
 
 <Main>
     <ContentCenter>
@@ -334,6 +399,27 @@
                         {err}
                     </div>
                 {/if}
+
+                {#if providers.length > 0}
+                    <div class="providers flex-col">
+                        <div class="providersSeparator">
+                            <div class="separator"></div>
+                            <div class="registerWith">
+                                <div>
+                                    {t.register.orRegisterWith}
+                                </div>
+                            </div>
+                        </div>
+                        {#each providers as provider}
+                            <ButtonAuthProvider
+                                ariaLabel={`${t.register.orRegisterWith}: ${provider.name}`}
+                                {provider}
+                                onclick={() => providerLogin(provider.id)}
+                                {isLoading}
+                            />
+                        {/each}
+                    </div>
+                {/if}
             </Form>
         </div>
 
@@ -353,10 +439,6 @@
 </Main>
 
 <style>
-    .submit {
-        margin-top: 0.66rem;
-    }
-
     .container {
         padding: 1rem;
         display: flex;
@@ -377,6 +459,36 @@
 
     .domainTxt {
         margin: 0.5rem 0;
+    }
+
+    .providers {
+        margin-top: 1rem;
+    }
+
+    .providersSeparator {
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .registerWith {
+        display: flex;
+        justify-content: center;
+        margin-top: -0.9rem;
+    }
+
+    .registerWith > div {
+        padding: 0 0.5rem;
+        font-size: 0.8rem;
+        color: hsla(var(--text) / 0.6);
+    }
+
+    .separator {
+        height: 1px;
+        background: hsla(var(--bg-high) / 0.8);
+    }
+
+    .submit {
+        margin-top: 1rem;
     }
 
     @media (min-width: 35rem) {

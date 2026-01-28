@@ -311,6 +311,7 @@ export const I18nDe: I18n = {
         email: 'E-Mail',
         emailBadFormat: 'Ungültiges E-Mail Format',
         emailCheck: 'Bitte prüfen Sie Ihren E-Mail Posteingang',
+        orRegisterWith: 'order registrieren mit',
         regexName: 'Name mit 2 - 32 Buchstaben ohne Sonderzeichen',
         register: 'Registrieren',
         success: 'Registrierung erfolgreich',

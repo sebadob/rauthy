@@ -784,7 +784,14 @@ pub async fn rotate_jwk(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRe
     ),
 )]
 #[post("/oidc/session")]
-pub async fn post_session(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+pub async fn post_session(
+    principal: ReqPrincipal,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    if principal.validate_session_auth_or_init().is_ok() {
+        return Ok(HttpResponse::Ok().finish());
+    }
+
     let session = Session::new(
         RauthyConfig::get().vars.lifetimes.session_lifetime,
         real_ip_from_req(&req).ok(),

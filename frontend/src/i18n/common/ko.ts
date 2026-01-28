@@ -293,6 +293,7 @@ export const I18nKo: I18n = {
         email: '이메일',
         emailBadFormat: '잘못된 이메일 형식입니다.',
         emailCheck: '이메일 보관함을 확인해 주세요.',
+        orRegisterWith: 'or register with',
         regexName: '이름은 특수문자 없이 2~32자여야 합니다.',
         register: '가입',
         success: '성공적으로 가입되었습니다.',

@@ -42,7 +42,7 @@ export const redirectToLogin = (state?: string) => {
             localStorage.setItem(PKCE_VERIFIER, pkce.verifier);
             // If we were able to generate PKCE, nonce generation will always succeed as well.
             // `genKey()` is just a fallback to make TS happy.
-            let nonce = generateNonce() || genKey(24);
+            let nonce = generateNonce() || genKey(64);
             const s = state || 'admin';
             const redirect_uri = `${window.location.origin}${REDIRECT_URI}`
                 .replaceAll(':', '%3A')

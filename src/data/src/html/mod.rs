@@ -169,7 +169,10 @@ impl HtmlCached {
                 let logo_updated = Logo::find_updated("rauthy", &LogoType::Client).await?;
                 UserPasswordResetHtml::build(&lang, theme_ts, logo_updated)
             }
-            Self::UserRegistration => UserRegisterHtml::build(&lang, theme_ts),
+            Self::UserRegistration => {
+                let providers = AuthProviderTemplate::get_all_json_template().await?;
+                UserRegisterHtml::build(&lang, theme_ts, HtmlTemplate::AuthProviders(providers))
+            }
         };
         let body_bytes = match encoding {
             "br" => {
