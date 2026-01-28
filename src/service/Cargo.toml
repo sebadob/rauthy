@@ -17,6 +17,7 @@ atrium-api = { workspace = true }
 atrium-common = { workspace = true }
 atrium-oauth = { workspace = true }
 chrono = { workspace = true }
+chrono-tz = { workspace = true }
 cryptr = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }

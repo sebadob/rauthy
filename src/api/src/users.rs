@@ -52,11 +52,11 @@ use rauthy_jwt::token::JwtToken;
 use rauthy_service::oidc::helpers::get_bearer_token_from_header;
 use rauthy_service::oidc::logout;
 use rauthy_service::password_reset;
+use rauthy_service::user_values_validator::UserValuesValidator;
 use spow::pow::Pow;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::net::IpAddr;
-use std::str::FromStr;
 use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
@@ -2182,113 +2182,4 @@ pub async fn delete_user_by_id(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)?;
     let user = User::find(id.into_inner()).await?;
     handle_user_delete(user).await
-}
-
-pub struct UserValuesValidator<'a> {
-    given_name: Option<&'a str>,
-    family_name: Option<&'a str>,
-    preferred_username: Option<&'a str>,
-    user_values: &'a Option<UserValuesRequest>,
-}
-
-impl UserValuesValidator<'_> {
-    pub fn validate(&self) -> Result<(), ErrorResponse> {
-        let config = &RauthyConfig::get().vars.user_values;
-
-        if config.given_name == UserValueConfigValue::Required
-            && (self.given_name.is_none() || self.given_name == Some(""))
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "'given_name' is required",
-            ));
-        }
-        if config.family_name == UserValueConfigValue::Required
-            && (self.family_name.is_none() || self.family_name == Some(""))
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "'family_name' is required",
-            ));
-        }
-        if let Some(username) = self.preferred_username
-            && config.preferred_username.preferred_username == UserValueConfigValue::Required
-            && username.is_empty()
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "'preferred_username' is required",
-            ));
-        }
-
-        if let Some(uv) = self.user_values {
-            if config.birthdate == UserValueConfigValue::Required
-                && (uv.birthdate.is_none() || uv.birthdate.as_deref() == Some(""))
-            {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "'birthdate' is required",
-                ));
-            }
-            if config.street == UserValueConfigValue::Required
-                && (uv.street.is_none() || uv.street.as_deref() == Some(""))
-            {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "'street' is required",
-                ));
-            }
-            if config.zip == UserValueConfigValue::Required
-                && (uv.zip.is_none() || uv.zip.as_deref() == Some(""))
-            {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "'zip' is required",
-                ));
-            }
-            if config.city == UserValueConfigValue::Required
-                && (uv.city.is_none() || uv.city.as_deref() == Some(""))
-            {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "'city' is required",
-                ));
-            }
-            if config.country == UserValueConfigValue::Required
-                && (uv.country.is_none() || uv.country.as_deref() == Some(""))
-            {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "'country' is required",
-                ));
-            }
-            if config.phone == UserValueConfigValue::Required
-                && (uv.phone.is_none() || uv.phone.as_deref() == Some(""))
-            {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "'phone' is required",
-                ));
-            }
-
-            if config.tz == UserValueConfigValue::Required
-                && (uv.tz.is_none() || uv.tz.as_deref() == Some(""))
-            {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "'tz' is required",
-                ));
-            }
-            if let Some(tz) = &uv.tz
-                && chrono_tz::Tz::from_str(tz).is_err()
-            {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "'tz' cannot be parsed",
-                ));
-            }
-        }
-
-        Ok(())
-    }
 }

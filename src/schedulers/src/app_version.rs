@@ -17,9 +17,7 @@ pub async fn app_version_check() {
 
     let mut last_version_notification = None;
 
-    // do a first check shortly after startup to not wait hours on a fresh install
-    tokio::time::sleep(Duration::from_secs(120)).await;
-    check_app_version(&mut last_version_notification).await;
+    tokio::time::sleep(Duration::from_secs(10)).await;
 
     let mut interval = tokio::time::interval(Duration::from_secs(3595 * 8));
     loop {
