@@ -164,6 +164,8 @@
         let nonce = generateNonce() || genKey(64);
         const redirect_uri = `${window.location.origin}${REDIRECT_URI}`;
 
+        isLoading = true;
+
         let payload: ProviderLoginRequest = {
             email: undefined,
             client_id: 'rauthy',
