@@ -284,6 +284,7 @@ export const I18nZh: I18n = {
         email: '电子邮件',
         emailBadFormat: '错误的电子邮件地址格式',
         emailCheck: '请检查您的电子邮件收件箱',
+        orRegisterWith: 'or register with',
         regexName: '姓名应为2-32个非特殊字符',
         register: '注册',
         success: '注册成功',

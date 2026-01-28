@@ -308,6 +308,7 @@ export const I18nUk: I18n = {
         email: 'E-Mail',
         emailBadFormat: 'Неправильний формат E-Mail',
         emailCheck: 'Будь ласка, перевірте вашу поштову скриньку',
+        orRegisterWith: 'or register with',
         regexName: "Ім'я повинно містити 2 - 32 символи, без спецсимволів",
         register: 'Зареєструватися',
         success: 'Реєстрація успішна',

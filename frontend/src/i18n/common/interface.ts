@@ -257,6 +257,7 @@ export interface I18n {
         email: string;
         emailBadFormat: string;
         emailCheck: string;
+        orRegisterWith: string;
         regexName: string;
         register: string;
         success: string;

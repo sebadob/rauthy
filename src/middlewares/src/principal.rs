@@ -15,7 +15,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::future::{Ready, ready};
 use std::rc::Rc;
-use tracing::debug;
+use tracing::{debug, trace};
 
 pub struct RauthyPrincipalMiddleware;
 
@@ -152,7 +152,7 @@ async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>
                     Ok(None)
                 }
             } else {
-                debug!("Access to {} with invalid Session", req.path());
+                trace!("Access to {} with invalid Session", req.path());
                 Ok(None)
             }
         }

@@ -1093,7 +1093,7 @@ pub struct UserRegisterHtml<'a> {
 }
 
 impl UserRegisterHtml<'_> {
-    pub fn build(lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64, auth_providers: HtmlTemplate) -> String {
         UserRegisterHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
@@ -1108,6 +1108,7 @@ impl UserRegisterHtml<'_> {
                         .unwrap_or_default(),
                 ),
                 HtmlTemplate::UserValues,
+                auth_providers,
             ],
         }
         .render()

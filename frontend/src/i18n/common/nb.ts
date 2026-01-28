@@ -299,6 +299,7 @@ export const I18nNb: I18n = {
         email: 'E-post',
         emailBadFormat: 'Ugyldig e-postformat',
         emailCheck: 'Vennligst sjekk e-postinnboksen din',
+        orRegisterWith: 'or register with',
         regexName: 'Navn med 2 - 32 bokstaver uten spesialtegn',
         register: 'Registrer',
         success: 'Registrering vellykket',

@@ -11,6 +11,7 @@ function b64UrlEncode(string: string) {
 
 export async function generatePKCE(): Promise<undefined | PKCE> {
     if (!isBrowser() || window.crypto?.subtle == undefined) {
+        console.error('Error generating PKCE challenge - are you in a secure browser context?');
         return;
     }
 

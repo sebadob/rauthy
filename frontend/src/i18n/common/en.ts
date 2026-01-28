@@ -302,6 +302,7 @@ export const I18nEn: I18n = {
         email: 'E-Mail',
         emailBadFormat: 'Bad E-Mail format',
         emailCheck: 'Please check your E-Mail inbox',
+        orRegisterWith: 'or register with',
         regexName: 'Name should have 2 - 32 non-special characters',
         register: 'Register',
         success: 'Registration successful',
