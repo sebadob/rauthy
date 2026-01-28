@@ -1,11 +1,11 @@
 # Upstream Authentication Provider
 
 Rauthy works with upstream authentication providers, if you are using one already.  
-The configuration is pretty straightforward and will be shown with Github in this example.
+The configuration is pretty straightforward and will be shown with GitHub in this example.
 
 1. Create a new client on your upstream provider.
 
-In case of Github, open the `Settings` for your account,  
+In case of GitHub, open the `Settings` for your account,  
 then navigate to `Developer Settings`  
 and `OAuth Apps` -> `Register a new application`
 

@@ -11,7 +11,7 @@ use validator::Validate;
 #[serde(rename_all = "lowercase")]
 pub enum AuthProviderType {
     Custom,
-    Github,
+    GitHub,
     Google,
     OIDC,
 }

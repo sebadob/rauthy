@@ -273,7 +273,7 @@ pub async fn login_finish<'a>(
             let res_bytes = res.bytes().await?;
             let mut claims = AuthProviderIdClaims::try_from(res_bytes.as_ref())?;
 
-            if claims.email.is_none() && provider.typ == AuthProviderType::Github {
+            if claims.email.is_none() && provider.typ == AuthProviderType::GitHub {
                 cust_impls::get_github_private_email(&access_token, &mut claims).await?;
             }
 

@@ -3453,15 +3453,15 @@ Rauthy. It should work everywhere else though.</p>
 </div>
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="upstream-authentication-providers"><a class="header" href="#upstream-authentication-providers">Upstream Authentication Providers</a></h1>
-<p>This section is about upstream authentication providers, for instance things like <strong>Sign in with Github</strong>.</p>
-<p>This feature can be considered "in beta state" and the only setup guide is for Github for now.<br />
+<p>This section is about upstream authentication providers, for instance things like <strong>Sign in with GitHub</strong>.</p>
+<p>This feature can be considered "in beta state" and the only setup guide is for GitHub for now.<br />
 Additional ones may come, when people are using other providers and give feedback or actually contribute to these docs.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="github-provider"><a class="header" href="#github-provider">Github Provider</a></h1>
-<p>To set up Github as an upstream provider for Rauthy, you have pretty little things to do.<br />
-Rauthy includes a Template for Github already, which makes this whole process pretty simple.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="github-provider"><a class="header" href="#github-provider">GitHub Provider</a></h1>
+<p>To set up GitHub as an upstream provider for Rauthy, you have pretty little things to do.<br />
+Rauthy includes a Template for GitHub already, which makes this whole process pretty simple.</p>
 <h2 id="create-an-oauth-app"><a class="header" href="#create-an-oauth-app">Create an OAuth App</a></h2>
 <ol>
-<li>Log in to your Github account</li>
+<li>Log in to your GitHub account</li>
 <li>Navigate to
 <a href="https://github.com/settings/applications/new">Settings -&gt; Developer Settings -&gt; OAuth Apps -&gt; Register a new application</a></li>
 <li>Provide any name for your application. This is not important for the flow, only for your users to recognize</li>
@@ -3480,22 +3480,22 @@ at <code>https://iam.example.com</code>, your callback URL would be <code>https:
 <h2 id="rauthy-provider-config"><a class="header" href="#rauthy-provider-config">Rauthy Provider Config</a></h2>
 <ol>
 <li>Log in to your Rauthy Admin UI, navigate to <code>Providers</code> and add a new provier.</li>
-<li>Choose <code>Github</code> as the <code>Type</code> and leave the Custom Root CA and insecure TLS unchecked.</li>
+<li>Choose <code>GitHub</code> as the <code>Type</code> and leave the Custom Root CA and insecure TLS unchecked.</li>
 </ol>
 <p><img src="auth_providers/img/2_rauthy_add_new.png" alt="1_github_app_create" /></p>
 <ol start="3">
 <li>The template pre-populates most of the inputs already for you. The only information you need to add here is
 <ul>
-<li><code>Client ID</code> -&gt; copy <code>Client ID</code> from the Github OAuth App page inside here</li>
-<li><code>Client Secret</code> -&gt; on Github, <code>Generate a new client secret</code> and copy &amp; paste the value</li>
-<li>you may edit the <code>Client Name</code> if you want something else than <code>Github</code></li>
+<li><code>Client ID</code> -&gt; copy <code>Client ID</code> from the GitHub OAuth App page inside here</li>
+<li><code>Client Secret</code> -&gt; on GitHub, <code>Generate a new client secret</code> and copy &amp; paste the value</li>
+<li>you may edit the <code>Client Name</code> if you want something else than <code>GitHub</code></li>
 </ul>
 </li>
 </ol>
 <p><img src="auth_providers/img/3_rauthy_provider_config.png" alt="1_github_app_create" /></p>
 <ol start="5">
 <li>Leave the rest untouched and hit <code>Save</code></li>
-<li>You should expand the saved Github provider in the Rauthy UI again after saving and upload a Logo for the Client.
+<li>You should expand the saved GitHub provider in the Rauthy UI again after saving and upload a Logo for the Client.
 Currently, Rauthy does not provide default Logos, though these might be added at some point. Just <code>UPLOAD LOGO</code> from
 your local disk.</li>
 </ol>
@@ -3692,7 +3692,7 @@ enabled, you would not even need an admin to be able to connect any new applicat
 reachable by Rauthy. The format must be parsable by Rauthy of course, which I will mention later. Whatever information
 you provide in this JSON document, Rauthy will use it to authenticate your login request with that very client. The
 most important part about this is, that the <code>client_id</code> <strong>must match</strong> the exact URI the document is hosted on.<br />
-For instance, let's say you have a JSON on a Github repo at
+For instance, let's say you have a JSON on a GitHub repo at
 <a href="https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json">https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json</a>
 , then the <code>client_id</code> <strong>must</strong> be</p>
 <pre><code>"client_id": "https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json"
@@ -3885,7 +3885,7 @@ If you want to configure some more things, keep reading.</p>
 </div>
 <div>
 <p>Rauthy fetches the document with an <code>Accept: application/json</code> header. This makes it possible to host your
-file on Github for instance and receive a valid JSON.</p>
+file on GitHub for instance and receive a valid JSON.</p>
 </div>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="e-mail-templates"><a class="header" href="#e-mail-templates">E-Mail Templates</a></h1>
 <p>The templates for E-Mails being sent by Rauthy are baked into the binary. This is the most efficient and fastest way
@@ -6625,7 +6625,7 @@ level_failed_login = 'info'
 # If set to 'true', it will disable the app version
 # checker. This is a scheduled task that looks up the
 # latest version periodically by doing a request to the
-# Github API to check the latest release. This ignores
+# GitHub API to check the latest release. This ignores
 # any type of prerelease and will only notify for a new stable.
 #
 # default: false

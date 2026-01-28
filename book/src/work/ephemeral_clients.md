@@ -40,7 +40,7 @@ The client definition exists in some JSON document that is hosted on some domain
 reachable by Rauthy. The format must be parsable by Rauthy of course, which I will mention later. Whatever information
 you provide in this JSON document, Rauthy will use it to authenticate your login request with that very client. The
 most important part about this is, that the `client_id` **must match** the exact URI the document is hosted on.  
-For instance, let's say you have a JSON on a Github repo at
+For instance, let's say you have a JSON on a GitHub repo at
 [https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json](https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json)
 , then the `client_id` **must** be
 
@@ -226,5 +226,5 @@ With this information, we can now build a complete example JSON with all the pos
 
 ```admonish hint
 Rauthy fetches the document with an <code>Accept: application/json</code> header. This makes it possible to host your
-file on Github for instance and receive a valid JSON.
+file on GitHub for instance and receive a valid JSON.
 ```
