@@ -66,7 +66,7 @@
         // maybe additional ones in the future like client_logo
     });
 
-    let modes: string[] = ['OIDC', 'Auto', 'Custom', 'Github', 'Google'];
+    let modes: string[] = ['OIDC', 'Auto', 'Custom', 'GitHub', 'Google'];
     let mode = $state(modes[0]);
     let isAuto = $derived(mode === 'Auto');
     let isCustom = $derived(mode === 'Custom');
@@ -87,8 +87,8 @@
             };
 
             switch (mode) {
-                case 'Github':
-                    // Github does not implement metadata lookup -> configure manually
+                case 'GitHub':
+                    // GitHub does not implement metadata lookup -> configure manually
                     config = {
                         enabled: true,
 
@@ -105,7 +105,7 @@
                         use_pkce: false,
 
                         // user defined values
-                        name: 'Github',
+                        name: 'GitHub',
                         client_id: '',
                         client_secret: '',
                         scope: 'user:email',

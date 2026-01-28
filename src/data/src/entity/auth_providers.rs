@@ -38,7 +38,7 @@ use utoipa::ToSchema;
 #[serde(rename_all = "lowercase")]
 pub enum AuthProviderType {
     Custom,
-    Github,
+    GitHub,
     Google,
     OIDC,
 }
@@ -47,7 +47,7 @@ impl AuthProviderType {
     pub fn as_str(&self) -> &str {
         match self {
             Self::Custom => "custom",
-            Self::Github => "github",
+            Self::GitHub => "github",
             Self::Google => "google",
             Self::OIDC => "oidc",
         }
@@ -60,7 +60,7 @@ impl TryFrom<&str> for AuthProviderType {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let slf = match value {
             "custom" => Self::Custom,
-            "github" => Self::Github,
+            "github" => Self::GitHub,
             "google" => Self::Google,
             "oidc" => Self::OIDC,
             _ => {
@@ -85,7 +85,7 @@ impl From<rauthy_api_types::auth_providers::AuthProviderType> for AuthProviderTy
     fn from(value: rauthy_api_types::auth_providers::AuthProviderType) -> Self {
         match value {
             rauthy_api_types::auth_providers::AuthProviderType::Custom => Self::Custom,
-            rauthy_api_types::auth_providers::AuthProviderType::Github => Self::Github,
+            rauthy_api_types::auth_providers::AuthProviderType::GitHub => Self::GitHub,
             rauthy_api_types::auth_providers::AuthProviderType::Google => Self::Google,
             rauthy_api_types::auth_providers::AuthProviderType::OIDC => Self::OIDC,
         }
@@ -96,7 +96,7 @@ impl From<AuthProviderType> for rauthy_api_types::auth_providers::AuthProviderTy
     fn from(value: AuthProviderType) -> Self {
         match value {
             AuthProviderType::Custom => Self::Custom,
-            AuthProviderType::Github => Self::Github,
+            AuthProviderType::GitHub => Self::GitHub,
             AuthProviderType::Google => Self::Google,
             AuthProviderType::OIDC => Self::OIDC,
         }

@@ -1514,7 +1514,7 @@ level_failed_login = 'info'
 # If set to 'true', it will disable the app version
 # checker. This is a scheduled task that looks up the
 # latest version periodically by doing a request to the
-# Github API to check the latest release. This ignores
+# GitHub API to check the latest release. This ignores
 # any type of prerelease and will only notify for a new stable.
 #
 # default: false
