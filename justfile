@@ -425,16 +425,16 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
 
     if [[ {{ push }} == "push" ]]; then
         {{ docker }} buildx build \
-            --build-arg CREATED=$NOW \
-            --build-arg VERSION=$TAG \
+            --build-arg CREATED="$NOW" \
+            --build-arg VERSION="$TAG" \
             -t {{ image }}:$TAG \
             --platform linux/amd64,linux/arm64 \
             --push \
             .
     else
         {{ docker }} buildx build \
-            --build-arg CREATED=$NOW \
-            --build-arg VERSION=$TAG \
+            --build-arg CREATED="$NOW" \
+            --build-arg VERSION="$TAG" \
             -t {{ image }}:$TAG \
             --platform linux/amd64,linux/arm64 \
             --load \

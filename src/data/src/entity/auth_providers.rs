@@ -539,6 +539,10 @@ impl AuthProvider {
     async fn invalidate_cache_all() -> Result<(), ErrorResponse> {
         DB::hql().delete(Cache::App, Self::cache_idx("all")).await?;
 
+        // We don't really need to clean all HTML caches, but rebuilding all of them
+        // is a lot easier to maintain and auth providers are not updated often anyway.
+        DB::hql().clear_cache(Cache::Html).await?;
+
         // Directly update the template cache preemptively.
         // This is needed all the time anyway.
         AuthProviderTemplate::update_cache().await?;
@@ -760,7 +764,11 @@ impl AuthProviderTemplate {
             return Ok(slf);
         }
 
-        let providers = AuthProvider::find_all().await?;
+        let providers = AuthProvider::find_all()
+            .await?
+            .into_iter()
+            .filter(|p| p.enabled)
+            .collect::<Vec<_>>();
         let mut slf = Vec::with_capacity(providers.len());
         for provider in providers {
             let updated = Logo::find_cached(&provider.id, &LogoType::AuthProvider)
