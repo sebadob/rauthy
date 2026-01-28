@@ -122,7 +122,7 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
                 let json = resp.json::<value::Value>().await.map_err(|err| {
                     ErrorResponse::new(
                         ErrorResponseType::Internal,
-                        format!("decoding Github response JSON: {err:?}"),
+                        format!("decoding GitHub response JSON: {err:?}"),
                     )
                 })?;
 

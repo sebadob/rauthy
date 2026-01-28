@@ -7,7 +7,7 @@ use serde::Deserialize;
 use tracing::debug;
 
 #[derive(Debug, Deserialize)]
-struct GithubEmailPrivateResponse {
+struct GitHubEmailPrivateResponse {
     email: String,
     primary: bool,
     verified: bool,
@@ -15,22 +15,22 @@ struct GithubEmailPrivateResponse {
     // visibility: Option<String>,
 }
 
-/// Github is very special and does its own thing, which is super annoying.
+/// GitHub is very special and does its own thing, which is super annoying.
 /// If a user has no public E-Mail and changed the visibility settings, the
 /// user info endpoint will not return any address, even if a valid access token
 /// has been provided. In this case, there is another special endpoint only for
 /// E-Mail addresses which needs to be used to actually retrieve the address.
-/// This means we need a 3rd request to Github.
+/// This means we need a 3rd request to GitHub.
 ///
 /// Note: The user endpoint is hardcoded because it is very unlikely to ever
 /// change in the future. If we allowed this to be customizable, everything
-/// would get super messy. If the Github API ever updates, we just need to update
+/// would get super messy. If the GitHub API ever updates, we just need to update
 /// the URL here as well.
 pub async fn get_github_private_email(
     access_token: &str,
     claims: &mut AuthProviderIdClaims<'_>,
 ) -> Result<(), ErrorResponse> {
-    debug!("Trying to get User E-Mail via Github /user/emails endpoint");
+    debug!("Trying to get User E-Mail via GitHub /user/emails endpoint");
 
     let res = http_client()
         .get("https://api.github.com/user/emails")
@@ -44,7 +44,7 @@ pub async fn get_github_private_email(
     debug!("GET /user/emails status: {status}\n{res:?}");
 
     if status < 300 {
-        let mut emails = res.json::<Vec<GithubEmailPrivateResponse>>().await?;
+        let mut emails = res.json::<Vec<GitHubEmailPrivateResponse>>().await?;
         debug!("GET /user/emails status: {status}");
 
         if emails.len() == 1 {
@@ -64,7 +64,7 @@ pub async fn get_github_private_email(
 
         Err(ErrorResponse::new(
             ErrorResponseType::Internal,
-            "Could not find a the primary user E-Mail in Github response",
+            "Could not find a the primary user E-Mail in GitHub response",
         ))
     } else {
         let text = res.text().await?;

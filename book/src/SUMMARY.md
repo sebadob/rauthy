@@ -24,7 +24,7 @@
     - [Tuning](config/tuning.md)
 
 - [Authentication Providers](auth_providers/index.md)
-    - [Github](./auth_providers/github.md)
+    - [GitHub](./auth_providers/github.md)
 
 - [Working with Rauthy](work/index.md)
     - [API Keys](work/api_keys.md)

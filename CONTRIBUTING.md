@@ -352,7 +352,7 @@ your local registry.
 > do a release build, especially twice. Just as a reference, on my Ryzen 9950X it currently takes ~10 minutes.
 
 > There is a `just build-builder` recipe, which you don't need to worry about. A new builder is only built when e.g. a
-> new Rust version needs to be used. Just use the existing builder image from Github, which is the default anyway.
+> new Rust version needs to be used. Just use the existing builder image from GitHub, which is the default anyway.
 
 ## Updating the Book
 
@@ -368,7 +368,7 @@ Once installed:
 - `mdbook serve --open`
 
 You can then update the `*.md` files in `book/src`. It should be pretty self-explanatory.
-`just build-docs` will rebuild them and make them available on Github after merging.
+`just build-docs` will rebuild them and make them available on GitHub after merging.
 
 ## Before Submitting a PR
 

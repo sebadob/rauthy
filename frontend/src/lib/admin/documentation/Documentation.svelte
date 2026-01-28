@@ -29,6 +29,6 @@
 
     <p>
         {ta.docs.source}:
-        <A href="https://github.com/sebadob/rauthy" target="_blank">Github</A>
+        <A href="https://github.com/sebadob/rauthy" target="_blank">GitHub</A>
     </p>
 </ContentAdmin>
