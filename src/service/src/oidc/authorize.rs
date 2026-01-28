@@ -1,3 +1,4 @@
+use crate::user_values_validator::UserValuesValidator;
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
@@ -219,6 +220,7 @@ pub(crate) async fn finish_authorize(
     if need_tos_accept {
         code_lifetime += config.vars.tos.accept_timeout as i32;
     }
+    let needs_user_update = UserValuesValidator::does_user_need_update(&user, &client.id).await?;
 
     let code = AuthCode::new(
         user.id.clone(),
@@ -264,6 +266,7 @@ pub(crate) async fn finish_authorize(
                 auth_code: code.id,
                 auth_code_lifetime: client.auth_code_lifetime,
             }),
+            needs_user_update,
         }
         .save()
         .await?;
@@ -298,6 +301,7 @@ pub(crate) async fn finish_authorize(
                 header_loc: (header::LOCATION, HeaderValue::from_str(&header_loc)?),
                 header_csrf: Session::get_csrf_header(&session.csrf_token),
                 header_origin: data.header_origin,
+                needs_user_update,
             }))
         }
     }

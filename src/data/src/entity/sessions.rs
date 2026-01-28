@@ -22,7 +22,7 @@ use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
 use std::ops::Add;
 use std::str::FromStr;
-use tracing::{debug, warn};
+use tracing::{debug, trace, warn};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Session {
@@ -696,7 +696,7 @@ impl Session {
                     return true;
                 }
 
-                debug!(
+                trace!(
                     "Session in Init state used on invalid path: {:?} -> {}",
                     self, req_path
                 );

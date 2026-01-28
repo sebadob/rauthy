@@ -600,19 +600,35 @@ impl WebauthnAdditionalData {
                     header::LOCATION,
                     HeaderValue::from_str(&login_req.header_loc).unwrap(),
                 );
-                let body = WebauthnLoginFinishResponse {
-                    loc: login_req.header_loc,
+                // let body = WebauthnLoginFinishResponse {
+                //     loc: login_req.header_loc,
+                // };
+
+                let mut builder = if login_req.needs_user_update {
+                    HttpResponse::ResetContent()
+                } else {
+                    let mut builder = HttpResponse::Accepted();
+                    builder.insert_header(header_loc);
+                    builder
                 };
-                let mut res = HttpResponse::Accepted()
-                    .insert_header(header_loc)
-                    .json(body);
+
+                // let mut res = HttpResponse::Accepted()
+                //     .insert_header(header_loc)
+                //     .json(body);
                 if let Some(value) = login_req.header_origin {
-                    res.headers_mut().insert(
+                    builder.insert_header((
                         header::ACCESS_CONTROL_ALLOW_ORIGIN,
                         HeaderValue::from_str(&value).unwrap(),
-                    );
+                    ));
                 }
-                res
+
+                if login_req.needs_user_update {
+                    builder.finish()
+                } else {
+                    builder.json(WebauthnLoginFinishResponse {
+                        loc: login_req.header_loc,
+                    })
+                }
             }
 
             Self::Service(svc_req) => HttpResponse::Accepted().json(svc_req),
@@ -652,6 +668,7 @@ pub struct WebauthnLoginReq {
     pub header_loc: String,
     pub header_origin: Option<String>,
     pub tos_await_data: Option<WebauthnToSAwaitData>,
+    pub needs_user_update: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

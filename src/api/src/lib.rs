@@ -105,10 +105,18 @@ pub async fn map_auth_step(
 
     match auth_step {
         AuthStep::LoggedIn(res) => {
-            let mut builder = HttpResponse::Accepted();
+            let mut builder = if res.needs_user_update {
+                HttpResponse::ResetContent()
+            } else {
+                let mut builder = HttpResponse::Accepted();
+                builder.insert_header(res.header_loc);
+                builder
+            };
+
+            // let mut builder = HttpResponse::Accepted();
             builder
                 .insert_header(fed_cm_header)
-                .insert_header(res.header_loc)
+                // .insert_header(res.header_loc)
                 .insert_header(res.header_csrf);
 
             if let Some(origin) = res.header_origin {

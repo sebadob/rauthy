@@ -171,6 +171,9 @@ export const I18nNb: I18n = {
         invalidKeyUsed: 'Ugyldig sikkerhetsnøkkel',
         login: 'Logg inn',
         mfaAck: 'Bekreftet',
+        navigateToAccount: 'Account Dashboard',
+        needsUserUpdate: `Some information for this account is missing. You need to update these 
+            values before you can proceed with the login.`,
         orLoginWith: 'eller logg inn med',
         password: 'Passord',
         passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',

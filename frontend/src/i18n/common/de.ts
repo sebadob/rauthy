@@ -178,6 +178,9 @@ export const I18nDe: I18n = {
         invalidKeyUsed: 'Ungültiger Sicherheitsschlüssel',
         login: 'Login',
         mfaAck: 'Bestätigt',
+        navigateToAccount: 'Account Dashboard',
+        needsUserUpdate: `Es fehlen Informationen zum Account. Diese benötigen ein Update, bevor
+            mit dem Login fortgefahren werden kann.`,
         orLoginWith: 'oder einloggen mit',
         password: 'Password',
         passwordExpired:
