@@ -852,6 +852,11 @@ pub struct AuthProviderIdClaims<'a> {
     pub locale: Option<Cow<'a, str>>,
     pub phone: Option<Cow<'a, str>>,
 
+    // some providers (e.g. Github) provide the username as `login`
+    pub login: Option<Cow<'a, str>>,
+    pub preferred_username: Option<Cow<'a, str>>,
+    pub zoneinfo: Option<Cow<'a, str>>,
+
     pub json_bytes: Option<&'a [u8]>,
 }
 
@@ -1257,6 +1262,31 @@ impl AuthProviderIdClaims<'_> {
             }
             found_values = true;
         }
+        if let Some(tz) = &self.zoneinfo {
+            user_values.tz = Some(tz.to_string());
+            found_values = true;
+        }
+
+        let preferred_username = if let Some(username) = &self.preferred_username {
+            UserValues::validate_preferred_username_free(username.to_string())
+                .await
+                .is_ok()
+                .then_some(username.to_string())
+        } else if let Some(username) = &self.login {
+            UserValues::validate_preferred_username_free(username.to_string())
+                .await
+                .is_ok()
+                .then_some(username.to_string())
+        } else {
+            None
+        };
+        if let Some(username) = preferred_username {
+            // We ignore the result in case of a race condition.
+            // Better continue without setting the username than failing.
+            // The user can edit it later on anyway.
+            let _ = UserValues::upsert_preferred_username(user.id.clone(), username).await;
+        }
+
         if found_values {
             UserValues::upsert(user.id.clone(), user_values).await?;
         }
