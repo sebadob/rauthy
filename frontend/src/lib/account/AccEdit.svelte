@@ -105,6 +105,16 @@
             }
             user = res.body;
 
+            if (!user.user_values.birthdate) {
+                user.user_values.birthdate = '';
+            }
+            if (!user.user_values.preferred_username) {
+                user.user_values.preferred_username = '';
+            }
+            if (!user.user_values.tz) {
+                user.user_values.tz = 'UTC';
+            }
+
             let timer = 3000;
             if (res.status === 202) {
                 successEmailConfirm = true;
