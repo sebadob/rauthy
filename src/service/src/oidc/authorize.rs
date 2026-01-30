@@ -117,7 +117,7 @@ pub async fn post_authorize(
     finish_authorize(
         user,
         client,
-        &session,
+        &mut session,
         AuthorizeData {
             redirect_uri: req_data.redirect_uri,
             scopes: req_data.scopes,
@@ -135,7 +135,7 @@ pub async fn post_authorize(
 }
 
 pub async fn post_authorize_refresh(
-    session: &Session,
+    mut session: Session,
     client: Client,
     header_origin: Option<(HeaderName, HeaderValue)>,
     req_data: LoginRefreshRequest,
@@ -156,7 +156,7 @@ pub async fn post_authorize_refresh(
     finish_authorize(
         user,
         client,
-        session,
+        &mut session,
         AuthorizeData {
             redirect_uri: req_data.redirect_uri,
             scopes: req_data.scopes,
@@ -190,7 +190,7 @@ pub(crate) struct AuthorizeData {
 pub(crate) async fn finish_authorize(
     user: User,
     client: Client,
-    session: &Session,
+    session: &mut Session,
     data: AuthorizeData,
     user_needs_mfa: Option<&mut bool>,
     provider_mfa_login: Option<ProviderMfaLogin>,
@@ -274,6 +274,7 @@ pub(crate) async fn finish_authorize(
         Ok(AuthStep::AwaitWebauthn(step))
     } else {
         // password only account
+        session.set_authenticated(&user).await?;
 
         if need_tos_accept {
             let code_await = AuthCodeToSAwait {

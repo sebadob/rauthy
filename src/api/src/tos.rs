@@ -267,11 +267,11 @@ async fn handle_tos_accept_deny(
     code_await.delete().await?;
 
     let mut builder = if code_await.needs_user_update {
-        let mut builder = HttpResponse::ResetContent();
+        HttpResponse::ResetContent()
+    } else {
+        let mut builder = HttpResponse::Accepted();
         builder.insert_header((LOCATION, code_await.header_loc));
         builder
-    } else {
-        HttpResponse::Accepted()
     };
 
     if let Some(value) = code_await.header_origin {

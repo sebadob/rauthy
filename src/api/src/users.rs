@@ -1377,6 +1377,7 @@ pub async fn post_webauthn_auth_finish(
     id: web::Path<String>,
     req: HttpRequest,
     browser_id: BrowserId,
+    principal: ReqPrincipal,
     Json(payload): Json<WebauthnAuthFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
@@ -1388,7 +1389,8 @@ pub async fn post_webauthn_auth_finish(
     // This here will simply fail, if the secret code from the /start does not exist
     // -> indirect validation through exising code.
 
-    let res = webauthn::auth_finish(id, &req, browser_id, payload).await?;
+    let principal = principal.into_inner();
+    let res = webauthn::auth_finish(id, &req, browser_id, principal.session, payload).await?;
     Ok(res.into_response())
 }
 

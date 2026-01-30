@@ -312,7 +312,7 @@ pub async fn login_finish<'a>(
     let auth_step = oidc::authorize::finish_authorize(
         user,
         client,
-        &session,
+        &mut session,
         AuthorizeData {
             redirect_uri: slf.req_redirect_uri,
             scopes: slf.req_scopes,

@@ -14,6 +14,7 @@
     import { IS_DEV } from '$utils/constants';
     import type { ToSAwaitLoginResponse, ToSLatestResponse } from '$api/types/tos';
     import TosAccept from '$lib/TosAccept.svelte';
+    import ContentCenter from '$lib/ContentCenter.svelte';
 
     let t = useI18n();
     let clientMfaForce = $state(false);
@@ -25,6 +26,7 @@
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
     let tosForceAccept = $state(false);
+    let needsValuesUpdate = $state(false);
 
     onMount(async () => {
         let pErr = useParam('error').get();
@@ -90,6 +92,9 @@
         } else if (res.status === 204) {
             // in case of a 204, we have done a user federation on an existing account -> just redirect
             window.location.replace('/auth/v1/account');
+        } else if (res.status === 205) {
+            // -> all good, password only account, user needs to update some values
+            needsValuesUpdate = true;
         } else if (res.status === 206) {
             // login successful, but the user needs to accept updated ToS
             let body = res.body as ToSAwaitLoginResponse;
@@ -138,6 +143,13 @@
     }
 
     function onWebauthnSuccess(data?: WebauthnAdditionalData) {
+        if (!data) {
+            // will be empty if the user needs to update values
+            mfaPurpose = undefined;
+            needsValuesUpdate = true;
+            return;
+        }
+
         if (data && 'loc' in data) {
             window.location.replace(data.loc as string);
         }
@@ -148,30 +160,39 @@
     <title>Callback</title>
 </svelte:head>
 
-{#if mfaPurpose && userId}
-    <WebauthnRequest
-        {userId}
-        purpose={mfaPurpose}
-        onSuccess={onWebauthnSuccess}
-        onError={onWebauthnError}
-    />
-{:else if clientMfaForce}
-    <div class="btn flex-col">
-        <Button onclick={() => (window.location.href = '/auth/v1/account')}>Account</Button>
-    </div>
-{:else if tos}
-    <TosAccept
-        {tos}
-        forceAccept={tosForceAccept}
-        {tosAcceptCode}
-        onToSAccept={handleAuthRes}
-        {onToSCancel}
-    />
-{:else if error}
-    <div class="err">
-        {error}
-    </div>
-{/if}
+<ContentCenter>
+    {#if mfaPurpose && userId}
+        <WebauthnRequest
+            {userId}
+            purpose={mfaPurpose}
+            onSuccess={onWebauthnSuccess}
+            onError={onWebauthnError}
+        />
+    {:else if clientMfaForce}
+        <div class="btn flex-col">
+            <Button onclick={() => (window.location.href = '/auth/v1/account')}>Account</Button>
+        </div>
+    {:else if needsValuesUpdate}
+        <div>
+            <p>{t.authorize.needsUserUpdate}</p>
+            <Button onclick={() => window.location.replace('/auth/v1/account')}>
+                {t.authorize.navigateToAccount}
+            </Button>
+        </div>
+    {:else if tos}
+        <TosAccept
+            {tos}
+            forceAccept={tosForceAccept}
+            {tosAcceptCode}
+            onToSAccept={handleAuthRes}
+            {onToSCancel}
+        />
+    {:else if error}
+        <div class="err">
+            {error}
+        </div>
+    {/if}
+</ContentCenter>
 
 <ThemeSwitch absolute />
 <LangSelector absolute />

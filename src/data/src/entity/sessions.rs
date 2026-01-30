@@ -1,5 +1,6 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
+use crate::entity::auth_codes::AuthCode;
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
@@ -489,6 +490,20 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
         };
 
         Ok(res)
+    }
+
+    #[inline]
+    pub async fn set_authenticated(&mut self, user: &User) -> Result<(), ErrorResponse> {
+        self.last_seen = Utc::now().timestamp();
+        self.state = SessionState::Auth;
+        if let Err(err) = self.validate_user_expiry(&user) {
+            return Err(err);
+        }
+        self.user_id = Some(user.id.clone());
+        self.roles = Some(user.roles.clone());
+        self.groups = user.groups.clone();
+        self.upsert().await?;
+        Ok(())
     }
 }
 

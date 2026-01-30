@@ -756,8 +756,14 @@ pub async fn post_mfa_finish(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let resp =
-        webauthn::auth_finish(payload.user_id, &req, BrowserId::default(), payload.data).await?;
+    let resp = webauthn::auth_finish(
+        payload.user_id,
+        &req,
+        BrowserId::default(),
+        None,
+        payload.data,
+    )
+    .await?;
     Ok(resp.into_response())
 }
 
