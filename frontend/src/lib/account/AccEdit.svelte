@@ -16,16 +16,16 @@
     import { fetchDelete, fetchGet, fetchPut } from '$api/fetch';
     import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
-    import { TPL_USER_VALUES_CONFIG } from '$utils/constants';
-    import Template from '$lib/Template.svelte';
     import { onMount } from 'svelte';
     import TZSelect from '$lib/TZSelect.svelte';
     import PreferredUsername from '$lib/PreferredUsername.svelte';
 
     let {
+        config,
         user = $bindable(),
         viewModePhone,
     }: {
+        config: undefined | UserValuesConfig;
         user: UserResponse;
         viewModePhone?: boolean;
     } = $props();
@@ -46,7 +46,6 @@
     let success = $state(false);
     let successEmailConfirm = $state(false);
 
-    let config: undefined | UserValuesConfig = $state();
     let canSelfDelete = $state(false);
     let showDeleteConfirm = $state(false);
     let deleteConfirmValue = $state('');
@@ -106,6 +105,16 @@
             }
             user = res.body;
 
+            if (!user.user_values.birthdate) {
+                user.user_values.birthdate = '';
+            }
+            if (!user.user_values.preferred_username) {
+                user.user_values.preferred_username = '';
+            }
+            if (!user.user_values.tz) {
+                user.user_values.tz = 'UTC';
+            }
+
             let timer = 3000;
             if (res.status === 202) {
                 successEmailConfirm = true;
@@ -128,8 +137,6 @@
         }
     }
 </script>
-
-<Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
 
 <div class="container">
     {#if config}

@@ -22,7 +22,7 @@ use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
 use std::ops::Add;
 use std::str::FromStr;
-use tracing::{debug, warn};
+use tracing::{debug, trace, warn};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Session {
@@ -490,6 +490,18 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
 
         Ok(res)
     }
+
+    #[inline]
+    pub async fn set_authenticated(&mut self, user: &User) -> Result<(), ErrorResponse> {
+        self.last_seen = Utc::now().timestamp();
+        self.state = SessionState::Auth;
+        self.validate_user_expiry(user)?;
+        self.user_id = Some(user.id.clone());
+        self.roles = Some(user.roles.clone());
+        self.groups = user.groups.clone();
+        self.upsert().await?;
+        Ok(())
+    }
 }
 
 impl Session {
@@ -696,7 +708,7 @@ impl Session {
                     return true;
                 }
 
-                debug!(
+                trace!(
                     "Session in Init state used on invalid path: {:?} -> {}",
                     self, req_path
                 );

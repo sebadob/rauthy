@@ -14,7 +14,7 @@ use rauthy_data::entity::auth_codes::AuthCode;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_dyn::ClientDyn;
 use rauthy_data::entity::dpop_proof::DPoPProof;
-use rauthy_data::entity::sessions::{Session, SessionState};
+use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::user_login_states::UserLoginState;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
@@ -168,22 +168,13 @@ pub async fn grant_type_authorization_code(
     )
     .await?;
 
+    code.delete().await?;
+
     // update session metadata
     if let Some(sid) = code.session_id.clone() {
         let mut session = Session::find(sid).await?;
-
-        session.last_seen = Utc::now().timestamp();
-        session.state = SessionState::Auth;
-        if let Err(err) = session.validate_user_expiry(&user) {
-            code.delete().await?;
-            return Err(err);
-        }
-        session.user_id = Some(user.id.clone());
-        session.roles = Some(user.roles.clone());
-        session.groups = user.groups.clone();
-        session.upsert().await?;
+        session.set_authenticated(&user).await?;
     }
-    code.delete().await?;
 
     if client.is_dynamic() {
         ClientDyn::update_used(&client.id).await?;

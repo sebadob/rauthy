@@ -778,6 +778,7 @@ impl Default for Vars {
                 country: UserValueConfigValue::Optional,
                 phone: UserValueConfigValue::Optional,
                 tz: UserValueConfigValue::Optional,
+                revalidate_during_login: false,
                 preferred_username: VarsUserPreferredUsername {
                     preferred_username: UserValueConfigValue::Optional,
                     immutable: true,
@@ -2708,6 +2709,15 @@ impl Vars {
             self.user_values.tz = UserValueConfigValue::from(v.as_str());
         }
 
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_values",
+            "revalidate_during_login",
+            "USER_VALUES_REVALIDATE_DURING_LOGIN",
+        ) {
+            self.user_values.revalidate_during_login = v;
+        }
+
         let mut table = t_table(&mut table, "preferred_username");
 
         if let Some(v) = t_str(
@@ -3312,6 +3322,7 @@ pub struct VarsUserValuesConfig {
     pub country: UserValueConfigValue,
     pub phone: UserValueConfigValue,
     pub tz: UserValueConfigValue,
+    pub revalidate_during_login: bool,
     pub preferred_username: VarsUserPreferredUsername,
 }
 

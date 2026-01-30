@@ -1,3 +1,4 @@
+use crate::user_values_validator::UserValuesValidator;
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
@@ -116,7 +117,7 @@ pub async fn post_authorize(
     finish_authorize(
         user,
         client,
-        &session,
+        &mut session,
         AuthorizeData {
             redirect_uri: req_data.redirect_uri,
             scopes: req_data.scopes,
@@ -134,7 +135,7 @@ pub async fn post_authorize(
 }
 
 pub async fn post_authorize_refresh(
-    session: &Session,
+    mut session: Session,
     client: Client,
     header_origin: Option<(HeaderName, HeaderValue)>,
     req_data: LoginRefreshRequest,
@@ -155,7 +156,7 @@ pub async fn post_authorize_refresh(
     finish_authorize(
         user,
         client,
-        session,
+        &mut session,
         AuthorizeData {
             redirect_uri: req_data.redirect_uri,
             scopes: req_data.scopes,
@@ -189,7 +190,7 @@ pub(crate) struct AuthorizeData {
 pub(crate) async fn finish_authorize(
     user: User,
     client: Client,
-    session: &Session,
+    session: &mut Session,
     data: AuthorizeData,
     user_needs_mfa: Option<&mut bool>,
     provider_mfa_login: Option<ProviderMfaLogin>,
@@ -219,6 +220,7 @@ pub(crate) async fn finish_authorize(
     if need_tos_accept {
         code_lifetime += config.vars.tos.accept_timeout as i32;
     }
+    let needs_user_update = UserValuesValidator::does_user_need_update(&user, &client.id).await?;
 
     let code = AuthCode::new(
         user.id.clone(),
@@ -264,6 +266,7 @@ pub(crate) async fn finish_authorize(
                 auth_code: code.id,
                 auth_code_lifetime: client.auth_code_lifetime,
             }),
+            needs_user_update,
         }
         .save()
         .await?;
@@ -271,6 +274,7 @@ pub(crate) async fn finish_authorize(
         Ok(AuthStep::AwaitWebauthn(step))
     } else {
         // password only account
+        session.set_authenticated(&user).await?;
 
         if need_tos_accept {
             let code_await = AuthCodeToSAwait {
@@ -282,6 +286,7 @@ pub(crate) async fn finish_authorize(
                     .header_origin
                     .as_ref()
                     .map(|(_, v)| v.to_str().unwrap().to_string()),
+                needs_user_update,
             };
             code_await.save().await?;
 
@@ -298,6 +303,7 @@ pub(crate) async fn finish_authorize(
                 header_loc: (header::LOCATION, HeaderValue::from_str(&header_loc)?),
                 header_csrf: Session::get_csrf_header(&session.csrf_token),
                 header_origin: data.header_origin,
+                needs_user_update,
             }))
         }
     }

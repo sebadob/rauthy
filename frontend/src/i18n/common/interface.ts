@@ -139,6 +139,8 @@ export interface I18n {
         invalidKeyUsed: string;
         login: string;
         mfaAck: string;
+        navigateToAccount: string;
+        needsUserUpdate: string;
         orLoginWith: string;
         password: string;
         passwordExpired: string;

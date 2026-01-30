@@ -203,7 +203,7 @@ pub struct UpdateUserSelfRequest {
     pub user_values: Option<UserValuesRequest>,
 }
 
-#[derive(Default, PartialEq, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Default, PartialEq, Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UserValuesRequest {
     /// Validation: `[0-9]{4}-[0-9]{2}-[0-9]{2}`

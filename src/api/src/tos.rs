@@ -266,20 +266,25 @@ async fn handle_tos_accept_deny(
     auth_code.reset_exp(code_await.auth_code_lifetime).await?;
     code_await.delete().await?;
 
-    let mut resp = HttpResponse::Accepted()
-        .insert_header((LOCATION, code_await.header_loc))
-        .finish();
+    let mut builder = if code_await.needs_user_update {
+        HttpResponse::ResetContent()
+    } else {
+        let mut builder = HttpResponse::Accepted();
+        builder.insert_header((LOCATION, code_await.header_loc));
+        builder
+    };
+
     if let Some(value) = code_await.header_origin {
-        resp.headers_mut()
-            .insert(ORIGIN, HeaderValue::from_str(&value)?);
-        resp.headers_mut().insert(
+        builder.insert_header((ORIGIN, HeaderValue::from_str(&value)?));
+        builder.insert_header((
             ACCESS_CONTROL_ALLOW_METHODS,
             HeaderValue::from_static("POST"),
-        );
-        resp.headers_mut().insert(
+        ));
+        builder.insert_header((
             ACCESS_CONTROL_ALLOW_CREDENTIALS,
             HeaderValue::from_static("true"),
-        );
+        ));
     }
-    Ok(resp)
+
+    Ok(builder.finish())
 }

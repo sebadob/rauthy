@@ -395,8 +395,10 @@ pub async fn post_authorize_refresh(
     Json(payload): Json<LoginRefreshRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let session = principal.validate_session_auth()?;
+    principal.validate_session_auth()?;
     payload.validate()?;
+
+    let session = principal.into_inner().session.unwrap();
 
     let (client, header_origin) = validation::validate_auth_req_param(
         &req,

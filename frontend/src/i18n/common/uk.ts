@@ -178,6 +178,9 @@ export const I18nUk: I18n = {
         invalidKeyUsed: 'Недійсний ключ',
         login: 'Увійти',
         mfaAck: 'Підтверджено',
+        navigateToAccount: 'Account Dashboard',
+        needsUserUpdate: `Some information for this account is missing. You need to update these 
+            values before you can proceed with the login.`,
         orLoginWith: 'або увійдіть за допомогою',
         password: 'Пароль',
         passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',

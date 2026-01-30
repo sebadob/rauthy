@@ -44,6 +44,7 @@
     import type { ToSAwaitLoginResponse, ToSLatestResponse } from '$api/types/tos';
     import TosAccept from '$lib/TosAccept.svelte';
     import { execProviderLogin } from '$utils/login';
+    import Modal from '$lib/Modal.svelte';
 
     const inputWidth = '18rem';
 
@@ -100,6 +101,8 @@
 
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
+
+    let showModalUpdate = $state(false);
 
     onMount(() => {
         if (!needsPassword) {
@@ -311,6 +314,9 @@
             } else {
                 console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
             }
+        } else if (res.status === 205) {
+            // -> all good, password only account, user needs to update some values
+            showModalUpdate = true;
         } else if (res.status === 206) {
             // login successful, but the user needs to accept updated ToS
             let body = res.body as ToSAwaitLoginResponse;
@@ -437,6 +443,9 @@
 
     function onWebauthnSuccess(data?: WebauthnAdditionalData) {
         if (!data) {
+            // will be empty if the user needs to update values
+            mfaPurpose = undefined;
+            showModalUpdate = true;
             return;
         }
 
@@ -685,6 +694,13 @@
                         {/each}
                     </div>
                 {/if}
+
+                <Modal bind:showModal={showModalUpdate} strict>
+                    <p>{t.authorize.needsUserUpdate}</p>
+                    <Button onclick={() => window.location.replace('/auth/v1/account')}>
+                        {t.authorize.navigateToAccount}
+                    </Button>
+                </Modal>
             </div>
 
             <ThemeSwitch absolute />

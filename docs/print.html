@@ -7545,6 +7545,23 @@ storage_type = 'db'
 # default: 'optional'
 #tz = 'optional'
 
+# Controls if the value requirements should be re-validated during
+# each single login. In most cases, you don't want this. It will
+# trigger additional database queries during the login procedure,
+# which are unnnecessary in most situations.
+# However, if you decide to make the requirements more strict down
+# the road, or you use upstream auth providers which may not provide
+# all necessary values, you might want to enable this setting.
+#
+# If a mismatch is found during login, it will be prevented and a
+# message will be shown to the user with the information, that some
+# information is missing. Only when all required values are set,
+# logins will be allowed again.
+#
+# default: false
+# overwritten_by: USER_VALUES_REVALIDATE_DURING_LOGIN
+#revalidate_during_login = false
+
 [user_values.preferred_username]
 
 # If the `preferred_username` is not set for a given user, the

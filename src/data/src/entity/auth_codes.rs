@@ -118,6 +118,7 @@ pub struct AuthCodeToSAwait {
     pub auth_code_lifetime: i32,
     pub header_loc: String,
     pub header_origin: Option<String>,
+    pub needs_user_update: bool,
 }
 
 // CRUD

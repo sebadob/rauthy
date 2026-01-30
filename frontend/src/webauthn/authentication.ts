@@ -8,6 +8,7 @@ import type {
     WebauthnAuthStartResponse,
 } from './types.ts';
 import { base64UrlSafeToArrBuf } from './utils';
+import { untrack } from 'svelte';
 
 export interface WebauthnAuthResult {
     error?: string;
@@ -108,11 +109,14 @@ export async function webauthnAuth(
         payloadFinish,
     );
     // 202 -> normal success
+    // 205 -> Webauthn success during login, but needs user values updates
     // 206 -> Webauthn success during login, but needs additional ToS update accept
     if (resFinish.status === 202 || resFinish.status === 206) {
         return {
             data: resFinish.body,
         };
+    } else if (resFinish.status === 205) {
+        return {};
     } else {
         console.error(resFinish);
         return {
