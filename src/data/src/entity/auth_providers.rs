@@ -1268,23 +1268,21 @@ impl AuthProviderIdClaims<'_> {
         }
 
         let preferred_username = if let Some(username) = &self.preferred_username {
-            UserValues::validate_preferred_username_free(username.to_string())
-                .await
-                .is_ok()
-                .then_some(username.to_string())
-        } else if let Some(username) = &self.login {
-            UserValues::validate_preferred_username_free(username.to_string())
-                .await
-                .is_ok()
-                .then_some(username.to_string())
+            Some(username.to_string())
         } else {
-            None
+            self.login.as_ref().map(|l| l.to_string())
         };
         if let Some(username) = preferred_username {
-            // We ignore the result in case of a race condition.
-            // Better continue without setting the username than failing.
-            // The user can edit it later on anyway.
-            let _ = UserValues::upsert_preferred_username(user.id.clone(), username).await;
+            // Check via local read first, which is a lot cheaper than write through the Raft.
+            if UserValues::validate_preferred_username_free(username.clone())
+                .await
+                .is_ok()
+            {
+                // We ignore the result in case of a race condition.
+                // Better continue without setting the username than failing.
+                // The user can edit it later on anyway.
+                let _ = UserValues::upsert_preferred_username(user.id.clone(), username).await;
+            }
         }
 
         if found_values {
