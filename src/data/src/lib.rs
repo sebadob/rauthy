@@ -30,6 +30,7 @@ pub struct AuthStepLoggedIn {
     pub header_loc: (HeaderName, HeaderValue),
     pub header_csrf: (HeaderName, HeaderValue),
     pub header_origin: Option<(HeaderName, HeaderValue)>,
+    pub needs_user_update: bool,
 }
 
 pub struct AwaitToSAccept {

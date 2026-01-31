@@ -8,7 +8,7 @@
     import AccDevices from '$lib5/account/AccDevices.svelte';
     import { useI18n } from '$state/i18n.svelte.js';
     import type { UserResponse } from '$api/types/user.ts';
-    import { TPL_AUTH_PROVIDERS } from '$utils/constants';
+    import { TPL_AUTH_PROVIDERS, TPL_USER_VALUES_CONFIG } from '$utils/constants';
     import Template from '$lib5/Template.svelte';
     import type { AuthProvidersTemplate } from '$api/templates/AuthProvider.ts';
     import { onMount } from 'svelte';
@@ -22,6 +22,7 @@
     import AccPAM from '$lib/account/AccPAM.svelte';
     import type { PamUserResponse } from '$api/types/pam';
     import { fetchGet } from '$api/fetch';
+    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
 
     let {
         user = $bindable(),
@@ -34,6 +35,7 @@
     let t = useI18n();
 
     let innerWidth: undefined | number = $state();
+    let config: undefined | UserValuesConfig = $state();
     let providers: AuthProvidersTemplate = $state([]);
     let authProvider = $derived.by(() => {
         if (user.account_type?.startsWith('federated')) {
@@ -87,6 +89,28 @@
         }
     });
 
+    $effect(() => {
+        if (!config) {
+            return;
+        }
+
+        if (
+            (config.birthdate === 'required' && !user.user_values.birthdate) ||
+            (config.city === 'required' && !user.user_values.city) ||
+            (config.country === 'required' && !user.user_values.country) ||
+            (config.given_name === 'required' && !user.given_name) ||
+            (config.family_name === 'required' && !user.family_name) ||
+            (config.phone === 'required' && !user.user_values.phone) ||
+            (config.preferred_username.preferred_username === 'required' &&
+                !user.user_values.preferred_username) ||
+            (config.street === 'required' && !user.user_values.street) ||
+            (config.tz === 'required' && !user.user_values.tz) ||
+            (config.zip === 'required' && !user.user_values.zip)
+        ) {
+            selected = t.account.navEdit;
+        }
+    });
+
     async function fetchPamUser() {
         let res = await fetchGet<PamUserResponse>('/auth/v1/pam/users/self');
         if (res.body) {
@@ -98,6 +122,7 @@
 <svelte:window bind:innerWidth />
 
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
+<Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
 
 {#snippet header()}
     <h3>{`${user.given_name || ''} ${user.family_name || ''}`}</h3>
@@ -125,7 +150,7 @@
                 {:else if selected === 'PAM' && pamUser}
                     <AccPAM bind:pamUser />
                 {:else if selected === t.account.navEdit}
-                    <AccEdit bind:user viewModePhone />
+                    <AccEdit {config} bind:user viewModePhone />
                 {:else if selected === t.common.password}
                     <AccPassword {user} {authProvider} viewModePhone />
                 {:else if selected === t.account.navMfa}
@@ -158,7 +183,7 @@
                     {:else if selected === 'PAM' && pamUser}
                         <AccPAM bind:pamUser />
                     {:else if selected === t.account.navEdit}
-                        <AccEdit bind:user />
+                        <AccEdit {config} bind:user />
                     {:else if selected === t.common.password}
                         <AccPassword {user} {authProvider} />
                     {:else if selected === t.account.navMfa}

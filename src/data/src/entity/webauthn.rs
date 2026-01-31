@@ -4,6 +4,7 @@ use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::password::PasswordPolicy;
+use crate::entity::sessions::Session;
 use crate::entity::users::{AccountType, User};
 use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::Cookie;
@@ -600,19 +601,29 @@ impl WebauthnAdditionalData {
                     header::LOCATION,
                     HeaderValue::from_str(&login_req.header_loc).unwrap(),
                 );
-                let body = WebauthnLoginFinishResponse {
-                    loc: login_req.header_loc,
+
+                let mut builder = if login_req.needs_user_update {
+                    HttpResponse::ResetContent()
+                } else {
+                    let mut builder = HttpResponse::Accepted();
+                    builder.insert_header(header_loc);
+                    builder
                 };
-                let mut res = HttpResponse::Accepted()
-                    .insert_header(header_loc)
-                    .json(body);
+
                 if let Some(value) = login_req.header_origin {
-                    res.headers_mut().insert(
+                    builder.insert_header((
                         header::ACCESS_CONTROL_ALLOW_ORIGIN,
                         HeaderValue::from_str(&value).unwrap(),
-                    );
+                    ));
                 }
-                res
+
+                if login_req.needs_user_update {
+                    builder.finish()
+                } else {
+                    builder.json(WebauthnLoginFinishResponse {
+                        loc: login_req.header_loc,
+                    })
+                }
             }
 
             Self::Service(svc_req) => HttpResponse::Accepted().json(svc_req),
@@ -652,6 +663,7 @@ pub struct WebauthnLoginReq {
     pub header_loc: String,
     pub header_origin: Option<String>,
     pub tos_await_data: Option<WebauthnToSAwaitData>,
+    pub needs_user_update: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -826,6 +838,7 @@ pub async fn auth_finish(
     user_id: String,
     req: &HttpRequest,
     browser_id: BrowserId,
+    session: Option<Session>,
     payload: WebauthnAuthFinishRequest,
 ) -> Result<WebauthnAdditionalData, ErrorResponse> {
     let auth_data = WebauthnData::find(payload.code).await?;
@@ -856,6 +869,12 @@ pub async fn auth_finish(
             let uid = user.id.clone();
 
             LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
+
+            if matches!(auth_data.data, WebauthnAdditionalData::Login(_))
+                && let Some(mut session) = session
+            {
+                session.set_authenticated(&user).await?;
+            }
 
             if auth_result.needs_update() {
                 for mut pk_entity in pks {
@@ -904,6 +923,7 @@ pub async fn auth_finish(
                         auth_code_lifetime: tos_data.auth_code_lifetime,
                         header_loc: data.header_loc,
                         header_origin: data.header_origin.clone(),
+                        needs_user_update: data.needs_user_update,
                     };
                     code_await.save().await?;
 

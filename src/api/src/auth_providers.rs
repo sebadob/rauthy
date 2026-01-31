@@ -209,12 +209,12 @@ pub async fn post_provider_callback_handle(
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
-    let session = principal.get_session()?;
     let (auth_step, cookie, new_user_created) =
         rauthy_service::oidc::auth_providers::login_finish::login_finish(
             &req,
             &payload,
-            session.clone(),
+            // unwrap: we already checked for session auth or init above
+            principal.into_inner().session.unwrap(),
         )
         .await?;
 
