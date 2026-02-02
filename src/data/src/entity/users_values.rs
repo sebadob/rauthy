@@ -57,8 +57,7 @@ impl UserValues {
         format!("{IDX_USERS_VALUES}_{user_id}")
     }
 
-    /// CAUTION: Does also set the `preferred_username`. This should only be used with open
-    /// registration.
+    /// CAUTION: Does also set the `preferred_username`. This should only be used with open registration.
     pub async fn insert(
         user_id: String,
         values: UserValuesRequest,
