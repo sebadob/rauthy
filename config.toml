@@ -2583,8 +2583,8 @@ rp_id = 'localhost'
 #
 # default: 'http://localhost:8080'
 # overwritten by: RP_ORIGIN
-#rp_origin = 'http://localhost:5173'
-rp_origin = 'http://localhost:8080'
+rp_origin = 'http://localhost:5173'
+#rp_origin = 'http://localhost:8080'
 
 # Non-critical RP Name
 # Has no security properties and may be changed without issues
