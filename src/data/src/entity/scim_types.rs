@@ -363,8 +363,12 @@ pub enum ScimResource {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScimListResponse {
-    /// `["urn:ietf:params:scim:api:messages:2.0:ListResponse"]`
-    pub schemas: Vec<Cow<'static, str>>,
+    // This should always be `urn:ietf:params:scim:api:messages:2.0:ListResponse`
+    // However, clients do non-RFC stuff and return custom schemas for no reason.
+    // To fix this, we ignore the schema in the response, as long as we can deserialize all the
+    // values we need.
+    // `["urn:ietf:params:scim:api:messages:2.0:ListResponse"]`
+    // pub schemas: Vec<Cow<'static, str>>,
     pub items_per_page: i64,
     pub total_results: i64,
     pub start_index: i64,
