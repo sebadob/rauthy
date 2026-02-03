@@ -5,6 +5,7 @@ use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
+use tracing::error;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -385,6 +386,27 @@ pub struct ScimError {
     pub schemas: Option<Vec<Cow<'static, str>>>,
     pub detail: Option<String>,
     pub status: u16,
+}
+
+impl ScimError {
+    pub async fn extract_from_res(res: reqwest::Response) -> Self {
+        let status = res.status().as_u16();
+        // we deserialize the body first because of clients not seting back RFC-valid errors
+        let body = res.text().await.unwrap_or_default();
+        match serde_json::from_str(&body) {
+            Ok(slf) => slf,
+            Err(err) => {
+                error!(
+                    "Error deserializing ScimError from client: {err:?}\nExtracting raw text instead"
+                );
+                Self {
+                    schemas: None,
+                    detail: Some(body),
+                    status,
+                }
+            }
+        }
+    }
 }
 
 // Note:
