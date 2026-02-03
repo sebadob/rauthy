@@ -36,7 +36,7 @@ insecure_cookie = false
 # This will only be respected when `DEV_MODE == true` as well.
 #
 # overwritten by: DEV_MODE_PROVIDER_CALLBACK_URL
-provider_callback_url = 'localhost:5173'
+#provider_callback_url = 'localhost:5173'
 
 [access]
 # If set to true, the `/userinfo` endpoint will do additional
@@ -260,6 +260,16 @@ token_revoke_device_tokens = true
 # default: false
 # overwritten by: WHOAMI_HEADERS
 whoami_headers = true
+
+# You can hide the 'Admin' button on the root / landing page for the UI.
+# The admin interface is always reachable via `/auth/v1/admin`, and the
+# button will only redirect, of course, only when the user is assigned to
+# the `rauthy_admin` role. However, if you are hosting some public service,
+# you might not want the button to show up there.
+#
+# default: false
+# overwritten by: ADMIN_BUTTON_HIDE
+admin_button_hide = false
 
 [atproto]
 # Set to `true` to enable the ATProto provider. If the public URL is
@@ -2471,7 +2481,7 @@ zip = 'optional'
 # default: 'optional'
 city = 'optional'
 # default: 'optional'
-country = 'optional'
+country = 'required'
 # default: 'optional'
 phone = 'optional'
 # default: 'optional'
@@ -2573,7 +2583,8 @@ rp_id = 'localhost'
 #
 # default: 'http://localhost:8080'
 # overwritten by: RP_ORIGIN
-rp_origin = 'http://localhost:5173'
+#rp_origin = 'http://localhost:5173'
+rp_origin = 'http://localhost:8080'
 
 # Non-critical RP Name
 # Has no security properties and may be changed without issues

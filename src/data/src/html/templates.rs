@@ -58,6 +58,7 @@ pub struct TplPasswordReset {
 // -> frontend/src/utils/constants.ts -> TPL_* values
 #[derive(Debug)]
 pub enum HtmlTemplate {
+    AdminButtonHide(bool),
     AtprotoId(String),
     /// Auth providers as pre-built, cached JSON value
     AuthProviders(String),
@@ -81,13 +82,16 @@ pub enum HtmlTemplate {
 impl HtmlTemplate {
     /// This function is only used during local dev to async resolve template values that are
     /// rendered into the HTML directly in prod.
-    ///
-    /// TODO maybe deactivate completely without debug_assertions?
+    #[cfg(debug_assertions)]
     pub async fn build_from_str(
         s: &str,
         session: Option<Session>,
     ) -> Result<(Self, Option<Cookie<'_>>), ErrorResponse> {
         match s {
+            "tpl_admin_btn_hide" => Ok((
+                Self::AdminButtonHide(RauthyConfig::get().vars.access.admin_button_hide),
+                None,
+            )),
             "tpl_atproto_id" => {
                 if RauthyConfig::get().vars.atproto.enable {
                     let provider = AuthProvider::find_by_iss(PROVIDER_ATPROTO.to_string()).await?;
@@ -221,6 +225,7 @@ impl HtmlTemplate {
     /// Returns the `id` that will be used for the HTML `<template>` element.
     pub fn id(&self) -> &'static str {
         match self {
+            Self::AdminButtonHide(_) => "tpl_admin_btn_hide",
             Self::AtprotoId(_) => "tpl_atproto_id",
             Self::AuthProviders(_) => "tpl_auth_providers",
             Self::ClientName(_) => "tpl_client_name",
@@ -245,6 +250,7 @@ impl HtmlTemplate {
     //  -> does askama accept generic traits like `Display`?
     pub fn inner(&self) -> String {
         match self {
+            Self::AdminButtonHide(i) => i.to_string(),
             Self::AtprotoId(i) => i.to_string(),
             Self::AuthProviders(i) => i.to_string(),
             Self::ClientName(i) => i.to_string(),
@@ -283,9 +289,10 @@ impl IndexHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::IsRegOpen(
-                RauthyConfig::get().vars.user_registration.enable,
-            )],
+            templates: &[
+                HtmlTemplate::AdminButtonHide(RauthyConfig::get().vars.access.admin_button_hide),
+                HtmlTemplate::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
+            ],
         };
 
         res.render().unwrap()
