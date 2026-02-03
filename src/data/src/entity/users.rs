@@ -711,7 +711,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
     ) -> Result<Vec<(Self, UserValues)>, ErrorResponse> {
         let sql = r#"
 SELECT u.id AS user_id, email, email_verified, given_name, family_name, roles, groups, enabled,
-    created_at, language, picture_id, birthdate, phone, street, zip, city, country
+    created_at, language, picture_id, birthdate, phone, street, zip, city, country,
+    preferred_username, tz
 FROM users u
 LEFT JOIN users_values uv ON u.id = uv.id
 WHERE u.created_at > $1
