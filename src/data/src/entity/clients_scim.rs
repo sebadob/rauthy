@@ -289,7 +289,7 @@ impl ClientScim {
                 .send()
                 .await?;
             if !res.status().is_success() {
-                let err = res.json::<ScimError>().await?;
+                let err = ScimError::extract_from_res(res).await;
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Scim,
                     format!("SCIM GET /Groups error: {err:?}"),
@@ -446,7 +446,7 @@ impl ClientScim {
                 }
             }
         } else {
-            let err = res.json::<ScimError>().await?;
+            let err = ScimError::extract_from_res(res).await;
             error!(?err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
@@ -532,7 +532,7 @@ impl ClientScim {
                 ))
             }
         } else {
-            let err = res.json::<ScimError>().await?;
+            let err = ScimError::extract_from_res(res).await;
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
@@ -620,7 +620,7 @@ impl ClientScim {
         if res.status().is_success() {
             Ok(())
         } else {
-            let err = res.json::<ScimError>().await?;
+            let err = ScimError::extract_from_res(res).await;
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
@@ -684,7 +684,7 @@ impl ClientScim {
         if res.status().is_success() {
             Ok(())
         } else {
-            let err = res.json::<ScimError>().await?;
+            let err = ScimError::extract_from_res(res).await;
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
@@ -764,7 +764,7 @@ impl ClientScim {
                 }
             }
         } else {
-            let err = res.json::<ScimError>().await?;
+            let err = ScimError::extract_from_res(res).await;
             error!("{:?}", err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
@@ -1003,7 +1003,7 @@ impl ClientScim {
             }
             Ok(())
         } else {
-            let err = res.json::<ScimError>().await?;
+            let err = ScimError::extract_from_res(res).await;
             error!("{:?}", err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
@@ -1060,7 +1060,7 @@ impl ClientScim {
 
             Ok(())
         } else {
-            let err = res.json::<ScimError>().await?;
+            let err = ScimError::extract_from_res(res).await;
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
@@ -1110,7 +1110,7 @@ impl ClientScim {
         if res.status().is_success() {
             Ok(())
         } else {
-            let err = res.json::<ScimError>().await?;
+            let err = ScimError::extract_from_res(res).await;
             Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 format!(
@@ -1233,7 +1233,7 @@ impl ClientScim {
                     .await?;
                 if !res.status().is_success() {
                     debug!(?res, "SCIM PatchOp Error");
-                    let err = res.json::<ScimError>().await?;
+                    let err = ScimError::extract_from_res(res).await;
                     error!(
                         self.client_id,
                         ?err,
@@ -1262,7 +1262,7 @@ impl ClientScim {
                 .send()
                 .await?;
             if !res.status().is_success() {
-                let err = res.json::<ScimError>().await?;
+                let err = ScimError::extract_from_res(res).await;
                 error!(self.client_id, ?err, "Error removing SCIM Group assignment",);
             }
         }
