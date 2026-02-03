@@ -306,6 +306,7 @@ impl Default for Vars {
                 token_revoke_on_logout: false,
                 token_revoke_device_tokens: false,
                 whoami_headers: false,
+                admin_button_hide: false,
             },
             auth_headers: VarsAuthHeaders {
                 enable: false,
@@ -994,6 +995,14 @@ impl Vars {
         }
         if let Some(v) = t_bool(&mut table, "access", "whoami_headers", "WHOAMI_HEADERS") {
             self.access.whoami_headers = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "access",
+            "admin_button_hide",
+            "ADMIN_BUTTON_HIDE",
+        ) {
+            self.access.admin_button_hide = v;
         }
     }
 
@@ -2922,6 +2931,7 @@ pub struct VarsAccess {
     pub token_revoke_on_logout: bool,
     pub token_revoke_device_tokens: bool,
     pub whoami_headers: bool,
+    pub admin_button_hide: bool,
 }
 
 #[derive(Debug)]
