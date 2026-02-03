@@ -251,7 +251,7 @@
         if (scimEnabled) {
             payload.scim = {
                 base_uri: scim.base_uri,
-                bearer_token: scim.bearer_token,
+                bearer_token: scim.bearer_token.trim(),
                 sync_groups: scim.sync_groups,
                 group_sync_prefix:
                     scim.sync_groups && scim.group_sync_prefix?.length
