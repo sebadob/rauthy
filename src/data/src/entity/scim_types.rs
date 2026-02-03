@@ -5,7 +5,7 @@ use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
-use tracing::error;
+use tracing::{debug, error};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -390,8 +390,9 @@ pub struct ScimError {
 
 impl ScimError {
     pub async fn extract_from_res(res: reqwest::Response) -> Self {
+        debug!("SCIM request error raw: {res:?}");
         let status = res.status().as_u16();
-        // we deserialize the body first because of clients not seting back RFC-valid errors
+        // we deserialize the body first because of clients not setting back RFC-valid errors
         let body = res.text().await.unwrap_or_default();
         match serde_json::from_str(&body) {
             Ok(slf) => slf,

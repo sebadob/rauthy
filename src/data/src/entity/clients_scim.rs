@@ -242,6 +242,7 @@ impl ClientScim {
         // The user sync however can take a very long time depending on the amount of users,
         // so it will be pushed into the background.
         let groups = if self.sync_groups {
+            info!("Syncing SCIM groups for {}", self.client_id);
             self.sync_groups().await?;
             Group::find_all().await?
         } else {
@@ -250,6 +251,7 @@ impl ClientScim {
 
         task::spawn(async move {
             let mut groups_remote = HashMap::with_capacity(groups.len());
+            info!("Syncing SCIM users for {}", self.client_id);
             if let Err(err) = self.sync_users(None, &groups, &mut groups_remote).await {
                 error!(?err);
             }
@@ -276,6 +278,7 @@ impl ClientScim {
     }
 
     async fn sync_groups_exec(&self) -> Result<(), ErrorResponse> {
+        info!("Syncing SCIM groups for {}", self.client_id);
         let mut groups = Group::find_all().await?;
         let mut start_index = 1;
         let count = 100;
