@@ -20,6 +20,8 @@ use templates::AdminDocsHtml;
 use tracing::debug;
 
 pub mod templates;
+#[cfg(debug_assertions)]
+pub mod templates_dev;
 
 #[derive(Debug, Deserialize)]
 pub enum HtmlCached {

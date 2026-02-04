@@ -5,6 +5,7 @@ use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
+use tracing::{debug, error};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -111,7 +112,9 @@ pub struct ScimValue {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScimUser {
-    pub schemas: Vec<Cow<'static, str>>,
+    // Note: This is not really optional, but there a terrible client implementations that do
+    // not send this field, even when they should.
+    pub schemas: Option<Vec<Cow<'static, str>>>,
     /// The `id` MUST be handled and set by the Service Provider, so it MUST be
     /// `None` for Create requests.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -155,7 +158,7 @@ pub struct ScimUser {
 impl Default for ScimUser {
     fn default() -> Self {
         Self {
-            schemas: vec!["urn:ietf:params:scim:schemas:core:2.0:User".into()],
+            schemas: Some(vec!["urn:ietf:params:scim:schemas:core:2.0:User".into()]),
             id: None,
             external_id: None,
             user_name: String::default(),
@@ -225,7 +228,7 @@ impl ScimUser {
             UserAttrValueEntity::find_key_value_by_scope(client_scopes, user.id.clone()).await?;
 
         Ok(Self {
-            schemas: vec!["urn:ietf:params:scim:schemas:core:2.0:User".into()],
+            schemas: Some(vec!["urn:ietf:params:scim:schemas:core:2.0:User".into()]),
             // must be None, set by the service provider
             id: None,
             external_id: Some(user.id),
@@ -266,7 +269,9 @@ impl ScimUser {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScimGroup {
-    pub schemas: Vec<Cow<'static, str>>,
+    // Note: This is not really optional, but there a terrible client implementations that do
+    // not send this field, even when they should.
+    pub schemas: Option<Vec<Cow<'static, str>>>,
     /// Managed by the Service Provider
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
@@ -280,7 +285,7 @@ pub struct ScimGroup {
 impl Default for ScimGroup {
     fn default() -> Self {
         ScimGroup {
-            schemas: vec!["urn:ietf:params:scim:schemas:core:2.0:Group".into()],
+            schemas: Some(vec!["urn:ietf:params:scim:schemas:core:2.0:Group".into()]),
             id: None,
             external_id: None,
             display_name: String::default(),
@@ -363,8 +368,9 @@ pub enum ScimResource {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScimListResponse {
-    /// `["urn:ietf:params:scim:api:messages:2.0:ListResponse"]`
-    pub schemas: Vec<Cow<'static, str>>,
+    // Note: This is not really optional, but there a terrible client implementations that do
+    // not send this field, even when they should.
+    pub schemas: Option<Vec<Cow<'static, str>>>,
     pub items_per_page: i64,
     pub total_results: i64,
     pub start_index: i64,
@@ -374,10 +380,34 @@ pub struct ScimListResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ScimError {
+    // Note: This is not really optional, but there a terrible client implementations that do
+    // not send this field, even when they should.
     /// `["urn:ietf:params:scim:api:messages:2.0:Error"]`
-    pub schemas: Vec<Cow<'static, str>>,
+    pub schemas: Option<Vec<Cow<'static, str>>>,
     pub detail: Option<String>,
     pub status: u16,
+}
+
+impl ScimError {
+    pub async fn extract_from_res(res: reqwest::Response) -> Self {
+        debug!("SCIM request error raw: {res:?}");
+        let status = res.status().as_u16();
+        // we deserialize the body first because of clients not setting back RFC-valid errors
+        let body = res.text().await.unwrap_or_default();
+        match serde_json::from_str(&body) {
+            Ok(slf) => slf,
+            Err(err) => {
+                error!(
+                    "Error deserializing ScimError from client: {err:?}\nExtracting raw text instead"
+                );
+                Self {
+                    schemas: None,
+                    detail: Some(body),
+                    status,
+                }
+            }
+        }
+    }
 }
 
 // Note:
