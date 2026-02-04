@@ -168,8 +168,10 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="user-registration"><a class="header" href="#user-registration">User Registration</a></h1>
-<p>By default, new users can only be added by an admin. This is safe and secure, and your database cannot ever be spammed.
-However, you might want users to register themselves for whatever reason. In that case, follow the next step.</p>
+<p>By default, new users can only be added by an admin. This is safe and secure, and your database
+cannot ever be spammed.
+However, you might want users to register themselves for whatever reason. In that case, follow the
+next step.</p>
 <h2 id="open-registration"><a class="header" href="#open-registration">Open Registration</a></h2>
 <p>To open the registration to anyone, just set</p>
 <pre><code class="language-toml">[user_registration]
@@ -181,7 +183,8 @@ However, you might want users to register themselves for whatever reason. In tha
 enable = true
 </code></pre>
 <p>This will open the registration endpoint and make it accessible without upfront authentication.<br />
-You will now see a new button at the page root which directs you to the very simple registration form.</p>
+You will now see a new button at the page root which directs you to the very simple registration
+form.</p>
 <p>After successful registration, the user will receive an E-Mail with an activation link.
 Clicking on this link will direct the user on a page, where a new password or passkey can be set.
 At the same time, the account will be activated and the E-Mail will be validated as well of course.</p>
@@ -203,25 +206,31 @@ You need to configure the following values to be able to send out E-Mails:</p>
 </div>
 </div>
 <h2 id="captcha--proof-of-work"><a class="header" href="#captcha--proof-of-work">Captcha / Proof of Work</a></h2>
-<p>The registration form uses a <em>Proof of Work (PoW)</em> behind the scenes. This is basically an invisible captcha
-without the user solving weird image puzzles that sometimes even humans cannot solve. It is done with the help of a
+<p>The registration form uses a <em>Proof of Work (PoW)</em> behind the scenes. This is basically an invisible
+captcha
+without the user solving weird image puzzles that sometimes even humans cannot solve. It is done
+with the help of a
 tiny crate I wrote myself as well.</p>
-<p>This will of course not prevent real humans from registering fake accounts, but until now, I never had issues with any
-bots, so it does what it should while providing a way better UX than any traditional captcha challenge.</p>
-<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<p>This will of course not prevent real humans from registering fake accounts, but until now, I never
+had issues with any
+bots, so it does what it should while providing a way better UX than any traditional captcha
+challenge.</p>
+<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
 <div class="admonition-title">
-<div id="admonition-info-title">
-<p>Info</p>
+<div id="admonition-hint-title">
+<p>Hint</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-info"></a>
+<a class="admonition-anchor-link" href="#admonition-hint"></a>
 </div>
 <div>
 <p>If you are interested in how it works, take a look at <a href="https://github.com/sebadob/spow">spow</a>.</p>
 </div>
 </div>
 <h2 id="restricted-registration"><a class="header" href="#restricted-registration">Restricted Registration</a></h2>
-<p>You may want your users to register themselves, but at the same time restrict the E-Mail domains they are using.
-For instance, when you deploy Rauthy at your company for all internal applications, you may only want users to
+<p>You may want your users to register themselves, but at the same time restrict the E-Mail domains
+they are using.
+For instance, when you deploy Rauthy at your company for all internal applications, you may only
+want users to
 register with their work E-Mail:</p>
 <pre><code class="language-toml">[user_registration]
 # Can be used when 'open_user_reg = true' to restrict the domains for
@@ -233,19 +242,30 @@ register with their work E-Mail:</p>
 domain_restriction = 'my-domain.com'
 </code></pre>
 <h2 id="domain-blacklisting"><a class="header" href="#domain-blacklisting">Domain Blacklisting</a></h2>
-<p>If you have opened your registration to anyone, you will get into the situation at some point, where evil people will
-create accounts only for checking out your security and trying to break in, execute XSS, and so on. These are often
+<p>If you have opened your registration to anyone, you will get into the situation at some point, where
+evil people will
+create accounts only for checking out your security and trying to break in, execute XSS, and so on.
+These are often
 real people, which means any Captcha or PoW will not prevent them from registering of course.</p>
-<p>The best thing you can do in that case, if your deployment allows this, is Geoblocking certain regions at your
-firewall / reverse proxy level. Attackers would then switch to origins in a country you allow, but this is usually
-more costly for them and more hassle, so it is a good first line of defense. At the same time, it reduces the visibility
-to those regions, and you might not get targeted in the first place because bots cannot scan you from there.</p>
-<p>When such attacks happen, there is no magic rule or setting to defend against them. This is really individual each time
+<p>The best thing you can do in that case, if your deployment allows this, is Geoblocking certain
+regions at your
+firewall / reverse proxy level. Attackers would then switch to origins in a country you allow, but
+this is usually
+more costly for them and more hassle, so it is a good first line of defense. At the same time, it
+reduces the visibility
+to those regions, and you might not get targeted in the first place because bots cannot scan you
+from there.</p>
+<p>When such attacks happen, there is no magic rule or setting to defend against them. This is really
+individual each time
 and depends on a lot of things out of the scope of this documentation.</p>
-<p>Nevertheless, Rauthy provides a small feature that might help you here: <strong>E-Mail Domain Blacklisting</strong></p>
-<p>Let's say you can't Geoblock or you found out, that specific E-Mail providers are being used during these attacks.
-If you have such a list of evil providers, you can blacklist and exclude them from the open registration. Existing users
-will keep working and an Admin can still create users with these domains. They just cannot be used for self-registration
+<p>Nevertheless, Rauthy provides a small feature that might help you here: **E-Mail Domain Blacklisting
+**</p>
+<p>Let's say you can't Geoblock or you found out, that specific E-Mail providers are being used during
+these attacks.
+If you have such a list of evil providers, you can blacklist and exclude them from the open
+registration. Existing users
+will keep working and an Admin can still create users with these domains. They just cannot be used
+for self-registration
 anymore.</p>
 <p>You have the following config option:</p>
 <pre><code class="language-toml">[user_registration]
@@ -263,8 +283,8 @@ anymore.</p>
 # default: []
 # overwritten by: USER_REG_DOMAIN_BLACKLIST - single String, \n separated values
 domain_blacklist = [
-    'example.com',
-    'evil.net',
+  'example.com',
+  'evil.net',
 ]
 </code></pre>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
@@ -281,12 +301,16 @@ These attacks usually stop after 1-2 weeks most often. When attackers did not fi
 </div>
 <h2 id="downstream-application-integration"><a class="header" href="#downstream-application-integration">Downstream Application Integration</a></h2>
 <p>You can integrate the registration into a downstream application on 2 different ways.<br />
-Either use the existing one with redirect hints for improved UX, or fully build your own registration frontend.</p>
+Either use the existing one with redirect hints for improved UX, or fully build your own
+registration frontend.</p>
 <h3 id="redirect-hints"><a class="header" href="#redirect-hints">Redirect Hints</a></h3>
-<p>Let's say you have an application that uses Rauthy for user management. You want to improve the registration flow
-and your users being redirected back to your downstream app after registration / password set instead of them
+<p>Let's say you have an application that uses Rauthy for user management. You want to improve the
+registration flow
+and your users being redirected back to your downstream app after registration / password set
+instead of them
 "being stuck" on Rauthy's UI, which would be the default flow.</p>
-<p>Your app can show a link to the existing registration form with an appended query param to control redirects.
+<p>Your app can show a link to the existing registration form with an appended query param to control
+redirects.
 When you append</p>
 <pre><code>?redirect_uri=https%3A%2F%2Fgithub.com
 </code></pre>
@@ -296,13 +320,17 @@ When you append</p>
 <p>The following things will happen:</p>
 <ol>
 <li>After a successful registration, the user will be redirected back to the given <code>redirect_uri</code>.</li>
-<li>After the password / passkey has been set using the E-Mail link, instead of being redirected to the Rauthy
+<li>After the password / passkey has been set using the E-Mail link, instead of being redirected to
+the Rauthy
 account dashboard, the user will be redirected to the same URI again.</li>
 </ol>
-<p>This makes it possible to use Rauthy as your upstream provider without the user really needing to interact with or
+<p>This makes it possible to use Rauthy as your upstream provider without the user really needing to
+interact with or
 know about it in detail, which again leads to less confusion.</p>
-<p>By default, the allowed <code>redirect_uri</code>s are restricted to all existing <code>client_uri</code>s in the database. They will be
-compared via <code>client_uri.startsWith(redirect_uri)</code>. If you want to opt-out of the additional redirect_uri checks and
+<p>By default, the allowed <code>redirect_uri</code>s are restricted to all existing <code>client_uri</code>s in the
+database. They will be
+compared via <code>client_uri.startsWith(redirect_uri)</code>. If you want to opt-out of the additional
+redirect_uri checks and
 configure and open redirect to allow just anything, you can do so:</p>
 <pre><code class="language-toml">[user_registration]
 # If set to `true`, any validation of the `redirect_uri` provided
@@ -326,11 +354,14 @@ configure and open redirect to allow just anything, you can do so:</p>
 allow_open_redirect = false
 </code></pre>
 <h3 id="custom-frontend"><a class="header" href="#custom-frontend">Custom Frontend</a></h3>
-<p>Depending on your application, you may want to create your own frontend for the registration. For speed and efficiency
-reasons, Rauthy does not allow you to overwrite the existing templates, but you can host your own UI of course.</p>
+<p>Depending on your application, you may want to create your own frontend for the registration. For
+speed and efficiency
+reasons, Rauthy does not allow you to overwrite the existing templates, but you can host your own UI
+of course.</p>
 <p>The registration page is super simple and you can take a look at what it does here:
 <a href="https://github.com/sebadob/rauthy/blob/main/frontend/src/routes/users/register/%2Bpage.svelte">page.svelte</a></p>
-<p>The registration endpoint allows CORS requests. The only thing you need to care about is the PoW calculation.</p>
+<p>The registration endpoint allows CORS requests. The only thing you need to care about is the PoW
+calculation.</p>
 <ol>
 <li>Accept the input from the user via any form inputs</li>
 <li>When the user clicks submit, fetch a new PoW from Rauthy via <code>POST /auth/v1/pow</code></li>
@@ -340,20 +371,20 @@ reasons, Rauthy does not allow you to overwrite the existing templates, but you 
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct NewUserRegistrationRequest {
-    #[validate(email)]
-    email: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
-    family_name: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
-    given_name: String,
-    /// Validation: `[a-zA-Z0-9,.:/_\-&amp;?=~#!$'()*+%]+`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+"))]
-    pow: String,
-    /// Validation: `[a-zA-Z0-9,.:/_\-&amp;?=~#!$'()*+%]+`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+"))]
-    redirect_uri: Option&lt;String&gt;,
+  #[validate(email)]
+  email: String,
+  /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
+  #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+  family_name: String,
+  /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
+  #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+  given_name: String,
+  /// Validation: `[a-zA-Z0-9,.:/_\-&amp;?=~#!$'()*+%]+`
+  #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+"))]
+  pow: String,
+  /// Validation: `[a-zA-Z0-9,.:/_\-&amp;?=~#!$'()*+%]+`
+  #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+"))]
+  redirect_uri: Option&lt;String&gt;,
 }
 <span class="boring">}</span></code></pre></pre>
 <div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">

@@ -172,7 +172,7 @@
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
 your localhost. The image contains a basic default config which is sufficient for local testing (
 don't use it in production, it contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.34.2
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.34.3
 </code></pre>
 <p>To proceed, go to <strong><a href="first_start.html">First Start</a></strong>, or do the production setup below to have
 persistence.</p>
@@ -191,7 +191,7 @@ a minimal setup that is able to send E-Mails. The easiest way (works on localhos
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.34.2
+    image: ghcr.io/sebadob/rauthy:0.34.3
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -262,7 +262,7 @@ at a later point. For now, create a new file and paste the <a href="../config/co
 </code></pre>
 <p><strong>3. Access rights for the Database files</strong></p>
 <p>The Rauthy container by default runs everything with user:group <code>10001:10001</code> for security
-reasons.<br />
+reasons. <br />
 To make this work with the default values, you have 2 options:</p>
 <ul>
 <li>Change the access rights:</li>
@@ -308,7 +308,7 @@ at <a href="../config/encryption.html">Encryption</a>.</p>
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.34.2
+    ghcr.io/sebadob/rauthy:0.34.3
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>

@@ -7,7 +7,7 @@ your localhost. The image contains a basic default config which is sufficient fo
 don't use it in production, it contains hardcoded secrets).
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.34.2
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.34.3
 ```
 
 To proceed, go to **[First Start](first_start.md)**, or do the production setup below to have
@@ -32,7 +32,7 @@ services:
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.34.2
+    image: ghcr.io/sebadob/rauthy:0.34.3
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -111,7 +111,7 @@ vim rauthy/config.toml
 **3. Access rights for the Database files**
 
 The Rauthy container by default runs everything with user:group `10001:10001` for security
-reasons.   
+reasons. \
 To make this work with the default values, you have 2 options:
 
 - Change the access rights:
@@ -161,7 +161,7 @@ docker run -d \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.34.2
+    ghcr.io/sebadob/rauthy:0.34.3
 ```
 
 - `-v $(pwd)/rauthy/config.toml:/app/config.toml` mounts the config in the correct place

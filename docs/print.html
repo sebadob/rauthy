@@ -430,14 +430,15 @@ Experimental FedCM support</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
 <h2 id="choose-a-database"><a class="header" href="#choose-a-database">Choose A Database</a></h2>
-<p>Rauthy's default database is <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>. Under the hood, it's using SQLite, but it
-adds an additional layer on top making it highly-available using
-the <a href="https://raft.github.io/">Raft Consensus Algorithm</a>. Don't let the SQLite engine under the hood fool you, it will
-handle most probably anything you throw at it, as long as your disks are fast enough. Hiqlite can easily saturate a
-1GBit/s network connection with just database (write) traffic. All reads are local, which means they are way faster than
-with Postgres in any scenario.</p>
-<p>If you already have a Postgres up an running with everything set up anyway, you might want to choose it as your main DB,
-but I do not recommend deploying a Postgres instance just for Rauthy. This would be a waste of precious resources.</p>
+<p>Rauthy's default database is <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>. Under the hood, it's
+using SQLite, but it adds a additional layer on top making it highly-available using
+the <a href="https://raft.github.io/">Raft Consensus Algorithm</a>. Don't let the SQLite engine under the hood
+fool you, it will handle most probably anything you throw at it, as long as your disks are fast
+enough. Hiqlite can easily saturate a 1GBit/s network connection with just database (write) traffic.
+All reads are local, which means they are way faster than with Postgres in any scenario.</p>
+<p>If you already have a Postgres up an running with everything set up anyway, you might want to choose
+it as your main DB, but I do not recommend deploying a Postgres instance just for Rauthy. This would
+be a waste of precious resources.</p>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
 <div class="admonition-title">
 <div id="admonition-hint-title">
@@ -451,20 +452,21 @@ Just take a look at the <a href="getting_started/../config/config.html">Referenc
 </div>
 </div>
 <h2 id="container-images"><a class="header" href="#container-images">Container Images</a></h2>
-<p>Rauthy versions before <code>0.27.0</code> had different container images depending on the database you choose. However, this is
-not the case anymore. There is only a single image which works with any configuration. It works on <code>x86_64</code> and <code>arm64</code>
-architectures.</p>
-<p>At the time of writing, you can run Rauthy either with <a href="getting_started/./docker.html">Docker</a> or inside <a href="getting_started/./k8s.html">Kubernetes</a>.<br />
-Both <em>Getting Started</em> guides do not cover all set up you might want to do for going into production. Especially the
-<em>Docker</em> guide is more for testing.<br />
-You should take a look at the <a href="getting_started/../config/config.html">Reference Config</a> to see, what you might want to configure
-additionally. A dedicated <em>Going into production</em> guide will be written in the future.</p>
+<p>Rauthy versions before <code>0.27.0</code> had different container images depending on the database you choose.
+However, this is not the case anymore. There is only a single image which works with any
+configuration. It works on <code>x86_64</code> and <code>arm64</code> architectures.</p>
+<p>At the time of writing, you can run Rauthy either with <a href="getting_started/./docker.html">Docker</a> or
+inside <a href="getting_started/./k8s.html">Kubernetes</a>. <br />
+Both <em>Getting Started</em> guides do not cover all set up you might want to do for going into
+production. Especially the <em>Docker</em> guide is more for testing. \<br />
+You should take a look at the <a href="getting_started/../config/config.html">Reference Config</a> to see, what you might want
+to configure additionally. A dedicated <em>Going into production</em> guide will be written in the future.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
 <h2 id="testing--local-evaluation"><a class="header" href="#testing--local-evaluation">Testing / Local Evaluation</a></h2>
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
 your localhost. The image contains a basic default config which is sufficient for local testing (
 don't use it in production, it contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.34.2
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.34.3
 </code></pre>
 <p>To proceed, go to <strong><a href="getting_started/first_start.html">First Start</a></strong>, or do the production setup below to have
 persistence.</p>
@@ -483,7 +485,7 @@ a minimal setup that is able to send E-Mails. The easiest way (works on localhos
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.34.2
+    image: ghcr.io/sebadob/rauthy:0.34.3
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -554,7 +556,7 @@ at a later point. For now, create a new file and paste the <a href="getting_star
 </code></pre>
 <p><strong>3. Access rights for the Database files</strong></p>
 <p>The Rauthy container by default runs everything with user:group <code>10001:10001</code> for security
-reasons.<br />
+reasons. <br />
 To make this work with the default values, you have 2 options:</p>
 <ul>
 <li>Change the access rights:</li>
@@ -600,7 +602,7 @@ at <a href="getting_started/../config/encryption.html">Encryption</a>.</p>
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.34.2
+    ghcr.io/sebadob/rauthy:0.34.3
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
@@ -802,7 +804,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.34.2
+          image: ghcr.io/sebadob/rauthy:0.34.3
           securityContext:
             capabilities:
               drop:
@@ -1015,12 +1017,13 @@ and Docker and will be explained in later chapters.</p>
 <p>You can now proceed with the <a href="getting_started/first_start.html">First Start</a> steps.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="first-start"><a class="header" href="#first-start">First Start</a></h1>
 <h2 id="initial-admin-password-and-login"><a class="header" href="#initial-admin-password-and-login">Initial admin password and login</a></h2>
-<p>With the very first start of rauthy, or better with an empty database, when rauthy is starting, it does not only
-create all the necessary schemas and initial data, but also some sensitive information will be generated safely.
-This includes a set of Json Web Keys (JWKS) for the token signing and some secrets.</p>
+<p>With the very first start of rauthy, or better with an empty database, when rauthy is starting, it
+does not only create all the necessary schemas and initial data, but also some sensitive information
+will be generated safely. This includes a set of Json Web Keys (JWKS) for the token signing and some
+secrets.</p>
 <p>The most important of these newly generated secrets is the default admin user's password.<br />
-When this is securely generated with the very first start, it will be logged into the console. This will only
-happen once and never again.</p>
+When this is securely generated with the very first start, it will be logged into the console. This
+will only happen once and never again.</p>
 <h3 id="logs-with-docker"><a class="header" href="#logs-with-docker">Logs with docker</a></h3>
 <pre><code>docker logs -f rauthy
 </code></pre>
@@ -1035,7 +1038,7 @@ happen once and never again.</p>
 <a class="admonition-anchor-link" href="getting_started/first_start.html#admonition-note"></a>
 </div>
 <div>
-<p>If you do a Kubernets HA deployment directly, only the Pod <code>rauthy-0</code> will log the initial password.</p>
+<p>If you do a Kubernetes HA deployment directly, only the Pod <code>rauthy-0</code> will log the initial password.</p>
 </div>
 </div>
 <div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
@@ -1050,17 +1053,20 @@ happen once and never again.</p>
 If this is the case, you can delete the database / volume and just restart rauthy.</p>
 </div>
 </div>
-<p>The log message contains a link to the accounts page, where you then should log in to immediately set a new password.
-Follow the link, use as the default admin <code>admin@localhost</code> and as password the copied value from the log.</p>
+<p>The log message contains a link to the accounts page, where you then should log in to immediately
+set a new password. Follow the link, use as the default admin <code>admin@localhost</code> and as password the
+copied value from the log.</p>
 <ul>
 <li>When logged into the account, click <code>EDIT</code> and <code>CHANGE PASSWORD</code> to set a new password</li>
 <li>Log out of the account and try to log in to the admin ui with the new password</li>
 </ul>
 <h2 id="custom-rauthy-admin-user"><a class="header" href="#custom-rauthy-admin-user">Custom rauthy admin user</a></h2>
-<p>It is a good idea, to either keep the <code>admin@localhost</code> and rename it (to never have a default admin, which would be an
-attack vector) as a fallback user with just a very long password, or disable it, after a custom admin has been added.</p>
-<p>When logged in to the admin UI, you can add a new user. When the <code>SMTP</code> settings are correctly configured in the config,
-which we can test right now, you will receive an E-Mail with the very first password reset.</p>
+<p>It is a good idea, to either keep the <code>admin@localhost</code> and rename it (to never have a default
+admin, which would be an attack vector) as a fallback user with just a very long password, or
+disable it, after a custom admin has been added.</p>
+<p>When logged in to the admin UI, you can add a new user. When the <code>SMTP</code> settings are correctly
+configured in the config, which we can test right now, you will receive an E-Mail with the very
+first password reset.</p>
 <div id="admonition-note-2" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-2-title">
 <div class="admonition-title">
 <div id="admonition-note-2-title">
@@ -1069,20 +1075,45 @@ which we can test right now, you will receive an E-Mail with the very first pass
 <a class="admonition-anchor-link" href="getting_started/first_start.html#admonition-note-2"></a>
 </div>
 <div>
-<p>If you do not receive an E-Mail after the first user registration, chances are you may have a problem with the SMTP
-setup.<br />
-To debug this, you can set <code>LOG_LEVEL=debug</code> in the config and then watch the logs after a restart.</p>
+<p>If you do not receive an E-Mail after the first user registration, chances are you may have a
+problem with the SMTP setup.</p>
+<p>To debug this, you can set <code>LOG_LEVEL=debug</code> in the config and then watch the logs after a restart.</p>
 </div>
 </div>
 <h3 id="rauthy_admin-user-role"><a class="header" href="#rauthy_admin-user-role"><code>rauthy_admin</code> user role</a></h3>
-<p>The role, which allows a user to access the admin UI, is the <code>rauthy_admin</code>.<br />
+<p>The role, which allows a user to access the admin UI, is the <code>rauthy_admin</code>. <br />
 If the user has this role assigned, he will be seen as an admin.</p>
-<p>Under the hood, rauthy itself uses the OIDC roles and groups in the same way, as all clients would do. This means you
-should not neither delete the <code>rauthy</code> default client, nor the <code>rauthy_admin</code> role. There are mechanisms to prevents
-this happening by accident via UI, but you could possibly do this via a direct API call.<br />
-There are some anti-lockout mechanisms in place in the backend, which will be executed with every start, but being
-careful at this point is a good idea anyway.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="production-config"><a class="header" href="#production-config">Production Config</a></h1>
+<p>Under the hood, rauthy itself uses the OIDC roles and groups in the same way, as all clients would
+do. This means you should not neither delete the <code>rauthy</code> default client, nor the <code>rauthy_admin</code>
+role. There are mechanisms to prevent this from happening by accident via UI, but you could possibly
+do this via a direct API call. \<br />
+There are some anti-lockout mechanisms in place in the backend, which will be executed with every
+start, but being careful at this point is a good idea anyway.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="shutdown"><a class="header" href="#shutdown">Shutdown</a></h1>
+<p>The shutdown may confuse some people. For single instance deployments, it will only take a few
+seconds. For a HA cluster node though, it will usually end up somewhere in the range of ~15 seconds.
+Depending on the current cluster state, healthiness of remote nodes, a possibly ongoing leader
+election, and so on, it may even take up to 25 - 30 seconds to do a graceful shutdown.
+The reason behind this is that the shutdown logic tries to do it as smooth as possible, to e.g.
+never have requests in Kubernetes going to an already shutting down node.</p>
+<p>This behavior is absolutely normal and expected! It does not hang or get stuck. Even though it can
+recover from it, you should never force-kill the process, as it will trigger an additional integrity
+check of WAL files and a full rebuild of the DB (when
+using <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>) during the next startup, so that a consistent
+state can always be guaranteed.</p>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="getting_started/shutdown.html#admonition-caution"></a>
+</div>
+<div>
+<p>Some container runtimes do force-kill automatically after 10 seconds. This is for instance the case
+for <code>podman</code>, or for <code>docker compose</code>.</p>
+<p>Make sure to adjust your shutdown timeout to at least 30 seconds.</p>
+</div>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="production-config"><a class="header" href="#production-config">Production Config</a></h1>
 <p>If you want to go into production, the configuration from the Getting Started section is most probably not enough.</p>
 <p>The best thing you could do is just taking a look at the <a href="config/../config/config.html">Reference Config</a> and reading through
 all the possible options.</p>
@@ -1269,29 +1300,35 @@ rp_origin = "http://localhost:5173"
 </div>
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="password-hashing-setup"><a class="header" href="#password-hashing-setup">Password Hashing Setup</a></h1>
-<p>Even though the options and tools in the Admin UI should be fully documented, I wanted to mention argon2id tuning here.</p>
-<p>Rauthy uses the argon2id hashing algorithm for passwords. This is the most expensive and compute-heavy operation
-done by the application and the variables need to be tuned for every deployment to provide the best compromise
-of security, resource usage and user experience.<br />
-The default values are a good start at the lower end of the "being safe scale" for a production deployment.
-However, you should at least take a look at them and verify, that they work for you.</p>
-<p>The Admin UI provides a utility which helps you find the best values for your deployment quickly. What and how to do is
-described in the Admin UI itself, I just want to guide you to this utility especially, since it is an important step
-security wise.</p>
-<p>When you are logged in to the Admin UI, please navigate to <code>Config</code> -&gt; <code>Argon2 Parameters</code> to find your values.
-After they have been found, apply them to the Rauthy config and restart the deployment.<br />
-Keep in mind, that if you run the application in a way, where memory is limited, for instance inside Kubernetes with
-resource limits set too low, that it will crash, if either <code>hashing.argon2_m_cost</code> is set too high or the memory limit
-too low.</p>
-<p>There is one additional, really important config variable need to be taken into account for the tuning.<br />
-Since this operation is really resource intense, you can limit the amount of threads, which can run in parallel doing
-hashing operations. This is really important when we think about constrained memory again.</p>
-<p><code>hashing.max_hash_threads</code> limits the maximum amount of parallel password hashes at the exact same time to never exceed
-system memory while still allowing a good amount of memory. The <strong>default value is 2</strong>.</p>
-<p>The rule is simple: Allow as many resources as possible for hashing to have the maximum amount of security, while
-restricting it as much as necessary.</p>
-<p>For smaller deployments, set <code>hashing.max_hash_threads</code>, which will technically allows only one user login at the exact
-same time. This value makes an external rate limiting for the login obsolete (while you may add some for the others).</p>
+<p>Even though the options and tools in the Admin UI should be fully documented, I wanted to mention
+argon2id tuning here.</p>
+<p>Rauthy uses the argon2id hashing algorithm for passwords. This is the most expensive and
+compute-heavy operation done by the application, and the variables need to be tuned for every
+deployment to provide the best compromise of security, resource usage and user experience.<br />
+The default values are a good start at the lower end of the "being safe scale" for a production
+deployment. However, you should at least take a look at them and verify that they work for you.</p>
+<p>The Admin UI provides a utility which helps you find the best values for your deployment quickly.
+What and how to do is described in the Admin UI itself. I just want to guide you to this utility,
+especially since it is an important step security wise.</p>
+<p>When you are logged in to the Admin UI, please navigate to <code>Config</code> -&gt; <code>Argon2 Parameters</code> to find
+your values. After they have been found, apply them to the Rauthy config and restart the
+deployment. <br />
+Keep in mind that if you run the application in a way, where memory is limited, for instance inside
+Kubernetes with resource limits set too low, that it will crash, if either <code>hashing.argon2_m_cost</code>
+is set too high or the memory limit too low.</p>
+<p>There is one additional, really important config variable need to be taken into account for the
+tuning. <br />
+Since this operation is really resource intense, you can limit the number of threads which can run
+in parallel doing hashing operations. This is really important when we think about constrained
+memory again.</p>
+<p><code>hashing.max_hash_threads</code> limits the maximum number of parallel password hashes at the exact same
+time to never exceed system memory while still allowing a good amount of memory. The <strong>default value
+is 2</strong>.</p>
+<p>The rule is simple: Allow as many resources as possible for hashing to have the maximum amount of
+security, while restricting it as much as necessary.</p>
+<p>For smaller deployments, set <code>hashing.max_hash_threads</code>, which will technically allows only one user
+login at the exact same time. This value makes an external rate limiting for the login obsolete (
+while you may add some for the others).</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="passkeys--webauthn"><a class="header" href="#passkeys--webauthn">Passkeys / WebAuthn</a></h1>
 <h2 id="passkey-only-accounts"><a class="header" href="#passkey-only-accounts">Passkey Only Accounts</a></h2>
 <p>Rauthy provides the ability to create Passkey only accounts.<br />
@@ -1575,16 +1612,22 @@ often a different story and its not guaranteed, that you will have AES accelerat
 Rauthy tries to be as secure as possible by default and therefore ChaCha20Poly1305 has a slight advantage over AES.</p>
 </div>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="logging-and-auditing"><a class="header" href="#logging-and-auditing">Logging and Auditing</a></h1>
-<p>Rauthy logs most things into the console, depending on the configuration of different log levels. In addition, more
-important events can be sent to Matrix, Slack or via E-Mail. All of this is highly configurable and you should be able
-to achieve whatever you need. All events are logged into the console as well with their configured level. This means,
-if Rauthy fires an event of type <code>NewUser</code> with the level <code>info</code> and you have configured a log level of at least the
-same, you will see the event in the console as well. So you could only use log aggregation and use existing tools
+<p>Rauthy logs most things into the console, depending on the configuration of different log levels. In
+addition, more
+important events can be sent to Matrix, Slack or via E-Mail. All of this is highly configurable and
+you should be able
+to achieve whatever you need. All events are logged into the console as well with their configured
+level. This means,
+if Rauthy fires an event of type <code>NewUser</code> with the level <code>info</code> and you have configured a log level
+of at least the
+same, you will see the event in the console as well. So you could only use log aggregation and use
+existing tools
 without configuring other targets and still catch everything.</p>
 <h2 id="logging"><a class="header" href="#logging">Logging</a></h2>
 <p>You can configure not only different levels for logging, but also different targets / situations.</p>
 <h3 id="log_level"><a class="header" href="#log_level"><code>LOG_LEVEL</code></a></h3>
-<p>The <code>LOG_LEVEL</code> variable configures the default logging in most situations. This defines the logging for instance
+<p>The <code>LOG_LEVEL</code> variable configures the default logging in most situations. This defines the logging
+for instance
 for logging information from different function runs or things that have been triggered.</p>
 <pre><code class="language-toml">[logging]
 # This is the log level for stdout logs
@@ -1595,9 +1638,12 @@ for logging information from different function runs or things that have been tr
 level = 'info'
 </code></pre>
 <h3 id="log_level_database"><a class="header" href="#log_level_database"><code>LOG_LEVEL_DATABASE</code></a></h3>
-<p>The Hiqlite database logging is at the time of writing pretty verbose on purpose. The whole persistence layer with the
-Raft cluster setup has been written from the ground up. The amount of logging will be reduced in later versions, when
-the whole layer has been proven to be really solid, but for now you get more information just in case you need to debug
+<p>The Hiqlite database logging is at the time of writing pretty verbose on purpose. The whole
+persistence layer with the
+Raft cluster setup has been written from the ground up. The amount of logging will be reduced in
+later versions, when
+the whole layer has been proven to be really solid, but for now you get more information just in
+case you need to debug
 something.</p>
 <p>You can reduce the default logging and for instance set it to <code>warn</code> or <code>error</code> only.</p>
 <pre><code class="language-toml">[logging]
@@ -1609,8 +1655,10 @@ something.</p>
 level_database = 'info'
 </code></pre>
 <h3 id="log_level_access"><a class="header" href="#log_level_access"><code>LOG_LEVEL_ACCESS</code></a></h3>
-<p>For changing the logging behavior for access logs to the API endpoints, you will need to set the <code>LOG_LEVEL_ACCESS</code>.
-If you have access logging configured at your firewall or reverse proxy, you can disable the <code>LOG_LEVEL_ACCESS</code> fully
+<p>For changing the logging behavior for access logs to the API endpoints, you will need to set the
+<code>LOG_LEVEL_ACCESS</code>.
+If you have access logging configured at your firewall or reverse proxy, you can disable the
+<code>LOG_LEVEL_ACCESS</code> fully
 to reduce duplicated log outputs.</p>
 <pre><code class="language-toml">[logging]
 # This is a special config which allows the configuration of
@@ -1650,9 +1698,12 @@ level_access = 'modifying'
 log_fmt = 'json'
 </code></pre>
 <h2 id="events"><a class="header" href="#events">Events</a></h2>
-<p>Events are used for auditing and never miss anything. If something important happens, you usually need to inspect logs
-to catch it, but why should you, if you did not notice any problems? This is where Rauthy Events are helping you out.
-You need to set up basic configuration for Event targets and then you could customize the different levels.</p>
+<p>Events are used for auditing and never miss anything. If something important happens, you usually
+need to inspect logs
+to catch it, but why should you, if you did not notice any problems? This is where Rauthy Events are
+helping you out.
+You need to set up basic configuration for Event targets and then you could customize the different
+levels.</p>
 <h3 id="basic-setup"><a class="header" href="#basic-setup">Basic Setup</a></h3>
 <p>Rauthy has the following Event targets built-in:</p>
 <ul>
@@ -1662,7 +1713,8 @@ You need to set up basic configuration for Event targets and then you could cust
 </ul>
 <p>You can see the full set of config option in the <code>[events]</code> in the <a href="config/config.html">Reference Config</a>.</p>
 <h4 id="e-mail"><a class="header" href="#e-mail">E-Mail</a></h4>
-<p>To be able to receive Events via E-Mail, you need to have set up an SMTP server and have a working connection. With
+<p>To be able to receive Events via E-Mail, you need to have set up an SMTP server and have a working
+connection. With
 a working SMTP, you only need to set <code>events.email</code>, that's it.</p>
 <pre><code class="language-toml">[events]
 # The E-Mail address event notifications should be sent to.
@@ -1671,9 +1723,12 @@ a working SMTP, you only need to set <code>events.email</code>, that's it.</p>
 email = 'admin@localhost'
 </code></pre>
 <h4 id="matrix"><a class="header" href="#matrix">Matrix</a></h4>
-<p>Matrix is often deployed with home servers that may not even have real TLS certificates or if just running behind closed
-doors, may use self-signed certificates. To make it work in all of these situations, you can configure quite a lot for
-the connection to Matrix. In the end, you will only need to have some credentials and a room ID, so Rauthy knows where
+<p>Matrix is often deployed with home servers that may not even have real TLS certificates or if just
+running behind closed
+doors, may use self-signed certificates. To make it work in all of these situations, you can
+configure quite a lot for
+the connection to Matrix. In the end, you will only need to have some credentials and a room ID, so
+Rauthy knows where
 it should post the events.</p>
 <pre><code class="language-toml">[events]
 # Matrix variables for event notifications.
@@ -1747,7 +1802,8 @@ using a session token which has been created on another machine.</p>
 </div>
 </div>
 <h4 id="slack"><a class="header" href="#slack">Slack</a></h4>
-<p>To receive messages via Slack, you need to create a legacy webhook inside your Slack account. This is then the only
+<p>To receive messages via Slack, you need to create a legacy webhook inside your Slack account. This
+is then the only
 config variable you need to set:</p>
 <pre><code class="language-toml">[events]
 # The Webhook for Slack Notifications.
@@ -1757,8 +1813,10 @@ config variable you need to set:</p>
 slack_webhook = ""
 </code></pre>
 <h4 id="custom-target"><a class="header" href="#custom-target">Custom Target</a></h4>
-<p>If you need your events to be sent somewhere custom, you can always create an API key with <code>read</code> access for Events.
-Then write a small app that simply listens to the events stream, which can process or just forwards the events to where
+<p>If you need your events to be sent somewhere custom, you can always create an API key with <code>read</code>
+access for Events.
+Then write a small app that simply listens to the events stream, which can process or just forwards
+the events to where
 ever you need them.</p>
 <ol>
 <li>Log in to the Admin UI and create an API key with <code>read</code> access for events.</li>
@@ -1789,49 +1847,58 @@ From the test, you should get an output similar to this:</li>
 </code></pre>
 <ol start="4">
 <li>Listen to the events stream.
-You need to add the API key in the <code>Authorization</code> header with the prefix <code>API-Key</code>, for instance like</li>
+You need to add the API key in the <code>Authorization</code> header with the prefix <code>API-Key</code>, for instance
+like</li>
 </ol>
 <pre><code>Authorization: API-Key events$SUcpBxcPmfwH9z1Kb4ExOUYDSXpxOj9mFLadjuQ1049XaWzdWB328aa97k2nj21E
 </code></pre>
-<p>You can either periodically fetch via the <code>/auth/v1/events</code> endpoint (see Swagger documentation in the Admin UI), or
+<p>You can either periodically fetch via the <code>/auth/v1/events</code> endpoint (see Swagger documentation in
+the Admin UI), or
 by listening to the <code>/auth/v1/events/stream</code>, which will be a Server Sent Events stream.</p>
 <p>The events will be sent in JSON format and have the following content:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct Event {
-    pub id: String,
-    pub timestamp: i64,
-    pub level: EventLevel,
-    pub typ: EventType,
-    pub ip: Option&lt;String&gt;,
-    pub data: Option&lt;i64&gt;,
-    pub text: Option&lt;String&gt;,
+  pub id: String,
+  pub timestamp: i64,
+  pub level: EventLevel,
+  pub typ: EventType,
+  pub ip: Option&lt;String&gt;,
+  pub data: Option&lt;i64&gt;,
+  pub text: Option&lt;String&gt;,
 }
 
 // the `EventLevel`s will be converted to lower case
 enum EventLevel {
-    Info,
-    Notice,
-    Warning,
-    Critical,
+  Info,
+  Notice,
+  Warning,
+  Critical,
 }
 
 enum EventType {
-    InvalidLogins,
-    IpBlacklisted,
-    IpBlacklistRemoved,
-    JwksRotated,
-    NewUserRegistered,
-    NewRauthyAdmin,
-    NewRauthyVersion,
-    PossibleBruteForce,
-    RauthyStarted,
-    RauthyHealthy,
-    RauthyUnhealthy,
-    SecretsMigrated,
-    UserEmailChange,
-    UserPasswordReset,
-    Test,
+  InvalidLogins,
+  IpBlacklisted,
+  IpBlacklistRemoved,
+  JwksRotated,
+  NewUserRegistered,
+  NewRauthyAdmin,
+  NewRauthyVersion,
+  PossibleBruteForce,
+  RauthyStarted,
+  RauthyHealthy,
+  RauthyUnhealthy,
+  SecretsMigrated,
+  UserEmailChange,
+  UserPasswordReset,
+  Test,
+  BackchannelLogoutFailed,
+  ScimTaskFailed,
+  ForcedLogout,
+  UserLoginRevoke,
+  SuspiciousApiScan,
+  LoginNewLocation,
+  TokenIssued,
 }
 <span class="boring">}</span></code></pre></pre>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
@@ -1848,13 +1915,18 @@ could fix it with a different proxy config or keep alive messages.</p>
 </div>
 </div>
 <h3 id="testing"><a class="header" href="#testing">Testing</a></h3>
-<p>You can test your Event handler / pipeline setup when you log in to the Admin UI and simply press the <code>Test</code> button
-in the upper right corner in the Events sidebar. This will send a Test event to all configured targets and listeners
-independent of any configured event level restrictions. Test events will always be sent as long as everything is working
+<p>You can test your Event handler / pipeline setup when you log in to the Admin UI and simply press
+the <code>Test</code> button
+in the upper right corner in the Events sidebar. This will send a Test event to all configured
+targets and listeners
+independent of any configured event level restrictions. Test events will always be sent as long as
+everything is working
 properly.</p>
 <h3 id="event_notify_level"><a class="header" href="#event_notify_level"><code>EVENT_NOTIFY_LEVEL</code></a></h3>
-<p>You can set different levels for each target. By default, Only events with <code>warning</code> or higher are sent via E-Mail
-while Matrix / Slack would receive Events with <code>notice</code> or higher. If you want a different behavior, you can get this:</p>
+<p>You can set different levels for each target. By default, Only events with <code>warning</code> or higher are
+sent via E-Mail
+while Matrix / Slack would receive Events with <code>notice</code> or higher. If you want a different behavior,
+you can get this:</p>
 <pre><code class="language-toml">[events]
 # The notification level for events. Works the same way as
 # a logging level. For instance: 'notice' means send out a
@@ -1876,10 +1948,13 @@ notify_level_matrix = 'notice'
 notify_level_slack = 'notice'
 </code></pre>
 <h3 id="event-persistence"><a class="header" href="#event-persistence">Event Persistence</a></h3>
-<p>Rauthys Admin UI has a component for inspecting Events from the past for analytical purposes. By default, events with
-the level <code>info</code> or higher are persisted for <code>31</code> days. After this period, they will be removed from the database to
+<p>Rauthys Admin UI has a component for inspecting Events from the past for analytical purposes. By
+default, events with
+the level <code>info</code> or higher are persisted for <code>31</code> days. After this period, they will be removed from
+the database to
 keep it clean.</p>
-<p>You can configure both the level which should be persisted, for instance set "only persist Events with level warning
+<p>You can configure both the level which should be persisted, for instance set "only persist Events
+with level warning
 or higher" and the days how long they should be kept.</p>
 <pre><code class="language-toml">[events]
 # Define the level from which on events should be persisted
@@ -1903,10 +1978,13 @@ persist_level = 'info'
 cleanup_days = 30
 </code></pre>
 <h3 id="level_-values"><a class="header" href="#level_-values"><code>level_*</code> Values</a></h3>
-<p>There are a lot of values starting with <code>level_*</code>. These can be used to configure the level for different kinds
+<p>There are a lot of values starting with <code>level_*</code>. These can be used to configure the level for
+different kinds
 of event being fired by Rauthy.</p>
-<p>For instance, let's say you only want to receive events with a level of <code>warning</code> or higher, but you also want to
-receive a notification when there are more than 7 failed logins from an IP. By default, 7 failed logins would trigger an
+<p>For instance, let's say you only want to receive events with a level of <code>warning</code> or higher, but you
+also want to
+receive a notification when there are more than 7 failed logins from an IP. By default, 7 failed
+logins would trigger an
 event with the level of <code>notice</code>. You can then set</p>
 <pre><code class="language-toml">[events]
 # default: notice
@@ -1916,6 +1994,36 @@ level_failed_logins_7 = 'notice'
 <p>to also receive these while still only receiving <code>warning</code> events.</p>
 <p>The full list of these configurable levels is the following:</p>
 <pre><code class="language-toml">[events]
+# The level for the generated Event after a backchannel
+# logout has failed after exceeding all retries.
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_BACKCHANNEL_LOGOUT_FAILED
+level_backchannel_logout_failed = 'critical'
+# The level for the generated Event after a user was
+# force-logged-out by an admin.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_FORCE_LOGOUT
+level_force_logout = 'notice'
+# The level for the generated Event after an IP has
+# been blacklisted
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_IP_BLACKLISTED
+level_ip_blacklisted = 'warning'
+# The level for the generated Event after the JWKS has
+# been rotated
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_JWKS_ROTATE
+level_jwks_rotate = 'notice'
+# The level for the generated Event after a login from
+# a new location for a user.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_NEW_LOGIN_LOCATION
+level_new_login_location = 'notice'
 # The level for the generated Event after a new user has
 # been registered.
 #
@@ -1940,30 +2048,6 @@ level_user_password_reset = 'notice'
 # default: notice
 # overwritten by: EVENT_LEVEL_RAUTHY_ADMIN
 level_rauthy_admin = 'notice'
-# The level for the generated Event after a new App
-# version has been found
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_RAUTHY_VERSION
-level_rauthy_version = 'notice'
-# The level for the generated Event after the JWKS has
-# been rotated
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_JWKS_ROTATE
-level_jwks_rotate = 'notice'
-# The level for the generated Event after DB secrets
-# have been migrated to a new key
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_SECRETS_MIGRATED
-level_secrets_migrated = 'notice'
-# The level for the generated Event after a Rauthy
-# instance has been started
-#
-# default: info
-# overwritten by: EVENT_LEVEL_RAUTHY_START
-level_rauthy_start = 'info'
 # The level for the generated Event after a Rauthy
 # entered a healthy state (again)
 #
@@ -1971,17 +2055,56 @@ level_rauthy_start = 'info'
 # overwritten by: EVENT_LEVEL_RAUTHY_HEALTHY
 level_rauthy_healthy = 'notice'
 # The level for the generated Event after a Rauthy
+# instance has been started
+#
+# default: info
+# overwritten by: EVENT_LEVEL_RAUTHY_START
+level_rauthy_start = 'info'
+# The level for the generated Event after a Rauthy
 # entered an unhealthy state
 #
 # default: critical
 # overwritten by: EVENT_LEVEL_RAUTHY_UNHEALTHY
 level_rauthy_unhealthy = 'critical'
-# The level for the generated Event after an IP has
-# been blacklisted
+# The level for the generated Event after a new App
+# version has been found
 #
-# default: warning+
-# overwritten by: EVENT_LEVEL_IP_BLACKLISTED
-level_ip_blacklisted = 'warning'
+# default: notice
+# overwritten by: EVENT_LEVEL_RAUTHY_VERSION
+level_rauthy_version = 'notice'
+# The level for the generated Event after DB secrets
+# have been migrated to a new key
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_SECRETS_MIGRATED
+level_secrets_migrated = 'notice'
+# The level for the generated Event after a user revoked
+# an illegal login with the link from the notification
+# E-Mail for "login from unknown location"
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
+level_user_login_revoke = 'warning'
+# The level for the generated Event after a SCIM
+# update task ultimately failed after exceeding
+# all retries.
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_SCIM_TASK_FAILED
+level_scim_task_failed = 'critical'
+# The level for the generated Event after Rauthy
+# detected a suspicious API scanning request.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_SUSPICIOUS_REQUEST
+level_suspicious_request = 'notice'
+# The level for the generated Event after a new JWT
+# Token was issued.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_TOKEN_ISSUED
+level_token_issued = 'info'
+
 # The level for the generated Event after certain
 # amounts of false logins from an IP
 #
@@ -2035,15 +2158,21 @@ backup_keep_days_local = 3
 </code></pre>
 <p>All these backups are written inside the pod / container into <code>data/state_machine/backups</code>.</p>
 <p>This difference makes it possible, that you could add a second volume mount to the container.<br />
-You then have the database itself on a different disk than the backups, which is the most simple and straight forward
-approach to have a basic backup strategy. However, it is recommended to use S3 for backups, especially for HA
+You then have the database itself on a different disk than the backups, which is the most simple and
+straight forward
+approach to have a basic backup strategy. However, it is recommended to use S3 for backups,
+especially for HA
 deployments.</p>
 <h2 id="remote-backups-to-s3-storage"><a class="header" href="#remote-backups-to-s3-storage">Remote Backups to S3 Storage</a></h2>
-<p>Hiqlite backups can be pushed to an S3 bucket after creation. This way, you can keep only very low amount of local
+<p>Hiqlite backups can be pushed to an S3 bucket after creation. This way, you can keep only very low
+amount of local
 backups and older ones on cheaper object storage.</p>
-<p>Rauthy has been tested against MinIO and Garage S3 storage and is working fine with both, so I expect and standard S3
-API to just work out of the box. You need to provide an Access Key + Secret with write access to an existing bucket
-and Rauthy will take care of the rest. All backups pushed to S3 will automatically encrypted with the currently active
+<p>Rauthy has been tested against MinIO and Garage S3 storage and is working fine with both, so I
+expect and standard S3
+API to just work out of the box. You need to provide an Access Key + Secret with write access to an
+existing bucket
+and Rauthy will take care of the rest. All backups pushed to S3 will automatically encrypted with
+the currently active
 <code>encryption.key_active</code> from the Rauthy config.</p>
 <p>The configuration is done with the following values:</p>
 <pre><code class="language-toml">[cluster]
@@ -2062,16 +2191,21 @@ s3_key = "my_key"
 s3_secret = "my_secret"
 </code></pre>
 <h2 id="disaster-recovery"><a class="header" href="#disaster-recovery">Disaster Recovery</a></h2>
-<p>If you really lost all your data, you can easily restore automatically from the latest backup. This works with either a
-local <code>file</code> backup or with an encrypted remote backup on <code>s3</code> storage (as long as you still have the <code>ENC_KEY_ACTIVE</code>
+<p>If you really lost all your data, you can easily restore automatically from the latest backup. This
+works with either a
+local <code>file</code> backup or with an encrypted remote backup on <code>s3</code> storage (as long as you still have
+the <code>ENC_KEY_ACTIVE</code>
 that has been used for the remote backup).<br />
-This, again, works only for Hiqlite. When you are using Postgres, you should use Postgres native tooling like
+This, again, works only for Hiqlite. When you are using Postgres, you should use Postgres native
+tooling like
 <code>pgBackRest</code> which is way better at this.</p>
 <p>The process is really simple:</p>
 <ol>
-<li>Have the cluster shut down. This is probably the case anyway, if you need to restore from a backup.</li>
-<li>Provide a backup file name on S3 storage with the <code>HQL_BACKUP_RESTORE</code> ENV value with prefix <code>s3:</code> (encrypted), or a
-file on disk (plain sqlite file) with the prefix <code>file:</code>.</li>
+<li>Have the cluster shut down. This is probably the case anyway, if you need to restore from a
+backup.</li>
+<li>Provide a backup file name on S3 storage with the <code>HQL_BACKUP_RESTORE</code> ENV value with prefix
+<code>s3:object_name</code> (encrypted), or a file on disk (plain sqlite file) with the prefix
+<code>file:/path/to/backup</code>.</li>
 <li>Start up Rauthy</li>
 <li>Check the logs and wait for the backup to be finished</li>
 <li>After a successful restore, Rauthy will start its normal operation</li>
@@ -2582,8 +2716,10 @@ sec_header_block = true
 a good reason to do so.</p>
 </div>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="user-registration"><a class="header" href="#user-registration">User Registration</a></h1>
-<p>By default, new users can only be added by an admin. This is safe and secure, and your database cannot ever be spammed.
-However, you might want users to register themselves for whatever reason. In that case, follow the next step.</p>
+<p>By default, new users can only be added by an admin. This is safe and secure, and your database
+cannot ever be spammed.
+However, you might want users to register themselves for whatever reason. In that case, follow the
+next step.</p>
 <h2 id="open-registration"><a class="header" href="#open-registration">Open Registration</a></h2>
 <p>To open the registration to anyone, just set</p>
 <pre><code class="language-toml">[user_registration]
@@ -2595,7 +2731,8 @@ However, you might want users to register themselves for whatever reason. In tha
 enable = true
 </code></pre>
 <p>This will open the registration endpoint and make it accessible without upfront authentication.<br />
-You will now see a new button at the page root which directs you to the very simple registration form.</p>
+You will now see a new button at the page root which directs you to the very simple registration
+form.</p>
 <p>After successful registration, the user will receive an E-Mail with an activation link.
 Clicking on this link will direct the user on a page, where a new password or passkey can be set.
 At the same time, the account will be activated and the E-Mail will be validated as well of course.</p>
@@ -2617,25 +2754,31 @@ You need to configure the following values to be able to send out E-Mails:</p>
 </div>
 </div>
 <h2 id="captcha--proof-of-work"><a class="header" href="#captcha--proof-of-work">Captcha / Proof of Work</a></h2>
-<p>The registration form uses a <em>Proof of Work (PoW)</em> behind the scenes. This is basically an invisible captcha
-without the user solving weird image puzzles that sometimes even humans cannot solve. It is done with the help of a
+<p>The registration form uses a <em>Proof of Work (PoW)</em> behind the scenes. This is basically an invisible
+captcha
+without the user solving weird image puzzles that sometimes even humans cannot solve. It is done
+with the help of a
 tiny crate I wrote myself as well.</p>
-<p>This will of course not prevent real humans from registering fake accounts, but until now, I never had issues with any
-bots, so it does what it should while providing a way better UX than any traditional captcha challenge.</p>
-<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<p>This will of course not prevent real humans from registering fake accounts, but until now, I never
+had issues with any
+bots, so it does what it should while providing a way better UX than any traditional captcha
+challenge.</p>
+<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
 <div class="admonition-title">
-<div id="admonition-info-title">
-<p>Info</p>
+<div id="admonition-hint-title">
+<p>Hint</p>
 </div>
-<a class="admonition-anchor-link" href="config/user_reg.html#admonition-info"></a>
+<a class="admonition-anchor-link" href="config/user_reg.html#admonition-hint"></a>
 </div>
 <div>
 <p>If you are interested in how it works, take a look at <a href="https://github.com/sebadob/spow">spow</a>.</p>
 </div>
 </div>
 <h2 id="restricted-registration"><a class="header" href="#restricted-registration">Restricted Registration</a></h2>
-<p>You may want your users to register themselves, but at the same time restrict the E-Mail domains they are using.
-For instance, when you deploy Rauthy at your company for all internal applications, you may only want users to
+<p>You may want your users to register themselves, but at the same time restrict the E-Mail domains
+they are using.
+For instance, when you deploy Rauthy at your company for all internal applications, you may only
+want users to
 register with their work E-Mail:</p>
 <pre><code class="language-toml">[user_registration]
 # Can be used when 'open_user_reg = true' to restrict the domains for
@@ -2647,19 +2790,30 @@ register with their work E-Mail:</p>
 domain_restriction = 'my-domain.com'
 </code></pre>
 <h2 id="domain-blacklisting"><a class="header" href="#domain-blacklisting">Domain Blacklisting</a></h2>
-<p>If you have opened your registration to anyone, you will get into the situation at some point, where evil people will
-create accounts only for checking out your security and trying to break in, execute XSS, and so on. These are often
+<p>If you have opened your registration to anyone, you will get into the situation at some point, where
+evil people will
+create accounts only for checking out your security and trying to break in, execute XSS, and so on.
+These are often
 real people, which means any Captcha or PoW will not prevent them from registering of course.</p>
-<p>The best thing you can do in that case, if your deployment allows this, is Geoblocking certain regions at your
-firewall / reverse proxy level. Attackers would then switch to origins in a country you allow, but this is usually
-more costly for them and more hassle, so it is a good first line of defense. At the same time, it reduces the visibility
-to those regions, and you might not get targeted in the first place because bots cannot scan you from there.</p>
-<p>When such attacks happen, there is no magic rule or setting to defend against them. This is really individual each time
+<p>The best thing you can do in that case, if your deployment allows this, is Geoblocking certain
+regions at your
+firewall / reverse proxy level. Attackers would then switch to origins in a country you allow, but
+this is usually
+more costly for them and more hassle, so it is a good first line of defense. At the same time, it
+reduces the visibility
+to those regions, and you might not get targeted in the first place because bots cannot scan you
+from there.</p>
+<p>When such attacks happen, there is no magic rule or setting to defend against them. This is really
+individual each time
 and depends on a lot of things out of the scope of this documentation.</p>
-<p>Nevertheless, Rauthy provides a small feature that might help you here: <strong>E-Mail Domain Blacklisting</strong></p>
-<p>Let's say you can't Geoblock or you found out, that specific E-Mail providers are being used during these attacks.
-If you have such a list of evil providers, you can blacklist and exclude them from the open registration. Existing users
-will keep working and an Admin can still create users with these domains. They just cannot be used for self-registration
+<p>Nevertheless, Rauthy provides a small feature that might help you here: **E-Mail Domain Blacklisting
+**</p>
+<p>Let's say you can't Geoblock or you found out, that specific E-Mail providers are being used during
+these attacks.
+If you have such a list of evil providers, you can blacklist and exclude them from the open
+registration. Existing users
+will keep working and an Admin can still create users with these domains. They just cannot be used
+for self-registration
 anymore.</p>
 <p>You have the following config option:</p>
 <pre><code class="language-toml">[user_registration]
@@ -2677,8 +2831,8 @@ anymore.</p>
 # default: []
 # overwritten by: USER_REG_DOMAIN_BLACKLIST - single String, \n separated values
 domain_blacklist = [
-    'example.com',
-    'evil.net',
+  'example.com',
+  'evil.net',
 ]
 </code></pre>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
@@ -2695,12 +2849,16 @@ These attacks usually stop after 1-2 weeks most often. When attackers did not fi
 </div>
 <h2 id="downstream-application-integration"><a class="header" href="#downstream-application-integration">Downstream Application Integration</a></h2>
 <p>You can integrate the registration into a downstream application on 2 different ways.<br />
-Either use the existing one with redirect hints for improved UX, or fully build your own registration frontend.</p>
+Either use the existing one with redirect hints for improved UX, or fully build your own
+registration frontend.</p>
 <h3 id="redirect-hints"><a class="header" href="#redirect-hints">Redirect Hints</a></h3>
-<p>Let's say you have an application that uses Rauthy for user management. You want to improve the registration flow
-and your users being redirected back to your downstream app after registration / password set instead of them
+<p>Let's say you have an application that uses Rauthy for user management. You want to improve the
+registration flow
+and your users being redirected back to your downstream app after registration / password set
+instead of them
 "being stuck" on Rauthy's UI, which would be the default flow.</p>
-<p>Your app can show a link to the existing registration form with an appended query param to control redirects.
+<p>Your app can show a link to the existing registration form with an appended query param to control
+redirects.
 When you append</p>
 <pre><code>?redirect_uri=https%3A%2F%2Fgithub.com
 </code></pre>
@@ -2710,13 +2868,17 @@ When you append</p>
 <p>The following things will happen:</p>
 <ol>
 <li>After a successful registration, the user will be redirected back to the given <code>redirect_uri</code>.</li>
-<li>After the password / passkey has been set using the E-Mail link, instead of being redirected to the Rauthy
+<li>After the password / passkey has been set using the E-Mail link, instead of being redirected to
+the Rauthy
 account dashboard, the user will be redirected to the same URI again.</li>
 </ol>
-<p>This makes it possible to use Rauthy as your upstream provider without the user really needing to interact with or
+<p>This makes it possible to use Rauthy as your upstream provider without the user really needing to
+interact with or
 know about it in detail, which again leads to less confusion.</p>
-<p>By default, the allowed <code>redirect_uri</code>s are restricted to all existing <code>client_uri</code>s in the database. They will be
-compared via <code>client_uri.startsWith(redirect_uri)</code>. If you want to opt-out of the additional redirect_uri checks and
+<p>By default, the allowed <code>redirect_uri</code>s are restricted to all existing <code>client_uri</code>s in the
+database. They will be
+compared via <code>client_uri.startsWith(redirect_uri)</code>. If you want to opt-out of the additional
+redirect_uri checks and
 configure and open redirect to allow just anything, you can do so:</p>
 <pre><code class="language-toml">[user_registration]
 # If set to `true`, any validation of the `redirect_uri` provided
@@ -2740,11 +2902,14 @@ configure and open redirect to allow just anything, you can do so:</p>
 allow_open_redirect = false
 </code></pre>
 <h3 id="custom-frontend"><a class="header" href="#custom-frontend">Custom Frontend</a></h3>
-<p>Depending on your application, you may want to create your own frontend for the registration. For speed and efficiency
-reasons, Rauthy does not allow you to overwrite the existing templates, but you can host your own UI of course.</p>
+<p>Depending on your application, you may want to create your own frontend for the registration. For
+speed and efficiency
+reasons, Rauthy does not allow you to overwrite the existing templates, but you can host your own UI
+of course.</p>
 <p>The registration page is super simple and you can take a look at what it does here:
 <a href="https://github.com/sebadob/rauthy/blob/main/frontend/src/routes/users/register/%2Bpage.svelte">page.svelte</a></p>
-<p>The registration endpoint allows CORS requests. The only thing you need to care about is the PoW calculation.</p>
+<p>The registration endpoint allows CORS requests. The only thing you need to care about is the PoW
+calculation.</p>
 <ol>
 <li>Accept the input from the user via any form inputs</li>
 <li>When the user clicks submit, fetch a new PoW from Rauthy via <code>POST /auth/v1/pow</code></li>
@@ -2754,20 +2919,20 @@ reasons, Rauthy does not allow you to overwrite the existing templates, but you 
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct NewUserRegistrationRequest {
-    #[validate(email)]
-    email: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
-    family_name: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
-    given_name: String,
-    /// Validation: `[a-zA-Z0-9,.:/_\-&amp;?=~#!$'()*+%]+`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+"))]
-    pow: String,
-    /// Validation: `[a-zA-Z0-9,.:/_\-&amp;?=~#!$'()*+%]+`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+"))]
-    redirect_uri: Option&lt;String&gt;,
+  #[validate(email)]
+  email: String,
+  /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
+  #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+  family_name: String,
+  /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
+  #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+  given_name: String,
+  /// Validation: `[a-zA-Z0-9,.:/_\-&amp;?=~#!$'()*+%]+`
+  #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+"))]
+  pow: String,
+  /// Validation: `[a-zA-Z0-9,.:/_\-&amp;?=~#!$'()*+%]+`
+  #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+"))]
+  redirect_uri: Option&lt;String&gt;,
 }
 <span class="boring">}</span></code></pre></pre>
 <div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">
@@ -3133,28 +3298,32 @@ endpoint to see if your IP address is shown correctly.</p>
 <p>It is also recommended to use POSIX ACLs to limit access to Rauthy socket to your reverse proxy, so other UNIX users
 won't be able to connect to the socket directly and bypass the reverse proxy.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="tuning"><a class="header" href="#tuning">Tuning</a></h1>
-<p>Rauthys default tuning is optimized for somewhat low resource usage while still providing good performance and low
-latency up to a couple of thousands of users. If you run a tiny instance with less than 100 users, or a very big one
-with users going into millions, or you need a very high degree of concurrency, you can optimize the default tuning.
-We will go through a few options to achieve what you need, no matter if you want even lower memory usage or higher
-throughput.</p>
+<p>Rauthys default tuning is optimized for somewhat low resource usage while still providing good
+performance and low latency up to a couple of thousands of users. If you run a tiny instance with
+less than 100 users, or a very big one with users going into millions, or you need a very high
+degree of concurrency, you can optimize the default tuning.
+We will go through a few options to achieve what you need, no matter if you want even lower memory
+usage or higher throughput.</p>
 <h2 id="database"><a class="header" href="#database">Database</a></h2>
 <h3 id="cache_storage_disk"><a class="header" href="#cache_storage_disk"><code>cache_storage_disk</code></a></h3>
-<p>By default, Rauthy keeps the WAL + Snapshots for the in-memory cache on disk. This makes the cache, even though it
-exists in-memory only, persistent, because it can be rebuilt from disk after a restart. Blacklisted IPs for instance
-exists in the cache only, as well as Auth Codes and some other values. The other advantage is, that it reduces the
-overall memory usage a bit, because we don't need duplicate data in-memory just to make the Raft replication work.</p>
-<p>These advantages are really nice and usually, because the throughput is really high anyway, you should not need to
-worry about it. However, you can optionally keep everything cache related in memory only. This boosts the throughput
-a lot, depending on the IOPS of your disk of course, at the cost of higher memory usage and the fact, that nodes need
-to re-join the Raft cluster after a restart and do a complete re-sync for latest Snapshot + Raft Logs.</p>
+<p>By default, Rauthy keeps the WAL + Snapshots for the in-memory cache on disk. This makes the cache,
+even though it exists in-memory only, persistent, because it can be rebuilt from disk after a
+restart. Blacklisted IPs for instance exists in the cache only, as well as Auth Codes and some other
+values. The other advantage is, that it reduces the overall memory usage a bit, because we don't
+need
+duplicate data in-memory just to make the Raft replication work.</p>
+<p>These advantages are really nice and usually, because the throughput is really high anyway, you
+should not need to worry about it. However, you can optionally keep everything cache related in
+memory only. This boosts the throughput a lot, depending on the IOPS of your disk of course, at the
+cost of higher memory usage and the fact, that nodes need to re-join the Raft cluster after a
+restart and do a complete re-sync for latest Snapshot + Raft Logs.</p>
 <p>To keep everything in memory only, set:</p>
 <pre><code class="language-toml">[cluster]
 # Set to `false` to store Cache WAL files + Snapshots in-memory only.
 # If you run a Cluster, a Node can re-sync cache data after a restart.
 # However, if you restart too quickly or shut down the whole cluster,
 # all your cached data will be gone.
-# In-memory only hugegly increases the throughput though, so it
+# In-memory only greatly increases the throughput, though, so it
 # depends on your needs, what you should prefer.
 #
 # default: true
@@ -3164,16 +3333,19 @@ cache_storage_disk = false
 <h3 id="read_pool_size--pg_max_conn"><a class="header" href="#read_pool_size--pg_max_conn"><code>read_pool_size</code> / <code>pg_max_conn</code></a></h3>
 <p>These values define the database connection pool sizes. <code>pg_max_conn</code> is by default set to <code>20</code>, and
 <code>read_pool_size</code> to <code>4</code>.</p>
-<p>The Postgres connections are a limit on the maximum and the application will dynamically open as many as necessary. If
-you have a huge amount of concurrency, you might see improvements by increasing <code>pg_max_conn</code>. Keep in mind though, that
-most data that is used for normal user authentication is cached in memory, so it's possible that it will not help at
-all. If you want to lower resource usage as much as possible, you might want to consider a lower value for
-<code>pg_max_conn</code>, even though I would only do this for very tiny Rauthy instances with less than 50 users. The connection
-pool size for Postgres has a much higher impact than it does for Hiqlite, because of the networking overhead.</p>
-<p>For Hiqlite with <code>read_pool_size</code>, you might want to do the same of course. However, the pool is statically built to
-reduce latency. On the other hand, a higher amount of connections will only very slightly increase memory usage. These
-connections are only for reading data and don't do anything regarding writes. The Hiqlite writer will always be a fixed,
-single writer connection running on a dedicated thread.</p>
+<p>The Postgres connections are a limit on the maximum and the application will dynamically open as
+many as necessary. If you have a huge amount of concurrency, you might see improvements by
+increasing <code>pg_max_conn</code>. Keep in mind though, that most data that is used for normal user
+authentication is cached in memory, so it's possible that it will not help at all. If you want to
+lower resource usage as much as possible, you might want to consider a lower value for
+<code>pg_max_conn</code>, even though I would only do this for very tiny Rauthy instances with less than 50
+users. The connection pool size for Postgres has a much higher impact than it does for Hiqlite,
+because of the networking overhead.</p>
+<p>For Hiqlite with <code>read_pool_size</code>, you might want to do the same of course. However, the pool is
+statically built to reduce latency. On the other hand, a higher number of connections will only very
+slightly increase memory usage. These connections are only for reading data and don't do anything
+regarding writes. The Hiqlite writer will always be a fixed, single writer connection running on a
+dedicated thread.</p>
 <p>The Hiqlite read pool can be configured in the <code>cluster</code> section:</p>
 <pre><code class="language-toml">[cluster]
 # The size of the pooled connections for local database reads.
@@ -3201,8 +3373,8 @@ single writer connection running on a dedicated thread.</p>
 pg_max_conn = 20
 </code></pre>
 <h3 id="log_sync"><a class="header" href="#log_sync"><code>log_sync</code></a></h3>
-<p>When using Hiqlite, you can control the Raft Log sync / flush strategy. This has an immediate effect on disk longevity
-and crash resistance, but of course also on total throughput.</p>
+<p>When using Hiqlite, you can control the Raft Log sync / flush strategy. This has an immediate effect
+on disk longevity and crash resistance, but of course, also on total throughput.</p>
 <pre><code class="language-toml">[cluster]
 # Setting for Raft Log syncing / flushing.
 #
@@ -3217,53 +3389,51 @@ and crash resistance, but of course also on total throughput.</p>
 # If you run a single instance "Cluster", you most probably want
 # `immediate` to have the highest degree of consistency. If set
 # to `immediate`, the Raft will block until data has been flushed
-# to disk. This is especially important for a single instance
-# deployment, because there is no way to recover state from other
-# nodes or re-sync a maybe corrupted WAL file.
+# to disk.
 # `immediate` has a very huge negative impact on throughput, and
 # it puts a lot of stress on your disk, which is important to
 # consider for SSDs.
 #
 # `immediate_async` puts the same amount of stress on your SSD
-# and flushed all buffers to disk immediately after a single
-# Raft Log was saved. Unlike `immediate` however, it does not
+# and flushes all buffers to disk immediately after a single
+# Raft Log was saved. Unlike `immediate`, however, it does not
 # wait for completion and directly returns `success` to the
-# Raft Engine. You have a bit less consistency guarantees in
-# exchange for basically the same throughput as with `interval`
+# Raft Engine. You have a tiny bit worse consistency guarantees
+# in exchange for basically the same throughput as with `interval`
 # syncing.
 #
 # The `interval_&lt;ms&gt;` option will not flush immediately. Flushes
-# will be triggered by an external ticker task top flush buffers
-# every &lt;ms&gt; ms, and then only if buffers are dirty, meaning if
-# any data has been updated since the last sync. This setting
-# has the highest throughput and puts the lowest amount of stress
-# on your SSD.
+# will be triggered by an external ticker task every &lt;ms&gt; ms, and
+# then only if buffers are dirty, meaning if any data was updated
+# since the last sync. This setting has the highest throughput
+# and puts the lowest amount of stress on your SSD.
+#
 # CAUTION: You probably never want to use this setting for a
 # single instance, since it may be the case that if you are
-# unlucky and your app crashes before buffers are synced, that
-# your WAL file might end up being corrupted. Even though very
-# unlikely in real world (can be force-produced though), you
-# would need to re-sync from a healthy cluster member in such
-# a case, if the automactic WAL repair does not succeed.
+# unlucky and your app crashes before buffers are synced, you might
+# lose the last few WAL entries. Even though very unlikely in the
+# real world (can be force-produced though).
 #
 # default: immediate_async
 # overwritten by: HQL_LOG_SYNC
-log_sync = "immediate_async"
+log_sync = "interval_200"
 </code></pre>
 <h2 id="wal_size--logs_until_snapshot"><a class="header" href="#wal_size--logs_until_snapshot"><code>wal_size</code> + <code>logs_until_snapshot</code></a></h2>
-<p>This applies to Hiqlite only as well. If you only run a small instance, you could save a little bit of memory by
-adjusting the WAL file size and the threshold when to create a new Snapshot and cleanup Raft Logs. The default values
-will handle as much throughput as your disk IOPS allow. However, you could tune it down for small instance to e.g.</p>
+<p>This applies to Hiqlite only as well. If you only run a small instance, you could save a little bit
+of memory by adjusting the WAL file size and the threshold when to create a new Snapshot and cleanup
+Raft Logs. The default values will handle as much throughput as your disk IOPS allow. However, you
+could tune it down for small instances to e.g.</p>
 <ul>
 <li><code>wal_size = 262144</code></li>
 <li><code>logs_until_snapshot = 1000</code></li>
 </ul>
 <pre><code class="language-toml">[cluster]
-# Hiqlite WAL files (when not using the `rocksdb` feature) will
-# always have a fixed size, even when they are still "empty", to
-# reduce disk operations while writing. You can set the WAL size
-# in bytes. The default value is 2 MB, while the minimum size is
-# 8 kB.
+# Hiqlite WAL files will always have a fixed size, even when they
+# are still "empty", to reduce disk operations while writing. You
+# can set the WAL size in bytes. The default value is 2 MiB, while
+# the minimum size is 8 kiB.
+# The value is given in bytes and should always be a multiple of 
+# 4096.
 #
 # default: 2097152
 # overwritten by: HQL_WAL_SIZE
@@ -3272,7 +3442,7 @@ wal_size = 2097152
 # Sets the limit when the Raft will trigger the creation of a new
 # state machine snapshot and purge all logs that are included in
 # the snapshot.
-# Higher values can achieve more throughput in very write heavy
+# Higher values can achieve more throughput in really write heavy
 # situations but will end up in more disk usage and longer
 # snapshot creations / log purges.
 #
@@ -3280,11 +3450,12 @@ wal_size = 2097152
 # overwritten by: HQL_LOGS_UNTIL_SNAPSHOT
 logs_until_snapshot = 10000
 </code></pre>
-<p>This will trigger more often WAL log roll-overs, which of course does more syscalls. But since WAL files are
-memory-mapped, you can save a little bit of memory at runtime. These values should always be adjusted together. They
-both have an impact on how many WAL files will exist during normal operation. ideally, you have 2-4 WAL files around
-during normal operation. At the same time, you should make make these values too small so that Snapshots are not being
-created more than probably every 15 minutes.</p>
+<p>This will trigger more often WAL log roll-overs, which of course does more syscalls. But since WAL
+files are memory-mapped, you can save a little bit of memory at runtime. These values should always
+be adjusted together. They both have an impact on how many WAL files will exist during normal
+operation. ideally, you have 2-4 WAL files around during normal operation. At the same time, you
+should make make these values too small so that Snapshots are not being created more than probably
+every 15 minutes.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -3293,25 +3464,29 @@ created more than probably every 15 minutes.</p>
 <a class="admonition-anchor-link" href="config/tuning.html#admonition-note"></a>
 </div>
 <div>
-<p>You should not push the <code>wal_size</code> below <code>131072</code>. The benefits in memory usage will become very small in exchange for
-a lot more disk I/O. Also, the <code>wal_size</code> should always be a multiple of <code>4096</code> for optimal alignment. Values bigger
-than the default 2MiB will typically not have any positive impact as well, as long as you are not having too many
-Snapshots because of a huge amount of concurrent users.</p>
+<p>You should not push the <code>wal_size</code> below <code>131072</code>. The benefits in memory usage will become very
+small in exchange for a lot more disk I/O. Also, the <code>wal_size</code> should always be a multiple of <code>4096</code>
+for optimal alignment. Values bigger than the default 2MiB will typically not have too much positive
+impact as well, as long as you are not having too many Snapshots because of a huge amount of
+concurrent users.</p>
 </div>
 </div>
 <h2 id="http-server"><a class="header" href="#http-server">HTTP Server</a></h2>
 <h3 id="http_workers"><a class="header" href="#http_workers"><code>http_workers</code></a></h3>
-<p>The <code>server.http_workers</code> variable defines the amount of HTTP worker threads being spawned. This has a big impact on
-the amount of memory used. This is especially important when you run Rauthy inside a container on a bigger underlying
-host with many cores. Rauthy will spawn more workers depending on the total amount of cores, and not depending on any
-container limits you might have set, which it cannot see.</p>
+<p>The <code>server.http_workers</code> variable defines the number of HTTP worker threads being spawned. This has
+a big impact on the amount of memory used. This is especially important when you run Rauthy inside a
+container on a bigger underlying host with many cores. Rauthy will spawn more workers depending on
+the total number of cores, and not depending on any container limits you might have set, which it
+cannot see.</p>
 <p>The default value is:</p>
 <ul>
 <li>less than 4 CPU cores -&gt; 1</li>
-<li>4+ cores -&gt; max(2, cores - MAX_HASH_THREADS - reserve), where <code>reserve</code> is 2 when <code>HIQLITE=true</code> and 1 otherwise</li>
+<li>4+ cores -&gt; max(2, cores - MAX_HASH_THREADS - reserve), where <code>reserve</code> is 2 when <code>HIQLITE=true</code>
+and 1 otherwise</li>
 </ul>
-<p>You almost <strong>always want to tune this</strong> to your needs, it has a big impact on memory! The best idea is probably to use
-the same formula, but with respect to custom container limits, or whatever you would want Rauthy to use.</p>
+<p>You almost <strong>always want to tune this</strong> to your needs, it has a big impact on memory! The best idea
+is probably to use the same formula, but with respect to custom container limits, or whatever you
+would want Rauthy to use.</p>
 <pre><code class="language-toml">[server]
 # Limits the amount of HTTP worker threads. This value
 # heavily impacts memory usage, even in idle. The default
@@ -3331,34 +3506,37 @@ the same formula, but with respect to custom container limits, or whatever you w
 http_workers = 1
 </code></pre>
 <h3 id="metrics_enable"><a class="header" href="#metrics_enable"><code>metrics_enable</code></a></h3>
-<p>In newer versions, the <code>metrics_enable</code> is <code>false</code> by default and opt-in. You can enable prometheus metrics with it. An
-independent HTTP server will be spawned, it will consume additional memory and CPU. Leave it to <code>false</code> if not needed.</p>
+<p>In newer versions, the <code>metrics_enable</code> is <code>false</code> by default and opt-in. You can enable prometheus
+metrics with it. An independent HTTP server will be spawned, it will consume additional memory and
+CPU. Leave it to <code>false</code> if not needed.</p>
 <pre><code class="language-toml">[server]
 # To enable or disable the additional HTTP server to expose
 # the /metrics endpoint.
 #
 # default: false
 # overwritten by: METRICS_ENABLE
-metrics_enable = true
+metrics_enable = false
 </code></pre>
 <h3 id="swagger_ui_enable"><a class="header" href="#swagger_ui_enable"><code>swagger_ui_enable</code></a></h3>
-<p>If enable <code>swagger_ui_enable</code> and set it to <code>true</code>, it will consume ~13 MB of additional memory. To reduce overall
-memory fragmentation further down the road, if enabled, it will be initialized at the very start of the application
-instead of being lazily initialized. If you don't need the API documentation, leave it to the default, which is <code>false</code>.</p>
+<p>If enable <code>swagger_ui_enable</code> and set it to <code>true</code>, it will consume ~13 MB of additional memory. To
+reduce overall memory fragmentation further down the road, if enabled, it will be initialized at the
+very start of the application instead of being lazily initialized. If you don't need the API
+documentation, leave it to the default, which is <code>false</code>.</p>
 <pre><code class="language-toml">[server]
 # Can be set to `true` to enable the Swagger UI.
 # This will consume ~13mb of additional memory.
 #
 # default: false
 # overwritten by: SWAGGER_UI_ENABLE
-swagger_ui_enable = true
+swagger_ui_enable = false
 </code></pre>
 <h2 id="password-hashing"><a class="header" href="#password-hashing">Password Hashing</a></h2>
 <h3 id="argon2_m_cost--argon2_t_cost--argon2_p_cost--max_hash_threads"><a class="header" href="#argon2_m_cost--argon2_t_cost--argon2_p_cost--max_hash_threads"><code>argon2_m_cost</code> + <code>argon2_t_cost</code> + <code>argon2_p_cost</code> + <code>max_hash_threads</code></a></h3>
-<p>Values for password hashing are probably the most important ones to tune overall. They do not only dictate resource
-usage, but also the strength and security of password hashes. The password hashing will always be the limiting factor,
-at least as long as not all of your users use Webauthn-only accounts. This book, as well as the Admin UI, have dedicated
-sections and utilities for these values. Just keep in mind to tune them properly.</p>
+<p>Values for password hashing are probably the most important ones to tune overall. They do not only
+dictate resource usage, but also the strength and security of password hashes. The password hashing
+will always be the limiting factor, at least as long as not all of your users use Webauthn-only
+accounts. This book, as well as the Admin UI, have dedicated sections and utilities for these
+values. Keep in mind to tune them properly.</p>
 <pre><code class="language-toml">[hashing]
 # Argon2ID hashing parameters. Take a look at the documentation
 # for more information:
@@ -3385,15 +3563,17 @@ argon2_p_cost = 8
 max_hash_threads = 2
 </code></pre>
 <h2 id="memory-allocator"><a class="header" href="#memory-allocator">Memory Allocator</a></h2>
-<p>Rauthy uses <code>jemalloc</code> under the hood, which you can tune via an environment variable, as long as it's set before the
-application starts. A default setting is baked into the compiled binary, but when you provide the env var, you can
-overwrite it. The default is tuned to be just fine for instances with a couple of hundreds of users and focuses more
-on being efficient rather than providing a high degree of concurrency.</p>
-<p>If you have a bigger instance with many thousands or even millions of users, or just a tiny one with probably less than
-100, you can optimize it. There is only a small amount of room in terms of lowering memory usage, but a lot of
-increasing concurrency at the cost of higher memory usage.</p>
-<p>I will not go into the details of <code>jemalloc</code> here. If you are interested in this topic, you will find lots of
-information via the search engine of your choice. I only want to give you recipes that should just work.</p>
+<p>Rauthy uses <code>jemalloc</code> under the hood, which you can tune via an environment variable, as long as
+it's set before the application starts. A default setting is baked into the compiled binary, but
+when you provide the env var, you can overwrite it. The default is tuned to be just fine for
+instances with a couple of hundreds of users and focuses more on being efficient rather than
+providing a high degree of concurrency.</p>
+<p>If you have a bigger instance with many thousands or even millions of users, or just a tiny one with
+probably less than 100, you can optimize it. There is only a small amount of room in terms of
+lowering memory usage, but a lot of increasing concurrency at the cost of higher memory usage.</p>
+<p>I will not go into the details of <code>jemalloc</code> here. If you are interested in this topic, you will
+find lots of information via the search engine of your choice. I only want to give you recipes that
+should just work.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -3402,42 +3582,46 @@ information via the search engine of your choice. I only want to give you recipe
 <a class="admonition-anchor-link" href="config/tuning.html#admonition-caution"></a>
 </div>
 <div>
-<p>You need to set the <code>MALLOC_CONF</code> environment variable from the recipes below BEFORE the application starts, or
-otherwise it will be ignored. Anything like the <code>-e</code> flag for docker, or a regular environment variable inside K8s will
-work.</p>
+<p>You need to set the <code>MALLOC_CONF</code> environment variable from the recipes below BEFORE the application
+starts, or otherwise it will be ignored. Anything like the <code>-e</code> flag for docker, or a regular
+environment variable inside K8s will work.</p>
 </div>
 </div>
 <h3 id="small-instance"><a class="header" href="#small-instance">Small Instance</a></h3>
-<p>If you run a small instance with less than 100 users and you want to reduce the memory footprint as much as possible,
-you have two options.</p>
+<p>If you run a small instance with less than 100 users, and you want to reduce the memory footprint as
+much as possible, you have two options.</p>
 <p><strong>1. Lowest memory usage</strong></p>
-<p>This value will probably give you no noticeable performance hit while still providing a low memory usage.</p>
+<p>This value will probably give you no noticeable performance hit while still providing a low memory
+usage.</p>
 <pre><code>MALLOC_CONF=abort_conf:true,narenas:1,tcache_max:1024,dirty_decay_ms:1000,muzzy_decay_ms:1000
 </code></pre>
 <p><strong>2. Lowest possible memory at all costs.</strong></p>
-<p>This will come with a <strong>very big performance hit</strong>! You should only use it, if you don't care about performance at all.
-Imho, the performance hit is not worth the small savings compared to the config above.</p>
+<p>This will come with a <strong>very big performance hit</strong>! You should only use it, if you don't care about
+performance at all. Imo, the performance hit is not worth the small savings compared to the config
+above.</p>
 <pre><code>MALLOC_CONF=abort_conf:true,narenas:1,tcache:false,dirty_decay_ms:0,muzzy_decay_ms:0
 </code></pre>
 <h3 id="medium-instance"><a class="header" href="#medium-instance">Medium Instance</a></h3>
-<p>If you run a medium instance with up to 500-1000 users, you are probably just fine with the defaults. Stick to them.
-Just for reference, the currently used default config is this:</p>
+<p>If you run a medium instance with up to 500-1000 users, you are probably just fine with the
+defaults. Stick to them. Just for reference, the currently used default config is this:</p>
 <pre><code>MALLOC_CONF=abort_conf:true,narenas:8,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000
 </code></pre>
 <h3 id="big-instance"><a class="header" href="#big-instance">Big Instance</a></h3>
-<p>A big instance is one with more than at least 1000 users. In this case, you might not get the desired performance,
-especially if you have a higher value for <code>MAX_HASH_THREADS</code> or <code>HTTP_WORKERS</code>. Most requests are so small, that they
-almost entirely fit in the thread-local cache for the allocator, but if dynamic brotli compression kicks in, memory
-from an allocator arena will be necessary most of the time. Because Rauthy does not need the arena's that often, the
-default value of <code>4</code> is too low in such a case. You should set <code>narenas</code> from the string below at least equal to the
-amount of CPU cores your Rauthy instance is assigned to. Depending on the amount or concurrent logins, you may set
-<code>narenas</code> to 2-4x CPU cores at the cost of higher memory usage.</p>
+<p>A big instance is one with more than at least 1000 users. In this case, you might not get the
+desired performance, especially if you have a higher value for <code>MAX_HASH_THREADS</code> or <code>HTTP_WORKERS</code>.
+Most requests are so small, that they almost entirely fit in the thread-local cache for the
+allocator, but if dynamic brotli compression kicks in, memory from an allocator arena will be
+necessary most of the time. Because Rauthy does not need the arena's that often, the default value
+of <code>4</code> is too low in such a case. You should set <code>narenas</code> from the string below at least equal to
+the amount of CPU cores your Rauthy instance is assigned to. Depending on the amount or concurrent
+logins, you may set <code>narenas</code> to 2-4x CPU cores at the cost of higher memory usage.</p>
 <pre><code>MALLOC_CONF=abort_conf:true,narenas:16,tcache_max:16384,dirty_decay_ms:10000,muzzy_decay_ms:10000
 </code></pre>
 <h3 id="open-end"><a class="header" href="#open-end">Open End</a></h3>
-<p>For any instance with basically an open end of users, or if you have a very high degree of concurrent logins (or you
-just don't care about low memory usage and only about max performance), set <code>narenas</code> to 4x your CPU cores (higher
-values will start to have a negative impact). This config will let you scale into millions of users easily.</p>
+<p>For any instance with basically an open end of users, or if you have a very high degree of
+concurrent logins (or you just don't care about low memory usage and only about max performance),
+set <code>narenas</code> to 4x your CPU cores (higher values will start to have a negative impact). This config
+will let you scale into millions of users easily.</p>
 <pre><code>MALLOC_CONF=abort_conf:true,narenas:64,tcache_max:32768,dirty_decay_ms:30000,muzzy_decay_ms:30000
 </code></pre>
 <div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
@@ -3448,8 +3632,8 @@ values will start to have a negative impact). This config will let you scale int
 <a class="admonition-anchor-link" href="config/tuning.html#admonition-note-1"></a>
 </div>
 <div>
-<p>The Memory Allocator tuning does not work on Windows msvc targets, if you are running a custom-compiled version of
-Rauthy. It should work everywhere else though.</p>
+<p>The Memory Allocator tuning does not work on Windows msvc or freebsd targets, if you are running a
+custom-compiled version of Rauthy. It should work everywhere else though.</p>
 </div>
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="upstream-authentication-providers"><a class="header" href="#upstream-authentication-providers">Upstream Authentication Providers</a></h1>
@@ -3949,29 +4133,29 @@ from source on your own. The existing setup should make it pretty easy to do. To
 <a href="https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="ip-blacklisting"><a class="header" href="#ip-blacklisting">IP Blacklisting</a></h1>
 <p>Rauthy can blacklist certain IP that should be prevented from even trying to access it.<br />
-Each blacklisting will always have an expiry. This is important because most client IPs will be ephemeral.</p>
+Each blacklisting will always have an expiry. This is important because most client IPs will be
+ephemeral.</p>
 <h2 id="automatic-blacklisting"><a class="header" href="#automatic-blacklisting">Automatic Blacklisting</a></h2>
-<p>Blacklisting with different timeouts will happen automatically, for instance when thresholds for invalid logins have
-been reached or it is obvious that someone is scanning Rauthys API. The scan detection is very basic, but will catch
-suspicious requests and bots automatically.</p>
-<p>With failed logins, not only the timeout will be increased to send an answer back to the client to prevent brute-force
-attacks. Rauthy also has the following default thresholds for blacklisting IPs:</p>
+<p>Blacklisting with different timeouts will happen automatically, for instance, when thresholds for
+invalid logins have been reached or it is obvious that someone is scanning Rauthys API. The scan
+detection is very basic, but will catch suspicious requests and bots automatically.</p>
+<p>With failed logins, not only the timeout will be increased to send an answer back to the client to
+prevent brute-force attacks. Rauthy also has the following default thresholds for blacklisting IPs:</p>
 <div class="table-wrapper"><table><thead><tr><th>failed logins</th><th>blacklist</th></tr></thead><tbody>
 <tr><td>7</td><td>1 minute</td></tr>
 <tr><td>10</td><td>10 minutes</td></tr>
 <tr><td>15</td><td>15 minutes</td></tr>
 <tr><td>20</td><td>1 hour</td></tr>
-<tr><td>25</td><td>1 day</td></tr>
 <tr><td>25+</td><td>1 day</td></tr>
 </tbody></table>
 </div>
-<p>In addition to blacklisting, the timeout's for failed logins in between these steps will be longer the higher the
-failed attempts counter is.</p>
+<p>In addition to blacklisting, the timeouts for failed logins in between these steps will be longer
+the higher the failed attempts counter is.</p>
 <h2 id="suspicious-request-blacklisting"><a class="header" href="#suspicious-request-blacklisting">Suspicious Request Blacklisting</a></h2>
-<p>As mentioned already, Rauthy has basic capabilities to detect API scanners and bots. These are called <em>suspicious
-requests</em> internally.</p>
-<p>By default, Rauthy will immediately block such IPs if it detects them. However, you may not want this for whatever
-reason. You can modify this behavior with the following config setting:</p>
+<p>As mentioned already, Rauthy has basic capabilities to detect API scanners and bots. These are
+called <em>suspicious requests</em> internally.</p>
+<p>By default, Rauthy will immediately block such IPs if it detects them. However, you may not want
+this for whatever reason. You can modify this behavior with the following config setting:</p>
 <pre><code class="language-toml">[suspicious_requests]
 # The "catch all" route handler on `/` will compare the request
 # path against a hardcoded list of common scan targets from bots
@@ -3994,21 +4178,26 @@ blacklist = 1440
 # overwritten by: SUSPICIOUS_REQUESTS_LOG
 log = false
 </code></pre>
-<p>At the time of writing, events for suspicious requests do not exist yet. This might change in the future.</p>
+<p>At the time of writing, events for suspicious requests do not exist yet. This might change in the
+future.</p>
 <h2 id="manual-blacklisting"><a class="header" href="#manual-blacklisting">Manual Blacklisting</a></h2>
-<p>You can also manually blacklist an IP, either via the Admin UI or with an <a href="work/api_keys.html">API Key</a> with the correct
-access rights. Just navigate to <code>Blacklist</code> in the Admin UI and click <code>Blacklist IP</code>.</p>
+<p>You can also manually blacklist an IP, either via the Admin UI or with an <a href="work/api_keys.html">API Key</a>
+with the correct access rights. Just navigate to <code>Blacklist</code> in the Admin UI and click
+<code>Blacklist IP</code>.</p>
 <h2 id="persistence"><a class="header" href="#persistence">Persistence</a></h2>
-<p>The blacklist currently is in-memory only. This means you loose all blacklisted IPs when Rauthy restarts, if you opt-in
-to <code>cluster.cache_storage_disk = false</code>.</p>
-<p>The reason behind this is that blacklisting usually happens in scenarios under attack, when you want to do as little
-work as possible, for instance to not end up with a DoS. The blacklisting middleware is also the very first one in
-the API stack, even before access logging, to make sure Rauthy has the least amount of work blocking blacklisted IP's.</p>
+<p>The blacklist currently is in-memory only. This means you loose all blacklisted IPs when Rauthy
+restarts, if you opt-in to <code>cluster.cache_storage_disk = false</code>.</p>
+<p>The reason behind this is that blacklisting usually happens in scenarios under attack, when you want
+to do as little work as possible, for instance to not end up with a DoS. The blacklisting middleware
+is also the very first one in the API stack, even before access logging, to make sure Rauthy has the
+least amount of work blocking blacklisted IP's.</p>
 <h2 id="expiry"><a class="header" href="#expiry">Expiry</a></h2>
-<p>After a blacklisting expires, the entry will be fully removed from Rauthy and you will not see it anymore.</p>
+<p>After a blacklisting expires, the entry will be fully removed from Rauthy and you will not see it
+anymore.</p>
 <h2 id="blacklist-events"><a class="header" href="#blacklist-events">Blacklist Events</a></h2>
-<p>You may or may not be notified about different blacklisting events. All auto-blacklisting will trigger an event.
-The levels change depending on the failed login counter. You can adopt the levels to your likings by setting:</p>
+<p>You may or may not be notified about different blacklisting events. All auto-blacklisting will
+trigger an event. The levels change depending on the failed login counter. You can adopt the levels
+to your likings by setting:</p>
 <pre><code class="language-toml">[events]
 # The level for the generated Event after certain
 # amounts of false logins from an IP
@@ -5357,6 +5546,16 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # default: false
 # overwritten by: WHOAMI_HEADERS
 #whoami_headers = false
+
+# You can hide the 'Admin' button on the root / landing page for the UI.
+# The admin interface is always reachable via `/auth/v1/admin`, and the
+# button will only redirect, of course, only when the user is assigned to
+# the `rauthy_admin` role. However, if you are hosting some public service,
+# you might not want the button to show up there.
+#
+# default: false
+# overwritten by: ADMIN_BUTTON_HIDE
+#admin_button_hide = false
 
 [atproto]
 # Set to `true` to enable the ATProto provider. If the public URL is

@@ -169,14 +169,15 @@
                     <main>
                         <h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
 <h2 id="choose-a-database"><a class="header" href="#choose-a-database">Choose A Database</a></h2>
-<p>Rauthy's default database is <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>. Under the hood, it's using SQLite, but it
-adds an additional layer on top making it highly-available using
-the <a href="https://raft.github.io/">Raft Consensus Algorithm</a>. Don't let the SQLite engine under the hood fool you, it will
-handle most probably anything you throw at it, as long as your disks are fast enough. Hiqlite can easily saturate a
-1GBit/s network connection with just database (write) traffic. All reads are local, which means they are way faster than
-with Postgres in any scenario.</p>
-<p>If you already have a Postgres up an running with everything set up anyway, you might want to choose it as your main DB,
-but I do not recommend deploying a Postgres instance just for Rauthy. This would be a waste of precious resources.</p>
+<p>Rauthy's default database is <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>. Under the hood, it's
+using SQLite, but it adds a additional layer on top making it highly-available using
+the <a href="https://raft.github.io/">Raft Consensus Algorithm</a>. Don't let the SQLite engine under the hood
+fool you, it will handle most probably anything you throw at it, as long as your disks are fast
+enough. Hiqlite can easily saturate a 1GBit/s network connection with just database (write) traffic.
+All reads are local, which means they are way faster than with Postgres in any scenario.</p>
+<p>If you already have a Postgres up an running with everything set up anyway, you might want to choose
+it as your main DB, but I do not recommend deploying a Postgres instance just for Rauthy. This would
+be a waste of precious resources.</p>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
 <div class="admonition-title">
 <div id="admonition-hint-title">
@@ -190,14 +191,15 @@ Just take a look at the <a href="../config/config.html">Reference Config</a> and
 </div>
 </div>
 <h2 id="container-images"><a class="header" href="#container-images">Container Images</a></h2>
-<p>Rauthy versions before <code>0.27.0</code> had different container images depending on the database you choose. However, this is
-not the case anymore. There is only a single image which works with any configuration. It works on <code>x86_64</code> and <code>arm64</code>
-architectures.</p>
-<p>At the time of writing, you can run Rauthy either with <a href="./docker.html">Docker</a> or inside <a href="./k8s.html">Kubernetes</a>.<br />
-Both <em>Getting Started</em> guides do not cover all set up you might want to do for going into production. Especially the
-<em>Docker</em> guide is more for testing.<br />
-You should take a look at the <a href="../config/config.html">Reference Config</a> to see, what you might want to configure
-additionally. A dedicated <em>Going into production</em> guide will be written in the future.</p>
+<p>Rauthy versions before <code>0.27.0</code> had different container images depending on the database you choose.
+However, this is not the case anymore. There is only a single image which works with any
+configuration. It works on <code>x86_64</code> and <code>arm64</code> architectures.</p>
+<p>At the time of writing, you can run Rauthy either with <a href="./docker.html">Docker</a> or
+inside <a href="./k8s.html">Kubernetes</a>. <br />
+Both <em>Getting Started</em> guides do not cover all set up you might want to do for going into
+production. Especially the <em>Docker</em> guide is more for testing. \<br />
+You should take a look at the <a href="../config/config.html">Reference Config</a> to see, what you might want
+to configure additionally. A dedicated <em>Going into production</em> guide will be written in the future.</p>
 
                     </main>
 

@@ -1,16 +1,17 @@
 # IP Blacklisting
 
 Rauthy can blacklist certain IP that should be prevented from even trying to access it.  
-Each blacklisting will always have an expiry. This is important because most client IPs will be ephemeral.
+Each blacklisting will always have an expiry. This is important because most client IPs will be
+ephemeral.
 
 ## Automatic Blacklisting
 
-Blacklisting with different timeouts will happen automatically, for instance when thresholds for invalid logins have
-been reached or it is obvious that someone is scanning Rauthys API. The scan detection is very basic, but will catch
-suspicious requests and bots automatically.
+Blacklisting with different timeouts will happen automatically, for instance, when thresholds for
+invalid logins have been reached or it is obvious that someone is scanning Rauthys API. The scan
+detection is very basic, but will catch suspicious requests and bots automatically.
 
-With failed logins, not only the timeout will be increased to send an answer back to the client to prevent brute-force
-attacks. Rauthy also has the following default thresholds for blacklisting IPs:
+With failed logins, not only the timeout will be increased to send an answer back to the client to
+prevent brute-force attacks. Rauthy also has the following default thresholds for blacklisting IPs:
 
 | failed logins | blacklist  |
 |---------------|------------|
@@ -18,19 +19,18 @@ attacks. Rauthy also has the following default thresholds for blacklisting IPs:
 | 10            | 10 minutes |
 | 15            | 15 minutes |
 | 20            | 1 hour     |
-| 25            | 1 day      |
 | 25+           | 1 day      |
 
-In addition to blacklisting, the timeout's for failed logins in between these steps will be longer the higher the
-failed attempts counter is.
+In addition to blacklisting, the timeouts for failed logins in between these steps will be longer
+the higher the failed attempts counter is.
 
 ## Suspicious Request Blacklisting
 
-As mentioned already, Rauthy has basic capabilities to detect API scanners and bots. These are called *suspicious
-requests* internally.
+As mentioned already, Rauthy has basic capabilities to detect API scanners and bots. These are
+called *suspicious requests* internally.
 
-By default, Rauthy will immediately block such IPs if it detects them. However, you may not want this for whatever
-reason. You can modify this behavior with the following config setting:
+By default, Rauthy will immediately block such IPs if it detects them. However, you may not want
+this for whatever reason. You can modify this behavior with the following config setting:
 
 ```toml
 [suspicious_requests]
@@ -56,30 +56,35 @@ blacklist = 1440
 log = false
 ```
 
-At the time of writing, events for suspicious requests do not exist yet. This might change in the future.
+At the time of writing, events for suspicious requests do not exist yet. This might change in the
+future.
 
 ## Manual Blacklisting
 
-You can also manually blacklist an IP, either via the Admin UI or with an [API Key](api_keys.md) with the correct
-access rights. Just navigate to `Blacklist` in the Admin UI and click `Blacklist IP`.
+You can also manually blacklist an IP, either via the Admin UI or with an [API Key](api_keys.md)
+with the correct access rights. Just navigate to `Blacklist` in the Admin UI and click
+`Blacklist IP`.
 
 ## Persistence
 
-The blacklist currently is in-memory only. This means you loose all blacklisted IPs when Rauthy restarts, if you opt-in
-to `cluster.cache_storage_disk = false`.
+The blacklist currently is in-memory only. This means you loose all blacklisted IPs when Rauthy
+restarts, if you opt-in to `cluster.cache_storage_disk = false`.
 
-The reason behind this is that blacklisting usually happens in scenarios under attack, when you want to do as little
-work as possible, for instance to not end up with a DoS. The blacklisting middleware is also the very first one in
-the API stack, even before access logging, to make sure Rauthy has the least amount of work blocking blacklisted IP's.
+The reason behind this is that blacklisting usually happens in scenarios under attack, when you want
+to do as little work as possible, for instance to not end up with a DoS. The blacklisting middleware
+is also the very first one in the API stack, even before access logging, to make sure Rauthy has the
+least amount of work blocking blacklisted IP's.
 
 ## Expiry
 
-After a blacklisting expires, the entry will be fully removed from Rauthy and you will not see it anymore.
+After a blacklisting expires, the entry will be fully removed from Rauthy and you will not see it
+anymore.
 
 ## Blacklist Events
 
-You may or may not be notified about different blacklisting events. All auto-blacklisting will trigger an event.
-The levels change depending on the failed login counter. You can adopt the levels to your likings by setting:
+You may or may not be notified about different blacklisting events. All auto-blacklisting will
+trigger an event. The levels change depending on the failed login counter. You can adopt the levels
+to your likings by setting:
 
 ```toml
 [events]
