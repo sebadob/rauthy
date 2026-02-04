@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.34.3-20260202"
+version = "0.34.3"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -49,7 +49,7 @@ atrium-oauth = "0.1.2"
 base64 = "0.22.0"
 bincode = { version = "2", features = ["serde"] }
 brotli = "8"
-bytes = "1.11"
+bytes = "1.10"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = [
     "clock", "serde", "std"
