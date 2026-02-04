@@ -15,7 +15,7 @@ pub static GROUPS: LazyLock<RwLock<Vec<ScimGroup>>> = LazyLock::new(|| RwLock::n
 // All SCIM type extractors already validate the proper Content-Type and the SCIM bearer token.
 // This means if you end up in the request handler, the token has already been validated.
 
-/// A request to get "all" users. The `ScimListQuery` basically deinfes pagination and the
+/// A request to get "all" users. The `ScimListQuery` basically defines pagination and the
 /// expected results. Must always return a `ScimListResponse`.
 ///
 /// By RFC, the `ScimListQuery` can include more fields, but Rauthy will only use `start_index` and
