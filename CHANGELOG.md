@@ -1,5 +1,86 @@
 # Changelog
 
+## v0.34.3
+
+### Changes
+
+#### `org.opencontainers` labels
+
+The Rauthy container image does now contain `org.opencontainers` labels.
+
+[#1360](https://github.com/sebadob/rauthy/pull/1360)
+
+#### "Register With" Auth Provider
+
+When you have an open registration and configured upstream auth providers, that have auto-onboarding
+enabled, you will now see a button during the registration saying "or register with {auth
+provider}".
+
+[#1367](https://github.com/sebadob/rauthy/pull/1367)
+
+#### Validate User Values during login
+
+You now have the config option to always check user values against the configured requirements
+during login.
+
+This feature is opt-in. In most scenarios, you will not need it, and if enabled, it will trigger
+additional database round trips during the login procedure. You may only want to enable it if
+you made user values requirements stricter for an already existing deployment and absolutely
+want to force users to update, or if you have an upstream auth provider for which you cannot
+guarantee that it provides all necessary values.
+If this check fails, the user will see a popup with an error message and a redirect button to
+the account dashboard to add the missing values.
+
+```toml
+[user_values]
+# Controls if the value requirements should be re-validated during
+# each single login. In most cases, you don't want this. It will
+# trigger additional database queries during the login procedure,
+# which are unnnecessary in most situations.
+# However, if you decide to make the requirements more strict down
+# the road, or you use upstream auth providers which may not provide
+# all necessary values, you might want to enable this setting.
+#
+# If a mismatch is found during login, it will be prevented and a
+# message will be shown to the user with the information, that some
+# information is missing. Only when all required values are set,
+# logins will be allowed again.
+#
+# default: false
+# overwritten_by: USER_VALUES_REVALIDATE_DURING_LOGIN
+revalidate_during_login = false
+```
+
+[#1368](https://github.com/sebadob/rauthy/pull/1368)
+
+#### Hide Admin Button
+
+You can now hide the Admin button from the root page in the UI.
+
+```toml
+[access]
+# You can hide the 'Admin' button on the root / landing page for the UI.
+# The admin interface is always reachable via `/auth/v1/admin`, and the
+# button will only redirect, of course, only when the user is assigned to
+# the `rauthy_admin` role. However, if you are hosting some public service,
+# you might not want the button to show up there.
+#
+# default: false
+# overwritten by: ADMIN_BUTTON_HIDE
+admin_button_hide = false
+```
+
+[#1381](https://github.com/sebadob/rauthy/pull/1381)
+
+### Bugfix
+
+- Upstream Auth Providers were shown as login button and in the account dashboard when they were
+  disabled.
+  [#1366](https://github.com/sebadob/rauthy/pull/1366)
+- With the addition of `preferred_username` and `tz` to SCIM users, one database query was forgotten
+  during the update. This could make a SCIM user sync fail.
+  [#1379](https://github.com/sebadob/rauthy/pull/1379)
+
 ## v0.34.2
 
 ### Changes
