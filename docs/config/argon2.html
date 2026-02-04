@@ -168,29 +168,35 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="password-hashing-setup"><a class="header" href="#password-hashing-setup">Password Hashing Setup</a></h1>
-<p>Even though the options and tools in the Admin UI should be fully documented, I wanted to mention argon2id tuning here.</p>
-<p>Rauthy uses the argon2id hashing algorithm for passwords. This is the most expensive and compute-heavy operation
-done by the application and the variables need to be tuned for every deployment to provide the best compromise
-of security, resource usage and user experience.<br />
-The default values are a good start at the lower end of the "being safe scale" for a production deployment.
-However, you should at least take a look at them and verify, that they work for you.</p>
-<p>The Admin UI provides a utility which helps you find the best values for your deployment quickly. What and how to do is
-described in the Admin UI itself, I just want to guide you to this utility especially, since it is an important step
-security wise.</p>
-<p>When you are logged in to the Admin UI, please navigate to <code>Config</code> -&gt; <code>Argon2 Parameters</code> to find your values.
-After they have been found, apply them to the Rauthy config and restart the deployment.<br />
-Keep in mind, that if you run the application in a way, where memory is limited, for instance inside Kubernetes with
-resource limits set too low, that it will crash, if either <code>hashing.argon2_m_cost</code> is set too high or the memory limit
-too low.</p>
-<p>There is one additional, really important config variable need to be taken into account for the tuning.<br />
-Since this operation is really resource intense, you can limit the amount of threads, which can run in parallel doing
-hashing operations. This is really important when we think about constrained memory again.</p>
-<p><code>hashing.max_hash_threads</code> limits the maximum amount of parallel password hashes at the exact same time to never exceed
-system memory while still allowing a good amount of memory. The <strong>default value is 2</strong>.</p>
-<p>The rule is simple: Allow as many resources as possible for hashing to have the maximum amount of security, while
-restricting it as much as necessary.</p>
-<p>For smaller deployments, set <code>hashing.max_hash_threads</code>, which will technically allows only one user login at the exact
-same time. This value makes an external rate limiting for the login obsolete (while you may add some for the others).</p>
+<p>Even though the options and tools in the Admin UI should be fully documented, I wanted to mention
+argon2id tuning here.</p>
+<p>Rauthy uses the argon2id hashing algorithm for passwords. This is the most expensive and
+compute-heavy operation done by the application, and the variables need to be tuned for every
+deployment to provide the best compromise of security, resource usage and user experience.<br />
+The default values are a good start at the lower end of the "being safe scale" for a production
+deployment. However, you should at least take a look at them and verify that they work for you.</p>
+<p>The Admin UI provides a utility which helps you find the best values for your deployment quickly.
+What and how to do is described in the Admin UI itself. I just want to guide you to this utility,
+especially since it is an important step security wise.</p>
+<p>When you are logged in to the Admin UI, please navigate to <code>Config</code> -&gt; <code>Argon2 Parameters</code> to find
+your values. After they have been found, apply them to the Rauthy config and restart the
+deployment. <br />
+Keep in mind that if you run the application in a way, where memory is limited, for instance inside
+Kubernetes with resource limits set too low, that it will crash, if either <code>hashing.argon2_m_cost</code>
+is set too high or the memory limit too low.</p>
+<p>There is one additional, really important config variable need to be taken into account for the
+tuning. <br />
+Since this operation is really resource intense, you can limit the number of threads which can run
+in parallel doing hashing operations. This is really important when we think about constrained
+memory again.</p>
+<p><code>hashing.max_hash_threads</code> limits the maximum number of parallel password hashes at the exact same
+time to never exceed system memory while still allowing a good amount of memory. The <strong>default value
+is 2</strong>.</p>
+<p>The rule is simple: Allow as many resources as possible for hashing to have the maximum amount of
+security, while restricting it as much as necessary.</p>
+<p>For smaller deployments, set <code>hashing.max_hash_threads</code>, which will technically allows only one user
+login at the exact same time. This value makes an external rate limiting for the login obsolete (
+while you may add some for the others).</p>
 
                     </main>
 

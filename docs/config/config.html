@@ -420,6 +420,16 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: WHOAMI_HEADERS
 #whoami_headers = false
 
+# You can hide the 'Admin' button on the root / landing page for the UI.
+# The admin interface is always reachable via `/auth/v1/admin`, and the
+# button will only redirect, of course, only when the user is assigned to
+# the `rauthy_admin` role. However, if you are hosting some public service,
+# you might not want the button to show up there.
+#
+# default: false
+# overwritten by: ADMIN_BUTTON_HIDE
+#admin_button_hide = false
+
 [atproto]
 # Set to `true` to enable the ATProto provider. If the public URL is
 # 'localhost' it should be changed to '127.0.0.1', if `dev_mode = true`

@@ -169,12 +169,13 @@
                     <main>
                         <h1 id="first-start"><a class="header" href="#first-start">First Start</a></h1>
 <h2 id="initial-admin-password-and-login"><a class="header" href="#initial-admin-password-and-login">Initial admin password and login</a></h2>
-<p>With the very first start of rauthy, or better with an empty database, when rauthy is starting, it does not only
-create all the necessary schemas and initial data, but also some sensitive information will be generated safely.
-This includes a set of Json Web Keys (JWKS) for the token signing and some secrets.</p>
+<p>With the very first start of rauthy, or better with an empty database, when rauthy is starting, it
+does not only create all the necessary schemas and initial data, but also some sensitive information
+will be generated safely. This includes a set of Json Web Keys (JWKS) for the token signing and some
+secrets.</p>
 <p>The most important of these newly generated secrets is the default admin user's password.<br />
-When this is securely generated with the very first start, it will be logged into the console. This will only
-happen once and never again.</p>
+When this is securely generated with the very first start, it will be logged into the console. This
+will only happen once and never again.</p>
 <h3 id="logs-with-docker"><a class="header" href="#logs-with-docker">Logs with docker</a></h3>
 <pre><code>docker logs -f rauthy
 </code></pre>
@@ -189,7 +190,7 @@ happen once and never again.</p>
 <a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
-<p>If you do a Kubernets HA deployment directly, only the Pod <code>rauthy-0</code> will log the initial password.</p>
+<p>If you do a Kubernetes HA deployment directly, only the Pod <code>rauthy-0</code> will log the initial password.</p>
 </div>
 </div>
 <div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
@@ -204,17 +205,20 @@ happen once and never again.</p>
 If this is the case, you can delete the database / volume and just restart rauthy.</p>
 </div>
 </div>
-<p>The log message contains a link to the accounts page, where you then should log in to immediately set a new password.
-Follow the link, use as the default admin <code>admin@localhost</code> and as password the copied value from the log.</p>
+<p>The log message contains a link to the accounts page, where you then should log in to immediately
+set a new password. Follow the link, use as the default admin <code>admin@localhost</code> and as password the
+copied value from the log.</p>
 <ul>
 <li>When logged into the account, click <code>EDIT</code> and <code>CHANGE PASSWORD</code> to set a new password</li>
 <li>Log out of the account and try to log in to the admin ui with the new password</li>
 </ul>
 <h2 id="custom-rauthy-admin-user"><a class="header" href="#custom-rauthy-admin-user">Custom rauthy admin user</a></h2>
-<p>It is a good idea, to either keep the <code>admin@localhost</code> and rename it (to never have a default admin, which would be an
-attack vector) as a fallback user with just a very long password, or disable it, after a custom admin has been added.</p>
-<p>When logged in to the admin UI, you can add a new user. When the <code>SMTP</code> settings are correctly configured in the config,
-which we can test right now, you will receive an E-Mail with the very first password reset.</p>
+<p>It is a good idea, to either keep the <code>admin@localhost</code> and rename it (to never have a default
+admin, which would be an attack vector) as a fallback user with just a very long password, or
+disable it, after a custom admin has been added.</p>
+<p>When logged in to the admin UI, you can add a new user. When the <code>SMTP</code> settings are correctly
+configured in the config, which we can test right now, you will receive an E-Mail with the very
+first password reset.</p>
 <div id="admonition-note-2" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-2-title">
 <div class="admonition-title">
 <div id="admonition-note-2-title">
@@ -223,19 +227,20 @@ which we can test right now, you will receive an E-Mail with the very first pass
 <a class="admonition-anchor-link" href="#admonition-note-2"></a>
 </div>
 <div>
-<p>If you do not receive an E-Mail after the first user registration, chances are you may have a problem with the SMTP
-setup.<br />
-To debug this, you can set <code>LOG_LEVEL=debug</code> in the config and then watch the logs after a restart.</p>
+<p>If you do not receive an E-Mail after the first user registration, chances are you may have a
+problem with the SMTP setup.</p>
+<p>To debug this, you can set <code>LOG_LEVEL=debug</code> in the config and then watch the logs after a restart.</p>
 </div>
 </div>
 <h3 id="rauthy_admin-user-role"><a class="header" href="#rauthy_admin-user-role"><code>rauthy_admin</code> user role</a></h3>
-<p>The role, which allows a user to access the admin UI, is the <code>rauthy_admin</code>.<br />
+<p>The role, which allows a user to access the admin UI, is the <code>rauthy_admin</code>. <br />
 If the user has this role assigned, he will be seen as an admin.</p>
-<p>Under the hood, rauthy itself uses the OIDC roles and groups in the same way, as all clients would do. This means you
-should not neither delete the <code>rauthy</code> default client, nor the <code>rauthy_admin</code> role. There are mechanisms to prevents
-this happening by accident via UI, but you could possibly do this via a direct API call.<br />
-There are some anti-lockout mechanisms in place in the backend, which will be executed with every start, but being
-careful at this point is a good idea anyway.</p>
+<p>Under the hood, rauthy itself uses the OIDC roles and groups in the same way, as all clients would
+do. This means you should not neither delete the <code>rauthy</code> default client, nor the <code>rauthy_admin</code>
+role. There are mechanisms to prevent this from happening by accident via UI, but you could possibly
+do this via a direct API call. \<br />
+There are some anti-lockout mechanisms in place in the backend, which will be executed with every
+start, but being careful at this point is a good idea anyway.</p>
 
                     </main>
 
@@ -245,7 +250,7 @@ careful at this point is a good idea anyway.</p>
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../config/production_config.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../getting_started/shutdown.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -259,7 +264,7 @@ careful at this point is a good idea anyway.</p>
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../config/production_config.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../getting_started/shutdown.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

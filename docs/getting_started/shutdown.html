@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Backups - Rauthy Documentation</title>
+        <title>Shutdown - Rauthy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -167,123 +167,40 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="backups"><a class="header" href="#backups">Backups</a></h1>
-<h2 id="postgres"><a class="header" href="#postgres">Postgres</a></h2>
-<p>If you are using Postgres as the main database, Rauthy does not do any backups.<br />
-There are a lot of way better tools out there to handle this task.</p>
-<h2 id="hiqlite"><a class="header" href="#hiqlite">Hiqlite</a></h2>
-<p>If Rauthy is using Hiqlite, it does automatic backups, which can be configured with:</p>
-<pre><code class="language-toml">[cluster]
-# When the auto-backup task should run.
-# Accepts cron syntax:
-# "sec min hour day_of_month month day_of_week year"
-#
-# default: "0 30 2 * * * *"
-# overwritten by: HQL_BACKUP_CRON
-backup_cron = "0 30 2 * * * *"
-
-# Backups older than the configured days will be cleaned up on S3
-# after the backup cron job `backup_cron`.
-#
-# default: 30
-# overwritten by: HQL_BACKUP_KEEP_DAYS
-backup_keep_days = 30
-
-# Backups older than the configured days will be cleaned up locally
-# after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
-#
-# default: 3
-# overwritten by: HQL_BACKUP_KEEP_DAYS_LOCAL
-backup_keep_days_local = 3
-</code></pre>
-<p>All these backups are written inside the pod / container into <code>data/state_machine/backups</code>.</p>
-<p>This difference makes it possible, that you could add a second volume mount to the container.<br />
-You then have the database itself on a different disk than the backups, which is the most simple and
-straight forward
-approach to have a basic backup strategy. However, it is recommended to use S3 for backups,
-especially for HA
-deployments.</p>
-<h2 id="remote-backups-to-s3-storage"><a class="header" href="#remote-backups-to-s3-storage">Remote Backups to S3 Storage</a></h2>
-<p>Hiqlite backups can be pushed to an S3 bucket after creation. This way, you can keep only very low
-amount of local
-backups and older ones on cheaper object storage.</p>
-<p>Rauthy has been tested against MinIO and Garage S3 storage and is working fine with both, so I
-expect and standard S3
-API to just work out of the box. You need to provide an Access Key + Secret with write access to an
-existing bucket
-and Rauthy will take care of the rest. All backups pushed to S3 will automatically encrypted with
-the currently active
-<code>encryption.key_active</code> from the Rauthy config.</p>
-<p>The configuration is done with the following values:</p>
-<pre><code class="language-toml">[cluster]
-# Access values for the S3 bucket where backups will be pushed to.
-# overwritten by: HQL_S3_URL
-s3_url = "https://s3.example.com"
-# overwritten by: HQL_S3_BUCKET
-s3_bucket = "my_bucket"
-# overwritten by: HQL_S3_REGION
-s3_region = "my_region"
-# overwritten by: HQL_S3_PATH_STYLE
-s3_path_style = true
-# overwritten by: HQL_S3_KEY
-s3_key = "my_key"
-# overwritten by: HQL_S3_SECRET
-s3_secret = "my_secret"
-</code></pre>
-<h2 id="disaster-recovery"><a class="header" href="#disaster-recovery">Disaster Recovery</a></h2>
-<p>If you really lost all your data, you can easily restore automatically from the latest backup. This
-works with either a
-local <code>file</code> backup or with an encrypted remote backup on <code>s3</code> storage (as long as you still have
-the <code>ENC_KEY_ACTIVE</code>
-that has been used for the remote backup).<br />
-This, again, works only for Hiqlite. When you are using Postgres, you should use Postgres native
-tooling like
-<code>pgBackRest</code> which is way better at this.</p>
-<p>The process is really simple:</p>
-<ol>
-<li>Have the cluster shut down. This is probably the case anyway, if you need to restore from a
-backup.</li>
-<li>Provide a backup file name on S3 storage with the <code>HQL_BACKUP_RESTORE</code> ENV value with prefix
-<code>s3:object_name</code> (encrypted), or a file on disk (plain sqlite file) with the prefix
-<code>file:/path/to/backup</code>.</li>
-<li>Start up Rauthy</li>
-<li>Check the logs and wait for the backup to be finished</li>
-<li>After a successful restore, Rauthy will start its normal operation</li>
-<li>Make sure to remove the <code>HQL_BACKUP_RESTORE</code> env value.</li>
-</ol>
-<div id="admonition-danger" class="admonition admonish-danger" role="note" aria-labelledby="admonition-danger-title">
+                        <h1 id="shutdown"><a class="header" href="#shutdown">Shutdown</a></h1>
+<p>The shutdown may confuse some people. For single instance deployments, it will only take a few
+seconds. For a HA cluster node though, it will usually end up somewhere in the range of ~15 seconds.
+Depending on the current cluster state, healthiness of remote nodes, a possibly ongoing leader
+election, and so on, it may even take up to 25 - 30 seconds to do a graceful shutdown.
+The reason behind this is that the shutdown logic tries to do it as smooth as possible, to e.g.
+never have requests in Kubernetes going to an already shutting down node.</p>
+<p>This behavior is absolutely normal and expected! It does not hang or get stuck. Even though it can
+recover from it, you should never force-kill the process, as it will trigger an additional integrity
+check of WAL files and a full rebuild of the DB (when
+using <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>) during the next startup, so that a consistent
+state can always be guaranteed.</p>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
-<div id="admonition-danger-title">
-<p>Danger</p>
+<div id="admonition-caution-title">
+<p>Caution</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-danger"></a>
+<a class="admonition-anchor-link" href="#admonition-caution"></a>
 </div>
 <div>
-<p>After a successful restore, you MUST remove the env var again!<br />
-If you don't do it, Rauthy will re-apply the same backup with each following restart over and over again.</p>
+<p>Some container runtimes do force-kill automatically after 10 seconds. This is for instance the case
+for <code>podman</code>, or for <code>docker compose</code>.</p>
+<p>Make sure to adjust your shutdown timeout to at least 30 seconds.</p>
 </div>
 </div>
-<p>You only need to set this single value:</p>
-<pre><code class="language-toml"># If you ever need to restore from a backup, the process is simple.
-# 1. Have the cluster shut down. This is probably the case anyway, if
-#    you need to restore from a backup.
-# 2. Provide the backup file name on S3 storage with the
-#    HQL_BACKUP_RESTORE value.
-# 3. Start up the cluster again.
-# 4. After the restart, make sure to remove the HQL_BACKUP_RESTORE
-#    env value.
-HQL_BACKUP_RESTORE = ""
-</code></pre>
-
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../config/logging.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../getting_started/first_start.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../config/tls.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../config/production_config.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -293,11 +210,11 @@ HQL_BACKUP_RESTORE = ""
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../config/logging.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../getting_started/first_start.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../config/tls.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../config/production_config.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

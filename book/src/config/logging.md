@@ -1,10 +1,15 @@
 # Logging and Auditing
 
-Rauthy logs most things into the console, depending on the configuration of different log levels. In addition, more
-important events can be sent to Matrix, Slack or via E-Mail. All of this is highly configurable and you should be able
-to achieve whatever you need. All events are logged into the console as well with their configured level. This means,
-if Rauthy fires an event of type `NewUser` with the level `info` and you have configured a log level of at least the
-same, you will see the event in the console as well. So you could only use log aggregation and use existing tools
+Rauthy logs most things into the console, depending on the configuration of different log levels. In
+addition, more
+important events can be sent to Matrix, Slack or via E-Mail. All of this is highly configurable and
+you should be able
+to achieve whatever you need. All events are logged into the console as well with their configured
+level. This means,
+if Rauthy fires an event of type `NewUser` with the level `info` and you have configured a log level
+of at least the
+same, you will see the event in the console as well. So you could only use log aggregation and use
+existing tools
 without configuring other targets and still catch everything.
 
 ## Logging
@@ -13,7 +18,8 @@ You can configure not only different levels for logging, but also different targ
 
 ### `LOG_LEVEL`
 
-The `LOG_LEVEL` variable configures the default logging in most situations. This defines the logging for instance
+The `LOG_LEVEL` variable configures the default logging in most situations. This defines the logging
+for instance
 for logging information from different function runs or things that have been triggered.
 
 ```toml
@@ -28,9 +34,12 @@ level = 'info'
 
 ### `LOG_LEVEL_DATABASE`
 
-The Hiqlite database logging is at the time of writing pretty verbose on purpose. The whole persistence layer with the
-Raft cluster setup has been written from the ground up. The amount of logging will be reduced in later versions, when
-the whole layer has been proven to be really solid, but for now you get more information just in case you need to debug
+The Hiqlite database logging is at the time of writing pretty verbose on purpose. The whole
+persistence layer with the
+Raft cluster setup has been written from the ground up. The amount of logging will be reduced in
+later versions, when
+the whole layer has been proven to be really solid, but for now you get more information just in
+case you need to debug
 something.
 
 You can reduce the default logging and for instance set it to `warn` or `error` only.
@@ -47,8 +56,10 @@ level_database = 'info'
 
 ### `LOG_LEVEL_ACCESS`
 
-For changing the logging behavior for access logs to the API endpoints, you will need to set the `LOG_LEVEL_ACCESS`.
-If you have access logging configured at your firewall or reverse proxy, you can disable the `LOG_LEVEL_ACCESS` fully
+For changing the logging behavior for access logs to the API endpoints, you will need to set the
+`LOG_LEVEL_ACCESS`.
+If you have access logging configured at your firewall or reverse proxy, you can disable the
+`LOG_LEVEL_ACCESS` fully
 to reduce duplicated log outputs.
 
 ```toml
@@ -96,9 +107,12 @@ log_fmt = 'json'
 
 ## Events
 
-Events are used for auditing and never miss anything. If something important happens, you usually need to inspect logs
-to catch it, but why should you, if you did not notice any problems? This is where Rauthy Events are helping you out.
-You need to set up basic configuration for Event targets and then you could customize the different levels.
+Events are used for auditing and never miss anything. If something important happens, you usually
+need to inspect logs
+to catch it, but why should you, if you did not notice any problems? This is where Rauthy Events are
+helping you out.
+You need to set up basic configuration for Event targets and then you could customize the different
+levels.
 
 ### Basic Setup
 
@@ -112,7 +126,8 @@ You can see the full set of config option in the `[events]` in the [Reference Co
 
 #### E-Mail
 
-To be able to receive Events via E-Mail, you need to have set up an SMTP server and have a working connection. With
+To be able to receive Events via E-Mail, you need to have set up an SMTP server and have a working
+connection. With
 a working SMTP, you only need to set `events.email`, that's it.
 
 ```toml
@@ -125,9 +140,12 @@ email = 'admin@localhost'
 
 #### Matrix
 
-Matrix is often deployed with home servers that may not even have real TLS certificates or if just running behind closed
-doors, may use self-signed certificates. To make it work in all of these situations, you can configure quite a lot for
-the connection to Matrix. In the end, you will only need to have some credentials and a room ID, so Rauthy knows where
+Matrix is often deployed with home servers that may not even have real TLS certificates or if just
+running behind closed
+doors, may use self-signed certificates. To make it work in all of these situations, you can
+configure quite a lot for
+the connection to Matrix. In the end, you will only need to have some credentials and a room ID, so
+Rauthy knows where
 it should post the events.
 
 ```toml
@@ -198,7 +216,8 @@ using a session token which has been created on another machine.
 
 #### Slack
 
-To receive messages via Slack, you need to create a legacy webhook inside your Slack account. This is then the only
+To receive messages via Slack, you need to create a legacy webhook inside your Slack account. This
+is then the only
 config variable you need to set:
 
 ```toml
@@ -212,8 +231,10 @@ slack_webhook = ""
 
 #### Custom Target
 
-If you need your events to be sent somewhere custom, you can always create an API key with `read` access for Events.
-Then write a small app that simply listens to the events stream, which can process or just forwards the events to where
+If you need your events to be sent somewhere custom, you can always create an API key with `read`
+access for Events.
+Then write a small app that simply listens to the events stream, which can process or just forwards
+the events to where
 ever you need them.
 
 1. Log in to the Admin UI and create an API key with `read` access for events.
@@ -245,52 +266,61 @@ ever you need them.
 ```
 
 4. Listen to the events stream.
-   You need to add the API key in the `Authorization` header with the prefix `API-Key`, for instance like
+   You need to add the API key in the `Authorization` header with the prefix `API-Key`, for instance
+   like
 
 ```
 Authorization: API-Key events$SUcpBxcPmfwH9z1Kb4ExOUYDSXpxOj9mFLadjuQ1049XaWzdWB328aa97k2nj21E
 ```
 
-You can either periodically fetch via the `/auth/v1/events` endpoint (see Swagger documentation in the Admin UI), or
+You can either periodically fetch via the `/auth/v1/events` endpoint (see Swagger documentation in
+the Admin UI), or
 by listening to the `/auth/v1/events/stream`, which will be a Server Sent Events stream.
 
 The events will be sent in JSON format and have the following content:
 
 ```rust
 struct Event {
-    pub id: String,
-    pub timestamp: i64,
-    pub level: EventLevel,
-    pub typ: EventType,
-    pub ip: Option<String>,
-    pub data: Option<i64>,
-    pub text: Option<String>,
+  pub id: String,
+  pub timestamp: i64,
+  pub level: EventLevel,
+  pub typ: EventType,
+  pub ip: Option<String>,
+  pub data: Option<i64>,
+  pub text: Option<String>,
 }
 
 // the `EventLevel`s will be converted to lower case
 enum EventLevel {
-    Info,
-    Notice,
-    Warning,
-    Critical,
+  Info,
+  Notice,
+  Warning,
+  Critical,
 }
 
 enum EventType {
-    InvalidLogins,
-    IpBlacklisted,
-    IpBlacklistRemoved,
-    JwksRotated,
-    NewUserRegistered,
-    NewRauthyAdmin,
-    NewRauthyVersion,
-    PossibleBruteForce,
-    RauthyStarted,
-    RauthyHealthy,
-    RauthyUnhealthy,
-    SecretsMigrated,
-    UserEmailChange,
-    UserPasswordReset,
-    Test,
+  InvalidLogins,
+  IpBlacklisted,
+  IpBlacklistRemoved,
+  JwksRotated,
+  NewUserRegistered,
+  NewRauthyAdmin,
+  NewRauthyVersion,
+  PossibleBruteForce,
+  RauthyStarted,
+  RauthyHealthy,
+  RauthyUnhealthy,
+  SecretsMigrated,
+  UserEmailChange,
+  UserPasswordReset,
+  Test,
+  BackchannelLogoutFailed,
+  ScimTaskFailed,
+  ForcedLogout,
+  UserLoginRevoke,
+  SuspiciousApiScan,
+  LoginNewLocation,
+  TokenIssued,
 }
 ```
 
@@ -302,15 +332,20 @@ could fix it with a different proxy config or keep alive messages.
 
 ### Testing
 
-You can test your Event handler / pipeline setup when you log in to the Admin UI and simply press the `Test` button
-in the upper right corner in the Events sidebar. This will send a Test event to all configured targets and listeners
-independent of any configured event level restrictions. Test events will always be sent as long as everything is working
+You can test your Event handler / pipeline setup when you log in to the Admin UI and simply press
+the `Test` button
+in the upper right corner in the Events sidebar. This will send a Test event to all configured
+targets and listeners
+independent of any configured event level restrictions. Test events will always be sent as long as
+everything is working
 properly.
 
 ### `EVENT_NOTIFY_LEVEL`
 
-You can set different levels for each target. By default, Only events with `warning` or higher are sent via E-Mail
-while Matrix / Slack would receive Events with `notice` or higher. If you want a different behavior, you can get this:
+You can set different levels for each target. By default, Only events with `warning` or higher are
+sent via E-Mail
+while Matrix / Slack would receive Events with `notice` or higher. If you want a different behavior,
+you can get this:
 
 ```toml
 [events]
@@ -336,11 +371,14 @@ notify_level_slack = 'notice'
 
 ### Event Persistence
 
-Rauthys Admin UI has a component for inspecting Events from the past for analytical purposes. By default, events with
-the level `info` or higher are persisted for `31` days. After this period, they will be removed from the database to
+Rauthys Admin UI has a component for inspecting Events from the past for analytical purposes. By
+default, events with
+the level `info` or higher are persisted for `31` days. After this period, they will be removed from
+the database to
 keep it clean.
 
-You can configure both the level which should be persisted, for instance set "only persist Events with level warning
+You can configure both the level which should be persisted, for instance set "only persist Events
+with level warning
 or higher" and the days how long they should be kept.
 
 ```toml
@@ -368,11 +406,14 @@ cleanup_days = 30
 
 ### `level_*` Values
 
-There are a lot of values starting with `level_*`. These can be used to configure the level for different kinds
+There are a lot of values starting with `level_*`. These can be used to configure the level for
+different kinds
 of event being fired by Rauthy.
 
-For instance, let's say you only want to receive events with a level of `warning` or higher, but you also want to
-receive a notification when there are more than 7 failed logins from an IP. By default, 7 failed logins would trigger an
+For instance, let's say you only want to receive events with a level of `warning` or higher, but you
+also want to
+receive a notification when there are more than 7 failed logins from an IP. By default, 7 failed
+logins would trigger an
 event with the level of `notice`. You can then set
 
 ```toml
@@ -388,6 +429,36 @@ The full list of these configurable levels is the following:
 
 ```toml
 [events]
+# The level for the generated Event after a backchannel
+# logout has failed after exceeding all retries.
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_BACKCHANNEL_LOGOUT_FAILED
+level_backchannel_logout_failed = 'critical'
+# The level for the generated Event after a user was
+# force-logged-out by an admin.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_FORCE_LOGOUT
+level_force_logout = 'notice'
+# The level for the generated Event after an IP has
+# been blacklisted
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_IP_BLACKLISTED
+level_ip_blacklisted = 'warning'
+# The level for the generated Event after the JWKS has
+# been rotated
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_JWKS_ROTATE
+level_jwks_rotate = 'notice'
+# The level for the generated Event after a login from
+# a new location for a user.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_NEW_LOGIN_LOCATION
+level_new_login_location = 'notice'
 # The level for the generated Event after a new user has
 # been registered.
 #
@@ -412,30 +483,6 @@ level_user_password_reset = 'notice'
 # default: notice
 # overwritten by: EVENT_LEVEL_RAUTHY_ADMIN
 level_rauthy_admin = 'notice'
-# The level for the generated Event after a new App
-# version has been found
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_RAUTHY_VERSION
-level_rauthy_version = 'notice'
-# The level for the generated Event after the JWKS has
-# been rotated
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_JWKS_ROTATE
-level_jwks_rotate = 'notice'
-# The level for the generated Event after DB secrets
-# have been migrated to a new key
-#
-# default: notice
-# overwritten by: EVENT_LEVEL_SECRETS_MIGRATED
-level_secrets_migrated = 'notice'
-# The level for the generated Event after a Rauthy
-# instance has been started
-#
-# default: info
-# overwritten by: EVENT_LEVEL_RAUTHY_START
-level_rauthy_start = 'info'
 # The level for the generated Event after a Rauthy
 # entered a healthy state (again)
 #
@@ -443,17 +490,56 @@ level_rauthy_start = 'info'
 # overwritten by: EVENT_LEVEL_RAUTHY_HEALTHY
 level_rauthy_healthy = 'notice'
 # The level for the generated Event after a Rauthy
+# instance has been started
+#
+# default: info
+# overwritten by: EVENT_LEVEL_RAUTHY_START
+level_rauthy_start = 'info'
+# The level for the generated Event after a Rauthy
 # entered an unhealthy state
 #
 # default: critical
 # overwritten by: EVENT_LEVEL_RAUTHY_UNHEALTHY
 level_rauthy_unhealthy = 'critical'
-# The level for the generated Event after an IP has
-# been blacklisted
+# The level for the generated Event after a new App
+# version has been found
 #
-# default: warning+
-# overwritten by: EVENT_LEVEL_IP_BLACKLISTED
-level_ip_blacklisted = 'warning'
+# default: notice
+# overwritten by: EVENT_LEVEL_RAUTHY_VERSION
+level_rauthy_version = 'notice'
+# The level for the generated Event after DB secrets
+# have been migrated to a new key
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_SECRETS_MIGRATED
+level_secrets_migrated = 'notice'
+# The level for the generated Event after a user revoked
+# an illegal login with the link from the notification
+# E-Mail for "login from unknown location"
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
+level_user_login_revoke = 'warning'
+# The level for the generated Event after a SCIM
+# update task ultimately failed after exceeding
+# all retries.
+#
+# default: critical
+# overwritten by: EVENT_LEVEL_SCIM_TASK_FAILED
+level_scim_task_failed = 'critical'
+# The level for the generated Event after Rauthy
+# detected a suspicious API scanning request.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_SUSPICIOUS_REQUEST
+level_suspicious_request = 'notice'
+# The level for the generated Event after a new JWT
+# Token was issued.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_TOKEN_ISSUED
+level_token_issued = 'info'
+
 # The level for the generated Event after certain
 # amounts of false logins from an IP
 #
