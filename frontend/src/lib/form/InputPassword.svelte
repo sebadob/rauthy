@@ -18,6 +18,7 @@
         autocomplete = 'current-password',
         placeholder = 'Password',
         disabled = false,
+        maxLength,
         required,
         pattern,
         errMsg,
@@ -39,6 +40,7 @@
         autocomplete?: FullAutoFill | null | undefined;
         placeholder: string;
         disabled?: boolean | null | undefined;
+        maxLength?: number | null | undefined;
         min?: string;
         max?: string;
         required?: boolean;
@@ -130,6 +132,7 @@
             {disabled}
             required={required || undefined}
             aria-required={required || false}
+            maxlength={maxLength || undefined}
             pattern={pattern || undefined}
             class:invalid={isError}
             {oninput}
