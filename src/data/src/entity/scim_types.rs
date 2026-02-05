@@ -373,7 +373,7 @@ pub struct ScimListResponse {
     pub schemas: Option<Vec<Cow<'static, str>>>,
     pub items_per_page: i64,
     pub total_results: i64,
-    pub start_index: i64,
+    pub start_index: Option<i64>,
     #[serde(rename = "Resources")]
     pub resources: Vec<ScimResource>,
 }
