@@ -18,7 +18,6 @@
         autocomplete = 'current-password',
         placeholder = 'Password',
         disabled = false,
-        maxLength = 128,
         required,
         pattern,
         errMsg,
