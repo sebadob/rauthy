@@ -3,6 +3,7 @@ export type JwkKeyPairType = 'RSA' | 'OKP';
 
 export interface JWKSPublicKeyCerts {
     kty: JwkKeyPairType;
+    use: string;
     alg: JwkKeyPairAlg;
     // Ed25519
     crv?: string;
