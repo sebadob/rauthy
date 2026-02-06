@@ -1032,6 +1032,10 @@ impl ClientScim {
             update_payload.external_id = None;
         }
 
+        // add remote id, required i.e. by vCenter
+        let remote_id = user_remote.id.clone().unwrap_or_default();
+        update_payload.id = Some(remote_id.to_owned());
+
         let json = serde_json::to_string(&update_payload)?;
         let res = http_client()
             .put(format!(
