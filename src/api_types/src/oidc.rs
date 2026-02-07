@@ -359,7 +359,7 @@ pub enum JwkKeyPairType {
 pub struct JWKSPublicKeyCerts {
     pub kty: JwkKeyPairType,
     #[serde(rename = "use")]
-    pub _use: String,
+    pub _use: &'static str,
     pub alg: JwkKeyPairAlg,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub crv: Option<String>, // Ed25519

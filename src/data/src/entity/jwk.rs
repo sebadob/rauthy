@@ -608,7 +608,7 @@ impl From<JWKSPublicKey> for JWKSPublicKeyCerts {
 
         Self {
             kty,
-            _use: "sig".to_string(),
+            _use: "sig",
             alg,
             crv: pk.crv,
             kid: pk.kid,
