@@ -953,8 +953,10 @@ impl ClientScim {
             .await?
         {
             None => {
-                self.create_user(expected_groups, payload, groups_local, groups_remote)
-                    .await?;
+                if !unlink_ext_id {
+                    self.create_user(expected_groups, payload, groups_local, groups_remote)
+                        .await?;
+                }
             }
             Some(user_remote) => {
                 self.update_user(
