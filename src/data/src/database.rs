@@ -147,7 +147,18 @@ impl DB {
         config.keepalives_idle(Duration::from_secs(30));
         // config.keepalives_interval()
         config.load_balance_hosts(LoadBalanceHosts::Random);
-        config.ssl_mode(SslMode::Prefer);
+
+        // Configure SSL mode from config (default: prefer)
+        let ssl_mode = match RauthyConfig::get().vars.database.pg_ssl_mode.as_str() {
+            "disable" => SslMode::Disable,
+            "allow" => SslMode::Allow,
+            "prefer" => SslMode::Prefer,
+            "require" => SslMode::Require,
+            "verify-ca" => SslMode::VerifyCa,
+            "verify-full" => SslMode::VerifyFull,
+            _ => SslMode::Prefer, // fallback to default
+        };
+        config.ssl_mode(ssl_mode);
 
         let tls_config = if RauthyConfig::get().vars.database.pg_tls_no_verify {
             rustls::ClientConfig::builder()
