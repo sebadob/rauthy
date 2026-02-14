@@ -343,6 +343,7 @@ impl Default for Vars {
                 pg_password: None,
                 pg_db_name: "rauthy".into(),
                 pg_tls_no_verify: false,
+                pg_ssl_mode: "prefer".to_string(),
                 pg_max_conn: 20,
                 migrate_pg_host: None,
                 migrate_pg_port: 5432,
@@ -1184,6 +1185,14 @@ impl Vars {
             "PG_TLS_NO_VERIFY",
         ) {
             self.database.pg_tls_no_verify = v;
+        }
+        if let Some(v) = t_str(&mut table, "database", "pg_ssl_mode", "PG_SSL_MODE") {
+            // Validate SSL mode value
+            let mode = v.to_lowercase();
+            if !["disable", "allow", "prefer", "require", "verify-ca", "verify-full"].contains(&mode.as_str()) {
+                panic!("Invalid PG_SSL_MODE value '{}'. Must be one of: disable, allow, prefer, require, verify-ca, verify-full", mode);
+            }
+            self.database.pg_ssl_mode = mode;
         }
         if let Some(v) = t_u16(&mut table, "database", "pg_max_conn", "PG_MAX_CONN") {
             self.database.pg_max_conn = v;
@@ -2977,6 +2986,7 @@ pub struct VarsDatabase {
     pub pg_password: Option<String>,
     pub pg_db_name: Cow<'static, str>,
     pub pg_tls_no_verify: bool,
+    pub pg_ssl_mode: String,
     pub pg_max_conn: u16,
 
     pub migrate_pg_host: Option<String>,

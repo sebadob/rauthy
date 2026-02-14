@@ -807,6 +807,23 @@ pg_db_name = 'rauthy'
 # overwritten by: PG_TLS_NO_VERIFY
 pg_tls_no_verify = true
 
+# PostgreSQL SSL mode configuration.
+# Defines how PostgreSQL connections handle SSL/TLS encryption.
+#
+# Options:
+# - disable: Only try a non-SSL connection
+# - allow: First try a non-SSL connection; if that fails, try an SSL connection
+# - prefer: First try an SSL connection; if that fails, try a non-SSL connection (default)
+# - require: Only try an SSL connection, but don't verify the certificate
+# - verify-ca: Only try an SSL connection and verify the certificate
+# - verify-full: Only try an SSL connection, verify the certificate and hostname
+#
+# Note: For managed database services (AWS RDS, DigitalOcean, etc.), use 'require' or higher.
+#
+# default: prefer
+# overwritten by: PG_SSL_MODE
+#pg_ssl_mode = 'prefer'
+
 # Max DB connections for the Postgres pool.
 #
 # default: 20
