@@ -183,6 +183,7 @@
 | LOG_LEVEL_DATABASE                         | logging.level_database                      | Level      |          |
 | LOG_LEVEL_ACCESS                           | logging.level_access                        | String     |          |
 | LOG_FMT                                    | logging.log_fmt                             | "json"     |          |
+| MATRIX_SUPPORT_ENABLE                      | matrix.msc3861_enable                       | bool       |          |
 | ADMIN_FORCE_MFA                            | mfa.admin_force_mfa                         | bool       |          |
 | POW_DIFFICULTY                             | pow.difficulty                              | u16        |          |
 | POW_EXP                                    | pow.exp                                     | u16        |          |

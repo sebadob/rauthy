@@ -1068,12 +1068,18 @@ impl Client {
             res.push(s.to_string());
         }
 
+        let matrix_enabled = RauthyConfig::get().vars.matrix.msc3861_enable;
+
         for s in scopes {
-            if self.default_scopes.contains(s) {
+            if self.default_scopes.split(',').any(|d| d == s) {
                 continue;
             }
 
-            if self.scopes.contains(s) {
+            if self
+                .scopes
+                .split(',')
+                .any(|allowed| Scope::matches(allowed, s, matrix_enabled))
+            {
                 res.push(s.clone());
             }
         }
