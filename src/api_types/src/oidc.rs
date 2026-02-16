@@ -4,8 +4,8 @@ use crate::sessions::SessionState;
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use rauthy_common::regex::{
-    RE_ALNUM, RE_BASE64, RE_CLIENT_ID_EPHEMERAL, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER,
-    RE_GRANT_TYPES, RE_LOWERCASE, RE_SCOPE_SPACE, RE_URI,
+    RE_ALNUM, RE_BASE64, RE_CLIENT_ID, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER, RE_GRANT_TYPES,
+    RE_LOWERCASE, RE_SCOPE_SPACE, RE_URI,
 };
 use rauthy_common::utils::base64_decode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -34,7 +34,7 @@ pub struct AddressClaim {
 pub struct AuthRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub client_id: String,
@@ -100,13 +100,13 @@ pub struct LoginRequest {
     pub password: Option<String>,
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
     pub pow: String,
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
     pub client_id: String,
@@ -134,7 +134,7 @@ pub struct LoginRequest {
 pub struct LoginRefreshRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
     pub client_id: String,
@@ -227,7 +227,7 @@ pub struct TokenRequest {
     pub redirect_uri: Option<String>,
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
     pub client_id: Option<String>,

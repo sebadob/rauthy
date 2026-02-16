@@ -141,7 +141,7 @@ pub fn trigger() {
     let _ = *RE_CODE_CHALLENGE_METHOD;
     let _ = *RE_CITY;
     if vars.ephemeral_clients.enable {
-        let _ = *RE_CLIENT_ID_EPHEMERAL;
+        let _ = *RE_CLIENT_ID;
     }
     let _ = *RE_CLIENT_NAME;
     let _ = *RE_CODE_CHALLENGE;

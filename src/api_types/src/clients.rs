@@ -1,8 +1,7 @@
 use crate::cust_validation::*;
 use crate::oidc::JwkKeyPairAlg;
 use rauthy_common::regex::{
-    RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_GROUPS, RE_LOWERCASE, RE_SCOPE_SPACE,
-    RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
+    RE_CLIENT_ID, RE_CLIENT_NAME, RE_GROUPS, RE_SCOPE_SPACE, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -79,7 +78,7 @@ pub struct DynamicClientRequest {
 pub struct EphemeralClientRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$`
     #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub client_id: String,
@@ -119,7 +118,10 @@ pub struct EphemeralClientRequest {
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct NewClientRequest {
     /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "*RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
+    #[validate(regex(
+        path = "*RE_CLIENT_ID",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
+    ))]
     pub id: String,
     /// Validation: None - will not be deserialized
     #[serde(skip_deserializing)]
@@ -142,7 +144,7 @@ pub struct NewClientRequest {
 pub struct UpdateClientRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$`
     #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub id: String,

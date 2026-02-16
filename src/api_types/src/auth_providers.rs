@@ -1,7 +1,7 @@
 use crate::cust_validation::validate_vec_scopes;
 use rauthy_common::regex::{
-    RE_ALNUM, RE_ATPROTO_HANDLE, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
-    RE_SCOPE_SPACE, RE_URI,
+    RE_ALNUM, RE_ATPROTO_HANDLE, RE_CLIENT_ID, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_SCOPE_SPACE,
+    RE_URI,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -102,7 +102,7 @@ pub struct ProviderLoginRequest {
     pub email: Option<String>,
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
     pub client_id: String,
@@ -126,7 +126,7 @@ pub struct ProviderLoginRequest {
     pub code_challenge_method: Option<String>,
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
     pub pow: String,
