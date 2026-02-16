@@ -93,23 +93,20 @@ impl ClientDyn {
     pub async fn rate_limit_ip(ip: IpAddr) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
+        let ttl = RauthyConfig::get().vars.dynamic_clients.rate_limit_sec as i64;
         let ts: Option<i64> = client.get(Cache::IpRateLimit, ip.to_string()).await?;
         match ts {
             Some(ts) => {
+                let retry_at = ts + ttl;
                 return Err(ErrorResponse::new(
-                    ErrorResponseType::TooManyRequests(ts),
-                    format!("You hit a rate limit. You may try again at: {ts}"),
+                    ErrorResponseType::TooManyRequests(retry_at),
+                    format!("You hit a rate limit. You may try again at: {retry_at}"),
                 ));
             }
             None => {
                 let now = Utc::now().timestamp();
-                let ttl = RauthyConfig::get()
-                    .vars
-                    .device_grant
-                    .rate_limit
-                    .map(|l| l as i64);
                 client
-                    .put(Cache::IpRateLimit, ip.to_string(), &now, ttl)
+                    .put(Cache::IpRateLimit, ip.to_string(), &now, Some(ttl))
                     .await?;
             }
         }
