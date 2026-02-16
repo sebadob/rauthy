@@ -1099,6 +1099,18 @@ pg_password = '123SuperSafe'
 # overwritten by: ENABLE_DYN_CLIENT_REG
 #enable = false
 
+# The allowed scopes separated by ' ' for dynamic clients.
+#
+# default: ['openid', 'profile', 'email', 'groups']
+# overwritten by: DYN_CLIENT_ALLOWED_SCOPES - single String, \n separated values
+#allowed_scopes = ['openid', 'profile', 'email', 'groups']
+
+# The default scopes separated by ' ' for dynamic clients.
+#
+# default: ['openid']
+# overwritten by: DYN_CLIENT_DEFAULT_SCOPES - single String, \n separated values
+#default_scopes = ['openid']
+
 # If specified, this secret token will be expected during
 # dynamic client registrations to be given as a
 # `Bearer &lt;DYN_CLIENT_REG_TOKEN&gt;` token. Needs to be communicated

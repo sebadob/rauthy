@@ -94,6 +94,8 @@
 | DPOP_FORCE_NONCE                           | dpop.force_nonce                            | bool       |          |
 | DPOP_NONCE_EXP                             | dpop.nonce_exp                              | u32        |          |
 | ENABLE_DYN_CLIENT_REG                      | dynamic_clients.enable                      | bool       |          |
+| DYN_CLIENT_ALLOWED_SCOPES                  | dynamic_clients.allowed_scopes              | \[String\] |          |
+| DYN_CLIENT_DEFAULT_SCOPES                  | dynamic_clients.default_scopes              | \[String\] |          |
 | DYN_CLIENT_REG_TOKEN                       | dynamic_clients.reg_token                   | String     | *5       |
 | DYN_CLIENT_DEFAULT_TOKEN_LIFETIME          | dynamic_clients.default_token_lifetime      | u32        |          |
 | DYN_CLIENT_SECRET_AUTO_ROTATE              | dynamic_clients.secret_auto_rotate          | bool       |          |
