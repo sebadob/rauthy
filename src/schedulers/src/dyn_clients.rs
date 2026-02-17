@@ -37,7 +37,7 @@ pub async fn dyn_client_cleanup() {
         }
         debug!("Running dynamic_client_cleanup scheduler");
 
-        let sql = "SELECT * FROM clients_dyn WHERE last_used = null";
+        let sql = "SELECT * FROM clients_dyn WHERE last_used IS NULL";
         let clients_res: Result<Vec<ClientDyn>, String> = if is_hiqlite() {
             DB::hql()
                 .query_as(sql, params!())
