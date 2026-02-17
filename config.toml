@@ -582,7 +582,7 @@ log_sync = "interval_200"
 # If you run a Cluster, a Node can re-sync cache data after a restart.
 # However, if you restart too quickly or shut down the whole cluster,
 # all your cached data will be gone.
-# In-memory only hugegly increases the throughput though, so it
+# In-memory only significantly increases the throughput though, so it
 # depends on your needs, what you should prefer.
 #
 # default: true
@@ -1016,7 +1016,7 @@ cleanup_minutes = 60
 rate_limit_sec = 60
 
 [email]
-# This contact information will be added to the `rauthy`client
+# This contact information will be added to the `rauthy` client
 # within the anti lockout rule with each new restart.
 #
 # overwritten by: RAUTHY_ADMIN_EMAIL
@@ -1314,7 +1314,7 @@ email = 'admin@localhost'
 # provide `matrix_access_token`.
 # If both are given, the `matrix_access_token` will be preferred.
 #
-# If left empty, no messages will not be sent to Matrix.
+# If left empty, messages will not be sent to Matrix.
 # Format: `@<user_id>:<server address>`
 #
 # overwritten by: EVENT_MATRIX_USER_ID
@@ -1998,7 +1998,7 @@ remote_password_ttl = 120
 authorized_keys_enable = true
 
 # By default, even though these are "public" keys, the endpoint
-# to retrieve them quires authentication. This will be a `basic"
+# to retrieve them requires authentication. This will be a `basic"
 # `Authentication` header in the form of `host_id:host_secret` of
 # any valid PAM host configured on Rauthy.
 # If you set it to `false`, the endpoint will be publicly available.
