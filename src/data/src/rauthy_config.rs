@@ -377,6 +377,7 @@ impl Default for Vars {
                 secret_auto_rotate: true,
                 cleanup_interval: 60,
                 cleanup_minutes: 60,
+                cleanup_inactive_days: 0,
                 rate_limit_sec: 60,
             },
             email: VarsEmail {
@@ -1362,6 +1363,14 @@ impl Vars {
             "DYN_CLIENT_CLEANUP_MINUTES",
         ) {
             self.dynamic_clients.cleanup_minutes = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "dynamic_clients",
+            "cleanup_inactive_days",
+            "DYN_CLIENT_CLEANUP_INACTIVE_DAYS",
+        ) {
+            self.dynamic_clients.cleanup_inactive_days = v;
         }
         if let Some(v) = t_u32(
             &mut table,
@@ -3037,6 +3046,7 @@ pub struct VarsDynamicClients {
     pub secret_auto_rotate: bool,
     pub cleanup_interval: u32,
     pub cleanup_minutes: u32,
+    pub cleanup_inactive_days: u32,
     pub rate_limit_sec: u32,
 }
 

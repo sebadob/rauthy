@@ -5,6 +5,7 @@ use rauthy_data::database::DB;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_dyn::ClientDyn;
 use rauthy_data::rauthy_config::RauthyConfig;
+use std::ops::Sub;
 use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info};
@@ -37,14 +38,28 @@ pub async fn dyn_client_cleanup() {
         }
         debug!("Running dynamic_client_cleanup scheduler");
 
-        let sql = "SELECT * FROM clients_dyn WHERE last_used IS NULL";
+        let cleanup_inactive_days = RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .cleanup_inactive_days;
+
+        let threshold_inactive = if cleanup_inactive_days > 0 {
+            Utc::now()
+                .sub(chrono::Duration::days(cleanup_inactive_days as i64))
+                .timestamp()
+        } else {
+            0
+        };
+
+        let sql = "SELECT * FROM clients_dyn WHERE last_used IS NULL OR last_used < $1";
+
         let clients_res: Result<Vec<ClientDyn>, String> = if is_hiqlite() {
             DB::hql()
-                .query_as(sql, params!())
+                .query_as(sql, params!(threshold_inactive))
                 .await
                 .map_err(|err| err.to_string())
         } else {
-            DB::pg_query(sql, &[], 0)
+            DB::pg_query(sql, &[&threshold_inactive], 0)
                 .await
                 .map_err(|err| err.to_string())
         };
@@ -60,7 +75,13 @@ pub async fn dyn_client_cleanup() {
             - RauthyConfig::get().vars.dynamic_clients.cleanup_minutes as i64;
         let mut cleaned_up = 0;
         for client in clients {
-            if client.created < threshold {
+            let should_delete = if client.last_used.is_some() {
+                cleanup_inactive_days > 0
+            } else {
+                client.created < threshold
+            };
+
+            if should_delete {
                 info!("Cleaning up unused dynamic client {}", client.id);
                 match Client::find(client.id).await {
                     Ok(c) => {
