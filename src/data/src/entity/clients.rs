@@ -1658,6 +1658,16 @@ impl Client {
 
             (!origins.is_empty()).then_some(origins)
         });
+        let scopes = RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .allowed_scopes
+            .join(",");
+        let default_scopes = RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .default_scopes
+            .join(",");
 
         Ok(Self {
             id,
@@ -1679,6 +1689,8 @@ impl Client {
                     .default_token_lifetime,
                 i32::MAX as u32,
             ) as i32,
+            scopes,
+            default_scopes,
             challenge: (!confidential).then_some("S256".to_string()),
             force_mfa: false,
             client_uri: req.client_uri,

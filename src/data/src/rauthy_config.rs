@@ -365,6 +365,13 @@ impl Default for Vars {
             },
             dynamic_clients: VarsDynamicClients {
                 enable: false,
+                allowed_scopes: vec![
+                    "openid".into(),
+                    "profile".into(),
+                    "email".into(),
+                    "groups".into(),
+                ],
+                default_scopes: vec!["openid".into()],
                 reg_token: None,
                 default_token_lifetime: 1800,
                 secret_auto_rotate: true,
@@ -1299,6 +1306,22 @@ impl Vars {
             "ENABLE_DYN_CLIENT_REG",
         ) {
             self.dynamic_clients.enable = v;
+        }
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "dynamic_clients",
+            "allowed_scopes",
+            "DYN_CLIENT_ALLOWED_SCOPES",
+        ) {
+            self.dynamic_clients.allowed_scopes = v.into_iter().map(Cow::from).collect::<Vec<_>>();
+        }
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "dynamic_clients",
+            "default_scopes",
+            "DYN_CLIENT_DEFAULT_SCOPES",
+        ) {
+            self.dynamic_clients.default_scopes = v.into_iter().map(Cow::from).collect::<Vec<_>>();
         }
         if let Some(v) = t_str(
             &mut table,
@@ -3007,6 +3030,8 @@ pub struct VarsDpop {
 #[derive(Debug)]
 pub struct VarsDynamicClients {
     pub enable: bool,
+    pub allowed_scopes: Vec<Cow<'static, str>>,
+    pub default_scopes: Vec<Cow<'static, str>>,
     pub reg_token: Option<String>,
     pub default_token_lifetime: u32,
     pub secret_auto_rotate: bool,
