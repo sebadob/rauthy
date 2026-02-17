@@ -7,7 +7,7 @@ export interface LoginRequest {
     /// Validation: max 256
     password?: string;
     pow: string;
-    /// Validation: PATTERN_CLIENT_ID_EPHEMERAL
+    /// Validation: PATTERN_CLIENT_ID
     client_id: string;
     /// Validation: PATTERN_URI
     redirect_uri: string;
@@ -24,7 +24,7 @@ export interface LoginRequest {
 }
 
 export interface LoginRefreshRequest {
-    /// Validation: PATTERN_CLIENT_ID_EPHEMERAL
+    /// Validation: PATTERN_CLIENT_ID
     client_id: string;
     /// Validation: PATTERN_URI
     redirect_uri: string;

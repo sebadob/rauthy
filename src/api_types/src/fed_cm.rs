@@ -1,4 +1,4 @@
-use rauthy_common::regex::{RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_URI};
+use rauthy_common::regex::{RE_ALNUM, RE_CLIENT_ID, RE_URI};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
@@ -7,7 +7,7 @@ use validator::Validate;
 pub struct FedCMAssertionRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
     pub client_id: String,
@@ -29,7 +29,7 @@ pub struct FedCMAssertionRequest {
 pub struct FedCMClientMetadataRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "*RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
     pub client_id: String,

@@ -10,7 +10,7 @@ export type AuthFlow =
 export type CodeChallengeMethod = 'plain' | 'S256';
 
 export interface NewClientRequest {
-    /// Validation: PATTERN_LOWERCASE
+    /// Validation: PATTERN_CLIENT_ID
     id: string;
     /// Validation: PATTERN_CLIENT_NAME
     name?: string;
@@ -32,7 +32,7 @@ export interface ScimClientRequestResponse {
 }
 
 export interface UpdateClientRequest {
-    /// Validation: PATTERN_CLIENT_ID_EPHEMERAL
+    /// Validation: PATTERN_CLIENT_ID
     id: string;
     /// Validation: PATTERN_CLIENT_NAME
     name?: string;

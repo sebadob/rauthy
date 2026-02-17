@@ -58,7 +58,7 @@ export interface ProviderLoginRequest {
     // values for the downstream client
     /// Validation: `email`
     email?: string;
-    /// Validation: PATTERN_CLIENT_ID_EPHEMERAL
+    /// Validation: PATTERN_CLIENT_ID
     client_id: string;
     /// Validation: PATTERN_URI
     redirect_uri: string;

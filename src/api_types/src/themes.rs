@@ -1,4 +1,4 @@
-use rauthy_common::regex::{RE_CLIENT_ID_EPHEMERAL, RE_CSS_VALUE_LOOSE};
+use rauthy_common::regex::{RE_CLIENT_ID, RE_CSS_VALUE_LOOSE};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -77,7 +77,7 @@ pub struct ThemeRequestResponse {
 
 impl ThemeRequestResponse {
     pub fn validate(&self) -> Result<(), ErrorResponse> {
-        if !RE_CLIENT_ID_EPHEMERAL.is_match(&self.client_id) {
+        if !RE_CLIENT_ID.is_match(&self.client_id) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "client_id must match: ^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$",
