@@ -435,6 +435,23 @@ impl Scope {
             && scope != "phone"
             && scope != "profile"
     }
+
+    /// Returns `true` if the `requested` scope matches the `allowed` scope.
+    /// Supports hierarchical matching for URNs if Matrix support is enabled
+    /// (e.g. `...:device` matches `...:device:ID`), as required by Matrix (MSC3861).
+    /// Reference: https://github.com/matrix-org/matrix-spec-proposals/pull/3861
+    #[inline]
+    pub fn matches(allowed: &str, requested: &str, matrix_enabled: bool) -> bool {
+        if allowed == requested {
+            return true;
+        }
+
+        if matrix_enabled && let Some(suffix) = requested.strip_prefix(allowed) {
+            return suffix.starts_with(':');
+        }
+
+        false
+    }
 }
 
 impl From<Scope> for ScopeResponse {

@@ -2107,6 +2107,15 @@ level_access = 'modifying'
 # overwritten by: LOG_FMT
 #log_fmt = 'text'
 
+[matrix]
+# Enables specific compatibility support for Matrix MSC3861 (Matrix 2.0 native OIDC).
+# This enables hierarchical scope matching (e.g. 'device' matches 'device:ID').
+# Note: Dynamic Client Registration (DCR) should be enabled for full support.
+#
+# default: false
+# overwritten by: MATRIX_SUPPORT_ENABLE
+#msc3861_enable = false
+
 [mfa]
 # If 'true', MFA for an account must be enabled to access the
 # rauthy admin UI.

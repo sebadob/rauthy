@@ -266,6 +266,7 @@ pub struct Vars {
     pub i18n: VarsI18n,
     pub lifetimes: VarsLifetimes,
     pub logging: VarsLogging,
+    pub matrix: VarsMatrix,
     pub mfa: VarsMfa,
     pub pam: VarsPam,
     pub pow: VarsPow,
@@ -539,6 +540,9 @@ impl Default for Vars {
                 level_database: "info".into(),
                 level_access: "modifying".into(),
                 log_fmt: "text".into(),
+            },
+            matrix: VarsMatrix {
+                msc3861_enable: false,
             },
             mfa: VarsMfa {
                 admin_force_mfa: true,
@@ -869,6 +873,7 @@ impl Vars {
         slf.parse_i18n(&mut table);
         slf.parse_lifetimes(&mut table);
         slf.parse_logging(&mut table);
+        slf.parse_matrix(&mut table);
         slf.parse_mfa(&mut table);
         slf.parse_pam(&mut table);
         slf.parse_pow(&mut table);
@@ -2248,6 +2253,19 @@ impl Vars {
         }
     }
 
+    fn parse_matrix(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "matrix");
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "matrix",
+            "msc3861_enable",
+            "MATRIX_SUPPORT_ENABLE",
+        ) {
+            self.matrix.msc3861_enable = v;
+        }
+    }
+
     fn parse_mfa(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "mfa");
 
@@ -3224,6 +3242,11 @@ pub struct VarsLogging {
     pub level_database: Cow<'static, str>,
     pub level_access: Cow<'static, str>,
     pub log_fmt: Cow<'static, str>,
+}
+
+#[derive(Debug)]
+pub struct VarsMatrix {
+    pub msc3861_enable: bool,
 }
 
 #[derive(Debug)]
