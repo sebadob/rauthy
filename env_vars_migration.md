@@ -101,6 +101,7 @@
 | DYN_CLIENT_SECRET_AUTO_ROTATE              | dynamic_clients.secret_auto_rotate          | bool       |          |
 | DYN_CLIENT_CLEANUP_INTERVAL                | dynamic_clients.cleanup_interval            | u32        |          |
 | DYN_CLIENT_CLEANUP_MINUTES                 | dynamic_clients.cleanup_minutes             | u32        |          |
+| DYN_CLIENT_CLEANUP_INACTIVE_DAYS           | dynamic_clients.cleanup_inactive_days       | u32        |          |
 | DYN_CLIENT_RATE_LIMIT_SEC                  | dynamic_clients.rate_limit_sec              | u32        |          |
 | RAUTHY_ADMIN_EMAIL                         | email.rauthy_admin_email                    | String     |          |
 | EMAIL_SUB_PREFIX                           | email.sub_prefix                            | String     |          |

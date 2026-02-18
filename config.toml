@@ -1005,6 +1005,16 @@ cleanup_interval = 60
 # overwritten by: DYN_CLIENT_CLEANUP_MINUTES
 cleanup_minutes = 60
 
+# Defines the number of days after which an inactive dynamic client will be
+# cleaned up. This applies to clients that have been used at least once but
+# have not been active since the configured amount of days.
+#
+# WARNING: This will permanently delete client registrations.
+#
+# default: 0 (disabled)
+# overwritten by: DYN_CLIENT_CLEANUP_INACTIVE_DAYS
+cleanup_inactive_days = 0
+
 # The rate-limiter timeout for dynamic client registration.
 # This is the timeout in seconds which will prevent an IP from
 # registering another dynamic client, if no `DYN_CLIENT_REG_TOKEN`
