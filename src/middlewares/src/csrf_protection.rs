@@ -135,6 +135,7 @@ fn is_path_csrf_exception(path: &str) -> bool {
             // have their own custom validation
             path == "/oidc/authorize"
                 || path == "/oidc/token"
+                || path == "/oidc/token/revoke"
                 || path == "/oidc/logout"
                 // no issue with CORS
                 || path == "/clients_dyn"

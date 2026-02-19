@@ -1007,8 +1007,23 @@ pub async fn post_token_revoke(
     req: HttpRequest,
     Form(payload): Form<TokenRevocationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    token_revocation::handle_token_revocation(req, payload).await?;
-    Ok(HttpResponse::Ok().finish())
+    let cors_header = token_revocation::handle_token_revocation(req, payload).await?;
+
+    if let Some((n, v)) = cors_header {
+        Ok(HttpResponse::Ok()
+            .insert_header((n, v))
+            .insert_header((
+                ACCESS_CONTROL_ALLOW_METHODS,
+                header::HeaderValue::from_static("POST"),
+            ))
+            .insert_header((
+                ACCESS_CONTROL_ALLOW_HEADERS,
+                header::HeaderValue::from_static("authorization, content-type"),
+            ))
+            .finish())
+    } else {
+        Ok(HttpResponse::Ok().finish())
+    }
 }
 
 /// The token introspection endpoint for OAuth2

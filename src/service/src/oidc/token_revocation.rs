@@ -14,7 +14,7 @@ use rauthy_jwt::token::JwtToken;
 pub async fn handle_token_revocation(
     req: HttpRequest,
     payload: TokenRevocationRequest,
-) -> Result<(), ErrorResponse> {
+) -> Result<Option<(header::HeaderName, header::HeaderValue)>, ErrorResponse> {
     let (client_id, client_secret) = {
         if let Some(h) = req.headers().get(header::AUTHORIZATION) {
             let decoded =
@@ -44,6 +44,8 @@ pub async fn handle_token_revocation(
     };
 
     let client = Client::find_maybe_ephemeral(client_id).await?;
+    let cors_header = client.get_validated_origin_header(&req)?;
+
     if client.confidential {
         client.validate_secret(&client_secret, &req).await?;
     }
@@ -93,7 +95,7 @@ pub async fn handle_token_revocation(
         let Some(jti) = claims.jti else {
             // We can only revoke new access tokens (at least Rauthy v0.34)
             // which contain the `jti` claim.
-            return Ok(());
+            return Ok(cors_header);
         };
 
         IssuedToken::revoke(jti.to_string()).await?;
@@ -109,5 +111,5 @@ pub async fn handle_token_revocation(
         }
     };
 
-    Ok(())
+    Ok(cors_header)
 }

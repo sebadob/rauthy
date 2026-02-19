@@ -66,6 +66,16 @@ pub async fn options_token() -> HttpResponse {
         .finish()
 }
 
+#[options("/oidc/token/revoke")]
+pub async fn options_token_revoke() -> HttpResponse {
+    HttpResponse::NoContent()
+        .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
+        .insert_header((ACCESS_CONTROL_ALLOW_METHODS, "POST, OPTIONS"))
+        .insert_header((ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
+        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, ALLOW_HEADERS_WITH_AUTH))
+        .finish()
+}
+
 #[options("/oidc/introspect")]
 pub async fn options_introspect() -> HttpResponse {
     HttpResponse::NoContent()
