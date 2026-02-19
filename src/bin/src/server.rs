@@ -295,6 +295,7 @@ fn api_services() -> actix_web::Scope {
                 .service(cors_preflight::options_certs_by_kid)
                 .service(cors_preflight::options_logout)
                 .service(cors_preflight::options_token)
+                .service(cors_preflight::options_token_revoke)
                 .service(cors_preflight::options_introspect)
                 .service(cors_preflight::options_userinfo)
                 .service(cors_preflight::options_users_picture)
