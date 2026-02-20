@@ -504,6 +504,7 @@
                     placeholder="Bearer Token"
                     width={inputWidth}
                     pattern={PATTERN_URI}
+                    maxLength={2048}
                     required={scimEnabled}
                 />
 
