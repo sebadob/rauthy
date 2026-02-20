@@ -1,6 +1,6 @@
+use crate::entity::auth_providers::AuthProviderIdClaims;
 use rauthy_common::constants::APPLICATION_JSON;
 use rauthy_common::http_client;
-use rauthy_data::entity::auth_providers::AuthProviderIdClaims;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
 use serde::Deserialize;

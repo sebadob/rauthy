@@ -968,6 +968,8 @@ LIMIT $2"#;
         if !self.enabled {
             Session::invalidate_for_user(&self.id).await?;
             RefreshToken::invalidate_for_user(&self.id).await?;
+            // TODO trigger backchannel logout and SCIM updates as well?
+            //  -> compare with old value beforehand somehow, probably in calling fn before updates
         }
 
         if let Some(email) = old_email {
