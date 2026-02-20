@@ -23,7 +23,7 @@
     {#if version.update_available}
         <div class="ver upd">
             <a href={version.latest_url} target="_blank">
-                v{version} ⚠️
+                v{version.current} ⚠️
             </a>
         </div>
     {:else}
