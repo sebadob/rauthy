@@ -438,8 +438,18 @@ impl rustls::client::danger::ServerCertVerifier for NoTlsVerifier {
     fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
         vec![
             rustls::SignatureScheme::ED25519,
+            rustls::SignatureScheme::ED448,
+            rustls::SignatureScheme::RSA_PKCS1_SHA256,
+            rustls::SignatureScheme::RSA_PKCS1_SHA384,
+            rustls::SignatureScheme::RSA_PKCS1_SHA512,
+            rustls::SignatureScheme::RSA_PSS_SHA256,
+            rustls::SignatureScheme::RSA_PSS_SHA384,
+            rustls::SignatureScheme::RSA_PSS_SHA512,
             rustls::SignatureScheme::ECDSA_NISTP256_SHA256,
             rustls::SignatureScheme::ECDSA_NISTP384_SHA384,
+            rustls::SignatureScheme::ML_DSA_44,
+            rustls::SignatureScheme::ML_DSA_65,
+            rustls::SignatureScheme::ML_DSA_87,
         ]
     }
 }
