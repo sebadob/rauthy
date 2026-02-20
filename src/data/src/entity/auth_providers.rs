@@ -851,13 +851,23 @@ impl AuthProviderCallback {
             return Err(ErrorResponse::new(ErrorResponseType::Internal, msg));
         }
 
-        // in case of a standard OIDC provider, we only care about the ID token
         if let Some(id_token) = ts.id_token {
             let claims_bytes = AuthProviderIdClaims::self_as_bytes_from_token(&id_token)?;
-            let claims = AuthProviderIdClaims::try_from(claims_bytes.as_slice())?;
 
-            claims.validate_update_user(provider, link_cookie).await
-        } else if let Some(access_token) = ts.access_token {
+            // Some providers like Discord send pretty useless id_tokens that do not even contain
+            // the requested claims. If anything fails to extract at least the bare minimum, we want
+            // to go on and try fetching userinfo using the access token below.
+            match AuthProviderIdClaims::try_from(claims_bytes.as_slice()) {
+                Ok(claims) => {
+                    return claims.validate_update_user(provider, link_cookie).await;
+                }
+                Err(err) => {
+                    debug!("Failed to extract claims from id_token: {err}. Trying access token.");
+                }
+            }
+        }
+
+        if let Some(access_token) = ts.access_token {
             // the id_token only exists, if we actually have an OIDC provider.
             // If we only get an access token, we need to do another request to the
             // userinfo endpoint
