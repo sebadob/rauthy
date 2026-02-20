@@ -111,7 +111,7 @@ impl RauthyConfig {
             ListenScheme::HttpHttps | ListenScheme::Https | ListenScheme::UnixHttps
         ) || vars.server.proxy_mode;
         let issuer_scheme = if is_https { "https" } else { "http" };
-        let issuer = format!("{issuer_scheme}://{}/auth/v1", vars.server.pub_url);
+        let issuer = format!("{issuer_scheme}://{}/auth/v1/", vars.server.pub_url);
 
         let Ok(log_level_access) = LogLevelAccess::from_str(&vars.logging.level_access) else {
             panic!(
