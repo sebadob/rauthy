@@ -281,6 +281,7 @@ fn api_services() -> actix_web::Scope {
                 .service(auth_providers::delete_provider)
                 .service(auth_providers::get_provider_img)
                 .service(auth_providers::put_provider_img)
+                .service(auth_providers::delete_provider_img)
                 .service(auth_providers::post_provider_link)
                 .service(backup::get_backups)
                 .service(backup::post_backup)

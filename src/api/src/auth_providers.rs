@@ -468,6 +468,30 @@ pub async fn put_provider_img(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// DELETE an image / icon for an auth provider
+///
+/// **Permissions**
+/// - `rauthy_admin`
+#[utoipa::path(
+    delete,
+    path = "/providers/{id}/img",
+    tag = "providers",
+    responses(
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[delete("/providers/{id}/img")]
+pub async fn delete_provider_img(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    Logo::delete(&id.into_inner(), &LogoType::AuthProvider).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
 /// POST a link between an existing user account and an upstream provider
 ///
 /// This action will create a link between an already existing, non-linked account and a configured

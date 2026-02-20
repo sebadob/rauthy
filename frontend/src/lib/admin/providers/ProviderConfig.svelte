@@ -4,7 +4,7 @@
     import type { ProviderRequest, ProviderResponse } from '$api/types/auth_provider.ts';
     import IconCheck from '$icons/IconCheck.svelte';
     import Form from '$lib5/form/Form.svelte';
-    import { fetchPut } from '$api/fetch';
+    import { fetchDelete, fetchPut } from '$api/fetch';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import { useI18n } from '$state/i18n.svelte';
     import LabeledValue from '$lib5/LabeledValue.svelte';
@@ -33,6 +33,8 @@
     let success = $state(false);
     let logoKey = $state(genKey());
 
+    let urlImg = $derived(`/auth/v1/providers/${provider.id}/img`);
+
     $effect(() => {
         if (provider.id) {
             provider.client_secret = provider.client_secret || '';
@@ -48,6 +50,15 @@
             provider.scope = provider.scope.replaceAll('+', ' ');
         }
     });
+
+    async function onLogoDelete() {
+        let res = await fetchDelete(urlImg);
+        if (res.error) {
+            err = res.error.message;
+        } else {
+            logoKey = genKey();
+        }
+    }
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
@@ -165,12 +176,12 @@
         <div class="logo">
             {#key logoKey}
                 <div>
-                    <ProviderLogo providerId={provider.id} />
+                    <ProviderLogo providerId={provider.id} onDelete={onLogoDelete} />
                 </div>
             {/key}
             <InputFile
                 method="PUT"
-                url={`/auth/v1/providers/${provider.id}/img`}
+                url={urlImg}
                 fileName="logo"
                 onSuccess={() => (logoKey = genKey())}
             />

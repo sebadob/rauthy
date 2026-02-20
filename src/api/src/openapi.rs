@@ -47,6 +47,7 @@ use utoipa::{OpenApi, openapi};
         auth_providers::get_provider_delete_safe,
         auth_providers::get_provider_img,
         auth_providers::put_provider_img,
+        auth_providers::delete_provider_img,
 
         backup::get_backups,
         backup::post_backup,
