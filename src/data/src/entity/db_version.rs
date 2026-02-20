@@ -96,7 +96,7 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
     ) -> Result<(), ErrorResponse> {
         // this check panics on purpose, and it is there to never forget to adjust this
         // version check before doing any major or minor release
-        if app_version.major != 0 || app_version.minor != 34 {
+        if app_version.major != 0 || app_version.minor != 35 {
             panic!(
                 "\nDbVersion::check_app_version needs adjustment for the new RAUTHY_VERSION: \
                 {RAUTHY_VERSION}\\n Also make sure that `LOWEST_COMPATIBLE_VERSION` is still \

@@ -4,7 +4,7 @@ use actix_web::dev::ServiceRequest;
 use actix_web::http::header::HeaderMap;
 use base64::{Engine as _, engine, engine::general_purpose};
 use gethostname::gethostname;
-use rand::Rng;
+use rand::RngExt;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::fmt::Debug;
 use std::net::IpAddr;
