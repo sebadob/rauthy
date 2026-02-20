@@ -673,7 +673,7 @@
                 {/if}
 
                 {#if !clientMfaForce && providers.length > 0 && !isAtproto}
-                    <div class="providers flex-col">
+                    <div class="providers flex-col gap-05">
                         <div class="providersSeparator">
                             <div class="separator"></div>
                             <div class="loginWith">
