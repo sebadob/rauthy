@@ -85,19 +85,19 @@ impl WellKnown {
     pub fn new(scopes_supported: Vec<String>) -> Self {
         let issuer = &RauthyConfig::get().issuer;
 
-        let authorization_endpoint = format!("{issuer}/oidc/authorize");
-        let device_authorization_endpoint = format!("{issuer}/oidc/device");
-        let token_endpoint = format!("{issuer}/oidc/token");
-        let introspection_endpoint = format!("{issuer}/oidc/introspect");
-        let revocation_endpoint = format!("{issuer}/oidc/token/revoke");
-        let userinfo_endpoint = format!("{issuer}/oidc/userinfo");
+        let authorization_endpoint = format!("{issuer}oidc/authorize");
+        let device_authorization_endpoint = format!("{issuer}oidc/device");
+        let token_endpoint = format!("{issuer}oidc/token");
+        let introspection_endpoint = format!("{issuer}oidc/introspect");
+        let revocation_endpoint = format!("{issuer}oidc/token/revoke");
+        let userinfo_endpoint = format!("{issuer}oidc/userinfo");
         let registration_endpoint = RauthyConfig::get()
             .vars
             .dynamic_clients
             .enable
-            .then_some(format!("{issuer}/clients_dyn"));
-        let end_session_endpoint = format!("{issuer}/oidc/logout");
-        let jwks_uri = format!("{issuer}/oidc/certs");
+            .then_some(format!("{issuer}clients_dyn"));
+        let end_session_endpoint = format!("{issuer}oidc/logout");
+        let jwks_uri = format!("{issuer}oidc/certs");
 
         WellKnown {
             issuer: String::from(issuer),
