@@ -373,6 +373,8 @@ VALUES
             res.retain(|p| p.issuer != PROVIDER_ATPROTO);
         }
 
+        res.sort_by(|a, b| a.name.cmp(&b.name));
+
         // needed for rendering each single login page -> always cache this
         client
             .put(Cache::App, Self::cache_idx("all"), &res, CACHE_TTL_APP)
@@ -772,8 +774,6 @@ struct AuthProviderTokenSet {
 }
 
 impl AuthProviderCallback {
-    // Inlined because it's only used in a single location
-    #[inline]
     pub async fn extract_user(
         &self,
         provider: &AuthProvider,
@@ -897,8 +897,6 @@ impl AuthProviderCallback {
         }
     }
 
-    // Inlined because it's only used in a single location
-    #[inline]
     pub async fn extract_user_at_proto(
         &self,
         provider: &AuthProvider,
@@ -1000,6 +998,7 @@ impl AuthProviderTemplate {
             .into_iter()
             .filter(|p| p.enabled)
             .collect::<Vec<_>>();
+
         let mut slf = Vec::with_capacity(providers.len());
         for provider in providers {
             let updated = Logo::find_cached(&provider.id, &LogoType::AuthProvider)
