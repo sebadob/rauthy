@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.34.3"
+version = "0.35.0-20260220"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -60,7 +60,7 @@ constant_time_eq = "0.4.2"
 cron = "0.15"
 cryptr = { version = "0.9", features = ["s3", "streaming"] }
 css-color = "0.2"
-deadpool = { version = "0.12", features = ["rt_tokio_1", "serde"] }
+deadpool = { version = "0.12.3", features = ["rt_tokio_1", "serde"] }
 deadpool-postgres = "0.14"
 dotenvy = "0.15"
 ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
@@ -95,8 +95,8 @@ oxiri = "0.2.2"
 postgres-types = { version = "0.2.6", features = ["derive"] }
 prometheus = "0.14"
 pulldown-cmark = "0.13"
-rand = "0.9"
-rand_core = { version = "0.9", features = ["std"] }
+rand = "0.10"
+rand_core = { version = "0.10", features = [] }
 rcgen = "0.14.3"
 refinery = { version = "0.9", features = ["tokio-postgres"] }
 regex = "1"

@@ -218,10 +218,10 @@ token_len_limit = 4096
 #
 # !!! CAUTION !!!
 # JWT token revocation is a myth and doesn't exist. You can only
-# blacklist, but not revoke them, even though that's the official term
-# used in the RFC. Token revocation does only work, when a client
+# blacklist but not revoke them, even though that's the official term
+# used in the RFC. Token revocation does only work when a client
 # validates tokens against the `/introspection` or `/userinfo`
-# endpoints, but they will still be valid, if a client just validates
+# endpoints, but they will still be valid if a client just validates
 # via public keys!
 #
 # The default value of `false` makes the most sense, because token
@@ -255,7 +255,7 @@ token_revoke_device_tokens = true
 # If set to `true`, the `/auth/v1/whoami` endpoint will return all
 # request headers. Only the `Cookie` and Rauthys internal CSRF headers
 # will be hidden. Since this has the potential to leak sensitive
-# information, depending on you networking, this is disabled by default.
+# information, depending on your networking, this is disabled by default.
 #
 # default: false
 # overwritten by: WHOAMI_HEADERS
