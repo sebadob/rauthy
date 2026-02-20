@@ -401,7 +401,7 @@
                 {/if}
 
                 {#if providers.length > 0}
-                    <div class="providers flex-col">
+                    <div class="providers flex-col gap-05">
                         <div class="providersSeparator">
                             <div class="separator"></div>
                             <div class="registerWith">
