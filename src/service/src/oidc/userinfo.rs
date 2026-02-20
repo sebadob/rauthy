@@ -139,6 +139,10 @@ pub async fn get_userinfo(
     let has_addr = scope.contains("address");
     let has_phone = scope.contains("phone");
 
+    if has_profile {
+        userinfo.picture = user.picture_uri();
+    }
+
     if (has_profile || has_addr || has_phone)
         && let Some(values) = UserValues::find(&user.id).await?
     {
@@ -176,7 +180,6 @@ pub async fn get_userinfo(
         userinfo.given_name = Some(user.given_name);
         userinfo.family_name = user.family_name;
         userinfo.locale = Some(user.language.to_string());
-        userinfo.picture = user.picture_id;
     }
 
     Ok((userinfo, cors_header))
