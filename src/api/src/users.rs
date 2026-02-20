@@ -151,13 +151,9 @@ pub async fn post_users(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Create)?;
     payload.validate()?;
-    UserValuesValidator {
-        given_name: payload.given_name.as_deref(),
-        family_name: payload.family_name.as_deref(),
-        preferred_username: None,
-        user_values: &None,
-    }
-    .validate()?;
+    // We are not using the UserValuesValidator on purpose here.
+    // When an admin registers a new user, the user details view will be shown immediately anyway,
+    // and an admin may have good reason to not set some values, like e.g. the preferred username.
 
     let user = User::create_from_new(payload).await?;
 
