@@ -115,7 +115,7 @@ impl ClientDyn {
     }
 
     pub fn registration_client_uri(id: &str) -> String {
-        format!("{}/clients_dyn/{}", RauthyConfig::get().issuer, id)
+        format!("{}clients_dyn/{}", RauthyConfig::get().issuer, id)
     }
 
     pub fn registration_token_plain(&self) -> Result<String, ErrorResponse> {
