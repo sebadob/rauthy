@@ -4,7 +4,10 @@ use rauthy_common::is_hiqlite;
 use rauthy_data::database::DB;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_dyn::ClientDyn;
+use rauthy_data::entity::failed_backchannel_logout::FailedBackchannelLogout;
+use rauthy_data::entity::user_login_states::UserLoginState;
 use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_service::oidc::logout;
 use std::ops::Sub;
 use std::time::Duration;
 use tokio::time;
@@ -85,6 +88,23 @@ pub async fn dyn_client_cleanup() {
                 info!("Cleaning up unused dynamic client {}", client.id);
                 match Client::find(client.id).await {
                     Ok(c) => {
+                        if client.last_used.is_some() {
+                            if let Err(err) = logout::execute_backchannel_logout_by_client(&c).await
+                            {
+                                error!(
+                                    "Error during async backchannel logout after client delete: {:?}",
+                                    err
+                                );
+                                let _ = UserLoginState::delete_all_by_cid(c.id.clone()).await;
+                            }
+
+                            if let Err(err) =
+                                FailedBackchannelLogout::delete_all_by_client(c.id.clone()).await
+                            {
+                                error!("Error cleaning up FailedBackchannelLogouts: {:?}", err);
+                            }
+                        }
+
                         if let Err(err) = c.delete().await {
                             error!(?err, "deleting unused client");
                             continue;
