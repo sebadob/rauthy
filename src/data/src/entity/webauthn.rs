@@ -399,35 +399,28 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
         Ok(pks)
     }
 
-    pub fn update_passkey_txn_append(&self, txn: &mut Vec<(&str, Params)>) {
-        txn.push((
-            r#"
-UPDATE passkeys
-SET passkey = $1, last_used = $2
-WHERE user_id = $3 AND name = $4"#,
-            params!(&self.passkey, self.last_used, &self.user_id, &self.name),
-        ));
-    }
-
-    pub async fn update_passkey_txn(
-        &self,
-        txn: &deadpool_postgres::Transaction<'_>,
-    ) -> Result<(), ErrorResponse> {
-        DB::pg_txn_append(
-            txn,
-            r#"
-UPDATE passkeys
-SET passkey = $1, last_used = $2
-WHERE user_id = $3 AND name = $4"#,
-            &[&self.passkey, &self.last_used, &self.user_id, &self.name],
-        )
-        .await?;
-
-        Ok(())
-    }
-
-    async fn update_caches_after_update(&self) -> Result<(), ErrorResponse> {
+    pub async fn update_passkey(&self) -> Result<(), ErrorResponse> {
         let client = DB::hql();
+
+        let sql = r#"
+UPDATE passkeys
+SET passkey = $1, last_used = $2
+WHERE user_id = $3 AND name = $4"#;
+
+        if is_hiqlite() {
+            client
+                .execute(
+                    sql,
+                    params!(&self.passkey, self.last_used, &self.user_id, &self.name),
+                )
+                .await?;
+        } else {
+            DB::pg_execute(
+                sql,
+                &[&self.passkey, &self.last_used, &self.user_id, &self.name],
+            )
+            .await?;
+        }
 
         let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp as i64);
         client
@@ -874,39 +867,20 @@ pub async fn auth_finish(
                 && let Some(mut session) = session
             {
                 session.set_authenticated(&user).await?;
+                user.last_login = Some(Utc::now().timestamp());
+                user.last_failed_login = None;
+                user.failed_login_attempts = None;
+                user.save(None).await?;
             }
 
             if auth_result.needs_update() {
+                let now = Utc::now().timestamp();
                 for mut pk_entity in pks {
                     let mut pk = pk_entity.get_pk();
-                    if let Some(updated) = pk.update_credential(&auth_result) {
-                        if updated {
-                            pk_entity.passkey = serde_json::to_string(&pk)?;
-                        }
-
-                        let now = OffsetDateTime::now_utc().unix_timestamp();
+                    if pk.update_credential(&auth_result) == Some(true) {
+                        pk_entity.passkey = serde_json::to_string(&pk)?;
                         pk_entity.last_used = now;
-                        user.last_login = Some(now);
-                        user.last_failed_login = None;
-                        user.failed_login_attempts = None;
-
-                        if is_hiqlite() {
-                            let mut txn = Vec::with_capacity(2);
-                            pk_entity.update_passkey_txn_append(&mut txn);
-                            user.save_txn_append(&mut txn);
-                            DB::hql().txn(txn).await?;
-                        } else {
-                            let mut cl = DB::pg().await?;
-                            let txn = cl.transaction().await?;
-                            pk_entity.update_passkey_txn(&txn).await?;
-                            user.save_txn(&txn).await?;
-                            txn.commit().await?;
-                        }
-
-                        pk_entity.update_caches_after_update().await?;
-
-                        // there can only be exactly one key that needs the update
-                        break;
+                        pk_entity.update_passkey().await?;
                     }
                 }
             }
