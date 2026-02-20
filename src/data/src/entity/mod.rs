@@ -6,6 +6,7 @@ pub mod api_keys;
 pub mod app_version;
 pub mod atproto;
 pub mod auth_codes;
+pub mod auth_provider_cust_impls;
 pub mod auth_providers;
 pub mod browser_id;
 pub mod ca_self_signed;
