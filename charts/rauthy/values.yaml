@@ -1,0 +1,151 @@
+# Default values for rauthy.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  repository: ghcr.io/sebadob/rauthy
+  # This sets the pull policy for images.
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+# Turn on Rauthy's local test mode.
+localTestMode: false
+
+adminEmail: "admin@localhost"
+
+config:
+  enable: true
+  # Define this section if you want to configure bootstrap.
+  bootstrap: {}
+  #  password_plain: "admin"
+  cluster: {}
+  #  secret_raft: SuperSecureSecret1337
+  #  secret_api: SuperSecureSecret1337
+  encryption: {}
+  #  keys:
+  #    - 20250710T0136/6666666666666666666666666666666666666666666=
+  #  key_active: 20250710T0136
+  # This is configured to use mailcrab to make it easy to test
+  email:
+    smtp_host: mailcrab.default.svc
+    smtp_port: 1025
+    danger_insecure: true
+  server:
+    port_http: 8080
+    port_https: 8443
+    trusted_proxies:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+    swagger_enable: true
+
+# This will set the replicaset count more information can be found here:
+#   https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+#
+# If you start a fresh cluster without a bootstrapped Admin password, it is
+# highly suggested to start a single replica for the first setup + login.
+# It will work with 3 replicas directly, but if you are not quick enough and
+# your logs buffer size is small, you might miss the auto-generated password
+# in Pod `rauthy-0` because of many logs.
+replicaCount: 1
+
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+# This secret should exist in the same target namespace before installing
+# the chart. This secret is the full contents of a Rauthy config file.
+# By default, ${service_name}-secret
+# configSecretNameOverride: rauthy-secret
+
+# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+podAnnotations: {}
+# This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: {}
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  hiqliteRaftPort: 8100
+  hiqliteAPIPort: 8200
+
+
+
+webauthn:
+  rp_id: localhost
+  rp_origin: https://localhost:443
+
+# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts: []
+#    - host: auth.staging.example.com
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+  requests: {}
+    # Tune the memory requests value carefully. Make sure, that the
+    # pods request at least:
+    # `ARGON2_M_COST` / 1024 * `MAX_HASH_THREADS` Mi + idle memory
+    # The actual usage also heavily depends on the Memory Allocator
+    # tuning. You can find more information in the Tuning section
+    # in this book.
+    # memory: 64Mi
+    # The CPU needs to be adjusted during runtime. This heavily
+    # depends on your use case.
+    # cpu: 100m
+  limits: {}
+  # Be careful with the memory limit. You must make sure, that the
+  # (very costly) password hashing has enough memory available. If not,
+  # the application will crash. You do not really need a memory limit,
+  # since Rust is not a garbage collected language. Better take a close
+  # look at what the container actually needs during
+  # prime time and set the requested resources above properly.
+  #memory:
+  # A CPU limit may make sense in case of DDoS attacks or something
+  # like this, if you do not have external rate limiting or other
+  # mechanisms. Otherwise, `MAX_HASH_THREADS` is the main mechanism 
+  # to limit resources.
+  #cpu: 1000m
+
+
+# This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
