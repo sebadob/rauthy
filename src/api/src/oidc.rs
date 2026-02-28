@@ -143,17 +143,29 @@ pub async fn get_authorize(
         }
     }
 
-    // check for `prompt=no-prompt`
+    // check for `prompt=none`
+    // Per OIDC Core 1.0 §3.1.2.6 the error must be returned as a redirect to
+    // redirect_uri with `error=login_required` (and the original `state` echoed
+    // back), NOT as a direct HTTP error response to the browser.
     if !force_new_session
         && params
             .prompt
             .as_ref()
             .map(|p| p.as_str() == "none")
             .unwrap_or(false)
+        && principal.validate_session_auth().is_err()
     {
-        let status = StatusCode::UNAUTHORIZED;
-        let body = Error1Html::build(&lang, theme_ts, status, "login_required");
-        return Ok(ErrorHtml::response(body, status));
+        let mut location = format!(
+            "{}?error=login_required",
+            params.redirect_uri,
+        );
+        if let Some(state) = &params.state {
+            location.push_str("&state=");
+            location.push_str(state);
+        }
+        return Ok(HttpResponse::Found()
+            .insert_header(("location", location))
+            .finish());
     }
 
     let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
