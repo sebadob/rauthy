@@ -26,13 +26,13 @@ pub async fn anti_lockout() -> Result<(), ErrorResponse> {
 
         (
             format!(
-                "{issuer}/oidc/callback,http://localhost:5173/auth/v1/oidc/callback,\
+                "{issuer}oidc/callback,http://localhost:5173/auth/v1/oidc/callback,\
                 https://{ip}:5173/auth/v1/oidc/callback"
             ),
             Some(origin),
         )
     } else {
-        (format!("{issuer}/oidc/callback"), None)
+        (format!("{issuer}oidc/callback"), None)
     };
 
     let cl = Client::find("rauthy".to_string()).await?;

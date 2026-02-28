@@ -48,7 +48,7 @@ pub struct EmailResetTxt<'a> {
 
 pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User, user_tz: Option<&str>) {
     let link = format!(
-        "{}/users/{}/reset/{}?type={}",
+        "{}users/{}/reset/{}?type={}",
         RauthyConfig::get().issuer,
         magic_link.user_id,
         &magic_link.id,
@@ -99,7 +99,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User, user_tz: Option
     } else {
         let i18n = I18nEmailReset::build(&user.language);
         link_request_new = Some(format!(
-            "{}/users/password_reset?email_hint={}",
+            "{}users/password_reset?email_hint={}",
             RauthyConfig::get().issuer,
             user.email
         ));
