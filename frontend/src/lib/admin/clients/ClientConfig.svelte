@@ -121,6 +121,7 @@
             id = client.id;
             name = client.name || '';
             enabled = client.enabled;
+            forceMfa = client.force_mfa;
             confidential = client.confidential;
             uri = client.client_uri || '';
             backchannel_logout_uri = client.backchannel_logout_uri || '';
