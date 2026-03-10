@@ -10,7 +10,7 @@ use rauthy_error::ErrorResponse;
 use tracing::debug;
 use validator::Validate;
 
-pub async fn api_key() -> Result<(), ErrorResponse> {
+pub async fn bootstrap() -> Result<(), ErrorResponse> {
     let Some(api_key_raw) = RauthyConfig::get().vars.bootstrap.api_key.as_ref() else {
         return Ok(());
     };

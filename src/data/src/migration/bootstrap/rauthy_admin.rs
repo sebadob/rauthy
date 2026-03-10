@@ -9,7 +9,7 @@ use rauthy_common::utils::{get_rand, new_store_id};
 use rauthy_error::ErrorResponse;
 use tracing::info;
 
-pub async fn rauthy_admin() -> Result<(), ErrorResponse> {
+pub async fn bootstrap() -> Result<(), ErrorResponse> {
     // check if we should use manually provided bootstrap values
     let issuer = &RauthyConfig::get().issuer;
     let bootstrap = &RauthyConfig::get().vars.bootstrap;

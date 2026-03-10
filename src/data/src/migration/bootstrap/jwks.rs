@@ -7,7 +7,7 @@ use rsa::pkcs8::EncodePrivateKey;
 use time::OffsetDateTime;
 use tracing::info;
 
-pub async fn jwks() -> Result<(), ErrorResponse> {
+pub async fn bootstrap() -> Result<(), ErrorResponse> {
     let enc_key_active = &EncKeys::get_static().enc_key_active;
 
     info!("Generating new JWKs - this might take a few seconds");

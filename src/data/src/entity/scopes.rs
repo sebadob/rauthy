@@ -76,12 +76,14 @@ impl Scope {
             attr_include_id,
         };
 
+        let sql = r#"
+INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
+VALUES ($1, $2, $3, $4)"#;
+
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    r#"
-INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
-VALUES ($1, $2, $3, $4)"#,
+                    sql,
                     params!(
                         &new_scope.id,
                         &new_scope.name,
@@ -92,9 +94,7 @@ VALUES ($1, $2, $3, $4)"#,
                 .await?;
         } else {
             DB::pg_execute(
-                r#"
-    INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
-    VALUES ($1, $2, $3, $4)"#,
+                sql,
                 &[
                     &new_scope.id,
                     &new_scope.name,

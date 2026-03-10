@@ -334,6 +334,7 @@ impl Default for Vars {
                 pasword_argon2id: None,
                 api_key: None,
                 api_key_secret: None,
+                bootstrap_dir: "bootstrap".into(),
             },
             database: VarsDatabase {
                 hiqlite: true,
@@ -1157,6 +1158,9 @@ impl Vars {
             "BOOTSTRAP_API_KEY_SECRET",
         ) {
             self.bootstrap.api_key_secret = Some(v);
+        }
+        if let Some(v) = t_str(&mut table, "bootstrap", "bootstrap_dir", "BOOTSTRAP_DIR") {
+            self.bootstrap.bootstrap_dir = v.into();
         }
     }
 
@@ -3014,6 +3018,7 @@ pub struct VarsBootstrap {
     pub pasword_argon2id: Option<String>,
     pub api_key: Option<String>,
     pub api_key_secret: Option<String>,
+    pub bootstrap_dir: Cow<'static, str>,
 }
 
 #[derive(Debug)]
