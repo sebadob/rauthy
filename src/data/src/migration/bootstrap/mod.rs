@@ -43,7 +43,7 @@ macro_rules! bootstrap_data {
         for d in &data {
             if let Err(err) = d.validate() {
                 panic!(
-                    "Validation error when bootstrapping data from '{}':\n\n{:?}\n\n{:?}",
+                    "Validation error when bootstrapping data from '{}':\n\n{:?}\n\n{:?}\n",
                     path, d, err
                 );
             }

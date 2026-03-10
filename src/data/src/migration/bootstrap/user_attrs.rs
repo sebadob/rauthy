@@ -19,6 +19,7 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
         } else {
             None
         };
+        let user_editable = attr.user_editable.unwrap_or(false);
 
         if is_hiqlite() {
             DB::hql()
@@ -26,7 +27,7 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
                     r#"
 INSERT INTO user_attr_config (name, desc, default_value, user_editable)
 VALUES ($1, $2, $3, $4)"#,
-                    params!(attr.name, attr.desc, default_value, attr.user_editable),
+                    params!(attr.name, attr.desc, default_value, user_editable),
                 )
                 .await?;
         } else {
@@ -34,7 +35,7 @@ VALUES ($1, $2, $3, $4)"#,
                 r#"
 INSERT INTO user_attr_config (name, "desc", default_value, user_editable)
 VALUES ($1, $2, $3, $4)"#,
-                &[&attr.name, &attr.desc, &default_value, &attr.user_editable],
+                &[&attr.name, &attr.desc, &default_value, &user_editable],
             )
             .await?;
         };
