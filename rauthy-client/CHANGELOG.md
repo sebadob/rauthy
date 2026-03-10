@@ -1,5 +1,20 @@
 # Changelog
 
+## UNRELEASED
+
+This release makes it possible to have a interrupt-free migration to Rauthy v0.35+, which changed
+the default Issuer. It now has a trailing `/` to bring more compatibility for some scenarios, where
+a client constructs URLs in a way without checking for trailing `/`. This is e.g. the case when
+a client like the Matrix Javascript SDK constructs the `openid-configuration` lookup URL with the
+default JS URL constructor in combination with a custom path. To make this work, the isser must have
+a trailing `/`.
+
+With this version, the `rauthy-client` will accept both versions, and it will check if you provided
+an issuer with trailing `/` or not, and append one if necessary. This means you should upgrade
+clients to this version BEFORE upgrading Rauthy to v0.35+, which will make the transition smooth and
+without any interrupt or config changes. You can even convert your config to the trailing `/` issuer
+beforehand.
+
 ## v0.12.0
 
 The `timezone` is now available for `ScimUser`, when used in combination with Rauthy v0.34.4+.

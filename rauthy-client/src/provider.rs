@@ -57,9 +57,22 @@ impl OidcProviderConfig {
             response_type=code&code_challenge_method=S256&scope={scope}"
         );
 
+        // We want to provide backwards compatibility to older Rauthy versions for some time, while
+        // also making it possible to do a migration to the new format without having an
+        // interruption in service.
+        //
+        // TODO remove the non-/ issuer with v0.14+ and mention the breaking change in the changelog
+        let mut allowed_issuers = HashSet::with_capacity(2);
+        if iss.ends_with("/") {
+            allowed_issuers.insert(iss.trim_end_matches('/').to_string());
+        } else {
+            allowed_issuers.insert(format!("{iss}/"));
+        }
+        allowed_issuers.insert(iss);
+
         let verification_options = VerificationOptions {
             allowed_audiences: Some(allowed_audiences),
-            allowed_issuers: Some(HashSet::from([iss])),
+            allowed_issuers: Some(allowed_issuers),
             time_tolerance: None,
             ..Default::default()
         };
@@ -132,10 +145,16 @@ impl OidcProvider {
             )
         })?;
 
+        let mut issuer = config.iss;
+
+        if !issuer.ends_with("/") {
+            issuer.push('/');
+        }
+
         let scope = config.scope.join("+");
         let config = OidcProviderConfig::build_from_values(
             redirect_uri,
-            config.iss,
+            issuer,
             scope,
             config.client_id,
             config.allowed_audiences,
