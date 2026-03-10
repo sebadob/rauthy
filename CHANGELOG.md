@@ -1,5 +1,181 @@
 # Changelog
 
+## UNRELEASED
+
+### Breaking
+
+The Rauthy Issuer was changed!
+
+Before, it was `https://iam.example.com/auth/v1`. Now it will be `https://iam.example.com/auth/v1/`,
+with the trailing `/` appended. This was a somewhat necessary change to do before v1.0.0. There are
+clients out there, which do not check for a trailing `/`, and only use the issuer URL as a base to
+construct the `openid-configuration` URL for instance. This can fail, as the `/v1` beforehand was
+seen as something like a filename, and therefore stripped from the "base URL". This leads to an
+invalid URL for the `openid-configuration`, and therefore to incompatibility. To improve this
+situation, it was decided to change the Issuer and always append the `/` in the end.
+
+**This single character comes with a huge impact!**
+
+You will need to update your clients! Their token validation will fail, when they validate for the
+old issuer without the trailing `/`. This means that **this update will require downtime!**. Not on
+Rauthy's side, but it will most probably make client logins unavailable until they were updated.
+
+For instance, when I tested with a forgejo instance which used auto-discovery, all it needed was a
+restart to trigger a fresh lookup and clear caches. For another Harbor instance however, I needed
+to log in and manually update the issuer, and append the `/`. This has lead to a weird error (which
+was probably a bug in Harbor), that the user under the hood was now not linked to the existing
+provider anymore. This was very unexpected, as it was only updated, never deleted. The fix was to
+delete all OIDC users and let them do a fresh onboarding with the next login.
+
+When you use the **rauthy-client**, I advise you to update to v0.13 BEFORE updating Rauthy. This
+version will be compatible with Rauthy v0.35 and the old ones at the same time, as it will accept
+the issuer with and without the trailing `/`. This means with the `rauthy-client:0.13+`, you will
+be able to do the Rauthy upgrade without any downtime.
+
+So sum this up:
+
+- If you use the `rauthy-client`, upgrade to `0.13` beforehand, which means no downtime.
+- If you have an application with auto-discovery, it most probably only needs a restart or cache
+  clear, if available.
+- If you have a static configuration, you need to update the issuer and append the `/` in the end.
+
+> [!NOTE]
+> This is probably the last bigger breaking change before releasing Rauthy v1.0.0.
+
+### Changes
+
+#### Client IDs can now container UPPERCASE characters
+
+Some clients like OpenCloud have very weird requirements. They basically dictate their hardcoded
+client ID to the IdP, and in this case they expect camelCasedIds. This is an absolutely terrible
+design and should never be done, but at least Rauthy supports this weird behavior now.
+
+[#1418](https://github.com/sebadob/rauthy/pull/1418)
+
+#### Updates for Dynamic Clients
+
+To finalize the support for Matrix "next-gen auth" some more adjustments and improvements have been
+added for dynamic clients. The default and allowed scopes are now configurable.
+
+The cleanup scheduler for unused dynamically registered clients was expanded. It can now also clean
+up dynamic clients that have been inactive or unsued since X days. The Matrix "next-gen auth"
+basically spams the database with dynamic clients (by terrible design imo), and they are forgotten
+and never cleaned up at some point. The inactive auto-cleanup fixes issues like these.
+
+```toml
+[dynamic_clients]
+# The allowed scopes separated by ' ' for dynamic clients.
+#
+# default: ['openid', 'profile', 'email', 'groups']
+# overwritten by: DYN_CLIENT_ALLOWED_SCOPES - single String, \n separated values
+allowed_scopes = ['openid', 'profile', 'email', 'groups']
+
+# The default scopes separated by ' ' for dynamic clients.
+#
+# default: ['openid']
+# overwritten by: DYN_CLIENT_DEFAULT_SCOPES - single String, \n separated values
+default_scopes = ['openid']
+
+# Defines the number of days after which an inactive dynamic client will be
+# cleaned up. This applies to clients that have been used at least once but
+# have not been active since the configured amount of days.
+#
+# WARNING: This will permanently delete client registrations.
+#
+# default: 0 (disabled)
+# overwritten by: DYN_CLIENT_CLEANUP_INACTIVE_DAYS
+#cleanup_inactive_days = 0
+```
+
+[#1413](https://github.com/sebadob/rauthy/pull/1413)
+[#1419](https://github.com/sebadob/rauthy/pull/1419)
+
+#### Hierarchical scope matching for URNs (MSC3861)
+
+This is another addon for Matrix "next-gen auth" only (probably). Rauthy now allowed wildscard scope
+matching for matrix via opt-in.
+
+```toml
+
+[matrix]
+# Enables specific compatibility support for Matrix MSC3861 (Matrix 2.0 native OIDC).
+# This enables hierarchical scope matching (e.g. 'device' matches 'device:ID').
+# Note: Dynamic Client Registration (DCR) should be enabled for full support.
+#
+# default: false
+# overwritten by: MATRIX_SUPPORT_ENABLE
+msc3861_enable = false
+```
+
+#### Auth Provider compatibility improvements
+
+To further improve compatibility with different upstream providers, the user info data extraction
+was updated and is less strict now. This brings compatibility with e.g. Discord, which sends a very
+weird `id_token`, which does not contain the values of the requested scoped for whatever reason. To
+fix edge cases like this, the extraction of necessary values will first be tried via `id_token`, and
+if it fails, the `/userinfo` endpoint will be used in combination with the `access_token`. This
+should now even fix OAuth2 providers that are trying to do OIDC (but do it not quite right).
+
+[#1431](https://github.com/sebadob/rauthy/pull/1431)
+
+#### Auth Provider logo deletion
+
+It was not possible to delete a logo for an Auth Provider once it was added. The implementation was
+simply never done. You will now see a button next to an uploaded logo which makes it possible to
+delete it again.
+
+[#1433](https://github.com/sebadob/rauthy/pull/1433)
+
+#### SCIM requirements loosened up
+
+To provide better compatibility with (pretty bad) SCIM clients that don't strictly follow the RFC,
+various values have been made optional, even though the RFC defines them as required. This brings
+compatibility for e.g. clients like VMware vCenter.
+
+[#1395](https://github.com/sebadob/rauthy/pull/1395)
+[#1402](https://github.com/sebadob/rauthy/pull/1402)
+
+#### `sig` added to JWKS response
+
+Super tiny addon to the JWKS endpoint. `sig` is no included for each entry, as some clinets seems
+to filter by it (and fail if it does not exist, which is their fault actually). To have lees errors
+even with bad client impl's, the `sig` will be set for each entry.
+
+[#1404](https://github.com/sebadob/rauthy/pull/1404)
+
+### Bugfix
+
+- The SCIM token input did only allow max 128 characters, which is not enough for some clients. They
+  can now be up to 2048 characters long.
+  [#1397](https://github.com/sebadob/rauthy/pull/1397)
+  [#1426](https://github.com/sebadob/rauthy/pull/1426)
+- The SCIM group prefix was not working as expected in some situations.
+  [#1403](https://github.com/sebadob/rauthy/pull/1403)
+- Clients could have ben rate-limited for forever when they exceeded limits because the use of a
+  wrong TTL for cache entries.
+  [#1416](https://github.com/sebadob/rauthy/pull/1416)
+- OPTIONS for CORS on the token revocation endpoint was missing.
+  [#1420](https://github.com/sebadob/rauthy/pull/1420)
+- Fixes a bug in the Admin UI when there is a new version available. The version is displayed
+  correctly now in the same ways as when there is no update.
+  [#1427](https://github.com/sebadob/rauthy/pull/1427)
+- Tiny CSS fix for Auth Provider buttons. They did not have any gap between them.
+  [#1428](https://github.com/sebadob/rauthy/pull/1428)
+- The `/userinfo` endpoint only showed the picture ID for a user when it should have shown the
+  complete URL instead.
+  [#1429](https://github.com/sebadob/rauthy/pull/1429)
+- The "Last Login" timestamp for a user was not correctly updated in some very specific situations.
+  [#1430](https://github.com/sebadob/rauthy/pull/1430)
+- When you had the `preferrred_username` configured as `required`, it was not possible to register
+  a new user as an admin without seeing an error. The user values validation for admin registrations
+  is now simply ignored, as you would see the full User Values form anyway immediately afterwards,
+  so you can fix any possible issues there.
+  [#1434](https://github.com/sebadob/rauthy/pull/1434)
+- It was not possible to connect to some Postgres instances with skipped TLS validation when they
+  did not support ED25519 or ECDSA keys. The custom verifier now also offers lots of other (only
+  safe) algorithms to choose from. No config required.
+  [#1436](https://github.com/sebadob/rauthy/pull/1436)
+
 ## v0.34.3
 
 ### Changes
