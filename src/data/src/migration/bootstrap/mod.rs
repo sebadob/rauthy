@@ -14,6 +14,7 @@ mod roles;
 mod scopes;
 mod types;
 mod user_attrs;
+mod users;
 
 macro_rules! bootstrap_data {
     ($type:ty, $e:expr) => {{
@@ -110,6 +111,7 @@ pub async fn bootstrap_additional_data() -> Result<(), ErrorResponse> {
     user_attrs::bootstrap().await?;
     scopes::bootstrap().await?;
     clients::bootstrap().await?;
+    users::bootstrap().await?;
 
     Ok(())
 }

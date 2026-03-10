@@ -11,9 +11,11 @@
 //! NOTE: Most database IDs here are all optional. If you provide them, the given, static ID will be
 //! used. If it is not given, a random ID will be generated.
 
+use crate::language::Language;
 use rauthy_api_types::clients::ScimClientRequestResponse;
 use rauthy_api_types::cust_validation::*;
 use rauthy_api_types::oidc::JwkKeyPairAlg;
+use rauthy_api_types::users::{UserAttrValueRequest, UserValuesRequest};
 use rauthy_common::regex::*;
 use regex::Regex;
 use serde::Deserialize;
@@ -21,9 +23,6 @@ use std::sync::LazyLock;
 use validator::Validate;
 
 pub static RE_DB_ID: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{24}$").unwrap());
-
-// TODO
-//  - users
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct Group {
@@ -113,12 +112,12 @@ pub struct Client {
     /// Validation: `10 <= access_token_lifetime <= 86400`
     #[validate(range(min = 10, max = 86400))]
     pub access_token_lifetime: i32,
-    /// Must match any `Scope.name`, NOT the `id`.
+    /// Must match any `Scope.name` (not the `id`) or OIDC default scopes.
     ///
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
     pub scopes: Vec<String>,
-    /// Must match any `Scope.name`, NOT the `id`.
+    /// Must match any `Scope.name` (not the `id`) or OIDC default scopes.
     ///
     /// Validation: `Vec<^[a-z0-9-_/:\s]{0,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
@@ -161,4 +160,54 @@ pub enum ClientSecret {
     // For future versions, the idea is to add CLI capabilities to the `rauthy` binary and provide
     // a much easier way to achieve this.
     Encrypted(String),
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct User {
+    /// Validation: UNIQUE `^[a-zA-Z0-9]{24}$`
+    #[validate(regex(path = "*RE_DB_ID", code = "^[a-zA-Z0-9]{24}$"))]
+    pub id: Option<String>,
+    /// Validation: `email`
+    #[validate(email)]
+    pub email: String,
+    /// Validation: `[user_values.preferred_username] -> regex_rust`
+    #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
+    pub preferred_username: Option<String>,
+    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    pub given_name: Option<String>,
+    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    pub family_name: Option<String>,
+    pub language: Option<Language>,
+    pub password: UserPassword,
+    /// Must match any `Role.name` (not the `id`) or existing default roles:
+    /// - `rauthy_admin`
+    /// - `admin`
+    /// - `user`
+    ///
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
+    #[validate(custom(function = "validate_vec_roles"))]
+    pub roles: Vec<String>,
+    /// Must match any `Group.name` (not the `id`) or existing default groups:
+    /// - `admin`
+    /// - `user`
+    ///
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
+    #[validate(custom(function = "validate_vec_groups"))]
+    pub groups: Option<Vec<String>>,
+    pub enabled: bool,
+    pub email_verified: bool,
+    /// Unix timestamp in seconds
+    #[validate(range(min = 1719784800))]
+    pub user_expires: Option<i64>,
+    #[validate(nested)]
+    pub user_values: Option<UserValuesRequest>,
+    pub attributes: Option<Vec<UserAttrValueRequest>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub enum UserPassword {
+    Plain(String),
+    Argon2ID(String),
 }

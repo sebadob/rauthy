@@ -641,7 +641,7 @@ impl UserAttrValueEntity {
         }
     }
 
-    pub async fn update_for_user(
+    pub async fn upsert_for_user(
         user_id: &str,
         req_data: UserAttrValuesUpdateRequest,
     ) -> Result<Vec<Self>, ErrorResponse> {

@@ -111,6 +111,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     debug!("Starting E-Mail handler");
     tokio::spawn(mailer::sender(rx_email));
 
+    // MUST start before we go into `DB::migrate()` - we may need it inside.
+    debug!("Starting Password Hasher");
+    tokio::spawn(password_hasher::run());
+
     debug!("Applying database migrations");
     DB::migrate().await.expect("Database migration error");
 
@@ -121,9 +125,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         rx_events_router,
         rx_events,
     ));
-
-    debug!("Starting Password Hasher");
-    tokio::spawn(password_hasher::run());
 
     debug!("Starting health watch");
     tokio::spawn(watch_health());
