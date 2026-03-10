@@ -6,6 +6,7 @@ use rauthy_error::ErrorResponse;
 use tracing::{debug, info};
 
 mod api_key;
+mod clients;
 mod groups;
 mod jwks;
 mod rauthy_admin;
@@ -108,6 +109,7 @@ pub async fn bootstrap_additional_data() -> Result<(), ErrorResponse> {
     roles::bootstrap().await?;
     user_attrs::bootstrap().await?;
     scopes::bootstrap().await?;
+    clients::bootstrap().await?;
 
     Ok(())
 }

@@ -1,1 +1,87 @@
-[]
+[
+    {
+        "id": "bootstrap_client_1",
+        "name": "Bootstrap Client 1",
+        "secret": null,
+        "redirect_uris": [
+            "https://localhost:8080/login/callback"
+        ],
+        "post_logout_redirect_uris": [
+            "https://localhost:8080/logged_out"
+        ],
+        "allowed_origins": [
+            "https://localhost:8080"
+        ],
+        "enabled": true,
+        "flows_enabled": [
+            "authorization_code",
+            "client_credentials",
+            "password",
+            "refresh_token",
+            "urn:ietf:params:oauth:grant-type:device_code"
+        ],
+        "access_token_alg": "RS256",
+        "id_token_alg": "RS256",
+        "auth_code_lifetime": 300,
+        "access_token_lifetime": 1800,
+        "scopes": [
+            "openid",
+            "profile",
+            "groups",
+            "bs_scope_1"
+        ],
+        "default_scopes": [
+            "openid",
+            "profile"
+        ],
+        "challenges": [
+            "S256"
+        ],
+        "force_mfa": true,
+        "client_uri": "https://localhost:8080",
+        "contacts": [
+            "alfred@batcave"
+        ],
+        "backchannel_logout_uri": "https://localhost:8080/logout/backchannel",
+        "restrict_group_prefix": "bs_group_",
+        "scim": {
+            "bearer_token": "SuperSafeBearer1337",
+            "base_uri": "https://localhost:8080/scim/v2/",
+            "sync_groups": true,
+            "group_sync_prefix": "bs_group_"
+        }
+    },
+    {
+        "id": "bootstrap_client_2",
+        "secret": {
+            "Plain": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "redirect_uris": [
+            "https://localhost:9090/login/callback"
+        ],
+        "enabled": true,
+        "flows_enabled": [
+            "authorization_code"
+        ],
+        "access_token_alg": "EdDSA",
+        "id_token_alg": "EdDSA",
+        "auth_code_lifetime": 10,
+        "access_token_lifetime": 900,
+        "scopes": [
+            "openid",
+            "address",
+            "profile",
+            "groups",
+            "phone",
+            "bs_scope_1"
+        ],
+        "default_scopes": [
+            "openid",
+            "address",
+            "profile",
+            "groups",
+            "phone"
+        ],
+        "force_mfa": false
+    }
+]
