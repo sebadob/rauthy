@@ -9,8 +9,8 @@ use rauthy_data::ListenScheme;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_handlers::{
     api_keys, atproto, auth_providers, backup, blacklist, clients, cors_preflight, dev_only, email,
-    events, fed_cm, generic, groups, html, oidc, pam, roles, scopes, sessions, swagger_ui, themes,
-    tos, users,
+    events, fed_cm, generic, groups, html, kv, oidc, pam, roles, scopes, sessions, swagger_ui,
+    themes, tos, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -340,6 +340,23 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::post_update_language)
                 .service(generic::get_version)
                 .service(generic::get_whoami)
+                .service(kv::get_kv_ns)
+                .service(kv::post_kv_ns)
+                .service(kv::put_kv_ns)
+                .service(kv::delete_kv_ns)
+                .service(kv::get_kv_ns_access)
+                .service(kv::post_kv_ns_access)
+                .service(kv::put_kv_ns_access)
+                .service(kv::delete_kv_ns_access)
+                .service(kv::get_kv_ns_values)
+                .service(kv::post_kv_ns_values)
+                .service(kv::put_kv_ns_values)
+                .service(kv::delete_kv_ns_values)
+                .service(kv::get_kv_keys_ext)
+                .service(kv::get_kv_values_ext)
+                .service(kv::put_kv_value_ext)
+                .service(kv::get_kv_value_ext)
+                .service(kv::delete_kv_value_ext)
                 .service(oidc::get_authorize)
                 .service(oidc::post_authorize)
                 .service(oidc::post_authorize_refresh)

@@ -1,11 +1,11 @@
 use crate::{
     api_keys, atproto, auth_providers, backup, blacklist, clients, email, events, fed_cm, generic,
-    groups, oidc, pam, roles, scopes, sessions, themes, tos, users,
+    groups, kv, oidc, pam, roles, scopes, sessions, themes, tos, users,
 };
 use rauthy_api_types::*;
 use rauthy_api_types::{
     api_keys::*, auth_providers::*, backup::*, blacklist::*, clients::*, email_jobs::*, events::*,
-    fed_cm::*, forward_auth::*, generic::*, groups::*, oidc::*, pam::*, roles::*, scopes::*,
+    fed_cm::*, forward_auth::*, generic::*, groups::*, kv::*, oidc::*, pam::*, roles::*, scopes::*,
     sessions::*, themes::*, tos::*, users::*,
 };
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
@@ -106,6 +106,24 @@ use utoipa::{OpenApi, openapi};
         groups::post_group,
         groups::put_group,
         groups::delete_group,
+
+        kv::get_kv_ns,
+        kv::post_kv_ns,
+        kv::put_kv_ns,
+        kv::delete_kv_ns,
+        kv::get_kv_ns_access,
+        kv::post_kv_ns_access,
+        kv::put_kv_ns_access,
+        kv::delete_kv_ns_access,
+        kv::get_kv_ns_values,
+        kv::post_kv_ns_values,
+        kv::put_kv_ns_values,
+        kv::delete_kv_ns_values,
+        kv::get_kv_keys_ext,
+        kv::get_kv_values_ext,
+        kv::put_kv_value_ext,
+        kv::get_kv_value_ext,
+        kv::delete_kv_value_ext,
 
         pam::get_pam_emails_unlinked,
         pam::post_getent,
@@ -290,6 +308,10 @@ use utoipa::{OpenApi, openapi};
             EventsRequest,
             ForwardAuthParams,
             ForwardAuthCallbackParams,
+            KVParams,
+            KVNamespaceRequest,
+            KVAccessRequest,
+            KVValueRequest,
             LoginRefreshRequest,
             GroupRequest,
             MfaModTokenRequest,
@@ -358,6 +380,9 @@ use utoipa::{OpenApi, openapi};
             JWKSCerts,
             JWKSPublicKeyCerts,
             Argon2ParamsResponse,
+            KVNamespaceResponse,
+            KVAccessResponse,
+            KVValueResponse,
             OAuth2ErrorResponse,
             OAuth2ErrorTypeResponse,
             PasswordPolicyResponse,
@@ -424,6 +449,7 @@ use utoipa::{OpenApi, openapi};
         (name = "roles", description = "Roles endpoints"),
         (name = "scopes", description = "Scopes endpoints"),
         (name = "events", description = "Events Stream"),
+        (name = "kv", description = "Global KV Store"),
         (name = "pam", description = "PAM endpoints"),
         (name = "providers", description = "Upstream Auth Providers"),
         (name = "health", description = "Ping, Health, Ready Check"),

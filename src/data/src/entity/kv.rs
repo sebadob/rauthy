@@ -2,6 +2,9 @@ use crate::database::DB;
 use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
 use hiqlite_macros::params;
+use rauthy_api_types::kv::{
+    KVAccessResponse, KVNamespaceResponse, KVValueRequest, KVValueResponse,
+};
 use rauthy_common::constants::API_KEY_LENGTH;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
@@ -156,6 +159,40 @@ impl KVValue {
         Ok(())
     }
 
+    pub async fn upsert_by_access_id(
+        access_id: String,
+        payload: KVValueRequest,
+    ) -> Result<(), ErrorResponse> {
+        let value = payload.value.to_string();
+        let value = if payload.encrypted {
+            EncValue::encrypt(value.as_bytes())?.into_bytes().to_vec()
+        } else {
+            value.as_bytes().to_vec()
+        };
+
+        let sql = r#"
+INSERT INTO kv_values (ns, key, encrypted, value)
+VALUES (
+    (SELECT ns FROM kv_access WHERE enabled = true AND id = $1),
+    $2, $3, $4
+)
+ON CONFLICT (ns, key) DO UPDATE SET encrypted = $3, value = $4
+"#;
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
+                    params!(access_id, payload.key, payload.encrypted, value),
+                )
+                .await?;
+        } else {
+            DB::pg_execute(sql, &[&access_id, &payload.key, &payload.encrypted, &value]).await?;
+        }
+
+        Ok(())
+    }
+
     pub async fn delete(ns: String, key: String) -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM kv_values WHERE ns = $1 AND key = $2";
         if is_hiqlite() {
@@ -163,6 +200,21 @@ impl KVValue {
         } else {
             DB::pg_execute(sql, &[&ns, &key]).await?;
         }
+        Ok(())
+    }
+
+    pub async fn delete_by_access_id(access_id: String, key: String) -> Result<(), ErrorResponse> {
+        let sql = r#"
+DELETE FROM kv_values
+WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1) AND key = $2
+"#;
+
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(access_id, key)).await?
+        } else {
+            DB::pg_execute(sql, &[&access_id, &key]).await?
+        };
+
         Ok(())
     }
 
@@ -178,13 +230,14 @@ impl KVValue {
         Ok(slf)
     }
 
-    pub async fn find_all(ns: String) -> Result<Vec<Self>, ErrorResponse> {
-        let sql = "SELECT * FROM kv_values WHERE ns = $1";
+    pub async fn find_all(ns: String, limit: Option<u32>) -> Result<Vec<Self>, ErrorResponse> {
+        let limit = limit.unwrap_or(u32::MAX);
+        let sql = "SELECT * FROM kv_values WHERE ns = $1 LIMIT $2";
 
         let res = if is_hiqlite() {
-            DB::hql().query_map(sql, params!(ns)).await?
+            DB::hql().query_map(sql, params!(ns, limit)).await?
         } else {
-            DB::pg_query(sql, &[&ns], 0).await?
+            DB::pg_query(sql, &[&ns, &limit], 0).await?
         };
 
         Ok(res)
@@ -207,16 +260,50 @@ WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1) AND key =
         Ok(slf)
     }
 
-    pub async fn find_all_by_access_id(access_id: String) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all_by_access_id(
+        access_id: String,
+        limit: Option<u32>,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let limit = limit.unwrap_or(u32::MAX);
         let sql = r#"
 SELECT * FROM kv_values
 WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1)
+LIMIT $2
 "#;
 
         let res = if is_hiqlite() {
-            DB::hql().query_map(sql, params!(access_id)).await?
+            DB::hql().query_map(sql, params!(access_id, limit)).await?
         } else {
-            DB::pg_query(sql, &[&access_id], 0).await?
+            DB::pg_query(sql, &[&access_id, &limit], 0).await?
+        };
+
+        Ok(res)
+    }
+
+    pub async fn find_all_keys_by_access_id(
+        access_id: String,
+        limit: Option<u32>,
+    ) -> Result<Vec<String>, ErrorResponse> {
+        let limit = limit.unwrap_or(u32::MAX);
+        let sql = r#"
+SELECT key FROM kv_values
+WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1)
+LIMIT $2
+"#;
+
+        let res = if is_hiqlite() {
+            DB::hql()
+                .query_raw(sql, params!(access_id, limit))
+                .await?
+                .into_iter()
+                .map(|mut row| row.get::<String>("key"))
+                .collect()
+        } else {
+            DB::pg_query_rows(sql, &[&access_id, &limit], 0)
+                .await?
+                .into_iter()
+                .map(|row| row.get::<_, String>("key"))
+                .collect()
         };
 
         Ok(res)
@@ -233,6 +320,16 @@ impl KVValue {
             serde_json::from_slice(&self.value)?
         };
         Ok(v)
+    }
+
+    #[inline]
+    pub fn try_into_response(self) -> Result<KVValueResponse, ErrorResponse> {
+        let value = self.value()?;
+        Ok(KVValueResponse {
+            key: self.key,
+            encrypted: self.encrypted,
+            value,
+        })
     }
 }
 
@@ -267,17 +364,28 @@ impl From<tokio_postgres::Row> for KVAccess {
 }
 
 impl KVAccess {
-    pub async fn insert(ns: String, name: Option<String>) -> Result<(), ErrorResponse> {
+    pub async fn insert(
+        ns: String,
+        enabled: bool,
+        name: Option<String>,
+    ) -> Result<Self, ErrorResponse> {
         let id = secure_random_alnum(API_KEY_LENGTH);
 
         let sql = "INSERT INTO kv_access (id, ns, enabled, name) VALUES ($1, $2, $3, $4)";
         if is_hiqlite() {
-            DB::hql().execute(sql, params!(id, ns, true, name)).await?;
+            DB::hql()
+                .execute(sql, params!(&id, &ns, enabled, &name))
+                .await?;
         } else {
-            DB::pg_execute(sql, &[&id, &ns, &true, &name]).await?;
+            DB::pg_execute(sql, &[&id, &ns, &enabled, &name]).await?;
         }
 
-        Ok(())
+        Ok(Self {
+            id,
+            ns,
+            enabled,
+            name,
+        })
     }
 
     pub async fn update(
@@ -315,5 +423,44 @@ impl KVAccess {
         }
 
         Ok(())
+    }
+
+    pub async fn find(id: String) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM kv_access WHERE id = $1";
+
+        let slf = if is_hiqlite() {
+            DB::hql().query_map_one(sql, params!(id)).await?
+        } else {
+            DB::pg_query_one(sql, &[&id]).await?
+        };
+
+        Ok(slf)
+    }
+
+    pub async fn find_all(ns: String) -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM kv_access WHERE ns = $1";
+        let res = if is_hiqlite() {
+            DB::hql().query_map(sql, params!(ns)).await?
+        } else {
+            DB::pg_query(sql, &[&ns], 0).await?
+        };
+        Ok(res)
+    }
+}
+
+impl From<KVNamespace> for KVNamespaceResponse {
+    fn from(value: KVNamespace) -> Self {
+        Self { name: value.ns }
+    }
+}
+
+impl From<KVAccess> for KVAccessResponse {
+    fn from(value: KVAccess) -> Self {
+        Self {
+            id: value.id,
+            ns: value.ns,
+            enabled: value.enabled,
+            name: value.name,
+        }
     }
 }
