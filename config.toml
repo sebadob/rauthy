@@ -464,6 +464,10 @@ api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQyn
 # - users.json
 # - clients.json
 #
+# For information about the structure and the applied validations,
+# check `src/data/src/migration/bootstrap/types.rs`, and the
+# `bootstrap/*.json` files for examples.
+#
 # TODO add more in-depth documentation to the book
 #
 # default: 'bootstrap'
