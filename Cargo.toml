@@ -35,7 +35,7 @@ accept-language = "3"
 actix = "0.13"
 actix-multipart = "0.7.2"
 actix-web = { version = "4", features = ["rustls-0_23"] }
-actix-web-lab = "0.24"
+actix-web-lab = "0.26"
 actix-web-prom = "0.10"
 ammonia = "4.1"
 arc-swap = "1.7"
