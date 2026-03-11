@@ -33,3 +33,6 @@ CREATE TABLE kv_access
 
 CREATE INDEX kv_access_ns_index
     ON kv_access (ns);
+
+INSERT INTO kv_ns
+VALUES ('default');
