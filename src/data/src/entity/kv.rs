@@ -3,7 +3,7 @@ use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
 use hiqlite_macros::params;
 use rauthy_api_types::kv::{
-    KVAccessResponse, KVNamespaceResponse, KVValueRequest, KVValueResponse,
+    KVAccessResponse, KVNamespaceResponse, KVParams, KVValueRequest, KVValueResponse,
 };
 use rauthy_common::constants::API_KEY_LENGTH;
 use rauthy_common::is_hiqlite;
@@ -230,14 +230,24 @@ WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1) AND key =
         Ok(slf)
     }
 
-    pub async fn find_all(ns: String, limit: Option<u32>) -> Result<Vec<Self>, ErrorResponse> {
-        let limit = limit.unwrap_or(u32::MAX);
-        let sql = "SELECT * FROM kv_values WHERE ns = $1 LIMIT $2";
+    pub async fn find_all(ns: String, params: KVParams) -> Result<Vec<Self>, ErrorResponse> {
+        let limit = params.limit.unwrap_or(u32::MAX);
 
-        let res = if is_hiqlite() {
-            DB::hql().query_map(sql, params!(ns, limit)).await?
+        let res = if let Some(search) = params.search {
+            let sql = "SELECT * FROM kv_values WHERE ns = $1 AND key LIKE $2 LIMIT $3";
+            let like = format!("%{}%", search);
+            if is_hiqlite() {
+                DB::hql().query_map(sql, params!(ns, like, limit)).await?
+            } else {
+                DB::pg_query(sql, &[&ns, &like, &limit], 0).await?
+            }
         } else {
-            DB::pg_query(sql, &[&ns, &limit], 0).await?
+            let sql = "SELECT * FROM kv_values WHERE ns = $1 LIMIT $2";
+            if is_hiqlite() {
+                DB::hql().query_map(sql, params!(ns, limit)).await?
+            } else {
+                DB::pg_query(sql, &[&ns, &limit], 0).await?
+            }
         };
 
         Ok(res)
@@ -262,19 +272,37 @@ WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1) AND key =
 
     pub async fn find_all_by_access_id(
         access_id: String,
-        limit: Option<u32>,
+        params: KVParams,
     ) -> Result<Vec<Self>, ErrorResponse> {
-        let limit = limit.unwrap_or(u32::MAX);
-        let sql = r#"
+        let limit = params.limit.unwrap_or(u32::MAX);
+
+        let res = if let Some(search) = params.search {
+            let sql = r#"
+SELECT * FROM kv_values
+WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1) AND key LIKE $2
+LIMIT $3
+"#;
+            let like = format!("%{}%", search);
+
+            if is_hiqlite() {
+                DB::hql()
+                    .query_map(sql, params!(access_id, like, limit))
+                    .await?
+            } else {
+                DB::pg_query(sql, &[&access_id, &like, &limit], 0).await?
+            }
+        } else {
+            let sql = r#"
 SELECT * FROM kv_values
 WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1)
 LIMIT $2
 "#;
 
-        let res = if is_hiqlite() {
-            DB::hql().query_map(sql, params!(access_id, limit)).await?
-        } else {
-            DB::pg_query(sql, &[&access_id, &limit], 0).await?
+            if is_hiqlite() {
+                DB::hql().query_map(sql, params!(access_id, limit)).await?
+            } else {
+                DB::pg_query(sql, &[&access_id, &limit], 0).await?
+            }
         };
 
         Ok(res)

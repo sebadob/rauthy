@@ -284,6 +284,17 @@ export let I18nAdminUk: I18nAdmin = {
         type: 'Тип',
         rotateKeys: 'Ротувати ключі',
     },
+    kv: {
+        addNew: 'New Value',
+        encryptedDesc: `For performance reasons, the additional encryption should only be used for 
+            particularly sensitive values such as access keys or personal information.`,
+        deleteConfirmMsg: `Do you really want to delete the key '{{ key }}'?`,
+        key: 'Key',
+        loadAllValues: 'Load all values',
+        storeEncrypted: 'Store value encrypted',
+        tabs: ['Data', 'Access', 'Delete'],
+        value: 'JSON Value',
+    },
     nav: {
         apiKeys: 'API Ключі',
         attributes: 'Атрибути',

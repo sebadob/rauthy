@@ -351,7 +351,7 @@ fn api_services() -> actix_web::Scope {
                 .service(kv::get_kv_ns_values)
                 .service(kv::post_kv_ns_values)
                 .service(kv::put_kv_ns_values)
-                .service(kv::delete_kv_ns_values)
+                .service(kv::delete_kv_ns_value)
                 .service(kv::get_kv_keys_ext)
                 .service(kv::get_kv_values_ext)
                 .service(kv::put_kv_value_ext)

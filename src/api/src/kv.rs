@@ -266,7 +266,7 @@ pub async fn get_kv_ns_values(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    let values = KVValue::find_all(ns.into_inner(), params.limit).await?;
+    let values = KVValue::find_all(ns.into_inner(), params.into_inner()).await?;
     let mut resp = Vec::with_capacity(values.len());
     for value in values {
         resp.push(value.try_into_response()?)
@@ -357,7 +357,7 @@ pub async fn put_kv_ns_values(
     ),
 )]
 #[delete("/kv/ns/{ns}/values/{key}")]
-pub async fn delete_kv_ns_values(
+pub async fn delete_kv_ns_value(
     principal: ReqPrincipal,
     path: Path<(String, String)>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -422,7 +422,7 @@ pub async fn get_kv_values_ext(
 ) -> Result<HttpResponse, ErrorResponse> {
     let access_id = get_bearer_token_from_header(req.headers())?;
 
-    let values = KVValue::find_all_by_access_id(access_id, params.limit).await?;
+    let values = KVValue::find_all_by_access_id(access_id, params.into_inner()).await?;
     let mut resp = Vec::with_capacity(values.len());
     for value in values {
         resp.push(value.try_into_response()?)

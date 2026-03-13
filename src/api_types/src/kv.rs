@@ -1,4 +1,4 @@
-use rauthy_common::regex::RE_ALNUM_48;
+use rauthy_common::regex::RE_GROUPS;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -6,12 +6,13 @@ use validator::Validate;
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct KVParams {
     pub limit: Option<u32>,
+    pub search: Option<String>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct KVNamespaceRequest {
-    /// Validation: `[a-zA-Z0-9]{48}`
-    #[validate(regex(path = "*RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
+    /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
+    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub name: String,
 }
 
@@ -23,8 +24,8 @@ pub struct KVAccessRequest {
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct KVValueRequest {
-    /// Validation: `[a-zA-Z0-9]{48}`
-    #[validate(regex(path = "*RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
+    /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
+    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub key: String,
     /// If set to `true`, the backend will encrypt the value on the application layer.
     /// The database will only contain encrypted data. Requires more resources, but is

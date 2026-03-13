@@ -235,6 +235,18 @@ export interface I18nAdmin {
         type: string;
         rotateKeys: string;
     };
+    kv: {
+        addNew: string;
+        encryptedDesc: string;
+        // MUST contain '{{ key }}' to be replaced with the key to delete
+        deleteConfirmMsg: string;
+        key: string;
+        loadAllValues: string;
+        storeEncrypted: string;
+        // order: data, access, delete
+        tabs: string[];
+        value: string;
+    };
     nav: {
         apiKeys: string;
         attributes: string;

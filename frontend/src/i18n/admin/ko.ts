@@ -265,6 +265,17 @@ export let I18nAdminKo: I18nAdmin = {
         type: '타입',
         rotateKeys: '키 회전',
     },
+    kv: {
+        addNew: 'New Value',
+        encryptedDesc: `For performance reasons, the additional encryption should only be used for 
+            particularly sensitive values such as access keys or personal information.`,
+        deleteConfirmMsg: `Do you really want to delete the key '{{ key }}'?`,
+        key: 'Key',
+        loadAllValues: 'Load all values',
+        storeEncrypted: 'Store value encrypted',
+        tabs: ['Data', 'Access', 'Delete'],
+        value: 'JSON Value',
+    },
     nav: {
         apiKeys: 'API 키',
         attributes: '속성',

@@ -257,7 +257,7 @@
 {/snippet}
 
 <NavSub
-    paddingTop="2.1rem"
+    paddingTop="2.35rem"
     buttonTilesAriaControls="users"
     width="min(23rem, 100dvw)"
     thresholdNavSub={700}

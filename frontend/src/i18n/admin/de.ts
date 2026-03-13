@@ -291,6 +291,18 @@ export let I18nAdminDe: I18nAdmin = {
         type: 'Typ',
         rotateKeys: 'Keys Rotieren',
     },
+    kv: {
+        addNew: 'Neuer Wert',
+        encryptedDesc: `Die zusätzliche Verschlüsselung sollte aus Performance-Gründen nur bei 
+            besonders sensiblen Werten wie z.B. access keys oder persönlichen Informationen gewählt 
+            werden.`,
+        deleteConfirmMsg: `Soll der Schlüssel '{{ key }}' wirklich gelöscht werden?`,
+        key: 'Schlüssel',
+        loadAllValues: 'Alle Werte laden',
+        storeEncrypted: 'Wert verschlüsselt speichern',
+        tabs: ['Daten', 'Zugriff', 'Löschen'],
+        value: 'JSON Wert',
+    },
     nav: {
         apiKeys: 'API Keys',
         attributes: 'Attribute',

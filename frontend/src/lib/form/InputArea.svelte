@@ -111,6 +111,11 @@
 </script>
 
 <div class="container" style:width>
+    <div class="label">
+        <label for={id} class="font-label noselect" data-required={required}>
+            {label}
+        </label>
+    </div>
     <textarea
         bind:this={ref}
         {id}
@@ -136,19 +141,19 @@
         {onkeydown}
     >
     </textarea>
-    <div class="label">
-        <label for={id} class="font-label noselect" data-required={required}>
-            {label}
-        </label>
-        {#if isError}
-            <div class="error" transition:slide={{ duration: 150 }}>
-                {errMsg}
-            </div>
-        {/if}
-    </div>
+    {#if isError}
+        <div class="error" transition:slide={{ duration: 150 }}>
+            {errMsg}
+        </div>
+    {/if}
 </div>
 
 <style>
+    label {
+        font-size: 0.9em;
+        flex-wrap: wrap;
+    }
+
     textarea {
         width: 100%;
         padding: 0.25rem 0.5rem;
@@ -169,28 +174,19 @@
     }
 
     .container {
-        margin: 1rem 0;
+        margin: 0.5rem 0;
     }
 
-    label,
     .error {
-        line-height: 1.1rem;
-        font-size: 0.9rem;
-    }
-
-    label {
-        color: hsla(var(--text) / 0.8);
-        flex-wrap: wrap;
+        color: hsl(var(--error));
+        margin-top: -0.4rem;
+        padding-left: 0.1rem;
+        font-size: 0.8rem;
     }
 
     .label {
         width: 100%;
-        margin-top: -0.8rem;
-        padding: 0.5rem;
-    }
-
-    .error {
-        margin-top: -0.5rem;
-        color: hsl(var(--error));
+        padding-left: 0.1rem;
+        padding-top: 0.1rem;
     }
 </style>

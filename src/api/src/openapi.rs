@@ -118,7 +118,7 @@ use utoipa::{OpenApi, openapi};
         kv::get_kv_ns_values,
         kv::post_kv_ns_values,
         kv::put_kv_ns_values,
-        kv::delete_kv_ns_values,
+        kv::delete_kv_ns_value,
         kv::get_kv_keys_ext,
         kv::get_kv_values_ext,
         kv::put_kv_value_ext,
