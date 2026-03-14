@@ -19,6 +19,8 @@ pub struct KVNamespaceRequest {
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct KVAccessRequest {
     pub enabled: bool,
+    /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
+    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub name: Option<String>,
 }
 
@@ -45,6 +47,13 @@ pub struct KVAccessResponse {
     pub ns: String,
     pub secret: String,
     pub enabled: bool,
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct KVAccessTestResponse {
+    pub id: String,
+    pub ns: String,
     pub name: Option<String>,
 }
 

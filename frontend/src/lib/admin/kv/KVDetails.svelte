@@ -199,7 +199,7 @@
     <Input typ="number" bind:value={limit} label="Limit" min="1" max="4294967295" width="7rem" />
     <div class="btns">
         <Button level={2} onclick={fetchAll}>{ta.kv.loadAllValues}</Button>
-        <Button onclick={() => (showModalAdd = true)}>{ta.kv.addNew}</Button>
+        <Button onclick={() => (showModalAdd = true)}>{ta.kv.addNewValue}</Button>
         <Modal bind:showModal={showModalAdd} bind:closeModal={closeModalAdd}>
             <div class="modal">
                 <Form action={urlValues} onSubmit={onSubmitAdd}>

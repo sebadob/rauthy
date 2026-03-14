@@ -285,7 +285,12 @@ export let I18nAdminUk: I18nAdmin = {
         rotateKeys: 'Ротувати ключі',
     },
     kv: {
-        addNew: 'New Value',
+        accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
+            <code>Bearer</code> token. The following <code>curl</code> command can be used for
+            testing.`,
+        addNewKey: 'New Access Key',
+        addNewValue: 'New Value',
+        delConfirm: 'Do you really want to delete this Access Key?',
         encryptedDesc: `For performance reasons, the additional encryption should only be used for 
             particularly sensitive values such as access keys or personal information.`,
         deleteConfirmMsg: `Do you really want to delete the key '{{ key }}'?`,
@@ -293,6 +298,7 @@ export let I18nAdminUk: I18nAdmin = {
         loadAllValues: 'Load all values',
         storeEncrypted: 'Store value encrypted',
         tabs: ['Data', 'Access', 'Delete'],
+        testCmd: 'Test Command',
         value: 'JSON Value',
     },
     nav: {

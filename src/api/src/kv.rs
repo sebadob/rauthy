@@ -3,8 +3,8 @@ use actix_web::http::header::CONTENT_TYPE;
 use actix_web::web::{Json, Path, Query};
 use actix_web::{HttpRequest, HttpResponse, delete, get, post, put};
 use rauthy_api_types::kv::{
-    KVAccessRequest, KVAccessResponse, KVNamespaceRequest, KVNamespaceResponse, KVParams,
-    KVValueRequest, KVValueResponse,
+    KVAccessRequest, KVAccessResponse, KVAccessTestResponse, KVNamespaceRequest,
+    KVNamespaceResponse, KVParams, KVValueRequest, KVValueResponse,
 };
 use rauthy_common::constants::APPLICATION_JSON;
 use rauthy_data::entity::kv::{KVAccess, KVNamespace, KVValue};
@@ -65,7 +65,7 @@ pub async fn post_kv_ns(
     Ok(HttpResponse::Ok().finish())
 }
 
-/// Updates a KV namespaces
+/// Updates a KV namespace
 ///
 /// **Permissions**
 /// - rauthy_admin
@@ -92,7 +92,7 @@ pub async fn put_kv_ns(
     Ok(HttpResponse::Ok().finish())
 }
 
-/// Deletes a KV namespaces
+/// Deletes a KV namespace
 ///
 /// **Permissions**
 /// - rauthy_admin
@@ -138,13 +138,13 @@ pub async fn get_kv_ns_access(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    let access = KVAccess::find_all(ns.into_inner())
-        .await?
-        .into_iter()
-        .map(|a| a.into_response())
-        .collect::<Vec<_>>();
+    let keys = KVAccess::find_all(ns.into_inner()).await?;
+    let mut resp = Vec::with_capacity(keys.len());
+    for key in keys {
+        resp.push(key.into_response()?);
+    }
 
-    Ok(HttpResponse::Ok().json(access))
+    Ok(HttpResponse::Ok().json(resp))
 }
 
 /// Create an access key for the given KV namespace.
@@ -242,6 +242,40 @@ pub async fn delete_kv_ns_access(
     KVAccess::delete(key.id).await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+/// Rotate a secret for an access key for the given KV namespace
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    post,
+    path = "/kv/ns/{ns}/access/{id}/secret",
+    tag = "kv",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/kv/ns/{ns}/access/{id}/secret")]
+pub async fn post_kv_ns_access_secret(
+    principal: ReqPrincipal,
+    path: Path<(String, String)>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let (ns, id) = path.into_inner();
+    let key = KVAccess::find(id).await?;
+    if key.ns != ns {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "invalid 'ns' for given key id",
+        ));
+    }
+    let resp = key.generate_new_secret().await?;
+
+    Ok(HttpResponse::Ok().json(resp))
 }
 
 /// Returns all key / values for the given KV namespace.
@@ -514,4 +548,31 @@ pub async fn delete_kv_value_ext(
 
     KVValue::delete(access.ns, key.into_inner()).await?;
     Ok(HttpResponse::Ok().finish())
+}
+
+/// Test a KV access key
+///
+/// **Permissions**
+/// - valid Access Keys for any KV Namespace
+#[utoipa::path(
+    get,
+    path = "/kv/test",
+    tag = "kv",
+    responses(
+        (status = 200, description = "Ok", body = serde_json::Value),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/kv/test")]
+pub async fn get_kv_access_test_ext(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    let bearer = get_bearer_token_from_header(req.headers())?;
+    let access = KVAccess::find_validated(&bearer).await?;
+
+    Ok(HttpResponse::Ok().json(KVAccessTestResponse {
+        id: access.id,
+        ns: access.ns,
+        name: access.name,
+    }))
 }

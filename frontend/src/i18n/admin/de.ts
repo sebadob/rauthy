@@ -292,7 +292,12 @@ export let I18nAdminDe: I18nAdmin = {
         rotateKeys: 'Keys Rotieren',
     },
     kv: {
-        addNew: 'Neuer Wert',
+        accessTestDesc: `Der Access Key muss im <code>Authorization</code> header als 
+            <code>Bearer</code> token angegeben werden. Der folgende <code>curl</code> Befehl kann
+            zum Testen genutzt werden.`,
+        addNewKey: 'Neuer Access Key',
+        addNewValue: 'Neuer Wert',
+        delConfirm: 'Soll dieser Access Key wirklich gelöscht werden?',
         encryptedDesc: `Die zusätzliche Verschlüsselung sollte aus Performance-Gründen nur bei 
             besonders sensiblen Werten wie z.B. access keys oder persönlichen Informationen gewählt 
             werden.`,
@@ -301,6 +306,7 @@ export let I18nAdminDe: I18nAdmin = {
         loadAllValues: 'Alle Werte laden',
         storeEncrypted: 'Wert verschlüsselt speichern',
         tabs: ['Daten', 'Zugriff', 'Löschen'],
+        testCmd: 'Test-Befehl',
         value: 'JSON Wert',
     },
     nav: {

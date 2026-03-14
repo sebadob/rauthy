@@ -7,6 +7,7 @@ export interface KVNamespaceRequest {
 
 export interface KVAccessRequest {
     enabled: boolean;
+    /// Validation: PATTERN_GROUP
     name?: string;
 }
 

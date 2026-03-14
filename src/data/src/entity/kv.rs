@@ -371,7 +371,7 @@ impl KVAccess {
         Ok(())
     }
 
-    pub async fn generate_new_secret(id: String) -> Result<(), ErrorResponse> {
+    pub async fn generate_new_secret(self) -> Result<KVAccessResponse, ErrorResponse> {
         let secret_pain = secure_random_alnum(48);
         let secret = EncValue::encrypt(secret_pain.as_bytes())?
             .into_bytes()
@@ -379,12 +379,18 @@ impl KVAccess {
 
         let sql = "UPDATE kv_access SET secret = $1 WHERE id = $2";
         if is_hiqlite() {
-            DB::hql().execute(sql, params!(secret, id)).await?;
+            DB::hql().execute(sql, params!(secret, &self.id)).await?;
         } else {
-            DB::pg_execute(sql, &[&secret, &id]).await?;
+            DB::pg_execute(sql, &[&secret, &self.id]).await?;
         }
 
-        Ok(())
+        Ok(KVAccessResponse {
+            id: self.id,
+            ns: self.ns,
+            secret: secret_pain,
+            enabled: self.enabled,
+            name: self.name,
+        })
     }
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {

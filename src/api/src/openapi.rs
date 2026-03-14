@@ -124,6 +124,7 @@ use utoipa::{OpenApi, openapi};
         kv::put_kv_value_ext,
         kv::get_kv_value_ext,
         kv::delete_kv_value_ext,
+        kv::get_kv_access_test_ext,
 
         pam::get_pam_emails_unlinked,
         pam::post_getent,
@@ -382,6 +383,7 @@ use utoipa::{OpenApi, openapi};
             Argon2ParamsResponse,
             KVNamespaceResponse,
             KVAccessResponse,
+            KVAccessTestResponse,
             KVValueResponse,
             OAuth2ErrorResponse,
             OAuth2ErrorTypeResponse,

@@ -236,7 +236,11 @@ export interface I18nAdmin {
         rotateKeys: string;
     };
     kv: {
-        addNew: string;
+        // inserted as HTML
+        accessTestDesc: string;
+        addNewKey: string;
+        addNewValue: string;
+        delConfirm: string;
         encryptedDesc: string;
         // MUST contain '{{ key }}' to be replaced with the key to delete
         deleteConfirmMsg: string;
@@ -245,6 +249,7 @@ export interface I18nAdmin {
         storeEncrypted: string;
         // order: data, access, delete
         tabs: string[];
+        testCmd: string;
         value: string;
     };
     nav: {
