@@ -62,9 +62,6 @@ pub struct AuthRequest {
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub prompt: Option<String>,
-    /// Validation: max length 128
-    #[validate(length(max = 128))]
-    pub idp_hint: Option<String>,
 }
 
 #[inline]
