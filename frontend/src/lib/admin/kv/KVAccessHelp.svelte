@@ -2,7 +2,6 @@
     import Button from '$lib/button/Button.svelte';
     import Modal from '$lib/Modal.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import IconLink from '$icons/editor/IconLink.svelte';
     import IconClipboard from '$icons/IconClipboard.svelte';
 
     let ta = useI18nAdmin();
@@ -26,6 +25,10 @@
     let getAllValues = $derived(`${curl}
     ${headerAuth}
     ${urlBase}/values`);
+
+    let getAllValuesParams = $derived(`${curl}
+    ${headerAuth}
+    '${urlBase}/values?limit=10&search=myKey'`);
 
     const jsonDataLeft = `--data-raw '{
         "key": "myKey",
@@ -113,6 +116,13 @@
 
     <h2>{ta.kv.help.ops[2]}</h2>
     {@render code(getAllValues)}
+    URL Parameters:
+    <ul>
+        <li><code>limit: u32</code></li>
+        <li><code>search: String</code></li>
+    </ul>
+    <br />
+    {@render code(getAllValuesParams)}
 
     <h2>{ta.kv.help.ops[3]}</h2>
     {@render code(setKeyValueString)}
