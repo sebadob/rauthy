@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { fetchGet } from '$api/fetch';
+    import { fetchGet, fetchPost } from '$api/fetch';
     import ContentAdmin from '$lib5/ContentAdmin.svelte';
     import NavSub from '$lib5/nav/NavSub.svelte';
     import { useParam } from '$state/param.svelte';
@@ -8,15 +8,22 @@
     import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import { useTrigger } from '$state/callback.svelte';
-    import type { KVNamespaceResponse } from '$api/types/kv';
+    import type { KVNamespaceRequest, KVNamespaceResponse } from '$api/types/kv';
     import KVDetails from '$lib/admin/kv/KVDetails.svelte';
     import Tabs from '$lib/tabs/Tabs.svelte';
     import KVAccess from '$lib/admin/kv/KVAccess.svelte';
     import KVDelete from '$lib/admin/kv/KVDelete.svelte';
+    import Form from '$lib/form/Form.svelte';
+    import Input from '$lib/form/Input.svelte';
+    import Button from '$lib/button/Button.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { PATTERN_GROUP } from '$utils/patterns';
 
+    let t = useI18n();
     let ta = useI18nAdmin();
 
     let refAddNew: undefined | HTMLButtonElement = $state();
+    let refInput: undefined | HTMLInputElement = $state();
     let tr = useTrigger();
     tr.set('navMain', () => refAddNew?.focus());
 
@@ -34,6 +41,14 @@
         fetchData();
     });
 
+    $effect(() => {
+        if (refInput) {
+            requestAnimationFrame(() => {
+                refInput?.focus();
+            });
+        }
+    });
+
     async function fetchData() {
         let res = await fetchGet<KVNamespaceResponse[]>('/auth/v1/kv/ns');
         if (res.body) {
@@ -46,10 +61,24 @@
         }
     }
 
-    function onSave() {
+    function onDelete() {
         ns.set(undefined);
         closeModal?.();
         fetchData();
+        tab = ta.kv.tabs[0];
+    }
+
+    async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
+        let payload: KVNamespaceRequest = {
+            name: params.get('name') || '',
+        };
+        let res = await fetchPost(form.action, payload);
+        if (res.error) {
+            err = res.error.message;
+        } else {
+            await fetchData();
+        }
+        closeModal?.();
     }
 </script>
 
@@ -60,7 +89,27 @@
         bind:closeModal
         alignRight
     >
-        TODO
+        <div class="alignLeft">
+            <Form action="/auth/v1/kv/ns" {onSubmit}>
+                <h3>{ta.kv.addNewNs}</h3>
+                <Input
+                    bind:ref={refInput}
+                    name="name"
+                    label={ta.common.name}
+                    placeholder={ta.common.name}
+                    pattern={PATTERN_GROUP}
+                />
+
+                <div class="btns">
+                    <Button type="submit">
+                        {t.common.save}
+                    </Button>
+                    <Button level={3} onclick={() => closeModal?.()}>
+                        {t.common.cancel}
+                    </Button>
+                </div>
+            </Form>
+        </div>
     </ButtonAddModal>
 
     {#snippet buttonTiles()}
@@ -70,7 +119,9 @@
                     onclick={() => ns.set(namespace.name)}
                     selected={ns.get() === namespace.name}
                 >
-                    {namespace.name}
+                    <div style:margin-top=".25rem">
+                        {namespace.name}
+                    </div>
                 </NavButtonTile>
             {/each}
         </div>
@@ -89,7 +140,7 @@
             {:else if tab === ta.kv.tabs[1]}
                 <KVAccess {ns} />
             {:else if tab === ta.kv.tabs[2]}
-                <KVDelete {ns} {onSave} />
+                <KVDelete {ns} {onDelete} />
             {/if}
         {/if}
     </div>
@@ -104,6 +155,17 @@
 <style>
     #kv {
         max-width: 60rem;
+    }
+
+    .alignLeft {
+        text-align: left;
+    }
+
+    .btns {
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .nsList {

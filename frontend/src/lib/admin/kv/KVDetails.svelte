@@ -27,6 +27,8 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
+    let ref: undefined | HTMLInputElement | HTMLTextAreaElement = $state();
+
     let showModalAdd = $state(false);
     let closeModalAdd: undefined | (() => void) = $state();
     let showModalEdit = $state(false);
@@ -53,10 +55,18 @@
     });
 
     $effect(() => {
-        if (search.length > 2) {
+        if (search.length > 1) {
             searchValues();
         } else {
             valuesSearch = [];
+        }
+    });
+
+    $effect(() => {
+        if (ref) {
+            requestAnimationFrame(() => {
+                ref?.focus();
+            });
         }
     });
 
@@ -204,6 +214,7 @@
             <div class="modal">
                 <Form action={urlValues} onSubmit={onSubmitAdd}>
                     <Input
+                        bind:ref
                         name="key"
                         label={ta.kv.key}
                         placeholder={ta.kv.key}
@@ -279,7 +290,7 @@
         {#each valuesSearch as entry (entry.key)}
             {@render renderEntry(entry)}
         {/each}
-    {:else if values.length > 0 && search.length < 3}
+    {:else if values.length > 0 && search.length < 2}
         {#each values as entry (entry.key)}
             {@render renderEntry(entry)}
         {/each}
@@ -301,6 +312,7 @@
                         {entrySelected.key}
                     </h3>
                     <InputArea
+                        bind:ref
                         name="value"
                         label={ta.kv.value}
                         placeholder={ta.kv.value}

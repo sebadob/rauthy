@@ -239,11 +239,29 @@ export interface I18nAdmin {
         // inserted as HTML
         accessTestDesc: string;
         addNewKey: string;
+        addNewNs: string;
         addNewValue: string;
         delConfirm: string;
+        delNsMsg: string;
         encryptedDesc: string;
         // MUST contain '{{ key }}' to be replaced with the key to delete
         deleteConfirmMsg: string;
+        help: {
+            help: string;
+            // order:
+            // - test access key
+            // - show all keys
+            // - show all keys + values
+            // - set a key + value
+            // - get the value for a key
+            // - delete a key + value
+            ops: string[];
+            p1: string;
+            // inserted as HTML
+            p2: string;
+            // inserted as HTML
+            p3: string;
+        };
         key: string;
         loadAllValues: string;
         storeEncrypted: string;

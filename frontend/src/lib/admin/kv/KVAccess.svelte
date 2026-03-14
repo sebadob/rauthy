@@ -12,6 +12,7 @@
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';
     import Input from '$lib/form/Input.svelte';
     import { PATTERN_GROUP } from '$utils/patterns';
+    import KVAccessHelp from './KVAccessHelp.svelte';
 
     let {
         ns,
@@ -21,6 +22,8 @@
 
     let t = useI18n();
     let ta = useI18nAdmin();
+
+    let ref: undefined | HTMLInputElement = $state();
 
     let showModal = $state(false);
     let closeModal: undefined | (() => void) = $state();
@@ -32,6 +35,14 @@
 
     $effect(() => {
         fetchData();
+    });
+
+    $effect(() => {
+        if (ref) {
+            requestAnimationFrame(() => {
+                ref?.focus();
+            });
+        }
     });
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
@@ -79,6 +90,7 @@
             </InputCheckbox>
 
             <Input
+                bind:ref
                 name="name"
                 label={ta.common.name}
                 placeholder={ta.common.name}
@@ -96,6 +108,8 @@
             </div>
         </Form>
     </Modal>
+
+    <KVAccessHelp />
 
     <div class="keys">
         {#if keys.length === 0}
