@@ -43,6 +43,7 @@ pub struct KVNamespaceResponse {
 pub struct KVAccessResponse {
     pub id: String,
     pub ns: String,
+    pub secret: String,
     pub enabled: bool,
     pub name: Option<String>,
 }

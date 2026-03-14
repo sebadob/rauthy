@@ -5,9 +5,8 @@ use hiqlite_macros::params;
 use rauthy_api_types::kv::{
     KVAccessResponse, KVNamespaceResponse, KVParams, KVValueRequest, KVValueResponse,
 };
-use rauthy_common::constants::API_KEY_LENGTH;
 use rauthy_common::is_hiqlite;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 
 #[derive(Debug)]
 pub struct KVNamespace {
@@ -159,10 +158,7 @@ impl KVValue {
         Ok(())
     }
 
-    pub async fn upsert_by_access_id(
-        access_id: String,
-        payload: KVValueRequest,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn upsert(ns: String, payload: KVValueRequest) -> Result<(), ErrorResponse> {
         let value = payload.value.to_string();
         let value = if payload.encrypted {
             EncValue::encrypt(value.as_bytes())?.into_bytes().to_vec()
@@ -172,22 +168,16 @@ impl KVValue {
 
         let sql = r#"
 INSERT INTO kv_values (ns, key, encrypted, value)
-VALUES (
-    (SELECT ns FROM kv_access WHERE enabled = true AND id = $1),
-    $2, $3, $4
-)
+VALUES ($1, $2, $3, $4)
 ON CONFLICT (ns, key) DO UPDATE SET encrypted = $3, value = $4
 "#;
 
         if is_hiqlite() {
             DB::hql()
-                .execute(
-                    sql,
-                    params!(access_id, payload.key, payload.encrypted, value),
-                )
+                .execute(sql, params!(ns, payload.key, payload.encrypted, value))
                 .await?;
         } else {
-            DB::pg_execute(sql, &[&access_id, &payload.key, &payload.encrypted, &value]).await?;
+            DB::pg_execute(sql, &[&ns, &payload.key, &payload.encrypted, &value]).await?;
         }
 
         Ok(())
@@ -200,21 +190,6 @@ ON CONFLICT (ns, key) DO UPDATE SET encrypted = $3, value = $4
         } else {
             DB::pg_execute(sql, &[&ns, &key]).await?;
         }
-        Ok(())
-    }
-
-    pub async fn delete_by_access_id(access_id: String, key: String) -> Result<(), ErrorResponse> {
-        let sql = r#"
-DELETE FROM kv_values
-WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1) AND key = $2
-"#;
-
-        if is_hiqlite() {
-            DB::hql().execute(sql, params!(access_id, key)).await?
-        } else {
-            DB::pg_execute(sql, &[&access_id, &key]).await?
-        };
-
         Ok(())
     }
 
@@ -253,81 +228,26 @@ WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1) AND key =
         Ok(res)
     }
 
-    pub async fn find_by_access_id(access_id: String, key: String) -> Result<Self, ErrorResponse> {
-        let sql = r#"
-SELECT * FROM kv_values
-WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1) AND key = $2
-"#;
-
-        let slf = if is_hiqlite() {
-            DB::hql()
-                .query_map_one(sql, params!(access_id, key))
-                .await?
-        } else {
-            DB::pg_query_one(sql, &[&access_id, &key]).await?
-        };
-
-        Ok(slf)
-    }
-
-    pub async fn find_all_by_access_id(
-        access_id: String,
-        params: KVParams,
-    ) -> Result<Vec<Self>, ErrorResponse> {
-        let limit = params.limit.unwrap_or(u32::MAX);
-
-        let res = if let Some(search) = params.search {
-            let sql = r#"
-SELECT * FROM kv_values
-WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1) AND key LIKE $2
-LIMIT $3
-"#;
-            let like = format!("%{}%", search);
-
-            if is_hiqlite() {
-                DB::hql()
-                    .query_map(sql, params!(access_id, like, limit))
-                    .await?
-            } else {
-                DB::pg_query(sql, &[&access_id, &like, &limit], 0).await?
-            }
-        } else {
-            let sql = r#"
-SELECT * FROM kv_values
-WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1)
-LIMIT $2
-"#;
-
-            if is_hiqlite() {
-                DB::hql().query_map(sql, params!(access_id, limit)).await?
-            } else {
-                DB::pg_query(sql, &[&access_id, &limit], 0).await?
-            }
-        };
-
-        Ok(res)
-    }
-
-    pub async fn find_all_keys_by_access_id(
-        access_id: String,
+    pub async fn find_all_keys(
+        ns: String,
         limit: Option<u32>,
     ) -> Result<Vec<String>, ErrorResponse> {
         let limit = limit.unwrap_or(u32::MAX);
         let sql = r#"
 SELECT key FROM kv_values
-WHERE ns = (SELECT ns FROM kv_access WHERE enabled = true AND id = $1)
+WHERE ns = $1
 LIMIT $2
 "#;
 
         let res = if is_hiqlite() {
             DB::hql()
-                .query_raw(sql, params!(access_id, limit))
+                .query_raw(sql, params!(ns, limit))
                 .await?
                 .into_iter()
                 .map(|mut row| row.get::<String>("key"))
                 .collect()
         } else {
-            DB::pg_query_rows(sql, &[&access_id, &limit], 0)
+            DB::pg_query_rows(sql, &[&ns, &limit], 0)
                 .await?
                 .into_iter()
                 .map(|row| row.get::<_, String>("key"))
@@ -365,6 +285,7 @@ impl KVValue {
 pub struct KVAccess {
     pub id: String,
     pub ns: String,
+    pub secret: Vec<u8>,
     pub enabled: bool,
     pub name: Option<String>,
 }
@@ -374,6 +295,7 @@ impl From<hiqlite::Row<'_>> for KVAccess {
         Self {
             id: row.get("id"),
             ns: row.get("ns"),
+            secret: row.get("secret"),
             enabled: row.get("enabled"),
             name: row.get("name"),
         }
@@ -385,6 +307,7 @@ impl From<tokio_postgres::Row> for KVAccess {
         Self {
             id: row.get("id"),
             ns: row.get("ns"),
+            secret: row.get("secret"),
             enabled: row.get("enabled"),
             name: row.get("name"),
         }
@@ -396,21 +319,29 @@ impl KVAccess {
         ns: String,
         enabled: bool,
         name: Option<String>,
-    ) -> Result<Self, ErrorResponse> {
-        let id = secure_random_alnum(API_KEY_LENGTH);
+    ) -> Result<KVAccessResponse, ErrorResponse> {
+        let id = secure_random_alnum(16);
+        // 48 characters is enough for the secret. The `id` is a secure random as well,
+        // and you need to know both.
+        let secret_pain = secure_random_alnum(48);
+        let secret = EncValue::encrypt(secret_pain.as_bytes())?
+            .into_bytes()
+            .to_vec();
 
-        let sql = "INSERT INTO kv_access (id, ns, enabled, name) VALUES ($1, $2, $3, $4)";
+        let sql =
+            "INSERT INTO kv_access (id, ns, secret, enabled, name) VALUES ($1, $2, $3, $4, $5)";
         if is_hiqlite() {
             DB::hql()
-                .execute(sql, params!(&id, &ns, enabled, &name))
+                .execute(sql, params!(&id, &ns, secret, enabled, &name))
                 .await?;
         } else {
-            DB::pg_execute(sql, &[&id, &ns, &enabled, &name]).await?;
+            DB::pg_execute(sql, &[&id, &ns, &secret, &enabled, &name]).await?;
         }
 
-        Ok(Self {
+        Ok(KVAccessResponse {
             id,
             ns,
+            secret: secret_pain,
             enabled,
             name,
         })
@@ -441,13 +372,16 @@ impl KVAccess {
     }
 
     pub async fn generate_new_secret(id: String) -> Result<(), ErrorResponse> {
-        let id_new = secure_random_alnum(API_KEY_LENGTH);
+        let secret_pain = secure_random_alnum(48);
+        let secret = EncValue::encrypt(secret_pain.as_bytes())?
+            .into_bytes()
+            .to_vec();
 
-        let sql = "UPDATE kv_access SET id = $1 WHERE id = $2";
+        let sql = "UPDATE kv_access SET secret = $1 WHERE id = $2";
         if is_hiqlite() {
-            DB::hql().execute(sql, params!(id_new, id)).await?;
+            DB::hql().execute(sql, params!(secret, id)).await?;
         } else {
-            DB::pg_execute(sql, &[&id_new, &id]).await?;
+            DB::pg_execute(sql, &[&secret, &id]).await?;
         }
 
         Ok(())
@@ -465,6 +399,34 @@ impl KVAccess {
         Ok(slf)
     }
 
+    /// Finds the KV Access Key from the given `Bearer` and validates it.
+    pub async fn find_validated(bearer: &str) -> Result<Self, ErrorResponse> {
+        let Some((id, secret)) = bearer.split_once('$') else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Invalid Access Key",
+            ));
+        };
+
+        let sql = "SELECT * FROM kv_access WHERE id = $1";
+        let slf: Self = if is_hiqlite() {
+            DB::hql().query_map_one(sql, params!(id)).await?
+        } else {
+            DB::pg_query_one(sql, &[&id]).await?
+        };
+
+        if !slf.enabled {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Disabled Access Key",
+            ));
+        }
+
+        slf.validate_secret(secret)?;
+
+        Ok(slf)
+    }
+
     pub async fn find_all(ns: String) -> Result<Vec<Self>, ErrorResponse> {
         let sql = "SELECT * FROM kv_access WHERE ns = $1";
         let res = if is_hiqlite() {
@@ -476,19 +438,35 @@ impl KVAccess {
     }
 }
 
-impl From<KVNamespace> for KVNamespaceResponse {
-    fn from(value: KVNamespace) -> Self {
-        Self { name: value.ns }
+impl KVAccess {
+    pub fn into_response(self) -> Result<KVAccessResponse, ErrorResponse> {
+        let dec = EncValue::try_from(self.secret)?.decrypt()?;
+
+        Ok(KVAccessResponse {
+            id: self.id,
+            ns: self.ns,
+            secret: String::from_utf8_lossy(dec.as_ref()).into(),
+            enabled: self.enabled,
+            name: self.name,
+        })
+    }
+
+    #[inline]
+    pub fn validate_secret(&self, secret: &str) -> Result<(), ErrorResponse> {
+        let plain = EncValue::try_from(self.secret.clone()).unwrap().decrypt()?;
+        if constant_time_eq::constant_time_eq(secret.as_bytes(), plain.as_ref()) {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Invalid Credentials",
+            ))
+        }
     }
 }
 
-impl From<KVAccess> for KVAccessResponse {
-    fn from(value: KVAccess) -> Self {
-        Self {
-            id: value.id,
-            ns: value.ns,
-            enabled: value.enabled,
-            name: value.name,
-        }
+impl From<KVNamespace> for KVNamespaceResponse {
+    fn from(value: KVNamespace) -> Self {
+        Self { name: value.ns }
     }
 }

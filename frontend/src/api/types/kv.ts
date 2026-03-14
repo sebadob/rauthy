@@ -1,5 +1,7 @@
+import type { JsonValue } from '$utils/jsonValue';
+
 export interface KVNamespaceRequest {
-    /// Validation: PATTERN_ALNUM_48
+    /// Validation: PATTERN_GROUP
     name: string;
 }
 
@@ -9,7 +11,7 @@ export interface KVAccessRequest {
 }
 
 export interface KVValueRequest {
-    /// Validation: PATTERN_ALNUM_48
+    /// Validation: PATTERN_GROUP
     key: string;
     /// If set to `true`, the backend will encrypt the value on the application layer.
     /// The database will only contain encrypted data. Requires more resources, but is
@@ -22,9 +24,11 @@ export interface KVNamespaceResponse {
     name: string;
 }
 
+/// The `Authorization` header must be `Bearer {id}${secret}`
 export interface KVAccessResponse {
     id: string;
     ns: string;
+    secret: string;
     enabled: boolean;
     name?: string;
 }

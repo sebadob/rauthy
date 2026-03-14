@@ -11,6 +11,8 @@
     import type { KVNamespaceResponse } from '$api/types/kv';
     import KVDetails from '$lib/admin/kv/KVDetails.svelte';
     import Tabs from '$lib/tabs/Tabs.svelte';
+    import KVAccess from '$lib/admin/kv/KVAccess.svelte';
+    import KVDelete from '$lib/admin/kv/KVDelete.svelte';
 
     let ta = useI18nAdmin();
 
@@ -85,9 +87,9 @@
             {#if tab === ta.kv.tabs[0]}
                 <KVDetails {ns} />
             {:else if tab === ta.kv.tabs[1]}
-                TODO ACCESS
+                <KVAccess {ns} />
             {:else if tab === ta.kv.tabs[2]}
-                TODO DELETE
+                <KVDelete {ns} {onSave} />
             {/if}
         {/if}
     </div>

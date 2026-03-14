@@ -27,6 +27,7 @@ CREATE TABLE kv_access
         CONSTRAINT kv_access_kv_ns_ns_fk
             REFERENCES kv_ns
             ON UPDATE CASCADE ON DELETE CASCADE,
+    secret  BYTEA                NOT NULL,
     enabled BOOLEAN DEFAULT true NOT NULL,
     name    VARCHAR
 );

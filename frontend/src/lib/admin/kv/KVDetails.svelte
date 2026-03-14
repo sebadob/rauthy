@@ -43,6 +43,8 @@
 
     let encryptNew = $state(false);
 
+    let urlValues = $derived(`/auth/v1/kv/ns/${ns.get()}/values`);
+
     $effect(() => {
         // make sure to reset on nav-switch
         if (ns.get()) {
@@ -76,9 +78,7 @@
             search = '';
         }
 
-        let res = await fetchGet<KVValueResponse[]>(
-            `/auth/v1/kv/ns/${ns.get()}/values?limit=${limit}`,
-        );
+        let res = await fetchGet<KVValueResponse[]>(`${urlValues}?limit=${limit}`);
         if (res.body) {
             res.body.sort((a, b) => a.key.localeCompare(b.key));
             values = res.body;
@@ -92,9 +92,7 @@
             err = '';
         }
 
-        let res = await fetchGet<KVValueResponse[]>(
-            `/auth/v1/kv/ns/${ns.get()}/values?limit=${limit}&search=${search}`,
-        );
+        let res = await fetchGet<KVValueResponse[]>(`${urlValues}?limit=${limit}&search=${search}`);
         if (res.body) {
             res.body.sort((a, b) => a.key.localeCompare(b.key));
             valuesSearch = res.body;
@@ -173,7 +171,7 @@
             return;
         }
 
-        let res = await fetchDelete(`/auth/v1/kv/ns/${ns.get()}/values/${entrySelected?.key}`);
+        let res = await fetchDelete(`${urlValues}/${entrySelected?.key}`);
         if (res.error) {
             err = res.error.message;
         } else {
@@ -204,7 +202,7 @@
         <Button onclick={() => (showModalAdd = true)}>{ta.kv.addNew}</Button>
         <Modal bind:showModal={showModalAdd} bind:closeModal={closeModalAdd}>
             <div class="modal">
-                <Form action={`/auth/v1/kv/ns/${ns.get()}/values`} onSubmit={onSubmitAdd}>
+                <Form action={urlValues} onSubmit={onSubmitAdd}>
                     <Input
                         name="key"
                         label={ta.kv.key}
@@ -298,7 +296,7 @@
     >
         <div class="modal">
             {#if entrySelected}
-                <Form action={`/auth/v1/kv/ns/${ns.get()}/values`} onSubmit={onSubmitEdit}>
+                <Form action={urlValues} onSubmit={onSubmitEdit}>
                     <h3>
                         {entrySelected.key}
                     </h3>

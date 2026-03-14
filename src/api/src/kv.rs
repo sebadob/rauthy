@@ -141,7 +141,7 @@ pub async fn get_kv_ns_access(
     let access = KVAccess::find_all(ns.into_inner())
         .await?
         .into_iter()
-        .map(KVAccessResponse::from)
+        .map(|a| a.into_response())
         .collect::<Vec<_>>();
 
     Ok(HttpResponse::Ok().json(access))
@@ -170,8 +170,8 @@ pub async fn post_kv_ns_access(
     payload.validate()?;
     principal.validate_admin_session()?;
 
-    let access = KVAccess::insert(ns.into_inner(), payload.enabled, payload.name).await?;
-    Ok(HttpResponse::Created().json(KVAccessResponse::from(access)))
+    let resp = KVAccess::insert(ns.into_inner(), payload.enabled, payload.name).await?;
+    Ok(HttpResponse::Created().json(resp))
 }
 
 /// Update an access key for the given KV namespace.
@@ -394,9 +394,10 @@ pub async fn get_kv_keys_ext(
     req: HttpRequest,
     params: Query<KVParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let access_id = get_bearer_token_from_header(req.headers())?;
+    let bearer = get_bearer_token_from_header(req.headers())?;
+    let access = KVAccess::find_validated(&bearer).await?;
 
-    let keys = KVValue::find_all_keys_by_access_id(access_id, params.limit).await?;
+    let keys = KVValue::find_all_keys(access.ns, params.limit).await?;
     Ok(HttpResponse::Ok().json(keys))
 }
 
@@ -420,9 +421,10 @@ pub async fn get_kv_values_ext(
     req: HttpRequest,
     params: Query<KVParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let access_id = get_bearer_token_from_header(req.headers())?;
+    let bearer = get_bearer_token_from_header(req.headers())?;
+    let access = KVAccess::find_validated(&bearer).await?;
 
-    let values = KVValue::find_all_by_access_id(access_id, params.into_inner()).await?;
+    let values = KVValue::find_all(access.ns, params.into_inner()).await?;
     let mut resp = Vec::with_capacity(values.len());
     for value in values {
         resp.push(value.try_into_response()?)
@@ -451,9 +453,10 @@ pub async fn put_kv_value_ext(
     req: HttpRequest,
     Json(payload): Json<KVValueRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let access_id = get_bearer_token_from_header(req.headers())?;
+    let bearer = get_bearer_token_from_header(req.headers())?;
+    let access = KVAccess::find_validated(&bearer).await?;
 
-    KVValue::upsert_by_access_id(access_id, payload).await?;
+    KVValue::upsert(access.ns, payload).await?;
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -477,12 +480,10 @@ pub async fn get_kv_value_ext(
     req: HttpRequest,
     key: Path<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let access_id = get_bearer_token_from_header(req.headers())?;
+    let bearer = get_bearer_token_from_header(req.headers())?;
+    let access = KVAccess::find_validated(&bearer).await?;
 
-    let value = KVValue::find_by_access_id(access_id, key.into_inner())
-        .await?
-        .value()?;
-
+    let value = KVValue::find(access.ns, key.into_inner()).await?.value()?;
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, APPLICATION_JSON))
         .json(value))
@@ -508,8 +509,9 @@ pub async fn delete_kv_value_ext(
     req: HttpRequest,
     key: Path<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let access_id = get_bearer_token_from_header(req.headers())?;
+    let bearer = get_bearer_token_from_header(req.headers())?;
+    let access = KVAccess::find_validated(&bearer).await?;
 
-    KVValue::delete_by_access_id(access_id, key.into_inner()).await?;
+    KVValue::delete(access.ns, key.into_inner()).await?;
     Ok(HttpResponse::Ok().finish())
 }

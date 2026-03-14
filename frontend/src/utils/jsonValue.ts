@@ -1,4 +1,4 @@
-type JsonValue = JSON | Array<JsonValue> | string | number | boolean;
+export type JsonValue = JSON | Array<JsonValue> | string | number | boolean;
 
 // Parses a `string` into any valid JSON value. This will match
 // `serde_json::Value` in the backend. If all typed parsing fails,
