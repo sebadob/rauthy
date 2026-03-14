@@ -431,7 +431,7 @@ pub async fn get_kv_keys_ext(
     let bearer = get_bearer_token_from_header(req.headers())?;
     let access = KVAccess::find_validated(&bearer).await?;
 
-    let keys = KVValue::find_all_keys(access.ns, params.limit).await?;
+    let keys = KVValue::find_all_keys(access.ns, params.into_inner()).await?;
     Ok(HttpResponse::Ok().json(keys))
 }
 

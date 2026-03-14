@@ -209,7 +209,11 @@ ON CONFLICT (ns, key) DO UPDATE SET encrypted = $3, value = $4
         let limit = params.limit.unwrap_or(u32::MAX);
 
         let res = if let Some(search) = params.search {
-            let sql = "SELECT * FROM kv_values WHERE ns = $1 AND key LIKE $2 LIMIT $3";
+            let sql = r#"
+SELECT * FROM kv_values
+WHERE ns = $1 AND key LIKE $2
+ORDER BY key
+LIMIT $3"#;
             let like = format!("%{}%", search);
             if is_hiqlite() {
                 DB::hql().query_map(sql, params!(ns, like, limit)).await?
@@ -217,7 +221,7 @@ ON CONFLICT (ns, key) DO UPDATE SET encrypted = $3, value = $4
                 DB::pg_query(sql, &[&ns, &like, &limit], 0).await?
             }
         } else {
-            let sql = "SELECT * FROM kv_values WHERE ns = $1 LIMIT $2";
+            let sql = "SELECT * FROM kv_values WHERE ns = $1 ORDER BY key LIMIT $2";
             if is_hiqlite() {
                 DB::hql().query_map(sql, params!(ns, limit)).await?
             } else {
@@ -228,30 +232,53 @@ ON CONFLICT (ns, key) DO UPDATE SET encrypted = $3, value = $4
         Ok(res)
     }
 
-    pub async fn find_all_keys(
-        ns: String,
-        limit: Option<u32>,
-    ) -> Result<Vec<String>, ErrorResponse> {
-        let limit = limit.unwrap_or(u32::MAX);
-        let sql = r#"
+    pub async fn find_all_keys(ns: String, params: KVParams) -> Result<Vec<String>, ErrorResponse> {
+        let limit = params.limit.unwrap_or(u32::MAX);
+
+        let res = if let Some(search) = params.search {
+            let sql = r#"
+SELECT key FROM kv_values
+WHERE ns = $1 AND key LIKE $2
+ORDER BY key
+LIMIT $3
+"#;
+            let like = format!("%{}%", search);
+            if is_hiqlite() {
+                DB::hql()
+                    .query_raw(sql, params!(ns, like, limit))
+                    .await?
+                    .into_iter()
+                    .map(|mut row| row.get::<String>("key"))
+                    .collect()
+            } else {
+                DB::pg_query_rows(sql, &[&ns, &like, &limit], 0)
+                    .await?
+                    .into_iter()
+                    .map(|row| row.get::<_, String>("key"))
+                    .collect()
+            }
+        } else {
+            let sql = r#"
 SELECT key FROM kv_values
 WHERE ns = $1
+ORDER BY key
 LIMIT $2
 "#;
 
-        let res = if is_hiqlite() {
-            DB::hql()
-                .query_raw(sql, params!(ns, limit))
-                .await?
-                .into_iter()
-                .map(|mut row| row.get::<String>("key"))
-                .collect()
-        } else {
-            DB::pg_query_rows(sql, &[&ns, &limit], 0)
-                .await?
-                .into_iter()
-                .map(|row| row.get::<_, String>("key"))
-                .collect()
+            if is_hiqlite() {
+                DB::hql()
+                    .query_raw(sql, params!(ns, limit))
+                    .await?
+                    .into_iter()
+                    .map(|mut row| row.get::<String>("key"))
+                    .collect()
+            } else {
+                DB::pg_query_rows(sql, &[&ns, &limit], 0)
+                    .await?
+                    .into_iter()
+                    .map(|row| row.get::<_, String>("key"))
+                    .collect()
+            }
         };
 
         Ok(res)
