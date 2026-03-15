@@ -1,6 +1,5 @@
 <script lang="ts">
-    import type { IParam } from '$state/param.svelte';
-    import type { KVValueRequest, KVValueResponse } from '$api/types/kv';
+    import type { KVNamespaceResponse, KVValueRequest, KVValueResponse } from '$api/types/kv';
     import Button from '$lib/button/Button.svelte';
     import Input from '$lib/form/Input.svelte';
     import SearchBar from '$lib/search_bar/SearchBar.svelte';
@@ -17,17 +16,19 @@
     import IconKey from '$icons/IconKey.svelte';
     import IconEdit from '$icons/IconEdit.svelte';
     import IconTrash from '$icons/IconTrash.svelte';
+    import IconLink from '$icons/editor/IconLink.svelte';
 
     let {
         ns,
     }: {
-        ns: IParam;
+        ns: KVNamespaceResponse;
     } = $props();
 
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    let ref: undefined | HTMLInputElement | HTMLTextAreaElement = $state();
+    let refInput: undefined | HTMLInputElement = $state();
+    let refArea: undefined | HTMLTextAreaElement = $state();
 
     let showModalAdd = $state(false);
     let closeModalAdd: undefined | (() => void) = $state();
@@ -45,11 +46,11 @@
 
     let encryptNew = $state(false);
 
-    let urlValues = $derived(`/auth/v1/kv/ns/${ns.get()}/values`);
+    let urlValues = $derived(`/auth/v1/kv/ns/${ns.name}/values`);
 
     $effect(() => {
         // make sure to reset on nav-switch
-        if (ns.get()) {
+        if (ns.name) {
             values = [];
         }
     });
@@ -63,12 +64,25 @@
     });
 
     $effect(() => {
-        if (ref) {
+        if (refInput) {
             requestAnimationFrame(() => {
-                ref?.focus();
+                refInput?.focus();
             });
         }
     });
+
+    $effect(() => {
+        if (refArea) {
+            requestAnimationFrame(() => {
+                refArea?.focus();
+            });
+        }
+    });
+
+    function openPubLink(key: string) {
+        let link = `${window.location.origin}/auth/v1/kv/pub/${ns.name}/${key}`;
+        window.open(link, '_blank')?.focus();
+    }
 
     function editEntry(entry: KVValueResponse) {
         entrySelected = entry;
@@ -147,7 +161,7 @@
 
         let payload: KVValueRequest = {
             key: entrySelected.key,
-            encrypted: entrySelected.encrypted,
+            encrypted: params.get('encrypted') === 'on' ? true : undefined,
             value: parseJsonValue(value),
         };
 
@@ -161,6 +175,7 @@
                 valuesSearch = valuesSearch.map(v => {
                     if (v.key === entrySelected?.key) {
                         v.value = value;
+                        v.encrypted = payload.encrypted;
                     }
                     return v;
                 });
@@ -169,6 +184,7 @@
                 values = values.map(v => {
                     if (v.key === entrySelected?.key) {
                         v.value = value;
+                        v.encrypted = payload.encrypted;
                     }
                     return v;
                 });
@@ -214,7 +230,7 @@
             <div class="modal">
                 <Form action={urlValues} onSubmit={onSubmitAdd}>
                     <Input
-                        bind:ref
+                        bind:ref={refInput}
                         name="key"
                         label={ta.kv.key}
                         placeholder={ta.kv.key}
@@ -271,6 +287,13 @@
                         <IconKey width="1.1rem" />
                     </div>
                 {/if}
+                {#if ns.public}
+                    <Button invisible onclick={() => openPubLink(entry.key)}>
+                        <div title="Public Access Link" style:margin-bottom="-.5rem">
+                            <IconLink width="1.1rem" />
+                        </div>
+                    </Button>
+                {/if}
                 <Button ariaLabel={ta.common.edit} invisible onclick={() => editEntry(entry)}>
                     <IconEdit width="1.25rem" />
                 </Button>
@@ -312,7 +335,7 @@
                         {entrySelected.key}
                     </h3>
                     <InputArea
-                        bind:ref
+                        bind:ref={refArea}
                         name="value"
                         label={ta.kv.value}
                         placeholder={ta.kv.value}
@@ -321,8 +344,9 @@
                         required
                     />
                     <InputCheckbox
+                        name="encrypted"
                         ariaLabel={ta.kv.storeEncrypted}
-                        bind:checked={entrySelected.encrypted}
+                        checked={!!entrySelected.encrypted}
                     >
                         {ta.kv.storeEncrypted}
                     </InputCheckbox>

@@ -325,7 +325,7 @@ export let I18nAdminDe: I18nAdmin = {
         key: 'Schlüssel',
         loadAllValues: 'Alle Werte laden',
         storeEncrypted: 'Wert verschlüsselt speichern',
-        tabs: ['Daten', 'Zugriff', 'Löschen'],
+        tabs: ['Daten', 'Zugriff', 'Bearbeiten', 'Löschen'],
         testCmd: 'Test-Befehl',
         value: 'JSON Wert',
     },

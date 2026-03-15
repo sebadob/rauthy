@@ -265,7 +265,7 @@ export interface I18nAdmin {
         key: string;
         loadAllValues: string;
         storeEncrypted: string;
-        // order: data, access, delete
+        // order: data, access, edit, delete
         tabs: string[];
         testCmd: string;
         value: string;

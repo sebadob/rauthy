@@ -310,7 +310,7 @@ export let I18nAdminEn: I18nAdmin = {
         key: 'Key',
         loadAllValues: 'Load all values',
         storeEncrypted: 'Store value encrypted',
-        tabs: ['Data', 'Access', 'Delete'],
+        tabs: ['Data', 'Access', 'Edit', 'Delete'],
         testCmd: 'Test Command',
         value: 'JSON Value',
     },

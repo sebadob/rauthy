@@ -61,7 +61,7 @@ pub async fn post_kv_ns(
     payload.validate()?;
     principal.validate_admin_session()?;
 
-    KVNamespace::insert(payload.name).await?;
+    KVNamespace::insert(payload.name, payload.public).await?;
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -88,7 +88,7 @@ pub async fn put_kv_ns(
     payload.validate()?;
     principal.validate_admin_session()?;
 
-    KVNamespace::update(ns.into_inner(), payload.name).await?;
+    KVNamespace::update(ns.into_inner(), payload.name, payload.public).await?;
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -401,6 +401,28 @@ pub async fn delete_kv_ns_value(
     KVValue::delete(ns, key).await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+/// Returns a Value for a key in a public Namespace
+///
+/// This is the only endpoint that can be used for public access (if the Namespace is public).
+#[utoipa::path(
+    get,
+    path = "/kv/pub/{ns}/{key}",
+    tag = "kv",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/kv/pub/{ns}/{key}")]
+pub async fn get_kv_pub_value(path: Path<(String, String)>) -> Result<HttpResponse, ErrorResponse> {
+    let (ns, key) = path.into_inner();
+    let ns = KVNamespace::find(ns).await?;
+    ns.validate_pub_access()?;
+
+    KVValue::find(ns.ns, key).await?.value_response()
 }
 
 // ##########################################################

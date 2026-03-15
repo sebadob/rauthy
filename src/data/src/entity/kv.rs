@@ -1,4 +1,5 @@
 use crate::database::DB;
+use actix_web::HttpResponse;
 use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
 use hiqlite_macros::params;
@@ -11,31 +12,50 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 #[derive(Debug)]
 pub struct KVNamespace {
     pub ns: String,
+    pub public: Option<bool>,
 }
 
 impl From<hiqlite::Row<'_>> for KVNamespace {
     fn from(mut row: hiqlite::Row<'_>) -> Self {
-        Self { ns: row.get("ns") }
+        Self {
+            ns: row.get("ns"),
+            public: row.get("public"),
+        }
     }
 }
 
 impl From<tokio_postgres::Row> for KVNamespace {
     fn from(row: tokio_postgres::Row) -> Self {
-        Self { ns: row.get("ns") }
+        Self {
+            ns: row.get("ns"),
+            public: row.get("public"),
+        }
     }
 }
 
 impl KVNamespace {
-    pub async fn insert(name: String) -> Result<(), ErrorResponse> {
-        let sql = "INSERT INTO kv_ns (ns) VALUES ($1)";
+    pub async fn insert(name: String, public: Option<bool>) -> Result<(), ErrorResponse> {
+        let sql = "INSERT INTO kv_ns (ns, public) VALUES ($1, $2)";
 
         if is_hiqlite() {
-            DB::hql().execute(sql, params!(name)).await?;
+            DB::hql().execute(sql, params!(name, public)).await?;
         } else {
-            DB::pg_execute(sql, &[&name]).await?;
+            DB::pg_execute(sql, &[&name, &public]).await?;
         }
 
         Ok(())
+    }
+
+    pub async fn find(ns: String) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM kv_ns WHERE ns = $1";
+
+        let slf = if is_hiqlite() {
+            DB::hql().query_map_one(sql, params!(ns)).await?
+        } else {
+            DB::pg_query_one(sql, &[&ns]).await?
+        };
+
+        Ok(slf)
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
@@ -50,13 +70,19 @@ impl KVNamespace {
         Ok(res)
     }
 
-    pub async fn update(name_old: String, name_new: String) -> Result<(), ErrorResponse> {
-        let sql = "UPDATE kv_ns SET ns = $1 WHERE ns = $2";
+    pub async fn update(
+        name_old: String,
+        name_new: String,
+        public: Option<bool>,
+    ) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE kv_ns SET ns = $1, public = $2 WHERE ns = $3";
 
         if is_hiqlite() {
-            DB::hql().execute(sql, params!(name_new, name_old)).await?;
+            DB::hql()
+                .execute(sql, params!(name_new, public, name_old))
+                .await?;
         } else {
-            DB::pg_execute(sql, &[&name_new, &name_old]).await?;
+            DB::pg_execute(sql, &[&name_new, &public, &name_old]).await?;
         }
 
         Ok(())
@@ -75,11 +101,25 @@ impl KVNamespace {
     }
 }
 
+impl KVNamespace {
+    #[inline]
+    pub fn validate_pub_access(&self) -> Result<(), ErrorResponse> {
+        if self.public == Some(true) {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Missing Credentials",
+            ))
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct KVValue {
     pub ns: String,
     pub key: String,
-    pub encrypted: bool,
+    pub encrypted: Option<bool>,
     pub value: Vec<u8>,
 }
 
@@ -109,11 +149,11 @@ impl KVValue {
     pub async fn insert(
         ns: String,
         key: String,
-        encrypted: bool,
+        encrypted: Option<bool>,
         value: serde_json::Value,
     ) -> Result<(), ErrorResponse> {
         let value = value.to_string();
-        let value = if encrypted {
+        let value = if encrypted == Some(true) {
             EncValue::encrypt(value.as_bytes())?.into_bytes().to_vec()
         } else {
             value.as_bytes().to_vec()
@@ -135,11 +175,11 @@ impl KVValue {
     pub async fn update(
         ns: String,
         key: String,
-        encrypted: bool,
+        encrypted: Option<bool>,
         value: serde_json::Value,
     ) -> Result<(), ErrorResponse> {
         let value = value.to_string();
-        let value = if encrypted {
+        let value = if encrypted == Some(true) {
             EncValue::encrypt(value.as_bytes())?.into_bytes().to_vec()
         } else {
             value.as_bytes().to_vec()
@@ -160,7 +200,7 @@ impl KVValue {
 
     pub async fn upsert(ns: String, payload: KVValueRequest) -> Result<(), ErrorResponse> {
         let value = payload.value.to_string();
-        let value = if payload.encrypted {
+        let value = if payload.encrypted == Some(true) {
             EncValue::encrypt(value.as_bytes())?.into_bytes().to_vec()
         } else {
             value.as_bytes().to_vec()
@@ -288,13 +328,32 @@ LIMIT $2
 impl KVValue {
     #[inline]
     pub fn value(&self) -> Result<serde_json::Value, ErrorResponse> {
-        let v = if self.encrypted {
+        let v = if self.encrypted == Some(true) {
             let bytes = EncValue::try_from(self.value.clone()).unwrap().decrypt()?;
             serde_json::from_slice(bytes.as_ref())?
         } else {
             serde_json::from_slice(&self.value)?
         };
         Ok(v)
+    }
+
+    #[inline]
+    pub fn value_response(self) -> Result<HttpResponse, ErrorResponse> {
+        let v = self.value()?;
+        match v {
+            serde_json::Value::Object(v) => Ok(HttpResponse::Ok().json(v)),
+            serde_json::Value::Array(v) => Ok(HttpResponse::Ok().json(v)),
+            serde_json::Value::String(s) => {
+                // The serialized string will have parenthesis. This makes sense as a JSON value,
+                // but is not very usable in this context, so we want to get rid of them.
+                Ok(HttpResponse::Ok()
+                    .content_type("text/html; charset=utf-8")
+                    .body(s))
+            }
+            other => Ok(HttpResponse::Ok()
+                .content_type("text/html; charset=utf-8")
+                .body(other.to_string())),
+        }
     }
 
     #[inline]
@@ -500,6 +559,9 @@ impl KVAccess {
 
 impl From<KVNamespace> for KVNamespaceResponse {
     fn from(value: KVNamespace) -> Self {
-        Self { name: value.ns }
+        Self {
+            name: value.ns,
+            public: value.public,
+        }
     }
 }

@@ -18,6 +18,8 @@
     import Button from '$lib/button/Button.svelte';
     import { useI18n } from '$state/i18n.svelte';
     import { PATTERN_GROUP } from '$utils/patterns';
+    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
+    import KVNamespaceEdit from '$lib/admin/kv/KVNamespaceEdit.svelte';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -36,6 +38,9 @@
     // order: data, access, delete
     let tab = $state(ta.kv.tabs[0]);
     let namespaces: KVNamespaceResponse[] = $state([]);
+    let selected: undefined | KVNamespaceResponse = $derived(
+        namespaces.find(namespace => namespace.name === ns.get()),
+    );
 
     onMount(() => {
         fetchData();
@@ -68,9 +73,15 @@
         tab = ta.kv.tabs[0];
     }
 
+    async function onSave(nameNew: string) {
+        await fetchData();
+        ns.set(nameNew);
+    }
+
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         let payload: KVNamespaceRequest = {
             name: params.get('name') || '',
+            public: params.get('public') === 'on',
         };
         let res = await fetchPost(form.action, payload);
         if (res.error) {
@@ -99,6 +110,9 @@
                     placeholder={ta.common.name}
                     pattern={PATTERN_GROUP}
                 />
+                <InputCheckbox ariaLabel="Public Access" name="public" checked={false}>
+                    Public Access
+                </InputCheckbox>
 
                 <div class="btns">
                     <Button type="submit">
@@ -121,6 +135,9 @@
                 >
                     <div style:margin-top=".25rem">
                         {namespace.name}
+                        {#if namespace.public}
+                            <i>(public)</i>
+                        {/if}
                     </div>
                 </NavButtonTile>
             {/each}
@@ -130,16 +147,18 @@
 
 <ContentAdmin>
     <div id="kv" aria-label={ta.common.details}>
-        {#if ns.get() !== undefined}
+        {#if selected}
             <div class="tabs">
                 <Tabs tabs={ta.kv.tabs} bind:selected={tab} />
             </div>
 
             {#if tab === ta.kv.tabs[0]}
-                <KVDetails {ns} />
+                <KVDetails ns={selected} />
             {:else if tab === ta.kv.tabs[1]}
                 <KVAccess {ns} />
             {:else if tab === ta.kv.tabs[2]}
+                <KVNamespaceEdit ns={selected} {onSave} />
+            {:else if tab === ta.kv.tabs[3]}
                 <KVDelete {ns} {onDelete} />
             {/if}
         {/if}

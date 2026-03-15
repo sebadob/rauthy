@@ -5,15 +5,16 @@ CREATE TABLE kv_ns
             PRIMARY KEY
 );
 
-create table kv_values
+CREATE TABLE kv_values
 (
-    ns        VARCHAR not null
-        constraint kv_values_kv_ns_ns_fk
-            references kv_ns
-            on update cascade on delete cascade,
-    key       VARCHAR not null,
-    encrypted BOOLEAN not null,
-    value     BYTEA   not null,
+    ns        VARCHAR NOT NULL
+        CONSTRAINT kv_values_kv_ns_ns_fk
+            REFERENCES kv_ns
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    key       VARCHAR NOT NULL,
+    encrypted BOOLEAN,
+    public    BOOLEAN,
+    value     BYTEA   NOT NULL,
     CONSTRAINT kv_values_pk
         PRIMARY KEY (ns, key)
 );
@@ -36,4 +37,4 @@ CREATE INDEX kv_access_ns_index
     ON kv_access (ns);
 
 INSERT INTO kv_ns
-VALUES ('default')
+VALUES ('default', false)
