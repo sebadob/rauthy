@@ -12,6 +12,7 @@ use crate::entity::failed_scim_tasks::FailedScimTask;
 use crate::entity::groups::Group;
 use crate::entity::issued_tokens::IssuedToken;
 use crate::entity::jwk::Jwk;
+use crate::entity::kv::{KVAccess, KVNamespace, KVValue};
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
@@ -688,6 +689,70 @@ VALUES ($1, $2, $3, $4, $5)"#;
                 ],
             )
             .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn kv_access(data_before: Vec<KVAccess>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM kv_access";
+    let sql_2 = r#"
+INSERT INTO kv_access (id, ns, secret, enabled, name)
+VALUES ($1, $2, $3, $4, $5)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(sql_2, params!(b.id, b.ns, b.secret, b.enabled, b.name))
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[&b.id, &b.ns, &b.secret, &b.enabled, &b.name]).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn kv_ns(data_before: Vec<KVNamespace>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM kv_ns";
+    let sql_2 = r#"
+INSERT INTO kv_ns (ns, public)
+VALUES ($1, $2)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql().execute(sql_2, params!(b.ns, b.public)).await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[&b.ns, &b.public]).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn kv_values(data_before: Vec<KVValue>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM kv_values";
+    let sql_2 = r#"
+INSERT INTO kv_values (ns, key, encrypted, value)
+VALUES ($1, $2, $3, $4)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(sql_2, params!(b.ns, b.key, b.encrypted, b.value))
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[&b.ns, &b.key, &b.encrypted, &b.value]).await?;
         }
     }
     Ok(())

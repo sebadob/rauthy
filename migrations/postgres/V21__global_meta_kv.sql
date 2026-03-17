@@ -1,8 +1,9 @@
 CREATE TABLE kv_ns
 (
-    ns VARCHAR NOT NULL
+    ns     VARCHAR NOT NULL
         CONSTRAINT kv_ns_pk
-            PRIMARY KEY
+            PRIMARY KEY,
+    public BOOLEAN
 );
 
 CREATE TABLE kv_values
@@ -13,7 +14,6 @@ CREATE TABLE kv_values
             ON UPDATE CASCADE ON DELETE CASCADE,
     key       VARCHAR NOT NULL,
     encrypted BOOLEAN,
-    public    BOOLEAN,
     value     BYTEA   NOT NULL,
     CONSTRAINT kv_values_pk
         PRIMARY KEY (ns, key)

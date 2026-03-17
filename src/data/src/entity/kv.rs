@@ -258,14 +258,14 @@ LIMIT $3"#;
             if is_hiqlite() {
                 DB::hql().query_map(sql, params!(ns, like, limit)).await?
             } else {
-                DB::pg_query(sql, &[&ns, &like, &limit], 0).await?
+                DB::pg_query(sql, &[&ns, &like, &(limit as i64)], 0).await?
             }
         } else {
             let sql = "SELECT * FROM kv_values WHERE ns = $1 ORDER BY key LIMIT $2";
             if is_hiqlite() {
                 DB::hql().query_map(sql, params!(ns, limit)).await?
             } else {
-                DB::pg_query(sql, &[&ns, &limit], 0).await?
+                DB::pg_query(sql, &[&ns, &(limit as i64)], 0).await?
             }
         };
 
@@ -291,7 +291,7 @@ LIMIT $3
                     .map(|mut row| row.get::<String>("key"))
                     .collect()
             } else {
-                DB::pg_query_rows(sql, &[&ns, &like, &limit], 0)
+                DB::pg_query_rows(sql, &[&ns, &like, &(limit as i64)], 0)
                     .await?
                     .into_iter()
                     .map(|row| row.get::<_, String>("key"))
@@ -313,7 +313,7 @@ LIMIT $2
                     .map(|mut row| row.get::<String>("key"))
                     .collect()
             } else {
-                DB::pg_query_rows(sql, &[&ns, &limit], 0)
+                DB::pg_query_rows(sql, &[&ns, &(limit as i64)], 0)
                     .await?
                     .into_iter()
                     .map(|row| row.get::<_, String>("key"))
