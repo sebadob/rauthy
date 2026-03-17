@@ -59,6 +59,7 @@
     let clientUri = $state(IS_DEV ? '/auth/v1' : '');
     let redirectUri = useParam('redirect_uri').get();
     let nonce = useParam('nonce').get();
+    let idpHint = useParam('idp_hint').get();
     let scopes = useParam('scope').get()?.split(' ') || [];
 
     let refEmail: undefined | HTMLInputElement = $state();
@@ -102,6 +103,7 @@
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
 
+    let hasAutoLoggedIn = false;
     let showModalUpdate = $state(false);
 
     onMount(() => {
@@ -141,6 +143,16 @@
             let mfaUser = loginAction.replace('MfaLogin ', '');
             email = mfaUser;
             existingMfaUser = mfaUser;
+        }
+    });
+
+    $effect(() => {
+        if (idpHint && providers.length > 0 && !isLoading && !err && !hasAutoLoggedIn) {
+            const provider = providers.find(p => p.id === idpHint);
+            if (provider) {
+                hasAutoLoggedIn = true;
+                providerLogin(provider.id);
+            }
         }
     });
 
