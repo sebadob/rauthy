@@ -272,6 +272,18 @@ LIMIT $3"#;
         Ok(res)
     }
 
+    pub async fn find_all_encrypted() -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM kv_values WHERE encrypted = true";
+
+        let res = if is_hiqlite() {
+            DB::hql().query_map(sql, params!()).await?
+        } else {
+            DB::pg_query(sql, &[], 0).await?
+        };
+
+        Ok(res)
+    }
+
     pub async fn find_all_keys(ns: String, params: KVParams) -> Result<Vec<String>, ErrorResponse> {
         let limit = params.limit.unwrap_or(u32::MAX);
 
@@ -322,6 +334,27 @@ LIMIT $2
         };
 
         Ok(res)
+    }
+
+    /// Re-encrypts the value and updates the DB. Used for secret migration.
+    pub async fn save_re_encrypted(self) -> Result<(), ErrorResponse> {
+        if self.encrypted != Some(true) {
+            return Ok(());
+        }
+
+        let dec = EncValue::try_from(self.value)?.into_bytes();
+        let value = EncValue::encrypt(dec.as_ref())?.into_bytes().to_vec();
+
+        let sql = "UPDATE kv_values SET value = $1 WHERE ns = $2 AND key = $3";
+        if is_hiqlite() {
+            DB::hql()
+                .execute(sql, params!(value, self.ns, self.key))
+                .await?;
+        } else {
+            DB::pg_execute(sql, &[&value, &self.ns, &self.key]).await?;
+        }
+
+        Ok(())
     }
 }
 
@@ -479,6 +512,21 @@ impl KVAccess {
         })
     }
 
+    /// Re-encrypts the secret and saves it into the DB. Used for secrets migration only.
+    pub async fn save_re_encrypt_secret(self) -> Result<(), ErrorResponse> {
+        let dec = EncValue::try_from(self.secret)?.decrypt()?;
+        let secret = EncValue::encrypt(dec.as_ref())?.into_bytes().to_vec();
+
+        let sql = "UPDATE kv_access SET secret = $1 WHERE id = $2";
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(secret, &self.id)).await?;
+        } else {
+            DB::pg_execute(sql, &[&secret, &self.id]).await?;
+        }
+
+        Ok(())
+    }
+
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let sql = "SELECT * FROM kv_access WHERE id = $1";
 
@@ -525,6 +573,17 @@ impl KVAccess {
             DB::hql().query_map(sql, params!(ns)).await?
         } else {
             DB::pg_query(sql, &[&ns], 0).await?
+        };
+        Ok(res)
+    }
+
+    /// Returns all existing access keys for all Namespaces.
+    pub async fn find_all_no_ns() -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM kv_access";
+        let res = if is_hiqlite() {
+            DB::hql().query_map(sql, params!()).await?
+        } else {
+            DB::pg_query(sql, &[], 0).await?
         };
         Ok(res)
     }

@@ -4,6 +4,7 @@ use rauthy_data::entity::auth_providers::AuthProvider;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::jwk::JWKS;
+use rauthy_data::entity::kv::{KVAccess, KVValue};
 use rauthy_error::ErrorResponse;
 use tracing::{error, info};
 
@@ -118,6 +119,24 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
     }
     info!(
         "Finished SCIM clients secrets migration to key id: {}",
+        new_kid
+    );
+
+    // migrate KV Access keys
+    for access in KVAccess::find_all_no_ns().await? {
+        access.save_re_encrypt_secret().await?;
+    }
+    info!(
+        "Finished KV Access Keys secrets migration to key id: {}",
+        new_kid
+    );
+
+    // migrate KV Values
+    for value in KVValue::find_all_encrypted().await? {
+        value.save_re_encrypted().await?;
+    }
+    info!(
+        "Finished KV Values secrets migration to key id: {}",
         new_kid
     );
 
