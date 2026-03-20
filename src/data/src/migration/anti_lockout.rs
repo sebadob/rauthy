@@ -10,7 +10,7 @@ pub async fn anti_lockout() -> Result<(), ErrorResponse> {
     debug!("Executing anti_lockout_check");
 
     let vars = &RauthyConfig::get().vars;
-    let issuer = &RauthyConfig::get().issuer;
+    let issuer = &RauthyConfig::get().issuer.trim_end_matches("/");
     let (redirect_uris, allowed_origins) = if vars.dev.dev_mode {
         let (ip, _) = RauthyConfig::get()
             .vars
