@@ -9,6 +9,35 @@ edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
 
+[workspace.metadata.typos.files]
+extend-exclude = [
+    "CHANGELOG.md",
+    "docs/**",
+    "frontend/src/i18n/**",
+    "migrations/**",
+    "rauthy-client/LICENSE",
+    "src/data/src/email/i18n/**",
+    "src/data/src/entity/jwk.rs",
+    "src/data/src/migration/db_migrate_dev.rs",
+    "src/data/src/rauthy_config.rs",
+    "src/service/src/token_set.rs",
+]
+
+[workspace.metadata.typos.default]
+extend-ignore-re = [
+    "(?s)root_ca_bundle = '''.*?'''",
+]
+
+[workspace.metadata.typos.default.extend-identifiers]
+GEO_BLOCK_UNKONW = "GEO_BLOCK_UNKONW"
+pasword_argon2id = "pasword_argon2id"
+pDetials = "pDetials"
+registerd = "registerd"
+registerdKeys = "registerdKeys"
+
+[workspace.metadata.typos.default.extend-words]
+SHS = "SHS"
+
 [profile.dev]
 panic = "abort"
 
