@@ -16,7 +16,7 @@ Rauthy requires:
     - `PATCH /Groups/{id}` with `PatchOp`
     - `DELETE /Groups/{id}` with `scim.sync_delete_groups = true`
 - the client to handle `externalId` properly
-- `fitler=externalId` on both `{base_url}/Users` and `{base_url}/Groups`
+- `filter=externalId` on both `{base_url}/Users` and `{base_url}/Groups`
 - `filter=userName` on `{base_url}/Users`
 - `filter=displayName` on `{base_url}/Groups`
 - `userName` to be set properly to the users `email` to match against the DB

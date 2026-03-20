@@ -61,7 +61,7 @@ pub async fn get_group(Path(id): Path<String>, _: ScimToken) -> Result<ScimGroup
 pub async fn patch_group(Path(id): Path<String>, patch_op: ScimPatchOp) -> Result<(), ScimError> {
     for op in patch_op.operations {
         // PatchOps can become very complex and super annoying to work with, if you have a
-        // stricly typed language. This example only shows the ones that Rauthy actually sends.
+        // strictly typed language. This example only shows the ones that Rauthy actually sends.
         // You get the least amount of boilerplate with this way of doing it.
 
         if let Ok(users) = op.try_as_add_member() {
@@ -230,7 +230,7 @@ async fn save_group(mut group: ScimGroup) -> Result<ScimGroup, ScimError> {
             if g.id.as_deref() == Some(id) {
                 g.external_id = group.external_id;
                 g.display_name = group.display_name;
-                // CAUTION: You MUST NOT update members here -> only doen via PatchOp!
+                // CAUTION: You MUST NOT update members here -> only done via PatchOp!
 
                 res = Some(g.clone());
                 break;

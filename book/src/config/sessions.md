@@ -38,7 +38,7 @@ proxy_mode = false
 
 Secondly, you need to tell Rauthy which proxy source IP's it can trust. This is important, because when behind a reverse
 proxy, Rauthy will only see the IP of the proxy itself by default, which would be the same for each client connecting
-though it. However, a reverse proxy adds headers which contain the clients real IP, like e.g. the `X-FORWARED-FOR`
+though it. However, a reverse proxy adds headers which contain the clients real IP, like e.g. the `X-FORWARDED-FOR`
 header and maybe others (depending on the proxy).
 
 These headers can be spoofed from an attacker, if the source IP is not validated. This is what Rauthy needs you to set
@@ -49,7 +49,7 @@ the trusted proxies config for:
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to
 # be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
+# to prevent IP header spoofing. All requests with a
 # different source will be blocked.
 #
 # default: []
@@ -92,7 +92,7 @@ There is an additional variable you can set:
 peer_ip_header_name = 'CF-Connecting-IP'
 ```
 
-The CDN usually adds some other headers than the default `X-FORWARED-FOR` headers, like in this example
+The CDN usually adds some other headers than the default `X-FORWARDED-FOR` headers, like in this example
 `CF-Connecting-IP` to the request. If this is the case, you can tell Rauthy to always check for this header first and
 only use the other methods as fallback, if this does not exist.
 

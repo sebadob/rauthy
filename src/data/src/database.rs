@@ -105,7 +105,7 @@ impl DB {
             .expect("cache::start_cache() must be called at startup")
     }
 
-    /// Returns a client from the Postgress connection pool
+    /// Returns a client from the Postgres connection pool
     #[inline]
     pub async fn pg() -> Result<PgClient, ErrorResponse> {
         PG_POOL
@@ -239,7 +239,7 @@ impl DB {
 
     Migrating data from 'MIGRATE_DB_FROM'
     This will overwrite possibly existing data in the current database!
-    Make sure, that the 'MIGRATE_DB_FROM' was created with the same rauthy verion
+    Make sure that 'MIGRATE_DB_FROM' was created with the same Rauthy version
 
     Proceeding in 10 seconds...
 

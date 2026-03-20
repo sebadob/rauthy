@@ -98,7 +98,7 @@ Rauthy can output logs as JSON data with the following variable:
 # for instance when `Text` already logs a JSON in debug level.
 # Some other logs like an Event for instance will be formatted
 # as Text anyway. If you need to auto-parse events, please consider
-# using an API token and listen ot them actively.
+# using an API token and listen to them actively.
 #
 # default: text
 # overwritten by: LOG_FMT
@@ -210,7 +210,7 @@ matrix_error_no_panic = false
 
 ```admonish hint
 I suggest that you create a separate room for these events. If you experience issues with Matrix encryption, you should
-maybe disbale the encryption for the Events room. I came across some weird errors from Matrix in the past when I was
+maybe disable the encryption for the Events room. I came across some weird errors from Matrix in the past when I was
 using a session token which has been created on another machine.
 ```
 
