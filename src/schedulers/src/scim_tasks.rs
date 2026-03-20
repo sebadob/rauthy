@@ -18,7 +18,7 @@ pub async fn scim_task_retry() {
 
     loop {
         // We want to randomize the sleep because this scheduler should run on all cluster members.
-        // This increases the chance opf success in case of a network segmentation.
+        // This increases the chance of success in case of a network segmentation.
         let millis = get_rand_between(60_000, 90_000);
         time::sleep(Duration::from_millis(millis)).await;
 

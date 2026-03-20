@@ -408,7 +408,7 @@ impl Scope {
         Some(res)
     }
 
-    // Accepts a string of scopes seperated by \s and returns a `Vec<&str>` containing all
+    // Accepts a string of scopes separated by \s and returns a `Vec<&str>` containing all
     // non-custom scopes.
     /// Note: `groups` is not a default scope, but it will be handled like one for performance
     /// and efficiency reasons.

@@ -187,7 +187,7 @@ impl Display for EventType {
             Self::ScimTaskFailed => write!(f, "SCIM task failed"),
             Self::ForcedLogout => write!(f, "Forced user logout"),
             Self::UserLoginRevoke => write!(f, "User revoked illegal login"),
-            Self::SuspiciousApiScan => write!(f, "Suspicous API scan"),
+            Self::SuspiciousApiScan => write!(f, "Suspicious API scan"),
             Self::LoginNewLocation => write!(f, "Login from new location"),
             Self::TokenIssued => write!(f, "JWT Token issued"),
         }
