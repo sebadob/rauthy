@@ -127,7 +127,7 @@ serde_urlencoded = "0.7.1"
 spow = { version = "0.6", features = ["server"] }
 strum = { version = "0.27", features = ["derive"] }
 svg-hush = "0.9.4"
-tar = "0.4.44"
+tar = "0.4.45"
 tikv-jemallocator = { version = "0.6", features = [
     "unprefixed_malloc_on_supported_platforms"
 ] }
