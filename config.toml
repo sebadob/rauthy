@@ -32,7 +32,7 @@ insecure_cookie = false
 # is being served with SSR.
 # You only need this value, if you want to work with the auth
 # provider login while running the UI in dev mode. Point it to
-# the full address, where ever your UI is running.
+# the full address, wherever your UI is running.
 # This will only be respected when `DEV_MODE == true` as well.
 #
 # overwritten by: DEV_MODE_PROVIDER_CALLBACK_URL
