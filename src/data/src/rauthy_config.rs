@@ -251,6 +251,7 @@ pub struct Vars {
     pub atproto: VarsAtproto,
     pub backchannel_logout: VarsBackchannelLogout,
     pub bootstrap: VarsBootstrap,
+    pub cred_stuff_detect: VarsCredStuff,
     pub database: VarsDatabase,
     pub device_grant: VarsDeviceGrant,
     pub dpop: VarsDpop,
@@ -334,6 +335,11 @@ impl Default for Vars {
                 pasword_argon2id: None,
                 api_key: None,
                 api_key_secret: None,
+            },
+            cred_stuff_detect: VarsCredStuff {
+                blacklist_duration: 86400,
+                blacklist_threshold: 15,
+                scan_window: 10800,
             },
             database: VarsDatabase {
                 hiqlite: true,
@@ -461,6 +467,7 @@ impl Default for Vars {
                 level_rauthy_healthy: EventLevel::Notice,
                 level_rauthy_unhealthy: EventLevel::Critical,
                 level_ip_blacklisted: EventLevel::Warning,
+                level_cred_stuff: EventLevel::Warning,
                 level_backchannel_logout_failed: EventLevel::Critical,
                 level_force_logout: EventLevel::Notice,
                 level_user_login_revoke: EventLevel::Warning,
@@ -966,6 +973,7 @@ impl Vars {
         slf.parse_auth_headers(&mut table);
         slf.parse_backchannel_logout(&mut table);
         slf.parse_bootstrap(&mut table);
+        slf.parse_cred_stuff(&mut table);
         slf.parse_database(&mut table);
         slf.parse_device_grant(&mut table);
         slf.parse_dpop(&mut table);
@@ -1265,6 +1273,35 @@ impl Vars {
             "BOOTSTRAP_API_KEY_SECRET",
         ) {
             self.bootstrap.api_key_secret = Some(v);
+        }
+    }
+
+    fn parse_cred_stuff(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "cred_stuff_detection");
+
+        if let Some(v) = t_u32(
+            &mut table,
+            "cred_stuff_detection",
+            "blacklist_duration",
+            "CRED_STUFF_BLACKLIST_DUR",
+        ) {
+            self.cred_stuff_detect.blacklist_duration = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "cred_stuff_detection",
+            "blacklist_threshold",
+            "CRED_STUFF_BLACKLIST_THRES",
+        ) {
+            self.cred_stuff_detect.blacklist_threshold = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "cred_stuff_detection",
+            "scan_window",
+            "CRED_STUFF_SCAN_WINDOW",
+        ) {
+            self.cred_stuff_detect.scan_window = v;
         }
     }
 
@@ -3125,6 +3162,13 @@ pub struct VarsBootstrap {
 }
 
 #[derive(Debug)]
+pub struct VarsCredStuff {
+    pub blacklist_duration: u32,
+    pub blacklist_threshold: u32,
+    pub scan_window: u32,
+}
+
+#[derive(Debug)]
 pub struct VarsDatabase {
     pub hiqlite: bool,
     pub health_check_delay_secs: u32,
@@ -3268,6 +3312,7 @@ pub struct VarsEvents {
     pub level_rauthy_healthy: EventLevel,
     pub level_rauthy_unhealthy: EventLevel,
     pub level_ip_blacklisted: EventLevel,
+    pub level_cred_stuff: EventLevel,
     pub level_backchannel_logout_failed: EventLevel,
     pub level_force_logout: EventLevel,
     pub level_user_login_revoke: EventLevel,

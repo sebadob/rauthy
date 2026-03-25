@@ -15,6 +15,7 @@ pub mod clients_dyn;
 pub mod clients_scim;
 pub mod config;
 pub mod continuation_token;
+pub mod cred_stuff_detect;
 pub mod db_version;
 pub mod devices;
 pub mod dpop_proof;

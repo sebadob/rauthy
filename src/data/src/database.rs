@@ -57,6 +57,7 @@ pub enum Cache {
     PAM,
     ToS,
     EmailRateLimit,
+    CredStuffDetect,
 }
 
 impl CacheIndex for Cache {
