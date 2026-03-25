@@ -1,7 +1,6 @@
 [book]
 authors = ["sebastiandobe@mailbox.org"]
 language = "en"
-multilingual = false
 src = "src"
 title = "Rauthy Documentation"
 
