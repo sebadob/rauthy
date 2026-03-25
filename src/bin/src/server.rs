@@ -17,7 +17,9 @@ use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use std::cmp::max;
+use std::fs;
 use std::net::Ipv4Addr;
+use std::os::unix::fs::PermissionsExt;
 use std::str::FromStr;
 use std::thread;
 use tracing::{error, info};
@@ -153,7 +155,9 @@ pub async fn server_with_metrics() -> std::io::Result<()> {
 
         #[cfg(not(target_os = "windows"))]
         ListenScheme::UnixHttp | ListenScheme::UnixHttps => {
-            server.bind_uds(listen_addr)?.run().await
+            let server = server.bind_uds(&listen_addr)?;
+            fs::set_permissions(listen_addr, fs::Permissions::from_mode(0o666))?;
+            server.run().await
         }
     }
 }
@@ -233,7 +237,9 @@ pub async fn server_without_metrics() -> std::io::Result<()> {
 
         #[cfg(not(target_os = "windows"))]
         ListenScheme::UnixHttp | ListenScheme::UnixHttps => {
-            server.bind_uds(listen_addr)?.run().await
+            let server = server.bind_uds(&listen_addr)?;
+            fs::set_permissions(listen_addr, fs::Permissions::from_mode(0o666))?;
+            server.run().await
         }
     }
 }
