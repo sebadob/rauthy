@@ -578,7 +578,7 @@ pub async fn post_device_auth(
     };
 
     if client.confidential {
-        let Some(secret) = &payload.client_secret else {
+        let Some(secret) = payload.client_secret.clone() else {
             return HttpResponse::Unauthorized().json(OAuth2ErrorResponse {
                 error: OAuth2ErrorTypeResponse::UnauthorizedClient,
                 error_description: Some(Cow::from("Missing `client_secret`")),

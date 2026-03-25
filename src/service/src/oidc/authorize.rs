@@ -20,6 +20,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::trace;
+use zeroize::Zeroize;
 
 pub async fn post_authorize(
     req: &HttpRequest,
@@ -45,6 +46,10 @@ pub async fn post_authorize(
 
             let ip = real_ip_from_req(req)?;
             CredStuffDetect::trigger(ip, &req_data.email, req_data.password.as_deref()).await;
+
+            if let Some(mut pwd) = req_data.password {
+                pwd.zeroize();
+            }
 
             return Err(err);
         }

@@ -14,11 +14,6 @@ pub struct CredStuffDetect;
 
 impl CredStuffDetect {
     pub async fn trigger(ip: IpAddr, email: &str, password: Option<&str>) {
-        tracing::warn!(
-            "Credential stuffing attempt detected for IP: {:?} - {:?}",
-            ip,
-            password
-        );
         if let Err(err) = Self::handle_trigger(ip, email, password.unwrap_or_default()).await {
             error!(
                 "Error during credential stuffing detection for IP {}: {}",
@@ -36,8 +31,6 @@ impl CredStuffDetect {
             .get::<_, _, BTreeSet<Vec<u8>>>(Cache::CredStuffDetect, ip.clone())
             .await?
             .unwrap_or_default();
-
-        tracing::warn!("Hashes for CredStuff {} -> {:?}", ip, hashes);
 
         let vars = &RauthyConfig::get().vars.cred_stuff_detect;
 

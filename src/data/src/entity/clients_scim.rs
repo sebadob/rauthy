@@ -22,6 +22,7 @@ use tracing::{debug, error, info};
 #[derive(Clone, PartialEq)]
 pub struct ClientScim {
     pub client_id: String,
+    // TODO migrate this value to an encrypted one
     pub bearer_token: String,
     pub base_uri: String,
     pub sync_groups: bool,
@@ -70,12 +71,13 @@ impl From<tokio_postgres::Row> for ClientScim {
 impl ClientScim {
     pub async fn upsert(
         client_id: String,
-        bearer_token: &[u8],
+        bearer_token: &str,
         base_endpoint: String,
         sync_groups: bool,
         group_sync_prefix: Option<String>,
     ) -> Result<(), ErrorResponse> {
-        let bearer_encrypted = EncValue::encrypt(bearer_token)?.into_bytes();
+        let bearer_encrypted = EncValue::encrypt(bearer_token.as_bytes())?.into_bytes();
+
         let sql = r#"
 INSERT INTO clients_scim (client_id, bearer_token, base_endpoint, sync_groups, group_sync_prefix)
 VALUES ($1, $2, $3, $4, $5)

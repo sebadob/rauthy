@@ -194,6 +194,7 @@ pub struct DeviceAuthCode {
     pub exp: DateTime<Utc>,
     pub last_poll: DateTime<Utc>,
     pub scopes: Option<String>,
+    // TODO we should probably save it hashed, even though it is only very shortly lived
     // saved additionally here to have fewer cache requests during client polling
     pub client_secret: Option<String>,
     // The warnings counter will increase, if a client does not stick to
