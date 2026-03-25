@@ -19,6 +19,7 @@ pub mod db_version;
 pub mod devices;
 pub mod dpop_proof;
 pub mod email_jobs;
+pub mod email_rate_limit;
 pub mod failed_backchannel_logout;
 pub mod failed_login_counter;
 pub mod failed_scim_tasks;
