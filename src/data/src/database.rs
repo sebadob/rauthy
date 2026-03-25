@@ -56,6 +56,7 @@ pub enum Cache {
     Webauthn,
     PAM,
     ToS,
+    EmailRateLimit,
 }
 
 impl CacheIndex for Cache {

@@ -7,7 +7,7 @@ use std::str::FromStr;
 pub mod custom;
 pub mod email_change_confirm;
 pub mod email_change_info;
-mod email_registered_already;
+pub mod email_registered_already;
 pub mod i18n;
 pub mod login_location;
 pub mod mailer;

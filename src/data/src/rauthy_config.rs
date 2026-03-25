@@ -764,11 +764,11 @@ impl Default for Vars {
                 email_registered_already: VarsTemplatesLanguages {
                     de: VarsTemplate {
                         subject: "E-Mail bereits registriert".into(),
-                        header: "E-Mail bereits registriert: ".into(),
-                        text: Some(r#"Es wurde versucht einen neuen Account mit dieser E-Mail Adresse zu r
-egistrieren, während diese Adresse bereits registriert war. Falls dies ein Fehler war,
-kann diese E-Mail ignoriert werden. Sollte jedoch das Passwort verloren gegangen sein
-und ein neues wird benötigt, so kann der unten stehende Link dafür genutzt werden.
+                        header: "E-Mail bereits registriert - ".into(),
+                        text: Some(r#"Es wurde versucht einen neuen Account mit dieser E-Mail Adresse zu registrieren,
+während diese Adresse bereits registriert war. Falls dies ein Fehler war, kann diese
+E-Mail ignoriert werden. Sollte jedoch das Passwort verloren gegangen sein und ein
+neues wird benötigt, so kann der unten stehende Link dafür genutzt werden.
 Falls diese Nachricht durch jemand Anderen ausgelöst wurde - keine Sorge, der Account
 is sicher und es gab keinerlei Datenlecks."#.into()),
                         click_link: None,
@@ -776,15 +776,15 @@ is sicher und es gab keinerlei Datenlecks."#.into()),
                         expires: None,
                         button: None,
                         footer: None,
-                        button_text_request_new: Some("Neuen Link Anfordern".into()),
+                        button_text_request_new: Some("Passwort-Zurücksetzen Link anfordern".into()),
                     },
                     en: VarsTemplate {
-                        subject: "Password Reset Request".into(),
-                        header: "Password reset request for".into(),
+                        subject: "E-Mail registered already".into(),
+                        header: "E-Mail registered already - ".into(),
                         text: Some(r#"Someone tried to register a new account with your E-Mail address
 while an account exists already. If that was you, and it was a mistake, you
 can ignore this message. However, if you forgot your password, you can use
-the link belopw to reset it.
+the link below to reset it.
 If it was not you trying to register the new account - no need to worry.
 Your account has not been compromised and no data was leaked."#.into()),
                         click_link: None,
@@ -792,59 +792,71 @@ Your account has not been compromised and no data was leaked."#.into()),
                         expires: None,
                         button: None,
                         footer: None,
-                        button_text_request_new: Some("Request New Link".into()),
+                        button_text_request_new: Some("Request password reset Link".into()),
                     },
                     ko: VarsTemplate {
-                        subject: "密码重置请求".into(),
-                        header: "密码重置请求：".into(),
-                        text: None,
-                        click_link: Some("点击下方链接以打开密码重置表单。".into()),
-                        validity: Some("出于安全考虑，此链接仅在短时间内有效。".into()),
-                        expires: Some("链接过期时间".into()),
-                        button: Some("重置密码".into()),
-                        footer: Some("If this link has expired, you can request a new one.".into()),
-                        button_text_request_new: Some("Request New Link".into()),
+                        subject: "E-Mail registered already".into(),
+                        header: "E-Mail registered already - ".into(),
+                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+while an account exists already. If that was you, and it was a mistake, you
+can ignore this message. However, if you forgot your password, you can use
+the link below to reset it.
+If it was not you trying to register the new account - no need to worry.
+Your account has not been compromised and no data was leaked."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Request password reset Link".into()),
                     },
                     nb: VarsTemplate {
-                        subject: "Passordtilbakestilling etterspurt".into(),
-                        header: "Passordtilbakestilling etterspurt for".into(),
-                        text: None,
-                        click_link: Some("Klikk på lenken under for å tilbakestille passordet.".into()),
-                        validity: Some("Denne lenken er kun gyldig i en kort periode av sikkerhetsgrunner."
-                                .into()),
-                        expires: Some("Lenken utløper:".into()),
-                        button: Some("Tilbakestill passord".into()),
-                        footer: Some("Hvis lenken har utløpt, kan du be om en ny.".into()),
-                        button_text_request_new: Some("Be om ny lenke".into()),
+                        subject: "E-Mail registered already".into(),
+                        header: "E-Mail registered already - ".into(),
+                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+while an account exists already. If that was you, and it was a mistake, you
+can ignore this message. However, if you forgot your password, you can use
+the link below to reset it.
+If it was not you trying to register the new account - no need to worry.
+Your account has not been compromised and no data was leaked."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Request password reset Link".into()),
                     },
                     uk: VarsTemplate {
-                        subject: "Запит на скидання пароля".into(),
-                        header: "Запит на скидання пароля для".into(),
-                        text: None,
-                        click_link: Some("Натисніть посилання нижче, щоб перейти до форми скидання пароля."
-                                .into()),
-                        validity:
-                        Some("З міркувань безпеки це посилання дійсне лише протягом короткого часу."
-                                .into()),
-                        expires: Some("Посилання дійсне до:".into()),
-                        button: Some("Скинути пароль".into()),
-                        footer: Some(
-                            "Якщо термін дії посилання минув, ви можете запросити нове.".into(),
-                        ),
-                        button_text_request_new: Some("Запросити нове посилання".into()),
+                        subject: "E-Mail registered already".into(),
+                        header: "E-Mail registered already - ".into(),
+                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+while an account exists already. If that was you, and it was a mistake, you
+can ignore this message. However, if you forgot your password, you can use
+the link below to reset it.
+If it was not you trying to register the new account - no need to worry.
+Your account has not been compromised and no data was leaked."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Request password reset Link".into()),
                     },
                     zhhans: VarsTemplate {
-                        subject: "비밀번호 초기화 요청".into(),
-                        header: "비밀번호 초기화 요청:".into(),
-                        text: None,
-                        click_link:
-                        Some("비밀번호 초기화 요청 창으로 이동하려면, 아래의 링크를 클릭해 주세요."
-                                .into()),
-                        validity: Some("이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into()),
-                        expires: Some("링크 만료일:".into()),
-                        button: Some("비밀번호 초기화".into()),
-                        footer: Some("If this link has expired, you can request a new one.".into()),
-                        button_text_request_new: Some("Request New Link".into()),
+                        subject: "E-Mail registered already".into(),
+                        header: "E-Mail registered already - ".into(),
+                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+while an account exists already. If that was you, and it was a mistake, you
+can ignore this message. However, if you forgot your password, you can use
+the link below to reset it.
+If it was not you trying to register the new account - no need to worry.
+Your account has not been compromised and no data was leaked."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Request password reset Link".into()),
                     },
                 },
             },
