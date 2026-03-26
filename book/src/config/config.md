@@ -593,18 +593,6 @@ nodes = ["1 localhost:8100 localhost:8200"]
 # overwritten by: HQL_LOGS_UNTIL_SNAPSHOT
 #logs_until_snapshot = 10000
 
-# The artificial shutdown delay to add in multi-node environments.
-# This value is being added before finally shutting down a node
-# to make sure rolling releases can be executed graceful with
-# proper leader switches. You may want to increase this value if
-# you are in an environment with huge in-memory caches and you
-# want to provide a bit more headroom for the snapshot replication
-# after restarts.
-#
-# default: 5000
-# overwritten by: HQL_SHUTDOWN_DELAY_MILLS
-#shutdown_delay_millis = 5000
-
 # If given, these keys / certificates will be used to establish
 # TLS connections between nodes.
 #

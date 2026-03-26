@@ -923,7 +923,10 @@ It has just informative purposes."#
 }
 
 pub async fn generate(args: ArgsGenConfig) -> Result<(), StdError> {
-    if fs::try_exists(&args.output_file).await? && !args.overwrite {
+    if fs::try_exists(&args.output_file).await?
+        && !args.overwrite
+        && !fs::read(&args.output_file).await?.is_empty()
+    {
         return Err(format!(
             "Cannot generate '{}' - file exists already",
             args.output_file
@@ -933,15 +936,15 @@ pub async fn generate(args: ArgsGenConfig) -> Result<(), StdError> {
 
     let config = GenConfig::prompt().await?;
 
-    // check again after the time-consuming setup
-    if fs::try_exists(&args.output_file).await? {
-        fs::remove_file(&args.output_file).await?;
-    }
+    let _ = fs::remove_file(&args.output_file).await;
     let path = PathBuf::from(&args.output_file);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).await?;
     }
-    fs::write(&args.output_file, config.to_string()).await?;
+    fs::write(&path, config.to_string()).await?;
+
+    #[cfg(target_family = "unix")]
+    set_access_rights(path).await?;
 
     println!("\n\n{}\n", "=".repeat(40));
 
@@ -951,14 +954,26 @@ pub async fn generate(args: ArgsGenConfig) -> Result<(), StdError> {
 Keep in mind that this is only to get you started. This is by no means
 a full config. You can configure a lot more things, and especially when
 finally going into production, you should check the Book:
-
 https://sebadob.github.io/rauthy
-
-and / or the reference with all the config options:
-
+and / or the reference config with all available options:
 https://sebadob.github.io/rauthy/config/config.html
+
+NOTE: Depending on how you generated this file, you may need to adjust
+the uid:gid. If you plan to use it inside the original container directly,
+the file needs to be owned by user 10001:
+
+chown 10001:10001 /path/to/file
 "#
     );
+
+    Ok(())
+}
+
+async fn set_access_rights(path: PathBuf) -> Result<(), StdError> {
+    use std::fs::Permissions;
+    use std::os::unix::fs::PermissionsExt;
+
+    fs::set_permissions(&path, Permissions::from_mode(0o600)).await?;
 
     Ok(())
 }
