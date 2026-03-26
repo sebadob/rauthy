@@ -1,6 +1,6 @@
 use crate::database::DB;
 use cryptr::utils::secure_random_alnum;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use tracing::debug;
@@ -11,8 +11,8 @@ pub struct UserRevoke {
     pub code: String,
 }
 
-impl From<hiqlite::Row<'_>> for UserRevoke {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for UserRevoke {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             user_id: row.get("user_id"),
             code: row.get("code"),
@@ -73,10 +73,10 @@ ON CONFLICT (user_id) DO NOTHING
 RETURNING *"#;
 
         let slf = if is_hiqlite() {
-            DB::hql()
+            let mut row = DB::hql()
                 .execute_returning_one(sql, params!(user_id, code))
-                .await?
-                .into()
+                .await?;
+            Self::from(&mut row)
         } else {
             DB::pg_query_one(sql, &[&user_id, &code]).await?
         };

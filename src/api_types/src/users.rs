@@ -567,8 +567,8 @@ pub struct UserResponseSimple {
     pub picture_id: Option<String>,
 }
 
-impl From<hiqlite::Row<'_>> for UserResponseSimple {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for UserResponseSimple {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         let name: String = row.get("given_name");
         let given_name = if name.is_empty() { None } else { Some(name) };
 

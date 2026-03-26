@@ -12,7 +12,7 @@ use atrium_common::store::Store;
 use chrono::Utc;
 use cryptr::EncValue;
 use hiqlite::Row;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use itertools::Itertools;
 use rauthy_api_types::auth_providers::{
     ProviderCallbackRequest, ProviderLinkedUserResponse, ProviderLookupResponse, ProviderResponse,
@@ -180,8 +180,8 @@ pub struct AuthProvider {
     pub auto_link: bool,
 }
 
-impl<'r> From<hiqlite::Row<'r>> for AuthProvider {
-    fn from(mut row: Row<'r>) -> Self {
+impl<'r> From<&mut hiqlite::Row<'r>> for AuthProvider {
+    fn from(row: &mut Row<'r>) -> Self {
         let typ_str: String = row.get("typ");
         let typ = AuthProviderType::from(typ_str);
 

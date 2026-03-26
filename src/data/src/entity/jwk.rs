@@ -4,7 +4,7 @@ use crate::rauthy_config::RauthyConfig;
 use actix_web::web;
 use cryptr::{EncKeys, EncValue};
 use ed25519_compact::Noise;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use postgres_types::Type;
 use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
 use rauthy_common::constants::{
@@ -869,8 +869,8 @@ pub enum JwkKeyPairAlg {
     EdDSA,
 }
 
-impl<'r> From<hiqlite::Row<'r>> for JwkKeyPairAlg {
-    fn from(mut row: hiqlite::Row<'r>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for JwkKeyPairAlg {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         let sig: String = row.get("signature");
         JwkKeyPairAlg::from_str(&sig).expect("corrupted signature in database")
     }

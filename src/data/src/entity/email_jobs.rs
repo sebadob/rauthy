@@ -3,8 +3,7 @@ use crate::email;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
-use hiqlite::Row;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::email_jobs::{EmailJobFilterType, EmailJobRequest, EmailJobResponse};
 use rauthy_common::{is_hiqlite, markdown};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -133,8 +132,8 @@ impl Display for EmailJobFilter {
     }
 }
 
-impl From<hiqlite::Row<'_>> for EmailJob {
-    fn from(mut row: Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for EmailJob {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         // This downcasting is "safe" because Rauthy controls the input to the DB.
         let status = EmailJobStatus::from(row.get::<i64>("status") as i16);
         let filter = EmailJobFilter::from(row.get::<String>("filter").as_str());

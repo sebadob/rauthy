@@ -8,7 +8,7 @@ use actix_web::http::header::{
 };
 use actix_web::{HttpResponse, HttpResponseBuilder, web};
 use futures_util::StreamExt;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use image::ImageFormat;
 use image::imageops::FilterType;
 use rauthy_common::is_hiqlite;

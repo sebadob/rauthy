@@ -17,7 +17,7 @@ use chrono::Utc;
 use cryptr::EncValue;
 use deadpool_postgres::GenericClient;
 use hiqlite::Params;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::tos::ToSAwaitLoginResponse;
 use rauthy_api_types::users::{
     MfaPurpose, PasskeyResponse, WebauthnAuthFinishRequest, WebauthnAuthStartResponse,

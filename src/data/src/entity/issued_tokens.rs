@@ -1,7 +1,7 @@
 use crate::database::DB;
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::ops::Add;
@@ -17,8 +17,8 @@ pub struct IssuedToken {
     pub revoked: Option<bool>,
 }
 
-impl From<hiqlite::Row<'_>> for IssuedToken {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for IssuedToken {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             jti: row.get("jti"),
             user_id: row.get("user_id"),

@@ -1,7 +1,7 @@
 use crate::database::DB;
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::pam::PamSshAuthKeyResponse;
 use rauthy_common::utils::base64_encode;
 use rauthy_common::{is_hiqlite, sha256};
@@ -20,8 +20,8 @@ pub struct AuthorizedKey {
     pub comment: String,
 }
 
-impl From<hiqlite::Row<'_>> for AuthorizedKey {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for AuthorizedKey {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             // type cast is safe because Rauthy controls the input
             pam_uid: row.get::<i64>("pam_uid") as u32,

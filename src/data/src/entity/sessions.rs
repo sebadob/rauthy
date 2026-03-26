@@ -7,7 +7,7 @@ use actix_web::cookie::SameSite;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, cookie, web};
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_common::constants::{
     CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER,
@@ -58,8 +58,8 @@ impl Debug for Session {
     }
 }
 
-impl From<hiqlite::Row<'_>> for Session {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for Session {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         let state =
             SessionState::from_str(&row.get::<String>("state")).unwrap_or(SessionState::Unknown);
 

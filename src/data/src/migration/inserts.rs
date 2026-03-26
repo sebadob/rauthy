@@ -38,7 +38,7 @@ use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::Event;
 use cryptr::EncValue;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use std::cmp::max;

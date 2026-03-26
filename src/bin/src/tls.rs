@@ -33,7 +33,15 @@ pub async fn load_tls() -> rustls::ServerConfig {
         (key_path, cert_path)
     };
 
-    tls_hot_reload::load_server_config(key_path, cert_path).await
+    let ck = tls_hot_reload::CertifiedKeyWatched::new(key_path, cert_path)
+        .await
+        .expect("Cannot load TLS certificates");
+
+    rustls::ServerConfig::builder()
+        .with_no_client_auth()
+        .with_cert_resolver(ck)
+
+    // tls_hot_reload::load_server_config(key_path, cert_path).await
 }
 
 async fn check_generate_tls() {

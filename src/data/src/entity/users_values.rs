@@ -1,5 +1,5 @@
 use crate::database::{Cache, DB};
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::users::{UserValuesRequest, UserValuesResponse};
 use rauthy_common::constants::{CACHE_TTL_USER, IDX_USERS_VALUES};
 use rauthy_common::is_hiqlite;
@@ -19,8 +19,8 @@ pub struct UserValues {
     pub tz: Option<String>,
 }
 
-impl From<hiqlite::Row<'_>> for UserValues {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for UserValues {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             id: row.get("id"),
             birthdate: row.get("birthdate"),

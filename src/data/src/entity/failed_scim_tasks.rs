@@ -1,5 +1,5 @@
 use crate::database::DB;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use std::fmt::{Display, Formatter};
@@ -66,8 +66,8 @@ pub struct FailedScimTask {
     pub retry_count: i64,
 }
 
-impl<'r> From<hiqlite::Row<'r>> for FailedScimTask {
-    fn from(mut row: hiqlite::Row<'r>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for FailedScimTask {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             action: ScimAction::from(row.get::<String>("action").as_str()),
             client_id: row.get("client_id"),

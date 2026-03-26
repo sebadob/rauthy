@@ -1,6 +1,6 @@
 use crate::database::{Cache, DB};
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::tos::ToSUserAcceptResponse;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;

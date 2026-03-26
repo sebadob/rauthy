@@ -13,7 +13,7 @@ use chrono::Utc;
 use cryptr::{EncKeys, EncValue, utils};
 use deadpool_postgres::GenericClient;
 use hiqlite::Params;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest, ScimClientRequestResponse,

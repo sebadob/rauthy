@@ -3,7 +3,7 @@ use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use deadpool_postgres::GenericClient;
 use hiqlite::Params;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigTyp, UserAttrConfigValueResponse, UserAttrValueResponse,
     UserAttrValuesUpdateRequest,
@@ -26,8 +26,8 @@ pub struct UserAttrConfigEntity {
     pub user_editable: bool,
 }
 
-impl From<hiqlite::Row<'_>> for UserAttrConfigEntity {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for UserAttrConfigEntity {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         let typ = if let Ok(s) = row.try_get::<String>("typ") {
             UserAttrConfigTyp::try_from(s.as_str()).ok()
         } else {

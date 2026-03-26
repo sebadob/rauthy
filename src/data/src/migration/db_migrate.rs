@@ -40,7 +40,7 @@ use crate::entity::webids::WebId;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::migration::inserts;
 use crate::rauthy_config::RauthyConfig;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use itertools::Itertools;
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::utils::deserialize;

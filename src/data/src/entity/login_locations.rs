@@ -8,7 +8,7 @@ use crate::ipgeo::get_location;
 use actix_web::HttpRequest;
 use actix_web::http::header::USER_AGENT;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -26,8 +26,8 @@ pub struct LoginLocation {
     pub location: Option<String>,
 }
 
-impl From<hiqlite::Row<'_>> for LoginLocation {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for LoginLocation {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             user_id: row.get("user_id"),
             browser_id: row.get("browser_id"),

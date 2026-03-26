@@ -40,7 +40,6 @@ futures-util = { workspace = true }
 hex = { workspace = true }
 hickory-resolver = { workspace = true }
 hiqlite = { workspace = true }
-hiqlite-macros = { workspace = true }
 hmac-sha256 = { workspace = true }
 hmac-sha512 = { workspace = true }
 image = { workspace = true }

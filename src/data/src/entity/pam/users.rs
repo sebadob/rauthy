@@ -1,7 +1,7 @@
 use crate::database::DB;
 use crate::entity::pam::authorized_keys::AuthorizedKey;
 use crate::entity::pam::groups::{PamGroup, PamGroupType};
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::pam::{PamGroupUserLink, PamSshAuthKeyResponse, PamUserResponse};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
@@ -16,8 +16,8 @@ pub struct PamUser {
     pub shell: String,
 }
 
-impl From<hiqlite::Row<'_>> for PamUser {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for PamUser {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             id: row.get::<i64>("id") as u32,
             name: row.get("name"),

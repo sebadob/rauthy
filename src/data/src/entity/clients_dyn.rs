@@ -2,7 +2,7 @@ use crate::database::{Cache, DB};
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
 use cryptr::EncValue;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};

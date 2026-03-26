@@ -4,7 +4,7 @@ use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::entity::well_known::WellKnown;
 use deadpool_postgres::GenericClient;
 use hiqlite::Params;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_CLIENTS, IDX_SCOPES};
 use rauthy_common::is_hiqlite;

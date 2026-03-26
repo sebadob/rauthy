@@ -25,7 +25,7 @@ use argon2::PasswordHash;
 use chrono::Utc;
 use core::str::Split;
 use hiqlite::Params;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{

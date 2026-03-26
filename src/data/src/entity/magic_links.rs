@@ -3,7 +3,7 @@ use crate::database::DB;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};

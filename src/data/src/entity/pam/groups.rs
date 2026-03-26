@@ -1,6 +1,6 @@
 use crate::database::DB;
 use crate::entity::pam::hosts::PamHost;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::pam::{PamGroupMembersResponse, PamGroupResponse};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -47,8 +47,8 @@ pub struct PamGroup {
     pub typ: PamGroupType,
 }
 
-impl From<hiqlite::Row<'_>> for PamGroup {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for PamGroup {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             id: row.get::<i64>("id") as u32,
             name: row.get("name"),

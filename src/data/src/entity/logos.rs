@@ -2,7 +2,7 @@ use crate::database::{Cache, DB};
 use crate::entity::auth_providers::AuthProviderTemplate;
 use actix_web::web;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use image::imageops::FilterType;
 use image::{EncodableLayout, ImageFormat};
 use rauthy_common::constants::{
@@ -84,8 +84,8 @@ impl From<tokio_postgres::Row> for Logo {
     }
 }
 
-impl<'r> From<hiqlite::Row<'r>> for Logo {
-    fn from(mut row: hiqlite::Row<'r>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for Logo {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             id: row.get("id"),
             res: LogoRes::from(row.get::<String>("res")),

@@ -5,7 +5,7 @@ use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use chrono::{DateTime, Timelike, Utc};
 use hiqlite::Row;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::events::EventResponse;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_local_hostname, get_rand};
@@ -394,8 +394,8 @@ pub struct Event {
     pub text: Option<String>,
 }
 
-impl<'r> From<hiqlite::Row<'r>> for Event {
-    fn from(mut row: Row<'r>) -> Self {
+impl<'r> From<&mut hiqlite::Row<'r>> for Event {
+    fn from(row: &mut Row<'r>) -> Self {
         Self {
             id: row.get("id"),
             timestamp: row.get("timestamp"),

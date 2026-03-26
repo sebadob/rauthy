@@ -1,6 +1,6 @@
 use crate::database::{Cache, DB};
 use crate::rauthy_config::RauthyConfig;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::users::WebIdResponse;
 use rauthy_common::constants::CACHE_TTL_USER;
 use rauthy_common::is_hiqlite;

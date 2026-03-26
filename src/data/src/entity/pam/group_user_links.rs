@@ -1,5 +1,5 @@
 use crate::database::DB;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 
@@ -10,8 +10,8 @@ pub struct PamGroupUserLink {
     pub wheel: bool,
 }
 
-impl From<hiqlite::Row<'_>> for PamGroupUserLink {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for PamGroupUserLink {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             uid: row.get::<i64>("uid") as u32,
             gid: row.get::<i64>("gid") as u32,
