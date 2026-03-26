@@ -3,11 +3,12 @@ use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
 use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::ops::Add;
 use tracing::debug;
 
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone, FromRow, FromPgRow)]
 pub struct IssuedToken {
     pub jti: String,
     pub user_id: Option<String>,
@@ -15,19 +16,6 @@ pub struct IssuedToken {
     pub sid: Option<String>,
     pub exp: i64,
     pub revoked: Option<bool>,
-}
-
-impl From<tokio_postgres::Row> for IssuedToken {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            jti: row.get("jti"),
-            user_id: row.get("user_id"),
-            did: row.get("did"),
-            sid: row.get("sid"),
-            exp: row.get("exp"),
-            revoked: row.get("revoked"),
-        }
-    }
 }
 
 impl IssuedToken {

@@ -3,27 +3,17 @@ use chrono::Utc;
 use hiqlite::macros::params;
 use rauthy_api_types::tos::ToSUserAcceptResponse;
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromPgRow)]
 pub struct ToSUserAccept {
     pub user_id: String,
     pub tos_ts: i64,
     pub accept_ts: i64,
     pub location: String,
-}
-
-impl From<tokio_postgres::Row> for ToSUserAccept {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            user_id: row.get("user_id"),
-            tos_ts: row.get("tos_ts"),
-            accept_ts: row.get("accept_ts"),
-            location: row.get("location"),
-        }
-    }
 }
 
 impl ToSUserAccept {

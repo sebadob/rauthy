@@ -2,12 +2,13 @@ use crate::database::DB;
 use chrono::Utc;
 use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 use time::OffsetDateTime;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, FromPgRow)]
 pub struct RefreshTokenDevice {
     pub id: String,
     pub device_id: String,
@@ -31,20 +32,6 @@ impl Debug for RefreshTokenDevice {
             self.scope,
             self.access_token_jti,
         )
-    }
-}
-
-impl From<tokio_postgres::Row> for RefreshTokenDevice {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            device_id: row.get("device_id"),
-            user_id: row.get("user_id"),
-            nbf: row.get("nbf"),
-            exp: row.get("exp"),
-            scope: row.get("scope"),
-            access_token_jti: row.get("access_token_jti"),
-        }
     }
 }
 

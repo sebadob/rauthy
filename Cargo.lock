@@ -5006,6 +5006,7 @@ dependencies = [
  "openssl",
  "openssl-sys",
  "rauthy-common",
+ "rauthy-derive",
  "rauthy-error",
  "serde",
  "serde_json",
@@ -5093,6 +5094,7 @@ dependencies = [
  "rand_core 0.10.0",
  "rauthy-api-types",
  "rauthy-common",
+ "rauthy-derive",
  "rauthy-error",
  "rauthy-notify",
  "rcgen",
@@ -5128,6 +5130,15 @@ dependencies = [
  "webauthn-rs",
  "webauthn-rs-proto",
  "webpki-roots",
+]
+
+[[package]]
+name = "rauthy-derive"
+version = "0.35.0-20260220"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]

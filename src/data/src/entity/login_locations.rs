@@ -11,12 +11,13 @@ use chrono::Utc;
 use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::real_ip_from_req;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::net::IpAddr;
 use tokio::task;
 use tracing::{debug, error, info};
 
-#[derive(Debug, FromRow)]
+#[derive(Debug, FromRow, FromPgRow)]
 pub struct LoginLocation {
     pub user_id: String,
     pub browser_id: String,
@@ -24,19 +25,6 @@ pub struct LoginLocation {
     pub last_seen: i64,
     pub user_agent: String,
     pub location: Option<String>,
-}
-
-impl From<tokio_postgres::Row> for LoginLocation {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            user_id: row.get("user_id"),
-            browser_id: row.get("browser_id"),
-            ip: row.get("ip"),
-            last_seen: row.get("last_seen"),
-            user_agent: row.get("user_agent"),
-            location: row.get("location"),
-        }
-    }
 }
 
 impl LoginLocation {

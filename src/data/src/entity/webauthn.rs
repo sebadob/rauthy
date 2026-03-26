@@ -26,6 +26,7 @@ use rauthy_api_types::users::{
 use rauthy_common::constants::{COOKIE_MFA, IDX_WEBAUTHN};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{base64_decode, base64_encode, deserialize, get_rand, serialize};
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
@@ -39,7 +40,7 @@ use webauthn_rs_proto::{
     AuthenticatorSelectionCriteria, ResidentKeyRequirement, UserVerificationPolicy,
 };
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, FromPgRow)]
 pub struct PasskeyEntity {
     pub user_id: String,
     pub name: String,
@@ -49,21 +50,6 @@ pub struct PasskeyEntity {
     pub registered: i64,
     pub last_used: i64,
     pub user_verified: Option<bool>,
-}
-
-impl From<tokio_postgres::Row> for PasskeyEntity {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            user_id: row.get("user_id"),
-            name: row.get("name"),
-            passkey_user_id: row.get("passkey_user_id"),
-            passkey: row.get("passkey"),
-            credential_id: row.get("credential_id"),
-            registered: row.get("registered"),
-            last_used: row.get("last_used"),
-            user_verified: row.get("user_verified"),
-        }
-    }
 }
 
 impl Debug for PasskeyEntity {

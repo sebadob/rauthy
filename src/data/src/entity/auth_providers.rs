@@ -26,6 +26,7 @@ use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_no_pad_decode, deserialize, new_store_id, serialize,
 };
 use rauthy_common::{http_client, is_hiqlite};
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, value};
@@ -150,7 +151,7 @@ impl AuthProviderLinkCookie {
 }
 
 /// Upstream Auth Provider for upstream logins without a local Rauthy account
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, FromPgRow)]
 pub struct AuthProvider {
     pub id: String,
     pub name: String,
@@ -178,37 +179,6 @@ pub struct AuthProvider {
     pub client_secret_post: bool,
     pub auto_onboarding: bool,
     pub auto_link: bool,
-}
-
-impl From<tokio_postgres::Row> for AuthProvider {
-    fn from(row: tokio_postgres::Row) -> Self {
-        let typ_str: String = row.get("typ");
-        let typ = AuthProviderType::from(typ_str);
-
-        Self {
-            id: row.get("id"),
-            name: row.get("name"),
-            enabled: row.get("enabled"),
-            typ,
-            issuer: row.get("issuer"),
-            authorization_endpoint: row.get("authorization_endpoint"),
-            token_endpoint: row.get("token_endpoint"),
-            userinfo_endpoint: row.get("userinfo_endpoint"),
-            jwks_endpoint: row.get("jwks_endpoint"),
-            client_id: row.get("client_id"),
-            secret: row.get("secret"),
-            scope: row.get("scope"),
-            admin_claim_path: row.get("admin_claim_path"),
-            admin_claim_value: row.get("admin_claim_value"),
-            mfa_claim_path: row.get("mfa_claim_path"),
-            mfa_claim_value: row.get("mfa_claim_value"),
-            use_pkce: row.get("use_pkce"),
-            client_secret_basic: row.get("client_secret_basic"),
-            client_secret_post: row.get("client_secret_post"),
-            auto_onboarding: row.get("auto_onboarding"),
-            auto_link: row.get("auto_link"),
-        }
-    }
 }
 
 impl AuthProvider {

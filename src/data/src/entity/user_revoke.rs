@@ -2,22 +2,14 @@ use crate::database::DB;
 use cryptr::utils::secure_random_alnum;
 use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
 use tracing::debug;
 
-#[derive(Debug, FromRow)]
+#[derive(Debug, FromRow, FromPgRow)]
 pub struct UserRevoke {
     pub user_id: String,
     pub code: String,
-}
-
-impl From<tokio_postgres::Row> for UserRevoke {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            user_id: row.get("user_id"),
-            code: row.get("code"),
-        }
-    }
 }
 
 impl UserRevoke {

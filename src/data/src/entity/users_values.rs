@@ -3,10 +3,11 @@ use hiqlite::macros::{FromRow, params};
 use rauthy_api_types::users::{UserValuesRequest, UserValuesResponse};
 use rauthy_common::constants::{CACHE_TTL_USER, IDX_USERS_VALUES};
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, FromRow, FromPgRow)]
 pub struct UserValues {
     pub id: String,
     pub birthdate: Option<String>,
@@ -17,22 +18,6 @@ pub struct UserValues {
     pub country: Option<String>,
     pub preferred_username: Option<String>,
     pub tz: Option<String>,
-}
-
-impl From<tokio_postgres::Row> for UserValues {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            birthdate: row.get("birthdate"),
-            phone: row.get("phone"),
-            street: row.get("street"),
-            zip: row.get("zip"),
-            city: row.get("city"),
-            country: row.get("country"),
-            preferred_username: row.get("preferred_username"),
-            tz: row.get("tz"),
-        }
-    }
 }
 
 impl UserValues {

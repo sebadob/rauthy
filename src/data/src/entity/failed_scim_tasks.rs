@@ -1,6 +1,7 @@
 use crate::database::DB;
 use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -63,23 +64,13 @@ impl Display for ScimAction {
     }
 }
 
-#[derive(Debug, FromRow)]
+#[derive(Debug, FromRow, FromPgRow)]
 pub struct FailedScimTask {
     // pub action: ScimAction,
     pub client_id: String,
     #[column(parse)]
     pub action: ScimAction,
-    pub retry_count: i64,
-}
-
-impl From<tokio_postgres::Row> for FailedScimTask {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            action: row.get::<_, String>("action").parse().unwrap(),
-            client_id: row.get("client_id"),
-            retry_count: row.get::<_, i32>("retry_count") as i64,
-        }
-    }
+    pub retry_count: i32,
 }
 
 impl FailedScimTask {

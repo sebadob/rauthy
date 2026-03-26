@@ -12,6 +12,7 @@ doctest = false
 [dependencies]
 rauthy-api-types = { path = "../api_types" }
 rauthy-common = { path = "../common" }
+rauthy-derive = { path = "../macros" }
 rauthy-error = { path = "../error" }
 rauthy-notify = { path = "../notify" }
 

@@ -6,6 +6,7 @@ use chrono::Utc;
 use hiqlite::macros::{FromRow, params};
 use rauthy_api_types::email_jobs::{EmailJobFilterType, EmailJobRequest, EmailJobResponse};
 use rauthy_common::{is_hiqlite, markdown};
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
@@ -13,7 +14,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use tracing::{error, info, trace, warn};
 
-#[derive(Debug, FromRow)]
+#[derive(Debug, FromRow, FromPgRow)]
 pub struct EmailJob {
     pub id: i64,
     pub scheduled: Option<i64>,
@@ -139,26 +140,6 @@ impl Display for EmailJobFilter {
             EmailJobFilter::HasNotRole(s) => {
                 write!(f, "not_role_{s}")
             }
-        }
-    }
-}
-
-impl From<tokio_postgres::Row> for EmailJob {
-    fn from(row: tokio_postgres::Row) -> Self {
-        let status = EmailJobStatus::from(row.get::<_, i64>("status"));
-        let filter: EmailJobFilter = row.get::<_, String>("filter").parse().unwrap();
-        let content_type: EmailContentType = row.get::<_, String>("content_type").parse().unwrap();
-
-        Self {
-            id: row.get("id"),
-            scheduled: row.get("scheduled"),
-            status,
-            updated: row.get("updated"),
-            last_user_ts: row.get("last_user_ts"),
-            filter,
-            content_type,
-            subject: row.get("subject"),
-            body: row.get("body"),
         }
     }
 }

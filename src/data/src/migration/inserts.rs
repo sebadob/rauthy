@@ -597,7 +597,7 @@ VALUES ($1, $2, $3)"#;
         for b in data_before {
             DB::pg_execute(
                 sql_2,
-                &[&b.client_id, &b.action.to_string(), &(b.retry_count as i32)],
+                &[&b.client_id, &b.action.to_string(), &b.retry_count],
             )
             .await?;
         }

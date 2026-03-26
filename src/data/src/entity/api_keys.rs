@@ -6,11 +6,12 @@ use rauthy_api_types::api_keys::ApiKeyResponse;
 use rauthy_common::constants::{API_KEY_LENGTH, CACHE_TTL_APP};
 use rauthy_common::utils::{deserialize, get_rand, serialize};
 use rauthy_common::{is_hiqlite, sha256};
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, FromPgRow)]
 pub struct ApiKeyEntity {
     pub name: String,
     pub secret: Vec<u8>,
@@ -18,19 +19,6 @@ pub struct ApiKeyEntity {
     pub expires: Option<i64>,
     pub enc_key_id: String,
     pub access: Vec<u8>,
-}
-
-impl From<tokio_postgres::Row> for ApiKeyEntity {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            name: row.get("name"),
-            secret: row.get("secret"),
-            created: row.get("created"),
-            expires: row.get("expires"),
-            enc_key_id: row.get("enc_key_id"),
-            access: row.get("access"),
-        }
-    }
 }
 
 impl Debug for ApiKeyEntity {

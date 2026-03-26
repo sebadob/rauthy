@@ -14,6 +14,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -24,7 +25,7 @@ use std::ops::Add;
 use std::str::FromStr;
 use tracing::{debug, trace, warn};
 
-#[derive(Clone, Serialize, Deserialize, FromRow)]
+#[derive(Clone, Serialize, Deserialize, FromRow, FromPgRow)]
 pub struct Session {
     pub id: String,
     pub csrf_token: String,
@@ -56,23 +57,6 @@ impl Debug for Session {
             self.last_seen,
             self.remote_ip
         )
-    }
-}
-
-impl From<tokio_postgres::Row> for Session {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            csrf_token: row.get("csrf_token"),
-            user_id: row.get("user_id"),
-            roles: row.get("roles"),
-            groups: row.get("groups"),
-            is_mfa: row.get("is_mfa"),
-            state: row.get::<_, String>("state").parse().unwrap(),
-            exp: row.get("exp"),
-            last_seen: row.get("last_seen"),
-            remote_ip: row.get("remote_ip"),
-        }
     }
 }
 

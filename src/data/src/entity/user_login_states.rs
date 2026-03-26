@@ -2,27 +2,17 @@ use crate::database::DB;
 use chrono::Utc;
 use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, FromPgRow)]
 pub struct UserLoginState {
     // Unix Timestamp in Millis - used inside PK
     pub timestamp: i64,
     pub user_id: String,
     pub client_id: String,
     pub session_id: Option<String>,
-}
-
-impl From<tokio_postgres::Row> for UserLoginState {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            timestamp: row.get("timestamp"),
-            user_id: row.get("user_id"),
-            client_id: row.get("client_id"),
-            session_id: row.get("session_id"),
-        }
-    }
 }
 
 /// CRUD

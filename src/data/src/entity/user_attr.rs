@@ -10,6 +10,7 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::constants::{CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_ATTR_CONFIG};
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -17,7 +18,7 @@ use std::collections::{HashMap, HashSet};
 
 // Additional custom attributes for users. These can be set for every user and then mapped to a
 // scope, to include them in JWT tokens.
-#[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
+#[derive(Clone, Debug, Serialize, Deserialize, FromRow, FromPgRow)]
 pub struct UserAttrConfigEntity {
     pub name: String,
     pub desc: Option<String>,
@@ -25,24 +26,6 @@ pub struct UserAttrConfigEntity {
     #[column(parse)]
     pub typ: Option<UserAttrConfigTyp>,
     pub user_editable: bool,
-}
-
-impl From<tokio_postgres::Row> for UserAttrConfigEntity {
-    fn from(row: tokio_postgres::Row) -> Self {
-        let typ = if let Ok(s) = row.try_get::<_, String>("typ") {
-            s.parse::<UserAttrConfigTyp>().ok()
-        } else {
-            None
-        };
-
-        Self {
-            name: row.get("name"),
-            desc: row.get("desc"),
-            default_value: row.get("default_value"),
-            typ,
-            user_editable: row.get("user_editable"),
-        }
-    }
 }
 
 // CRUD
@@ -464,21 +447,11 @@ impl From<UserAttrConfigEntity> for UserAttrConfigValueResponse {
 
 /// The value for a pre-defined UserAttrConfig with all `serde_json::Value` being valid values.
 /// Important: There is no further input validation / restriction
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, FromPgRow)]
 pub struct UserAttrValueEntity {
     pub user_id: String,
     pub key: String,
     pub value: Vec<u8>,
-}
-
-impl From<tokio_postgres::Row> for UserAttrValueEntity {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            user_id: row.get("user_id"),
-            key: row.get("key"),
-            value: row.get("value"),
-        }
-    }
 }
 
 impl UserAttrValueEntity {

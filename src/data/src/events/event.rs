@@ -848,7 +848,7 @@ impl Event {
         )
     }
 
-    pub fn scim_task_failed(client_id: &str, action: &ScimAction, retries: i64) -> Self {
+    pub fn scim_task_failed(client_id: &str, action: &ScimAction, retries: i32) -> Self {
         Self::new(
             RauthyConfig::get()
                 .vars
@@ -857,7 +857,7 @@ impl Event {
                 .clone(),
             EventType::BackchannelLogoutFailed,
             None,
-            Some(retries),
+            Some(retries as i64),
             Some(format!("{client_id} / {action:?}")),
         )
     }

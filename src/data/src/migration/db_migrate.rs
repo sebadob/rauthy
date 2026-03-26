@@ -17,7 +17,7 @@ use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::pam::authorized_keys::AuthorizedKey;
-use crate::entity::pam::groups::{PamGroup, PamGroupType};
+use crate::entity::pam::groups::PamGroup;
 use crate::entity::pam::hosts::PamHost;
 use crate::entity::pam::users::PamUser;
 use crate::entity::password::RecentPasswordsEntity;
@@ -321,7 +321,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
             Ok(FailedScimTask {
                 action: row.get::<_, String>("action")?.parse().unwrap(),
                 client_id: row.get("client_id")?,
-                retry_count: row.get::<_, i64>("retry_count")?,
+                retry_count: row.get::<_, i64>("retry_count")? as i32,
             })
         })?
         .map(|r| r.unwrap())
@@ -374,7 +374,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
             Ok(PamGroup {
                 id: row.get::<_, i64>("id")? as u32,
                 name: row.get("name")?,
-                typ: PamGroupType::from(row.get::<_, String>("typ")?.as_str()),
+                typ: row.get::<_, String>("typ")?.parse().unwrap(),
             })
         })?
         .map(|r| r.unwrap())
@@ -750,15 +750,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // FAILED SCIM TASKS
     debug!("Migrating table: failed_scim_tasks");
-    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM failed_scim_tasks", &[], 0)
-        .await?
-        .into_iter()
-        .map(|row| FailedScimTask {
-            action: row.get::<_, String>("action").parse().unwrap(),
-            client_id: row.get("client_id"),
-            retry_count: row.get::<_, i32>("retry_count") as i64,
-        })
-        .collect::<Vec<_>>();
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM failed_scim_tasks", &[], 0).await?;
     inserts::failed_scim_tasks(before).await?;
 
     // RECENT PASSWORDS
