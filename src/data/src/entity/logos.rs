@@ -2,7 +2,7 @@ use crate::database::{Cache, DB};
 use crate::entity::auth_providers::AuthProviderTemplate;
 use actix_web::web;
 use chrono::Utc;
-use hiqlite::macros::params;
+use hiqlite::macros::{FromRow, params};
 use image::imageops::FilterType;
 use image::{EncodableLayout, ImageFormat};
 use rauthy_common::constants::{
@@ -63,9 +63,10 @@ pub enum LogoType {
     AuthProvider,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Logo {
     pub id: String,
+    #[column(from_string)]
     pub res: LogoRes,
     pub content_type: String,
     pub data: Vec<u8>,
@@ -77,18 +78,6 @@ impl From<tokio_postgres::Row> for Logo {
         Self {
             id: row.get("id"),
             res: LogoRes::from(row.get::<_, String>("res")),
-            content_type: row.get("content_type"),
-            data: row.get("data"),
-            updated: row.get("updated"),
-        }
-    }
-}
-
-impl From<&mut hiqlite::Row<'_>> for Logo {
-    fn from(row: &mut hiqlite::Row<'_>) -> Self {
-        Self {
-            id: row.get("id"),
-            res: LogoRes::from(row.get::<String>("res")),
             content_type: row.get("content_type"),
             data: row.get("data"),
             updated: row.get("updated"),

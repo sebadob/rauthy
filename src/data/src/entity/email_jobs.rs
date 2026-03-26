@@ -3,23 +3,27 @@ use crate::email;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
-use hiqlite::macros::params;
+use hiqlite::macros::{FromRow, params};
 use rauthy_api_types::email_jobs::{EmailJobFilterType, EmailJobRequest, EmailJobResponse};
 use rauthy_common::{is_hiqlite, markdown};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 use std::time::Duration;
 use tracing::{error, info, trace, warn};
 
-#[derive(Debug)]
+#[derive(Debug, FromRow)]
 pub struct EmailJob {
     pub id: i64,
     pub scheduled: Option<i64>,
+    #[column(from_i64)]
     pub status: EmailJobStatus,
     pub updated: i64,
     pub last_user_ts: Option<String>,
+    #[column(parse)]
     pub filter: EmailJobFilter,
+    #[column(parse)]
     pub content_type: EmailContentType,
     pub subject: String,
     pub body: String,
@@ -32,13 +36,16 @@ pub enum EmailContentType {
     Html,
 }
 
-impl From<&str> for EmailContentType {
-    fn from(s: &str) -> Self {
-        match s {
+impl FromStr for EmailContentType {
+    type Err = ErrorResponse;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = match s {
             "markdown" => Self::Markdown,
             "html" => Self::Html,
             _ => Self::Text,
-        }
+        };
+        Ok(slf)
     }
 }
 
@@ -78,8 +85,8 @@ impl EmailJobStatus {
     }
 }
 
-impl From<i16> for EmailJobStatus {
-    fn from(value: i16) -> Self {
+impl From<i64> for EmailJobStatus {
+    fn from(value: i64) -> Self {
         match value {
             0 => Self::Open,
             1 => Self::Finished,
@@ -91,9 +98,11 @@ impl From<i16> for EmailJobStatus {
     }
 }
 
-impl From<&str> for EmailJobFilter {
-    fn from(s: &str) -> Self {
-        if let Some(group) = s.strip_prefix("group_") {
+impl FromStr for EmailJobFilter {
+    type Err = ErrorResponse;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = if let Some(group) = s.strip_prefix("group_") {
             Self::InGroup(group.to_string())
         } else if let Some(group) = s.strip_prefix("not_group_") {
             Self::NotInGroup(group.to_string())
@@ -106,7 +115,9 @@ impl From<&str> for EmailJobFilter {
             Self::None
         } else {
             Self::None
-        }
+        };
+
+        Ok(slf)
     }
 }
 
@@ -132,32 +143,11 @@ impl Display for EmailJobFilter {
     }
 }
 
-impl From<&mut hiqlite::Row<'_>> for EmailJob {
-    fn from(row: &mut hiqlite::Row<'_>) -> Self {
-        // This downcasting is "safe" because Rauthy controls the input to the DB.
-        let status = EmailJobStatus::from(row.get::<i64>("status") as i16);
-        let filter = EmailJobFilter::from(row.get::<String>("filter").as_str());
-        let content_type = EmailContentType::from(row.get::<String>("content_type").as_str());
-
-        Self {
-            id: row.get("id"),
-            scheduled: row.get("scheduled"),
-            status,
-            updated: row.get("updated"),
-            last_user_ts: row.get("last_user_ts"),
-            filter,
-            content_type,
-            subject: row.get("subject"),
-            body: row.get("body"),
-        }
-    }
-}
-
 impl From<tokio_postgres::Row> for EmailJob {
     fn from(row: tokio_postgres::Row) -> Self {
-        let status = EmailJobStatus::from(row.get::<_, i16>("status"));
-        let filter = EmailJobFilter::from(row.get::<_, String>("filter").as_str());
-        let content_type = EmailContentType::from(row.get::<_, String>("content_type").as_str());
+        let status = EmailJobStatus::from(row.get::<_, i64>("status"));
+        let filter: EmailJobFilter = row.get::<_, String>("filter").parse().unwrap();
+        let content_type: EmailContentType = row.get::<_, String>("content_type").parse().unwrap();
 
         Self {
             id: row.get("id"),

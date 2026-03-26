@@ -11,8 +11,7 @@ use atrium_api::xrpc::http::header::{ACCEPT, AUTHORIZATION};
 use atrium_common::store::Store;
 use chrono::Utc;
 use cryptr::EncValue;
-use hiqlite::Row;
-use hiqlite::macros::params;
+use hiqlite::macros::{FromRow, params};
 use itertools::Itertools;
 use rauthy_api_types::auth_providers::{
     ProviderCallbackRequest, ProviderLinkedUserResponse, ProviderLookupResponse, ProviderResponse,
@@ -151,11 +150,12 @@ impl AuthProviderLinkCookie {
 }
 
 /// Upstream Auth Provider for upstream logins without a local Rauthy account
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AuthProvider {
     pub id: String,
     pub name: String,
     pub enabled: bool,
+    #[column(from_string)]
     pub typ: AuthProviderType,
 
     pub issuer: String,
@@ -178,37 +178,6 @@ pub struct AuthProvider {
     pub client_secret_post: bool,
     pub auto_onboarding: bool,
     pub auto_link: bool,
-}
-
-impl<'r> From<&mut hiqlite::Row<'r>> for AuthProvider {
-    fn from(row: &mut Row<'r>) -> Self {
-        let typ_str: String = row.get("typ");
-        let typ = AuthProviderType::from(typ_str);
-
-        Self {
-            id: row.get("id"),
-            name: row.get("name"),
-            enabled: row.get("enabled"),
-            typ,
-            issuer: row.get("issuer"),
-            authorization_endpoint: row.get("authorization_endpoint"),
-            token_endpoint: row.get("token_endpoint"),
-            userinfo_endpoint: row.get("userinfo_endpoint"),
-            jwks_endpoint: row.get("jwks_endpoint"),
-            client_id: row.get("client_id"),
-            secret: row.get("secret"),
-            scope: row.get("scope"),
-            admin_claim_path: row.get("admin_claim_path"),
-            admin_claim_value: row.get("admin_claim_value"),
-            mfa_claim_path: row.get("mfa_claim_path"),
-            mfa_claim_value: row.get("mfa_claim_value"),
-            use_pkce: row.get("use_pkce"),
-            client_secret_basic: row.get("client_secret_basic"),
-            client_secret_post: row.get("client_secret_post"),
-            auto_onboarding: row.get("auto_onboarding"),
-            auto_link: row.get("auto_link"),
-        }
-    }
 }
 
 impl From<tokio_postgres::Row> for AuthProvider {

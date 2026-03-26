@@ -9,7 +9,7 @@ use crate::entity::db_version::DbVersion;
 use crate::entity::devices::DeviceEntity;
 use crate::entity::email_jobs::{EmailContentType, EmailJob, EmailJobFilter, EmailJobStatus};
 use crate::entity::failed_backchannel_logout::FailedBackchannelLogout;
-use crate::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
+use crate::entity::failed_scim_tasks::FailedScimTask;
 use crate::entity::groups::Group;
 use crate::entity::issued_tokens::IssuedToken;
 use crate::entity::jwk::Jwk;
@@ -319,7 +319,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     let before = stmt
         .query_map([], |row| {
             Ok(FailedScimTask {
-                action: ScimAction::from(row.get::<_, String>("action")?.as_str()),
+                action: row.get::<_, String>("action")?.parse().unwrap(),
                 client_id: row.get("client_id")?,
                 retry_count: row.get::<_, i64>("retry_count")?,
             })
@@ -474,10 +474,10 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     let mut stmt = conn.prepare("SELECT * FROM email_jobs")?;
     let before = stmt
         .query_map([], |row| {
-            let status = EmailJobStatus::from(row.get::<_, i64>("status")? as i16);
-            let filter = EmailJobFilter::from(row.get::<_, String>("filter")?.as_str());
-            let content_type =
-                EmailContentType::from(row.get::<_, String>("content_type")?.as_str());
+            let status = EmailJobStatus::from(row.get::<_, i64>("status")?);
+            let filter: EmailJobFilter = row.get::<_, String>("filter")?.parse().unwrap();
+            let content_type: EmailContentType =
+                row.get::<_, String>("content_type")?.parse().unwrap();
 
             Ok(EmailJob {
                 id: row.get("id")?,
@@ -754,7 +754,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
         .await?
         .into_iter()
         .map(|row| FailedScimTask {
-            action: ScimAction::from(row.get::<_, String>("action").as_str()),
+            action: row.get::<_, String>("action").parse().unwrap(),
             client_id: row.get("client_id"),
             retry_count: row.get::<_, i32>("retry_count") as i64,
         })

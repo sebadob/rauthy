@@ -3,7 +3,7 @@ use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use deadpool_postgres::GenericClient;
 use hiqlite::Params;
-use hiqlite::macros::params;
+use hiqlite::macros::{FromRow, params};
 use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigTyp, UserAttrConfigValueResponse, UserAttrValueResponse,
     UserAttrValuesUpdateRequest,
@@ -17,37 +17,20 @@ use std::collections::{HashMap, HashSet};
 
 // Additional custom attributes for users. These can be set for every user and then mapped to a
 // scope, to include them in JWT tokens.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
 pub struct UserAttrConfigEntity {
     pub name: String,
     pub desc: Option<String>,
     pub default_value: Option<Vec<u8>>,
+    #[column(parse)]
     pub typ: Option<UserAttrConfigTyp>,
     pub user_editable: bool,
-}
-
-impl From<&mut hiqlite::Row<'_>> for UserAttrConfigEntity {
-    fn from(row: &mut hiqlite::Row<'_>) -> Self {
-        let typ = if let Ok(s) = row.try_get::<String>("typ") {
-            UserAttrConfigTyp::try_from(s.as_str()).ok()
-        } else {
-            None
-        };
-
-        Self {
-            name: row.get("name"),
-            desc: row.get("desc"),
-            default_value: row.get("default_value"),
-            typ,
-            user_editable: row.get("user_editable"),
-        }
-    }
 }
 
 impl From<tokio_postgres::Row> for UserAttrConfigEntity {
     fn from(row: tokio_postgres::Row) -> Self {
         let typ = if let Ok(s) = row.try_get::<_, String>("typ") {
-            UserAttrConfigTyp::try_from(s.as_str()).ok()
+            s.parse::<UserAttrConfigTyp>().ok()
         } else {
             None
         };

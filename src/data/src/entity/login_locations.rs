@@ -8,7 +8,7 @@ use crate::ipgeo::get_location;
 use actix_web::HttpRequest;
 use actix_web::http::header::USER_AGENT;
 use chrono::Utc;
-use hiqlite::macros::params;
+use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -16,7 +16,7 @@ use std::net::IpAddr;
 use tokio::task;
 use tracing::{debug, error, info};
 
-#[derive(Debug)]
+#[derive(Debug, FromRow)]
 pub struct LoginLocation {
     pub user_id: String,
     pub browser_id: String,
@@ -24,19 +24,6 @@ pub struct LoginLocation {
     pub last_seen: i64,
     pub user_agent: String,
     pub location: Option<String>,
-}
-
-impl From<&mut hiqlite::Row<'_>> for LoginLocation {
-    fn from(row: &mut hiqlite::Row<'_>) -> Self {
-        Self {
-            user_id: row.get("user_id"),
-            browser_id: row.get("browser_id"),
-            ip: row.get("ip"),
-            last_seen: row.get("last_seen"),
-            user_agent: row.get("user_agent"),
-            location: row.get("location"),
-        }
-    }
 }
 
 impl From<tokio_postgres::Row> for LoginLocation {

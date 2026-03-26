@@ -8,6 +8,7 @@ use rauthy_common::regex::{
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
+use std::str::FromStr;
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -234,11 +235,11 @@ pub enum UserAttrConfigTyp {
     Email,
 }
 
-impl TryFrom<&str> for UserAttrConfigTyp {
-    type Error = ErrorResponse;
+impl FromStr for UserAttrConfigTyp {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let slf = match value {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = match s {
             "email" => Self::Email,
             _ => {
                 return Err(ErrorResponse::new(

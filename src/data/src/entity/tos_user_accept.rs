@@ -6,7 +6,6 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
-use tokio_postgres::Row;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ToSUserAccept {
@@ -17,7 +16,7 @@ pub struct ToSUserAccept {
 }
 
 impl From<tokio_postgres::Row> for ToSUserAccept {
-    fn from(row: Row) -> Self {
+    fn from(row: tokio_postgres::Row) -> Self {
         Self {
             user_id: row.get("user_id"),
             tos_ts: row.get("tos_ts"),

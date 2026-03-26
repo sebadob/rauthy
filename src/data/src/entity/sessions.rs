@@ -7,7 +7,7 @@ use actix_web::cookie::SameSite;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{HttpRequest, cookie, web};
 use chrono::Utc;
-use hiqlite::macros::params;
+use hiqlite::macros::{FromRow, params};
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_common::constants::{
     CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER,
@@ -24,7 +24,7 @@ use std::ops::Add;
 use std::str::FromStr;
 use tracing::{debug, trace, warn};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, FromRow)]
 pub struct Session {
     pub id: String,
     pub csrf_token: String,
@@ -32,6 +32,7 @@ pub struct Session {
     pub roles: Option<String>,
     pub groups: Option<String>,
     pub is_mfa: bool,
+    #[column(parse)]
     pub state: SessionState,
     pub exp: i64,
     pub last_seen: i64,
@@ -58,31 +59,8 @@ impl Debug for Session {
     }
 }
 
-impl From<&mut hiqlite::Row<'_>> for Session {
-    fn from(row: &mut hiqlite::Row<'_>) -> Self {
-        let state =
-            SessionState::from_str(&row.get::<String>("state")).unwrap_or(SessionState::Unknown);
-
-        Self {
-            id: row.get("id"),
-            csrf_token: row.get("csrf_token"),
-            user_id: row.get("user_id"),
-            roles: row.get("roles"),
-            groups: row.get("groups"),
-            is_mfa: row.get("is_mfa"),
-            state,
-            exp: row.get("exp"),
-            last_seen: row.get("last_seen"),
-            remote_ip: row.get("remote_ip"),
-        }
-    }
-}
-
 impl From<tokio_postgres::Row> for Session {
     fn from(row: tokio_postgres::Row) -> Self {
-        let state =
-            SessionState::from_str(&row.get::<_, String>("state")).unwrap_or(SessionState::Unknown);
-
         Self {
             id: row.get("id"),
             csrf_token: row.get("csrf_token"),
@@ -90,7 +68,7 @@ impl From<tokio_postgres::Row> for Session {
             roles: row.get("roles"),
             groups: row.get("groups"),
             is_mfa: row.get("is_mfa"),
-            state,
+            state: row.get::<_, String>("state").parse().unwrap(),
             exp: row.get("exp"),
             last_seen: row.get("last_seen"),
             remote_ip: row.get("remote_ip"),
