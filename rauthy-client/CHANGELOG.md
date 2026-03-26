@@ -15,6 +15,14 @@ clients to this version BEFORE upgrading Rauthy to v0.35+, which will make the t
 without any interrupt or config changes. You can even convert your config to the trailing `/` issuer
 beforehand.
 
+### Breaking
+
+The claim name in `JwtIdClaims` when the `phone` scope was requests did not match the OIDC RFC. It
+was called `phone` when it should have been `phone_number`.
+
+Apart from that, the HTTP client does not embed TLS certificates anymore, but instead uses the
+platform verifier to reduce binary size in most situations.
+
 ## v0.12.0
 
 The `timezone` is now available for `ScimUser`, when used in combination with Rauthy v0.34.4+.

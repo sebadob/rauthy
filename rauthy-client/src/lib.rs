@@ -27,7 +27,7 @@ use crate::jwks::jwks_handler;
 use crate::provider::OidcProvider;
 use crate::rauthy_error::RauthyError;
 use base64::{engine, engine::general_purpose, Engine as _};
-use rand::{distr, Rng};
+use rand::{distr, RngExt};
 pub use reqwest::Certificate as RootCertificate;
 use sha2::{Digest, Sha256};
 use tracing::{error, warn};
