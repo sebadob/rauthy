@@ -128,7 +128,8 @@ pub async fn get_userinfo(
         zoneinfo: None,
 
         // scope: phone
-        phone: None,
+        phone_number: None,
+        phone_number_verified: None,
 
         // scope: webid
         webid,
@@ -167,7 +168,9 @@ pub async fn get_userinfo(
         }
 
         if has_phone {
-            userinfo.phone = values.phone;
+            userinfo.phone_number = values.phone;
+            // Note: Rauthy does not have a mechanism to send SMS and therefore verify a number.
+            userinfo.phone_number_verified = Some(false);
         }
     }
 

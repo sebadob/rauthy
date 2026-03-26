@@ -494,7 +494,9 @@ pub struct Userinfo {
 
     // scope: phone
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub phone: Option<String>,
+    pub phone_number: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone_number_verified: Option<bool>,
 
     // scope: webid
     #[serde(skip_serializing_if = "Option::is_none")]
