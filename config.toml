@@ -600,18 +600,6 @@ cache_storage_disk = true
 # overwritten by: HQL_LOGS_UNTIL_SNAPSHOT
 #logs_until_snapshot = 10000
 
-# The artificial shutdown delay to add in multi-node environments.
-# This value is being added before finally shutting down a node
-# to make sure rolling releases can be executed graceful with
-# proper leader switches. You may want to increase this value if
-# you are in an environment with huge in-memory caches and you
-# want to provide a bit more headroom for the snapshot replication
-# after restarts.
-#
-# default: 5000
-# overwritten by: HQL_SHUTDOWN_DELAY_MILLS
-#shutdown_delay_millis = 5000
-
 # If given, these keys / certificates will be used to establish
 # TLS connections between nodes.
 #
@@ -2173,7 +2161,7 @@ http_workers = 1
 #
 # default: false
 # overwritten by: PROXY_MODE
-proxy_mode = false
+proxy_modeproxy_mode = false
 
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to

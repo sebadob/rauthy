@@ -175,22 +175,22 @@ run ty="hiqlite" node_id="1":
     clear
 
     if [[ {{ ty }} == "postgres" ]]; then
-      {{ postgres }} cargo run
+      {{ postgres }} cargo run -- serve
     elif [[ {{ ty }} == "ui" ]]; then
       cd frontend
       {{ npm }} run dev -- --host=0.0.0.0
     elif [[ {{ ty }} == "hiqlite" ]]; then
-      cargo run
-    elif [[ {{ ty }} == "node" ]]; then
-      if [[ {{ node_id }} == "1" ]]; then
-        LISTEN_PORT_HTTP=8001 PUB_URL="localhost:8001" HQL_DATA_DIR=data/node_1 HQL_NODE_ID=1 cargo run -- 1
-      elif [[ {{ node_id }} == "2" ]]; then
-        LISTEN_PORT_HTTP=8002 PUB_URL="localhost:8002" HQL_DATA_DIR=data/node_2 HQL_NODE_ID=2 cargo run -- 2
-      elif [[ {{ node_id }} == "3" ]]; then
-        LISTEN_PORT_HTTP=8003 PUB_URL="localhost:8003" HQL_DATA_DIR=data/node_3 HQL_NODE_ID=3 cargo run -- 3
-      else
-        echo "Only node_id from 1 - 3 supported"
-      fi
+      cargo run -- serve
+    #elif [[ {{ ty }} == "node" ]]; then
+    #  if [[ {{ node_id }} == "1" ]]; then
+    #    LISTEN_PORT_HTTP=8001 PUB_URL="localhost:8001" HQL_DATA_DIR=data/node_1 HQL_NODE_ID=1 cargo run -- 1
+    #  elif [[ {{ node_id }} == "2" ]]; then
+    #    LISTEN_PORT_HTTP=8002 PUB_URL="localhost:8002" HQL_DATA_DIR=data/node_2 HQL_NODE_ID=2 cargo run -- 2
+    #  elif [[ {{ node_id }} == "3" ]]; then
+    #    LISTEN_PORT_HTTP=8003 PUB_URL="localhost:8003" HQL_DATA_DIR=data/node_3 HQL_NODE_ID=3 cargo run -- 3
+    #  else
+    #    echo "Only node_id from 1 - 3 supported"
+    #  fi
     fi
 
 # runs (and stops) Postgres, Mailcrab, normal `just run` command

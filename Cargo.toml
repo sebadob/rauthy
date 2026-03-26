@@ -8,6 +8,7 @@ version = "0.35.0-20260220"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
+description = "Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2 and PAM"
 
 [workspace.metadata.typos.files]
 extend-exclude = [
@@ -85,6 +86,8 @@ chrono = { version = "0.4", default-features = false, features = [
 ] }
 chrono-tz = "0.10.4"
 cidr = "0.3.0"
+clap = { version = "4.6", features = ["derive", "env"] }
+colored = "3"
 constant_time_eq = "0.4.2"
 cron = "0.15"
 cryptr = { version = "0.9", features = ["s3", "streaming"] }
@@ -136,6 +139,7 @@ reqwest = { version = "0.12.3", default-features = false, features = [
 ring = "0.17.13"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
+rpassword = "7.4.0"
 rsa = { version = "0.9.10", features = ["serde", "sha2"] }
 ruma-client = { version = "0.17", features = [
     "client-api", "reqwest-rustls-webpki-roots"
@@ -184,3 +188,4 @@ webauthn-rs = { version = "0.5", features = [
 ] }
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"
+zeroize = "1.8.2"
