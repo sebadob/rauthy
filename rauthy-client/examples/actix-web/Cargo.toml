@@ -6,10 +6,10 @@ authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
 
 [dependencies]
-actix-web = { version = "4.10" }
+actix-web = { version = "4.13.0" }
 anyhow = "1.0.75"
 dotenvy = "0.15.7"
 tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["tracing"] }
+tracing-subscriber = { version = "0.3.23", features = ["tracing"] }
 
 rauthy-client = { path = "../..", features = ["actix-web"] }

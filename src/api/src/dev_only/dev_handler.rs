@@ -76,7 +76,7 @@ pub async fn post_dev_only_endpoints(
             if params.logout_token.is_none() {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "exptected 'logout_token'",
+                    "expected 'logout_token'",
                 ));
             }
 

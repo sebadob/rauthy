@@ -176,6 +176,59 @@ even with bad client impl's, the `sig` will be set for each entry.
   safe) algorithms to choose from. No config required.
   [#1436](https://github.com/sebadob/rauthy/pull/1436)
 
+## UNRELEASED
+
+### Breaking
+
+#### Custom Attributes Values
+
+The custom user attributes were taking every value a just a `String`, even though the UI said
+"JSON Value". The backend parsed them as JSON Values, but since the UI always sent `String`s, they
+were all JSON Strings, which is not that helpful. This version changes this behavior. There is no
+equivalent for Rusts `serde_json::Value` in JS, but a custom parsing function was added to the UI.
+This now makes it possible to actually parse separate, typed JSON values.
+
+This means when you had set custom attributes before, they were returned like this:
+
+```json
+{
+  "custom": {
+    "str": "some string",
+    "arr": "[1, 2, 3]",
+    "num": "1337",
+    "obj": "{\"key\": \"value\", \"key2\": 123}"
+  }
+}
+```
+
+Now instead, since the UI can parse and type the input properly, you will get:
+
+```json
+{
+  "custom": {
+    "arr": [
+      1,
+      2,
+      3
+    ],
+    "num": 1337,
+    "obj": {
+      "key": "value",
+      "key2": 123
+    },
+    "str": "some string"
+  }
+}
+```
+
+Depending on how you currently extract custom attributes, this may be a breaking change for you.
+
+### Changes
+
+#### Global KV Store
+
+TODO
+
 ## v0.34.3
 
 ### Changes

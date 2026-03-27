@@ -7,6 +7,8 @@
     import { useI18n } from '$state/i18n.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import type { RoleRequest, RoleResponse } from '$api/types/roles.ts';
+    import InputArea from '$lib/form/InputArea.svelte';
+    import { parseJsonValue } from '$utils/jsonValue';
 
     let {
         roles,
@@ -23,6 +25,7 @@
 
     let err = $state('');
     let name = $state('');
+    let jsonMeta = $state('');
 
     $effect(() => {
         requestAnimationFrame(() => {
@@ -39,6 +42,7 @@
 
         let payload: RoleRequest = {
             role: name,
+            meta: parseJsonValue(jsonMeta),
         };
         let res = await fetchPost<RoleResponse>(form.action, payload);
         if (res.body) {
@@ -60,10 +64,20 @@
             required
             pattern={PATTERN_ROLE_SCOPE}
         />
+        <div class="meta">
+            <InputArea
+                label={ta.common.jsonMeta}
+                placeholder={ta.common.jsonMeta}
+                bind:value={jsonMeta}
+                rows={15}
+            />
+        </div>
 
-        <Button type="submit">
-            {t.common.save}
-        </Button>
+        <div class="btn">
+            <Button type="submit">
+                {t.common.save}
+            </Button>
+        </div>
 
         {#if err}
             <div class="err">
@@ -74,8 +88,19 @@
 </div>
 
 <style>
+    .btn {
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
     .container {
         min-height: 7rem;
         text-align: left;
+    }
+
+    .meta {
+        width: min(40rem, calc(100dvw - 2rem));
     }
 </style>

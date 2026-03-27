@@ -17,6 +17,7 @@
         UserAttrValueResponse,
         UserAttrValuesResponse,
     } from '$api/types/user_attrs.ts';
+    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
 
     let {
         user,
@@ -78,7 +79,10 @@
     async function fetchUserAttr() {
         let res = await fetchGet<UserAttrValuesResponse>(`/auth/v1/users/${user.id}/attr`);
         if (res.body) {
-            attrsUser = res.body.values;
+            attrsUser = res.body.values.map(v => {
+                v.value = stringifyJsonValue(v.value, 1);
+                return v;
+            });
         } else {
             err = res.error?.message || 'Error fetching users attrs';
         }
@@ -94,7 +98,7 @@
                 .map(a => {
                     let v: UserAttrValueRequest = {
                         key: a.name,
-                        value: a.value.trim(),
+                        value: parseJsonValue(a.value),
                     };
                     return v;
                 }),

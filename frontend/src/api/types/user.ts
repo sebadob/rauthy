@@ -1,5 +1,6 @@
 import type { Language } from './i18n';
 import { PATTERN_ALNUM } from '$utils/patterns';
+import type { JsonValue } from '$utils/jsonValue';
 
 export interface UserPictureConfig {
     upload_allowed: boolean;
@@ -86,7 +87,7 @@ export interface UpdateUserSelfRequest {
 export interface UserAttrValueRequest {
     /// Validation: PATTERN_ATTR
     key: string;
-    value: string;
+    value: JsonValue;
 }
 
 export interface UserAttrValuesUpdateRequest {

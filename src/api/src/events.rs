@@ -141,6 +141,7 @@ pub async fn post_event_test(
             .send()
             .await?;
         Event::ip_blacklist_removed(ip.to_string()).send().await?;
+        Event::cred_stuff(ip.to_string()).send().await?;
         Event::new_user("test@dummy".to_string(), ip.to_string())
             .send()
             .await?;

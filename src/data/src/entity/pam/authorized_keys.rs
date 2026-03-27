@@ -1,7 +1,7 @@
 use crate::database::DB;
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::{FromRow, params};
 use rauthy_api_types::pam::PamSshAuthKeyResponse;
 use rauthy_common::utils::base64_encode;
 use rauthy_common::{is_hiqlite, sha256};
@@ -10,7 +10,7 @@ use std::fmt::Write;
 use std::ops::{Add, Sub};
 use tokio_postgres::Row;
 
-#[derive(Debug)]
+#[derive(Debug, FromRow)]
 pub struct AuthorizedKey {
     pub pam_uid: u32,
     pub ts_added: i64,
@@ -18,20 +18,6 @@ pub struct AuthorizedKey {
     pub typ: String,
     pub data: String,
     pub comment: String,
-}
-
-impl From<hiqlite::Row<'_>> for AuthorizedKey {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
-        Self {
-            // type cast is safe because Rauthy controls the input
-            pam_uid: row.get::<i64>("pam_uid") as u32,
-            ts_added: row.get("ts_added"),
-            expires: row.get("expires"),
-            typ: row.get("typ"),
-            data: row.get("data"),
-            comment: row.get("comment"),
-        }
-    }
 }
 
 impl From<tokio_postgres::Row> for AuthorizedKey {

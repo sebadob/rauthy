@@ -1,7 +1,7 @@
 use crate::ReqPrincipal;
 use actix_web::web::Json;
 use actix_web::{HttpResponse, delete, get, post, put, web};
-use rauthy_api_types::roles::RoleRequest;
+use rauthy_api_types::roles::{RoleRequest, RoleResponse};
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::roles::Role;
 use rauthy_error::ErrorResponse;
@@ -16,7 +16,7 @@ use validator::Validate;
     path = "/roles",
     tag = "roles",
     responses(
-        (status = 200, description = "Ok", body = [Role]),
+        (status = 200, description = "Ok", body = [RoleResponse]),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -25,9 +25,13 @@ use validator::Validate;
 pub async fn get_roles(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Roles, AccessRights::Read)?;
 
-    Role::find_all()
-        .await
-        .map(|rls| HttpResponse::Ok().json(rls))
+    let roles = Role::find_all()
+        .await?
+        .into_iter()
+        .map(RoleResponse::from)
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(roles))
 }
 
 /// Adds a new role to the database
@@ -40,7 +44,7 @@ pub async fn get_roles(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRes
     tag = "roles",
     request_body = RoleRequest,
     responses(
-        (status = 200, description = "Ok", body = Role),
+        (status = 200, description = "Ok", body = RoleResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -55,7 +59,7 @@ pub async fn post_role(
 
     Role::create(payload)
         .await
-        .map(|r| HttpResponse::Ok().json(r))
+        .map(|r| HttpResponse::Ok().json(RoleResponse::from(r)))
 }
 
 /// Modifies a roles name
@@ -82,9 +86,9 @@ pub async fn put_role(
     principal.validate_api_key_or_admin_session(AccessGroup::Roles, AccessRights::Update)?;
     payload.validate()?;
 
-    Role::update(id.into_inner(), payload.role)
+    Role::update(id.into_inner(), payload.role, payload.meta)
         .await
-        .map(|r| HttpResponse::Ok().json(r))
+        .map(|r| HttpResponse::Ok().json(RoleResponse::from(r)))
 }
 
 /// Deletes a role

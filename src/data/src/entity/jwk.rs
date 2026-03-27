@@ -4,7 +4,7 @@ use crate::rauthy_config::RauthyConfig;
 use actix_web::web;
 use cryptr::{EncKeys, EncValue};
 use ed25519_compact::Noise;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use postgres_types::Type;
 use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
 use rauthy_common::constants::{
@@ -14,6 +14,7 @@ use rauthy_common::utils::{
     base64_url_encode, base64_url_no_pad_decode, base64_url_no_pad_decode_buf, get_rand,
 };
 use rauthy_common::{http_client, is_hiqlite};
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
 use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey};
@@ -30,7 +31,7 @@ use tracing::{error, info, warn};
 The Json Web Keys are saved encrypted inside the database. The encryption is the same as for a
 Client secret -> *ChaCha20Poly1305*
  */
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, FromPgRow)]
 pub struct Jwk {
     pub kid: String,
     pub created_at: i64,
@@ -46,18 +47,6 @@ impl Debug for Jwk {
             "Jwk {{ kid: {}, created_at: {}, signature: {:?}, enc_key_id: {}, jwk: <hidden> }}",
             self.kid, self.created_at, self.signature, self.enc_key_id,
         )
-    }
-}
-
-impl From<tokio_postgres::row::Row> for Jwk {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            kid: row.get("kid"),
-            created_at: row.get("created_at"),
-            signature: row.get("signature"),
-            enc_key_id: row.get("enc_key_id"),
-            jwk: row.get("jwk"),
-        }
     }
 }
 
@@ -869,8 +858,8 @@ pub enum JwkKeyPairAlg {
     EdDSA,
 }
 
-impl<'r> From<hiqlite::Row<'r>> for JwkKeyPairAlg {
-    fn from(mut row: hiqlite::Row<'r>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for JwkKeyPairAlg {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         let sig: String = row.get("signature");
         JwkKeyPairAlg::from_str(&sig).expect("corrupted signature in database")
     }

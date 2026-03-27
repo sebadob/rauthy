@@ -24,6 +24,7 @@
         UserEditableAttrsResponse,
     } from '$api/types/user_attrs';
     import { onMount } from 'svelte';
+    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
 
     let {
         user = $bindable(),
@@ -49,7 +50,10 @@
             `/auth/v1/users/${user.id}/attr/editable`,
         );
         if (res.body) {
-            attrs = res.body.values;
+            attrs = res.body.values.map(v => {
+                v.value = stringifyJsonValue(v.value, 1);
+                return v;
+            });
         } else {
             err = res.error?.message || 'Error fetching User Attributes';
         }
@@ -65,7 +69,7 @@
                 .map(a => {
                     let v: UserAttrValueRequest = {
                         key: a.name,
-                        value: a.value?.trim() || '',
+                        value: parseJsonValue(a.value),
                     };
                     return v;
                 }),
@@ -123,6 +127,7 @@
 
 <style>
     .bottom {
+        margin-top: 0.5rem;
         display: flex;
         align-items: center;
         gap: 1rem;

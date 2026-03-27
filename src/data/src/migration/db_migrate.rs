@@ -9,15 +9,16 @@ use crate::entity::db_version::DbVersion;
 use crate::entity::devices::DeviceEntity;
 use crate::entity::email_jobs::{EmailContentType, EmailJob, EmailJobFilter, EmailJobStatus};
 use crate::entity::failed_backchannel_logout::FailedBackchannelLogout;
-use crate::entity::failed_scim_tasks::{FailedScimTask, ScimAction};
+use crate::entity::failed_scim_tasks::FailedScimTask;
 use crate::entity::groups::Group;
 use crate::entity::issued_tokens::IssuedToken;
 use crate::entity::jwk::Jwk;
+use crate::entity::kv::{KVAccess, KVNamespace, KVValue};
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::pam::authorized_keys::AuthorizedKey;
-use crate::entity::pam::groups::{PamGroup, PamGroupType};
+use crate::entity::pam::groups::PamGroup;
 use crate::entity::pam::hosts::PamHost;
 use crate::entity::pam::users::PamUser;
 use crate::entity::password::RecentPasswordsEntity;
@@ -40,7 +41,7 @@ use crate::entity::webids::WebId;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::migration::inserts;
 use crate::rauthy_config::RauthyConfig;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use itertools::Itertools;
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::utils::deserialize;
@@ -319,9 +320,9 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     let before = stmt
         .query_map([], |row| {
             Ok(FailedScimTask {
-                action: ScimAction::from(row.get::<_, String>("action")?.as_str()),
+                action: row.get::<_, String>("action")?.parse().unwrap(),
                 client_id: row.get("client_id")?,
-                retry_count: row.get::<_, i64>("retry_count")?,
+                retry_count: row.get::<_, i64>("retry_count")? as i32,
             })
         })?
         .map(|r| r.unwrap())
@@ -374,7 +375,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
             Ok(PamGroup {
                 id: row.get::<_, i64>("id")? as u32,
                 name: row.get("name")?,
-                typ: PamGroupType::from(row.get::<_, String>("typ")?.as_str()),
+                typ: row.get::<_, String>("typ")?.parse().unwrap(),
             })
         })?
         .map(|r| r.unwrap())
@@ -474,10 +475,10 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     let mut stmt = conn.prepare("SELECT * FROM email_jobs")?;
     let before = stmt
         .query_map([], |row| {
-            let status = EmailJobStatus::from(row.get::<_, i64>("status")? as i16);
-            let filter = EmailJobFilter::from(row.get::<_, String>("filter")?.as_str());
-            let content_type =
-                EmailContentType::from(row.get::<_, String>("content_type")?.as_str());
+            let status = EmailJobStatus::from(row.get::<_, i64>("status")?);
+            let filter: EmailJobFilter = row.get::<_, String>("filter")?.parse().unwrap();
+            let content_type: EmailContentType =
+                row.get::<_, String>("content_type")?.parse().unwrap();
 
             Ok(EmailJob {
                 id: row.get("id")?,
@@ -544,6 +545,53 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .map(|r| r.unwrap())
         .collect_vec();
     inserts::issued_tokens(before).await?;
+
+    // KV NS
+    debug!("Migrating table: kv_ns");
+    let mut stmt = conn.prepare("SELECT * FROM kv_ns")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(KVNamespace {
+                ns: row.get("ns")?,
+                public: row.get("public")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::kv_ns(before).await?;
+
+    // KV ACCESS
+    debug!("Migrating table: kv_access");
+    let mut stmt = conn.prepare("SELECT * FROM kv_access")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(KVAccess {
+                id: row.get("id")?,
+                ns: row.get("ns")?,
+                secret: row.get("secret")?,
+                enabled: row.get("enabled")?,
+                name: row.get("name")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::kv_access(before).await?;
+
+    // KV VALUES
+    debug!("Migrating table: kv_values");
+    let mut stmt = conn.prepare("SELECT * FROM kv_values")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(KVValue {
+                ns: row.get("ns")?,
+                key: row.get("key")?,
+                encrypted: row.get("encrypted")?,
+                value: row.get("value")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::kv_values(before).await?;
 
     Ok(())
 }
@@ -750,15 +798,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // FAILED SCIM TASKS
     debug!("Migrating table: failed_scim_tasks");
-    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM failed_scim_tasks", &[], 0)
-        .await?
-        .into_iter()
-        .map(|row| FailedScimTask {
-            action: ScimAction::from(row.get::<_, String>("action").as_str()),
-            client_id: row.get("client_id"),
-            retry_count: row.get::<_, i32>("retry_count") as i64,
-        })
-        .collect::<Vec<_>>();
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM failed_scim_tasks", &[], 0).await?;
     inserts::failed_scim_tasks(before).await?;
 
     // RECENT PASSWORDS
@@ -868,6 +908,21 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: issued_tokens");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM issued_tokens", &[], 0).await?;
     inserts::issued_tokens(before).await?;
+
+    // KV NS
+    debug!("Migrating table: kv_ns");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM kv_ns", &[], 0).await?;
+    inserts::kv_ns(before).await?;
+
+    // KV ACCESS
+    debug!("Migrating table: kv_access");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM kv_access", &[], 0).await?;
+    inserts::kv_access(before).await?;
+
+    // KV VALUES
+    debug!("Migrating table: kv_values");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM kv_values", &[], 0).await?;
+    inserts::kv_values(before).await?;
 
     Ok(())
 }

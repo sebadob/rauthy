@@ -1,0 +1,58 @@
+[
+    {
+        "id": "batmanBruceWayne13371111",
+        "email": "batman@batcave",
+        "preferred_username": "batman",
+        "given_name": "Bruce",
+        "family_name": "Wayne",
+        "language": "en",
+        "password": {
+            "Argon2ID": "$argon2id$v=19$m=32768,t=3,p=2$xr23OhOHw+pNyy3dYKZUcA$CBO4NpGvyi6gvrb5uNrnsS/z/Ew+IuS0/gVqFmLKncA"
+        },
+        "roles": [
+            "admin",
+            "bs_role_1",
+            "bs_role_2"
+        ],
+        "groups": [
+            "admin",
+            "bs_group_1",
+            "bs_group_2"
+        ],
+        "enabled": true,
+        "email_verified": true,
+        "user_values": {
+            "birthdate": "1974-02-19",
+            "phone": "+1337",
+            "street": "Wayne Manor Street 1",
+            "zip": "1",
+            "city": "Gotham City",
+            "country": "US",
+            "tz": "America/New_York"
+        },
+        "attributes": [
+            {
+                "key": "bs_attr_1",
+                "value": "I'm Batman!"
+            },
+            {
+                "key": "bs_attr_2",
+                "value": "You don't know I'm Bruce."
+            }
+        ]
+    },
+    {
+        "email": "alfred@batcave",
+        "given_name": "Alfred",
+        "family_name": "Batman",
+        "password": {
+            "Plain": "123SuperSafe"
+        },
+        "roles": [
+            "user"
+        ],
+        "enabled": true,
+        "email_verified": true,
+        "user_expires": 1798761600
+    }
+]

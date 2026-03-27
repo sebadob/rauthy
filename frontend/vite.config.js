@@ -31,6 +31,7 @@ const config = {
             '/auth/v1/events': backend,
             '/auth/v1/fed_cm/': backend,
             '/auth/v1/i18n': backend,
+            '/auth/v1/kv/': backend,
             // '/auth/v1/oidc/authorize': backend,
             '/auth/v1/oidc/authorize/refresh': backend,
             // '/auth/v1/oidc/callback': backend,

@@ -149,6 +149,13 @@ pub async fn get_admin_groups_html(req: HttpRequest) -> Result<HttpResponse, Err
         .await
 }
 
+#[get("/admin/kv")]
+pub async fn get_admin_kv_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::AdminKV
+        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
+        .await
+}
+
 #[get("/admin/providers")]
 pub async fn get_admin_providers_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     HtmlCached::AdminProviders

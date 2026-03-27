@@ -45,6 +45,7 @@
     import TosAccept from '$lib/TosAccept.svelte';
     import { execProviderLogin } from '$utils/login';
     import Modal from '$lib/Modal.svelte';
+    import Loading from '$lib/Loading.svelte';
 
     const inputWidth = '18rem';
 
@@ -59,6 +60,7 @@
     let clientUri = $state(IS_DEV ? '/auth/v1' : '');
     let redirectUri = useParam('redirect_uri').get();
     let nonce = useParam('nonce').get();
+    let idpHint = useParam('idp_hint').get();
     let scopes = useParam('scope').get()?.split(' ') || [];
 
     let refEmail: undefined | HTMLInputElement = $state();
@@ -75,6 +77,7 @@
     let mfaPurpose: undefined | MfaPurpose = $state();
 
     let isLoading = $state(false);
+    let isAutoRefreshing = $state(false);
     let err = $state('');
     let loginAction = $state('');
     let csrfToken = $state('');
@@ -102,6 +105,7 @@
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
 
+    let hasAutoLoggedIn = false;
     let showModalUpdate = $state(false);
 
     onMount(() => {
@@ -141,6 +145,16 @@
             let mfaUser = loginAction.replace('MfaLogin ', '');
             email = mfaUser;
             existingMfaUser = mfaUser;
+        }
+    });
+
+    $effect(() => {
+        if (idpHint && providers.length > 0 && !isLoading && !err && !hasAutoLoggedIn) {
+            const provider = providers.find(p => p.id === idpHint);
+            if (provider) {
+                hasAutoLoggedIn = true;
+                providerLogin(provider.id);
+            }
         }
     });
 
@@ -196,6 +210,7 @@
         }
 
         isLoading = true;
+        isAutoRefreshing = true;
 
         const payload: LoginRefreshRequest = {
             client_id: clientId,
@@ -290,6 +305,7 @@
         res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
     ) {
         isLoading = false;
+        isAutoRefreshing = false;
 
         if (!res) {
             console.error('no result in handleAuthRes');
@@ -497,6 +513,11 @@
 <Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen} />
 
 <Main>
+    {#if isAutoRefreshing}
+        <div class="loadingGlobal">
+            <Loading global />
+        </div>
+    {/if}
     <div class="outer">
         <ContentCenter>
             <div class="container">
@@ -557,7 +578,7 @@
                                     label={t.common.email}
                                     placeholder={t.common.email}
                                     errMsg={t.authorize.validEmail}
-                                    disabled={tooManyRequests || clientMfaForce}
+                                    disabled={tooManyRequests || clientMfaForce || isLoading}
                                     onInput={onEmailInput}
                                     width={inputWidth}
                                     required
@@ -574,7 +595,7 @@
                                 label={t.common.password}
                                 placeholder={t.common.password}
                                 maxLength={256}
-                                disabled={tooManyRequests || clientMfaForce}
+                                disabled={tooManyRequests || clientMfaForce || isLoading}
                                 width={inputWidth}
                                 required
                             />
@@ -710,6 +731,14 @@
 </Main>
 
 <style>
+    .loadingGlobal {
+        width: 100dvw;
+        height: 100dvh;
+        position: absolute;
+        background-color: hsla(var(--bg) / 0.85);
+        z-index: 99;
+    }
+
     .btn {
         margin: 0.8rem 0 0.5rem 0;
         display: flex;

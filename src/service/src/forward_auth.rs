@@ -112,7 +112,7 @@ pub async fn get_forward_auth_client(
         }
         .encrypted_str()?;
         let location = format!(
-            "{iss}/oidc/authorize?client_id={cid}&redirect_uri={redirect_uri}&response_type=code&state={state}"
+            "{iss}oidc/authorize?client_id={cid}&redirect_uri={redirect_uri}&response_type=code&state={state}"
         );
 
         let status =

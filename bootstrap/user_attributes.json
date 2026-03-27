@@ -1,0 +1,15 @@
+[
+    {
+        "name": "bs_attr_1",
+        "desc": "Bootstrapped attribute",
+        "default_value": "some value",
+        "user_editable": true
+    },
+    {
+        "name": "bs_attr_2",
+        "user_editable": false
+    },
+    {
+        "name": "bs_attr_3"
+    }
+]

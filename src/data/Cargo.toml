@@ -12,6 +12,7 @@ doctest = false
 [dependencies]
 rauthy-api-types = { path = "../api_types" }
 rauthy-common = { path = "../common" }
+rauthy-derive = { path = "../macros" }
 rauthy-error = { path = "../error" }
 rauthy-notify = { path = "../notify" }
 
@@ -40,7 +41,6 @@ futures-util = { workspace = true }
 hex = { workspace = true }
 hickory-resolver = { workspace = true }
 hiqlite = { workspace = true }
-hiqlite-macros = { workspace = true }
 hmac-sha256 = { workspace = true }
 hmac-sha512 = { workspace = true }
 image = { workspace = true }
@@ -55,6 +55,7 @@ openssl-sys = { workspace = true }
 rand_08 = { package = "rand", version = "0.8" }
 rand_core = { workspace = true }
 rcgen = { workspace = true }
+regex = { workspace = true }
 reqwest = { workspace = true }
 ring = { workspace = true }
 rio_api = { workspace = true }
@@ -80,6 +81,7 @@ utoipa = { workspace = true }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
 webauthn-rs-proto = { workspace = true }
+zeroize = { workspace = true }
 
 # Postgres -> integrate by alphabet when finished and sqlx as been finally removed
 deadpool = { workspace = true }
@@ -89,7 +91,6 @@ refinery = { workspace = true }
 tokio-postgres = { workspace = true }
 tokio-postgres-rustls = { workspace = true }
 webpki-roots = { workspace = true }
-regex = "1.11.3"
 
 [dev-dependencies]
 pretty_assertions = "1"
