@@ -1,11 +1,12 @@
 use crate::ReqPrincipal;
 use actix_web::web::Json;
 use actix_web::{HttpResponse, delete, get, post, put, web};
-use rauthy_api_types::groups::GroupRequest;
+use rauthy_api_types::groups::{GroupRequest, GroupResponse};
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::groups::Group;
 use rauthy_error::ErrorResponse;
+use tracing::warn;
 use validator::Validate;
 
 /// Returns all existing *groups*
@@ -17,7 +18,7 @@ use validator::Validate;
     path = "/groups",
     tag = "groups",
     responses(
-        (status = 200, description = "Ok", body = [Group]),
+        (status = 200, description = "Ok", body = [GroupResponse]),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -26,9 +27,13 @@ use validator::Validate;
 pub async fn get_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Read)?;
 
-    Group::find_all()
-        .await
-        .map(|rls| HttpResponse::Ok().json(rls))
+    let groups = Group::find_all()
+        .await?
+        .into_iter()
+        .map(GroupResponse::from)
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(groups))
 }
 
 /// Adds a new group to the database
@@ -41,7 +46,7 @@ pub async fn get_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRe
     tag = "groups",
     request_body = GroupRequest,
     responses(
-        (status = 200, description = "Ok", body = Group),
+        (status = 200, description = "Ok", body = GroupResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -60,7 +65,7 @@ pub async fn post_group(
         client.create_update_group(group.clone()).await?;
     }
 
-    Ok(HttpResponse::Ok().json(group))
+    Ok(HttpResponse::Ok().json(GroupResponse::from(group)))
 }
 
 /// Modifies a groups name
@@ -73,7 +78,7 @@ pub async fn post_group(
     tag = "groups",
     request_body = GroupRequest,
     responses(
-        (status = 200, description = "Ok", body = Group),
+        (status = 200, description = "Ok", body = GroupResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -87,13 +92,13 @@ pub async fn put_group(
     principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Update)?;
     payload.validate()?;
 
-    let group = Group::update(id.into_inner(), payload.group).await?;
+    let group = Group::update(id.into_inner(), payload.group, payload.json_meta).await?;
 
     for client in ClientScim::find_all().await? {
         client.create_update_group(group.clone()).await?;
     }
 
-    Ok(HttpResponse::Ok().json(group))
+    Ok(HttpResponse::Ok().json(GroupResponse::from(group)))
 }
 
 /// Deletes a group

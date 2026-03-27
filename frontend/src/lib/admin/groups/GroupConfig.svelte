@@ -10,6 +10,8 @@
     import type { GroupResponse, GroupRequest } from '$api/types/groups.ts';
     import { PATTERN_GROUP } from '$utils/patterns';
     import { untrack } from 'svelte';
+    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
+    import InputArea from '$lib/form/InputArea.svelte';
 
     let {
         group,
@@ -27,10 +29,12 @@
     let err = $state('');
     let success = $state(false);
     let name = $state(untrack(() => group.name));
+    let jsonMeta = $state(untrack(() => stringifyJsonValue(group.json_meta) || ''));
 
     $effect(() => {
         if (group.id) {
             name = group.name;
+            jsonMeta = stringifyJsonValue(group.json_meta) || '';
         }
     });
 
@@ -44,6 +48,7 @@
 
         let payload: GroupRequest = {
             group: name,
+            json_meta: parseJsonValue(jsonMeta),
         };
 
         let res = await fetchPut(form.action, payload);
@@ -73,8 +78,16 @@
         required
         pattern={PATTERN_GROUP}
     />
+    <div class="meta">
+        <InputArea
+            label={ta.common.jsonMeta}
+            placeholder={ta.common.jsonMeta}
+            rows={15}
+            bind:value={jsonMeta}
+        />
+    </div>
 
-    <div class="flex gap-05">
+    <div class="btn">
         <Button type="submit">
             {t.common.save}
         </Button>
@@ -92,4 +105,14 @@
 </Form>
 
 <style>
+    .btn {
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .meta {
+        max-width: 40rem;
+    }
 </style>

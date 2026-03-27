@@ -125,6 +125,7 @@ export let I18nAdminKo: I18nAdmin = {
         information: '정보',
         language: '언어',
         loading: '로딩중...',
+        jsonMeta: 'Metadata as JSON value',
         name: '이름',
         nameExistsAlready: '이미 존재하는 이름입니다.',
         note: '참고',

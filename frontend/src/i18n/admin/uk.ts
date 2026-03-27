@@ -131,6 +131,7 @@ export let I18nAdminUk: I18nAdmin = {
         information: 'Інформація',
         language: 'Мова',
         loading: 'Завантаження',
+        jsonMeta: 'Metadata as JSON value',
         name: 'Назва',
         nameExistsAlready: 'Назва вже існує',
         note: 'Примітка',

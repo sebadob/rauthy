@@ -129,6 +129,7 @@ export let I18nAdminEn: I18nAdmin = {
         information: 'Information',
         language: 'Language',
         loading: 'Loading',
+        jsonMeta: 'Metadata as JSON value',
         name: 'Name',
         nameExistsAlready: 'Name exists already',
         note: 'Note',

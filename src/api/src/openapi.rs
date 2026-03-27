@@ -376,6 +376,7 @@ use utoipa::{OpenApi, openapi};
             DynamicClientResponse,
             ClientSecretResponse,
             EncKeysResponse,
+            GroupResponse,
             HealthResponse,
             I18nConfigResponse,
             JWKSCerts,

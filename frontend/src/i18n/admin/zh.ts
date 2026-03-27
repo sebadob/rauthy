@@ -126,6 +126,7 @@ export let I18nAdminZh: I18nAdmin = {
         information: '信息',
         language: '语言',
         loading: '加载中',
+        jsonMeta: 'Metadata as JSON value',
         name: '名称',
         nameExistsAlready: '名称已存在',
         note: '备注',

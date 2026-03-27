@@ -1,6 +1,7 @@
-use crate::database::DB;
+use crate::database::{Cache, DB};
 use crate::entity::user_attr::UserAttrValueEntity;
 use hiqlite_macros::params;
+use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS, IDX_ROLES};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use tracing::info;
@@ -42,6 +43,10 @@ pub async fn apply_temp_migrations() -> Result<(), ErrorResponse> {
     if migrated > 0 {
         info!("Migrated {} user attr values to proper JSON", migrated);
     }
+
+    // because of changes on groups and roles, we must clear caches
+    DB::hql().delete(Cache::App, IDX_GROUPS).await?;
+    DB::hql().delete(Cache::App, IDX_ROLES).await?;
 
     Ok(())
 }

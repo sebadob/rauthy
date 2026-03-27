@@ -114,6 +114,7 @@ export interface I18nAdmin {
         information: string;
         language: string;
         loading: string;
+        jsonMeta: string;
         name: string;
         nameExistsAlready: string;
         note: string;

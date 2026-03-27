@@ -133,6 +133,7 @@ export let I18nAdminNb: I18nAdmin = {
         information: 'Informasjon',
         language: 'Språk',
         loading: 'Laster',
+        jsonMeta: 'Metadata as JSON value',
         name: 'Navn',
         nameExistsAlready: 'Navnet finnes allerede',
         note: 'Notat',

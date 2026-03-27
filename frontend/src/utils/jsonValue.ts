@@ -6,7 +6,7 @@ export type JsonValue = JSON | Array<JsonValue> | string | number | boolean | un
 export function parseJsonValue(value: string | undefined): JsonValue {
     value = value?.trim();
     if (!value) {
-        return null;
+        return undefined;
     }
 
     if (value === 'true' || value === 'false') {
