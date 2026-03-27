@@ -1,13 +1,16 @@
 use crate::cust_validation::{validate_vec_groups, validate_vec_roles};
 use crate::generic::Language;
 use crate::oidc::AddressClaim;
+use hiqlite::macros::FromRow;
 use rauthy_common::regex::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_NAME,
     RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_PREFERRED_USERNAME, RE_STREET, RE_URI, RE_USER_NAME,
 };
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
+use std::str::FromStr;
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -234,11 +237,11 @@ pub enum UserAttrConfigTyp {
     Email,
 }
 
-impl TryFrom<&str> for UserAttrConfigTyp {
-    type Error = ErrorResponse;
+impl FromStr for UserAttrConfigTyp {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let slf = match value {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = match s {
             "email" => Self::Email,
             _ => {
                 return Err(ErrorResponse::new(
@@ -558,7 +561,7 @@ pub struct UserResponse {
     pub picture_id: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, FromRow, FromPgRow, ToSchema)]
 pub struct UserResponseSimple {
     pub id: String,
     pub email: String,
@@ -567,40 +570,6 @@ pub struct UserResponseSimple {
     pub created_at: i64,
     pub last_login: Option<i64>,
     pub picture_id: Option<String>,
-}
-
-impl From<hiqlite::Row<'_>> for UserResponseSimple {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
-        let name: String = row.get("given_name");
-        let given_name = if name.is_empty() { None } else { Some(name) };
-
-        Self {
-            id: row.get("id"),
-            email: row.get("email"),
-            given_name,
-            family_name: row.get("family_name"),
-            created_at: row.get("created_at"),
-            last_login: row.get("last_login"),
-            picture_id: row.get("picture_id"),
-        }
-    }
-}
-
-impl From<tokio_postgres::Row> for UserResponseSimple {
-    fn from(row: tokio_postgres::Row) -> Self {
-        let name: String = row.get("given_name");
-        let given_name = if name.is_empty() { None } else { Some(name) };
-
-        Self {
-            id: row.get("id"),
-            email: row.get("email"),
-            given_name,
-            family_name: row.get("family_name"),
-            created_at: row.get("created_at"),
-            last_login: row.get("last_login"),
-            picture_id: row.get("picture_id"),
-        }
-    }
 }
 
 #[derive(Default, Serialize, ToSchema)]
