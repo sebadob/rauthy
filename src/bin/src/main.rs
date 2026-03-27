@@ -37,6 +37,9 @@ mod version_migration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    let config_file_var = env::var("CONFIG_FILE");
+    let config_file_path = config_file_var.as_deref().unwrap_or("config.toml");
+
     let (config_file, test_mode) = {
         let args: Vec<String> = env::args().collect();
         if args.len() > 1 && args[1] == "test" {
@@ -52,7 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 eprintln!("!!! Using insecure config for testing - DO NOT USE IN PRODUCTION !!!");
                 ("config-local-test.toml", false)
             } else {
-                ("config.toml", false)
+                (config_file_path, false)
             }
         }
     };
