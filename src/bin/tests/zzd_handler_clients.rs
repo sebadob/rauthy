@@ -27,7 +27,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
 
     let clients = res.json::<Vec<ClientResponse>>().await?;
     let len_orig = clients.len();
-    let mut client = clients.iter().find(|c| c.id == "rauthy").unwrap();
+    let client = clients.iter().find(|c| c.id == "rauthy").unwrap();
     println!("{:?}", client);
     assert_eq!(client.id, "rauthy");
     assert_eq!(client.name, Some("Rauthy".to_string()));

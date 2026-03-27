@@ -36,7 +36,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if local_test {
                 server::run("config-local-test.toml".to_string(), false).await?
             } else {
-                server::run(args.config_file, args.test).await?
+                #[cfg(debug_assertions)]
+                let test_mode = args.test;
+                #[cfg(not(debug_assertions))]
+                let test_mode = false;
+                server::run(args.config_file, test_mode).await?
             }
         }
         Args::GenerateConfig(args) => utils::gen_config::generate(args).await?,

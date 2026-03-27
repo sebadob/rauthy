@@ -4,6 +4,44 @@
 
 ### Breaking
 
+#### The Rauthy Issuer was changed!
+
+Before, it was `https://iam.example.com/auth/v1`. Now it will be `https://iam.example.com/auth/v1/`,
+with the trailing `/` appended. This was a somewhat necessary change to do before v1.0.0. There are
+clients out there, which do not check for a trailing `/`, and only use the issuer URL as a base to
+construct the `openid-configuration` URL for instance. This can fail, as the `/v1` beforehand was
+seen as something like a filename, and therefore stripped from the "base URL". This leads to an
+invalid URL for the `openid-configuration`, and therefore to incompatibility. To improve this
+situation, it was decided to change the Issuer and always append the `/` in the end.
+
+**This single character comes with a huge impact!**
+
+You will need to update your clients! Their token validation will fail, when they validate for the
+old issuer without the trailing `/`. This means that **this update will require downtime!**. Not on
+Rauthy's side, but it will most probably make client logins unavailable until they were updated.
+
+For instance, when I tested with a forgejo instance which used auto-discovery, all it needed was a
+restart to trigger a fresh lookup and clear caches. For another Harbor instance however, I needed
+to log in and manually update the issuer, and append the `/`. This has lead to a weird error (which
+was probably a bug in Harbor), that the user under the hood was now not linked to the existing
+provider anymore. This was very unexpected, as it was only updated, never deleted. The fix was to
+delete all OIDC users and let them do a fresh onboarding with the next login.
+
+When you use the **rauthy-client**, I advise you to update to v0.13 BEFORE updating Rauthy. This
+version will be compatible with Rauthy v0.35 and the old ones at the same time, as it will accept
+the issuer with and without the trailing `/`. This means with the `rauthy-client:0.13+`, you will
+be able to do the Rauthy upgrade without any downtime.
+
+So sum this up:
+
+- If you use the `rauthy-client`, upgrade to `0.13` beforehand, which means no downtime.
+- If you have an application with auto-discovery, it most probably only needs a restart or cache
+  clear, if available.
+- If you have a static configuration, you need to update the issuer and append the `/` in the end.
+
+> [!NOTE]
+> This is probably the last bigger breaking change before releasing Rauthy v1.0.0.
+
 #### Custom Attributes Values
 
 The custom user attributes were taking every value a just a `String`, even though the UI said
@@ -47,11 +85,351 @@ Now instead, since the UI can parse and type the input properly, you will get:
 
 Depending on how you currently extract custom attributes, this may be a breaking change for you.
 
+[#1491](https://github.com/sebadob/rauthy/pull/1491)
+
 ### Changes
 
 #### Global KV Store
 
-TODO
+Sometimes, you need a simple place to store e.g. additional policies or things like that, or maybe
+you need some additional information about your Rauthy instance, or some clients, and you want to
+have all your authn / authz related information in one place. For that reason, Rauthy now brings
+a global KV store.
+
+You can define multiple, independent namespaces. Each namespace is private by default but can
+optionally allow public access. You can add additional Access Keys for each namespace. Key / Value
+pairs can be added without any prior definition necessary. The value can be any valid `JSON` value,
+and it therefore typed automatically. You can add:
+
+- number
+- bool
+- string
+- array
+- objects
+
+They will be auto-detected and returned properly by the API. You can find it in the Admin UI
+navigation on the left side.
+
+[#1491](https://github.com/sebadob/rauthy/pull/1491)
+
+#### Credential Stuffing Detection
+
+Rauthy was already detecting brute-force attempts for a user. When multiple passwords were wrong,
+the timeout between retries would be artificially increased. Now it can also detect credential
+stuffing over multiple accounts. How it works is pretty simple:
+
+- If a user fails doing a login, the username + password will be sent into the cred stuff detector.
+- The detector will create a `hash(username + password)` and store it in the cache.
+- The duration will be the so called `scan_window`, which can be configured.
+- If the length of unique hashes exceeds the configured threshold, the IP will be automatically
+  blacklisted.
+- When any new failure event comes in and there are already hashes collected, then `scan_window`
+  will NOT expire depending on the first add, but the timer will reset with teach event.
+
+```toml
+[cred_stuff_detection]
+## This section contains values for the credential stuffing
+## detection algorithm. In most cases the defaults should be
+## fine.
+
+# The duration in seconds for how long an IP will be
+# blacklisted after it was considered harmful, doing
+# credential stuffing.
+#
+# default: 86400
+# overwritten by: CRED_STUFF_BLACKLIST_DUR
+blacklist_duration = 10
+
+# The threshold for username / password combinations. When
+# this is reached within the `scan_window` the IP will be
+# blacklisted and a new warning Event will be fired.
+#
+# default: 15
+# overwritten by: CRED_STUFF_BLACKLIST_THRES
+blacklist_threshold = 3
+
+# The time in seconds within the detector should operate.
+# Whenever either a non-existing email or a email with a
+# wrong password is sent, the combination of both will be
+# hashed and stored (in-memory) for the duration of this
+# value. If any new event happens within this time frame,
+# the new hash will be stored as well, and then timer will
+# reset to `scan_window` again. Only if not a single event
+# happens during the whole duration, the values will be
+# evicted.
+#
+# Keep in mind, that when the `scan_window` is bigger than
+# `blacklist_duration`, a single false login may be enough
+# to blacklist an IP again, after it was removed from the
+# blacklist.
+#
+# default: 10800
+# overwritten by: CRED_STUFF_SCAN_WINDOW
+scan_window = 5
+```
+
+There is also a new event you can configure the level for:
+
+```toml
+[events]
+# The level for the generated Event after an IP has
+# been considered harmful, doing credential stuffing.
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_CRED_STUFF
+level_cred_stuff = 'warning'
+```
+
+[#1488](https://github.com/sebadob/rauthy/pull/1488)
+
+#### User Enumeration Prevention
+
+When you had an open user registration, it was a known issue that it had the potential for username
+enumeration because Rauthy simply behaved like almost all other applications. However, this is
+mitigated now. When a user registers and the email exists already, the response will always be
+'success'. If it existed before, however, the user will receive a notification email about it with a
+link to request a password reset.
+
+[#1487](https://github.com/sebadob/rauthy/pull/1487)
+
+#### Upgraded to `hiqlite-v0.13`
+
+The underlying `hiqlite` was upgraded to `v0.13`. This version includes a small throughput
+improvement of ~12%. Apart from that, it comes with optimized and much improved macros, which do
+not only boost performance (as seen on the 12%), but they also provide better future maintenance.
+Many manual DB deserialization impls are now auto-generated. The same macro was created for Postgres
+types as well to have the exact same behavior. Apart from maybe the small performance improvement,
+the end user will not really notice anything about it though. It's most about future maintenance,
+stability and improved DX.
+
+Another feature that was added with this version is auto-encrypted in-cluster TLS traffic. If you
+want to follow a zero trust philosophy, and you don't have something like a service mesh with auto
+mTLS in place already, you don't need to manage TLS certificates for hiqlite cluster traffic
+manually anymore. You have a new config variable to make it maintenance-free:
+
+```toml
+[cluster]
+# The `tls_auto_certificates` will generate self-signed TLS
+# certificates for internal Raft and API traffic. Clients will
+# simply not validate the certificates for ease of use because
+# they don't have to. They do a 3-way handshake anyway, which
+# validates both client and server without the secret ever being
+# sent over the network.
+#
+# If you specify specific certificates with either `tls_raft_*` or
+# `tls_api_*`, they will be used instead.
+#
+# default: false
+# overwritten by: HQL_TLS_AUTO_CERTS
+tls_auto_certificates = false
+```
+
+[#1481](https://github.com/sebadob/rauthy/pull/1481)
+
+#### The Binary is a CLI
+
+The `rauthy` binary is now a CLI tool. This makes it possible to not only specify a custom path to
+your config file, but it also provides additional utility. You can use it to generate new encryption
+keys, or to generate a complete config to get you started. More documentation about it will be added
+to the book in the future. The tl;dr for now is: You start the Server with `rauthy serve` now, and
+with the `-c` option, you can select a custom config file path:
+
+[#1481](https://github.com/sebadob/rauthy/pull/1481)
+
+#### Bootstrapping
+
+You can now bootstrap a lot more values:
+
+- groups
+- roles
+- scopes
+- custom user attributes
+- users
+- clients
+
+These are read from `*.json` files. You have a new config variable in the `bootstrap` section to
+configure the directory:
+
+```toml
+[bootstrap]
+# This is the directory where the bootstrap logic will look for
+# additional bootstrapping data. It will expect JSON files with
+# fixed names inside this folder. If it finds any of them, it will
+# try to parse and apply them during the bootstrapping process.
+#
+# The following files will be parsed in the given directory:
+# - roles.json
+# - groups.json
+# - scopes.json
+# - user_attributes.json
+# - users.json
+# - clients.json
+#
+# For information about the structure and the applied validations,
+# check `src/data/src/migration/bootstrap/types.rs`, and the
+# `bootstrap/*.json` files for examples.
+#
+# default: 'bootstrap'
+# overwritten by: BOOTSTRAP_DIR
+bootstrap_dir = 'bootstrap'
+```
+
+The book was not updated with all the new types yet, but you can take a look at examples here:
+
+https://github.com/sebadob/rauthy/tree/main/bootstrap
+
+Or take a look at the definitions directly here:
+
+https://github.com/sebadob/rauthy/blob/main/src/data/src/migration/bootstrap/types.rs
+
+> Note: Right now, the API key for bootstrapping still lives in the config file in is limited to a
+> single one. This will probably be merged into the new way of bootstrapping from files.
+> The initial admin user bootstrap also lives in the config file only, even though you could
+> bootstrap as many admins from file as you like. The initial admin bootstrap is essential, while
+> all other users are most-likely only bootstrapped in CI pipelines.
+
+[#1490](https://github.com/sebadob/rauthy/pull/1490)
+
+#### Client IDs can now contain UPPERCASE characters
+
+Some clients like OpenCloud have very weird requirements. They basically dictate their hardcoded
+client ID to the IdP, and in this case they expect camelCasedIds. This is an absolutely terrible
+design and should never be done, but at least Rauthy supports this weird behavior now.
+
+[#1418](https://github.com/sebadob/rauthy/pull/1418)
+
+#### Updates for Dynamic Clients
+
+To finalize the support for Matrix "next-gen auth" some more adjustments and improvements have been
+added for dynamic clients. The default and allowed scopes are now configurable.
+
+The cleanup scheduler for unused dynamically registered clients was expanded. It can now also clean
+up dynamic clients that have been inactive or unsued since X days. The Matrix "next-gen auth"
+basically spams the database with dynamic clients (by terrible design imo), and they are forgotten
+and never cleaned up at some point. The inactive auto-cleanup fixes issues like these.
+
+```toml
+[dynamic_clients]
+# The allowed scopes separated by ' ' for dynamic clients.
+#
+# default: ['openid', 'profile', 'email', 'groups']
+# overwritten by: DYN_CLIENT_ALLOWED_SCOPES - single String, \n separated values
+allowed_scopes = ['openid', 'profile', 'email', 'groups']
+
+# The default scopes separated by ' ' for dynamic clients.
+#
+# default: ['openid']
+# overwritten by: DYN_CLIENT_DEFAULT_SCOPES - single String, \n separated values
+default_scopes = ['openid']
+
+# Defines the number of days after which an inactive dynamic client will be
+# cleaned up. This applies to clients that have been used at least once but
+# have not been active since the configured amount of days.
+#
+# WARNING: This will permanently delete client registrations.
+#
+# default: 0 (disabled)
+# overwritten by: DYN_CLIENT_CLEANUP_INACTIVE_DAYS
+#cleanup_inactive_days = 0
+```
+
+[#1413](https://github.com/sebadob/rauthy/pull/1413)
+[#1419](https://github.com/sebadob/rauthy/pull/1419)
+
+#### Hierarchical scope matching for URNs (MSC3861)
+
+This is another addon for Matrix "next-gen auth" only (probably). Rauthy now allowed wildscard scope
+matching for matrix via opt-in.
+
+```toml
+
+[matrix]
+# Enables specific compatibility support for Matrix MSC3861 (Matrix 2.0 native OIDC).
+# This enables hierarchical scope matching (e.g. 'device' matches 'device:ID').
+# Note: Dynamic Client Registration (DCR) should be enabled for full support.
+#
+# default: false
+# overwritten by: MATRIX_SUPPORT_ENABLE
+msc3861_enable = false
+```
+
+#### Auth Provider compatibility improvements
+
+To further improve compatibility with different upstream providers, the user info data extraction
+was updated and is less strict now. This brings compatibility with e.g. Discord, which sends a very
+weird `id_token`, which does not contain the values of the requested scoped for whatever reason. To
+fix edge cases like this, the extraction of necessary values will first be tried via `id_token`, and
+if it fails, the `/userinfo` endpoint will be used in combination with the `access_token`. This
+should now even fix OAuth2 providers that are trying to do OIDC (but do it not quite right).
+
+[#1431](https://github.com/sebadob/rauthy/pull/1431)
+
+#### Auth Provider logo deletion
+
+It was not possible to delete a logo for an Auth Provider once it was added. The implementation was
+simply never done. You will now see a button next to an uploaded logo which makes it possible to
+delete it again.
+
+[#1433](https://github.com/sebadob/rauthy/pull/1433)
+
+#### SCIM requirements loosened up
+
+To provide better compatibility with (pretty bad) SCIM clients that don't strictly follow the RFC,
+various values have been made optional, even though the RFC defines them as required. This brings
+compatibility for e.g. clients like VMware vCenter.
+
+[#1395](https://github.com/sebadob/rauthy/pull/1395)
+[#1402](https://github.com/sebadob/rauthy/pull/1402)
+
+#### `sig` added to JWKS response
+
+Super tiny addon to the JWKS endpoint. `sig` is no included for each entry, as some clinets seems
+to filter by it (and fail if it does not exist, which is their fault actually). To have lees errors
+even with bad client impl's, the `sig` will be set for each entry.
+
+[#1404](https://github.com/sebadob/rauthy/pull/1404)
+
+### Bugfix
+
+- The SCIM token input did only allow max 128 characters, which is not enough for some clients. They
+  can now be up to 2048 characters long.
+  [#1397](https://github.com/sebadob/rauthy/pull/1397)
+  [#1426](https://github.com/sebadob/rauthy/pull/1426)
+- The SCIM group prefix was not working as expected in some situations.
+  [#1403](https://github.com/sebadob/rauthy/pull/1403)
+- Clients could have ben rate-limited for forever when they exceeded limits because the use of a
+  wrong TTL for cache entries.
+  [#1416](https://github.com/sebadob/rauthy/pull/1416)
+- OPTIONS for CORS on the token revocation endpoint was missing.
+  [#1420](https://github.com/sebadob/rauthy/pull/1420)
+- Fixes a bug in the Admin UI when there is a new version available. The version is displayed
+  correctly now in the same ways as when there is no update.
+  [#1427](https://github.com/sebadob/rauthy/pull/1427)
+- Tiny CSS fix for Auth Provider buttons. They did not have any gap between them.
+  [#1428](https://github.com/sebadob/rauthy/pull/1428)
+- The `/userinfo` endpoint only showed the picture ID for a user when it should have shown the
+  complete URL instead.
+  [#1429](https://github.com/sebadob/rauthy/pull/1429)
+- The "Last Login" timestamp for a user was not correctly updated in some very specific situations.
+  [#1430](https://github.com/sebadob/rauthy/pull/1430)
+- When you had the `preferrred_username` configured as `required`, it was not possible to register
+  a new user as an admin without seeing an error. The user values validation for admin registrations
+  is now simply ignored, as you would see the full User Values form anyway immediately afterwards,
+  so you can fix any possible issues there.
+  [#1434](https://github.com/sebadob/rauthy/pull/1434)
+- It was not possible to connect to some Postgres instances with skipped TLS validation when they
+  did not support ED25519 or ECDSA keys. The custom verifier now also offers lots of other (only
+  safe) algorithms to choose from. No config required.
+  [#1436](https://github.com/sebadob/rauthy/pull/1436)
+- When a client added `prompt=none` to a request during authorization, Rauthy did not return a `302`
+  and therefore did not redirect back to the client.
+  [#1484](https://github.com/sebadob/rauthy/pull/1484)
+- The username blacklist was not checked if you had an open user registration and the
+  `preferred_username` was set to `required`.
+  [#1485](https://github.com/sebadob/rauthy/pull/1485)
+- The claim name in the `id_token` and on the `/userinfo` response for the `phone` claim was not
+  matching the RFC. It was called `phone` when it should have been `phone_number`.
+  [#1486](https://github.com/sebadob/rauthy/pull/1486)
 
 ## v0.34.3
 

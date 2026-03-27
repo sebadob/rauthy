@@ -2441,7 +2441,6 @@ generate_self_signed = true
 #accept_timeout = 900
 
 [user_delete]
-
 # You can enable user self-deletion via the Account Dashboard.
 # It is disabled by default, because especially if you use things like
 # SCIM, the deletion of a user might trigger a series of events which
@@ -2562,7 +2561,6 @@ enable = true
 #allow_open_redirect = false
 
 [user_values]
-
 # In this section, you can configure the requirements for different
 # user values to adjust them to your needs. The `preferred_username`
 # as a special value provide some additional options.
