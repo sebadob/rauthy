@@ -7,27 +7,18 @@ use rauthy_api_types::groups::{GroupRequest, GroupResponse};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromPgRow, ToSchema)]
 pub struct Group {
     pub id: String,
     pub name: String,
     // We don't want to store `serde_json::Value` directly, because it might produce a
     // `Bincode: Serde(AnyNotSupported)`
     pub meta: Option<Vec<u8>>,
-}
-
-impl From<tokio_postgres::Row> for Group {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            name: row.get("name"),
-            meta: row.get("meta"),
-        }
-    }
 }
 
 // CRUD
