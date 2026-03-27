@@ -126,7 +126,7 @@
     }
 
     async function onSubmitAdd(form: HTMLFormElement, params: URLSearchParams) {
-        let value = params.get('value')?.trim();
+        let value = params.get('value');
         if (!value) {
             return;
         }
