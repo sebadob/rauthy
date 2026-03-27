@@ -284,7 +284,8 @@ impl TokenSet {
             picture: None,
             locale: None,
             nonce: nonce.as_ref().map(|n| n.0.as_str()),
-            phone: None,
+            phone_number: None,
+            phone_number_verified: None,
             roles: user.get_roles(),
             groups: None,
             custom: None,
@@ -332,7 +333,9 @@ impl TokenSet {
             && let Some(values) = &user_values
             && let Some(phone) = &values.phone
         {
-            claims.phone = Some(phone.as_str());
+            claims.phone_number = Some(phone.as_str());
+            // Note: Rauthy does not have a mechanism to send SMS and therefore verify a number.
+            claims.phone_number_verified = Some(false);
         }
         if scope.contains("groups") {
             claims.groups = Some(user.get_groups());

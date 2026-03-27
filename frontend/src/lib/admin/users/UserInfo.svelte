@@ -675,7 +675,7 @@
 
     .values {
         display: flex;
-        gap: 1rem;
+        column-gap: 1rem;
         flex-wrap: wrap;
     }
 

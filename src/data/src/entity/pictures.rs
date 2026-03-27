@@ -8,11 +8,12 @@ use actix_web::http::header::{
 };
 use actix_web::{HttpResponse, HttpResponseBuilder, web};
 use futures_util::StreamExt;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use image::ImageFormat;
 use image::imageops::FilterType;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -91,23 +92,12 @@ impl PictureStorage {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, FromPgRow)]
 pub struct UserPicture {
     pub id: String,
     pub content_type: String,
     pub storage: String,
     pub data: Option<Vec<u8>>,
-}
-
-impl From<tokio_postgres::Row> for UserPicture {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            content_type: row.get("content_type"),
-            storage: row.get("storage"),
-            data: row.get("data"),
-        }
-    }
 }
 
 // CRUD

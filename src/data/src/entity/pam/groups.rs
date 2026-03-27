@@ -1,10 +1,11 @@
 use crate::database::DB;
 use crate::entity::pam::hosts::PamHost;
-use hiqlite_macros::params;
+use hiqlite::macros::{FromRow, params};
 use rauthy_api_types::pam::{PamGroupMembersResponse, PamGroupResponse};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -16,15 +17,19 @@ pub enum PamGroupType {
     Local,
 }
 
-impl From<&str> for PamGroupType {
-    fn from(value: &str) -> Self {
-        match value {
+impl FromStr for PamGroupType {
+    type Err = ErrorResponse;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = match s {
             "immutable" => Self::Immutable,
             "host" => Self::Host,
             "user" => Self::User,
             "local" => Self::Local,
             _ => Self::Generic,
-        }
+        };
+
+        Ok(slf)
     }
 }
 
@@ -40,21 +45,12 @@ impl PamGroupType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct PamGroup {
     pub id: u32,
     pub name: String,
+    #[column(parse)]
     pub typ: PamGroupType,
-}
-
-impl From<hiqlite::Row<'_>> for PamGroup {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
-        Self {
-            id: row.get::<i64>("id") as u32,
-            name: row.get("name"),
-            typ: PamGroupType::from(row.get::<String>("typ").as_str()),
-        }
-    }
 }
 
 impl From<tokio_postgres::Row> for PamGroup {
@@ -62,7 +58,7 @@ impl From<tokio_postgres::Row> for PamGroup {
         Self {
             id: row.get::<_, i64>("id") as u32,
             name: row.get("name"),
-            typ: PamGroupType::from(row.get::<_, String>("typ").as_str()),
+            typ: row.get::<_, String>("typ").parse().unwrap(),
         }
     }
 }

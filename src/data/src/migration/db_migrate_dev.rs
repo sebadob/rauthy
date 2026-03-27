@@ -3,7 +3,7 @@ use crate::entity::jwk::Jwk;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::deserialize;
 use rauthy_error::ErrorResponse;

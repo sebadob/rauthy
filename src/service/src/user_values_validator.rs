@@ -3,6 +3,7 @@ use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_data::rauthy_config::{RauthyConfig, UserValueConfigValue};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::borrow::Cow;
 use std::str::FromStr;
 use tracing::{debug, warn};
 
@@ -42,6 +43,18 @@ impl UserValuesValidator<'_> {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "'preferred_username' is required",
+            ));
+        }
+
+        if let Some(username) = self.preferred_username
+            && config
+                .preferred_username
+                .blacklist
+                .contains(&Cow::from(username.to_lowercase()))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::NotAccepted,
+                format!("username '{username}' is not available",),
             ));
         }
 

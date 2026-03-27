@@ -3,10 +3,11 @@ use crate::database::DB;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
@@ -86,7 +87,7 @@ impl Display for MagicLinkUsage {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, FromPgRow)]
 pub struct MagicLink {
     pub id: String,
     pub user_id: String,
@@ -111,20 +112,6 @@ impl Debug for MagicLink {
             self.used,
             self.usage
         )
-    }
-}
-
-impl From<tokio_postgres::Row> for MagicLink {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            user_id: row.get("user_id"),
-            csrf_token: row.get("csrf_token"),
-            cookie: row.get("cookie"),
-            exp: row.get("exp"),
-            used: row.get("used"),
-            usage: row.get("usage"),
-        }
     }
 }
 
