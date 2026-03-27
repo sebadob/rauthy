@@ -25,6 +25,7 @@
     import { redirectToLogout } from '$utils/helpers';
     import Tooltip from '$lib5/Tooltip.svelte';
     import IconCommandLine from '$icons/IconCommandLine.svelte';
+    import IconCircleStack from '$icons/IconCircleStack.svelte';
 
     let ta = useI18nAdmin();
 
@@ -214,6 +215,13 @@
                             <IconCloud {width} />
                         {/snippet}
                         {ta.nav.providers}
+                    </NavLink>
+
+                    <NavLink {compact} {params} route="/kv">
+                        {#snippet icon(width: string)}
+                            <IconCircleStack {width} />
+                        {/snippet}
+                        KV Store
                     </NavLink>
 
                     <NavLink {compact} {params} route="/config/policy" highlightIncludes="/config/">

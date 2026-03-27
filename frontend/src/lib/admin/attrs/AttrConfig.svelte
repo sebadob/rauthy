@@ -14,6 +14,7 @@
     import CheckIcon from '$lib/CheckIcon.svelte';
     import { slide } from 'svelte/transition';
     import { untrack } from 'svelte';
+    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
 
     let {
         attr,
@@ -37,7 +38,7 @@
 
     let name = $state(untrack(() => attr.name));
     let desc = $state(untrack(() => attr.desc));
-    let defaultValue = $state(untrack(() => attr.default_value));
+    let defaultValue = $state(untrack(() => stringifyJsonValue(attr.default_value, 1)));
     let userEditable = $state(untrack(() => attr.user_editable || false));
 
     let showMakeEditable = $state(false);
@@ -46,7 +47,7 @@
         if (attr.name) {
             name = attr.name;
             desc = attr.desc;
-            defaultValue = attr.default_value;
+            defaultValue = stringifyJsonValue(attr.default_value, 1);
             userEditable = attr.user_editable || false;
 
             showMakeEditable = false;
@@ -69,7 +70,7 @@
         let payload: UserAttrConfigRequest = {
             name,
             desc: desc || undefined,
-            default_value: defaultValue || undefined,
+            default_value: parseJsonValue(defaultValue),
             user_editable: userEditable || false,
         };
 

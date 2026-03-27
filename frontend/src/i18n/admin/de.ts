@@ -138,6 +138,7 @@ export let I18nAdminDe: I18nAdmin = {
         information: 'Informationen',
         language: 'Sprache',
         loading: 'Lade',
+        jsonMeta: 'Metadaten als JSON Wert',
         name: 'Name',
         nameExistsAlready: 'Name existiert bereits',
         note: 'Notiz',
@@ -290,6 +291,44 @@ export let I18nAdminDe: I18nAdmin = {
         kann dies einige Sekunden in Anspruch nehmen.`,
         type: 'Typ',
         rotateKeys: 'Keys Rotieren',
+    },
+    kv: {
+        accessTestDesc: `Der Access Key muss im <code>Authorization</code> header als 
+            <code>Bearer</code> token angegeben werden. Der folgende <code>curl</code> Befehl kann
+            zum Testen genutzt werden.`,
+        addNewKey: 'Neuer Access Key',
+        addNewNs: 'Neuer Namespace',
+        addNewValue: 'Neuer Wert',
+        delConfirm: 'Soll dieser Access Key wirklich gelöscht werden?',
+        delNsMsg: 'Soll wirklich dieser Namespace mitsamt aller enthaltenen Daten gelöscht werden?',
+        encryptedDesc: `Die zusätzliche Verschlüsselung sollte aus Performance-Gründen nur bei 
+            besonders sensiblen Werten wie z.B. access keys oder persönlichen Informationen gewählt 
+            werden.`,
+        deleteConfirmMsg: `Soll der Schlüssel '{{ key }}' wirklich gelöscht werden?`,
+        help: {
+            help: 'Hilfe',
+            ops: [
+                'Einen Access Key testen',
+                'Alle existierenden Schlüssel anzeigen',
+                'Alle existierenden Schlüssel + Werte anzeigen',
+                'Einen Schlüssel / Wert setzen',
+                'Einen Wert für einen Schlüssel anzeigen',
+                'Einen Schlüssel löschen',
+            ],
+            p1: `Der externe Zugriff auf KV Stores ist bewusst sehr einfach gehalten. Es gibt nur
+                ein paar Operationen:`,
+            p2: `Jede dieser Operationen erfordert einene Access Key als <code>Bearer</code> token
+                (<code>{id}\${secret}</code>) im <code>Authorization</code> header. Ein Access Key gilt immer nur 
+                isoliert für den Namespace, in dem er existiert.`,
+            p3: `Die oben genannten Operationen sind im folgenden mit <code>curl</code> Beispielen 
+                erläutert.`,
+        },
+        key: 'Schlüssel',
+        loadAllValues: 'Alle Werte laden',
+        storeEncrypted: 'Wert verschlüsselt speichern',
+        tabs: ['Daten', 'Zugriff', 'Bearbeiten', 'Löschen'],
+        testCmd: 'Test-Befehl',
+        value: 'JSON Wert',
     },
     nav: {
         apiKeys: 'API Keys',

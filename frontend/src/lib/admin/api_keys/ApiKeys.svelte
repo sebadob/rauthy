@@ -75,7 +75,7 @@
 {err}
 
 <NavSub
-    paddingTop="2.1rem"
+    paddingTop="2.35rem"
     buttonTilesAriaControls="keys"
     width="min(20rem, 100dvw)"
     thresholdNavSub={700}

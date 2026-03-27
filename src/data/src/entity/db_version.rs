@@ -10,6 +10,8 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use tracing::{debug, warn};
 
+// TODO After bumping to v0.36, make sure the lowest compatible is set to v0.35
+//  and `apply_temp_migrations()` was cleaned up!
 static LOWEST_COMPATIBLE_VERSION: &str = "0.30.0";
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -96,6 +98,8 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
     ) -> Result<(), ErrorResponse> {
         // this check panics on purpose, and it is there to never forget to adjust this
         // version check before doing any major or minor release
+        // TODO After bumping to v0.36, make sure the lowest compatible is set to v0.35
+        //  and `apply_temp_migrations()` was cleaned up!
         if app_version.major != 0 || app_version.minor != 35 {
             panic!(
                 "\nDbVersion::check_app_version needs adjustment for the new RAUTHY_VERSION: \

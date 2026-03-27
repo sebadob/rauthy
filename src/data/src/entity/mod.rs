@@ -32,6 +32,7 @@ pub mod ip_rate_limit;
 pub mod issued_tokens;
 pub mod jwk;
 pub mod jwk_token_validation;
+pub mod kv;
 pub mod login_locations;
 pub mod logos;
 pub mod magic_links;

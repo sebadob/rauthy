@@ -13,6 +13,7 @@ use crate::entity::failed_scim_tasks::FailedScimTask;
 use crate::entity::groups::Group;
 use crate::entity::issued_tokens::IssuedToken;
 use crate::entity::jwk::Jwk;
+use crate::entity::kv::{KVAccess, KVNamespace, KVValue};
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
@@ -545,6 +546,53 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .collect_vec();
     inserts::issued_tokens(before).await?;
 
+    // KV NS
+    debug!("Migrating table: kv_ns");
+    let mut stmt = conn.prepare("SELECT * FROM kv_ns")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(KVNamespace {
+                ns: row.get("ns")?,
+                public: row.get("public")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::kv_ns(before).await?;
+
+    // KV ACCESS
+    debug!("Migrating table: kv_access");
+    let mut stmt = conn.prepare("SELECT * FROM kv_access")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(KVAccess {
+                id: row.get("id")?,
+                ns: row.get("ns")?,
+                secret: row.get("secret")?,
+                enabled: row.get("enabled")?,
+                name: row.get("name")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::kv_access(before).await?;
+
+    // KV VALUES
+    debug!("Migrating table: kv_values");
+    let mut stmt = conn.prepare("SELECT * FROM kv_values")?;
+    let before = stmt
+        .query_map([], |row| {
+            Ok(KVValue {
+                ns: row.get("ns")?,
+                key: row.get("key")?,
+                encrypted: row.get("encrypted")?,
+                value: row.get("value")?,
+            })
+        })?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::kv_values(before).await?;
+
     Ok(())
 }
 
@@ -860,6 +908,21 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: issued_tokens");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM issued_tokens", &[], 0).await?;
     inserts::issued_tokens(before).await?;
+
+    // KV NS
+    debug!("Migrating table: kv_ns");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM kv_ns", &[], 0).await?;
+    inserts::kv_ns(before).await?;
+
+    // KV ACCESS
+    debug!("Migrating table: kv_access");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM kv_access", &[], 0).await?;
+    inserts::kv_access(before).await?;
+
+    // KV VALUES
+    debug!("Migrating table: kv_values");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM kv_values", &[], 0).await?;
+    inserts::kv_values(before).await?;
 
     Ok(())
 }

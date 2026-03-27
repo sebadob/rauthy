@@ -131,6 +131,7 @@ export let I18nAdminUk: I18nAdmin = {
         information: 'Інформація',
         language: 'Мова',
         loading: 'Завантаження',
+        jsonMeta: 'Metadata as JSON value',
         name: 'Назва',
         nameExistsAlready: 'Назва вже існує',
         note: 'Примітка',
@@ -283,6 +284,43 @@ export let I18nAdminUk: I18nAdmin = {
         це може зайняти кілька секунд.`,
         type: 'Тип',
         rotateKeys: 'Ротувати ключі',
+    },
+    kv: {
+        accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
+            <code>Bearer</code> token. The following <code>curl</code> command can be used for
+            testing.`,
+        addNewKey: 'New Access Key',
+        addNewNs: 'New Namespace',
+        addNewValue: 'New Value',
+        delConfirm: 'Do you really want to delete this Access Key?',
+        delNsMsg: 'Do you really want to delete this namespace including all existing data?',
+        encryptedDesc: `For performance reasons, the additional encryption should only be used for 
+            particularly sensitive values such as access keys or personal information.`,
+        deleteConfirmMsg: `Do you really want to delete the key '{{ key }}'?`,
+        help: {
+            help: 'Help',
+            ops: [
+                'Test an Access Key',
+                'Get all existing Keys',
+                'Get all existing Keys + Values',
+                'Set a Key + Value',
+                'Get the Value for a Key',
+                'Delete a Key',
+            ],
+            p1: `The external access to KV stores is kept very simple on purpose. There are only a
+                few operations:`,
+            p2: `Each of these operations requires an Access Key as <code>Bearer</code> token
+                (<code>{id}\${secret}</code>) in the <code>Authorization</code> header. An Access 
+                Key is only valid for the very namespace it exists in.`,
+            p3: `Here you will see examples for the above-mentioned operations using 
+                <code>curl</code>.`,
+        },
+        key: 'Key',
+        loadAllValues: 'Load all values',
+        storeEncrypted: 'Store value encrypted',
+        tabs: ['Data', 'Access', 'Edit', 'Delete'],
+        testCmd: 'Test Command',
+        value: 'JSON Value',
     },
     nav: {
         apiKeys: 'API Ключі',
