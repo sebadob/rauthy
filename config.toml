@@ -468,8 +468,6 @@ api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQyn
 # check `src/data/src/migration/bootstrap/types.rs`, and the
 # `bootstrap/*.json` files for examples.
 #
-# TODO add more in-depth documentation to the book
-#
 # default: 'bootstrap'
 # overwritten by: BOOTSTRAP_DIR
 bootstrap_dir = 'bootstrap'
@@ -639,6 +637,20 @@ cache_storage_disk = true
 #tls_api_cert = "tls/tls.crt"
 #tls_api_danger_tls_no_verify = true
 
+# The `tls_auto_certificates` will generate self-signed TLS
+# certificates for internal Raft and API traffic. Clients will
+# simply not validate the certificates for ease of use because
+# they don't have to. They do a 3-way handshake anyway, which
+# validates both client and server without the secret ever being
+# sent over the network.
+#
+# If you specify specific certificates with either `tls_raft_*` or
+# `tls_api_*`, they will be used instead.
+#
+# default: false
+# overwritten by: HQL_TLS_AUTO_CERTS
+tls_auto_certificates = false
+
 # Secrets for Raft internal authentication as well as for the API.
 # These must be at least 16 characters long and you should provide
 # different ones for both variables.
@@ -802,7 +814,7 @@ blacklist_threshold = 3
 # happens during the whole duration, the values will be
 # evicted.
 #
-# Keep in mind, that when the `scan_window` is bigger than
+# Keep in mind that when the `scan_window` is bigger than
 # `blacklist_duration`, a single false login may be enough
 # to blacklist an IP again, after it was removed from the
 # blacklist.
@@ -2353,12 +2365,12 @@ header = 'New password for'
 # Note: This value will be empty for `password_new` and `password_reset`.
 # You can set custom content that you wish to add to your emails though.
 # For `email_registered_already`, it will have a default text.
-text = """Someone tried to register a new account with your E-Mail address
-while an account exists already. If that was you, and it was a mistake, you
-can ignore this message. However, if you forgot your password, you can use
-the link belopw to reset it.
-If it was not you trying to register the new account - no need to worry.
-Your account has not been compromised and no data was leaked."""
+#text = """Someone tried to register a new account with your E-Mail address
+#while an account exists already. If that was you, and it was a mistake, you
+#can ignore this message. However, if you forgot your password, you can use
+#the link belopw to reset it.
+#If it was not you trying to register the new account - no need to worry.
+#Your account has not been compromised and no data was leaked."""
 
 # Exists only for: password_new, password_reset
 click_link = 'Click the link below to get forwarded to the password form.'
