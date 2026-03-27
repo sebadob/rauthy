@@ -4,7 +4,7 @@ use crate::entity::scopes::Scope;
 use crate::migration::bootstrap::bootstrap_data;
 use crate::migration::bootstrap::types::{Client, ClientSecret};
 use cryptr::{EncKeys, EncValue};
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use itertools::Itertools;
 use rauthy_common::constants::SECRET_LEN_CLIENTS;
 use rauthy_common::is_hiqlite;
@@ -161,7 +161,7 @@ $18, $19, $20, $21, $22)"#;
         if let Some(scim) = client.scim {
             ClientScim::upsert(
                 client.id,
-                scim.bearer_token.as_bytes(),
+                scim.bearer_token.as_str(),
                 scim.base_uri,
                 scim.sync_groups,
                 scim.group_sync_prefix,

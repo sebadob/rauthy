@@ -1,7 +1,7 @@
 use crate::database::DB;
 use crate::migration::bootstrap::bootstrap_data;
 use crate::migration::bootstrap::types::UserAttribute;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use tracing::info;

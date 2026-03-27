@@ -1,7 +1,7 @@
 use crate::database::DB;
 use crate::migration::bootstrap::bootstrap_data;
 use crate::migration::bootstrap::types::Role;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
 use rauthy_error::ErrorResponse;

@@ -1,6 +1,6 @@
 use crate::database::DB;
 use crate::entity::jwk::Jwk;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use tracing::{debug, info};

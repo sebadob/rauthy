@@ -6,7 +6,7 @@ use crate::entity::users_values::UserValues;
 use crate::migration::bootstrap::bootstrap_data;
 use crate::migration::bootstrap::types::{User, UserPassword};
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::HashPassword;

@@ -3,7 +3,7 @@ use crate::rauthy_config::RauthyConfig;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, new_store_id};
 use rauthy_error::ErrorResponse;

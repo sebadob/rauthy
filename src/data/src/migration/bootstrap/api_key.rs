@@ -2,7 +2,7 @@ use crate::database::DB;
 use crate::entity::api_keys::ApiKeyEntity;
 use crate::rauthy_config::RauthyConfig;
 use cryptr::EncValue;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::api_keys::ApiKeyRequest;
 use rauthy_common::utils::base64_decode;
 use rauthy_common::{is_hiqlite, sha256};
