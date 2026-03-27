@@ -43,13 +43,7 @@
             "alfred@batcave"
         ],
         "backchannel_logout_uri": "https://localhost:8080/logout/backchannel",
-        "restrict_group_prefix": "bs_group_",
-        "scim": {
-            "bearer_token": "SuperSafeBearer1337",
-            "base_uri": "https://localhost:8080/scim/v2/",
-            "sync_groups": true,
-            "group_sync_prefix": "bs_group_"
-        }
+        "restrict_group_prefix": "bs_group_"
     },
     {
         "id": "bootstrap_client_2",

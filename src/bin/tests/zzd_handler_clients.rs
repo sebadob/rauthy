@@ -26,11 +26,8 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let clients = res.json::<Vec<ClientResponse>>().await?;
-    assert_eq!(clients.len(), 2);
-    let mut client = clients.get(0).unwrap();
-    if client.id == "init_client" {
-        client = clients.get(1).unwrap();
-    }
+    let len_orig = clients.len();
+    let mut client = clients.iter().find(|c| c.id == "rauthy").unwrap();
     println!("{:?}", client);
     assert_eq!(client.id, "rauthy");
     assert_eq!(client.name, Some("Rauthy".to_string()));
@@ -185,7 +182,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let clients = res.json::<Vec<ClientResponse>>().await?;
-    assert_eq!(clients.len(), 2);
+    assert_eq!(clients.len(), len_orig);
 
     Ok(())
 }

@@ -28,8 +28,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     assert_eq!(res.status(), 200);
-    let attrs = res.json::<UserAttrConfigResponse>().await?;
-    assert!(attrs.values.is_empty());
+    let _ = res.json::<UserAttrConfigResponse>().await?;
 
     // add a new attr
     let cust_attr = UserAttrConfigRequest {

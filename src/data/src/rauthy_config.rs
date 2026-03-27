@@ -45,12 +45,12 @@ pub struct RauthyConfig {
 
 impl RauthyConfig {
     pub async fn build(
-        config_file: &str,
+        config_file: String,
         tx_email: mpsc::Sender<EMail>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
-        let (vars, node_config) = Vars::load(config_file).await;
+        let (vars, node_config) = Vars::load(&config_file).await;
         vars.validate();
         if let Err(err) = node_config.is_valid() {
             panic!("Invalid `[cluster]` config: {err}");
@@ -932,7 +932,7 @@ Your account has not been compromised and no data was leaked."#.into()),
 }
 
 impl Vars {
-    async fn load(path_config: &str) -> (Self, hiqlite::NodeConfig) {
+    pub async fn load(path_config: &str) -> (Self, hiqlite::NodeConfig) {
         let use_vault_config = env::var("USE_VAULT_CONFIG")
             .unwrap_or_else(|_| "false".to_string())
             .parse::<bool>()
@@ -3022,7 +3022,7 @@ impl Vars {
         }
     }
 
-    fn validate(&self) {
+    pub fn validate(&self) {
         if !self.database.hiqlite
             && (self.database.pg_host.is_none()
                 || self.database.pg_user.is_none()

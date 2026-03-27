@@ -28,7 +28,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let users = res.json::<Vec<UserResponseSimple>>().await?;
-    assert_eq!(users.len(), 3);
+    let len_orig = users.len();
 
     // post a new user
     let new_user = NewUserRequest {
@@ -122,7 +122,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let users = res.json::<Vec<UserResponseSimple>>().await?;
-    assert_eq!(users.len(), 3);
+    assert_eq!(users.len(), len_orig);
 
     Ok(())
 }

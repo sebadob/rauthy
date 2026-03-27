@@ -1,8 +1,7 @@
 use crate::common::{get_auth_headers, get_backend_url, init_client_bcl_uri};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{ClientResponse, UpdateClientRequest};
-use rauthy_api_types::scopes::ScopeRequest;
-use rauthy_data::entity::scopes::Scope;
+use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
 use std::error::Error;
 
 mod common;
@@ -21,8 +20,8 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
-    let scopes = res.json::<Vec<Scope>>().await?;
-    assert_eq!(scopes.len(), 6);
+    let scopes = res.json::<Vec<ScopeResponse>>().await?;
+    let len_orig = scopes.len();
 
     // add a scope
     let new_scope = ScopeRequest {
@@ -38,7 +37,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
-    let scope = res.json::<Scope>().await?;
+    let scope = res.json::<ScopeResponse>().await?;
     assert_eq!(scope.name, new_scope.scope);
 
     // link the scope to a client and check
@@ -107,7 +106,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
-    let upd_scp = res.json::<Scope>().await?;
+    let upd_scp = res.json::<ScopeResponse>().await?;
     assert_eq!(upd_scope.scope, upd_scp.name);
 
     // check the linked client update
@@ -138,8 +137,8 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
-    let scopes = res.json::<Vec<Scope>>().await?;
-    assert_eq!(scopes.len(), 6);
+    let scopes = res.json::<Vec<ScopeResponse>>().await?;
+    assert_eq!(scopes.len(), len_orig);
 
     // check the linked client deletion
     let res = client

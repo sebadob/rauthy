@@ -175,22 +175,12 @@ run ty="hiqlite" node_id="1":
     clear
 
     if [[ {{ ty }} == "postgres" ]]; then
-      {{ postgres }} cargo run
+      {{ postgres }} cargo run -- serve
     elif [[ {{ ty }} == "ui" ]]; then
       cd frontend
       {{ npm }} run dev -- --host=0.0.0.0
     elif [[ {{ ty }} == "hiqlite" ]]; then
-      cargo run
-    elif [[ {{ ty }} == "node" ]]; then
-      if [[ {{ node_id }} == "1" ]]; then
-        LISTEN_PORT_HTTP=8001 PUB_URL="localhost:8001" HQL_DATA_DIR=data/node_1 HQL_NODE_ID=1 cargo run -- 1
-      elif [[ {{ node_id }} == "2" ]]; then
-        LISTEN_PORT_HTTP=8002 PUB_URL="localhost:8002" HQL_DATA_DIR=data/node_2 HQL_NODE_ID=2 cargo run -- 2
-      elif [[ {{ node_id }} == "3" ]]; then
-        LISTEN_PORT_HTTP=8003 PUB_URL="localhost:8003" HQL_DATA_DIR=data/node_3 HQL_NODE_ID=3 cargo run -- 3
-      else
-        echo "Only node_id from 1 - 3 supported"
-      fi
+      cargo run -- serve
     fi
 
 # runs (and stops) Postgres, Mailcrab, normal `just run` command
@@ -203,9 +193,9 @@ watch ty="hiqlite":
     if [[ {{ ty }} == "postgres" ]]; then
       just postgres-start
       sleep 2
-      command="{{ postgres }} cargo run"
+      command="{{ postgres }} cargo run -- serve"
     elif [[ {{ ty }} == "hiqlite" ]]; then
-      command="cargo run"
+      command="cargo run -- serve"
     fi
 
     watchexec -r -w src -w templates -- $command
@@ -222,7 +212,7 @@ test-backend: test-backend-stop delete-hiqlite
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    {{ test_env_vars }} cargo run test
+    {{ test_env_vars }} cargo run -- serve -c config-test.toml --test
 
 # starts the test backend with memory profiling - expects `heaptrack` to be available
 test-backend-heaptrack: test-backend-stop delete-hiqlite
@@ -236,7 +226,7 @@ test-backend-heaptrack: test-backend-stop delete-hiqlite
     #echo 'grant temporary access to performance events until reboot'
     #echo '1' | sudo tee /proc/sys/kernel/perf_event_paranoid
     #echo 'if you get an mmap error, try: sudo sysctl kernel.perf_event_mlock_kb=2048'
-    {{ test_env_vars }} heaptrack ./target/profiling/rauthy test
+    {{ test_env_vars }} heaptrack ./target/profiling/rauthy serve -c config-test.toml --test
 
 # stops a possibly running test backend that may have spawned in the background for integration tests
 test-backend-stop:
@@ -262,7 +252,7 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
     clear
 
     cargo build
-    {{ test_env_vars }} ./target/debug/rauthy test &
+    {{ test_env_vars }} ./target/debug/rauthy serve -c config-test.toml --test  &
     echo $! > {{ file_test_pid }}
 
     while ! curl -s localhost:8081/auth/v1/ping; do
@@ -286,7 +276,7 @@ test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlit
 
     cargo build
     # the Hiqlite tests are disk-backed, lets check postgres in-memory to cover this as well
-    {{ test_env_vars }} {{ postgres }} HQL_CACHE_STORAGE_DISK=false ./target/debug/rauthy test &
+    {{ test_env_vars }} {{ postgres }} HQL_CACHE_STORAGE_DISK=false ./target/debug/rauthy serve -c config-test.toml --test &
     echo $! > {{ file_test_pid }}
 
     while ! curl -s localhost:8081/auth/v1/ping; do
