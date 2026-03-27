@@ -114,6 +114,7 @@ export interface I18nAdmin {
         information: string;
         language: string;
         loading: string;
+        jsonMeta: string;
         name: string;
         nameExistsAlready: string;
         note: string;
@@ -234,6 +235,41 @@ export interface I18nAdmin {
         p3: string;
         type: string;
         rotateKeys: string;
+    };
+    kv: {
+        // inserted as HTML
+        accessTestDesc: string;
+        addNewKey: string;
+        addNewNs: string;
+        addNewValue: string;
+        delConfirm: string;
+        delNsMsg: string;
+        encryptedDesc: string;
+        // MUST contain '{{ key }}' to be replaced with the key to delete
+        deleteConfirmMsg: string;
+        help: {
+            help: string;
+            // order:
+            // - test access key
+            // - show all keys
+            // - show all keys + values
+            // - set a key + value
+            // - get the value for a key
+            // - delete a key + value
+            ops: string[];
+            p1: string;
+            // inserted as HTML
+            p2: string;
+            // inserted as HTML
+            p3: string;
+        };
+        key: string;
+        loadAllValues: string;
+        storeEncrypted: string;
+        // order: data, access, edit, delete
+        tabs: string[];
+        testCmd: string;
+        value: string;
     };
     nav: {
         apiKeys: string;

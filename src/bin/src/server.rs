@@ -1,26 +1,181 @@
-use crate::tls;
+use crate::logging::setup_logging;
+use crate::{init_static_vars, logging, tls, version_migration};
 use actix_web::rt::System;
 use actix_web::{App, HttpServer, middleware, web};
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
-use rauthy_common::is_hiqlite;
+use rauthy_common::constants::BUILD_TIME;
+use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::utils::UseDummyAddress;
+use rauthy_common::{is_hiqlite, password_hasher};
 use rauthy_data::ListenScheme;
+use rauthy_data::database::{Cache, DB};
+use rauthy_data::email::mailer;
+use rauthy_data::entity;
+use rauthy_data::entity::pictures::UserPicture;
+use rauthy_data::events::health_watch::watch_health;
+use rauthy_data::events::listener::EventListener;
+use rauthy_data::events::notifier::EventNotifier;
 use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_handlers::openapi::ApiDoc;
+use rauthy_handlers::swagger_ui::{OPENAPI_CONFIG, OPENAPI_JSON};
 use rauthy_handlers::{
     api_keys, atproto, auth_providers, backup, blacklist, clients, cors_preflight, dev_only, email,
-    events, fed_cm, generic, groups, html, oidc, pam, roles, scopes, sessions, swagger_ui, themes,
-    tos, users,
+    events, fed_cm, generic, groups, html, kv, oidc, pam, roles, scopes, sessions, swagger_ui,
+    themes, tos, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use std::cmp::max;
+use std::error::Error;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::thread;
-use tracing::{error, info};
+use std::time::Duration;
+use tokio::sync::mpsc;
+
+use tokio::time;
+use tracing::{debug, error, info, warn};
+
+pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Error>> {
+    let (tx_email, rx_email) = mpsc::channel::<mailer::EMail>(16);
+    let (tx_events, rx_events) = flume::unbounded();
+    let (tx_events_router, rx_events_router) = flume::unbounded();
+
+    info!("Initializing Config");
+    let (rauthy_config, node_config) = RauthyConfig::build(
+        config_file,
+        tx_email.clone(),
+        tx_events.clone(),
+        tx_events_router.clone(),
+    )
+    .await?;
+    rauthy_config.init_static();
+    init_static_vars::trigger();
+
+    if !logging::is_log_fmt_json() {
+        println!(
+            r#"
+                                                  88
+                                            ,d    88
+                                            88    88
+        8b,dPPYba, ,adPPYYba, 88       88 MM88MMM 88,dPPYba,  8b       d8
+        88P'   "Y8 ""     `Y8 88       88   88    88P'    "8a `8b     d8'
+        88         ,adPPPPP88 88       88   88    88       88  `8b   d8'
+        88         88,    ,88 "8a,   ,a88   88,   88       88   `8b,d8'
+        88         `"8bbdP"Y8  `"YbbdP'Y8   "Y888 88       88     Y88'
+                                                                  d8'
+                                                                 d8'
+            "#
+        );
+        // On some terminals, the banner gets mixed up
+        // with the first other logs without this short sleep.
+        time::sleep(Duration::from_micros(10)).await;
+    }
+
+    let log_level = setup_logging();
+    info!("Starting Rauthy v{RAUTHY_VERSION} ({})", *BUILD_TIME);
+    info!("Log Level set to '{log_level}'");
+    if test_mode {
+        warn!("Application started in Integration Test Mode");
+    }
+
+    RauthyConfig::debug_logs();
+
+    // init BEFORE Hiqlite to avoid issues in case of misconfiguration
+    rauthy_data::ipgeo::init_geo().await;
+
+    DB::init(node_config)
+        .await
+        .expect("Error starting the database / cache layer");
+
+    debug!("Starting E-Mail handler");
+    tokio::spawn(mailer::sender(rx_email));
+
+    // MUST start before we go into `DB::migrate()` - we may need it inside.
+    debug!("Starting Password Hasher");
+    tokio::spawn(password_hasher::run());
+
+    debug!("Applying database migrations");
+    DB::migrate().await.expect("Database migration error");
+
+    debug!("Starting Events handler");
+    EventNotifier::init_notifiers(tx_email).await.unwrap();
+    tokio::spawn(EventListener::listen(
+        tx_events_router,
+        rx_events_router,
+        rx_events,
+    ));
+
+    debug!("Starting health watch");
+    tokio::spawn(watch_health());
+
+    // Loop, because you could get into a race condition when recovery a HA Leader after lost volume
+    while let Err(err) = version_migration::manual_version_migrations().await {
+        error!("Error during version migration: {err:?}");
+        time::sleep(Duration::from_secs(1)).await;
+    }
+
+    UserPicture::test_config().await.unwrap();
+
+    // We need to clear some caches
+    DB::hql().clear_cache(Cache::Html).await?;
+    // whole App cache to make sure config changes are always updated
+    DB::hql().clear_cache(Cache::App).await?;
+
+    #[cfg(debug_assertions)]
+    {
+        DB::hql().clear_cache(Cache::Atproto).await?;
+        DB::hql().clear_cache(Cache::DeviceCode).await?;
+        DB::hql().clear_cache(Cache::AuthProviderCallback).await?;
+        DB::hql().clear_cache(Cache::ClientDynamic).await?;
+        DB::hql().clear_cache(Cache::ClientEphemeral).await?;
+        DB::hql().clear_cache(Cache::ClientSecret).await?;
+        DB::hql().clear_cache(Cache::DPoPNonce).await?;
+        DB::hql().clear_cache(Cache::JwksRemote).await?;
+        DB::hql().clear_cache(Cache::ThemeTs).await?;
+        DB::hql().clear_cache(Cache::IpBlacklist).await?;
+        DB::hql().clear_cache(Cache::IpRateLimit).await?;
+        DB::hql().clear_cache(Cache::Session).await?;
+        DB::hql().clear_cache(Cache::PoW).await?;
+        DB::hql().clear_cache(Cache::ToS).await?;
+        DB::hql().clear_cache(Cache::User).await?;
+        DB::hql().clear_cache(Cache::Webauthn).await?;
+        DB::hql().clear_cache(Cache::PAM).await?;
+    }
+
+    {
+        let cfg = &RauthyConfig::get().vars.server;
+        if cfg.swagger_ui_enable {
+            OPENAPI_JSON.set(ApiDoc::build().to_json()?)?;
+            let _ = *OPENAPI_CONFIG;
+        }
+    }
+
+    if RauthyConfig::get().vars.atproto.enable {
+        entity::atproto::Client::init_provider()
+            .await
+            .map_err(|error| {
+                error!(%error, "failed to initialize atproto provider");
+            })
+            .unwrap();
+    }
+
+    rauthy_schedulers::spawn();
+
+    if RauthyConfig::get().vars.server.metrics_enable {
+        server_with_metrics().await?;
+    } else {
+        server_without_metrics().await?;
+    }
+
+    DB::hql().shutdown().await?;
+
+    Ok(())
+}
+
 // TODO Currently, we have some duplicated code in here for building the HttpServer.
 // This is due to the strict typing from actix_web. We want to be able to conditionally `.wrap`
 // the server with an optional prometheus metrics collector.
@@ -30,7 +185,7 @@ use tracing::{error, info};
 // There is most probably a way to do this when we wrap it inside something like
 // `Box<dyn ServiceFactory<_>>`, but I have not figured out the correct type for that yet.
 
-pub async fn server_with_metrics() -> std::io::Result<()> {
+async fn server_with_metrics() -> std::io::Result<()> {
     let listen_scheme = RauthyConfig::get().listen_scheme.clone();
     let listen_addr = RauthyConfig::get().vars.server.listen_address.to_string();
 
@@ -153,12 +308,16 @@ pub async fn server_with_metrics() -> std::io::Result<()> {
 
         #[cfg(not(target_os = "windows"))]
         ListenScheme::UnixHttp | ListenScheme::UnixHttps => {
-            server.bind_uds(listen_addr)?.run().await
+            use std::os::unix::fs::PermissionsExt;
+
+            let server = server.bind_uds(&listen_addr)?;
+            tokio::fs::set_permissions(listen_addr, std::fs::Permissions::from_mode(0o666)).await?;
+            server.run().await
         }
     }
 }
 
-pub async fn server_without_metrics() -> std::io::Result<()> {
+async fn server_without_metrics() -> std::io::Result<()> {
     let listen_scheme = RauthyConfig::get().listen_scheme.clone();
     let listen_addr = RauthyConfig::get().vars.server.listen_address.to_string();
 
@@ -233,7 +392,11 @@ pub async fn server_without_metrics() -> std::io::Result<()> {
 
         #[cfg(not(target_os = "windows"))]
         ListenScheme::UnixHttp | ListenScheme::UnixHttps => {
-            server.bind_uds(listen_addr)?.run().await
+            use std::os::unix::fs::PermissionsExt;
+
+            let server = server.bind_uds(&listen_addr)?;
+            tokio::fs::set_permissions(listen_addr, std::fs::Permissions::from_mode(0o666)).await?;
+            server.run().await
         }
     }
 }
@@ -326,6 +489,7 @@ fn api_services() -> actix_web::Scope {
                 .service(html::get_admin_docs_html)
                 .service(html::get_admin_events_html)
                 .service(html::get_admin_groups_html)
+                .service(html::get_admin_kv_html)
                 .service(html::get_admin_roles_html)
                 .service(html::get_admin_scopes_html)
                 .service(html::get_admin_pam_html)
@@ -340,6 +504,26 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::post_update_language)
                 .service(generic::get_version)
                 .service(generic::get_whoami)
+                .service(kv::get_kv_ns)
+                .service(kv::post_kv_ns)
+                .service(kv::put_kv_ns)
+                .service(kv::delete_kv_ns)
+                .service(kv::get_kv_ns_access)
+                .service(kv::post_kv_ns_access)
+                .service(kv::put_kv_ns_access)
+                .service(kv::delete_kv_ns_access)
+                .service(kv::post_kv_ns_access_secret)
+                .service(kv::get_kv_ns_values)
+                .service(kv::post_kv_ns_values)
+                .service(kv::put_kv_ns_values)
+                .service(kv::delete_kv_ns_value)
+                .service(kv::get_kv_pub_value)
+                .service(kv::get_kv_keys_ext)
+                .service(kv::get_kv_values_ext)
+                .service(kv::put_kv_value_ext)
+                .service(kv::get_kv_value_ext)
+                .service(kv::delete_kv_value_ext)
+                .service(kv::get_kv_access_test_ext)
                 .service(oidc::get_authorize)
                 .service(oidc::post_authorize)
                 .service(oidc::post_authorize_refresh)

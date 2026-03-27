@@ -12,6 +12,7 @@ use crate::entity::failed_scim_tasks::FailedScimTask;
 use crate::entity::groups::Group;
 use crate::entity::issued_tokens::IssuedToken;
 use crate::entity::jwk::Jwk;
+use crate::entity::kv::{KVAccess, KVNamespace, KVValue};
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
@@ -38,7 +39,7 @@ use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::Event;
 use cryptr::EncValue;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use std::cmp::max;
@@ -597,7 +598,7 @@ VALUES ($1, $2, $3)"#;
         for b in data_before {
             DB::pg_execute(
                 sql_2,
-                &[&b.client_id, &b.action.to_string(), &(b.retry_count as i32)],
+                &[&b.client_id, &b.action.to_string(), &b.retry_count],
             )
             .await?;
         }
@@ -607,17 +608,19 @@ VALUES ($1, $2, $3)"#;
 
 pub async fn groups(data_before: Vec<Group>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM groups";
-    let sql_2 = "INSERT INTO groups (id, name) VALUES ($1, $2)";
+    let sql_2 = "INSERT INTO groups (id, name, meta) VALUES ($1, $2, $3)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::hql().execute(sql_2, params!(b.id, b.name)).await?;
+            DB::hql()
+                .execute(sql_2, params!(b.id, b.name, b.meta))
+                .await?;
         }
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            DB::pg_execute(sql_2, &[&b.id, &b.name]).await?;
+            DB::pg_execute(sql_2, &[&b.id, &b.name, &b.meta]).await?;
         }
     }
     Ok(())
@@ -688,6 +691,70 @@ VALUES ($1, $2, $3, $4, $5)"#;
                 ],
             )
             .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn kv_access(data_before: Vec<KVAccess>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM kv_access";
+    let sql_2 = r#"
+INSERT INTO kv_access (id, ns, secret, enabled, name)
+VALUES ($1, $2, $3, $4, $5)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(sql_2, params!(b.id, b.ns, b.secret, b.enabled, b.name))
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[&b.id, &b.ns, &b.secret, &b.enabled, &b.name]).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn kv_ns(data_before: Vec<KVNamespace>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM kv_ns";
+    let sql_2 = r#"
+INSERT INTO kv_ns (ns, public)
+VALUES ($1, $2)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql().execute(sql_2, params!(b.ns, b.public)).await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[&b.ns, &b.public]).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn kv_values(data_before: Vec<KVValue>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM kv_values";
+    let sql_2 = r#"
+INSERT INTO kv_values (ns, key, encrypted, value)
+VALUES ($1, $2, $3, $4)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(sql_2, params!(b.ns, b.key, b.encrypted, b.value))
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[&b.ns, &b.key, &b.encrypted, &b.value]).await?;
         }
     }
     Ok(())
@@ -1193,17 +1260,19 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
 
 pub async fn roles(data_before: Vec<Role>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM roles";
-    let sql_2 = "INSERT INTO roles (id, name) VALUES ($1, $2)";
+    let sql_2 = "INSERT INTO roles (id, name, meta) VALUES ($1, $2, $3)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::hql().execute(sql_2, params!(b.id, b.name)).await?;
+            DB::hql()
+                .execute(sql_2, params!(b.id, b.name, b.meta))
+                .await?;
         }
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            DB::pg_execute(sql_2, &[&b.id, &b.name]).await?;
+            DB::pg_execute(sql_2, &[&b.id, &b.name, &b.meta]).await?;
         }
     }
     Ok(())

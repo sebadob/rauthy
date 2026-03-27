@@ -190,7 +190,7 @@ export interface RequestRegistrationExtensions {
     /// browser *requests* a residentKey to be created. It has no bearing on the
     /// true rk state of the credential.
     credProps?: boolean;
-    /// CTAP2.1 Minumum pin length
+    /// CTAP2.1 minimum pin length
     minPinLength?: boolean;
     /// ⚠️  - Browsers support the *creation* of the secret, but not the retrieval of it.
     /// CTAP2.1 create hmac secret
@@ -246,7 +246,7 @@ export interface RegistrationExtensionsClientOutputs {
 
 export interface CredProps {
     /// A user agent supplied hint that this credential *may* have created a resident key. It is
-    /// retured from the user agent, not the authenticator meaning that this is an unreliable
+    /// returned from the user agent, not the authenticator meaning that this is an unreliable
     /// signal.
     ///
     /// Note that this extension is UNSIGNED and may have been altered by page javascript.

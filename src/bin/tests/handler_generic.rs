@@ -52,7 +52,8 @@ async fn test_get_well_known() -> Result<(), Box<dyn Error>> {
 
     assert_eq!(res.status(), 200);
     let content = res.json::<WellKnown>().await?;
-    assert_eq!(content.issuer, get_issuer());
+    // strip trailing /
+    assert_eq!(content.issuer[..content.issuer.len() - 1], get_issuer());
     // don't test the rest for now as it might change soon again
 
     Ok(())

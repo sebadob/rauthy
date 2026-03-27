@@ -19,11 +19,12 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
     let roles = res.json::<Vec<Role>>().await?;
-    assert_eq!(roles.len(), 3);
+    let len_orig = roles.len();
 
     // add a role
     let new_role = RoleRequest {
         role: "role123".to_string(),
+        meta: None,
     };
     let res = reqwest::Client::new()
         .post(&url)
@@ -38,6 +39,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
     // modify the role
     let upd_role = RoleRequest {
         role: "role456".to_string(),
+        meta: None,
     };
     let url_name = format!("{}/{}", url, role.id);
     let res = reqwest::Client::new()
@@ -68,7 +70,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let roles = res.json::<Vec<Role>>().await?;
-    assert_eq!(roles.len(), 3);
+    assert_eq!(roles.len(), len_orig);
 
     Ok(())
 }

@@ -45,7 +45,7 @@ pub async fn send_email_change_info_new(
     new_email: String,
 ) {
     let link = format!(
-        "{}/users/{}/email_confirm/{}",
+        "{}users/{}/email_confirm/{}",
         RauthyConfig::get().issuer,
         magic_link.user_id,
         &magic_link.id,

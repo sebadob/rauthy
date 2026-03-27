@@ -255,6 +255,7 @@
 
     .l3 {
         color: hsla(var(--action) / 0.9);
+        border: none;
         background: transparent;
     }
 

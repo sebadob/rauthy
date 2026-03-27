@@ -19,11 +19,12 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
     let groups = res.json::<Vec<Group>>().await?;
-    assert_eq!(groups.len(), 3);
+    let len_orig = groups.len();
 
     // add a group
     let new_group = GroupRequest {
         group: "My Group 123".to_string(),
+        meta: None,
     };
     let res = reqwest::Client::new()
         .post(&url)
@@ -38,6 +39,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
     // modify the group
     let upd_group = GroupRequest {
         group: "group456".to_string(),
+        meta: None,
     };
     let url_name = format!("{}/{}", url, group.id);
     let res = reqwest::Client::new()
@@ -68,7 +70,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let groups = res.json::<Vec<Group>>().await?;
-    assert_eq!(groups.len(), 3);
+    assert_eq!(groups.len(), len_orig);
 
     Ok(())
 }

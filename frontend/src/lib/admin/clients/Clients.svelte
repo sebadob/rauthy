@@ -87,7 +87,7 @@
 </script>
 
 <NavSub
-    paddingTop="2.1rem"
+    paddingTop="2.35rem"
     buttonTilesAriaControls="groups"
     width="min(20rem, 100dvw)"
     thresholdNavSub={700}

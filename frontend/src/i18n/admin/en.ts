@@ -65,7 +65,7 @@ export let I18nAdminEn: I18nAdmin = {
             security. If a non-confidential client (e.g. a SPA) is being used, you must at least 
             activate one of the PKCE challenges to have enough security.`,
         descPKCEEnforce: `If any PKCE is activated, Rauthy will enforce the usage during Logins, and
-            rejects login request that do not contain a valida challenge.`,
+            rejects login request that do not contain a valid challenge.`,
         descUri: `You can provide as many redirect URIs as you like. At the end of each, you can use 
             <code>*</code> as a Wildcard.`,
         errConfidentialPKCE: `The client must either be confidential or have at least one PKCE
@@ -129,6 +129,7 @@ export let I18nAdminEn: I18nAdmin = {
         information: 'Information',
         language: 'Language',
         loading: 'Loading',
+        jsonMeta: 'Metadata as JSON value',
         name: 'Name',
         nameExistsAlready: 'Name exists already',
         note: 'Note',
@@ -276,6 +277,43 @@ export let I18nAdminEn: I18nAdmin = {
         take a few seconds.`,
         type: 'Type',
         rotateKeys: 'Rotate Keys',
+    },
+    kv: {
+        accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
+            <code>Bearer</code> token. The following <code>curl</code> command can be used for
+            testing.`,
+        addNewKey: 'New Access Key',
+        addNewNs: 'New Namespace',
+        addNewValue: 'New Value',
+        delConfirm: 'Do you really want to delete this Access Key?',
+        delNsMsg: 'Do you really want to delete this namespace including all existing data?',
+        encryptedDesc: `For performance reasons, the additional encryption should only be used for 
+            particularly sensitive values such as access keys or personal information.`,
+        deleteConfirmMsg: `Do you really want to delete the key '{{ key }}'?`,
+        help: {
+            help: 'Help',
+            ops: [
+                'Test an Access Key',
+                'Get all existing Keys',
+                'Get all existing Keys + Values',
+                'Set a Key + Value',
+                'Get the Value for a Key',
+                'Delete a Key',
+            ],
+            p1: `The external access to KV stores is kept very simple on purpose. There are only a
+                few operations:`,
+            p2: `Each of these operations requires an Access Key as <code>Bearer</code> token
+                (<code>{id}\${secret}</code>) in the <code>Authorization</code> header. An Access 
+                Key is only valid for the very namespace it exists in.`,
+            p3: `Here you will see examples for the above-mentioned operations using 
+                <code>curl</code>.`,
+        },
+        key: 'Key',
+        loadAllValues: 'Load all values',
+        storeEncrypted: 'Store value encrypted',
+        tabs: ['Data', 'Access', 'Edit', 'Delete'],
+        testCmd: 'Test Command',
+        value: 'JSON Value',
     },
     nav: {
         apiKeys: 'API Keys',

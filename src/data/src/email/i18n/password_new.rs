@@ -20,10 +20,22 @@ impl From<&'static VarsTemplate> for I18nEmailPasswordNew<'_> {
             subject: tpl.subject.as_ref(),
             header: tpl.header.as_ref(),
             text: tpl.text.as_deref(),
-            click_link: tpl.click_link.as_ref(),
-            validity: tpl.validity.as_ref(),
-            expires: tpl.expires.as_ref(),
-            button_text: tpl.button.as_ref(),
+            click_link: tpl
+                .click_link
+                .as_ref()
+                .expect("Missing `click_link` in `password_new` template"),
+            validity: tpl
+                .validity
+                .as_ref()
+                .expect("Missing `validity` in `password_new` template"),
+            expires: tpl
+                .expires
+                .as_ref()
+                .expect("Missing `expires` in `password_new` template"),
+            button_text: tpl
+                .button
+                .as_ref()
+                .expect("Missing `button` in `password_new` template"),
             footer: tpl.footer.as_deref(),
         }
     }
@@ -31,14 +43,14 @@ impl From<&'static VarsTemplate> for I18nEmailPasswordNew<'_> {
 
 impl I18nEmailPasswordNew<'_> {
     pub fn build(lang: &Language) -> Self {
-        let tpls = &RauthyConfig::get().vars.templates;
+        let tpls = &RauthyConfig::get().vars.templates.password_new;
         match lang {
-            Language::De => Self::from(&tpls.password_new_de),
-            Language::En => Self::from(&tpls.password_new_en),
-            Language::Ko => Self::from(&tpls.password_new_ko),
-            Language::Nb => Self::from(&tpls.password_new_nb),
-            Language::Uk => Self::from(&tpls.password_new_uk),
-            Language::ZhHans => Self::from(&tpls.password_new_zhhans),
+            Language::De => (&tpls.de).into(),
+            Language::En => (&tpls.en).into(),
+            Language::Ko => (&tpls.ko).into(),
+            Language::Nb => (&tpls.nb).into(),
+            Language::Uk => (&tpls.uk).into(),
+            Language::ZhHans => (&tpls.zhhans).into(),
         }
     }
 }

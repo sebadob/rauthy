@@ -40,7 +40,7 @@ you have done customizations, you probably know about how it's done anyway and m
 templates. That's up to you of course. The same for NSS, as long as you add Rauthys modules to your setup correctly, it
 should work.
 
-For standard scenarios, you will get an install script. It currently should upport RHEL and Debian based distros. Other
+For standard scenarios, you will get an install script. It currently should support RHEL and Debian based distros. Other
 ones (suse, arch, gentoo) may need contributions to include them in the script.
 
 ## Install TL;DR
