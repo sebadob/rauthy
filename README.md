@@ -227,7 +227,7 @@ setting for very quick and easy local testing and taking a first look. By settin
 a demo config is being loaded at startup.
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.34.3
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.0
 ```
 
 > [!CAUTION]

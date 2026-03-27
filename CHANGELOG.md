@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.35.0
 
 ### Breaking
 

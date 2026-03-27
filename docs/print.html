@@ -193,8 +193,8 @@ PAM. It aims to be simple to both set up and operate, with very secure defaults 
 options, if you need the flexibility. It puts heavy emphasis on Passkeys and a very strong security
 in general. The project is written in Rust to be as memory efficient, secure and fast as possible,
 and it can run on basically any hardware. If you need Single Sign-On support for IoT or headless CLI
-tools, it's got you covered as well.<br />
-You get High-Availability, client branding, UI translation, a nice Admin UI, Events and Auditing,
+tools, it's got you covered as well.</p>
+<p>You get High-Availability, client branding, UI translation, a nice Admin UI, Events and Auditing,
 and many more features. By default, it runs on top of <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>
 and does not depend on an external database (Postgres as an alternative) to make it even simpler to
 operate, while scaling up to millions of users easily.</p>
@@ -253,7 +253,7 @@ both <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> and Postgres.</p>
 <h3 id="admin-ui--user-account-dashboard"><a class="header" href="#admin-ui--user-account-dashboard">Admin UI + User Account Dashboard</a></h3>
 <p>Rauthy does have an Admin UI which can be used to basically do almost any operation you might need
 to administrate the whole application and its users. There is also an account dashboard for each
-individual user, where users will get a basic overview over their account and can self-manage som
+individual user, where users will get a basic overview over their account and can self-manage some
 values, password, passkeys, and so on.</p>
 <p><img src="https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/users.png" alt="Admin UI" /></p>
 <p><img src="https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/account.png" alt="Account Dashboard" /></p>
@@ -466,7 +466,7 @@ to configure additionally. A dedicated <em>Going into production</em> guide will
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
 your localhost. The image contains a basic default config which is sufficient for local testing (
 don't use it in production, it contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.34.3
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.0
 </code></pre>
 <p>To proceed, go to <strong><a href="getting_started/first_start.html">First Start</a></strong>, or do the production setup below to have
 persistence.</p>
@@ -485,7 +485,7 @@ a minimal setup that is able to send E-Mails. The easiest way (works on localhos
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.34.3
+    image: ghcr.io/sebadob/rauthy:0.35.0
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -602,7 +602,7 @@ at <a href="getting_started/../config/encryption.html">Encryption</a>.</p>
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.34.3
+    ghcr.io/sebadob/rauthy:0.35.0
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
@@ -804,7 +804,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.34.3
+          image: ghcr.io/sebadob/rauthy:0.35.0
           securityContext:
             capabilities:
               drop:
@@ -1259,7 +1259,7 @@ proxy_mode = false
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to
 # be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
+# to prevent IP header spoofing. All requests with a
 # different source will be blocked.
 #
 # default: []
@@ -1691,7 +1691,7 @@ level_access = 'modifying'
 # for instance when `Text` already logs a JSON in debug level.
 # Some other logs like an Event for instance will be formatted
 # as Text anyway. If you need to auto-parse events, please consider
-# using an API token and listen ot them actively.
+# using an API token and listen to them actively.
 #
 # default: text
 # overwritten by: LOG_FMT
@@ -1797,7 +1797,7 @@ matrix_error_no_panic = false
 </div>
 <div>
 <p>I suggest that you create a separate room for these events. If you experience issues with Matrix encryption, you should
-maybe disbale the encryption for the Events room. I came across some weird errors from Matrix in the past when I was
+maybe disable the encryption for the Events room. I came across some weird errors from Matrix in the past when I was
 using a session token which has been created on another machine.</p>
 </div>
 </div>
@@ -2486,7 +2486,7 @@ proxy_mode = false
 </code></pre>
 <p>Secondly, you need to tell Rauthy which proxy source IP's it can trust. This is important, because when behind a reverse
 proxy, Rauthy will only see the IP of the proxy itself by default, which would be the same for each client connecting
-though it. However, a reverse proxy adds headers which contain the clients real IP, like e.g. the <code>X-FORWARED-FOR</code>
+though it. However, a reverse proxy adds headers which contain the clients real IP, like e.g. the <code>X-FORWARDED-FOR</code>
 header and maybe others (depending on the proxy).</p>
 <p>These headers can be spoofed from an attacker, if the source IP is not validated. This is what Rauthy needs you to set
 the trusted proxies config for:</p>
@@ -2494,7 +2494,7 @@ the trusted proxies config for:</p>
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to
 # be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
+# to prevent IP header spoofing. All requests with a
 # different source will be blocked.
 #
 # default: []
@@ -2537,7 +2537,7 @@ There is an additional variable you can set:</p>
 # overwritten by: PEER_IP_HEADER_NAME
 peer_ip_header_name = 'CF-Connecting-IP'
 </code></pre>
-<p>The CDN usually adds some other headers than the default <code>X-FORWARED-FOR</code> headers, like in this example
+<p>The CDN usually adds some other headers than the default <code>X-FORWARDED-FOR</code> headers, like in this example
 <code>CF-Connecting-IP</code> to the request. If this is the case, you can tell Rauthy to always check for this header first and
 only use the other methods as fallback, if this does not exist.</p>
 <h3 id="session-peer-ip-binding"><a class="header" href="#session-peer-ip-binding">Session peer IP binding</a></h3>
@@ -2715,7 +2715,8 @@ sec_header_block = true
 <p>Only change any of the above mentioned session security settings if you really know what you are doing and if you have
 a good reason to do so.</p>
 </div>
-</div><div style="break-before: page; page-break-before: always;"></div><h1 id="user-registration"><a class="header" href="#user-registration">User Registration</a></h1>
+</div>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="user-registration"><a class="header" href="#user-registration">User Registration</a></h1>
 <p>By default, new users can only be added by an admin. This is safe and secure, and your database
 cannot ever be spammed.
 However, you might want users to register themselves for whatever reason. In that case, follow the
@@ -3640,6 +3641,13 @@ custom-compiled version of Rauthy. It should work everywhere else though.</p>
 <p>This section is about upstream authentication providers, for instance things like <strong>Sign in with GitHub</strong>.</p>
 <p>This feature can be considered "in beta state" and the only setup guide is for GitHub for now.<br />
 Additional ones may come, when people are using other providers and give feedback or actually contribute to these docs.</p>
+<h2 id="direct-login-with-idp_hint"><a class="header" href="#direct-login-with-idp_hint">Direct Login with <code>idp_hint</code></a></h2>
+<p>Rauthy supports the <code>idp_hint</code> query parameter in the OIDC authorization request.
+When this parameter is provided with the ID of an upstream authentication provider, Rauthy will automatically redirect the user to that provider's login page, bypassing the Rauthy login selection.</p>
+<p>For example, if you have a GitHub provider with the ID <code>github</code> configured:
+<code>GET /auth/v1/oidc/authorize?client_id=...&amp;idp_hint=github</code></p>
+<p>This is useful if you want to provide a "Login with GitHub" button directly in your application that skips the intermediate Rauthy login selection page.
+The <code>idp_hint</code> value must match the <code>ID</code> of the provider as configured in the Admin UI.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="github-provider"><a class="header" href="#github-provider">GitHub Provider</a></h1>
 <p>To set up GitHub as an upstream provider for Rauthy, you have pretty little things to do.<br />
 Rauthy includes a Template for GitHub already, which makes this whole process pretty simple.</p>
@@ -3663,7 +3671,7 @@ at <code>https://iam.example.com</code>, your callback URL would be <code>https:
 <p>Both of these values need to be inserted into Rauthy's Admin UI in the next step, so lets open this in a new tab.</p>
 <h2 id="rauthy-provider-config"><a class="header" href="#rauthy-provider-config">Rauthy Provider Config</a></h2>
 <ol>
-<li>Log in to your Rauthy Admin UI, navigate to <code>Providers</code> and add a new provier.</li>
+<li>Log in to your Rauthy Admin UI, navigate to <code>Providers</code> and add a new provider.</li>
 <li>Choose <code>GitHub</code> as the <code>Type</code> and leave the Custom Root CA and insecure TLS unchecked.</li>
 </ol>
 <p><img src="auth_providers/img/2_rauthy_add_new.png" alt="1_github_app_create" /></p>
@@ -3705,7 +3713,7 @@ Most access rights requests mimic their HTTP methods:</p>
 <li><code>PUT</code> -&gt; <code>update</code></li>
 <li><code>DELETE</code> -&gt; <code>delete</code></li>
 </ul>
-<p>To use an API Key, you need to provide is with the HTTP <code>Authorization</code> header, but instead of <code>Bearer</code> as prefix, you
+<p>To use an API Key, you need to provide it with the HTTP <code>Authorization</code> header, but instead of <code>Bearer</code> as prefix, you
 set it to <code>API-Key</code>, so Rauthy can efficiently distinguish if you try to access the API with a JWT token or an API Key:</p>
 <pre><code>Authorization: API-Key &lt;API Key name&gt;$&lt;API Key secret&gt;
 </code></pre>
@@ -3722,7 +3730,7 @@ you only need to copy &amp; paste it.</p>
 </div>
 <div>
 <p>The only actions API Keys are not allowed to do is interacting with other API Keys and external SSO Providers for
-logins to limit the likelyhood of priviledge escalation in case of leaked credentials.</p>
+logins to limit the likelihood of privilege escalation in case of leaked credentials.</p>
 </div>
 </div>
 <h2 id="creating-a-new-api-key"><a class="header" href="#creating-a-new-api-key">Creating a new API Key</a></h2>
@@ -3863,7 +3871,7 @@ database round trip during each login.</li>
 <div>
 <p>In case of an open, unauthenticated endpoint for DCR, Rauthy has a simple internal cleanup logic. For instance, if a
 dynamic client is registered by bots or spammers and is not used within the first hour after the registration, it will
-be deleted automatically. Usually, when an app registers via DCR, the client will be used immeditately for at least one
+be deleted automatically. Usually, when an app registers via DCR, the client will be used immediately for at least one
 login.</p>
 </div>
 </div>
@@ -4071,7 +4079,8 @@ If you want to configure some more things, keep reading.</p>
 <p>Rauthy fetches the document with an <code>Accept: application/json</code> header. This makes it possible to host your
 file on GitHub for instance and receive a valid JSON.</p>
 </div>
-</div><div style="break-before: page; page-break-before: always;"></div><h1 id="e-mail-templates"><a class="header" href="#e-mail-templates">E-Mail Templates</a></h1>
+</div>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="e-mail-templates"><a class="header" href="#e-mail-templates">E-Mail Templates</a></h1>
 <p>The templates for E-Mails being sent by Rauthy are baked into the binary. This is the most efficient and fastest way
 of handling them. It simplifies the container images and speeds up the internal generation of new ones from templates
 compared to dynamic ones. At the same time, Rauthy checks these templates for correctness at compile time. It makes
@@ -4459,7 +4468,7 @@ allowed_token_lifetime = 120
 </ul>
 </li>
 <li>the client to handle <code>externalId</code> properly</li>
-<li><code>fitler=externalId</code> on both <code>{base_url}/Users</code> and <code>{base_url}/Groups</code></li>
+<li><code>filter=externalId</code> on both <code>{base_url}/Users</code> and <code>{base_url}/Groups</code></li>
 <li><code>filter=userName</code> on <code>{base_url}/Users</code></li>
 <li><code>filter=displayName</code> on <code>{base_url}/Groups</code></li>
 <li><code>userName</code> to be set properly to the users <code>email</code> to match against the DB</li>
@@ -4615,7 +4624,7 @@ proxies, feel free to submit a PR.</p>
 <li>Have a reverse proxy in front of the application you want to protect, like e.g. Traefik or nginx</li>
 <li>Make sure it's impossible(!) to access the client app by skipping the reverse proxy, e.g. with network policies,
 internal networks, or something like that.</li>
-<li>Find an unsued route on your client app, where you can inject Rauthys <code>/callback</code>. You will probably be fine with
+<li>Find an unused route on your client app, where you can inject Rauthys <code>/callback</code>. You will probably be fine with
 something like <code>/oidc/rauthy/callback</code>. The name does not matter, it just must not be used by the app already.</li>
 <li>Inject Rauthy special <code>/callback</code> endpoint into your client app with the help of your reverse proxy. This is a step
 that most other IdP's skip for a less secure setup. Rauthy does not let you skip this.</li>
@@ -4766,7 +4775,7 @@ server {
     location = /forward_auth {
         internal;
 
-        # These are the requiered, above mentioned request headers.
+        # These are the required, above mentioned request headers.
         # The `X-Forwarded-For` is inserted into every request globally 
         # above already.
         proxy_set_header X-Original-URI $request_uri;
@@ -4818,7 +4827,7 @@ server {
         error_page 401 =302 $redirection_url;
 
         # If you have auth headers disabled, you can skip these next 2 blocks,
-        # which are basically just copying them from the Rauthy repsonse
+        # which are basically just copying them from the Rauthy response
         # into the request that is forwarded to the client app.
         
         ## Auth Headers Rauthy sends when `auth_headers.enable = true`
@@ -4971,7 +4980,7 @@ can take a look at it here: <a href="https://github.com/sebadob/rauthy-pam-nss">
 </div>
 <div>
 <p>You will notice on the following pages and when testing the PAM setup via the Admin UI, that quite a few resources and
-values are immutable after their initial creation. The reason is simply to avoid things like accidentially leaking
+values are immutable after their initial creation. The reason is simply to avoid things like accidentally leaking
 left-over user data, when for instance a user was deleted and a new one with the exact same name was created, but maybe
 some files are left on some hosts, and so on. The same is true for instance for group names and types, just to avoid
 confusion for admins.</p>
@@ -5115,7 +5124,7 @@ know which names might already be special in some companies and situations.</p>
 <p>As soon as an Admin has configured a Linux user for a "real" user, this user can log in to the account dashboard and a
 PAM section will pop up in the tab bar. Here you can generate the auto-expiring Remote PAM Passwords that are used for
 basically all actions via SSH like logging in and <code>sudo</code>, and you will see a list of all hosts you have access to. For
-these PAM passwords, you have 2 static config varibales:</p>
+these PAM passwords, you have 2 static config variables:</p>
 <pre><code class="language-toml">[pam]
 # The length of newly generated PAM remote passwords via the
 # account dashboard. The default is fine as long as you can copy
@@ -5171,7 +5180,7 @@ do any customizations to your hosts anyway, the provided default templates shoul
 you have done customizations, you probably know about how it's done anyway and maybe don't even want to use the provided
 templates. That's up to you of course. The same for NSS, as long as you add Rauthys modules to your setup correctly, it
 should work.</p>
-<p>For standard scenarios, you will get an install script. It currently should upport RHEL and Debian based distros. Other
+<p>For standard scenarios, you will get an install script. It currently should support RHEL and Debian based distros. Other
 ones (suse, arch, gentoo) may need contributions to include them in the script.</p>
 <h2 id="install-tldr"><a class="header" href="#install-tldr">Install TL;DR</a></h2>
 <p>The PAM project is in a very early phase and there are no distro-packaged versions available. Here is the gist how to
@@ -5318,7 +5327,7 @@ order matches their location in the reference config below.</p>
 <a class="admonition-anchor-link" href="config/config.html#admonition-caution"></a>
 </div>
 <div>
-<p>When you go into production, make sure that you provide the included secrets / sensistive
+<p>When you go into production, make sure that you provide the included secrets / sensitive
 information in this file in an appropriate way. With docker, you can leave them inside this file
 (with proper access rights!), but when deploying with Kubernetes, either extract these values into
 Kubernetes secrets, or simply provide the whole config as one secret (my preferred approach).</p>
@@ -5531,7 +5540,7 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 #
 # This value will only be respected, if `token_revoke_on_logout` is
 # set to `true` as well. Otherwise, tokens will only be revoked
-# via the dedicated `recovation_endpoint` or forced logout from an
+# via the dedicated `revocation_endpoint` or forced logout from an
 # admin.
 #
 # default: false
@@ -5737,6 +5746,27 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: BOOTSTRAP_API_KEY_SECRET
 #api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh'
 
+# This is the directory where the bootstrap logic will look for
+# additional bootstrapping data. It will expect JSON files with
+# fixed names inside this folder. If it finds any of them, it will
+# try to parse and apply them during the bootstrapping process.
+#
+# The following files will be parsed in the given directory:
+# - roles.json
+# - groups.json
+# - scopes.json
+# - user_attributes.json
+# - users.json
+# - clients.json
+#
+# For information about the structure and the applied validations,
+# check `src/data/src/migration/bootstrap/types.rs`, and the
+# `bootstrap/*.json` files for examples.
+#
+# default: 'bootstrap'
+# overwritten by: BOOTSTRAP_DIR
+#bootstrap_dir = 'bootstrap'
+
 [cluster]
 # Can be set to 'k8s' to try to split off the node id from the hostname
 # when Hiqlite is running as a StatefulSet inside Kubernetes.
@@ -5893,18 +5923,6 @@ nodes = ["1 localhost:8100 localhost:8200"]
 # overwritten by: HQL_LOGS_UNTIL_SNAPSHOT
 #logs_until_snapshot = 10000
 
-# The artificial shutdown delay to add in multi-node environments.
-# This value is being added before finally shutting down a node
-# to make sure rolling releases can be executed graceful with
-# proper leader switches. You may want to increase this value if
-# you are in an environment with huge in-memory caches and you
-# want to provide a bit more headroom for the snapshot replication
-# after restarts.
-#
-# default: 5000
-# overwritten by: HQL_SHUTDOWN_DELAY_MILLS
-#shutdown_delay_millis = 5000
-
 # If given, these keys / certificates will be used to establish
 # TLS connections between nodes.
 #
@@ -5920,6 +5938,20 @@ nodes = ["1 localhost:8100 localhost:8200"]
 # overwritten by: HQL_TLS_RAFT_KEY
 #tls_api_cert = "tls/tls.crt"
 #tls_api_danger_tls_no_verify = true
+
+# The `tls_auto_certificates` will generate self-signed TLS
+# certificates for internal Raft and API traffic. Clients will
+# simply not validate the certificates for ease of use because
+# they don't have to. They do a 3-way handshake anyway, which
+# validates both client and server without the secret ever being
+# sent over the network.
+#
+# If you specify specific certificates with either `tls_raft_*` or
+# `tls_api_*`, they will be used instead.
+#
+# default: false
+# overwritten by: HQL_TLS_AUTO_CERTS
+#tls_auto_certificates = false
 
 # Secrets for Raft internal authentication as well as for the API.
 # These must be at least 16 characters long and you should provide
@@ -6053,6 +6085,46 @@ secret_api = "SuperSecureSecret1337"
 # default: false
 #HQL_DANGER_RAFT_STATE_RESET=true
 
+[cred_stuff_detection]
+## This section contains values for the credential stuffing
+## detection algorithm. In most cases the defaults should be
+## fine.
+
+# The duration in seconds for how long an IP will be
+# blacklisted after it was considered harmful, doing
+# credential stuffing.
+#
+# default: 86400
+# overwritten by: CRED_STUFF_BLACKLIST_DUR
+#blacklist_duration = 86400
+
+# The threshold for username / password combinations. When
+# this is reached within the `scan_window` the IP will be
+# blacklisted and a new warning Event will be fired.
+#
+# default: 15
+# overwritten by: CRED_STUFF_BLACKLIST_THRES
+#blacklist_threshold = 15
+
+# The time in seconds within the detector should operate.
+# Whenever either a non-existing email or a email with a
+# wrong password is sent, the combination of both will be
+# hashed and stored (in-memory) for the duration of this
+# value. If any new event happens within this time frame,
+# the new hash will be stored as well, and then timer will
+# reset to `scan_window` again. Only if not a single event
+# happens during the whole duration, the values will be
+# evicted.
+#
+# Keep in mind that when the `scan_window` is bigger than
+# `blacklist_duration`, a single false login may be enough
+# to blacklist an IP again, after it was removed from the
+# blacklist.
+#
+# default: 10800
+# overwritten by: CRED_STUFF_SCAN_WINDOW
+#scan_window = 10800
+
 [database]
 # Hiqlite is the default database for Rauthy.
 # You can opt-out and use Postgres instead by setting this
@@ -6155,7 +6227,7 @@ pg_password = '123SuperSafe'
 #sched_user_exp_delete_mins = 7200
 
 [device_grant]
-# The lifetime in secods  of auth codes for the Device Authorization
+# The lifetime in seconds of auth codes for the Device Authorization
 # Grant flow. You may increase the default of 300 seconds, if you have
 # "slow users" and they are simply not fast enough with the verification.
 #
@@ -6226,6 +6298,18 @@ pg_password = '123SuperSafe'
 # overwritten by: ENABLE_DYN_CLIENT_REG
 #enable = false
 
+# The allowed scopes separated by ' ' for dynamic clients.
+#
+# default: ['openid', 'profile', 'email', 'groups']
+# overwritten by: DYN_CLIENT_ALLOWED_SCOPES - single String, \n separated values
+#allowed_scopes = ['openid', 'profile', 'email', 'groups']
+
+# The default scopes separated by ' ' for dynamic clients.
+#
+# default: ['openid']
+# overwritten by: DYN_CLIENT_DEFAULT_SCOPES - single String, \n separated values
+#default_scopes = ['openid']
+
 # If specified, this secret token will be expected during
 # dynamic client registrations to be given as a
 # `Bearer &lt;DYN_CLIENT_REG_TOKEN&gt;` token. Needs to be communicated
@@ -6286,6 +6370,16 @@ pg_password = '123SuperSafe'
 # overwritten by: DYN_CLIENT_CLEANUP_MINUTES
 #cleanup_minutes = 60
 
+# Defines the number of days after which an inactive dynamic client will be
+# cleaned up. This applies to clients that have been used at least once but
+# have not been active since the configured amount of days.
+#
+# WARNING: This will permanently delete client registrations.
+#
+# default: 0 (disabled)
+# overwritten by: DYN_CLIENT_CLEANUP_INACTIVE_DAYS
+#cleanup_inactive_days = 0
+
 # The rate-limiter timeout for dynamic client registration.
 # This is the timeout in seconds which will prevent an IP from
 # registering another dynamic client, if no `DYN_CLIENT_REG_TOKEN`
@@ -6334,7 +6428,7 @@ smtp_url = 'localhost'
 # will connect via SMTP PLAIN or LOGIN, which works in almost
 # all scenarios. However, you can change it to `xoauth2` to
 # connect via XOAUTH2. In addition, there is also `microsoft_graph`.
-# It is a custom implementaion that does not use SMTP anymore,
+# It is a custom implementation that does not use SMTP anymore,
 # but instead the Microsoft Azure Graph API. You should not use
 # it, unless you have no other choice or a very good reason.
 #
@@ -6706,6 +6800,12 @@ level_force_logout = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_IP_BLACKLISTED
 level_ip_blacklisted = 'warning'
+# The level for the generated Event after an IP has
+# been considered harmful, doing credential stuffing.
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_CRED_STUFF
+level_cred_stuff = 'warning'
 # The level for the generated Event after the JWKS has
 # been rotated
 #
@@ -7206,11 +7306,20 @@ level_access = 'modifying'
 # for instance when `Text` already logs a JSON in debug level.
 # Some other logs like an Event for instance will be formatted
 # as Text anyway. If you need to auto-parse events, please consider
-# using an API token and listen ot them actively.
+# using an API token and listen to them actively.
 #
 # default: text
 # overwritten by: LOG_FMT
 #log_fmt = 'text'
+
+[matrix]
+# Enables specific compatibility support for Matrix MSC3861 (Matrix 2.0 native OIDC).
+# This enables hierarchical scope matching (e.g. 'device' matches 'device:ID').
+# Note: Dynamic Client Registration (DCR) should be enabled for full support.
+#
+# default: false
+# overwritten by: MATRIX_SUPPORT_ENABLE
+#msc3861_enable = false
 
 [mfa]
 # If 'true', MFA for an account must be enabled to access the
@@ -7413,7 +7522,7 @@ proxy_mode = false
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to
 # be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
+# to prevent IP header spoofing. All requests with a
 # different source will be blocked.
 #
 # default: []
@@ -7528,7 +7637,17 @@ swagger_ui_enable = false
 
 #subject = 'New Password'
 #header = 'New password for'
-#text = ''
+
+# Note: This value will be empty for `password_new` and `password_reset`.
+# You can set custom content that you wish to add to your emails though.
+# For `email_registered_already`, it will have a default text.
+#text = """Someone tried to register a new account with your E-Mail address
+#while an account exists already. If that was you, and it was a mistake, you
+#can ignore this message. However, if you forgot your password, you can use
+#the link belopw to reset it.
+#If it was not you trying to register the new account - no need to worry.
+#Your account has not been compromised and no data was leaked."""
+
 #click_link = 'Click the link below to get forwarded to the password form.'
 #validity = 'This link is only valid for a short period of time for security reasons.'
 #expires = 'Link expires:'
@@ -7590,7 +7709,6 @@ key_path = 'tls/key.pem'
 #accept_timeout = 900
 
 [user_delete]
-
 # You can enable user self-deletion via the Account Dashboard.
 # It is disabled by default, because especially if you use things like
 # SCIM, the deletion of a user might trigger a series of events which
@@ -7610,7 +7728,7 @@ key_path = 'tls/key.pem'
 # instance deployments, file storage to local disk is available
 # as well, but this must not be used with multi replica / HA
 # deployments.
-# Images will ba reduced in size to max 192px on the longest side.
+# Images will be reduced in size to max 192px on the longest side.
 # They most often end up between 25 - 40kB in size.
 #
 # Available options: db file s3 disabled
@@ -7711,7 +7829,6 @@ storage_type = 'db'
 #allow_open_redirect = false
 
 [user_values]
-
 # In this section, you can configure the requirements for different
 # user values to adjust them to your needs. The `preferred_username`
 # as a special value provide some additional options.
@@ -7747,7 +7864,7 @@ storage_type = 'db'
 # Controls if the value requirements should be re-validated during
 # each single login. In most cases, you don't want this. It will
 # trigger additional database queries during the login procedure,
-# which are unnnecessary in most situations.
+# which are unnecessary in most situations.
 # However, if you decide to make the requirements more strict down
 # the road, or you use upstream auth providers which may not provide
 # all necessary values, you might want to enable this setting.
@@ -7969,7 +8086,7 @@ following and make the link work:</p>
 swagger_ui_public = false
 </code></pre>
 <h2 id="internal-access"><a class="header" href="#internal-access">Internal Access</a></h2>
-<p>By defautl, the SwaggerUI is only visible to <code>rauthy_admin</code>s with a valid session. You can access it via the Admin UI,
+<p>By default, the SwaggerUI is only visible to <code>rauthy_admin</code>s with a valid session. You can access it via the Admin UI,
 or via <code>/auth/v1/docs/</code> on your Rauthy instance.</p>
 
                     </main>
