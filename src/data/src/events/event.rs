@@ -4,8 +4,7 @@ use crate::entity::login_locations::LoginLocation;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use chrono::{DateTime, Timelike, Utc};
-use hiqlite::Row;
-use hiqlite_macros::params;
+use hiqlite::macros::{FromRow, params};
 use rauthy_api_types::events::EventResponse;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_local_hostname, get_rand};
@@ -187,7 +186,7 @@ impl Display for EventType {
             Self::ScimTaskFailed => write!(f, "SCIM task failed"),
             Self::ForcedLogout => write!(f, "Forced user logout"),
             Self::UserLoginRevoke => write!(f, "User revoked illegal login"),
-            Self::SuspiciousApiScan => write!(f, "Suspicous API scan"),
+            Self::SuspiciousApiScan => write!(f, "Suspicious API scan"),
             Self::LoginNewLocation => write!(f, "Login from new location"),
             Self::TokenIssued => write!(f, "JWT Token issued"),
         }
@@ -383,29 +382,17 @@ impl From<i64> for EventType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
 pub struct Event {
     pub id: String,
     pub timestamp: i64,
+    #[column(from_i64)]
     pub level: EventLevel,
+    #[column(from_i64)]
     pub typ: EventType,
     pub ip: Option<String>,
     pub data: Option<i64>,
     pub text: Option<String>,
-}
-
-impl<'r> From<hiqlite::Row<'r>> for Event {
-    fn from(mut row: Row<'r>) -> Self {
-        Self {
-            id: row.get("id"),
-            timestamp: row.get("timestamp"),
-            level: EventLevel::from(row.get::<i64>("level")),
-            typ: EventType::from(row.get::<i64>("typ")),
-            ip: row.get("ip"),
-            data: row.get("data"),
-            text: row.get("text"),
-        }
-    }
 }
 
 impl From<tokio_postgres::Row> for Event {
@@ -861,7 +848,7 @@ impl Event {
         )
     }
 
-    pub fn scim_task_failed(client_id: &str, action: &ScimAction, retries: i64) -> Self {
+    pub fn scim_task_failed(client_id: &str, action: &ScimAction, retries: i32) -> Self {
         Self::new(
             RauthyConfig::get()
                 .vars
@@ -870,7 +857,7 @@ impl Event {
                 .clone(),
             EventType::BackchannelLogoutFailed,
             None,
-            Some(retries),
+            Some(retries as i64),
             Some(format!("{client_id} / {action:?}")),
         )
     }

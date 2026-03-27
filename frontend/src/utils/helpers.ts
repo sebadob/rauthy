@@ -65,7 +65,7 @@ export const saveCsrfToken = (csrf: string) => {
     // With this very simple obfuscation, you can only grab a valid
     // token if you forge a targeted attack against Rauthy specifically.
     //
-    // Apart from that, there are other ways to handel a CSRF token, but
+    // Apart from that, there are other ways to handle a CSRF token, but
     // all of them have their downsides and none is fully secure against
     // browser extensions grabbing them, apart from managing it in a
     // WebWorker, which will have huge UX downsides.

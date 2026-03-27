@@ -25,7 +25,7 @@ Both of these values need to be inserted into Rauthy's Admin UI in the next step
 
 ## Rauthy Provider Config
 
-1. Log in to your Rauthy Admin UI, navigate to `Providers` and add a new provier.
+1. Log in to your Rauthy Admin UI, navigate to `Providers` and add a new provider.
 2. Choose `GitHub` as the `Type` and leave the Custom Root CA and insecure TLS unchecked.
 
 ![1_github_app_create](img/2_rauthy_add_new.png)

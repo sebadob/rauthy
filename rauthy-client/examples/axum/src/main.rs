@@ -103,7 +103,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .route("/session", get(routes::get_session))
         .route("/data", get(scim::get_data))
-        // in production, you should add middlewares here with safe default resposne headers
+        // in production, you should add middlewares here with safe default response headers
         .with_state(Arc::new(config));
 
     let addr = "0.0.0.0:3000";

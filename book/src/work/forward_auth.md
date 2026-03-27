@@ -109,7 +109,7 @@ proxies, feel free to submit a PR.
 - Have a reverse proxy in front of the application you want to protect, like e.g. Traefik or nginx
 - Make sure it's impossible(!) to access the client app by skipping the reverse proxy, e.g. with network policies,
   internal networks, or something like that.
-- Find an unsued route on your client app, where you can inject Rauthys `/callback`. You will probably be fine with
+- Find an unused route on your client app, where you can inject Rauthys `/callback`. You will probably be fine with
   something like `/oidc/rauthy/callback`. The name does not matter, it just must not be used by the app already.
 - Inject Rauthy special `/callback` endpoint into your client app with the help of your reverse proxy. This is a step
   that most other IdP's skip for a less secure setup. Rauthy does not let you skip this.
@@ -256,7 +256,7 @@ server {
     location = /forward_auth {
         internal;
 
-        # These are the requiered, above mentioned request headers.
+        # These are the required, above mentioned request headers.
         # The `X-Forwarded-For` is inserted into every request globally 
         # above already.
         proxy_set_header X-Original-URI $request_uri;
@@ -308,7 +308,7 @@ server {
         error_page 401 =302 $redirection_url;
 
         # If you have auth headers disabled, you can skip these next 2 blocks,
-        # which are basically just copying them from the Rauthy repsonse
+        # which are basically just copying them from the Rauthy response
         # into the request that is forwarded to the client app.
         
         ## Auth Headers Rauthy sends when `auth_headers.enable = true`

@@ -32,7 +32,7 @@ insecure_cookie = false
 # is being served with SSR.
 # You only need this value, if you want to work with the auth
 # provider login while running the UI in dev mode. Point it to
-# the full address, where ever your UI is running.
+# the full address, wherever your UI is running.
 # This will only be respected when `DEV_MODE == true` as well.
 #
 # overwritten by: DEV_MODE_PROVIDER_CALLBACK_URL
@@ -245,7 +245,7 @@ token_revoke_on_logout = true
 #
 # This value will only be respected, if `token_revoke_on_logout` is
 # set to `true` as well. Otherwise, tokens will only be revoked
-# via the dedicated `recovation_endpoint` or forced logout from an
+# via the dedicated `revocation_endpoint` or forced logout from an
 # admin.
 #
 # default: false
@@ -862,7 +862,7 @@ sched_user_exp_mins = 60
 sched_user_exp_delete_mins = 7200
 
 [device_grant]
-# The lifetime in secods  of auth codes for the Device Authorization
+# The lifetime in seconds of auth codes for the Device Authorization
 # Grant flow. You may increase the default of 300 seconds, if you have
 # "slow users" and they are simply not fast enough with the verification.
 #
@@ -1063,7 +1063,7 @@ smtp_from = 'Rauthy <rauthy@localhost>'
 # will connect via SMTP PLAIN or LOGIN, which works in almost
 # all scenarios. However, you can change it to `xoauth2` to
 # connect via XOAUTH2. In addition, there is also `microsoft_graph`.
-# It is a custom implementaion that does not use SMTP anymore,
+# It is a custom implementation that does not use SMTP anymore,
 # but instead the Microsoft Azure Graph API. You should not use
 # it, unless you have no other choice or a very good reason.
 #
@@ -1962,7 +1962,7 @@ level_database = 'info'
 # for instance when `Text` already logs a JSON in debug level.
 # Some other logs like an Event for instance will be formatted
 # as Text anyway. If you need to auto-parse events, please consider
-# using an API token and listen ot them actively.
+# using an API token and listen to them actively.
 #
 # default: text
 # overwritten by: LOG_FMT
@@ -2178,7 +2178,7 @@ proxy_mode = false
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to
 # be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
+# to prevent IP header spoofing. All requests with a
 # different source will be blocked.
 #
 # default: []
@@ -2377,7 +2377,7 @@ generate_self_signed = true
 # instance deployments, file storage to local disk is available
 # as well, but this must not be used with multi replica / HA
 # deployments.
-# Images will ba reduced in size to max 192px on the longest side.
+# Images will be reduced in size to max 192px on the longest side.
 # They most often end up between 25 - 40kB in size.
 #
 # Available options: db file s3 disabled
@@ -2521,7 +2521,7 @@ tz = 'optional'
 # Controls if the value requirements should be re-validated during
 # each single login. In most cases, you don't want this. It will
 # trigger additional database queries during the login procedure,
-# which are unnnecessary in most situations.
+# which are unnecessary in most situations.
 # However, if you decide to make the requirements more strict down
 # the road, or you use upstream auth providers which may not provide
 # all necessary values, you might want to enable this setting.
