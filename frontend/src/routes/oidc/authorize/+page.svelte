@@ -305,6 +305,7 @@
         res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
     ) {
         isLoading = false;
+        isAutoRefreshing = true;
 
         if (!res) {
             console.error('no result in handleAuthRes');
