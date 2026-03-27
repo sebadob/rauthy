@@ -15,12 +15,14 @@ use rauthy_common::constants::{
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
+use rauthy_data::email::email_registered_already::send_email_registered_already;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::continuation_token::ContinuationToken;
 use rauthy_data::entity::devices::DeviceEntity;
+use rauthy_data::entity::email_rate_limit::EmailRateLimit;
 use rauthy_data::entity::groups::Group;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_mod_token::MfaModToken;
@@ -458,7 +460,33 @@ pub async fn post_users_register_handle(
     }
 
     let lang = Language::try_from(&req).unwrap_or_default();
-    let user = User::create_from_reg(payload, lang).await?;
+    let email = payload.email.clone();
+    let user = match User::create_from_reg(payload, lang).await {
+        Ok(u) => u,
+        Err(err) => {
+            // email is probably registered already.
+            if let Ok(user) = User::find_by_email(email).await {
+                let ip = real_ip_from_req(&req)?;
+                info!("User registration request for already registered account from {ip}");
+
+                let rate_limit = EmailRateLimit::RegisteredAlready {
+                    email: user.email.clone(),
+                };
+                if rate_limit.is_limited().await? {
+                    warn!("Already rate-limited try to register exiting E-Mail from {ip}");
+                } else {
+                    send_email_registered_already(&user).await;
+                    rate_limit.limit().await?;
+                }
+
+                return Ok(HttpResponse::NoContent()
+                    .insert_header(HEADER_ALLOW_ALL_ORIGINS)
+                    .finish());
+            }
+
+            return Err(err);
+        }
+    };
 
     RauthyConfig::get()
         .tx_events
@@ -1383,7 +1411,7 @@ pub async fn post_webauthn_auth_finish(
     // We do not need to further validate the principal here.
     // All of this is done at the /start endpoint.
     // This here will simply fail, if the secret code from the /start does not exist
-    // -> indirect validation through exising code.
+    // -> indirect validation through existing code.
 
     let principal = principal.into_inner();
     let res = webauthn::auth_finish(id, &req, browser_id, principal.session, payload).await?;

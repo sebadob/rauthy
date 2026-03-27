@@ -81,7 +81,7 @@ pub async fn get_callback(
     };
 
     // At this point, the redirect was valid and everything was fine.
-    // Depending on how you like to proceed, you could create an independant session for the user,
+    // Depending on how you like to proceed, you could create an independent session for the user,
     // or maybe create just another factor of authentication like a CSRF token.
     // Otherwise, you could just go on and using the existing access token for further authentication.
 
@@ -177,11 +177,11 @@ pub async fn get_protected(principal: PrincipalOidc) -> Response {
     .into_response()
 }
 
-/// This endpoitn will only allow access with our very simple Session. JWT tokens are good for
+/// This endpoint will only allow access with our very simple Session. JWT tokens are good for
 /// initializing a session, but not that good for ongoing authn/authz, since they cannot be revoked.
 /// However, a token-based authn/authz scales better (when done right) and is way easier of course.
-/// Both approaches have their up's and downs. We show the session as well to be able to demostrate
-/// OIDC Backchannmel Logut, since tokens cannot be revoked.
+/// Both approaches have their ups and downs. We show the session as well to be able to demonstrate
+/// OIDC Backchannel Logout, since tokens cannot be revoked.
 pub async fn get_session(config: ConfigExt, jar: CookieJar) -> Response {
     let sid = match jar.get(SESSION_COOKIE_KEY) {
         None => {

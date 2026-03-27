@@ -4,7 +4,7 @@ use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::migration::bootstrap::bootstrap_additional_data;
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::deserialize;
 use rauthy_error::ErrorResponse;
@@ -174,7 +174,7 @@ ON CONFLICT DO NOTHING"#;
     }
 
     let issuer = &RauthyConfig::get().issuer;
-    let backchannel_logout_uri = format!("{issuer}/dev/backchannel_logout");
+    let backchannel_logout_uri = format!("{issuer}dev/backchannel_logout");
     let ml = MagicLink {
         id: "2qqdUOcXECQeypBNTs7Pnp7A2zAwr0VzynyzJiIjNR1Ua9KA95dTewM56JaPIoyj".to_string(),
         user_id: "2PYV3STNz3MN7VnPjJVcPQap".to_string(),

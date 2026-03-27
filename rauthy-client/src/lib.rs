@@ -14,9 +14,9 @@
 //! - `actix-web` enables actix-web specific extractors and api
 //! - `axum` enables axum specific extractors and api
 //! - `backchannel-logout` adds `LogoutToken` + validation functions for OIDC Backchannel Logout
-//! - `device-code` adds everything oyu need to the device code flow. This will most probably be
+//! - `device-code` adds everything you need to the device code flow. This will most probably be
 //!   used without default features.
-//! - `qrcode` brings QR Code geneation in combination with the `device-code` feature
+//! - `qrcode` brings QR Code generation in combination with the `device-code` feature
 //! - `scim` adds types and helpers to implement the client side of SCIM v2 in a Rauthy-compatible
 //!   way
 //! - `userinfo` adds additional types and helpers to easily fetch the `/userinfo` endpoint and

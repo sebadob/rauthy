@@ -1,23 +1,13 @@
 use crate::database::DB;
-use hiqlite_macros::params;
+use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 
-#[derive(Debug)]
+#[derive(Debug, FromRow)]
 pub struct PamGroupUserLink {
     pub uid: u32,
     pub gid: u32,
     pub wheel: bool,
-}
-
-impl From<hiqlite::Row<'_>> for PamGroupUserLink {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
-        Self {
-            uid: row.get::<i64>("uid") as u32,
-            gid: row.get::<i64>("gid") as u32,
-            wheel: row.get("wheel"),
-        }
-    }
 }
 
 impl From<tokio_postgres::Row> for PamGroupUserLink {

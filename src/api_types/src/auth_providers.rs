@@ -3,6 +3,7 @@ use rauthy_common::regex::{
     RE_ALNUM, RE_ATPROTO_HANDLE, RE_CLIENT_ID, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_SCOPE_SPACE,
     RE_URI,
 };
+use rauthy_derive::FromPgRow;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -187,19 +188,10 @@ pub struct ProviderResponse {
     pub auto_link: bool,
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, FromPgRow, ToSchema)]
 pub struct ProviderLinkedUserResponse {
     pub id: String,
     pub email: String,
-}
-
-impl From<tokio_postgres::Row> for ProviderLinkedUserResponse {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            email: row.get("email"),
-        }
-    }
 }
 
 #[derive(Serialize, ToSchema)]

@@ -17,7 +17,7 @@ Most access rights requests mimic their HTTP methods:
 - `PUT` -> `update`
 - `DELETE` -> `delete`
 
-To use an API Key, you need to provide is with the HTTP `Authorization` header, but instead of `Bearer` as prefix, you
+To use an API Key, you need to provide it with the HTTP `Authorization` header, but instead of `Bearer` as prefix, you
 set it to `API-Key`, so Rauthy can efficiently distinguish if you try to access the API with a JWT token or an API Key:
 
 ```
@@ -33,7 +33,7 @@ you only need to copy & paste it.
 
 ```admonish info
 The only actions API Keys are not allowed to do is interacting with other API Keys and external SSO Providers for
-logins to limit the likelyhood of priviledge escalation in case of leaked credentials. 
+logins to limit the likelihood of privilege escalation in case of leaked credentials. 
 ```
 
 ## Creating a new API Key

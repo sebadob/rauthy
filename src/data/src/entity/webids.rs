@@ -1,9 +1,10 @@
 use crate::database::{Cache, DB};
 use crate::rauthy_config::RauthyConfig;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::users::WebIdResponse;
 use rauthy_common::constants::CACHE_TTL_USER;
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
@@ -12,21 +13,11 @@ use rio_turtle::{NTriplesFormatter, NTriplesParser, TurtleFormatter, TurtleParse
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromPgRow, utoipa::ToSchema)]
 pub struct WebId {
     pub user_id: String,
     pub expose_email: bool,
     pub custom_triples: Option<String>,
-}
-
-impl From<tokio_postgres::Row> for WebId {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            user_id: row.get("user_id"),
-            expose_email: row.get("expose_email"),
-            custom_triples: row.get("custom_triples"),
-        }
-    }
 }
 
 impl WebId {

@@ -2,31 +2,20 @@ use crate::database::{Cache, DB};
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
 use cryptr::EncValue;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromPgRow)]
 pub struct ClientDyn {
     pub id: String,
     pub created: i64,
     pub last_used: Option<i64>,
     pub registration_token: Vec<u8>,
     pub token_endpoint_auth_method: String,
-}
-
-impl From<tokio_postgres::Row> for ClientDyn {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            created: row.get("created"),
-            last_used: row.get("last_used"),
-            registration_token: row.get("registration_token"),
-            token_endpoint_auth_method: row.get("token_endpoint_auth_method"),
-        }
-    }
 }
 
 impl ClientDyn {
@@ -115,7 +104,7 @@ impl ClientDyn {
     }
 
     pub fn registration_client_uri(id: &str) -> String {
-        format!("{}/clients_dyn/{}", RauthyConfig::get().issuer, id)
+        format!("{}clients_dyn/{}", RauthyConfig::get().issuer, id)
     }
 
     pub fn registration_token_plain(&self) -> Result<String, ErrorResponse> {
