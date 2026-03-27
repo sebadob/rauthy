@@ -643,6 +643,28 @@ impl AdminGroupsHtml<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "html/admin/kv.html")]
+pub struct AdminKVHtml<'a> {
+    lang: &'a str,
+    client_id: &'a str,
+    theme_ts: i64,
+    templates: &'a [HtmlTemplate],
+}
+
+impl AdminKVHtml<'_> {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
+        let res = AdminGroupsHtml {
+            lang: lang.as_str(),
+            client_id: "rauthy",
+            theme_ts,
+            ..Default::default()
+        };
+
+        res.render().unwrap()
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "html/admin/roles.html")]
 pub struct AdminRolesHtml<'a> {
     lang: &'a str,

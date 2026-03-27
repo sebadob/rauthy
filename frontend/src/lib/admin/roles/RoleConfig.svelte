@@ -10,6 +10,8 @@
     import type { RoleRequest, RoleResponse } from '$api/types/roles.ts';
     import { PATTERN_ROLE_SCOPE } from '$utils/patterns';
     import { untrack } from 'svelte';
+    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
+    import InputArea from '$lib/form/InputArea.svelte';
 
     let {
         role,
@@ -29,10 +31,12 @@
     let isRauthyAdmin = $derived(role.name === 'rauthy_admin');
 
     let name = $state(untrack(() => role.name));
+    let jsonMeta = $state(untrack(() => stringifyJsonValue(role.meta) || ''));
 
     $effect(() => {
         if (role.id) {
             name = role.name;
+            jsonMeta = stringifyJsonValue(role.meta) || '';
         }
     });
 
@@ -46,6 +50,7 @@
 
         let payload: RoleRequest = {
             role: name,
+            meta: parseJsonValue(jsonMeta),
         };
 
         let res = await fetchPut(form.action, payload);
@@ -80,7 +85,16 @@
     {#if isRauthyAdmin}
         <p>{@html ta.roles.adminNoMod}</p>
     {:else}
-        <div class="flex gap-05">
+        <div class="meta">
+            <InputArea
+                label={ta.common.jsonMeta}
+                placeholder={ta.common.jsonMeta}
+                rows={15}
+                bind:value={jsonMeta}
+            />
+        </div>
+
+        <div class="btn">
             <Button type="submit">
                 {t.common.save}
             </Button>
@@ -99,4 +113,14 @@
 </Form>
 
 <style>
+    .btn {
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .meta {
+        max-width: 40rem;
+    }
 </style>

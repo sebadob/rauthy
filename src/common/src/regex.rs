@@ -18,7 +18,7 @@ pub static RE_BASE64: LazyLock<Regex> =
 pub static RE_CODE_CHALLENGE_METHOD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(plain|S256)$").unwrap());
 pub static RE_CITY: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-]{0,48}$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{0,48}$").unwrap());
 pub static RE_CLIENT_ID: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$").unwrap());
 pub static RE_CLIENT_NAME: LazyLock<Regex> = LazyLock::new(|| {

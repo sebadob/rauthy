@@ -1,5 +1,5 @@
 use crate::database::DB;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 
 pub mod api_keys;
@@ -15,10 +15,12 @@ pub mod clients_dyn;
 pub mod clients_scim;
 pub mod config;
 pub mod continuation_token;
+pub mod cred_stuff_detect;
 pub mod db_version;
 pub mod devices;
 pub mod dpop_proof;
 pub mod email_jobs;
+pub mod email_rate_limit;
 pub mod failed_backchannel_logout;
 pub mod failed_login_counter;
 pub mod failed_scim_tasks;
@@ -30,6 +32,7 @@ pub mod ip_rate_limit;
 pub mod issued_tokens;
 pub mod jwk;
 pub mod jwk_token_validation;
+pub mod kv;
 pub mod login_locations;
 pub mod logos;
 pub mod magic_links;

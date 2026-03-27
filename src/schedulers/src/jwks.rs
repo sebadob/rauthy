@@ -1,6 +1,6 @@
 use crate::sleep_schedule_next;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::constants::IDX_JWK_KID;
 use rauthy_common::is_hiqlite;
 use rauthy_data::database::{Cache, DB};

@@ -79,7 +79,7 @@ pub async fn update_client(
             if needs_sync {
                 ClientScim::upsert(
                     scim_before.client_id,
-                    scim_req.bearer_token.as_bytes(),
+                    &scim_req.bearer_token,
                     scim_new.base_uri.clone(),
                     scim_req.sync_groups,
                     scim_req.group_sync_prefix.clone(),
@@ -91,7 +91,7 @@ pub async fn update_client(
         } else {
             ClientScim::upsert(
                 client.id.clone(),
-                scim_req.bearer_token.as_bytes(),
+                &scim_req.bearer_token,
                 base_uri.clone(),
                 scim_req.sync_groups,
                 scim_req.group_sync_prefix.clone(),

@@ -38,7 +38,7 @@
         label?: string;
         ariaLabel?: string;
         autocomplete?: FullAutoFill | null | undefined;
-        placeholder: string;
+        placeholder?: string;
         disabled?: boolean | null | undefined;
         maxLength?: number | null | undefined;
         min?: string;
@@ -128,7 +128,7 @@
             style:padding-right={showCopy ? '3.8rem' : '2.2rem'}
             bind:value
             {autocomplete}
-            {placeholder}
+            placeholder={placeholder || label}
             {disabled}
             required={required || undefined}
             aria-required={required || false}

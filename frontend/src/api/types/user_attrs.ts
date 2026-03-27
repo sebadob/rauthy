@@ -1,3 +1,5 @@
+import type { JsonValue } from '$utils/jsonValue';
+
 export type UserAttrConfigTyp = 'email';
 
 export interface UserAttrConfigEntity {
@@ -10,7 +12,7 @@ export interface UserAttrConfigRequest {
     name: string;
     /// Validation: PATTERN_ATTR_DESC
     desc?: string;
-    default_value?: string;
+    default_value?: JsonValue;
     /// Currently ignored - will be implemented in a future version
     typ?: UserAttrConfigTyp;
     user_editable?: boolean;
@@ -19,7 +21,7 @@ export interface UserAttrConfigRequest {
 export interface UserAttrConfigValueResponse {
     name: string;
     desc?: string;
-    default_value?: string;
+    default_value?: JsonValue;
     /// Currently ignored - will be implemented in a future version
     typ?: UserAttrConfigTyp;
     user_editable?: boolean;
@@ -31,7 +33,7 @@ export interface UserAttrConfigResponse {
 
 export interface UserAttrValueResponse {
     key: string;
-    value: string;
+    value: JsonValue;
 }
 
 export interface UserAttrValuesResponse {
@@ -41,7 +43,7 @@ export interface UserAttrValuesResponse {
 export interface UserEditableAttrResponse {
     name: string;
     desc?: string;
-    default_value?: string;
+    default_value?: JsonValue;
     typ?: UserAttrConfigTyp;
     value?: string;
 }

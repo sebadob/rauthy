@@ -36,6 +36,7 @@ pub mod fed_cm;
 pub mod generic;
 pub mod groups;
 pub mod html;
+pub mod kv;
 pub mod oidc;
 pub mod openapi;
 pub mod pam;

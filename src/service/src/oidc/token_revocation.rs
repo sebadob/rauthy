@@ -47,7 +47,7 @@ pub async fn handle_token_revocation(
     let cors_header = client.get_validated_origin_header(&req)?;
 
     if client.confidential {
-        client.validate_secret(&client_secret, &req).await?;
+        client.validate_secret(client_secret, &req).await?;
     }
 
     let is_refresh_token = payload.token_type_hint.as_deref() == Some("refresh_token");

@@ -35,6 +35,7 @@ pub enum EventType {
     SuspiciousApiScan,
     LoginNewLocation,
     TokenIssued,
+    CredentialStuffing,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]

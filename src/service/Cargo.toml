@@ -28,3 +28,4 @@ serde_json = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 utoipa = { workspace = true }
+zeroize = { workspace = true }

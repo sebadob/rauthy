@@ -1,10 +1,9 @@
 use crate::entity::db_version::DbVersion;
 use crate::migration::db_migrate_dev::migrate_dev_data;
-use crate::migration::{anti_lockout, db_migrate, init_prod};
+use crate::migration::{anti_lockout, bootstrap, db_migrate};
 use crate::rauthy_config::RauthyConfig;
 use futures_util::StreamExt;
-use hiqlite::cache_idx::CacheIndex;
-use hiqlite_macros::embed::*;
+use hiqlite::macros::{CacheVariants, embed::*};
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
 use std::env;
@@ -34,7 +33,7 @@ struct MigrationsHiqlite;
 /// CAUTION: DO NOT change the order when adding new entries to now have false-positive
 /// during updates for already existing environments. Caches are not indexed via String / Name,
 /// but via u32 internally.
-#[derive(Debug, strum::EnumIter)]
+#[derive(Debug, CacheVariants)]
 pub enum Cache {
     Atproto,
     App,
@@ -56,12 +55,8 @@ pub enum Cache {
     Webauthn,
     PAM,
     ToS,
-}
-
-impl CacheIndex for Cache {
-    fn to_usize(self) -> usize {
-        self as usize
-    }
+    EmailRateLimit,
+    CredStuffDetect,
 }
 
 pub struct DB;
@@ -219,7 +214,7 @@ impl DB {
         // migrate dynamic DB data
         let config = RauthyConfig::get();
         if !config.vars.dev.dev_mode && config.is_primary_node {
-            init_prod::migrate_init_prod().await?;
+            bootstrap::migrate_init_prod().await?;
         }
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {
