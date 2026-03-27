@@ -1576,17 +1576,6 @@ checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
 
 [[package]]
 name = "cron"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5877d3fbf742507b66bc2a1945106bd30dd8504019d596901ddd012a4dd01740"
-dependencies = [
- "chrono",
- "once_cell",
- "winnow 0.6.26",
-]
-
-[[package]]
-name = "cron"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "089df96cf6a25253b4b6b6744d86f91150a3d4df546f31a95def47976b8cba97"
@@ -2809,7 +2798,7 @@ dependencies = [
  "bincode",
  "bytes",
  "chrono",
- "cron 0.16.0",
+ "cron",
  "cryptr",
  "deadpool 0.13.0",
  "dotenvy",
@@ -3481,10 +3470,12 @@ dependencies = [
 
 [[package]]
 name = "js-sys"
-version = "0.3.91"
+version = "0.3.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b49715b7073f385ba4bc528e5747d02e66cb39c6146efb66b781f131f0fb399c"
+checksum = "cc4c90f45aa2e6eacbe8645f77fdea542ac97a494bcd117a67df9ff4d611f995"
 dependencies = [
+ "cfg-if",
+ "futures-util",
  "once_cell",
  "wasm-bindgen",
 ]
@@ -4985,7 +4976,7 @@ checksum = "0c8d0fd677905edcbeedbf2edb6494d676f0e98d54d5cf9bda0b061cb8fb8aba"
 
 [[package]]
 name = "rauthy"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -5035,7 +5026,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "actix-web",
  "hiqlite",
@@ -5055,7 +5046,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "actix-web",
  "ammonia",
@@ -5086,7 +5077,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-data"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -5172,7 +5163,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-derive"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5181,7 +5172,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5218,7 +5209,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5255,7 +5246,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "chrono",
  "openssl",
@@ -5272,7 +5263,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5288,7 +5279,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "async-trait",
  "openssl",
@@ -5304,11 +5295,11 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "actix-web",
  "chrono",
- "cron 0.15.0",
+ "cron",
  "hiqlite",
  "openssl",
  "openssl-sys",
@@ -5323,7 +5314,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "actix-web",
  "atrium-api",
@@ -5351,7 +5342,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-wasm-modules"
-version = "0.35.0-20260326"
+version = "0.35.0"
 dependencies = [
  "ammonia",
  "console_error_panic_hook",
@@ -7676,9 +7667,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen"
-version = "0.2.114"
+version = "0.2.115"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6532f9a5c1ece3798cb1c2cfdba640b9b3ba884f5db45973a6f442510a87d38e"
+checksum = "6523d69017b7633e396a89c5efab138161ed5aafcbc8d3e5c5a42ae38f50495a"
 dependencies = [
  "cfg-if",
  "once_cell",
@@ -7690,23 +7681,19 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-futures"
-version = "0.4.64"
+version = "0.4.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9c5522b3a28661442748e09d40924dfb9ca614b21c00d3fd135720e48b67db8"
+checksum = "2d1faf851e778dfa54db7cd438b70758eba9755cb47403f3496edd7c8fc212f0"
 dependencies = [
- "cfg-if",
- "futures-util",
  "js-sys",
- "once_cell",
  "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
 name = "wasm-bindgen-macro"
-version = "0.2.114"
+version = "0.2.115"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18a2d50fcf105fb33bb15f00e7a77b772945a2ee45dcf454961fd843e74c18e6"
+checksum = "4e3a6c758eb2f701ed3d052ff5737f5bfe6614326ea7f3bbac7156192dc32e67"
 dependencies = [
  "quote",
  "wasm-bindgen-macro-support",
@@ -7714,9 +7701,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro-support"
-version = "0.2.114"
+version = "0.2.115"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03ce4caeaac547cdf713d280eda22a730824dd11e6b8c3ca9e42247b25c631e3"
+checksum = "921de2737904886b52bcbb237301552d05969a6f9c40d261eb0533c8b055fedf"
 dependencies = [
  "bumpalo",
  "proc-macro2",
@@ -7727,18 +7714,18 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-shared"
-version = "0.2.114"
+version = "0.2.115"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75a326b8c223ee17883a4251907455a2431acc2791c98c26279376490c378c16"
+checksum = "a93e946af942b58934c604527337bad9ae33ba1d5c6900bbb41c2c07c2364a93"
 dependencies = [
  "unicode-ident",
 ]
 
 [[package]]
 name = "wasm-bindgen-test"
-version = "0.3.64"
+version = "0.3.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6311c867385cc7d5602463b31825d454d0837a3aba7cdb5e56d5201792a3f7fe"
+checksum = "1138411301a026d6662dc44e7076a74dbaa76a369312275eea5dee4d7dc68c7c"
 dependencies = [
  "async-trait",
  "cast",
@@ -7758,9 +7745,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-test-macro"
-version = "0.3.64"
+version = "0.3.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67008cdde4769831958536b0f11b3bdd0380bde882be17fff9c2f34bb4549abd"
+checksum = "186ddfe8383ba7ae7927bae3bb7343fd1f03ba2dbaf1474410f0d831131c269b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7769,9 +7756,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-test-shared"
-version = "0.2.114"
+version = "0.2.115"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfe29135b180b72b04c74aa97b2b4a2ef275161eff9a6c7955ea9eaedc7e1d4e"
+checksum = "f032e076ceb8d36d5921c6cef5bf447f2ca2bbd5439ce1683d68d1c99cc2be16"
 
 [[package]]
 name = "wasm-encoder"
@@ -7835,9 +7822,9 @@ dependencies = [
 
 [[package]]
 name = "web-sys"
-version = "0.3.91"
+version = "0.3.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "854ba17bb104abfb26ba36da9729addc7ce7f06f5c0f90f3c391f8461cca21f9"
+checksum = "84cde8507f4d7cfcb1185b8cb5890c494ffea65edbe1ba82cfd63661c805ed94"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -8374,15 +8361,6 @@ name = "windows_x86_64_msvc"
 version = "0.53.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
-
-[[package]]
-name = "winnow"
-version = "0.6.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e90edd2ac1aa278a5c4599b1d89cf03074b610800f866d4026dc199d7929a28"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "winnow"
