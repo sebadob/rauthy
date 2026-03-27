@@ -1,5 +1,5 @@
 ALTER TABLE groups
-    ADD json_meta BLOB;
+    ADD meta BLOB;
 
 ALTER TABLE roles
-    ADD json_meta BLOB;
+    ADD meta BLOB;

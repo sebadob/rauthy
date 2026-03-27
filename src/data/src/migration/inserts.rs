@@ -608,17 +608,19 @@ VALUES ($1, $2, $3)"#;
 
 pub async fn groups(data_before: Vec<Group>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM groups";
-    let sql_2 = "INSERT INTO groups (id, name) VALUES ($1, $2)";
+    let sql_2 = "INSERT INTO groups (id, name, meta) VALUES ($1, $2, $3)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::hql().execute(sql_2, params!(b.id, b.name)).await?;
+            DB::hql()
+                .execute(sql_2, params!(b.id, b.name, b.meta))
+                .await?;
         }
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            DB::pg_execute(sql_2, &[&b.id, &b.name]).await?;
+            DB::pg_execute(sql_2, &[&b.id, &b.name, &b.meta]).await?;
         }
     }
     Ok(())
@@ -1258,17 +1260,19 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
 
 pub async fn roles(data_before: Vec<Role>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM roles";
-    let sql_2 = "INSERT INTO roles (id, name) VALUES ($1, $2)";
+    let sql_2 = "INSERT INTO roles (id, name, meta) VALUES ($1, $2, $3)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            DB::hql().execute(sql_2, params!(b.id, b.name)).await?;
+            DB::hql()
+                .execute(sql_2, params!(b.id, b.name, b.meta))
+                .await?;
         }
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            DB::pg_execute(sql_2, &[&b.id, &b.name]).await?;
+            DB::pg_execute(sql_2, &[&b.id, &b.name, &b.meta]).await?;
         }
     }
     Ok(())

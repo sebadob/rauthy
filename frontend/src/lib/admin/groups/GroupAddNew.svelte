@@ -42,7 +42,7 @@
 
         let payload: GroupRequest = {
             group: name,
-            json_meta: parseJsonValue(jsonMeta),
+            meta: parseJsonValue(jsonMeta),
         };
         let res = await fetchPost<GroupResponse>(form.action, payload);
         if (res.body) {

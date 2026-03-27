@@ -6,7 +6,6 @@ use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::groups::Group;
 use rauthy_error::ErrorResponse;
-use tracing::warn;
 use validator::Validate;
 
 /// Returns all existing *groups*
@@ -92,7 +91,7 @@ pub async fn put_group(
     principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Update)?;
     payload.validate()?;
 
-    let group = Group::update(id.into_inner(), payload.group, payload.json_meta).await?;
+    let group = Group::update(id.into_inner(), payload.group, payload.meta).await?;
 
     for client in ClientScim::find_all().await? {
         client.create_update_group(group.clone()).await?;

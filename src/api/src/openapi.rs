@@ -407,6 +407,7 @@ use utoipa::{OpenApi, openapi};
             ProviderResponse,
             ProviderLinkedUserResponse,
             ProviderLookupResponse,
+            RoleResponse,
             ScopeResponse,
             SessionResponse,
             SessionInfoResponse,

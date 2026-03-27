@@ -29,12 +29,12 @@
     let err = $state('');
     let success = $state(false);
     let name = $state(untrack(() => group.name));
-    let jsonMeta = $state(untrack(() => stringifyJsonValue(group.json_meta) || ''));
+    let jsonMeta = $state(untrack(() => stringifyJsonValue(group.meta) || ''));
 
     $effect(() => {
         if (group.id) {
             name = group.name;
-            jsonMeta = stringifyJsonValue(group.json_meta) || '';
+            jsonMeta = stringifyJsonValue(group.meta) || '';
         }
     });
 
@@ -48,7 +48,7 @@
 
         let payload: GroupRequest = {
             group: name,
-            json_meta: parseJsonValue(jsonMeta),
+            meta: parseJsonValue(jsonMeta),
         };
 
         let res = await fetchPut(form.action, payload);

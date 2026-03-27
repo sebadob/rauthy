@@ -1,5 +1,5 @@
 ALTER TABLE groups
-    ADD json_meta BYTEA;
+    ADD meta BYTEA;
 
 ALTER TABLE roles
-    ADD json_meta BYTEA;
+    ADD meta BYTEA;

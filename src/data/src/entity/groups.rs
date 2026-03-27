@@ -17,7 +17,7 @@ pub struct Group {
     pub name: String,
     // We don't want to store `serde_json::Value` directly, because it might produce a
     // `Bincode: Serde(AnyNotSupported)`
-    pub json_meta: Option<Vec<u8>>,
+    pub meta: Option<Vec<u8>>,
 }
 
 impl From<tokio_postgres::Row> for Group {
@@ -25,7 +25,7 @@ impl From<tokio_postgres::Row> for Group {
         Self {
             id: row.get("id"),
             name: row.get("name"),
-            json_meta: row.get("json_meta"),
+            meta: row.get("meta"),
         }
     }
 }
@@ -34,9 +34,8 @@ impl From<tokio_postgres::Row> for Group {
 impl Group {
     // Inserts a new group into the database
     pub async fn create(group_req: GroupRequest) -> Result<Self, ErrorResponse> {
-        let mut groups = Group::find_all().await?;
-        for g in &groups {
-            if g.name == group_req.group {
+        for group in Group::find_all().await? {
+            if group.name == group_req.group {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "Group already exists",
@@ -47,12 +46,12 @@ impl Group {
         let new_group = Group {
             id: new_store_id(),
             name: group_req.group,
-            json_meta: group_req
-                .json_meta
+            meta: group_req
+                .meta
                 .and_then(|json| serde_json::to_vec(&json).ok()),
         };
 
-        let sql = "INSERT INTO groups (id, name, json_meta) VALUES ($1, $2, $3)";
+        let sql = "INSERT INTO groups (id, name, meta) VALUES ($1, $2, $3)";
         if is_hiqlite() {
             DB::hql()
                 .execute(
@@ -60,18 +59,15 @@ impl Group {
                     params!(
                         new_group.id.clone(),
                         new_group.name.clone(),
-                        new_group.json_meta.clone()
+                        new_group.meta.clone()
                     ),
                 )
                 .await?;
         } else {
-            DB::pg_execute(sql, &[&new_group.id, &new_group.name, &new_group.json_meta]).await?;
+            DB::pg_execute(sql, &[&new_group.id, &new_group.name, &new_group.meta]).await?;
         }
 
-        groups.push(new_group.clone());
-        DB::hql()
-            .put(Cache::App, IDX_GROUPS, &groups, CACHE_TTL_APP)
-            .await?;
+        DB::hql().delete(Cache::App, IDX_GROUPS).await?;
 
         Ok(new_group)
     }
@@ -110,19 +106,9 @@ impl Group {
             txn.commit().await?;
         }
 
-        let groups = Group::find_all()
-            .await?
-            .into_iter()
-            .filter(|g| g.id != group.id)
-            .collect::<Vec<Group>>();
-
         let client = DB::hql();
-        // clearing users cache is more safe and less resource intensive than trying to
-        // update each single entry
         client.clear_cache(Cache::User).await?;
-        client
-            .put(Cache::App, IDX_GROUPS, &groups, CACHE_TTL_APP)
-            .await?;
+        client.delete(Cache::App, IDX_GROUPS).await?;
 
         Ok(())
     }
@@ -164,7 +150,7 @@ impl Group {
     pub async fn update(
         id: String,
         new_name: String,
-        json_meta: Option<serde_json::Value>,
+        meta: Option<serde_json::Value>,
     ) -> Result<Self, ErrorResponse> {
         let client = DB::hql();
         let group = Group::find(id).await?;
@@ -173,29 +159,26 @@ impl Group {
         let new_group = Self {
             id: group.id,
             name: new_name,
-            json_meta: json_meta.and_then(|json| serde_json::to_vec(&json).ok()),
+            meta: meta.and_then(|json| serde_json::to_vec(&json).ok()),
         };
 
         if group.name == new_group.name {
             // This update is a lot simpler. We only need to update metadata and don't need to
             // care about anything else.
-            let sql = "UPDATE groups SET json_meta = $1 WHERE id = $2";
+            let sql = "UPDATE groups SET meta = $1 WHERE id = $2";
             if is_hiqlite() {
                 client
-                    .execute(
-                        sql,
-                        params!(new_group.json_meta.clone(), new_group.id.clone()),
-                    )
+                    .execute(sql, params!(new_group.meta.clone(), new_group.id.clone()))
                     .await?;
             } else {
-                DB::pg_execute(sql, &[&new_group.json_meta, &new_group.id]).await?;
+                DB::pg_execute(sql, &[&new_group.meta, &new_group.id]).await?;
             }
 
             client.delete(Cache::App, IDX_GROUPS).await?;
             return Ok(new_group);
         }
 
-        let sql = "UPDATE groups SET name = $1, json_meta = $2 WHERE id = $3";
+        let sql = "UPDATE groups SET name = $1, meta = $2 WHERE id = $3";
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
@@ -213,7 +196,7 @@ impl Group {
                 sql,
                 params!(
                     new_group.name.clone(),
-                    new_group.json_meta.clone(),
+                    new_group.meta.clone(),
                     new_group.id.clone()
                 ),
             ));
@@ -233,7 +216,7 @@ impl Group {
             DB::pg_txn_append(
                 &txn,
                 sql,
-                &[&new_group.name, &new_group.json_meta, &new_group.id],
+                &[&new_group.name, &new_group.meta, &new_group.id],
             )
             .await?;
 
@@ -275,21 +258,19 @@ impl Group {
     }
 
     pub fn value(&self) -> Option<serde_json::Value> {
-        if let Some(meta) = &self.json_meta {
-            Some(serde_json::from_slice(meta).unwrap_or_default())
-        } else {
-            None
-        }
+        self.meta
+            .as_ref()
+            .map(|meta| serde_json::from_slice(meta).unwrap_or_default())
     }
 }
 
 impl From<Group> for GroupResponse {
     fn from(value: Group) -> Self {
-        let json_meta = value.value();
+        let meta = value.value();
         Self {
             id: value.id,
             name: value.name,
-            json_meta,
+            meta,
         }
     }
 }
