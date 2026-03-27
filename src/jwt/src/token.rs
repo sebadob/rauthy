@@ -124,7 +124,7 @@ impl JwtToken {
 
 // Note: No need to include `aud` in the validation. This will never be `rauthy` itself, and all
 // other possibilities are validated indirectly with a `Client` lookup afterward, which will be
-// done ba grabbing the `client_id` from `aud` / `azp` anyway.
+// done by grabbing the `client_id` from `aud` / `azp` anyway.
 #[derive(Debug, Deserialize)]
 struct ValidationClaims<'a> {
     iat: i64,

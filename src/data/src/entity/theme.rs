@@ -1,6 +1,6 @@
 use crate::database::{Cache, DB};
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::themes::ThemeRequestResponse;
 use rauthy_common::compression::{compress_br, compress_gzip};
 use rauthy_common::constants::BUILD_TIME;
@@ -28,8 +28,8 @@ pub struct ThemeCssFull {
     pub border_radius: String,
 }
 
-impl From<hiqlite::Row<'_>> for ThemeCssFull {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for ThemeCssFull {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         let version: i64 = row.get("version");
         let (light, dark) = if version == 1 {
             let light = ThemeCss::from(row.get::<Vec<u8>>("light").as_slice());

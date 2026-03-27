@@ -108,7 +108,7 @@
         </div>
 
         {#if err}
-            <div clasS="err">
+            <div class="err">
                 {err}
             </div>
         {/if}

@@ -485,7 +485,7 @@ export let I18nAdminDe: I18nAdmin = {
             'Es kann eine neue Reset E-Mail gesendet werden, sollte der Benutzer keine erhalten haben.',
         savePassword: 'Passwort Speichern',
         selfServiceDesc:
-            'Es kann entweder ein neues Passwort gesetzt, order eine Reset E-Mail versendet werden.',
+            'Es kann entweder ein neues Passwort gesetzt, oder eine Reset E-Mail versendet werden.',
         sendResetEmail: 'Reset E-Mail Senden',
     },
     validation: {

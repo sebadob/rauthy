@@ -1,16 +1,8 @@
+use rauthy_derive::FromPgRow;
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, FromPgRow)]
 pub struct ConfigEntity {
     pub id: String,
     pub data: Vec<u8>,
-}
-
-impl From<tokio_postgres::Row> for ConfigEntity {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            data: row.get("data"),
-        }
-    }
 }

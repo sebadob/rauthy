@@ -12,6 +12,7 @@ doctest = false
 [dependencies]
 rauthy-api-types = { path = "../api_types" }
 rauthy-common = { path = "../common" }
+rauthy-derive = { path = "../macros" }
 rauthy-error = { path = "../error" }
 rauthy-notify = { path = "../notify" }
 
@@ -40,7 +41,6 @@ futures-util = { workspace = true }
 hex = { workspace = true }
 hickory-resolver = { workspace = true }
 hiqlite = { workspace = true }
-hiqlite-macros = { workspace = true }
 hmac-sha256 = { workspace = true }
 hmac-sha512 = { workspace = true }
 image = { workspace = true }
