@@ -80,6 +80,19 @@
     {ta.kv.help.help}
 </Button>
 
+{#snippet code(value: string)}
+    <div class="btn">
+        <div class="relative">
+            <div class="copy">
+                <Button invisible onclick={() => navigator.clipboard.writeText(value)}>
+                    <IconClipboard />
+                </Button>
+            </div>
+        </div>
+    </div>
+    <pre><code>{value}</code></pre>
+{/snippet}
+
 <Modal bind:showModal bind:closeModal>
     <h1>{ta.kv.help.help}</h1>
 
@@ -94,19 +107,6 @@
     </ul>
     <p>{@html ta.kv.help.p2}</p>
     <p>{@html ta.kv.help.p3}</p>
-
-    {#snippet code(value: string)}
-        <div class="btn">
-            <div class="relative">
-                <div class="copy">
-                    <Button invisible onclick={() => navigator.clipboard.writeText(value)}>
-                        <IconClipboard />
-                    </Button>
-                </div>
-            </div>
-        </div>
-        <pre><code>{value}</code></pre>
-    {/snippet}
 
     <h2>{ta.kv.help.ops[0]}</h2>
     {@render code(testKey)}
