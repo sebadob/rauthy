@@ -326,6 +326,7 @@ fn api_services() -> actix_web::Scope {
                 .service(html::get_admin_docs_html)
                 .service(html::get_admin_events_html)
                 .service(html::get_admin_groups_html)
+                .service(html::get_admin_kv_html)
                 .service(html::get_admin_roles_html)
                 .service(html::get_admin_scopes_html)
                 .service(html::get_admin_pam_html)
