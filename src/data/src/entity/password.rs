@@ -3,7 +3,7 @@ use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::generic::{
     PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse,
 };
@@ -12,6 +12,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{deserialize, serialize};
+use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
@@ -110,7 +111,7 @@ pub struct PasswordHashTime {
     pub time_taken: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromPgRow)]
 pub struct PasswordPolicy {
     pub length_min: i32,
     pub length_max: i32,
@@ -120,21 +121,6 @@ pub struct PasswordPolicy {
     pub include_special: Option<i32>,
     pub valid_days: Option<i32>,
     pub not_recently_used: Option<i32>,
-}
-
-impl From<tokio_postgres::Row> for PasswordPolicy {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            length_min: row.get("length_min"),
-            length_max: row.get("length_max"),
-            include_lower_case: row.get("include_lower_case"),
-            include_upper_case: row.get("include_upper_case"),
-            include_digits: row.get("include_digits"),
-            include_special: row.get("include_special"),
-            valid_days: row.get("valid_days"),
-            not_recently_used: row.get("not_recently_used"),
-        }
-    }
 }
 
 // CRUD
@@ -206,20 +192,11 @@ impl From<PasswordPolicy> for PasswordPolicyResponse {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromPgRow)]
 pub struct RecentPasswordsEntity {
     pub user_id: String,
     // password hashes separated by \n
     pub passwords: String,
-}
-
-impl From<tokio_postgres::Row> for RecentPasswordsEntity {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            user_id: row.get("user_id"),
-            passwords: row.get("passwords"),
-        }
-    }
 }
 
 impl RecentPasswordsEntity {

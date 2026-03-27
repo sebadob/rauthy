@@ -93,7 +93,7 @@ pub struct FedCMIdPIcon {
 impl FedCMIdPIcon {
     fn rauthy_logo() -> Self {
         Self {
-            url: format!("{}/clients/rauthy/logo", RauthyConfig::get().issuer),
+            url: format!("{}clients/rauthy/logo", RauthyConfig::get().issuer),
             // Rauthy's default icon is an SVG which is fine according to the spec -> no size
             size: None,
         }
@@ -195,7 +195,7 @@ pub struct WebIdentity {
 impl Default for WebIdentity {
     fn default() -> Self {
         Self {
-            provider_urls: vec![format!("{}/fed_cm/config", RauthyConfig::get().issuer)],
+            provider_urls: vec![format!("{}fed_cm/config", RauthyConfig::get().issuer)],
         }
     }
 }

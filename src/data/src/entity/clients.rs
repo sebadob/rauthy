@@ -13,7 +13,7 @@ use chrono::Utc;
 use cryptr::{EncKeys, EncValue, utils};
 use deadpool_postgres::GenericClient;
 use hiqlite::Params;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest, ScimClientRequestResponse,
@@ -21,6 +21,7 @@ use rauthy_api_types::clients::{
 use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP, SECRET_LEN_CLIENTS};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_common::{http_client, is_hiqlite};
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
 use reqwest::header::CONTENT_TYPE;
@@ -53,7 +54,7 @@ performance, when we do reads on clients, which we do most of the time.
 
 `*_lifetime` values are meant to be in seconds.
  */
-#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize, FromPgRow)]
 pub struct Client {
     pub id: String,
     pub name: Option<String>,
@@ -112,35 +113,6 @@ impl Debug for Client {
             self.backchannel_logout_uri,
             self.restrict_group_prefix,
         )
-    }
-}
-
-impl From<tokio_postgres::Row> for Client {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            name: row.get("name"),
-            enabled: row.get("enabled"),
-            confidential: row.get("confidential"),
-            secret: row.get("secret"),
-            secret_kid: row.get("secret_kid"),
-            redirect_uris: row.get("redirect_uris"),
-            post_logout_redirect_uris: row.get("post_logout_redirect_uris"),
-            allowed_origins: row.get("allowed_origins"),
-            flows_enabled: row.get("flows_enabled"),
-            access_token_alg: row.get("access_token_alg"),
-            id_token_alg: row.get("id_token_alg"),
-            auth_code_lifetime: row.get("auth_code_lifetime"),
-            access_token_lifetime: row.get("access_token_lifetime"),
-            scopes: row.get("scopes"),
-            default_scopes: row.get("default_scopes"),
-            challenge: row.get("challenge"),
-            force_mfa: row.get("force_mfa"),
-            client_uri: row.get("client_uri"),
-            contacts: row.get("contacts"),
-            backchannel_logout_uri: row.get("backchannel_logout_uri"),
-            restrict_group_prefix: row.get("restrict_group_prefix"),
-        }
     }
 }
 

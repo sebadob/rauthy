@@ -7,7 +7,7 @@ use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
 use cryptr::{EncKeys, EncValue};
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::api_keys::ApiKeyRequest;
 use rauthy_common::utils::{base64_decode, get_rand, new_store_id};
 use rauthy_common::{is_hiqlite, sha256};
@@ -59,7 +59,7 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
 
     First-Time setup - an already hashed bootstrap password has been given for '{email}'
 
-    Please change it immediately: {issuer}/account
+    Please change it immediately: {issuer}account
     You will never see this message again!
         "#
                 );
@@ -73,7 +73,7 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
 
     First-Time setup - a bootstrap password has been given for '{email}'
 
-    Please change it immediately: {issuer}/account
+    Please change it immediately: {issuer}account
     You will never see this message again!
         "#
                         );
@@ -88,7 +88,7 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
 
     {plain}
 
-    Please change it immediately: {issuer}/account
+    Please change it immediately: {issuer}account
     You will never see this message again!
         "#
                         );

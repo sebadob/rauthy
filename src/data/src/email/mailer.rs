@@ -305,7 +305,7 @@ async fn connect_test_smtp(
 
     Err(ErrorResponse::new(
         ErrorResponseType::Internal,
-        format!("Could not connect to {smtp_url} - neither TLS nor STARTTLS worked"),
+        format!("Could not connect to {smtp_url}"),
     ))
 }
 

@@ -69,7 +69,7 @@ pub async fn get_callback(
     };
 
     // At this point, the redirect was valid and everything was fine.
-    // Depending on how you like to proceed, you could create an independant session for the user,
+    // Depending on how you like to proceed, you could create an independent session for the user,
     // or maybe create just another factor of authentication like a CSRF token.
     // Otherwise, you could just go on and using the existing access token for further authentication.
     //

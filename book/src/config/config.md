@@ -17,7 +17,7 @@ order matches their location in the reference config below.
 - !!! `webauthn.rp_id` + `webauthn.rp_origin` + `webauthn.rp_name`
 
 ```admonish caution
-When you go into production, make sure that you provide the included secrets / sensistive 
+When you go into production, make sure that you provide the included secrets / sensitive
 information in this file in an appropriate way. With docker, you can leave them inside this file 
 (with proper access rights!), but when deploying with Kubernetes, either extract these values into 
 Kubernetes secrets, or simply provide the whole config as one secret (my preferred approach).
@@ -231,7 +231,7 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 #
 # This value will only be respected, if `token_revoke_on_logout` is
 # set to `true` as well. Otherwise, tokens will only be revoked
-# via the dedicated `recovation_endpoint` or forced logout from an
+# via the dedicated `revocation_endpoint` or forced logout from an
 # admin.
 #
 # default: false
@@ -241,7 +241,7 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # If set to `true`, the `/auth/v1/whoami` endpoint will return all
 # request headers. Only the `Cookie` and Rauthys internal CSRF headers
 # will be hidden. Since this has the potential to leak sensitive
-# information, depending on you networking, this is disabled by default.
+# information, depending on your networking, this is disabled by default.
 #
 # default: false
 # overwritten by: WHOAMI_HEADERS
@@ -855,7 +855,7 @@ pg_password = '123SuperSafe'
 #sched_user_exp_delete_mins = 7200
 
 [device_grant]
-# The lifetime in secods  of auth codes for the Device Authorization
+# The lifetime in seconds of auth codes for the Device Authorization
 # Grant flow. You may increase the default of 300 seconds, if you have
 # "slow users" and they are simply not fast enough with the verification.
 #
@@ -1056,7 +1056,7 @@ smtp_url = 'localhost'
 # will connect via SMTP PLAIN or LOGIN, which works in almost
 # all scenarios. However, you can change it to `xoauth2` to
 # connect via XOAUTH2. In addition, there is also `microsoft_graph`.
-# It is a custom implementaion that does not use SMTP anymore,
+# It is a custom implementation that does not use SMTP anymore,
 # but instead the Microsoft Azure Graph API. You should not use
 # it, unless you have no other choice or a very good reason.
 #
@@ -1928,7 +1928,7 @@ level_access = 'modifying'
 # for instance when `Text` already logs a JSON in debug level.
 # Some other logs like an Event for instance will be formatted
 # as Text anyway. If you need to auto-parse events, please consider
-# using an API token and listen ot them actively.
+# using an API token and listen to them actively.
 #
 # default: text
 # overwritten by: LOG_FMT
@@ -2144,7 +2144,7 @@ proxy_mode = false
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to
 # be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
+# to prevent IP header spoofing. All requests with a
 # different source will be blocked.
 #
 # default: []
@@ -2341,7 +2341,7 @@ key_path = 'tls/key.pem'
 # instance deployments, file storage to local disk is available
 # as well, but this must not be used with multi replica / HA
 # deployments.
-# Images will ba reduced in size to max 192px on the longest side.
+# Images will be reduced in size to max 192px on the longest side.
 # They most often end up between 25 - 40kB in size.
 #
 # Available options: db file s3 disabled
@@ -2478,7 +2478,7 @@ storage_type = 'db'
 # Controls if the value requirements should be re-validated during
 # each single login. In most cases, you don't want this. It will
 # trigger additional database queries during the login procedure,
-# which are unnnecessary in most situations.
+# which are unnecessary in most situations.
 # However, if you decide to make the requirements more strict down
 # the road, or you use upstream auth providers which may not provide
 # all necessary values, you might want to enable this setting.

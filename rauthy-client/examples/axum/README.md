@@ -19,7 +19,7 @@ the client directly.
 
 ## SCIM
 
-This example also shows a very simple SCIM implementation. You can test it if you naviagte to
+This example also shows a very simple SCIM implementation. You can test it if you navigate to
 
 ```
 http://localhost:3000/data
