@@ -162,6 +162,7 @@ pub enum EventType {
     SuspiciousApiScan,
     LoginNewLocation,
     TokenIssued,
+    CredentialStuffing,
 }
 
 impl Display for EventType {
@@ -189,6 +190,7 @@ impl Display for EventType {
             Self::SuspiciousApiScan => write!(f, "Suspicious API scan"),
             Self::LoginNewLocation => write!(f, "Login from new location"),
             Self::TokenIssued => write!(f, "JWT Token issued"),
+            Self::CredentialStuffing => write!(f, "Possible credential stuffing"),
         }
     }
 }
@@ -220,6 +222,7 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             rauthy_api_types::events::EventType::SuspiciousApiScan => Self::SuspiciousApiScan,
             rauthy_api_types::events::EventType::LoginNewLocation => Self::LoginNewLocation,
             rauthy_api_types::events::EventType::TokenIssued => Self::TokenIssued,
+            rauthy_api_types::events::EventType::CredentialStuffing => Self::CredentialStuffing,
         }
     }
 }
@@ -249,6 +252,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::SuspiciousApiScan => Self::SuspiciousApiScan,
             EventType::LoginNewLocation => Self::LoginNewLocation,
             EventType::TokenIssued => Self::TokenIssued,
+            EventType::CredentialStuffing => Self::CredentialStuffing,
         }
     }
 }
@@ -278,6 +282,7 @@ impl EventType {
             Self::SuspiciousApiScan => "SuspiciousApiScan",
             Self::LoginNewLocation => "LoginNewLocation",
             Self::TokenIssued => "TokenIssued",
+            Self::CredentialStuffing => "CredentialStuffing",
         }
     }
 
@@ -308,6 +313,7 @@ impl EventType {
             EventType::SuspiciousApiScan => 19,
             EventType::LoginNewLocation => 20,
             EventType::TokenIssued => 21,
+            EventType::CredentialStuffing => 22,
         }
     }
 }
@@ -337,6 +343,7 @@ impl From<String> for EventType {
             "SuspiciousApiScan" => Self::SuspiciousApiScan,
             "LoginNewLocation" => Self::LoginNewLocation,
             "TokenIssued" => Self::TokenIssued,
+            "CredentialStuffing" => Self::CredentialStuffing,
             // just return test to never panic
             s => {
                 error!("EventType::from() for invalid String: {s}");
@@ -377,6 +384,7 @@ impl From<i64> for EventType {
             19 => EventType::SuspiciousApiScan,
             20 => EventType::LoginNewLocation,
             21 => EventType::TokenIssued,
+            22 => EventType::CredentialStuffing,
             _ => EventType::Test,
         }
     }
@@ -483,6 +491,10 @@ impl From<&Event> for Notification {
             EventType::SuspiciousApiScan => value.text.clone(),
             EventType::LoginNewLocation => value.text.clone(),
             EventType::TokenIssued => value.text.clone(),
+            EventType::CredentialStuffing => Some(format!(
+                "Potential credential stuffing detected from IP: '{}'",
+                value.ip.as_deref().unwrap_or_default()
+            )),
         };
 
         Self {
@@ -677,6 +689,16 @@ impl Event {
         Self::new(
             EventLevel::Critical,
             EventType::PossibleBruteForce,
+            Some(ip),
+            None,
+            None,
+        )
+    }
+
+    pub fn cred_stuff(ip: String) -> Self {
+        Self::new(
+            RauthyConfig::get().vars.events.level_cred_stuff.clone(),
+            EventType::CredentialStuffing,
             Some(ip),
             None,
             None,
@@ -955,6 +977,10 @@ impl Event {
                 format!("IP blacklisted until {}", d.format("%Y/%m/%d %H:%M:%S"))
             }
             EventType::IpBlacklistRemoved => "IP removed from blacklist".to_string(),
+            EventType::CredentialStuffing => format!(
+                "Potential CredentialStuffing from IP: '{}'",
+                self.ip.as_deref().unwrap_or_default()
+            ),
             EventType::JwksRotated => String::default(),
             EventType::NewUserRegistered => {
                 format!("User E-Mail: {}", self.text.as_deref().unwrap_or_default())

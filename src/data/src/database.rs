@@ -3,9 +3,7 @@ use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, db_migrate, init_prod};
 use crate::rauthy_config::RauthyConfig;
 use futures_util::StreamExt;
-use hiqlite::macros::CacheVariants;
-use hiqlite::macros::embed::Embed;
-use hiqlite::macros::embed::*;
+use hiqlite::macros::{CacheVariants, embed::*};
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
 use std::env;
@@ -58,6 +56,7 @@ pub enum Cache {
     PAM,
     ToS,
     EmailRateLimit,
+    CredStuffDetect,
 }
 
 pub struct DB;

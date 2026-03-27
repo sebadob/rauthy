@@ -5053,6 +5053,7 @@ dependencies = [
  "serde",
  "tokio",
  "tracing",
+ "zeroize",
 ]
 
 [[package]]
@@ -5138,6 +5139,7 @@ dependencies = [
  "webauthn-rs",
  "webauthn-rs-proto",
  "webpki-roots",
+ "zeroize",
 ]
 
 [[package]]
@@ -5220,6 +5222,7 @@ dependencies = [
  "utoipa",
  "utoipa-swagger-ui",
  "validator",
+ "zeroize",
 ]
 
 [[package]]
@@ -5315,6 +5318,7 @@ dependencies = [
  "tokio",
  "tracing",
  "utoipa",
+ "zeroize",
 ]
 
 [[package]]

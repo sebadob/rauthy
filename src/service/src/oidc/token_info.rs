@@ -9,6 +9,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtAccessClaims, JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
 use tracing::error;
+use zeroize::Zeroize;
 
 pub async fn get_token_info(
     req: &HttpRequest,
@@ -118,7 +119,8 @@ async fn check_client_auth(
         } else {
             claims_client
         };
-        client.validate_secret(secret, req).await?;
+        client.validate_secret(secret.to_string(), req).await?;
+        buf.zeroize();
 
         Ok(client)
     } else {

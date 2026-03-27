@@ -34,6 +34,7 @@ use std::ops::Deref;
 use std::str::FromStr;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
+use zeroize::Zeroize;
 
 static SQL_SAVE: &str = r#"
 UPDATE clients
@@ -1301,7 +1302,7 @@ impl Client {
     #[inline]
     pub async fn validate_secret(
         &self,
-        secret: &str,
+        mut secret: String,
         req: &HttpRequest,
     ) -> Result<(), ErrorResponse> {
         if !self.confidential {
@@ -1333,10 +1334,11 @@ impl Client {
         let a = <&[u8; 64]>::try_from(cleartext.as_ref()).unwrap();
         let b = <&[u8; 64]>::try_from(secret.as_bytes()).unwrap();
         if constant_time_eq::constant_time_eq_64(a, b)
-            || Client::validate_cached_secret(&self.id, secret)
+            || Client::validate_cached_secret(&self.id, &secret)
                 .await
                 .is_ok()
         {
+            secret.zeroize();
             return Ok(());
         }
 
