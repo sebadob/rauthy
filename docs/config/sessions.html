@@ -204,7 +204,7 @@ proxy_mode = false
 </code></pre>
 <p>Secondly, you need to tell Rauthy which proxy source IP's it can trust. This is important, because when behind a reverse
 proxy, Rauthy will only see the IP of the proxy itself by default, which would be the same for each client connecting
-though it. However, a reverse proxy adds headers which contain the clients real IP, like e.g. the <code>X-FORWARED-FOR</code>
+though it. However, a reverse proxy adds headers which contain the clients real IP, like e.g. the <code>X-FORWARDED-FOR</code>
 header and maybe others (depending on the proxy).</p>
 <p>These headers can be spoofed from an attacker, if the source IP is not validated. This is what Rauthy needs you to set
 the trusted proxies config for:</p>
@@ -212,7 +212,7 @@ the trusted proxies config for:</p>
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to
 # be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
+# to prevent IP header spoofing. All requests with a
 # different source will be blocked.
 #
 # default: []
@@ -255,7 +255,7 @@ There is an additional variable you can set:</p>
 # overwritten by: PEER_IP_HEADER_NAME
 peer_ip_header_name = 'CF-Connecting-IP'
 </code></pre>
-<p>The CDN usually adds some other headers than the default <code>X-FORWARED-FOR</code> headers, like in this example
+<p>The CDN usually adds some other headers than the default <code>X-FORWARDED-FOR</code> headers, like in this example
 <code>CF-Connecting-IP</code> to the request. If this is the case, you can tell Rauthy to always check for this header first and
 only use the other methods as fallback, if this does not exist.</p>
 <h3 id="session-peer-ip-binding"><a class="header" href="#session-peer-ip-binding">Session peer IP binding</a></h3>
@@ -434,6 +434,7 @@ sec_header_block = true
 a good reason to do so.</p>
 </div>
 </div>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">

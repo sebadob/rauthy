@@ -183,7 +183,7 @@ Most access rights requests mimic their HTTP methods:</p>
 <li><code>PUT</code> -&gt; <code>update</code></li>
 <li><code>DELETE</code> -&gt; <code>delete</code></li>
 </ul>
-<p>To use an API Key, you need to provide is with the HTTP <code>Authorization</code> header, but instead of <code>Bearer</code> as prefix, you
+<p>To use an API Key, you need to provide it with the HTTP <code>Authorization</code> header, but instead of <code>Bearer</code> as prefix, you
 set it to <code>API-Key</code>, so Rauthy can efficiently distinguish if you try to access the API with a JWT token or an API Key:</p>
 <pre><code>Authorization: API-Key &lt;API Key name&gt;$&lt;API Key secret&gt;
 </code></pre>
@@ -200,7 +200,7 @@ you only need to copy &amp; paste it.</p>
 </div>
 <div>
 <p>The only actions API Keys are not allowed to do is interacting with other API Keys and external SSO Providers for
-logins to limit the likelyhood of priviledge escalation in case of leaked credentials.</p>
+logins to limit the likelihood of privilege escalation in case of leaked credentials.</p>
 </div>
 </div>
 <h2 id="creating-a-new-api-key"><a class="header" href="#creating-a-new-api-key">Creating a new API Key</a></h2>

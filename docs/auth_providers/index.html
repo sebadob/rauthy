@@ -171,6 +171,13 @@
 <p>This section is about upstream authentication providers, for instance things like <strong>Sign in with GitHub</strong>.</p>
 <p>This feature can be considered "in beta state" and the only setup guide is for GitHub for now.<br />
 Additional ones may come, when people are using other providers and give feedback or actually contribute to these docs.</p>
+<h2 id="direct-login-with-idp_hint"><a class="header" href="#direct-login-with-idp_hint">Direct Login with <code>idp_hint</code></a></h2>
+<p>Rauthy supports the <code>idp_hint</code> query parameter in the OIDC authorization request.
+When this parameter is provided with the ID of an upstream authentication provider, Rauthy will automatically redirect the user to that provider's login page, bypassing the Rauthy login selection.</p>
+<p>For example, if you have a GitHub provider with the ID <code>github</code> configured:
+<code>GET /auth/v1/oidc/authorize?client_id=...&amp;idp_hint=github</code></p>
+<p>This is useful if you want to provide a "Login with GitHub" button directly in your application that skips the intermediate Rauthy login selection page.
+The <code>idp_hint</code> value must match the <code>ID</code> of the provider as configured in the Admin UI.</p>
 
                     </main>
 
