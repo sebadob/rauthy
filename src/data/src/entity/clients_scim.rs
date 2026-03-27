@@ -8,7 +8,7 @@ use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::rauthy_config::RauthyConfig;
 use cryptr::EncValue;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::constants::APPLICATION_JSON_SCIM;
 use rauthy_common::{http_client, is_hiqlite};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -40,8 +40,8 @@ impl Debug for ClientScim {
     }
 }
 
-impl From<hiqlite::Row<'_>> for ClientScim {
-    fn from(mut row: hiqlite::Row) -> ClientScim {
+impl From<&mut hiqlite::Row<'_>> for ClientScim {
+    fn from(row: &mut hiqlite::Row) -> Self {
         let bearer_token = Self::decrypt_bearer_token(row.get("bearer_token"))
             .expect("Column clients_scim.bearer_token corrupted");
         Self {

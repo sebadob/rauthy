@@ -2,7 +2,7 @@ use crate::database::DB;
 use crate::entity::pam::users::PamUser;
 use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::pam::{
     PamGroupMembersResponse, PamGroupType, PamHostAccessResponse, PamHostDetailsResponse,
     PamHostSimpleResponse, PamHostUpdateRequest,
@@ -28,8 +28,8 @@ pub struct PamHost {
     pub aliases: Vec<String>,
 }
 
-impl From<hiqlite::Row<'_>> for PamHost {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for PamHost {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             id: row.get("id"),
             hostname: row.get("hostname"),

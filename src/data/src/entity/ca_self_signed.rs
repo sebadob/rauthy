@@ -1,7 +1,7 @@
 use crate::database::DB;
 use crate::rauthy_config::RauthyConfig;
 use cryptr::EncValue;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{deserialize, serialize};
 use rauthy_error::ErrorResponse;
@@ -27,8 +27,8 @@ pub struct SelfSignedCA {
     cert: String,
 }
 
-impl From<hiqlite::Row<'_>> for SelfSignedCA {
-    fn from(mut row: hiqlite::Row) -> Self {
+impl From<&mut hiqlite::Row<'_>> for SelfSignedCA {
+    fn from(row: &mut hiqlite::Row) -> Self {
         let bytes: Vec<u8> = row.get("data");
         deserialize(bytes.as_ref()).unwrap()
     }

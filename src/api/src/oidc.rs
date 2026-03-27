@@ -143,17 +143,31 @@ pub async fn get_authorize(
         }
     }
 
-    // check for `prompt=no-prompt`
+    // check for `prompt=none` and redirect if we don't have a valid session
     if !force_new_session
-        && params
-            .prompt
-            .as_ref()
-            .map(|p| p.as_str() == "none")
-            .unwrap_or(false)
+        && params.prompt.as_deref() == Some("none")
+        && principal.validate_session_auth().is_err()
     {
-        let status = StatusCode::UNAUTHORIZED;
-        let body = Error1Html::build(&lang, theme_ts, status, "login_required");
-        return Ok(ErrorHtml::response(body, status));
+        let mut loc = params.redirect_uri;
+        let state_len = params.state.as_ref().map(|s| 7 + s.len()).unwrap_or(0);
+        loc.reserve(1 + 20 + state_len);
+
+        // make sure URIs that already contain params work fine
+        if loc.contains('?') {
+            loc.push('&');
+        } else {
+            loc.push('?');
+        }
+        loc.push_str("error=login_required");
+
+        if let Some(state) = params.state {
+            loc.push_str("&state=");
+            loc.push_str(&state);
+        }
+
+        return Ok(HttpResponse::Found()
+            .insert_header(("location", loc))
+            .finish());
     }
 
     let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
