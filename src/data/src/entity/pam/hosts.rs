@@ -2,7 +2,7 @@ use crate::database::DB;
 use crate::entity::pam::users::PamUser;
 use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::pam::{
     PamGroupMembersResponse, PamGroupType, PamHostAccessResponse, PamHostDetailsResponse,
     PamHostSimpleResponse, PamHostUpdateRequest,
@@ -13,6 +13,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::net::IpAddr;
+use zeroize::Zeroize;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PamHost {
@@ -27,8 +28,8 @@ pub struct PamHost {
     pub aliases: Vec<String>,
 }
 
-impl From<hiqlite::Row<'_>> for PamHost {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
+impl From<&mut hiqlite::Row<'_>> for PamHost {
+    fn from(row: &mut hiqlite::Row<'_>) -> Self {
         Self {
             id: row.get("id"),
             hostname: row.get("hostname"),
@@ -549,14 +550,15 @@ WHERE pu.gid = $1 AND pu.wheel = $2
     }
 
     #[inline]
-    pub fn validate_secret(&self, secret: &[u8]) -> Result<(), ErrorResponse> {
+    pub fn validate_secret(&self, mut secret: String) -> Result<(), ErrorResponse> {
         // make sure this function is updated if the secret length ever changes
         debug_assert_eq!(SECRET_LEN_CLIENTS, 64);
 
         let dec = EncValue::try_from_bytes(self.secret.clone())?.decrypt()?;
         let a = <&[u8; 64]>::try_from(dec.as_ref()).unwrap();
-        let b = <&[u8; 64]>::try_from(secret).unwrap();
+        let b = <&[u8; 64]>::try_from(secret.as_bytes()).unwrap();
         if constant_time_eq::constant_time_eq_64(a, b) {
+            secret.zeroize();
             Ok(())
         } else {
             Err(ErrorResponse::new(

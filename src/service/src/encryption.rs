@@ -110,7 +110,7 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
         // and otherwise does not update anything else
         ClientScim::upsert(
             client.client_id,
-            client.bearer_token.as_bytes(),
+            &client.bearer_token,
             client.base_uri,
             client.sync_groups,
             client.group_sync_prefix,

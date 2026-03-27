@@ -101,7 +101,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     RauthyConfig::debug_logs();
 
-    // init BEFORE Hiqlite to avoid issues in case of mis-config
+    // init BEFORE Hiqlite to avoid issues in case of misconfiguration
     rauthy_data::ipgeo::init_geo().await;
 
     DB::init(node_config)
@@ -110,6 +110,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     debug!("Starting E-Mail handler");
     tokio::spawn(mailer::sender(rx_email));
+
+    // MUST start before we go into `DB::migrate()` - we may need it inside.
+    debug!("Starting Password Hasher");
+    tokio::spawn(password_hasher::run());
 
     debug!("Applying database migrations");
     DB::migrate().await.expect("Database migration error");
@@ -121,9 +125,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         rx_events_router,
         rx_events,
     ));
-
-    debug!("Starting Password Hasher");
-    tokio::spawn(password_hasher::run());
 
     debug!("Starting health watch");
     tokio::spawn(watch_health());

@@ -201,7 +201,7 @@ admin@localhost
 
 If you want to stop the dev containers, `just dev-env-stop` will take care of this, to remove the containers use
 `just dev-env-rm`. If you are working on DB migrations and are still changing your new migration, you probably need to
-clean upt he DB while tuning, because of hash mismatches. For Postgres, `just postgres-rm` and `just postgres-start`.
+clean up the DB while tuning, because of hash mismatches. For Postgres, `just postgres-rm` and `just postgres-start`.
 For Hiqlite, `just delete-hiqlite`.
 
 Your local email test server [mailcrab](https://github.com/tweedegolf/mailcrab) will be available on `localhost:1080`.

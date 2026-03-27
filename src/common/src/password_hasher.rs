@@ -6,6 +6,7 @@ use std::sync::OnceLock;
 use std::thread;
 use tokio::time::Instant;
 use tracing::{debug, error, warn};
+use zeroize::Zeroize;
 
 pub static ARGON2_PARAMS: OnceLock<argon2::Params> = OnceLock::new();
 pub static HASH_CHANNELS: OnceLock<(
@@ -112,7 +113,7 @@ fn check_await_threshold(instant: &Instant) {
     }
 }
 
-fn hash_password(msg: HashPassword) {
+fn hash_password(mut msg: HashPassword) {
     debug!("Starting password hash on {:?}", thread::current());
 
     let argon2 = Argon2::new(
@@ -127,6 +128,8 @@ fn hash_password(msg: HashPassword) {
         .expect("Error hashing the Password")
         .to_string();
 
+    msg.plain_text.as_mut().zeroize();
+
     if let Err(err) = msg.tx.send(hash) {
         error!("{}", err);
     }
@@ -134,7 +137,7 @@ fn hash_password(msg: HashPassword) {
     debug!("Finished with password hash on {:?}", thread::current());
 }
 
-fn compare_passwords(msg: ComparePasswords) {
+fn compare_passwords(mut msg: ComparePasswords) {
     debug!("Starting password compare on {:?}", thread::current());
 
     let mut is_match = false;
@@ -147,6 +150,7 @@ fn compare_passwords(msg: ComparePasswords) {
             {
                 is_match = true;
             }
+            msg.plain_text.as_mut().zeroize();
         }
         Err(err) => {
             error!("Error parsing the original password hash: {err}");

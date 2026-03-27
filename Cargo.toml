@@ -9,6 +9,35 @@ edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
 
+[workspace.metadata.typos.files]
+extend-exclude = [
+    "CHANGELOG.md",
+    "docs/**",
+    "frontend/src/i18n/**",
+    "migrations/**",
+    "rauthy-client/LICENSE",
+    "src/data/src/email/i18n/**",
+    "src/data/src/entity/jwk.rs",
+    "src/data/src/migration/db_migrate_dev.rs",
+    "src/data/src/rauthy_config.rs",
+    "src/service/src/token_set.rs",
+]
+
+[workspace.metadata.typos.default]
+extend-ignore-re = [
+    "(?s)root_ca_bundle = '''.*?'''",
+]
+
+[workspace.metadata.typos.default.extend-identifiers]
+GEO_BLOCK_UNKONW = "GEO_BLOCK_UNKONW"
+pasword_argon2id = "pasword_argon2id"
+pDetials = "pDetials"
+registerd = "registerd"
+registerdKeys = "registerdKeys"
+
+[workspace.metadata.typos.default.extend-words]
+SHS = "SHS"
+
 [profile.dev]
 panic = "abort"
 
@@ -27,7 +56,7 @@ strip = false
 
 [patch.crates-io]
 #hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
-#hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
+#hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive" }
 #hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
 
 [workspace.dependencies]
@@ -58,7 +87,7 @@ chrono-tz = "0.10.4"
 cidr = "0.3.0"
 constant_time_eq = "0.4.2"
 cron = "0.15"
-cryptr = { version = "0.9", features = ["s3", "streaming"] }
+cryptr = { version = "0.10", features = ["s3", "streaming"] }
 css-color = "0.2"
 deadpool = { version = "0.12.3", features = ["rt_tokio_1", "serde"] }
 deadpool-postgres = "0.14"
@@ -71,10 +100,9 @@ futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 hickory-resolver = "0.25.2"
-hiqlite = { version = "0.12.2", features = [
-    "cache", "counters", "dashboard", "listen_notify_local", "webpki-roots"
+hiqlite = { version = "0.13", features = [
+    "cache", "cast_ints", "counters", "dashboard", "listen_notify_local", "macros"
 ] }
-hiqlite-macros = { version = "0.12" }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
@@ -102,7 +130,7 @@ refinery = { version = "0.9", features = ["tokio-postgres"] }
 regex = "1"
 # upgrade blocked by ruma-client
 reqwest = { version = "0.12.3", default-features = false, features = [
-    "json", "rustls-tls"
+    "json", "rustls-tls", "stream"
 ] }
 ring = "0.17.13"
 rio_api = "0.8.4"
@@ -111,31 +139,31 @@ rsa = { version = "0.9.10", features = ["serde", "sha2"] }
 ruma-client = { version = "0.17", features = [
     "client-api", "reqwest-rustls-webpki-roots"
 ] }
-rusqlite = "0.37"
+rusqlite = "0.39"
 rust-embed = "8.5.0"
-rustls = { version = "0.23", default-features = false, features = [
+rustls = { version = "0.23.37", default-features = false, features = [
     "logging", "std", "tls12", "ring"
 ] }
 rustls-pki-types = "1.4.1"
-s3-simple = "0.7"
+s3-simple = "0.8.0"
 semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_json_path = "0.7.1"
-serde_rusqlite = "0.40"
+serde_rusqlite = "0.42"
 serde_urlencoded = "0.7.1"
 spow = { version = "0.6", features = ["server"] }
-strum = { version = "0.27", features = ["derive"] }
+strum = { version = "0.28", features = ["derive"] }
 svg-hush = "0.9.4"
-tar = "0.4.44"
+tar = "0.4.45"
 tikv-jemallocator = { version = "0.6", features = [
     "unprefixed_malloc_on_supported_platforms"
 ] }
 time = { version = "0.3.47", features = [
     "formatting", "local-offset", "macros", "parsing", "serde"
 ] }
-tls-hot-reload = "0.2"
-toml = "0.9"
+tls-hot-reload = "0.3"
+toml = "1"
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = [
     "env-filter", "json", "tracing"
@@ -155,3 +183,4 @@ webauthn-rs = { version = "0.5", features = [
 ] }
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"
+zeroize = "1.8"

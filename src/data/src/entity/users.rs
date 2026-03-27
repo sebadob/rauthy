@@ -25,7 +25,7 @@ use argon2::PasswordHash;
 use chrono::Utc;
 use core::str::Split;
 use hiqlite::Params;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{
@@ -39,6 +39,7 @@ use rauthy_common::constants::{
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{new_store_id, real_ip_from_req};
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
@@ -82,7 +83,7 @@ impl From<AccountType> for UserAccountTypeResponse {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, FromPgRow)]
 pub struct User {
     pub id: String,
     pub email: String,
@@ -98,6 +99,7 @@ pub struct User {
     pub last_login: Option<i64>,
     pub last_failed_login: Option<i64>,
     pub failed_login_attempts: Option<i64>,
+    #[column(from_string)]
     pub language: Language,
     pub webauthn_user_id: Option<String>,
     pub user_expires: Option<i64>,
@@ -138,33 +140,6 @@ impl Debug for User {
     }
 }
 
-impl From<tokio_postgres::Row> for User {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            email: row.get("email"),
-            given_name: row.get("given_name"),
-            family_name: row.get("family_name"),
-            password: row.get("password"),
-            roles: row.get("roles"),
-            groups: row.get("groups"),
-            enabled: row.get("enabled"),
-            email_verified: row.get("email_verified"),
-            password_expires: row.get("password_expires"),
-            created_at: row.get("created_at"),
-            last_login: row.get("last_login"),
-            last_failed_login: row.get("last_failed_login"),
-            failed_login_attempts: row.get("failed_login_attempts"),
-            language: Language::from(row.get::<_, String>("language")),
-            webauthn_user_id: row.get("webauthn_user_id"),
-            user_expires: row.get("user_expires"),
-            auth_provider_id: row.get("auth_provider_id"),
-            federation_uid: row.get("federation_uid"),
-            picture_id: row.get("picture_id"),
-        }
-    }
-}
-
 // CRUD
 impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
@@ -182,6 +157,7 @@ impl User {
     pub async fn count() -> Result<i64, ErrorResponse> {
         let client = DB::hql();
 
+        // TODO migrate to the new distributed counter from hiqlite
         if let Some(count) = client.get(Cache::App, IDX_USER_COUNT).await? {
             return Ok(count);
         }

@@ -1,12 +1,13 @@
 use crate::database::DB;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Deserialize;
 use std::fmt::{Debug, Formatter};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, FromPgRow)]
 pub struct RefreshToken {
     pub id: String,
     pub user_id: String,
@@ -32,21 +33,6 @@ impl Debug for RefreshToken {
             self.is_mfa,
             self.session_id.as_ref().map(|sid| &sid[..5]),
         )
-    }
-}
-
-impl From<tokio_postgres::Row> for RefreshToken {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            user_id: row.get("user_id"),
-            nbf: row.get("nbf"),
-            exp: row.get("exp"),
-            scope: row.get("scope"),
-            is_mfa: row.get("is_mfa"),
-            session_id: row.get("session_id"),
-            access_token_jti: row.get("access_token_jti"),
-        }
     }
 }
 

@@ -11,7 +11,7 @@ mod common;
 async fn test_backchannel_logout() -> Result<(), Box<dyn Error>> {
     // These tests are set up a bit "weird" to reduce complexity.
     // Rauthy exposes `/auth/v1/dev/` endpoints during test and dev.
-    // It has a `backchannel_logout` endpoint which just accepts a `logout_token` as speecified in
+    // It has a `backchannel_logout` endpoint which just accepts a `logout_token` as specified in
     // the RFC. It won't do anything though apart from receiving that token and saving it into
     // a directory on disk. This test will read in the token and make sure everything is fine.
     // This will test the whole flow from POST to the logout and that the backchannel logout
@@ -48,7 +48,7 @@ async fn test_backchannel_logout() -> Result<(), Box<dyn Error>> {
     let mut buf = Vec::with_capacity(256);
     let (_, token) = LogoutToken::build_from_str(&token_str, &mut buf).unwrap();
     eprintln!("token: {token:?}");
-    pretty_assertions::assert_eq!(token.iss, "http://localhost:8081/auth/v1");
+    pretty_assertions::assert_eq!(token.iss, "http://localhost:8081/auth/v1/");
     pretty_assertions::assert_eq!(token.aud, "init_client");
     let now = Utc::now().timestamp();
     assert!(token.iat <= now);

@@ -65,7 +65,7 @@ export let I18nAdminEn: I18nAdmin = {
             security. If a non-confidential client (e.g. a SPA) is being used, you must at least 
             activate one of the PKCE challenges to have enough security.`,
         descPKCEEnforce: `If any PKCE is activated, Rauthy will enforce the usage during Logins, and
-            rejects login request that do not contain a valida challenge.`,
+            rejects login request that do not contain a valid challenge.`,
         descUri: `You can provide as many redirect URIs as you like. At the end of each, you can use 
             <code>*</code> as a Wildcard.`,
         errConfidentialPKCE: `The client must either be confidential or have at least one PKCE

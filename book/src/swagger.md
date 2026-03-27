@@ -58,6 +58,5 @@ swagger_ui_public = false
 
 ## Internal Access
 
-By defautl, the SwaggerUI is only visible to `rauthy_admin`s with a valid session. You can access it via the Admin UI,
+By default, the SwaggerUI is only visible to `rauthy_admin`s with a valid session. You can access it via the Admin UI,
 or via `/auth/v1/docs/` on your Rauthy instance.
-

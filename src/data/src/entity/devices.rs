@@ -1,7 +1,7 @@
 use crate::database::{Cache, DB};
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use chrono::{DateTime, Utc};
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::users::DeviceResponse;
 use rauthy_common::constants::DEVICE_KEY_LENGTH;
 use rauthy_common::is_hiqlite;
@@ -11,9 +11,10 @@ use serde::{Deserialize, Serialize};
 use std::ops::{Add, Sub};
 
 use crate::rauthy_config::RauthyConfig;
+use rauthy_derive::FromPgRow;
 use tracing::info;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, FromPgRow)]
 pub struct DeviceEntity {
     pub id: String,
     pub client_id: String,
@@ -23,21 +24,6 @@ pub struct DeviceEntity {
     pub refresh_exp: Option<i64>,
     pub peer_ip: String,
     pub name: String,
-}
-
-impl From<tokio_postgres::Row> for DeviceEntity {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            client_id: row.get("client_id"),
-            user_id: row.get("user_id"),
-            created: row.get("created"),
-            access_exp: row.get("access_exp"),
-            refresh_exp: row.get("refresh_exp"),
-            peer_ip: row.get("peer_ip"),
-            name: row.get("name"),
-        }
-    }
 }
 
 impl DeviceEntity {
@@ -194,6 +180,7 @@ pub struct DeviceAuthCode {
     pub exp: DateTime<Utc>,
     pub last_poll: DateTime<Utc>,
     pub scopes: Option<String>,
+    // TODO we should probably save it hashed, even though it is only very shortly lived
     // saved additionally here to have fewer cache requests during client polling
     pub client_secret: Option<String>,
     // The warnings counter will increase, if a client does not stick to

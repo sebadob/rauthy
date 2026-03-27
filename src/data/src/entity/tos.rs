@@ -1,32 +1,21 @@
 use crate::database::{Cache, DB};
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::tos::{ToSLatestResponse, ToSResponse};
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 
 static CACHE_IDX: &str = "tos_latest";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromPgRow)]
 pub struct ToS {
     pub ts: i64,
     pub author: String,
     pub is_html: bool,
     pub opt_until: Option<i64>,
     pub content: String,
-}
-
-impl From<tokio_postgres::Row> for ToS {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            ts: row.get("ts"),
-            author: row.get("author"),
-            is_html: row.get("is_html"),
-            opt_until: row.get("opt_until"),
-            content: row.get("content"),
-        }
-    }
 }
 
 impl ToS {

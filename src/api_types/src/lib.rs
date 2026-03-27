@@ -8,7 +8,7 @@ pub mod auth_providers;
 pub mod backup;
 pub mod blacklist;
 pub mod clients;
-mod cust_validation;
+pub mod cust_validation;
 pub mod email_jobs;
 pub mod events;
 pub mod fed_cm;

@@ -27,7 +27,7 @@ know which names might already be special in some companies and situations.
 As soon as an Admin has configured a Linux user for a "real" user, this user can log in to the account dashboard and a
 PAM section will pop up in the tab bar. Here you can generate the auto-expiring Remote PAM Passwords that are used for
 basically all actions via SSH like logging in and `sudo`, and you will see a list of all hosts you have access to. For
-these PAM passwords, you have 2 static config varibales:
+these PAM passwords, you have 2 static config variables:
 
 ```toml
 [pam]
