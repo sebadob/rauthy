@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.13.0
 
 This release makes it possible to have a interrupt-free migration to Rauthy v0.35+, which changed
 the default Issuer. It now has a trailing `/` to bring more compatibility for some scenarios, where
