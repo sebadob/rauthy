@@ -26,7 +26,7 @@ login afterward. This sound very nice in the beginning, but brings quite a few p
 ```admonish info
 In case of an open, unauthenticated endpoint for DCR, Rauthy has a simple internal cleanup logic. For instance, if a 
 dynamic client is registered by bots or spammers and is not used within the first hour after the registration, it will 
-be deleted automatically. Usually, when an app registers via DCR, the client will be used immeditately for at least one
+be deleted automatically. Usually, when an app registers via DCR, the client will be used immediately for at least one
 login.
 ```
 

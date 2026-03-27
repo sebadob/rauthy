@@ -2,13 +2,14 @@ use crate::database::{Cache, DB};
 use crate::entity::auth_providers::AuthProviderTemplate;
 use actix_web::web;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::{FromRow, params};
 use image::imageops::FilterType;
 use image::{EncodableLayout, ImageFormat};
 use rauthy_common::constants::{
     CACHE_TTL_APP, CONTENT_TYPE_WEBP, IDX_AUTH_PROVIDER_LOGO, IDX_CLIENT_LOGO,
 };
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
@@ -63,37 +64,14 @@ pub enum LogoType {
     AuthProvider,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromRow, FromPgRow)]
 pub struct Logo {
     pub id: String,
+    #[column(from_string)]
     pub res: LogoRes,
     pub content_type: String,
     pub data: Vec<u8>,
     pub updated: i64,
-}
-
-impl From<tokio_postgres::Row> for Logo {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            res: LogoRes::from(row.get::<_, String>("res")),
-            content_type: row.get("content_type"),
-            data: row.get("data"),
-            updated: row.get("updated"),
-        }
-    }
-}
-
-impl<'r> From<hiqlite::Row<'r>> for Logo {
-    fn from(mut row: hiqlite::Row<'r>) -> Self {
-        Self {
-            id: row.get("id"),
-            res: LogoRes::from(row.get::<String>("res")),
-            content_type: row.get("content_type"),
-            data: row.get("data"),
-            updated: row.get("updated"),
-        }
-    }
 }
 
 impl Logo {

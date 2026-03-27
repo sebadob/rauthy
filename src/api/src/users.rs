@@ -1383,7 +1383,7 @@ pub async fn post_webauthn_auth_finish(
     // We do not need to further validate the principal here.
     // All of this is done at the /start endpoint.
     // This here will simply fail, if the secret code from the /start does not exist
-    // -> indirect validation through exising code.
+    // -> indirect validation through existing code.
 
     let principal = principal.into_inner();
     let res = webauthn::auth_finish(id, &req, browser_id, principal.session, payload).await?;

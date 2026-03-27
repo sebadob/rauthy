@@ -637,7 +637,7 @@ pub async fn post_login(
         user.save(None).await?;
 
         // Note: We don't want to increase the FailedLoginCounter for the IP here, because
-        // this could be abused for DoS and block remote hosts with enough failed login atempts.
+        // this could be abused for DoS and block remote hosts with enough failed login attempts.
 
         warn!(?err, "Failed PAM login for user {}", user.email);
 

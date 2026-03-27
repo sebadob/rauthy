@@ -1,6 +1,6 @@
 use crate::sleep_schedule_next;
 use chrono::Utc;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_data::database::DB;
 use rauthy_data::email::password_reset_info::send_pwd_reset_info;

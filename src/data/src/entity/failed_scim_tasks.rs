@@ -1,8 +1,10 @@
 use crate::database::DB;
-use hiqlite_macros::params;
+use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 pub enum ScimAction {
@@ -18,9 +20,11 @@ pub enum ScimAction {
     Unknown,
 }
 
-impl From<&str> for ScimAction {
-    fn from(s: &str) -> Self {
-        if s.starts_with("uc_") {
+impl FromStr for ScimAction {
+    type Err = ErrorResponse;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = if s.starts_with("uc_") {
             let (_, uid) = s.split_once('_').unwrap();
             Self::UserCreateUpdate(uid.to_string())
         } else if s.starts_with("ud_") {
@@ -40,7 +44,9 @@ impl From<&str> for ScimAction {
             Self::GroupsSync
         } else {
             Self::Unknown
-        }
+        };
+
+        Ok(slf)
     }
 }
 
@@ -58,32 +64,13 @@ impl Display for ScimAction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, FromRow, FromPgRow)]
 pub struct FailedScimTask {
     // pub action: ScimAction,
     pub client_id: String,
+    #[column(parse)]
     pub action: ScimAction,
-    pub retry_count: i64,
-}
-
-impl<'r> From<hiqlite::Row<'r>> for FailedScimTask {
-    fn from(mut row: hiqlite::Row<'r>) -> Self {
-        Self {
-            action: ScimAction::from(row.get::<String>("action").as_str()),
-            client_id: row.get("client_id"),
-            retry_count: row.get::<i64>("retry_count"),
-        }
-    }
-}
-
-impl From<tokio_postgres::Row> for FailedScimTask {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            action: ScimAction::from(row.get::<_, String>("action").as_str()),
-            client_id: row.get("client_id"),
-            retry_count: row.get::<_, i32>("retry_count") as i64,
-        }
-    }
+    pub retry_count: i32,
 }
 
 impl FailedScimTask {
