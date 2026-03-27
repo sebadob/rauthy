@@ -123,6 +123,8 @@ stuffing over multiple accounts. How it works is pretty simple:
 - The duration will be the so called `scan_window`, which can be configured.
 - If the length of unique hashes exceeds the configured threshold, the IP will be automatically
   blacklisted.
+- When any new failure event comes in and there are already hashes collected, then `scan_window`
+  will NOT expire depending on the first add, but the timer will reset with teach event.
 
 ```toml
 [cred_stuff_detection]
@@ -164,6 +166,18 @@ blacklist_threshold = 3
 # default: 10800
 # overwritten by: CRED_STUFF_SCAN_WINDOW
 scan_window = 5
+```
+
+There is also a new event you can configure the level for:
+
+```toml
+[events]
+# The level for the generated Event after an IP has
+# been considered harmful, doing credential stuffing.
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_CRED_STUFF
+level_cred_stuff = 'warning'
 ```
 
 [#1488](https://github.com/sebadob/rauthy/pull/1488)
