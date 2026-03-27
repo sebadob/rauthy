@@ -4,21 +4,12 @@
     import Input from '$lib5/form/Input.svelte';
     import { useI18n } from '$state/i18n.svelte.js';
     import type {
-        UpdateUserSelfRequest,
         UserAttrValueRequest,
         UserAttrValuesUpdateRequest,
         UserResponse,
     } from '$api/types/user.ts';
-    import Form from '$lib5/form/Form.svelte';
-    import {
-        PATTERN_CITY,
-        PATTERN_PHONE,
-        PATTERN_STREET,
-        PATTERN_USER_NAME,
-    } from '$utils/patterns';
     import IconCheck from '$icons/IconCheck.svelte';
-    import { errorFromResponse, fetchGet, fetchPut } from '$api/fetch';
-    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
+    import { fetchGet, fetchPut } from '$api/fetch';
     import type {
         UserEditableAttrResponse,
         UserEditableAttrsResponse,
@@ -96,7 +87,9 @@
                 bind:value={a.value}
                 autocomplete="off"
                 label={a.name}
-                placeholder={a.default_value ? a.default_value : a.desc || ''}
+                placeholder={a.default_value?.toString()
+                    ? a.default_value?.toString()
+                    : a.desc || ''}
                 width="100%"
                 onEnter={onSubmit}
             />

@@ -59,8 +59,8 @@
             let v: AttrValue = {
                 name: a.name,
                 desc: a.desc,
-                value: attrsUser.find(au => au.key === a.name)?.value || '',
-                defaultValue: a.default_value,
+                value: stringifyJsonValue(attrsUser.find(au => au.key === a.name)?.value),
+                defaultValue: stringifyJsonValue(a.default_value),
                 userEditable: a.user_editable || false,
             };
             return v;
