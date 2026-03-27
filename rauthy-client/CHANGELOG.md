@@ -1,5 +1,12 @@
 # Changelog
 
+## UNRELEASED
+
+### Breaking
+
+The `phone` claim in the `JwtIdClaims` has been renamed to `phone_number` to match the latest
+Rauthy changes. `phone_number` is actually correct according to the RFC.
+
 ## v0.12.0
 
 The `timezone` is now available for `ScimUser`, when used in combination with Rauthy v0.34.4+.

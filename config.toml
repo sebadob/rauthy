@@ -760,6 +760,46 @@ insecure_cookie = true
 # default: false
 #HQL_DANGER_RAFT_STATE_RESET=true
 
+[cred_stuff_detection]
+## This section contains values for the credential stuffing
+## detection algorithm. In most cases the defaults should be
+## fine.
+
+# The duration in seconds for how long an IP will be
+# blacklisted after it was considered harmful, doing
+# credential stuffing.
+#
+# default: 86400
+# overwritten by: CRED_STUFF_BLACKLIST_DUR
+blacklist_duration = 10
+
+# The threshold for username / password combinations. When
+# this is reached within the `scan_window` the IP will be
+# blacklisted and a new warning Event will be fired.
+#
+# default: 15
+# overwritten by: CRED_STUFF_BLACKLIST_THRES
+blacklist_threshold = 3
+
+# The time in seconds within the detector should operate.
+# Whenever either a non-existing email or a email with a
+# wrong password is sent, the combination of both will be
+# hashed and stored (in-memory) for the duration of this
+# value. If any new event happens within this time frame,
+# the new hash will be stored as well, and then timer will
+# reset to `scan_window` again. Only if not a single event
+# happens during the whole duration, the values will be
+# evicted.
+#
+# Keep in mind, that when the `scan_window` is bigger than
+# `blacklist_duration`, a single false login may be enough
+# to blacklist an IP again, after it was removed from the
+# blacklist.
+#
+# default: 10800
+# overwritten by: CRED_STUFF_SCAN_WINDOW
+scan_window = 5
+
 [database]
 # Hiqlite is the default database for Rauthy.
 # You can opt-out and use Postgres instead by setting this
@@ -1442,6 +1482,12 @@ level_force_logout = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_IP_BLACKLISTED
 level_ip_blacklisted = 'warning'
+# The level for the generated Event after an IP has
+# been considered harmful, doing credential stuffing.
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_CRED_STUFF
+level_cred_stuff = 'warning'
 # The level for the generated Event after the JWKS has
 # been rotated
 #
@@ -2287,19 +2333,34 @@ log = true
 
 # one of: en de ko uk zh_hans
 lang = 'en'
-# pme of: password_new, password_reset
+# one of: password_new, password_reset, email_registered_already
 typ = 'password_new'
 
 subject = 'New Password'
 header = 'New password for'
-text = ''
+
+# Note: This value will be empty for `password_new` and `password_reset`.
+# You can set custom content that you wish to add to your emails though.
+# For `email_registered_already`, it will have a default text.
+text = """Someone tried to register a new account with your E-Mail address
+while an account exists already. If that was you, and it was a mistake, you
+can ignore this message. However, if you forgot your password, you can use
+the link belopw to reset it.
+If it was not you trying to register the new account - no need to worry.
+Your account has not been compromised and no data was leaked."""
+
+# Exists only for: password_new, password_reset
 click_link = 'Click the link below to get forwarded to the password form.'
+# Exists only for: password_new, password_reset
 validity = 'This link is only valid for a short period of time for security reasons.'
+# Exists only for: password_new, password_reset
 expires = 'Link expires:'
 footer = ''
 
-# Exists only for password reset E-Mails for initialized accounts.
+# Exists only for password reset E-Mails for initialized accounts or
+# `email_registered_already`
 button_text_request_new = ''
+
 
 [tls]
 ## UI + API TLS

@@ -5,12 +5,13 @@ use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
 use rauthy_api_types::oidc::{LoginRefreshRequest, LoginRequest};
 use rauthy_common::constants::COOKIE_MFA;
-use rauthy_common::utils::get_rand;
+use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use rauthy_data::entity::auth_providers::ProviderMfaLogin;
 use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::{AccountType, User};
@@ -19,6 +20,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::trace;
+use zeroize::Zeroize;
 
 pub async fn post_authorize(
     req: &HttpRequest,
@@ -31,15 +33,27 @@ pub async fn post_authorize(
 ) -> Result<AuthStep, ErrorResponse> {
     *add_login_delay = true;
 
-    let mut user = User::find_by_email(req_data.email).await.inspect_err(|_| {
-        // The UI does not show the password input form when there is no user yet.
-        // To prevent username enumeration, we should not add a login delay if a user does not
-        // even exist, when the UI is in that phase where the user does not provide any
-        // password.
-        if req_data.password.is_none() {
-            *add_login_delay = false;
+    let mut user = match User::find_by_email(req_data.email.clone()).await {
+        Ok(u) => u,
+        Err(err) => {
+            // The UI does not show the password input form when there is no user yet.
+            // To prevent username enumeration, we should not add a login delay if a user does not
+            // even exist when the UI is in that phase where the user does not provide any
+            // password.
+            if req_data.password.is_none() {
+                *add_login_delay = false;
+            }
+
+            let ip = real_ip_from_req(req)?;
+            CredStuffDetect::trigger(ip, &req_data.email, req_data.password.as_deref()).await;
+
+            if let Some(mut pwd) = req_data.password {
+                pwd.zeroize();
+            }
+
+            return Err(err);
         }
-    })?;
+    };
 
     let mfa_cookie =
         if let Ok(c) = WebauthnCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA)) {
@@ -63,7 +77,7 @@ pub async fn post_authorize(
         // if we get here, the UI did the first step from the login form
         // -> username only without password
         // We should not add a delay in that case, because the user did nothing wrong, we just need
-        // to get the password, because it is no passkey only account.
+        // to get the password, because it is no passkey-only account.
         *add_login_delay = false;
 
         trace!("No user password has been provided");
@@ -74,7 +88,7 @@ pub async fn post_authorize(
     }
 
     if account_type == AccountType::New {
-        // the user has created an account but no password has been set so far
+        // the user has created an account, but no password has been set so far
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
             "The account has not been set up yet",
@@ -86,7 +100,12 @@ pub async fn post_authorize(
 
     if let Some(pwd) = req_data.password {
         *has_password_been_hashed = true;
-        user.validate_password(pwd).await?;
+        if let Err(err) = user.validate_password(pwd.clone()).await {
+            let ip = real_ip_from_req(req)?;
+            CredStuffDetect::trigger(ip, &user.email, Some(&pwd)).await;
+
+            return Err(err);
+        }
 
         // This would also send a location notification if an attacker only knows a password, but
         // is later on unable to fully compromise an account when MFA is missing. However, this is

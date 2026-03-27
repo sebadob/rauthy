@@ -36,6 +36,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 use tracing::{debug, info, warn};
 use validator::Validate;
+use zeroize::Zeroize;
 
 /// GET all user emails that are not yet linked to a PAM account
 ///
@@ -85,7 +86,7 @@ pub async fn post_getent(
     payload.validate()?;
 
     let host = PamHost::find_simple(payload.host_id).await?;
-    host.validate_secret(payload.host_secret.as_bytes())?;
+    host.validate_secret(payload.host_secret)?;
 
     let resp = match payload.getent {
         Getent::Users => {
@@ -581,7 +582,7 @@ pub async fn post_host_whoami(
     payload.validate()?;
 
     let host = PamHost::find_by_id_full(id.into_inner()).await?;
-    host.validate_secret(payload.host_secret.as_bytes())?;
+    host.validate_secret(payload.host_secret)?;
     Ok(HttpResponse::Ok().json(PamHostDetailsResponse::from(host)))
 }
 
@@ -616,7 +617,7 @@ pub async fn post_login(
     }
 
     let host = PamHost::find_simple(payload.host_id).await?;
-    host.validate_secret(payload.host_secret.as_bytes())?;
+    host.validate_secret(payload.host_secret)?;
 
     let pam_user = PamUser::find_by_name(payload.username).await?;
     if !host.is_user_in_group(&pam_user).await {
@@ -815,7 +816,7 @@ pub async fn post_preflight(
     payload.validate()?;
 
     let host = PamHost::find_simple(payload.host_id).await?;
-    host.validate_secret(payload.host_secret.as_bytes())?;
+    host.validate_secret(payload.host_secret)?;
 
     let pam_user = PamUser::find_by_name(payload.username).await?;
     if !host.is_user_in_group(&pam_user).await {
@@ -1016,7 +1017,7 @@ pub async fn get_pam_users_authorized_keys(
                 "'Authorization' invalid - expected 'Basic' authentication",
             ));
         };
-        let bytes = base64_decode(b64)?;
+        let mut bytes = base64_decode(b64)?;
         let data = String::from_utf8_lossy(bytes.as_ref());
         let Some((host_id, host_secret)) = data.split_once(":") else {
             return Err(ErrorResponse::new(
@@ -1026,7 +1027,8 @@ pub async fn get_pam_users_authorized_keys(
         };
 
         let host = PamHost::find_simple(host_id.to_string()).await?;
-        host.validate_secret(host_secret.as_bytes())?;
+        host.validate_secret(host_secret.to_string())?;
+        bytes.zeroize();
     }
 
     let keys = AuthorizedKey::find_by_username(username.into_inner()).await?;

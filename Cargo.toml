@@ -55,14 +55,9 @@ lto = false
 strip = false
 
 [patch.crates-io]
-cryptr = { path = "../cryptr" }
-hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
-hiqlite-wal = { path = "../hiqlite/hiqlite-wal", package = "hiqlite-wal" }
 #hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
-#hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
+#hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive" }
 #hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
-s3-simple = { path = "../s3-simple" }
-tls-hot-reload = { path = "../tls-hot-reload" }
 
 [workspace.dependencies]
 accept-language = "3"
@@ -150,7 +145,7 @@ rustls = { version = "0.23.37", default-features = false, features = [
     "logging", "std", "tls12", "ring"
 ] }
 rustls-pki-types = "1.4.1"
-s3-simple = "0.8.0-20260309"
+s3-simple = "0.8.0"
 semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -188,3 +183,4 @@ webauthn-rs = { version = "0.5", features = [
 ] }
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"
+zeroize = "1.8"

@@ -10,6 +10,7 @@ use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
+use zeroize::Zeroize;
 
 #[derive(Clone, Serialize, Deserialize, FromPgRow)]
 pub struct ApiKeyEntity {
@@ -125,7 +126,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         let api_key = entity.into_api_key()?;
 
         // generate a new secret
-        let secret_plain = get_rand(API_KEY_LENGTH);
+        let mut secret_plain = get_rand(API_KEY_LENGTH);
         let secret_enc = EncValue::encrypt(sha256!(secret_plain.as_bytes()))?
             .into_bytes()
             .to_vec();
@@ -157,6 +158,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         Self::cache_invalidate(name).await?;
 
         let secret_fmt = format!("{name}${secret_plain}");
+        secret_plain.zeroize();
         Ok(secret_fmt)
     }
 
@@ -167,9 +169,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         access: Vec<ApiKeyAccess>,
     ) -> Result<(), ErrorResponse> {
         let entity = ApiKeyEntity::find(name).await?;
-        let api_key = entity.into_api_key()?;
+        let mut api_key = entity.into_api_key()?;
 
         let secret_enc = EncValue::encrypt(&api_key.secret)?.into_bytes().to_vec();
+        api_key.secret.zeroize();
 
         let access_bytes = serialize(&access)?;
         let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
