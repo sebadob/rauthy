@@ -1,6 +1,6 @@
 use crate::database::{Cache, DB};
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::constants::{IDX_GROUPS, IDX_ROLES};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;

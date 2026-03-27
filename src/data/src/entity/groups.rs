@@ -2,7 +2,7 @@ use crate::database::{Cache, DB};
 use crate::entity::users::User;
 use deadpool_postgres::GenericClient;
 use hiqlite::Params;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::groups::{GroupRequest, GroupResponse};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS};
 use rauthy_common::is_hiqlite;

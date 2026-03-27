@@ -2,35 +2,18 @@ use crate::database::DB;
 use actix_web::HttpResponse;
 use cryptr::EncValue;
 use cryptr::utils::secure_random_alnum;
-use hiqlite_macros::params;
+use hiqlite::macros::{FromRow, params};
 use rauthy_api_types::kv::{
     KVAccessResponse, KVNamespaceResponse, KVParams, KVValueRequest, KVValueResponse,
 };
 use rauthy_common::is_hiqlite;
+use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 
-#[derive(Debug)]
+#[derive(Debug, FromRow, FromPgRow)]
 pub struct KVNamespace {
     pub ns: String,
     pub public: Option<bool>,
-}
-
-impl From<hiqlite::Row<'_>> for KVNamespace {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
-        Self {
-            ns: row.get("ns"),
-            public: row.get("public"),
-        }
-    }
-}
-
-impl From<tokio_postgres::Row> for KVNamespace {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            ns: row.get("ns"),
-            public: row.get("public"),
-        }
-    }
 }
 
 impl KVNamespace {
@@ -115,34 +98,12 @@ impl KVNamespace {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, FromRow, FromPgRow)]
 pub struct KVValue {
     pub ns: String,
     pub key: String,
     pub encrypted: Option<bool>,
     pub value: Vec<u8>,
-}
-
-impl From<hiqlite::Row<'_>> for KVValue {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
-        Self {
-            ns: row.get("ns"),
-            key: row.get("key"),
-            encrypted: row.get("encrypted"),
-            value: row.get("value"),
-        }
-    }
-}
-
-impl From<tokio_postgres::Row> for KVValue {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            ns: row.get("ns"),
-            key: row.get("key"),
-            encrypted: row.get("encrypted"),
-            value: row.get("value"),
-        }
-    }
 }
 
 impl KVValue {
@@ -400,37 +361,13 @@ impl KVValue {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, FromRow, FromPgRow)]
 pub struct KVAccess {
     pub id: String,
     pub ns: String,
     pub secret: Vec<u8>,
     pub enabled: bool,
     pub name: Option<String>,
-}
-
-impl From<hiqlite::Row<'_>> for KVAccess {
-    fn from(mut row: hiqlite::Row<'_>) -> Self {
-        Self {
-            id: row.get("id"),
-            ns: row.get("ns"),
-            secret: row.get("secret"),
-            enabled: row.get("enabled"),
-            name: row.get("name"),
-        }
-    }
-}
-
-impl From<tokio_postgres::Row> for KVAccess {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            id: row.get("id"),
-            ns: row.get("ns"),
-            secret: row.get("secret"),
-            enabled: row.get("enabled"),
-            name: row.get("name"),
-        }
-    }
 }
 
 impl KVAccess {
