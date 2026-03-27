@@ -2,10 +2,26 @@
 
 ## UNRELEASED
 
+This release makes it possible to have a interrupt-free migration to Rauthy v0.35+, which changed
+the default Issuer. It now has a trailing `/` to bring more compatibility for some scenarios, where
+a client constructs URLs in a way without checking for trailing `/`. This is e.g. the case when
+a client like the Matrix Javascript SDK constructs the `openid-configuration` lookup URL with the
+default JS URL constructor in combination with a custom path. To make this work, the isser must have
+a trailing `/`.
+
+With this version, the `rauthy-client` will accept both versions, and it will check if you provided
+an issuer with trailing `/` or not, and append one if necessary. This means you should upgrade
+clients to this version BEFORE upgrading Rauthy to v0.35+, which will make the transition smooth and
+without any interrupt or config changes. You can even convert your config to the trailing `/` issuer
+beforehand.
+
 ### Breaking
 
-The `phone` claim in the `JwtIdClaims` has been renamed to `phone_number` to match the latest
-Rauthy changes. `phone_number` is actually correct according to the RFC.
+The claim name in `JwtIdClaims` when the `phone` scope was requests did not match the OIDC RFC. It
+was called `phone` when it should have been `phone_number`.
+
+Apart from that, the HTTP client does not embed TLS certificates anymore, but instead uses the
+platform verifier to reduce binary size in most situations.
 
 ## v0.12.0
 
