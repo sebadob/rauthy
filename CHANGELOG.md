@@ -4,7 +4,7 @@
 
 ### Breaking
 
-The Rauthy Issuer was changed!
+#### The Rauthy Issuer was changed!
 
 Before, it was `https://iam.example.com/auth/v1`. Now it will be `https://iam.example.com/auth/v1/`,
 with the trailing `/` appended. This was a somewhat necessary change to do before v1.0.0. There are
@@ -42,9 +42,241 @@ So sum this up:
 > [!NOTE]
 > This is probably the last bigger breaking change before releasing Rauthy v1.0.0.
 
+#### Custom Attributes Values
+
+The custom user attributes were taking every value a just a `String`, even though the UI said
+"JSON Value". The backend parsed them as JSON Values, but since the UI always sent `String`s, they
+were all JSON Strings, which is not that helpful. This version changes this behavior. There is no
+equivalent for Rusts `serde_json::Value` in JS, but a custom parsing function was added to the UI.
+This now makes it possible to actually parse separate, typed JSON values.
+
+This means when you had set custom attributes before, they were returned like this:
+
+```json
+{
+  "custom": {
+    "str": "some string",
+    "arr": "[1, 2, 3]",
+    "num": "1337",
+    "obj": "{\"key\": \"value\", \"key2\": 123}"
+  }
+}
+```
+
+Now instead, since the UI can parse and type the input properly, you will get:
+
+```json
+{
+  "custom": {
+    "arr": [
+      1,
+      2,
+      3
+    ],
+    "num": 1337,
+    "obj": {
+      "key": "value",
+      "key2": 123
+    },
+    "str": "some string"
+  }
+}
+```
+
+Depending on how you currently extract custom attributes, this may be a breaking change for you.
+
+[#1491](https://github.com/sebadob/rauthy/pull/1491)
+
 ### Changes
 
-#### Client IDs can now container UPPERCASE characters
+#### Global KV Store
+
+Sometimes, you need a simple place to store e.g. additional policies or things like that, or maybe
+you need some additional information about your Rauthy instance, or some clients, and you want to
+have all your authn / authz related information in one place. For that reason, Rauthy now brings
+a global KV store.
+
+You can define multiple, independent namespaces. Each namespace is private by default but can
+optionally allow public access. You can add additional Access Keys for each namespace. Key / Value
+pairs can be added without any prior definition necessary. The value can be any valid `JSON` value,
+and it therefore typed automatically. You can add:
+
+- number
+- bool
+- string
+- array
+- objects
+
+They will be auto-detected and returned properly by the API. You can find it in the Admin UI
+navigation on the left side.
+
+[#1491](https://github.com/sebadob/rauthy/pull/1491)
+
+#### Credential Stuffing Detection
+
+Rauthy was already detecting brute-force attempts for a user. When multiple passwords were wrong,
+the timeout between retries would be artificially increased. Now it can also detect credential
+stuffing over multiple accounts. How it works is pretty simple:
+
+- If a user fails doing a login, the username + password will be sent into the cred stuff detector.
+- The detector will create a `hash(username + password)` and store it in the cache.
+- The duration will be the so called `scan_window`, which can be configured.
+- If the length of unique hashes exceeds the configured threshold, the IP will be automatically
+  blacklisted.
+
+```toml
+[cred_stuff_detection]
+## This section contains values for the credential stuffing
+## detection algorithm. In most cases the defaults should be
+## fine.
+
+# The duration in seconds for how long an IP will be
+# blacklisted after it was considered harmful, doing
+# credential stuffing.
+#
+# default: 86400
+# overwritten by: CRED_STUFF_BLACKLIST_DUR
+blacklist_duration = 10
+
+# The threshold for username / password combinations. When
+# this is reached within the `scan_window` the IP will be
+# blacklisted and a new warning Event will be fired.
+#
+# default: 15
+# overwritten by: CRED_STUFF_BLACKLIST_THRES
+blacklist_threshold = 3
+
+# The time in seconds within the detector should operate.
+# Whenever either a non-existing email or a email with a
+# wrong password is sent, the combination of both will be
+# hashed and stored (in-memory) for the duration of this
+# value. If any new event happens within this time frame,
+# the new hash will be stored as well, and then timer will
+# reset to `scan_window` again. Only if not a single event
+# happens during the whole duration, the values will be
+# evicted.
+#
+# Keep in mind, that when the `scan_window` is bigger than
+# `blacklist_duration`, a single false login may be enough
+# to blacklist an IP again, after it was removed from the
+# blacklist.
+#
+# default: 10800
+# overwritten by: CRED_STUFF_SCAN_WINDOW
+scan_window = 5
+```
+
+[#1488](https://github.com/sebadob/rauthy/pull/1488)
+
+#### User Enumeration Prevention
+
+When you had an open user registration, it was a known issue that it had the potential for username
+enumeration because Rauthy simply behaved like almost all other applications. However, this is
+mitigated now. When a user registers and the email exists already, the response will always be
+'success'. If it existed before, however, the user will receive a notification email about it with a
+link to request a password reset.
+
+[#1487](https://github.com/sebadob/rauthy/pull/1487)
+
+#### Upgraded to `hiqlite-v0.13`
+
+The underlying `hiqlite` was upgraded to `v0.13`. This version includes a small throughput
+improvement of ~12%. Apart from that, it comes with optimized and much improved macros, which do
+not only boost performance (as seen on the 12%), but they also provide better future maintenance.
+Many manual DB deserialization impls are now auto-generated. The same macro was created for Postgres
+types as well to have the exact same behavior. Apart from maybe the small performance improvement,
+the end user will not really notice anything about it though. It's most about future maintenance,
+stability and improved DX.
+
+Another feature that was added with this version is auto-encrypted in-cluster TLS traffic. If you
+want to follow a zero trust philosophy, and you don't have something like a service mesh with auto
+mTLS in place already, you don't need to manage TLS certificates for hiqlite cluster traffic
+manually anymore. You have a new config variable to make it maintenance-free:
+
+```toml
+[cluster]
+# The `tls_auto_certificates` will generate self-signed TLS
+# certificates for internal Raft and API traffic. Clients will
+# simply not validate the certificates for ease of use because
+# they don't have to. They do a 3-way handshake anyway, which
+# validates both client and server without the secret ever being
+# sent over the network.
+#
+# If you specify specific certificates with either `tls_raft_*` or
+# `tls_api_*`, they will be used instead.
+#
+# default: false
+# overwritten by: HQL_TLS_AUTO_CERTS
+tls_auto_certificates = false
+```
+
+[#1481](https://github.com/sebadob/rauthy/pull/1481)
+
+#### The Binary is a CLI
+
+The `rauthy` binary is now a CLI tool. This makes it possible to not only specify a custom path to
+your config file, but it also provides additional utility. You can use it to generate new encryption
+keys, or to generate a complete config to get you started. More documentation about it will be added
+to the book in the future. The tl;dr for now is: You start the Server with `rauthy serve` now, and
+with the `-c` option, you can select a custom config file path:
+
+[#1481](https://github.com/sebadob/rauthy/pull/1481)
+
+#### Bootstrapping
+
+You can now bootstrap a lot more values:
+
+- groups
+- roles
+- scopes
+- custom user attributes
+- users
+- clients
+
+These are read from `*.json` files. You have a new config variable in the `bootstrap` section to
+configure the directory:
+
+```toml
+[bootstrap]
+# This is the directory where the bootstrap logic will look for
+# additional bootstrapping data. It will expect JSON files with
+# fixed names inside this folder. If it finds any of them, it will
+# try to parse and apply them during the bootstrapping process.
+#
+# The following files will be parsed in the given directory:
+# - roles.json
+# - groups.json
+# - scopes.json
+# - user_attributes.json
+# - users.json
+# - clients.json
+#
+# For information about the structure and the applied validations,
+# check `src/data/src/migration/bootstrap/types.rs`, and the
+# `bootstrap/*.json` files for examples.
+#
+# default: 'bootstrap'
+# overwritten by: BOOTSTRAP_DIR
+bootstrap_dir = 'bootstrap'
+```
+
+The book was not updated with all the new types yet, but you can take a look at examples here:
+
+https://github.com/sebadob/rauthy/tree/main/bootstrap
+
+Or take a look at the definitions directly here:
+
+https://github.com/sebadob/rauthy/blob/main/src/data/src/migration/bootstrap/types.rs
+
+> Note: Right now, the API key for bootstrapping still lives in the config file in is limited to a
+> single one. This will probably be merged into the new way of bootstrapping from files.
+> The initial admin user bootstrap also lives in the config file only, even though you could
+> bootstrap as many admins from file as you like. The initial admin bootstrap is essential, while
+> all other users are most-likely only bootstrapped in CI pipelines.
+
+[#1490](https://github.com/sebadob/rauthy/pull/1490)
+
+#### Client IDs can now contain UPPERCASE characters
 
 Some clients like OpenCloud have very weird requirements. They basically dictate their hardcoded
 client ID to the IdP, and in this case they expect camelCasedIds. This is an absolutely terrible
@@ -175,59 +407,15 @@ even with bad client impl's, the `sig` will be set for each entry.
   did not support ED25519 or ECDSA keys. The custom verifier now also offers lots of other (only
   safe) algorithms to choose from. No config required.
   [#1436](https://github.com/sebadob/rauthy/pull/1436)
-
-## UNRELEASED
-
-### Breaking
-
-#### Custom Attributes Values
-
-The custom user attributes were taking every value a just a `String`, even though the UI said
-"JSON Value". The backend parsed them as JSON Values, but since the UI always sent `String`s, they
-were all JSON Strings, which is not that helpful. This version changes this behavior. There is no
-equivalent for Rusts `serde_json::Value` in JS, but a custom parsing function was added to the UI.
-This now makes it possible to actually parse separate, typed JSON values.
-
-This means when you had set custom attributes before, they were returned like this:
-
-```json
-{
-  "custom": {
-    "str": "some string",
-    "arr": "[1, 2, 3]",
-    "num": "1337",
-    "obj": "{\"key\": \"value\", \"key2\": 123}"
-  }
-}
-```
-
-Now instead, since the UI can parse and type the input properly, you will get:
-
-```json
-{
-  "custom": {
-    "arr": [
-      1,
-      2,
-      3
-    ],
-    "num": 1337,
-    "obj": {
-      "key": "value",
-      "key2": 123
-    },
-    "str": "some string"
-  }
-}
-```
-
-Depending on how you currently extract custom attributes, this may be a breaking change for you.
-
-### Changes
-
-#### Global KV Store
-
-TODO
+- When a client added `prompt=none` to a request during authorization, Rauthy did not return a `302`
+  and therefore did not redirect back to the client.
+  [#1484](https://github.com/sebadob/rauthy/pull/1484)
+- The username blacklist was not checked if you had an open user registration and the
+  `preferred_username` was set to `required`.
+  [#1485](https://github.com/sebadob/rauthy/pull/1485)
+- The claim name in the `id_token` and on the `/userinfo` response for the `phone` claim was not
+  matching the RFC. It was called `phone` when it should have been `phone_number`.
+  [#1486](https://github.com/sebadob/rauthy/pull/1486)
 
 ## v0.34.3
 
