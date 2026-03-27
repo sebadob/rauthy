@@ -38,7 +38,7 @@ use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::Event;
 use cryptr::EncValue;
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use std::cmp::max;
@@ -597,7 +597,7 @@ VALUES ($1, $2, $3)"#;
         for b in data_before {
             DB::pg_execute(
                 sql_2,
-                &[&b.client_id, &b.action.to_string(), &(b.retry_count as i32)],
+                &[&b.client_id, &b.action.to_string(), &b.retry_count],
             )
             .await?;
         }

@@ -7,7 +7,7 @@ use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
 use cryptr::{EncKeys, EncValue};
-use hiqlite_macros::params;
+use hiqlite::macros::params;
 use rauthy_api_types::api_keys::ApiKeyRequest;
 use rauthy_common::utils::{base64_decode, get_rand, new_store_id};
 use rauthy_common::{is_hiqlite, sha256};
