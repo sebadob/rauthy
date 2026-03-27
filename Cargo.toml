@@ -55,14 +55,9 @@ lto = false
 strip = false
 
 [patch.crates-io]
-cryptr = { path = "../cryptr" }
-hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
-hiqlite-wal = { path = "../hiqlite/hiqlite-wal", package = "hiqlite-wal" }
 #hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
-#hiqlite-macros = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-macros" }
+#hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive" }
 #hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
-s3-simple = { path = "../s3-simple" }
-tls-hot-reload = { path = "../tls-hot-reload" }
 
 [workspace.dependencies]
 accept-language = "3"

@@ -1652,6 +1652,8 @@ dependencies = [
 [[package]]
 name = "cryptr"
 version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ceed6f824991d2ee1f69d9e29e802e70bb70c567169ecd9713b08722d2d616de"
 dependencies = [
  "argon2",
  "async-stream",
@@ -2787,6 +2789,8 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "069f42dc958188a0f5b56dd0db57d74610c7fa46718ce3fcc05a695416f29c4a"
 dependencies = [
  "argon2",
  "aws-lc-rs",
@@ -2846,6 +2850,8 @@ dependencies = [
 [[package]]
 name = "hiqlite-derive"
 version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4edb6e4dbbb5f8e407335b3a55ea5ab79bd7c647ccffb09617d2b606d7f517b6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2855,6 +2861,8 @@ dependencies = [
 [[package]]
 name = "hiqlite-wal"
 version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05d53e55d82308a8433aab0cbbd8ba981e8e4fbecfa62b407ef26e92a671a65e"
 dependencies = [
  "bincode",
  "byteorder",
@@ -6038,7 +6046,9 @@ checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 
 [[package]]
 name = "s3-simple"
-version = "0.8.0-20260309"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fa335ba7f76236080b92f12f7740ba227ad0e6c6747c355f38782c0ba76ecf5"
 dependencies = [
  "aws-lc-rs",
  "aws-lc-sys",
@@ -6064,7 +6074,6 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
- "webpki-root-certs",
 ]
 
 [[package]]
@@ -6859,6 +6868,8 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 [[package]]
 name = "tls-hot-reload"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a405ff8d93cf593b6e1dbcf52e2c00c8a163bca856ad552843cfa55ccdb0ca6"
 dependencies = [
  "arc-swap",
  "notify",
