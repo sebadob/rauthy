@@ -672,7 +672,7 @@ pub async fn put_user_attr(
     payload.validate()?;
 
     let user = User::find(user_id).await?;
-    let values = UserAttrValueEntity::update_for_user(&user.id, payload)
+    let values = UserAttrValueEntity::upsert_for_user(&user.id, payload)
         .await?
         .drain(..)
         .map(UserAttrValueResponse::from)

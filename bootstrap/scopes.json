@@ -1,0 +1,16 @@
+[
+    {
+        "id": "aaaaaaaaaaaaaaaaaaaaaaaa",
+        "name": "bs_scope_1"
+    },
+    {
+        "name": "bs_scope_2",
+        "attr_include_access": [
+            "bs_attr_1"
+        ],
+        "attr_include_id": [
+            "bs_attr_2",
+            "bs_attr_3"
+        ]
+    }
+]

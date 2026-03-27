@@ -94,9 +94,9 @@ pub struct NewUserRegistrationRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
     pub given_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
     #[validate(nested)]
     pub user_values: Option<UserValuesRequest>,
+    /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
     pub pow: String,
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
@@ -221,11 +221,11 @@ pub struct UserValuesRequest {
     /// Validation: `[a-zA-Z0-9]`, max length 24
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"), length(max = 24))]
     pub zip: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-]{0,48}`
-    #[validate(regex(path = "*RE_CITY", code = "[a-zA-Z0-9À-ÿ-]{0,48}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-\s]{0,48}`
+    #[validate(regex(path = "*RE_CITY", code = "[a-zA-Z0-9À-ÿ-\\s]{0,48}"))]
     pub city: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-]{0,48}`
-    #[validate(regex(path = "*RE_CITY", code = "[a-zA-Z0-9À-ÿ-]{0,48}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-\s]{0,48}`
+    #[validate(regex(path = "*RE_CITY", code = "[a-zA-Z0-9À-ÿ-\\s]{0,48}"))]
     pub country: Option<String>,
     /// Validation: Valid Timezone in the format of `Europe/Berlin`
     #[validate(length(max = 48))]
@@ -277,7 +277,7 @@ pub struct UserAttrConfigRequest {
     pub user_editable: Option<bool>,
 }
 
-#[derive(Deserialize, Validate, ToSchema)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UserAttrValueRequest {
     /// Validation: `^[a-zA-Z0-9-_/]{2,32}$`

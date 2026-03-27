@@ -1,6 +1,6 @@
 use crate::entity::db_version::DbVersion;
 use crate::migration::db_migrate_dev::migrate_dev_data;
-use crate::migration::{anti_lockout, db_migrate, init_prod};
+use crate::migration::{anti_lockout, bootstrap, db_migrate};
 use crate::rauthy_config::RauthyConfig;
 use futures_util::StreamExt;
 use hiqlite::macros::{CacheVariants, embed::*};
@@ -214,7 +214,7 @@ impl DB {
         // migrate dynamic DB data
         let config = RauthyConfig::get();
         if !config.vars.dev.dev_mode && config.is_primary_node {
-            init_prod::migrate_init_prod().await?;
+            bootstrap::migrate_init_prod().await?;
         }
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {

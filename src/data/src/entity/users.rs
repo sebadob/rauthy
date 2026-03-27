@@ -157,6 +157,7 @@ impl User {
     pub async fn count() -> Result<i64, ErrorResponse> {
         let client = DB::hql();
 
+        // TODO migrate to the new distributed counter from hiqlite
         if let Some(count) = client.get(Cache::App, IDX_USER_COUNT).await? {
             return Ok(count);
         }
