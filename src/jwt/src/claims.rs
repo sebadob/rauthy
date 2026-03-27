@@ -162,7 +162,9 @@ pub struct JwtIdClaims<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub phone: Option<&'a str>,
+    pub phone_number: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone_number_verified: Option<bool>,
     pub roles: Vec<String>, // TODO change to borrowed data when everything works
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<Vec<String>>, // TODO change to borrowed data when everything works
