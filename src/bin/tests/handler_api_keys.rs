@@ -65,6 +65,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
     // we should NOT be able to create a new group
     let new_group = GroupRequest {
         group: "api_key_test_group".to_string(),
+        meta: None,
     };
     let res = client
         .post(&url_groups)

@@ -985,8 +985,9 @@ impl ClientScim {
         groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
         let json = serde_json::to_string(&update_payload)?;
+        let base = self.base_uri.trim_end_matches("/");
         let res = http_client()
-            .post(format!("{}/Users", self.base_uri))
+            .post(format!("{}/Users", base))
             .header(AUTHORIZATION, self.auth_header())
             .header(ACCEPT, APPLICATION_JSON_SCIM)
             .header(CONTENT_TYPE, APPLICATION_JSON_SCIM)
