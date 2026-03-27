@@ -1,0 +1,9 @@
+{{ header }} {{ email_sub_prefix -}}
+
+{{ text }}
+
+{{ footer }}
+
+{%- if !link_request_new.is_empty() -%}
+{{ link_request_new }}
+{%- endif -%}

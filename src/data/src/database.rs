@@ -57,6 +57,7 @@ pub enum Cache {
     Webauthn,
     PAM,
     ToS,
+    EmailRateLimit,
 }
 
 pub struct DB;

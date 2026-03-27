@@ -2287,19 +2287,34 @@ log = true
 
 # one of: en de ko uk zh_hans
 lang = 'en'
-# pme of: password_new, password_reset
+# one of: password_new, password_reset, email_registered_already
 typ = 'password_new'
 
 subject = 'New Password'
 header = 'New password for'
-text = ''
+
+# Note: This value will be empty for `password_new` and `password_reset`.
+# You can set custom content that you wish to add to your emails though.
+# For `email_registered_already`, it will have a default text.
+text = """Someone tried to register a new account with your E-Mail address
+while an account exists already. If that was you, and it was a mistake, you
+can ignore this message. However, if you forgot your password, you can use
+the link belopw to reset it.
+If it was not you trying to register the new account - no need to worry.
+Your account has not been compromised and no data was leaked."""
+
+# Exists only for: password_new, password_reset
 click_link = 'Click the link below to get forwarded to the password form.'
+# Exists only for: password_new, password_reset
 validity = 'This link is only valid for a short period of time for security reasons.'
+# Exists only for: password_new, password_reset
 expires = 'Link expires:'
 footer = ''
 
-# Exists only for password reset E-Mails for initialized accounts.
+# Exists only for password reset E-Mails for initialized accounts or
+# `email_registered_already`
 button_text_request_new = ''
+
 
 [tls]
 ## UI + API TLS
