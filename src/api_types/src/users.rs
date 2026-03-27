@@ -408,7 +408,7 @@ pub struct UserAttrConfigValueResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub desc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub default_value: Option<String>,
+    pub default_value: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub typ: Option<UserAttrConfigTyp>,
     pub user_editable: bool,
@@ -440,7 +440,7 @@ pub struct UserEditableAttrResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub desc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub default_value: Option<String>,
+    pub default_value: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub typ: Option<UserAttrConfigTyp>,
     #[serde(skip_serializing_if = "Option::is_none")]

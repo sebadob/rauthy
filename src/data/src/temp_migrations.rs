@@ -1,5 +1,5 @@
 use crate::database::{Cache, DB};
-use crate::entity::user_attr::UserAttrValueEntity;
+use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use hiqlite_macros::params;
 use rauthy_common::constants::{IDX_GROUPS, IDX_ROLES};
 use rauthy_common::is_hiqlite;
@@ -7,6 +7,7 @@ use rauthy_error::ErrorResponse;
 use tracing::info;
 
 pub async fn apply_temp_migrations() -> Result<(), ErrorResponse> {
+    // user_attr_values
     let sql = "SELECT * FROM user_attr_values";
     let values: Vec<UserAttrValueEntity> = if is_hiqlite() {
         DB::hql().query_as(sql, params!()).await?
@@ -42,6 +43,50 @@ pub async fn apply_temp_migrations() -> Result<(), ErrorResponse> {
 
     if migrated > 0 {
         info!("Migrated {} user attr values to proper JSON", migrated);
+    }
+
+    // user_attr_config
+    let sql = "SELECT * FROM user_attr_config";
+    let configs: Vec<UserAttrConfigEntity> = if is_hiqlite() {
+        DB::hql().query_as(sql, params!()).await?
+    } else {
+        DB::pg_query(sql, &[], 0).await?
+    };
+
+    let mut migrated = 0;
+
+    for value in configs {
+        let Some(default_value) = value.default_value else {
+            continue;
+        };
+        let json = serde_json::from_slice::<serde_json::Value>(&default_value)?;
+        let serde_json::Value::String(s) = json else {
+            continue;
+        };
+
+        // This is the easiest method to check if the String is actually another JSON obj.
+        let Ok(json) = serde_json::from_str::<serde_json::Value>(s.as_str()) else {
+            // If this fails, we actually have a String here - nothing to do.
+            continue;
+        };
+        let value_json = serde_json::to_vec(&json)?;
+
+        let sql = "UPDATE user_attr_config SET default_value = $1 WHERE name = $2";
+        if is_hiqlite() {
+            DB::hql()
+                .execute(sql, params!(value_json, value.name))
+                .await?;
+        } else {
+            DB::pg_execute(sql, &[&value_json, &value.name]).await?;
+        }
+        migrated += 1;
+    }
+
+    if migrated > 0 {
+        info!(
+            "Migrated {} user attr configs to proper JSON default values",
+            migrated
+        );
     }
 
     // because of changes on groups and roles, we must clear caches
