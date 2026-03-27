@@ -208,8 +208,7 @@ pub struct ClientSecretRequest {
     pub cache_current_hours: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Validate)]
-#[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(Debug, Serialize, Deserialize, ToSchema, Validate)]
 pub struct ScimClientRequestResponse {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]

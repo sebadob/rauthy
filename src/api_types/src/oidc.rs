@@ -326,8 +326,7 @@ pub struct JktClaim<'a> {
     pub jkt: &'a str,
 }
 
-#[derive(Default, PartialEq, Serialize, Deserialize, ToSchema)]
-#[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum JwkKeyPairAlg {
     RS256,
     RS384,

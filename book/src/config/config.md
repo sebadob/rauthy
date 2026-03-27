@@ -437,6 +437,27 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: BOOTSTRAP_API_KEY_SECRET
 #api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh'
 
+# This is the directory where the bootstrap logic will look for
+# additional bootstrapping data. It will expect JSON files with
+# fixed names inside this folder. If it finds any of them, it will
+# try to parse and apply them during the bootstrapping process.
+#
+# The following files will be parsed in the given directory:
+# - roles.json
+# - groups.json
+# - scopes.json
+# - user_attributes.json
+# - users.json
+# - clients.json
+#
+# For information about the structure and the applied validations,
+# check `src/data/src/migration/bootstrap/types.rs`, and the
+# `bootstrap/*.json` files for examples.
+#
+# default: 'bootstrap'
+# overwritten by: BOOTSTRAP_DIR
+#bootstrap_dir = 'bootstrap'
+
 [cluster]
 # Can be set to 'k8s' to try to split off the node id from the hostname
 # when Hiqlite is running as a StatefulSet inside Kubernetes.
@@ -609,6 +630,20 @@ nodes = ["1 localhost:8100 localhost:8200"]
 #tls_api_cert = "tls/tls.crt"
 #tls_api_danger_tls_no_verify = true
 
+# The `tls_auto_certificates` will generate self-signed TLS
+# certificates for internal Raft and API traffic. Clients will
+# simply not validate the certificates for ease of use because
+# they don't have to. They do a 3-way handshake anyway, which
+# validates both client and server without the secret ever being
+# sent over the network.
+#
+# If you specify specific certificates with either `tls_raft_*` or
+# `tls_api_*`, they will be used instead.
+#
+# default: false
+# overwritten by: HQL_TLS_AUTO_CERTS
+#tls_auto_certificates = false
+
 # Secrets for Raft internal authentication as well as for the API.
 # These must be at least 16 characters long and you should provide
 # different ones for both variables.
@@ -740,6 +775,46 @@ secret_api = "SuperSecureSecret1337"
 #
 # default: false
 #HQL_DANGER_RAFT_STATE_RESET=true
+
+[cred_stuff_detection]
+## This section contains values for the credential stuffing
+## detection algorithm. In most cases the defaults should be
+## fine.
+
+# The duration in seconds for how long an IP will be
+# blacklisted after it was considered harmful, doing
+# credential stuffing.
+#
+# default: 86400
+# overwritten by: CRED_STUFF_BLACKLIST_DUR
+#blacklist_duration = 86400
+
+# The threshold for username / password combinations. When
+# this is reached within the `scan_window` the IP will be
+# blacklisted and a new warning Event will be fired.
+#
+# default: 15
+# overwritten by: CRED_STUFF_BLACKLIST_THRES
+#blacklist_threshold = 15
+
+# The time in seconds within the detector should operate.
+# Whenever either a non-existing email or a email with a
+# wrong password is sent, the combination of both will be
+# hashed and stored (in-memory) for the duration of this
+# value. If any new event happens within this time frame,
+# the new hash will be stored as well, and then timer will
+# reset to `scan_window` again. Only if not a single event
+# happens during the whole duration, the values will be
+# evicted.
+#
+# Keep in mind that when the `scan_window` is bigger than
+# `blacklist_duration`, a single false login may be enough
+# to blacklist an IP again, after it was removed from the
+# blacklist.
+#
+# default: 10800
+# overwritten by: CRED_STUFF_SCAN_WINDOW
+#scan_window = 10800
 
 [database]
 # Hiqlite is the default database for Rauthy.
@@ -1416,6 +1491,12 @@ level_force_logout = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_IP_BLACKLISTED
 level_ip_blacklisted = 'warning'
+# The level for the generated Event after an IP has
+# been considered harmful, doing credential stuffing.
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_CRED_STUFF
+level_cred_stuff = 'warning'
 # The level for the generated Event after the JWKS has
 # been rotated
 #
@@ -2247,7 +2328,17 @@ swagger_ui_enable = false
 
 #subject = 'New Password'
 #header = 'New password for'
-#text = ''
+
+# Note: This value will be empty for `password_new` and `password_reset`.
+# You can set custom content that you wish to add to your emails though.
+# For `email_registered_already`, it will have a default text.
+#text = """Someone tried to register a new account with your E-Mail address
+#while an account exists already. If that was you, and it was a mistake, you
+#can ignore this message. However, if you forgot your password, you can use
+#the link belopw to reset it.
+#If it was not you trying to register the new account - no need to worry.
+#Your account has not been compromised and no data was leaked."""
+
 #click_link = 'Click the link below to get forwarded to the password form.'
 #validity = 'This link is only valid for a short period of time for security reasons.'
 #expires = 'Link expires:'
@@ -2309,7 +2400,6 @@ key_path = 'tls/key.pem'
 #accept_timeout = 900
 
 [user_delete]
-
 # You can enable user self-deletion via the Account Dashboard.
 # It is disabled by default, because especially if you use things like
 # SCIM, the deletion of a user might trigger a series of events which
@@ -2430,7 +2520,6 @@ storage_type = 'db'
 #allow_open_redirect = false
 
 [user_values]
-
 # In this section, you can configure the requirements for different
 # user values to adjust them to your needs. The `preferred_username`
 # as a special value provide some additional options.
