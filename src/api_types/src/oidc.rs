@@ -59,8 +59,8 @@ pub struct AuthRequest {
     pub code_challenge_method: Option<String>,
     #[validate(range(min = 0))]
     pub max_age: Option<i64>,
-    /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    /// Validation: `[a-zA-Z0-9_\s]{0,128}`
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9_\\s]{0,128}"))]
     pub prompt: Option<String>,
 }
 

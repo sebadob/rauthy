@@ -111,7 +111,7 @@ pub async fn get_authorize(
     let mut force_new_session = if params
         .prompt
         .as_ref()
-        .map(|p| p.as_str() == "login")
+        .map(|p| p.contains("login"))
         .unwrap_or(false)
     {
         true
@@ -145,7 +145,11 @@ pub async fn get_authorize(
 
     // check for `prompt=none` and redirect if we don't have a valid session
     if !force_new_session
-        && params.prompt.as_deref() == Some("none")
+        && params
+            .prompt
+            .as_ref()
+            .map(|p| p.contains("none"))
+            .unwrap_or(false)
         && principal.validate_session_auth().is_err()
     {
         let mut loc = params.redirect_uri;
@@ -189,7 +193,12 @@ pub async fn get_authorize(
     }
 
     // if the user is still authenticated and everything is valid -> immediate refresh
-    if !force_new_session && principal.validate_session_auth().is_ok() {
+    let prompt_consent = params
+        .prompt
+        .as_ref()
+        .map(|p| p.contains("consent"))
+        .unwrap_or(false);
+    if !force_new_session && !prompt_consent && principal.validate_session_auth().is_ok() {
         let csrf = principal.get_session_csrf_token()?;
 
         templates.push(HtmlTemplate::CsrfToken(csrf.to_string()));
