@@ -681,7 +681,8 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::get_ready)
                 .service(swagger_ui::get_openapi_doc)
                 .service(swagger_ui::get_swagger_ui)
-                .service(html::get_static_assets),
+                .service(html::get_static_assets)
+                .default_service(web::to(generic::redirect_subroutes)),
         )
 }
 
