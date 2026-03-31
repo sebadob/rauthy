@@ -1260,6 +1260,9 @@ smtp_url = 'localhost'
 # overwritten by: TZ_FMT_NO
 #no = '%d.%m.%Y %T (%Z)'
 # default: '%d.%m.%Y %T (%Z)'
+# overwritten by: TZ_FMT_RU
+#ru = '%d.%m.%Y %T (%Z)'
+# default: '%d.%m.%Y %T (%Z)'
 # overwritten by: TZ_FMT_UK
 #uk = '%d.%m.%Y %T (%Z)'
 # default: '%d-%m-%Y %T (%Z)'
@@ -1871,13 +1874,13 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de ko nb uk zhhans
+# Available Options: en de ko nb ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'ko', 'nb', 'uk', 'zhhans']
+filter_lang_common = ['en', 'de', 'ko', 'nb', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de ko nb uk zhhans
+# Available Options: en de ko nb ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'ko', 'nb', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'ko', 'nb', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh

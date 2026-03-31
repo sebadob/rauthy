@@ -40,6 +40,7 @@ fn email_ts_prettify_with(
         Language::En => config.en.as_ref(),
         Language::Ko => config.ko.as_ref(),
         Language::Nb => config.no.as_ref(),
+        Language::Ru => config.ru.as_ref(),
         Language::Uk => config.uk.as_ref(),
         Language::ZhHans => config.zhhans.as_ref(),
     };
@@ -59,6 +60,7 @@ mod tests {
             en: "%m/%d/%Y %T (%Z)".into(),
             ko: "%Y-%m-%d %T (%Z)".into(),
             no: "%d.%m.%Y %T (%Z)".into(),
+            ru: "%d.%m.%Y %T (%Z)".into(),
             uk: "%d.%m.%Y %T (%Z)".into(),
             zhhans: "%d-%m-%Y %T (%Z)".into(),
             tz_fallback: "UTC".into(),
