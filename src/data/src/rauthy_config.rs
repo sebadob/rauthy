@@ -309,6 +309,7 @@ impl Default for Vars {
                 token_revoke_device_tokens: false,
                 whoami_headers: false,
                 admin_button_hide: false,
+                redirect_root_to_account: false,
             },
             auth_headers: VarsAuthHeaders {
                 enable: false,
@@ -1182,6 +1183,14 @@ impl Vars {
             "ADMIN_BUTTON_HIDE",
         ) {
             self.access.admin_button_hide = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "access",
+            "redirect_root_to_account",
+            "REDIRECT_ROOT_TO_ACCOUNT",
+        ) {
+            self.access.redirect_root_to_account = v;
         }
     }
 
@@ -3192,6 +3201,7 @@ pub struct VarsAccess {
     pub token_revoke_device_tokens: bool,
     pub whoami_headers: bool,
     pub admin_button_hide: bool,
+    pub redirect_root_to_account: bool,
 }
 
 #[derive(Debug)]
