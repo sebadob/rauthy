@@ -539,6 +539,19 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
         .finish())
 }
 
+/// Default handler for subroutes to handle trailing slash redirects.
+pub async fn redirect_subroutes(req: HttpRequest) -> HttpResponse {
+    let path = req.path();
+    if path.len() > 9 && path.ends_with('/') {
+        let new_path = &path[..path.len() - 1];
+        HttpResponse::MovedPermanently()
+            .insert_header((header::LOCATION, HeaderValue::from_str(new_path).unwrap()))
+            .finish()
+    } else {
+        HttpResponse::NotFound().finish()
+    }
+}
+
 #[get("/v1")]
 pub async fn redirect_v1() -> HttpResponse {
     HttpResponse::MovedPermanently()
