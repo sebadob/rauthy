@@ -3,6 +3,7 @@ use actix_web::http::header;
 use actix_web::{HttpRequest, HttpResponse, get, web};
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::html::HtmlCached;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use std::borrow::Cow;
 
@@ -52,9 +53,15 @@ pub async fn get_static_assets(
 
 #[get("/")]
 pub async fn get_index(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    HtmlCached::Index
-        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
-        .await
+    if RauthyConfig::get().vars.access.redirect_root_to_account {
+        Ok(HttpResponse::Found()
+            .insert_header(("location", "/auth/v1/account"))
+            .finish())
+    } else {
+        HtmlCached::Index
+            .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
+            .await
+    }
 }
 
 #[get("/account")]

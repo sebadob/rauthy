@@ -309,6 +309,7 @@ impl Default for Vars {
                 token_revoke_device_tokens: false,
                 whoami_headers: false,
                 admin_button_hide: false,
+                redirect_root_to_account: false,
             },
             auth_headers: VarsAuthHeaders {
                 enable: false,
@@ -417,6 +418,7 @@ impl Default for Vars {
                     en: "%m/%d/%Y %T (%Z)".into(),
                     ko: "%Y-%m-%d %T (%Z)".into(),
                     no: "%d.%m.%Y %T (%Z)".into(),
+                    ru: "%d.%m.%Y %T (%Z)".into(),
                     uk: "%d.%m.%Y %T (%Z)".into(),
                     zhhans: "%d-%m-%Y %T (%Z)".into(),
                     tz_fallback: "UTC".into(),
@@ -655,6 +657,22 @@ impl Default for Vars {
                         footer: None,
                         button_text_request_new: None,
                     },
+                    ru: VarsTemplate
+                    {
+                        subject: "Новый пароль".into(),
+                        header: "Новый пароль для".into(),
+                        text: None,
+                        click_link:
+                        Some("Нажмите на ссылку ниже, чтобы перейти к форме установки пароля."
+                                .into()),
+                        validity:
+                        Some("Из соображений безопасности эта ссылка действительна только в течение короткого времени."
+                                .into()),
+                        expires: Some("Ссылка действительна до:".into()),
+                        button: Some("Установить пароль".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     uk: VarsTemplate
                     {
                         subject: "Новий пароль".into(),
@@ -738,6 +756,22 @@ impl Default for Vars {
                         button: Some("Tilbakestill passord".into()),
                         footer: Some("Hvis lenken har utløpt, kan du be om en ny.".into()),
                         button_text_request_new: Some("Be om ny lenke".into()),
+                    },
+                    ru: VarsTemplate {
+                        subject: "Запрос на сброс пароля".into(),
+                        header: "Запрос на сброс пароля для".into(),
+                        text: None,
+                        click_link: Some("Нажмите на ссылку ниже, чтобы перейти к форме сброса пароля."
+                                .into()),
+                        validity:
+                        Some("Из соображений безопасности эта ссылка действительна только в течение короткого времени."
+                                .into()),
+                        expires: Some("Ссылка действительна до:".into()),
+                        button: Some("Сбросить пароль".into()),
+                        footer: Some(
+                            "Если срок действия ссылки истёк, вы можете запросить новую.".into(),
+                        ),
+                        button_text_request_new: Some("Запросить новую ссылку".into()),
                     },
                     uk: VarsTemplate {
                         subject: "Запит на скидання пароля".into(),
@@ -833,6 +867,22 @@ Your account has not been compromised and no data was leaked."#.into()),
                         button: None,
                         footer: None,
                         button_text_request_new: Some("Request password reset Link".into()),
+                    },
+                    ru: VarsTemplate {
+                        subject: "E-Mail уже зарегистрирован".into(),
+                        header: "E-Mail уже зарегистрирован - ".into(),
+                        text: Some(r#"Кто-то попытался зарегистрировать новый аккаунт с вашим адресом E-Mail,
+в то время как аккаунт уже существует. Если это были вы и произошла ошибка,
+можете проигнорировать это сообщение. Однако если вы забыли пароль, вы можете
+воспользоваться ссылкой ниже для его сброса.
+Если регистрацию пытался выполнить кто-то другой — не беспокойтесь.
+Ваш аккаунт не был скомпрометирован и утечки данных не произошло."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Запросить ссылку для сброса пароля".into()),
                     },
                     uk: VarsTemplate {
                         subject: "E-Mail registered already".into(),
@@ -1133,6 +1183,14 @@ impl Vars {
             "ADMIN_BUTTON_HIDE",
         ) {
             self.access.admin_button_hide = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "access",
+            "redirect_root_to_account",
+            "REDIRECT_ROOT_TO_ACCOUNT",
+        ) {
+            self.access.redirect_root_to_account = v;
         }
     }
 
@@ -1655,6 +1713,9 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "no", "TZ_FMT_NO") {
             self.email.tz_fmt.no = v.into();
+        }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ru", "TZ_FMT_RU") {
+            self.email.tz_fmt.ru = v.into();
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "zhhans", "TZ_FMT_ZHHANS") {
             self.email.tz_fmt.zhhans = v.into();
@@ -2677,6 +2738,13 @@ impl Vars {
                         self.templates.password_reset.nb.clone()
                     }
                 }
+                "ru" => {
+                    if is_password_new {
+                        self.templates.password_new.ru.clone()
+                    } else {
+                        self.templates.password_reset.ru.clone()
+                    }
+                }
                 "uk" => {
                     if is_password_new {
                         self.templates.password_new.uk.clone()
@@ -2692,7 +2760,9 @@ impl Vars {
                     }
                 }
                 _ => {
-                    panic!("Invalid value for `templates.lang`, allowed are: en de ko zh_hans")
+                    panic!(
+                        "Invalid value for `templates.lang`, allowed are: en de ko nb ru uk zh_hans"
+                    )
                 }
             };
 
@@ -3131,6 +3201,7 @@ pub struct VarsAccess {
     pub token_revoke_device_tokens: bool,
     pub whoami_headers: bool,
     pub admin_button_hide: bool,
+    pub redirect_root_to_account: bool,
 }
 
 #[derive(Debug)]
@@ -3262,6 +3333,7 @@ pub struct VarsEmailTzFmt {
     pub en: Cow<'static, str>,
     pub ko: Cow<'static, str>,
     pub no: Cow<'static, str>,
+    pub ru: Cow<'static, str>,
     pub uk: Cow<'static, str>,
     pub zhhans: Cow<'static, str>,
     pub tz_fallback: Cow<'static, str>,
@@ -3481,6 +3553,7 @@ pub struct VarsTemplatesLanguages {
     pub en: VarsTemplate,
     pub ko: VarsTemplate,
     pub nb: VarsTemplate,
+    pub ru: VarsTemplate,
     pub uk: VarsTemplate,
     pub zhhans: VarsTemplate,
 }
