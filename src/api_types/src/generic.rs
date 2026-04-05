@@ -39,6 +39,7 @@ pub enum Language {
     En,
     Ko,
     Nb,
+    Ru,
     Uk,
     ZhHans,
 }

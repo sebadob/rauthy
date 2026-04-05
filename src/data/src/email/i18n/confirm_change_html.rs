@@ -16,6 +16,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
             Language::En => Self::build_en(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
+            Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
         }
@@ -64,6 +65,15 @@ impl I18nEmailConfirmChangeHtml<'_> {
             title: "Зміну E-mail підтверджено",
             text_changed: "Вашу адресу E-mail було змінено з",
             text_login: "Тепер ви можете увійти, використовуючи вашу нову адресу.",
+            to: "на",
+        }
+    }
+
+    fn build_ru() -> Self {
+        Self {
+            title: "Смена E-Mail подтверждена",
+            text_changed: "Ваш адрес E-Mail был изменён с",
+            text_login: "Теперь вы можете войти, используя новый адрес.",
             to: "на",
         }
     }
