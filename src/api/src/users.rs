@@ -1469,7 +1469,7 @@ pub async fn delete_webauthn(
         token.validate(principal.user_id()?, ip)?;
 
         warn!("Passkey delete for user {} for key {}", id, name);
-    } else {
+    } else if principal.is_user(&id).is_err() {
         warn!("Passkey delete from admin for user {} for key {}", id, name);
     }
 

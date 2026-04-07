@@ -196,8 +196,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
             let mut user = User::find(user_id.clone()).await?;
             user.webauthn_user_id = None;
 
-            // in this case, we need to check against the current password policy,
-            // if the password should expire again
+            // We need to check against the current password policy
+            // if the password should expire again.
             let policy = PasswordPolicy::find().await?;
             if let Some(valid_days) = policy.valid_days {
                 if user.password.is_some() {
@@ -218,20 +218,20 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(2);
 
+            Self::delete_by_id_name_append(user_id.clone(), name.clone(), &mut txn);
             if let Some(user) = user_to_save {
                 user.save_txn_append(&mut txn);
             }
-            Self::delete_by_id_name_append(user_id.clone(), name.clone(), &mut txn);
 
             DB::hql().txn(txn).await?;
         } else {
             let mut cl = DB::pg().await?;
             let txn = cl.transaction().await?;
 
+            Self::delete_by_id_name(&user_id, &name, &txn).await?;
             if let Some(user) = user_to_save {
                 user.save_txn(&txn).await?;
             }
-            Self::delete_by_id_name(&user_id, &name, &txn).await?;
 
             txn.commit().await?;
         }
