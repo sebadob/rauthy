@@ -11,7 +11,8 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use std::future::{Ready, ready};
 use std::rc::Rc;
-use tracing::{debug, info};
+use tokio::time::Instant;
+use tracing::info;
 
 pub struct RauthyLoggingMiddleware;
 
@@ -53,68 +54,84 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
+        let time_taken = Instant::now();
         let service = Rc::clone(&self.service);
 
         Box::pin(async move {
-            log_access(&req).await?;
-            service.call(req).await
+            let log = build_log(&req)?;
+            let resp = service.call(req).await;
+            emit_log(log, time_taken);
+            resp
         })
     }
 }
 
-async fn log_access(req: &ServiceRequest) -> Result<(), ErrorResponse> {
+#[inline(always)]
+fn emit_log(log: Option<String>, inst: Instant) {
+    if let Some(log) = log {
+        // Technically, this downcast is unsafe. In reality,
+        // it will be impossible to ever exceed u64::MAX.
+        let elapsed = inst.elapsed().as_micros() as u64;
+        if elapsed > 1000 {
+            info!("{} {}ms", log, elapsed / 1000);
+        } else {
+            info!("{} {}μs", log, elapsed);
+        }
+    }
+}
+
+#[inline(always)]
+fn build_log(req: &ServiceRequest) -> Result<Option<String>, ErrorResponse> {
     let path = req.uri().path();
     let ip = real_ip_from_svc_req(req)?;
 
-    match RauthyConfig::get().log_level_access {
+    let log = match RauthyConfig::get().log_level_access {
         LogLevelAccess::Debug => {
-            debug!("{:?}", req)
+            format!("{:?}", req)
         }
         LogLevelAccess::Verbose => {
-            info!(
+            format!(
                 "{ip} {:?} {} {path} {:?}",
                 req.version(),
                 req.method(),
                 req.headers()
                     .get(actix_web::http::header::USER_AGENT)
                     .unwrap_or(&HeaderValue::from_static(""))
-            );
+            )
         }
         LogLevelAccess::Basic => {
-            if path.starts_with("/auth/v1/_app")
-                || path.starts_with("/docs/")
-                || path.starts_with("/auth/v1/ping")
-                || path.starts_with("/auth/v1/health")
+            if let Some(p) = path.strip_prefix("/auth/v1")
+                && (p.starts_with("/_app/")
+                    || p.starts_with("/docs/")
+                    || p == "/ping"
+                    || p == "/health")
             {
-                return Ok(());
+                return Ok(None);
             }
-            info!(
+            format!(
                 "{ip} {:?} {} {path} {:?}",
                 req.version(),
                 req.method(),
                 req.headers()
                     .get(actix_web::http::header::USER_AGENT)
                     .unwrap_or(&HeaderValue::from_static(""))
-            );
+            )
         }
         LogLevelAccess::Modifying => {
-            if path.starts_with("/auth/v1/_app")
-                || path.starts_with("/docs/")
-                || req.method() == Method::GET
-            {
-                return Ok(());
+            if req.method() == Method::GET || req.method() == Method::OPTIONS {
+                return Ok(None);
             }
-            info!(
+            format!(
                 "{ip} {:?} {} {path} {:?}",
                 req.version(),
                 req.method(),
                 req.headers()
                     .get(actix_web::http::header::USER_AGENT)
                     .unwrap_or(&HeaderValue::from_static(""))
-            );
+            )
         }
-        LogLevelAccess::Off => return Ok(()),
-    }
+        LogLevelAccess::Off => return Ok(None),
+    };
 
-    Ok(())
+    Ok(Some(log))
 }
