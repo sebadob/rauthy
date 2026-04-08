@@ -1139,7 +1139,7 @@ smtp_from = 'Rauthy <rauthy@localhost>'
 # it, unless you have no other choice or a very good reason.
 #
 # If you specify another value than ´default`, you must provide
-# all the additional `x_oauth_*` values bwloe.
+# all the additional `x_oauth_*` values below.
 #
 # possible values: 'default', 'xoauth2', 'microsoft_graph'
 # default: 'default'

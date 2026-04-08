@@ -20,13 +20,17 @@ Just take a look at the [Reference Config](../config/config.html) and the variab
 
 ## Container Images
 
-Rauthy versions before `0.27.0` had different container images depending on the database you choose.
-However, this is not the case anymore. There is only a single image which works with any
-configuration. It works on `x86_64` and `arm64` architectures.
+Rauthys images are built for `x86_64` and `arm64` architectures. There is no native installer (
+yet?), but if you want to run it outside a container, you can either just copy the binary out of if,
+or you can build from source pretty easily. Take a look at
+the [CONTRIBUTING.md](https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md) for more
+information.
 
-At the time of writing, you can run Rauthy either with [Docker](./docker.md) or
-inside [Kubernetes](./k8s.md). \
-Both *Getting Started* guides do not cover all set up you might want to do for going into
-production. Especially the *Docker* guide is more for testing. \   
+At the time of writing, you can run Rauthy either with [Docker](./docker.md) (or any other
+compatible container runtime) or inside [Kubernetes](./k8s.md). Both *Getting Started* guides do not
+cover all setup you might want to do for going into production. Especially the *Docker* guide is
+more for testing.
+
 You should take a look at the [Reference Config](../config/config.html) to see, what you might want
-to configure additionally. A dedicated *Going into production* guide will be written in the future.
+to configure additionally, or for a more minimal setup
+the [Minimal Production Config](../config/config_minimal.md).

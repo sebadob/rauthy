@@ -10,6 +10,23 @@ don't use it in production, it contains hardcoded secrets).
 docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.0
 ```
 
+```admonish caution
+When you add the `LOCAL_TEST=true` var, it will ONLY work on `localhost`! Under the hood, Rauthy
+loads a very minimal (and unsafe) demo config. If you want to test anywhere else than `localhost`,
+you need to set up a proper config.
+```
+
+```admonish note
+Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS
+certificates. To be able to do this during testing, you would need to add the generated CA
+certificate to your trust store.
+```
+
+```admonish hint
+This command starts an HTTPS server with self-signed certificates.  
+Make sure to add the `https://` scheme if you open the URL manually.
+```
+
 To proceed, go to **[First Start](first_start.md)**, or do the production setup below to have
 persistence.
 
@@ -95,63 +112,89 @@ no Windows user myself, I cannot provide tested commands in this case.
 
 **1. We want to create a new directory for Rauthy's persistent data**
 
-```
-mkdir -p rauthy/data
+```bash
+mkdir -p rauthy/data rauthy/tls
 ```
 
 **2. Add the new config file.**
 
-This documentation is in an early version and remote links are not available yet, they will be added
-at a later point. For now, create a new file and paste the [reference config](../config/config.html)
+Rauthy (since v0.35) comes with a CLI. You can use it to generate a (basic) config file to get
+you started. We will use it from inside the container. However, since it's rootless and runs with
+user `10001:10001` inside, we need to modify access rights.
 
+```bash
+sudo chown -R 10001:$(id -g) rauthy
+``` 
+
+Next, we set an `alias` to be able to work with the CLI comfortably.
+
+```bash
+alias rauthy='docker run -it --rm -v $(pwd)/rauthy/data:/app/data -p 8080:8080 ghcr.io/sebadob/rauthy'
 ```
-vim rauthy/config.toml
+
+```admonish note
+The alias expects you to expose on port `8080` afterwards. If you plan on doing something else
+(for testing), adopt the `-p` option.
+```
+
+Make sure it's working:
+
+```bash
+rauthy --help
+```
+
+We can then use it to generate a config:
+
+```bash
+rauthy generate-config -o data/config-generated.toml
+```
+
+Once finished, you will have a new config file at `rauthy/data/config-generated.toml`. You can only
+access it as `root` though, because as mentioned above, the binary inside the container runs as
+`10001:10001`.
+
+```bash
+sudo cat rauthy/data/config-generated.toml
+```
+
+You can either use it directly, or you can evaluate it first. The final config will be expected in
+`rauthy/config.toml` by default. However, let's start with the generated one and make sure
+everything works as expected:
+
+```bash
+rauthy serve -c data/config-generated.toml
+```
+
+```admonish note
+If you answered during the config generation that you want to run Rauthy with your own TLS 
+certificates, make sure to copy them in place. By default in `rauthy/tls/*`.
+```
+
+When everything is working as expected, move the generated config in the final location:
+
+```bash
+sudo mv rauthy/data/config-generated.toml rauthy/config.toml
 ```
 
 **3. Access rights for the Database files**
 
-The Rauthy container by default runs everything with user:group `10001:10001` for security
-reasons. \
-To make this work with the default values, you have 2 options:
-
-- Change the access rights:
+Finalize / harden access rights:
 
 ```
-sudo chmod 0600 rauthy/config.toml
-sudo chmod 0700 rauthy/data
+sudo chmod 0600 rauthy/config.toml && \
+sudo chmod 0700 rauthy/data && \
+sudo chmod 0700 rauthy/tls && \
 sudo chown -R 10001:10001 rauthy
-```
-
-- The other solution, if you do not have sudo rights, would be to change the owner of the whole
-  directory.
-
-```
-chmod a+w rauthy/data
-```
-
-This will make the directory writeable for everyone, so Rauthy can create the database files inside
-the container with `10001:10001` again.
-
-```admonish caution
-The safest approach would be to change the owner and group for these files on the host system. This 
-needs `sudo` to edit the config, which may be a bit annoying, but at the same time it makes sure, 
-that you can only read the secrets inside it with `sudo` too.
-
-You should avoid making Rauthy's data world-accessible at all cost. 
-[Hiqlite](https://github.com/sebadob/hiqlite) will take care of this automatically during 
-sub-directory creation, but the config includes sensitive information. 
 ```
 
 **4. Adopt the config to your liking.**
 
-Take a look at the [reference config](../config/config.html) and adopt everything to your needs, but
-to not break this example, be sure to not change `cluster.data_dir`.
+The config-generator only gets you started and asks for the very basic requirements. There is a lot
+more you can configure. Take a look at the [reference config](../config/config.html) and adopt
+everything to your needs.
 
 For an in-depth guide on a production ready config, check
 the [Production Config](../config/production_config.md) section.
-
-A **mandatory step** will be to generate proper encryption keys. Take a look
-at [Encryption](../config/encryption.md).
 
 **5. Start the container with volume mounts**
 
@@ -169,6 +212,11 @@ docker run -d \
 - `-p 8443:8443` needs to match your configured `server.port_http` or `server.port_https` of course.
   If you use a reverse proxy inside a docker network, you don't need to expose any port, but you
   need to make sure to set `server.scheme = "http"`, `server.proxy_mode = true` and the correct
-  value for `server.trusted_proxies`.
+  value for `server.trusted_proxies`.-
+
+```admonish note
+If you provided your own TLS Certificates, make sure to mount them as well with an additional \
+`-v $(pwd)/rauthy/tls:/app/tls`.
+```
 
 **6. You can now proceed with the [First Start](first_start.md) steps.**
