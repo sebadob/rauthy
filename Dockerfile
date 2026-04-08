@@ -14,7 +14,7 @@ ARG VERSION
 LABEL org.opencontainers.image.authors="Sebastian Dobe <sebastiandobe@mailbox.org>"
 LABEL org.opencontainers.image.base.name="gcr.io/distroless/cc-debian12:nonroot"
 LABEL org.opencontainers.image.created="$CREATED"
-LABEL org.opencontainers.image.description="Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2.0 and PAM"
+LABEL org.opencontainers.image.description="Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2 and PAM"
 LABEL org.opencontainers.image.documentation="https://sebadob.github.io/rauthy/"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.source="https://github.com/sebadob/rauthy"
@@ -37,4 +37,5 @@ COPY --chown=$TARGET_USER ./config-local-test.toml ./config-local-test.toml
 COPY --chown=$TARGET_USER ./out/empty/ ./data
 COPY --chown=$TARGET_USER ./out/empty/ ./tls
 
-CMD ["/app/rauthy", "serve"]
+ENTRYPOINT ["/app/rauthy"]
+CMD ["serve"]

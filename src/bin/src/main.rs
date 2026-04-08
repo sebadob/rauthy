@@ -45,6 +45,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         Args::GenerateConfig(args) => utils::gen_config::generate(args).await?,
         Args::GenerateEncKey(args) => utils::gen_enc_keys::generate(args).await?,
+        Args::GenerateSecrets => utils::gen_secrets::generate().await?,
     }
 
     Ok(())

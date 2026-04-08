@@ -20,7 +20,7 @@ struct GenConfig {
     // Cluster
     node_id_from_k8s: bool,
     nodes: Vec<String>,
-    tls_auto_certificates: Option<bool>,
+    cluster_tls_auto_certificates: Option<bool>,
 
     // Database + Backups
     use_hiqlite: Option<bool>,
@@ -145,11 +145,11 @@ node_id = 1"#
         }
         writeln!(f, "\nnodes = [")?;
         for node in &self.nodes {
-            writeln!(f, "    '1 {node}:8100 {node}:8200',")?;
+            writeln!(f, "    '{node},")?;
         }
         writeln!(f, "]")?;
 
-        if let Some(tls) = self.tls_auto_certificates {
+        if let Some(tls) = self.cluster_tls_auto_certificates {
             writeln!(
                 f,
                 r#"
@@ -562,10 +562,10 @@ impl GenConfig {
                     .push("1 localhost:8100 localhost:8200".to_string());
 
                 println!(
-                    "\nSince it only really makes sense for single-isntance deployments, \
+                    "\nSince it only really makes sense for single-instance deployments, \
                 do you want to keep the cache in-memory only?"
                 );
-                slf.cache_storage_disk = Some(read_line_stdin_yes().await?);
+                slf.cache_storage_disk = Some(!read_line_stdin_yes().await?);
 
                 break;
             } else if v == "ha" {
@@ -598,9 +598,9 @@ each node 1 by 1:"#
 
                 println!("\nDo you want to enable auto-TLS for in-cluster traffic?");
                 if read_line_stdin_yes().await? {
-                    slf.tls_auto_certificates = Some(true);
+                    slf.cluster_tls_auto_certificates = Some(true);
                 } else {
-                    slf.tls_auto_certificates = Some(false);
+                    slf.cluster_tls_auto_certificates = Some(false);
                 }
 
                 break;
@@ -744,7 +744,7 @@ password policy you must match. At least:
             );
             let v = read_line_stdin().await?.trim().to_lowercase();
             if v == "auto" {
-                slf.tls_auto_certificates = Some(true);
+                slf.tls_generate_self_signed = Some(true);
             } else if v == "existing" {
                 println!(
                     r#"

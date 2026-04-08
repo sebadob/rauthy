@@ -11,6 +11,9 @@ pub enum Args {
 
     /// Generate a new secure, random encryption key
     GenerateEncKey(ArgsGenKey),
+
+    /// Generate Raft Cluster secrets
+    GenerateSecrets,
 }
 
 #[derive(Debug, Clone, Parser)]
