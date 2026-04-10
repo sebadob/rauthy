@@ -266,13 +266,6 @@ This middleware on its own would be a full CSRF protection even without addition
 or a synchronizer token, but these headers are just way too fresh on mobile browsers to only rely on
 them right now.
 
-The `Sec-` middleware is somewhat new to Rauthy, so it might be too restrictive in some situations
-where I forgot to add an exception for. By default, it blocks any non-user initiated or navigating
-cross-origin request, and I added exceptions for routes, which should be available cross-origin. If
-you experience issues with it, you might want to disable it and set it to warn-only mode.
-Please [open an issue](https://github.com/sebadob/rauthy/issues) about this, though, so it can be
-fixed, if it makes sense, because this option will probably be removed in a future version:
-
 ```toml
 [access]
 # If set to true, a violation inside the CSRF protection middleware

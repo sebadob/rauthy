@@ -22,8 +22,10 @@ in insecure contexts.
 
 ### Automatic self-signed certificates
 
+#### Rauthy Server + API
+
 Generating self-signed TLS certificates for the Rauthy HTTPS server is pretty straight forward. Keep
-in mind that these will only be generated for the HTTPS server and NOT for hiqlite internal cluster
+in mind that these will only be generated for the HTTPS server and NOT for Hiqlite internal cluster
 traffic, if you have an HA deployment. The cluster-internal auto-tls has a separate config variable.
 
 To generate TLS certificates on startup, you only need to set `tls.generate_self_signed = true`:
@@ -47,6 +49,30 @@ generate_self_signed = true
 
 If you only care about testing certificates for the HTTPS server, you don't need to configure
 anything else at this point.
+
+#### Hiqlite - Raft Cluster Traffic
+
+By default, Raft-internal traffic is NOT encrypted. The reasons is that you may not even want this
+in situations like when you e.g. have a separate physical network for nodes, or you already have a
+service mesh with mTLS in place. However, if you want to follow a zero-trust philosophy, the best
+way to do this is by letting Hiqlite handle everything for you automatically:
+
+```toml
+[cluster]
+# The `tls_auto_certificates` will generate self-signed TLS
+# certificates for internal Raft and API traffic. Clients will
+# simply not validate the certificates for ease of use because
+# they don't have to. They do a 3-way handshake anyway, which
+# validates both client and server without the secret ever being
+# sent over the network.
+#
+# If you specify specific certificates with either `tls_raft_*` or
+# `tls_api_*`, they will be used instead.
+#
+# default: false
+# overwritten by: HQL_TLS_AUTO_CERTS
+tls_auto_certificates = true
+```
 
 ### Manually managed certificates
 

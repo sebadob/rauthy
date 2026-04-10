@@ -2392,7 +2392,6 @@ footer = ''
 # `email_registered_already`
 button_text_request_new = ''
 
-
 [tls]
 ## UI + API TLS
 

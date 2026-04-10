@@ -34,14 +34,20 @@ Since `v0.26.0`, Rauthy uses the above-mentioned [Hiqlite](https://github.com/se
 instead. You only need to configure a few variables.
 
 ```admonish caution
-Even when using Postgres as your DB of choice, in HA deployments, you should always provide 
-persistent volumes to your Rauthy Pods. One reason is that it smoothes out rolling releases, because 
-even though you can keep the Cache Raft in-memory only because it can handle these situations, even 
-when using Postgres, Rauthy will create at least an empty SQLite cache layer. If this loses state 
-between restarts and they happen too fast for instance, this can end up in crashes.
+Even when using Postgres as your DB of choice, you should provide a persistent volume for your 
+Rauthy instances. The reason is that the cache is disk-backed. By default, it will store at least
+WAL logs and snapshots on disk. All working data will be kept in memory for the fastest access.
+Having the WAL logs on disk though is a huge advantage when it comes to restarts or rolling 
+releases. The Raft cluster needs a persistent state, which lives inside the WAL logs. If they are
+being wiped with each restart (no persistent volume), the node has to re-join the Raft cluster 
+each time, which takes time.
 
-It is also very recommended to persist the cache on disk anyway (which is the default), to keep 
-things like not yet used Auth Codes between restarts.
+However, you can choose to run the cache fully in-memory as well. In that scenario, nodes will 
+gracefully leave the Raft cluster on shutdown and cleanly re-join with the next start. However, it
+is very important that the data dir exists. You don't need to care about this in a container, but
+when running it natively for instance. Even a fully in-memory cache, Rauthy will use the data dir 
+for temporarily storing WAL snapshots. These are necessary when other nodes join the cluster, and
+to clean up WAL logs from memory at some point. 
 ```
 
 ### `node_id`
@@ -107,7 +113,7 @@ nodes = [
 
 Since you need both `cluster.secret_raft` and `cluster.secret_api` in any case, there is nothing to
 change here. These define the secrets being used internally to authenticate against the Raft or the
-API server for `Hiqlite`. You can generate safe values with for instance
+API server for `Hiqlite`. You can generate safe values with any tool you like, for instance:
 
 ```
 cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
@@ -121,4 +127,3 @@ connections between all pods by default, you can use the HA cache with just plai
 
 However, if you do not have encryption between pods by default, I would highly recommend, that you
 use [TLS](tls.md).
-
