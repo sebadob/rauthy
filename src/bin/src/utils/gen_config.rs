@@ -716,7 +716,7 @@ password policy you must match. At least:
                 );
             }
 
-            println!("Creating password hash...");
+            println!("Hashing password ...");
             let params = argon2::ParamsBuilder::new()
                 .m_cost(131_072)
                 .t_cost(4)

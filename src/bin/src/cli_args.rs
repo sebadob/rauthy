@@ -14,6 +14,8 @@ pub enum Args {
 
     /// Generate Raft Cluster secrets
     GenerateSecrets,
+
+    HashPassword(ArgsPasswordHash),
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -44,4 +46,19 @@ pub struct ArgsGenKey {
     /// Provide if you want a specific Key ID - must match: [a-zA-Z0-9:_-]{2,20}
     #[clap(short = 'k', long)]
     pub with_key_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct ArgsPasswordHash {
+    /// The amount of memory in bytes used during the key derivation process. MUST NOT be below 32768.
+    #[clap(short, long, default_value = "131072")]
+    pub m_cost: Option<u32>,
+
+    /// The number of iterations performed during the key derivation process.
+    #[clap(short, long, default_value = "4")]
+    pub t_cost: Option<u32>,
+
+    /// The number of parallel threads used during computation.
+    #[clap(short, long, default_value = "8")]
+    pub p_cost: Option<u32>,
 }
