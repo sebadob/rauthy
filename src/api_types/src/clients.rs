@@ -100,8 +100,8 @@ pub struct EphemeralClientRequest {
     /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
     #[validate(custom(function = "validate_vec_grant_type"))]
     pub grant_types: Option<Vec<String>>,
-    /// Validation: `60 <= access_token_lifetime <= 86400`
-    #[validate(range(min = 60, max = 86400))]
+    /// Validation: `60 <= access_token_lifetime <= 2592000`
+    #[validate(range(min = 60, max = 2592000))]
     pub default_max_age: Option<i32>,
     /// Validation: `[a-zA-Z0-9-_/:\s*]{0,512}`
     #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
@@ -172,8 +172,8 @@ pub struct UpdateClientRequest {
     /// Validation: `10 <= auth_code_lifetime <= 300`
     #[validate(range(min = 10, max = 300))]
     pub auth_code_lifetime: i32,
-    /// Validation: `10 <= access_token_lifetime <= 86400`
-    #[validate(range(min = 10, max = 86400))]
+    /// Validation: `10 <= access_token_lifetime <= 2592000`
+    #[validate(range(min = 10, max = 2592000))]
     pub access_token_lifetime: i32,
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
