@@ -18,6 +18,7 @@ use std::str::FromStr;
 use std::sync::OnceLock;
 use tokio::fs;
 use tokio::sync::mpsc;
+use tokio_postgres::config;
 use toml::Value;
 use tracing::{debug, info, warn};
 use utoipa::ToSchema;
@@ -351,7 +352,9 @@ impl Default for Vars {
                 pg_user: None,
                 pg_password: None,
                 pg_db_name: "rauthy".into(),
+                pg_tls: config::SslMode::Prefer,
                 pg_tls_no_verify: false,
+                pg_tls_root_ca: None,
                 pg_max_conn: 20,
                 migrate_pg_host: None,
                 migrate_pg_port: 5432,
@@ -1444,6 +1447,14 @@ impl Vars {
         if let Some(v) = t_str(&mut table, "database", "pg_db_name", "PG_DB_NAME") {
             self.database.pg_db_name = v.into();
         }
+        if let Some(v) = t_str(&mut table, "database", "pg_tls", "PG_TLS") {
+            self.database.pg_tls = match v.as_str() {
+                "disable" => config::SslMode::Disable,
+                "prefer" => config::SslMode::Prefer,
+                "require" => config::SslMode::Require,
+                _ => panic!("`pg_tls` must be one of: disable, prefer, require"),
+            };
+        }
         if let Some(v) = t_bool(
             &mut table,
             "database",
@@ -1451,6 +1462,9 @@ impl Vars {
             "PG_TLS_NO_VERIFY",
         ) {
             self.database.pg_tls_no_verify = v;
+        }
+        if let Some(v) = t_str(&mut table, "database", "pg_tls_root_ca", "PG_TLS_ROOT_CA") {
+            self.database.pg_tls_root_ca = Some(v);
         }
         if let Some(v) = t_u16(&mut table, "database", "pg_max_conn", "PG_MAX_CONN") {
             self.database.pg_max_conn = v;
@@ -3311,7 +3325,9 @@ pub struct VarsDatabase {
     pub pg_port: u16,
     pub pg_password: Option<String>,
     pub pg_db_name: Cow<'static, str>,
+    pub pg_tls: config::SslMode,
     pub pg_tls_no_verify: bool,
+    pub pg_tls_root_ca: Option<String>,
     pub pg_max_conn: u16,
 
     pub migrate_pg_host: Option<String>,

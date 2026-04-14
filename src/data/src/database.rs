@@ -6,12 +6,15 @@ use futures_util::StreamExt;
 use hiqlite::macros::{CacheVariants, embed::*};
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
+use rustls::pki_types::CertificateDer;
+use rustls::pki_types::pem::PemObject;
 use std::env;
 use std::ops::DerefMut;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tokio::pin;
 use tokio::time::sleep;
+use tokio_postgres::NoTls;
 use tokio_postgres::config::{LoadBalanceHosts, SslMode};
 use tracing::{debug, error, info, warn};
 
@@ -130,6 +133,8 @@ impl DB {
         db_name: &str,
         db_max_conn: u16,
     ) -> Result<deadpool_postgres::Pool, ErrorResponse> {
+        let vars = &RauthyConfig::get().vars.database;
+
         // let mut config: tokio_postgres::Config = db_host.parse().expect("invalid database url");
         let mut config: tokio_postgres::Config = tokio_postgres::Config::default();
         config.host(host);
@@ -140,26 +145,50 @@ impl DB {
         config.application_name("Rauthy");
         config.connect_timeout(Duration::from_secs(10));
         config.keepalives_idle(Duration::from_secs(30));
-        // config.keepalives_interval()
         config.load_balance_hosts(LoadBalanceHosts::Random);
-        config.ssl_mode(SslMode::Prefer);
+        config.ssl_mode(vars.pg_tls);
 
-        let tls_config = if RauthyConfig::get().vars.database.pg_tls_no_verify {
-            rustls::ClientConfig::builder()
-                .dangerous()
-                .with_custom_certificate_verifier(Arc::new(NoTlsVerifier {}))
-                .with_no_client_auth()
+        let mgr = if vars.pg_tls == SslMode::Disable {
+            config.ssl_mode(SslMode::Disable);
+            deadpool_postgres::Manager::new(config, NoTls)
         } else {
-            let root_store = rustls::RootCertStore {
-                roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
-            };
-            rustls::ClientConfig::builder()
-                .with_root_certificates(root_store)
-                .with_no_client_auth()
-        };
-        let tls = tokio_postgres_rustls::MakeRustlsConnect::new(tls_config);
+            let tls_config = if vars.pg_tls_no_verify {
+                rustls::ClientConfig::builder()
+                    .dangerous()
+                    .with_custom_certificate_verifier(Arc::new(NoTlsVerifier {}))
+                    .with_no_client_auth()
+            } else if let Some(root_ca) = &vars.pg_tls_root_ca {
+                let mut root_store = rustls::RootCertStore::empty();
 
-        let mgr = deadpool_postgres::Manager::new(config, tls);
+                for res in CertificateDer::pem_slice_iter(root_ca.as_bytes()) {
+                    match res {
+                        Ok(cert) => {
+                            root_store
+                                .add(cert)
+                                .expect("Invalid `database.pg_tls_root_ca`");
+                        }
+                        Err(err) => {
+                            panic!("Cannot parse `database.pg_tls_root_ca`: {err:?}")
+                        }
+                    }
+                }
+
+                rustls::ClientConfig::builder()
+                    .with_root_certificates(root_store)
+                    .with_no_client_auth()
+            } else {
+                let root_store = rustls::RootCertStore {
+                    roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
+                };
+                rustls::ClientConfig::builder()
+                    .with_root_certificates(root_store)
+                    .with_no_client_auth()
+            };
+            let tls = tokio_postgres_rustls::MakeRustlsConnect::new(tls_config);
+
+            deadpool_postgres::Manager::new(config, tls)
+        };
+
         let pool: deadpool_postgres::Pool = deadpool_postgres::Pool::builder(mgr)
             .max_size(db_max_conn as usize)
             .create_timeout(Some(Duration::from_secs(10)))
@@ -442,6 +471,7 @@ impl rustls::client::danger::ServerCertVerifier for NoTlsVerifier {
             rustls::SignatureScheme::RSA_PSS_SHA512,
             rustls::SignatureScheme::ECDSA_NISTP256_SHA256,
             rustls::SignatureScheme::ECDSA_NISTP384_SHA384,
+            rustls::SignatureScheme::ECDSA_NISTP521_SHA512,
             rustls::SignatureScheme::ML_DSA_44,
             rustls::SignatureScheme::ML_DSA_65,
             rustls::SignatureScheme::ML_DSA_87,
