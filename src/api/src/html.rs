@@ -18,13 +18,13 @@ pub async fn get_static_assets(
     let mime = mime_guess::from_path(&path);
     let (p, encoding) =
         if path.ends_with(".png") || path.ends_with(".webp") || path.ends_with(".jpg") {
-            (Cow::from(path), "none")
+            (Cow::Borrowed(path.as_str()), "none")
         } else if accept_encoding.contains(&"br".parse().unwrap()) {
-            (Cow::from(format!("{path}.br")), "br")
+            (Cow::Owned(format!("{path}.br")), "br")
         } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
-            (Cow::from(format!("{path}.gz")), "gzip")
+            (Cow::Owned(format!("{path}.gz")), "gzip")
         } else {
-            (Cow::from(path), "none")
+            (Cow::Borrowed(path.as_str()), "none")
         };
 
     match Assets::get(p.as_ref()) {
@@ -34,6 +34,16 @@ pub async fn get_static_assets(
             .content_type(mime.first_or_octet_stream().as_ref())
             .body(content.data.into_owned()),
         None => {
+            if path.starts_with("admin/") && path.ends_with('/') {
+                let new_path = format!("/auth/v1/{}", &path[..path.len() - 1]);
+                return HttpResponse::MovedPermanently()
+                    .insert_header((
+                        actix_web::http::header::LOCATION,
+                        actix_web::http::header::HeaderValue::from_str(&new_path).unwrap(),
+                    ))
+                    .finish();
+            }
+
             // Since this may resolve to a sub url path of any length, we cannot now, which
             // error template we need to serve -> just return not found
             HttpResponse::NotFound().finish()

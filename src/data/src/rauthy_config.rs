@@ -419,6 +419,7 @@ impl Default for Vars {
                 tz_fmt: VarsEmailTzFmt {
                     de: "%d.%m.%Y %T (%Z)".into(),
                     en: "%m/%d/%Y %T (%Z)".into(),
+                    fr: "%d/%m/%Y %T (%Z)".into(),
                     ko: "%Y-%m-%d %T (%Z)".into(),
                     no: "%d.%m.%Y %T (%Z)".into(),
                     ru: "%d.%m.%Y %T (%Z)".into(),
@@ -635,15 +636,32 @@ impl Default for Vars {
                         footer: None,
                         button_text_request_new: None,
                     },
+                    fr: VarsTemplate
+                    {
+                        subject: "Nouveau mot de passe".into(),
+                        header: "Nouveau mot de passe pour".into(),
+                        text: None,
+                        click_link:
+                        Some("Cliquez sur le lien ci-dessous pour être redirigé vers le formulaire de mot de passe."
+                                .into()),
+                        validity:
+                        Some("Ce lien n'est valable que pendant une courte période pour des raisons de sécurité."
+                                .into()),
+                        expires: Some("Le lien expire :".into()),
+                        button: Some("Définir le mot de passe".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     ko: VarsTemplate
                     {
-                        subject: "新密码".into(),
-                        header: "新密码".into(),
+                       subject: "새 비밀번호".into(),
+                        header: "새 비밀번호를 설정해 주세요:".into(),
                         text: None,
-                        click_link: Some("点击下方链接以打开密码设置表单。".into()),
-                        validity: Some("出于安全考虑，此链接仅在短时间内有效。".into()),
-                        expires: Some("链接过期时间：".into()),
-                        button: Some("设置密码".into()),
+                        click_link: Some("비밀번호 입력창으로 이동하려면, 아래의 링크를 클릭해 주세요."
+                                .into()),
+                        validity: Some("이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into()),
+                        expires: Some("링크 만료일:".into()),
+                        button: Some("비밀번호 설정".into()),
                         footer: None,
                         button_text_request_new: None,
                     },
@@ -694,16 +712,16 @@ impl Default for Vars {
                     },
                     zhhans: VarsTemplate
                     {
-                        subject: "새 비밀번호".into(),
-                        header: "새 비밀번호를 설정해 주세요:".into(),
+                         subject: "新密码".into(),
+                        header: "新密码".into(),
                         text: None,
-                        click_link: Some("비밀번호 입력창으로 이동하려면, 아래의 링크를 클릭해 주세요."
-                                .into()),
-                        validity: Some("이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into()),
-                        expires: Some("링크 만료일:".into()),
-                        button: Some("비밀번호 설정".into()),
+                        click_link: Some("点击下方链接以打开密码设置表单。".into()),
+                        validity: Some("出于安全考虑，此链接仅在短时间内有效。".into()),
+                        expires: Some("链接过期时间：".into()),
+                        button: Some("设置密码".into()),
                         footer: None,
                         button_text_request_new: None,
+
                     },
                 },
                 password_reset: VarsTemplatesLanguages {
@@ -737,16 +755,31 @@ impl Default for Vars {
                         footer: Some("If this link has expired, you can request a new one.".into()),
                         button_text_request_new: Some("Request New Link".into()),
                     },
-                    ko: VarsTemplate {
-                        subject: "密码重置请求".into(),
-                        header: "密码重置请求：".into(),
+                    fr: VarsTemplate {
+                        subject: "Demande de réinitialisation du mot de passe".into(),
+                        header: "Demande de réinitialisation du mot de passe pour".into(),
                         text: None,
-                        click_link: Some("点击下方链接以打开密码重置表单。".into()),
-                        validity: Some("出于安全考虑，此链接仅在短时间内有效。".into()),
-                        expires: Some("链接过期时间".into()),
-                        button: Some("重置密码".into()),
+                        click_link:
+                        Some("Cliquez sur le lien ci-dessous pour être redirigé vers le formulaire de demande de mot de passe.".into()),
+                        validity:
+                        Some("Ce lien n'est valable que pendant une courte période pour des raisons de sécurité.".into()),
+                        expires: Some("Le lien expire :".into()),
+                        button: Some("Réinitialiser le mot de passe".into()),
+                        footer: Some("Si ce lien a expiré, vous pouvez en demander un nouveau.".into()),
+                        button_text_request_new: Some("Demander un nouveau lien".into()),
+                    },
+                    ko: VarsTemplate {subject: "비밀번호 초기화 요청".into(),
+                        header: "비밀번호 초기화 요청:".into(),
+                        text: None,
+                        click_link:
+                        Some("비밀번호 초기화 요청 창으로 이동하려면, 아래의 링크를 클릭해 주세요."
+                                .into()),
+                        validity: Some("이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into()),
+                        expires: Some("링크 만료일:".into()),
+                        button: Some("비밀번호 초기화".into()),
                         footer: Some("If this link has expired, you can request a new one.".into()),
                         button_text_request_new: Some("Request New Link".into()),
+
                     },
                     nb: VarsTemplate {
                         subject: "Passordtilbakestilling etterspurt".into(),
@@ -793,15 +826,13 @@ impl Default for Vars {
                         button_text_request_new: Some("Запросити нове посилання".into()),
                     },
                     zhhans: VarsTemplate {
-                        subject: "비밀번호 초기화 요청".into(),
-                        header: "비밀번호 초기화 요청:".into(),
+                        subject: "密码重置请求".into(),
+                        header: "密码重置请求：".into(),
                         text: None,
-                        click_link:
-                        Some("비밀번호 초기화 요청 창으로 이동하려면, 아래의 링크를 클릭해 주세요."
-                                .into()),
-                        validity: Some("이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into()),
-                        expires: Some("링크 만료일:".into()),
-                        button: Some("비밀번호 초기화".into()),
+                        click_link: Some("点击下方链接以打开密码重置表单。".into()),
+                        validity: Some("出于安全考虑，此链接仅在短时间内有效。".into()),
+                        expires: Some("链接过期时间".into()),
+                        button: Some("重置密码".into()),
                         footer: Some("If this link has expired, you can request a new one.".into()),
                         button_text_request_new: Some("Request New Link".into()),
                     },
@@ -838,6 +869,22 @@ Your account has not been compromised and no data was leaked."#.into()),
                         button: None,
                         footer: None,
                         button_text_request_new: Some("Request password reset Link".into()),
+                    },
+                    fr: VarsTemplate {
+                        subject: "e-mail déjà enregistré".into(),
+                        header: "e-mail déjà enregistré - ".into(),
+                        text: Some(r#"Quelqu'un a essayé d'enregistrer un nouveau compte avec votre adresse e-mail
+alors qu'un compte existe déjà. Si c'était vous et que c'était une erreur, vous pouvez ignorer ce message.
+Cependant, si vous avez oublié votre mot de passe,
+vous pouvez utiliser le lien ci-dessous pour le réinitialiser.
+Si ce n'est pas vous qui essayez d'enregistrer le nouveau compte, ne vous inquiétez pas.
+Votre compte n'a pas été compromis et aucune donnée n'a été divulguée."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Demander un lien de réinitialisation du mot de passe".into()),
                     },
                     ko: VarsTemplate {
                         subject: "E-Mail registered already".into(),
@@ -1721,6 +1768,9 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "en", "TZ_FMT_EN") {
             self.email.tz_fmt.en = v.into();
+        }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "fr", "TZ_FMT_FR") {
+            self.email.tz_fmt.fr = v.into();
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ko", "TZ_FMT_KO") {
             self.email.tz_fmt.ko = v.into();
@@ -2738,6 +2788,13 @@ impl Vars {
                         self.templates.password_reset.de.clone()
                     }
                 }
+                "fr" => {
+                    if is_password_new {
+                        self.templates.password_new.fr.clone()
+                    } else {
+                        self.templates.password_reset.fr.clone()
+                    }
+                }
                 "ko" => {
                     if is_password_new {
                         self.templates.password_new.ko.clone()
@@ -2775,7 +2832,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de ko nb ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en de fr ko nb ru uk zh_hans"
                     )
                 }
             };
@@ -3347,6 +3404,7 @@ pub struct VarsEmailJobs {
 pub struct VarsEmailTzFmt {
     pub de: Cow<'static, str>,
     pub en: Cow<'static, str>,
+    pub fr: Cow<'static, str>,
     pub ko: Cow<'static, str>,
     pub no: Cow<'static, str>,
     pub ru: Cow<'static, str>,
@@ -3567,6 +3625,7 @@ pub struct VarsTemplates {
 pub struct VarsTemplatesLanguages {
     pub de: VarsTemplate,
     pub en: VarsTemplate,
+    pub fr: VarsTemplate,
     pub ko: VarsTemplate,
     pub nb: VarsTemplate,
     pub ru: VarsTemplate,

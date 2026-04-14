@@ -1934,13 +1934,13 @@ MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de ko nb ru uk zhhans
+# Available Options: en de fr ko nb ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['de', 'en', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['de', 'en', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de ko nb ru uk zhhans
+# Available Options: en de fr ko nb ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
