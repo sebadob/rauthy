@@ -13,6 +13,7 @@ pub enum Language {
     De,
     #[default]
     En,
+    Fr,
     Ko,
     Nb,
     Ru,
@@ -21,10 +22,10 @@ pub enum Language {
 }
 
 impl Language {
-    fn all_available<'a>() -> [&'a str; 14] {
+    fn all_available<'a>() -> [&'a str; 16] {
         [
-            "en", "en-US", "de", "de-DE", "ko", "nb", "nb-NO", "no-NO", "ru", "ru-RU", "uk",
-            "uk-UA", "zh", "zh-Hans",
+            "en", "en-US", "de", "de-DE", "fr", "fr-FR", "ko", "nb", "nb-NO", "no-NO", "ru",
+            "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
         ]
     }
 
@@ -33,6 +34,7 @@ impl Language {
         match self {
             Language::De => "de",
             Language::En => "en",
+            Language::Fr => "fr",
             Language::Ko => "ko",
             Language::Nb => "nb",
             Language::Ru => "ru",
@@ -65,6 +67,7 @@ impl From<&str> for Language {
         match value {
             "en" | "en-US" => Self::En,
             "de" | "de-DE" => Self::De,
+            "fr" | "fr-FR" => Self::Fr,
             "ko" | "ko-KR" => Self::Ko,
             "nb" | "nb-NO" | "no-NO" => Self::Nb,
             "ru" | "ru-RU" => Self::Ru,
@@ -108,6 +111,7 @@ impl From<rauthy_api_types::generic::Language> for Language {
         match value {
             rauthy_api_types::generic::Language::De => Self::De,
             rauthy_api_types::generic::Language::En => Self::En,
+            rauthy_api_types::generic::Language::Fr => Self::Fr,
             rauthy_api_types::generic::Language::Ko => Self::Ko,
             rauthy_api_types::generic::Language::Nb => Self::Nb,
             rauthy_api_types::generic::Language::Ru => Self::Ru,
@@ -122,6 +126,7 @@ impl From<Language> for rauthy_api_types::generic::Language {
         match value {
             Language::De => Self::De,
             Language::En => Self::En,
+            Language::Fr => Self::Fr,
             Language::Ko => Self::Ko,
             Language::Nb => Self::Nb,
             Language::Ru => Self::Ru,

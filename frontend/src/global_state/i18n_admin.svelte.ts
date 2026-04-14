@@ -2,6 +2,7 @@ import { useLang } from '$state/language.svelte';
 import type { I18nAdmin } from '../i18n/admin/interface.ts';
 import { I18nAdminDe } from '../i18n/admin/de';
 import { I18nAdminEn } from '../i18n/admin/en';
+import { I18nAdminFr } from '../i18n/admin/fr';
 import { I18nAdminKo } from '../i18n/admin/ko';
 import { I18nAdminNb } from '../i18n/admin/nb';
 import { I18nAdminRu } from '../i18n/admin/ru';
@@ -31,6 +32,7 @@ export function useI18nAdmin(): I18nAdmin {
 const i18nMap: Record<string, I18nAdmin> = {
     de: I18nAdminDe,
     en: I18nAdminEn,
+    fr: I18nAdminFr,
     ko: I18nAdminKo,
     nb: I18nAdminNb,
     ru: I18nAdminRu,

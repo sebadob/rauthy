@@ -47,6 +47,7 @@ impl I18nEmailPasswordNew<'_> {
         match lang {
             Language::De => (&tpls.de).into(),
             Language::En => (&tpls.en).into(),
+            Language::Fr => (&tpls.fr).into(),
             Language::Ko => (&tpls.ko).into(),
             Language::Nb => (&tpls.nb).into(),
             Language::Ru => (&tpls.ru).into(),

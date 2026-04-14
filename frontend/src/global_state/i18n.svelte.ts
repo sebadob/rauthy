@@ -2,6 +2,7 @@ import { useLang } from '$state/language.svelte';
 import { type I18n } from '../i18n/common/interface';
 import { I18nEn } from '../i18n/common/en';
 import { I18nDe } from '../i18n/common/de';
+import { I18nFr } from '../i18n/common/fr';
 import { I18nKo } from '../i18n/common/ko';
 import { I18nNb } from '../i18n/common/nb';
 import { I18nRu } from '../i18n/common/ru';
@@ -31,6 +32,7 @@ export function useI18n(): I18n {
 const i18nMap: Record<string, I18n> = {
     de: I18nDe,
     en: I18nEn,
+    fr: I18nFr,
     ko: I18nKo,
     nb: I18nNb,
     ru: I18nRu,
