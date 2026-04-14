@@ -5,7 +5,7 @@ use std::time::Duration;
 use time::OffsetDateTime;
 use tokio::fs;
 use tokio::task;
-use tracing::info;
+use tracing::{error, info};
 
 static SELF_SIGNED_DIR: &str = "tls";
 static SELF_SIGNED_KEY: &str = "tls/self_signed_key.pem";
@@ -16,7 +16,6 @@ pub async fn load_tls() -> rustls::ServerConfig {
 
     let (key_path, cert_path) = if vars.generate_self_signed {
         check_generate_tls().await;
-
         (SELF_SIGNED_KEY.to_string(), SELF_SIGNED_CERT.to_string())
     } else {
         // unwrap is fine here, since it should never be called with both paths set anyway
@@ -30,7 +29,18 @@ pub async fn load_tls() -> rustls::ServerConfig {
             .as_deref()
             .unwrap_or("tls/tls.crt")
             .to_string();
-        (key_path, cert_path)
+
+        if !fs::try_exists(&key_path).await.unwrap_or(false)
+            || !fs::try_exists(&cert_path).await.unwrap_or(false)
+        {
+            error!(
+                "Cannot load TLS certificates from {key_path} / {cert_path} - using self-signed as fallback"
+            );
+            check_generate_tls().await;
+            (SELF_SIGNED_KEY.to_string(), SELF_SIGNED_CERT.to_string())
+        } else {
+            (key_path, cert_path)
+        }
     };
 
     tls_hot_reload::load_server_config(key_path, cert_path).await

@@ -18,8 +18,7 @@ The steps to deploy on Kubernetes are pretty simple.
 ### Create Namespace
 
 For the purpose of this documentation, we assume that Rauthy will be deployed in the `rauthy`
-namespace.  
-If this is not the case for you, change the following commands accordingly.
+namespace. If this is not the case for you, change the following commands accordingly.
 
 ```
 kubectl create ns rauthy
@@ -33,12 +32,85 @@ This documentation will manage the Kubernetes files in a folder called `rauthy`.
 mkdir rauthy && cd rauthy
 ```
 
-Create the config file, paste the [Reference Config](../config/config.md) and adjust it to your
-needs. We are putting the complete config in a K8s secret. Rauthy's config contains quite a few
-different secret values and it's just a lot simpler to maintain everything in a single secret, than
-splitting it into a `ConfigMap` and overwrite each secret manually.
+For creating the config, you have different options. You can either start from the
+full [Reference Config](../config/config.md), or
+the [Minimal Production Config](../config/config_minimal.md), or you can use the CLI to generate
+one. Both the [Minimal Production Config](../config/config_minimal.md) and CLI generator though do
+not provide all possible options. They are recommended for getting started, but once going into
+production, it is a good idea to go over the complete [Reference Config](../config/config.md).
 
+#### Option 1: From reference config
+
+You can use either the [Reference Config](../config/config.md) or
+the [Minimal Production Config](../config/config_minimal.md). Copy the values into `config.toml`,
+open it in an editor of your choice, and adapt them to your liking.
+
+#### Option 2: Config generation via CLI
+
+This is a new option since Rauthy v0.35. You can use the CLI to get you started with the config.
+
+For security reasons, the binray inside the container runs as `10001:10001`. Lets create a new
+directory with proper access rights, so it can write to it:
+
+```bash
+mkdir data && sudo chown 10001:$(id -g) data
 ```
+
+Since we will use the binary from inside the container image, we will create an `alias` first:
+
+```bash
+alias rauthy='docker run -it --rm -v $(pwd)/data:/app/data ghcr.io/sebadob/rauthy'
+```
+
+Make sure it works:
+
+```bash
+rauthy --help
+```
+
+We can then use it to generate a config:
+
+```bash
+rauthy generate-config -o data/config-generated.toml
+```
+
+Since the CLI will lock down the config in terms of access rights, you will only be able to access
+it with `sudo`:
+
+```bash
+sudo cat data/config-generated.toml
+```
+
+Now move it in place and make sure we can read it:
+
+```bash
+sudo mv data/config-generated.toml config.toml && \
+sudo chown $(id -u):$(id -g) config.toml
+```
+
+#### Create K8s Config
+
+Since the config contains sensitive information, I highly suggest to put the whole config in a
+secret instead of a ConfigMap. You could of course split it and provide all sensitive values via
+a separate secret, and then provide them via ENV vars, but having the full config in a secret is a
+lot more straight forward imo.
+
+Let's create a new Secret from our `config.toml` file. You could auto-generate it like shown
+below, but this would have the problem, that the file is already base64 encoded and not easily
+modifyable later on:
+
+```bash
+kubectl create secret generic rauthy-config \
+  --from-file=config.toml \
+  --namespace=rauthy \
+  --dry-run=client \
+  -o yaml > rauthy-config.yaml
+```
+
+If you want to have it more convenient, you can create it manually and use `stringData` to keep it
+readable on disk:
+
+```bash
 apiVersion: v1
 kind: Secret
 metadata:
@@ -47,28 +119,38 @@ metadata:
 type: Opaque
 stringData:
   config.toml: |
-    PASTE CONFIG HERE - WATCH THE INDENTATION'
+    # Paste your whole config file here. whatch the indentation.
 ```
 
-Open the config with your favorite editor and paste the [Reference Config](../config/config.md) in
-place.  
-Make sure to watch the indentation.
+**If you did NOT use the CLI generator**
 
-```admonish note
-I recommend to just always set `cluster.node_id_from = "k8s"` when deploying a StatefulSet. This 
-will parse the Raft NodeID automatically from the K8s Pod / Hostname and you don't have to worry 
-about the `node_id`. For instance, a Pod named `rauthy-0` will be translated to `node_id = 1` 
-automatically.
-```
+If you did not use the CLI generator, you need to generate secrets and enc keys manually. You could
+either do it 100% by hand with e.g. `openssl`, or you can use the CLI.
 
-There are some values that you need to generate on your own. These are:
+You need to generate the following secrets and keys:
 
 - `cluster.secret_raft` + `cluster.secret_api`
 - `encryption.keys` + `encryption.key_active`
 
 The secrets for the `cluster` can be just some long random alphanumeric values. They are used for
-authentication for the Hiqlite Raft + API layer. The encryption keys must be generated. More
+authentication for the Hiqlite Raft + API layer. The encryption keys must be generated. A more
 detailed explanation is in the [Encryption](../config/encryption.md) section. The tl;dr is:
+
+**Option 1: CLI**
+
+If you have not set the `alias` from above yet:
+
+```bash
+alias rauthy='docker run -it --rm ghcr.io/sebadob/rauthy'
+```
+
+Then generate secrets:
+
+```bash
+rauthy generate-secrets && rauthy generate-enc-key
+```
+
+**Option 2: `openssl`**
 
 ```
 echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
@@ -425,10 +507,14 @@ spec:
 
 #### Hiqlite Internal TLS
 
-You can of course also provide TLS certificates for the Hiqlite internal communication. Two
-independent networks are created: one for the Raft-Internal network traffic like heartbeats and data
-replication, and a second one for the "external" Hiqlite API. This is used by other Hiqlite cluster
-members for management purposes and to execute things like consistent queries on the leader node.
+If you can encrypted in-cluster traffic for a zero-trust architecture, the
+`cluster.tls_auto_certificates` options is the recommended way to go. It is maintenance-free, and
+just works. However, you can provide your own certificates if you like.
+
+Two independent networks are created: one for the Raft-Internal network traffic like heartbeats and
+data replication, and a second one for the "external" Hiqlite API. This is used by other Hiqlite
+cluster members for management purposes and to execute things like consistent queries on the leader
+node.
 
 You can provide TLS certificates for both of them independently via the following config variables:
 

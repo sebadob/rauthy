@@ -9,6 +9,7 @@
   - [Shutdown](./getting_started/shutdown.md)
 
 - [Production Config](config/production_config.md)
+  - [Rauthy CLI](config/cli.md)
   - [Minimal Production Config](config/config_minimal.md)
   - [Password Hashing](config/argon2.md)
   - [Passkeys](config/passkeys.md)

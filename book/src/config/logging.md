@@ -1,16 +1,12 @@
 # Logging and Auditing
 
 Rauthy logs most things into the console, depending on the configuration of different log levels. In
-addition, more
-important events can be sent to Matrix, Slack or via E-Mail. All of this is highly configurable and
-you should be able
-to achieve whatever you need. All events are logged into the console as well with their configured
-level. This means,
-if Rauthy fires an event of type `NewUser` with the level `info` and you have configured a log level
-of at least the
-same, you will see the event in the console as well. So you could only use log aggregation and use
-existing tools
-without configuring other targets and still catch everything.
+addition, more important events can be sent to Matrix, Slack or via E-Mail. All of this is
+configurable, and you should be able to achieve whatever you need. All events are logged into the
+console as well with their configured level. This means, if Rauthy fires an event of type `NewUser`
+with the level `info` and you have configured a log level of at least the same, you will see the
+event in the console as well. So you could only use log aggregation and use existing tools without
+configuring other targets and still catch everything.
 
 ## Logging
 
@@ -19,8 +15,8 @@ You can configure not only different levels for logging, but also different targ
 ### `LOG_LEVEL`
 
 The `LOG_LEVEL` variable configures the default logging in most situations. This defines the logging
-for instance
-for logging information from different function runs or things that have been triggered.
+for instance, for logging information from different function runs or things that have been
+triggered.
 
 ```toml
 [logging]
@@ -35,12 +31,9 @@ level = 'info'
 ### `LOG_LEVEL_DATABASE`
 
 The Hiqlite database logging is at the time of writing pretty verbose on purpose. The whole
-persistence layer with the
-Raft cluster setup has been written from the ground up. The amount of logging will be reduced in
-later versions, when
-the whole layer has been proven to be really solid, but for now you get more information just in
-case you need to debug
-something.
+persistence layer with the Raft cluster setup has been written from the ground up. The amount of
+logging will be reduced in later versions, when the whole layer has been proven to be really solid,
+but for now you get more information just in case you need to debug something.
 
 You can reduce the default logging and for instance set it to `warn` or `error` only.
 
@@ -57,10 +50,8 @@ level_database = 'info'
 ### `LOG_LEVEL_ACCESS`
 
 For changing the logging behavior for access logs to the API endpoints, you will need to set the
-`LOG_LEVEL_ACCESS`.
-If you have access logging configured at your firewall or reverse proxy, you can disable the
-`LOG_LEVEL_ACCESS` fully
-to reduce duplicated log outputs.
+`LOG_LEVEL_ACCESS`. If you have access logging configured at your firewall or reverse proxy, you can
+disable the `LOG_LEVEL_ACCESS` fully to reduce duplicated log outputs.
 
 ```toml
 [logging]
@@ -108,11 +99,9 @@ log_fmt = 'json'
 ## Events
 
 Events are used for auditing and never miss anything. If something important happens, you usually
-need to inspect logs
-to catch it, but why should you, if you did not notice any problems? This is where Rauthy Events are
-helping you out.
-You need to set up basic configuration for Event targets and then you could customize the different
-levels.
+need to inspect logs to catch it, but why should you, if you did not notice any problems? This is
+where Rauthy Events are helping you out. You need to set up basic configuration for Event targets
+and then you could customize the different levels.
 
 ### Basic Setup
 
@@ -127,8 +116,7 @@ You can see the full set of config option in the `[events]` in the [Reference Co
 #### E-Mail
 
 To be able to receive Events via E-Mail, you need to have set up an SMTP server and have a working
-connection. With
-a working SMTP, you only need to set `events.email`, that's it.
+connection. With a working SMTP, you only need to set `events.email`, that's it.
 
 ```toml
 [events]
@@ -141,12 +129,9 @@ email = 'admin@localhost'
 #### Matrix
 
 Matrix is often deployed with home servers that may not even have real TLS certificates or if just
-running behind closed
-doors, may use self-signed certificates. To make it work in all of these situations, you can
-configure quite a lot for
-the connection to Matrix. In the end, you will only need to have some credentials and a room ID, so
-Rauthy knows where
-it should post the events.
+running behind closed doors, may use self-signed certificates. To make it work in all of these
+situations, you can configure quite a lot for the connection to Matrix. In the end, you will only
+need to have some credentials and a room ID, so Rauthy knows where it should post the events.
 
 ```toml
 [events]
@@ -209,16 +194,16 @@ matrix_error_no_panic = false
 ```
 
 ```admonish hint
-I suggest that you create a separate room for these events. If you experience issues with Matrix encryption, you should
-maybe disable the encryption for the Events room. I came across some weird errors from Matrix in the past when I was
-using a session token which has been created on another machine.
+I suggest that you create a separate room for these events. If you experience issues with Matrix 
+encryption, you should maybe disable the encryption for the Events room. I came across some weird 
+errors from Matrix in the past when I was using a session token which has been created on another 
+machine.
 ```
 
 #### Slack
 
 To receive messages via Slack, you need to create a legacy webhook inside your Slack account. This
-is then the only
-config variable you need to set:
+is then the only config variable you need to set:
 
 ```toml
 [events]
@@ -232,10 +217,8 @@ slack_webhook = ""
 #### Custom Target
 
 If you need your events to be sent somewhere custom, you can always create an API key with `read`
-access for Events.
-Then write a small app that simply listens to the events stream, which can process or just forwards
-the events to where
-ever you need them.
+access for Events. Then write a small app that simply listens to the events stream, which can
+process or just forwards the events to where ever you need them.
 
 1. Log in to the Admin UI and create an API key with `read` access for events.
 
@@ -274,8 +257,8 @@ Authorization: API-Key events$SUcpBxcPmfwH9z1Kb4ExOUYDSXpxOj9mFLadjuQ1049XaWzdWB
 ```
 
 You can either periodically fetch via the `/auth/v1/events` endpoint (see Swagger documentation in
-the Admin UI), or
-by listening to the `/auth/v1/events/stream`, which will be a Server Sent Events stream.
+the Admin UI), or by listening to the `/auth/v1/events/stream`, which will be a Server Sent Events
+stream.
 
 The events will be sent in JSON format and have the following content:
 
@@ -321,31 +304,29 @@ enum EventType {
   SuspiciousApiScan,
   LoginNewLocation,
   TokenIssued,
+  CredentialStuffing,
 }
 ```
 
 ```admonish note
-Keep in mind, that depending on proxies you might have in between, they might kill your connection to the events stream
-after some timeout without messages. Your app should work around this and either re-connect on connection loss, or you
-could fix it with a different proxy config or keep alive messages.
+Keep in mind, that depending on proxies you might have in between, they might kill your connection 
+to the events stream after some timeout without messages. Your app should work around this and 
+either re-connect on connection loss, or you could fix it with a different proxy config or keep 
+alive messages.
 ```
 
 ### Testing
 
 You can test your Event handler / pipeline setup when you log in to the Admin UI and simply press
-the `Test` button
-in the upper right corner in the Events sidebar. This will send a Test event to all configured
-targets and listeners
-independent of any configured event level restrictions. Test events will always be sent as long as
-everything is working
-properly.
+the `Test` button in the upper right corner in the Events sidebar. This will send a Test event to
+all configured targets and listeners independent of any configured event level restrictions. Test
+events will always be sent as long as everything is working properly.
 
 ### `EVENT_NOTIFY_LEVEL`
 
 You can set different levels for each target. By default, Only events with `warning` or higher are
-sent via E-Mail
-while Matrix / Slack would receive Events with `notice` or higher. If you want a different behavior,
-you can get this:
+sent via E-Mail while Matrix / Slack would receive Events with `notice` or higher. If you want a
+different behavior, you can get this:
 
 ```toml
 [events]
@@ -372,14 +353,11 @@ notify_level_slack = 'notice'
 ### Event Persistence
 
 Rauthys Admin UI has a component for inspecting Events from the past for analytical purposes. By
-default, events with
-the level `info` or higher are persisted for `31` days. After this period, they will be removed from
-the database to
-keep it clean.
+default, events with the level `info` or higher are persisted for `31` days. After this period, they
+will be removed from the database to keep it clean.
 
 You can configure both the level which should be persisted, for instance set "only persist Events
-with level warning
-or higher" and the days how long they should be kept.
+with level warning or higher" and the days how long they should be kept.
 
 ```toml
 [events]
@@ -407,14 +385,11 @@ cleanup_days = 30
 ### `level_*` Values
 
 There are a lot of values starting with `level_*`. These can be used to configure the level for
-different kinds
-of event being fired by Rauthy.
+different kinds of event being fired by Rauthy.
 
 For instance, let's say you only want to receive events with a level of `warning` or higher, but you
-also want to
-receive a notification when there are more than 7 failed logins from an IP. By default, 7 failed
-logins would trigger an
-event with the level of `notice`. You can then set
+also want to receive a notification when there are more than 7 failed logins from an IP. By default,
+7 failed logins would trigger an event with the level of `notice`. You can then set
 
 ```toml
 [events]

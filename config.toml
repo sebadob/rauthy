@@ -1160,7 +1160,7 @@ smtp_from = 'Rauthy <rauthy@localhost>'
 # it, unless you have no other choice or a very good reason.
 #
 # If you specify another value than ´default`, you must provide
-# all the additional `x_oauth_*` values bwloe.
+# all the additional `x_oauth_*` values below.
 #
 # possible values: 'default', 'xoauth2', 'microsoft_graph'
 # default: 'default'
@@ -2412,7 +2412,6 @@ footer = ''
 # Exists only for password reset E-Mails for initialized accounts or
 # `email_registered_already`
 button_text_request_new = ''
-
 
 [tls]
 ## UI + API TLS

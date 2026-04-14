@@ -15,10 +15,10 @@ in `v0.32.1`. The full report can be found
 
 ## What it is
 
-Rauthy is a lightweight and easy to use Identity Provider supporting OpenID Connect, OAuth 2.0 and
+Rauthy is a lightweight and easy to use Identity Provider supporting OpenID Connect, OAuth 2, and
 PAM. It aims to be simple to both set up and operate, with very secure defaults and lots of config
 options, if you need the flexibility. It puts heavy emphasis on Passkeys and a very strong security
-in general. The project is written in Rust to be as memory efficient, secure and fast as possible,
+in general. The project is written in Rust to be as memory efficient, secure, and fast as possible,
 and it can run on basically any hardware. If you need Single Sign-On support for IoT or headless CLI
 tools, it's got you covered as well.
 
@@ -39,16 +39,15 @@ which do not support it, but you can of course deactivate this to your liking.
 **Option 1:**  
 Password + Security Key (without User Verification):  
 Rauthy provides FIDO 2 / Webauthn login flows. If you once logged in on a new client with your
-username + password, you will get an encrypted cookie which will allow you to log in without a
+username and password, you will get an encrypted cookie which will allow you to log in without a
 password from that moment on. You only need to have a FIDO compliant Passkey being registered for
 your account.
 
 **Option 2:**  
 Passkey-Only Accounts:  
-Rauthy supports Passkey-Only-Accounts: you basically just provide your E-Mail address and log in
-with your FIDO 2 Passkey. Your account will not even have / need a password. This login flow is
-restricted though to only those passkeys, that can provide User Verification (UV) to always have at
-least 2FA security.
+Rauthy supports Passkey-Only-Accounts: you provide your E-Mail address and log in with your FIDO 2
+Passkey. Your account will not even have / need a password. This login flow is restricted, though,
+to only those passkeys that can provide User Verification (UV) to always have at least 2FA security.
 
 ```admonish info
 Discoverable credentials are discouraged with Rauthy (for good reason). This means you will need
@@ -72,22 +71,26 @@ Rauthy comes with two database options:
   anyway.
 
 The resource usage depends a lot on your setup (Hiqlite, Postgres, HA deployment, amount of
-users, ...), but for a small set of users, it is usually below 100mb of memory even with the very
-aggressive, in-memory caching Rauthy uses, and in some cases even below 50mb.
+users, ...). However, if you apply memory allocator tuning from the book, and you have a small set
+of users, it usually looks like this:
+
+- Hiqlite single instance ~57mb
+- Hiqlite HA cluster ~65mb
+- Postgres-based ~35 mb
 
 ### Highly Available
 
 Even though it makes extensive use of caching, you can run it in HA
-mode. [Hiqlite](https://github.com/sebadob/hiqlite) creates its own embedded HA cache and
-persistence layer. Such a deployment is possible with
+mode with external dependencies. [Hiqlite](https://github.com/sebadob/hiqlite) creates its own
+embedded HA cache and persistence layer. Such a deployment is possible with
 both [Hiqlite](https://github.com/sebadob/hiqlite) and Postgres.
 
 ### Admin UI + User Account Dashboard
 
 Rauthy does have an Admin UI which can be used to basically do almost any operation you might need
 to administrate the whole application and its users. There is also an account dashboard for each
-individual user, where users will get a basic overview over their account and can self-manage some
-values, password, passkeys, and so on.
+user, where users will get a basic overview over their account and can self-manage some values,
+password, passkeys, and so on.
 
 ![Admin UI](https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/users.png)
 
@@ -96,7 +99,7 @@ values, password, passkeys, and so on.
 ### Client Branding
 
 You have a simple way to create a branding or stylized look for the Login page for each client. The
-whole color theme can be changed and each client can have its own custom logo. Additionally, if you
+whole color theme can be changed, and each client can have its own custom logo. Additionally, if you
 modify the branding for the default `rauthy` client, it will not only change the look for the Login
 page, but also for the Account and Admin page.
 
@@ -105,22 +108,27 @@ page, but also for the Account and Admin page.
 ### Events and Auditing
 
 Rauthy comes with an Event- and Alerting-System. Events are generated in all kinds of scenarios.
-They can be sent via E-Mail, Matrix or Slack, depending on the severity and the configured level.
+They can be sent via E-Mail, Matrix, or Slack, depending on the severity and the configured level.
 You will see them in the Admin UI in real-time, or you can subscribe to the events stream and
 externally handle them depending on your own business logic.
 
-### Brute-Force and basic DoS protection
+### Brute-Force, Credential Stuffing, basic DoS protection, Geo-Blocking
 
-Rauthy has brute-force and basic DoS protection for the login endpoint. The timeout will be
-artificially delayed after enough invalid logins. It auto-blacklists IPs that exceeded too many
-invalid logins, with automatic expiry of the blacklisting. You can, if you like, manually blacklist
-certain IPs as well via the Admin UI.
+Rauthy has brute-force, credential stuffing, and basic DoS protection for the login endpoint. The
+timeout will be artificially delayed after enough invalid logins. It auto-blacklists IPs that
+exceeded too many invalid logins, with automatic expiry of the blacklisting. You can, if you like,
+manually blacklist certain IPs as well via the Admin UI.
+
+On top of that, Rauthy can block requests depending on geolocation data. It can either grab that
+information from a custom header, e.g. when your CDN provides it, or you can add
+a [Maxmind](https://www.maxmind.com/en/home) account to the config, and Rauthy will download a
+database automatically.
 
 ### IoT Ready
 
 With the possibility to run on devices with very limited resources and having compatibility for the
 OAuth Device Authorization Grant `device_code` flow, Rauthy would be a very good choice for IoT
-projects. The IdP itself can easily run on a Raspberry Pi and all headless devices can be
+projects. The IdP itself can easily run on a Raspberry Pi, and all headless devices can be
 authenticated via the `device_code` flow. The `rauthy-client` has everything built-in and ready, if
 you want to use Rust on the IoT devices as well. It has not been checked in a `no_std` environment
 yet, but the client implementation is pretty simple.
@@ -130,17 +138,17 @@ yet, but the client implementation is pretty simple.
 OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes
 with `forward_auth` support. To not need an additional LDAP / AD / something similar for your
 backend and workstations, Rauthy comes with its own custom PAM module. It does not just use JWT
-Tokens for logging in, but you can actually manage all your Linux hosts, groups and users in
+Tokens for logging in, but you can actually manage all your Linux hosts, groups, and users in
 different ways. You have the option to secure local logins to workstations via Yubikey (only USB
-Passkeys supported, no QR-code / software keys), and all SSH logins can be done with ephemeral,
-auto-expiring passwords, that you can generate via your Account dashboard, if an Admin has created a
-PAM user for you. This means you basically have MFA-secured SSH logins without the need for any
-modifications or additional software on your local SSH client, and you can use any SSH client from
-any machine securely, even if it's not your own.
+Passkeys supported, no QR-code / software keys) All SSH logins can be done with ephemeral,
+auto-expiring passwords, that you can generate via your Account dashboard, or via SSH public key.
+The only prerequisite is that an Admin created a PAM user for the account. This means you have
+MFA-secured SSH logins without the need for any modifications or additional software on your local
+SSH client, and you can use any SSH client from any machine securely, even if it's not your own.
 
 In addition to the PAM module, you get an NSS module and an NSS proxy that runs on each machine. You
 can dynamically log in to any machine an Admin has given you access to. Users and groups are not
-added to local files, but will be resolved via the network.
+added to local files but will be resolved via the network.
 
 This module is published in a separate repo to avoid licensing issues, since it relies on some GPLv3
 dependencies. You can take a look at it
@@ -150,14 +158,14 @@ here: [rauthy-pam-nss](https://github.com/sebadob/rauthy-pam-nss).
 
 Rauthy has no issue handling even millions of users. Everything keeps being fast and responsive,
 apart from the search function for users in the Admin UI when you reach the 10+ million users, where
-searching usually takes ~3 seconds (depending on your server of course).   
+searching usually takes ~3 seconds (depending on your server, of course).   
 The only limiting factor at that point will be your configuration and needs for password hashing
 security. It really depends on how many resources you want to use for hashing (more resources ==
 more secure) and how many concurrent logins at the exact same time you need to support.
 
 ### Features List
 
-- [x] Fully working OIDC / OAuth 2.0 provider
+- [x] Fully working OIDC / OAuth 2 provider
 - [x] PAM logins via custom PAM + NSS modules
 - [x] [Hiqlite](https://github.com/sebadob/hiqlite) or Postgres as database
 - [x] Fast and efficient with low footprint
@@ -170,14 +178,14 @@ more secure) and how many concurrent logins at the exact same time you need to s
 - [x] OpenID Connect Dynamic Client Registration
 - [x] OpenID Connect RP Initiated Logout
 - [x] OpenID Connect Backchannel Logout
-- [x] OAuth 2.0 Device Authorization Grant flow
+- [x] OAuth 2 Device Authorization Grant flow
 - [x] Upstream Authentication Providers (Login with ...)
 - [x] DPoP tokens for decentralized login flows
 - [x] Ephemeral, dynamic clients for decentralized login flows
 - [x] SCIM v2 for downstream clients
 - [x] All End-User facing sites support i18n server-side translation
   with the possibility to add more languages
-- [x] Simple per client branding for the login page
+- [x] Simple per-client branding for the login page
 - [x] Custom roles
 - [x] Custom groups
 - [x] Custom scopes
@@ -192,7 +200,8 @@ more secure) and how many concurrent logins at the exact same time you need to s
   with support for configurable trusted auth headers
 - [x] Optional event notifications via: E-Mail, Matrix, Slack
 - [x] Optional Force MFA for the Admin UI
-- [x] Optional Force MFA for each individual client
+- [x] Optional Force MFA for each client
+- [x] Restrict logins to clients via group prefix
 - [x] Additional encryption inside the database for the most critical entries
 - [x] Automatic database backups with configurable retention and
   auto-cleanup ([Hiqlite](https://github.com/sebadob/hiqlite) only)
@@ -204,6 +213,9 @@ more secure) and how many concurrent logins at the exact same time you need to s
 - [x] Session client peer IP binding
 - [x] IP blacklisting feature
 - [x] Auto-IP blacklisting for login endpoints
+- [X] Brute-Force and Credential Stuffing detection
+- [x] Geolocation-based access restriction
+- [x] Namespaced K/V store for arbitrary JSON data
 - [x] Argon2ID with config helper UI utility
 - [x] Housekeeping schedulers and cron jobs
 - [x] JSON Web Key Set (JWKS) autorotation feature

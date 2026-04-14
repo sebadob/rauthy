@@ -487,6 +487,9 @@ release:
     # make sure git is clean
     git diff --quiet || exit 1
 
+    # make sure we always tag from `main` to never have a detached head
+    # TODO
+
     git tag "v$TAG"
     git push origin "v$TAG"
 
