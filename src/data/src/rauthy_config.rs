@@ -651,13 +651,14 @@ impl Default for Vars {
                     },
                     ko: VarsTemplate
                     {
-                        subject: "新密码".into(),
-                        header: "新密码".into(),
+                       subject: "새 비밀번호".into(),
+                        header: "새 비밀번호를 설정해 주세요:".into(),
                         text: None,
-                        click_link: Some("点击下方链接以打开密码设置表单。".into()),
-                        validity: Some("出于安全考虑，此链接仅在短时间内有效。".into()),
-                        expires: Some("链接过期时间：".into()),
-                        button: Some("设置密码".into()),
+                        click_link: Some("비밀번호 입력창으로 이동하려면, 아래의 링크를 클릭해 주세요."
+                                .into()),
+                        validity: Some("이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into()),
+                        expires: Some("링크 만료일:".into()),
+                        button: Some("비밀번호 설정".into()),
                         footer: None,
                         button_text_request_new: None,
                     },
@@ -708,16 +709,16 @@ impl Default for Vars {
                     },
                     zhhans: VarsTemplate
                     {
-                        subject: "새 비밀번호".into(),
-                        header: "새 비밀번호를 설정해 주세요:".into(),
+                         subject: "新密码".into(),
+                        header: "新密码".into(),
                         text: None,
-                        click_link: Some("비밀번호 입력창으로 이동하려면, 아래의 링크를 클릭해 주세요."
-                                .into()),
-                        validity: Some("이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into()),
-                        expires: Some("링크 만료일:".into()),
-                        button: Some("비밀번호 설정".into()),
+                        click_link: Some("点击下方链接以打开密码设置表单。".into()),
+                        validity: Some("出于安全考虑，此链接仅在短时间内有效。".into()),
+                        expires: Some("链接过期时间：".into()),
+                        button: Some("设置密码".into()),
                         footer: None,
                         button_text_request_new: None,
+
                     },
                 },
                 password_reset: VarsTemplatesLanguages {
@@ -764,16 +765,18 @@ impl Default for Vars {
                         footer: Some("Si ce lien a expiré, vous pouvez en demander un nouveau.".into()),
                         button_text_request_new: Some("Demander un nouveau lien".into()),
                     },
-                    ko: VarsTemplate {
-                        subject: "密码重置请求".into(),
-                        header: "密码重置请求：".into(),
+                    ko: VarsTemplate {subject: "비밀번호 초기화 요청".into(),
+                        header: "비밀번호 초기화 요청:".into(),
                         text: None,
-                        click_link: Some("点击下方链接以打开密码重置表单。".into()),
-                        validity: Some("出于安全考虑，此链接仅在短时间内有效。".into()),
-                        expires: Some("链接过期时间".into()),
-                        button: Some("重置密码".into()),
+                        click_link:
+                        Some("비밀번호 초기화 요청 창으로 이동하려면, 아래의 링크를 클릭해 주세요."
+                                .into()),
+                        validity: Some("이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into()),
+                        expires: Some("링크 만료일:".into()),
+                        button: Some("비밀번호 초기화".into()),
                         footer: Some("If this link has expired, you can request a new one.".into()),
                         button_text_request_new: Some("Request New Link".into()),
+
                     },
                     nb: VarsTemplate {
                         subject: "Passordtilbakestilling etterspurt".into(),
@@ -820,15 +823,13 @@ impl Default for Vars {
                         button_text_request_new: Some("Запросити нове посилання".into()),
                     },
                     zhhans: VarsTemplate {
-                        subject: "비밀번호 초기화 요청".into(),
-                        header: "비밀번호 초기화 요청:".into(),
+                        subject: "密码重置请求".into(),
+                        header: "密码重置请求：".into(),
                         text: None,
-                        click_link:
-                        Some("비밀번호 초기화 요청 창으로 이동하려면, 아래의 링크를 클릭해 주세요."
-                                .into()),
-                        validity: Some("이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.".into()),
-                        expires: Some("링크 만료일:".into()),
-                        button: Some("비밀번호 초기화".into()),
+                        click_link: Some("点击下方链接以打开密码重置表单。".into()),
+                        validity: Some("出于安全考虑，此链接仅在短时间内有效。".into()),
+                        expires: Some("链接过期时间".into()),
+                        button: Some("重置密码".into()),
                         footer: Some("If this link has expired, you can request a new one.".into()),
                         button_text_request_new: Some("Request New Link".into()),
                     },
