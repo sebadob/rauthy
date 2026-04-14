@@ -169,22 +169,18 @@
                     <main>
                         <h1 id="logging-and-auditing"><a class="header" href="#logging-and-auditing">Logging and Auditing</a></h1>
 <p>Rauthy logs most things into the console, depending on the configuration of different log levels. In
-addition, more
-important events can be sent to Matrix, Slack or via E-Mail. All of this is highly configurable and
-you should be able
-to achieve whatever you need. All events are logged into the console as well with their configured
-level. This means,
-if Rauthy fires an event of type <code>NewUser</code> with the level <code>info</code> and you have configured a log level
-of at least the
-same, you will see the event in the console as well. So you could only use log aggregation and use
-existing tools
-without configuring other targets and still catch everything.</p>
+addition, more important events can be sent to Matrix, Slack or via E-Mail. All of this is
+configurable, and you should be able to achieve whatever you need. All events are logged into the
+console as well with their configured level. This means, if Rauthy fires an event of type <code>NewUser</code>
+with the level <code>info</code> and you have configured a log level of at least the same, you will see the
+event in the console as well. So you could only use log aggregation and use existing tools without
+configuring other targets and still catch everything.</p>
 <h2 id="logging"><a class="header" href="#logging">Logging</a></h2>
 <p>You can configure not only different levels for logging, but also different targets / situations.</p>
 <h3 id="log_level"><a class="header" href="#log_level"><code>LOG_LEVEL</code></a></h3>
 <p>The <code>LOG_LEVEL</code> variable configures the default logging in most situations. This defines the logging
-for instance
-for logging information from different function runs or things that have been triggered.</p>
+for instance, for logging information from different function runs or things that have been
+triggered.</p>
 <pre><code class="language-toml">[logging]
 # This is the log level for stdout logs
 # Accepts: error, warn, info, debug, trace
@@ -195,12 +191,9 @@ level = 'info'
 </code></pre>
 <h3 id="log_level_database"><a class="header" href="#log_level_database"><code>LOG_LEVEL_DATABASE</code></a></h3>
 <p>The Hiqlite database logging is at the time of writing pretty verbose on purpose. The whole
-persistence layer with the
-Raft cluster setup has been written from the ground up. The amount of logging will be reduced in
-later versions, when
-the whole layer has been proven to be really solid, but for now you get more information just in
-case you need to debug
-something.</p>
+persistence layer with the Raft cluster setup has been written from the ground up. The amount of
+logging will be reduced in later versions, when the whole layer has been proven to be really solid,
+but for now you get more information just in case you need to debug something.</p>
 <p>You can reduce the default logging and for instance set it to <code>warn</code> or <code>error</code> only.</p>
 <pre><code class="language-toml">[logging]
 # The log level for the `Hiqlite` persistence layer.
@@ -212,10 +205,8 @@ level_database = 'info'
 </code></pre>
 <h3 id="log_level_access"><a class="header" href="#log_level_access"><code>LOG_LEVEL_ACCESS</code></a></h3>
 <p>For changing the logging behavior for access logs to the API endpoints, you will need to set the
-<code>LOG_LEVEL_ACCESS</code>.
-If you have access logging configured at your firewall or reverse proxy, you can disable the
-<code>LOG_LEVEL_ACCESS</code> fully
-to reduce duplicated log outputs.</p>
+<code>LOG_LEVEL_ACCESS</code>. If you have access logging configured at your firewall or reverse proxy, you can
+disable the <code>LOG_LEVEL_ACCESS</code> fully to reduce duplicated log outputs.</p>
 <pre><code class="language-toml">[logging]
 # This is a special config which allows the configuration of
 # customized access logs. These logs will be logged with each
@@ -255,11 +246,9 @@ log_fmt = 'json'
 </code></pre>
 <h2 id="events"><a class="header" href="#events">Events</a></h2>
 <p>Events are used for auditing and never miss anything. If something important happens, you usually
-need to inspect logs
-to catch it, but why should you, if you did not notice any problems? This is where Rauthy Events are
-helping you out.
-You need to set up basic configuration for Event targets and then you could customize the different
-levels.</p>
+need to inspect logs to catch it, but why should you, if you did not notice any problems? This is
+where Rauthy Events are helping you out. You need to set up basic configuration for Event targets
+and then you could customize the different levels.</p>
 <h3 id="basic-setup"><a class="header" href="#basic-setup">Basic Setup</a></h3>
 <p>Rauthy has the following Event targets built-in:</p>
 <ul>
@@ -270,8 +259,7 @@ levels.</p>
 <p>You can see the full set of config option in the <code>[events]</code> in the <a href="config.html">Reference Config</a>.</p>
 <h4 id="e-mail"><a class="header" href="#e-mail">E-Mail</a></h4>
 <p>To be able to receive Events via E-Mail, you need to have set up an SMTP server and have a working
-connection. With
-a working SMTP, you only need to set <code>events.email</code>, that's it.</p>
+connection. With a working SMTP, you only need to set <code>events.email</code>, that's it.</p>
 <pre><code class="language-toml">[events]
 # The E-Mail address event notifications should be sent to.
 #
@@ -280,12 +268,9 @@ email = 'admin@localhost'
 </code></pre>
 <h4 id="matrix"><a class="header" href="#matrix">Matrix</a></h4>
 <p>Matrix is often deployed with home servers that may not even have real TLS certificates or if just
-running behind closed
-doors, may use self-signed certificates. To make it work in all of these situations, you can
-configure quite a lot for
-the connection to Matrix. In the end, you will only need to have some credentials and a room ID, so
-Rauthy knows where
-it should post the events.</p>
+running behind closed doors, may use self-signed certificates. To make it work in all of these
+situations, you can configure quite a lot for the connection to Matrix. In the end, you will only
+need to have some credentials and a room ID, so Rauthy knows where it should post the events.</p>
 <pre><code class="language-toml">[events]
 # Matrix variables for event notifications.
 # `matrix_user_id` and `matrix_room_id` are mandatory.
@@ -352,15 +337,15 @@ matrix_error_no_panic = false
 <a class="admonition-anchor-link" href="#admonition-hint"></a>
 </div>
 <div>
-<p>I suggest that you create a separate room for these events. If you experience issues with Matrix encryption, you should
-maybe disable the encryption for the Events room. I came across some weird errors from Matrix in the past when I was
-using a session token which has been created on another machine.</p>
+<p>I suggest that you create a separate room for these events. If you experience issues with Matrix
+encryption, you should maybe disable the encryption for the Events room. I came across some weird
+errors from Matrix in the past when I was using a session token which has been created on another
+machine.</p>
 </div>
 </div>
 <h4 id="slack"><a class="header" href="#slack">Slack</a></h4>
 <p>To receive messages via Slack, you need to create a legacy webhook inside your Slack account. This
-is then the only
-config variable you need to set:</p>
+is then the only config variable you need to set:</p>
 <pre><code class="language-toml">[events]
 # The Webhook for Slack Notifications.
 # If left empty, no messages will be sent to Slack.
@@ -370,10 +355,8 @@ slack_webhook = ""
 </code></pre>
 <h4 id="custom-target"><a class="header" href="#custom-target">Custom Target</a></h4>
 <p>If you need your events to be sent somewhere custom, you can always create an API key with <code>read</code>
-access for Events.
-Then write a small app that simply listens to the events stream, which can process or just forwards
-the events to where
-ever you need them.</p>
+access for Events. Then write a small app that simply listens to the events stream, which can
+process or just forwards the events to where ever you need them.</p>
 <ol>
 <li>Log in to the Admin UI and create an API key with <code>read</code> access for events.</li>
 </ol>
@@ -409,8 +392,8 @@ like</li>
 <pre><code>Authorization: API-Key events$SUcpBxcPmfwH9z1Kb4ExOUYDSXpxOj9mFLadjuQ1049XaWzdWB328aa97k2nj21E
 </code></pre>
 <p>You can either periodically fetch via the <code>/auth/v1/events</code> endpoint (see Swagger documentation in
-the Admin UI), or
-by listening to the <code>/auth/v1/events/stream</code>, which will be a Server Sent Events stream.</p>
+the Admin UI), or by listening to the <code>/auth/v1/events/stream</code>, which will be a Server Sent Events
+stream.</p>
 <p>The events will be sent in JSON format and have the following content:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -455,6 +438,7 @@ enum EventType {
   SuspiciousApiScan,
   LoginNewLocation,
   TokenIssued,
+  CredentialStuffing,
 }
 <span class="boring">}</span></code></pre></pre>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
@@ -465,24 +449,21 @@ enum EventType {
 <a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
-<p>Keep in mind, that depending on proxies you might have in between, they might kill your connection to the events stream
-after some timeout without messages. Your app should work around this and either re-connect on connection loss, or you
-could fix it with a different proxy config or keep alive messages.</p>
+<p>Keep in mind, that depending on proxies you might have in between, they might kill your connection
+to the events stream after some timeout without messages. Your app should work around this and
+either re-connect on connection loss, or you could fix it with a different proxy config or keep
+alive messages.</p>
 </div>
 </div>
 <h3 id="testing"><a class="header" href="#testing">Testing</a></h3>
 <p>You can test your Event handler / pipeline setup when you log in to the Admin UI and simply press
-the <code>Test</code> button
-in the upper right corner in the Events sidebar. This will send a Test event to all configured
-targets and listeners
-independent of any configured event level restrictions. Test events will always be sent as long as
-everything is working
-properly.</p>
+the <code>Test</code> button in the upper right corner in the Events sidebar. This will send a Test event to
+all configured targets and listeners independent of any configured event level restrictions. Test
+events will always be sent as long as everything is working properly.</p>
 <h3 id="event_notify_level"><a class="header" href="#event_notify_level"><code>EVENT_NOTIFY_LEVEL</code></a></h3>
 <p>You can set different levels for each target. By default, Only events with <code>warning</code> or higher are
-sent via E-Mail
-while Matrix / Slack would receive Events with <code>notice</code> or higher. If you want a different behavior,
-you can get this:</p>
+sent via E-Mail while Matrix / Slack would receive Events with <code>notice</code> or higher. If you want a
+different behavior, you can get this:</p>
 <pre><code class="language-toml">[events]
 # The notification level for events. Works the same way as
 # a logging level. For instance: 'notice' means send out a
@@ -505,13 +486,10 @@ notify_level_slack = 'notice'
 </code></pre>
 <h3 id="event-persistence"><a class="header" href="#event-persistence">Event Persistence</a></h3>
 <p>Rauthys Admin UI has a component for inspecting Events from the past for analytical purposes. By
-default, events with
-the level <code>info</code> or higher are persisted for <code>31</code> days. After this period, they will be removed from
-the database to
-keep it clean.</p>
+default, events with the level <code>info</code> or higher are persisted for <code>31</code> days. After this period, they
+will be removed from the database to keep it clean.</p>
 <p>You can configure both the level which should be persisted, for instance set "only persist Events
-with level warning
-or higher" and the days how long they should be kept.</p>
+with level warning or higher" and the days how long they should be kept.</p>
 <pre><code class="language-toml">[events]
 # Define the level from which on events should be persisted
 # inside the database. All events with a lower level will be
@@ -535,13 +513,10 @@ cleanup_days = 30
 </code></pre>
 <h3 id="level_-values"><a class="header" href="#level_-values"><code>level_*</code> Values</a></h3>
 <p>There are a lot of values starting with <code>level_*</code>. These can be used to configure the level for
-different kinds
-of event being fired by Rauthy.</p>
+different kinds of event being fired by Rauthy.</p>
 <p>For instance, let's say you only want to receive events with a level of <code>warning</code> or higher, but you
-also want to
-receive a notification when there are more than 7 failed logins from an IP. By default, 7 failed
-logins would trigger an
-event with the level of <code>notice</code>. You can then set</p>
+also want to receive a notification when there are more than 7 failed logins from an IP. By default,
+7 failed logins would trigger an event with the level of <code>notice</code>. You can then set</p>
 <pre><code class="language-toml">[events]
 # default: notice
 # overwritten by: EVENT_LEVEL_FAILED_LOGINS_7

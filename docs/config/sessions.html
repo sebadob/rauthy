@@ -168,15 +168,17 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="sessions"><a class="header" href="#sessions">Sessions</a></h1>
-<p>When you log in to anything, be it your account dashboard, the admin UI, or a downstream application, you will get a
-Rauthy session. This is independent of any client / application login. These sessions are used to authorize against
-Rauthy only for things like account management. Depending on your configuration, users may be logged in to a downstream
-client immediately, if they already have a still valid session.</p>
-<p>You can configure quite a lot like session timeouts and so on, but the default are safe. However, there is one
-really important thing:</p>
-<p><strong>You need to make sure, that Rauthy can extract the connecting clients IP properly. This is
+<p>When you log in to anything, be it your account dashboard, the admin UI, or a downstream
+application, you will get a Rauthy session. This is independent of any client / application login.
+These sessions are used to authorize against Rauthy only for things like account management.
+Depending on your configuration, users may be logged in to a downstream client immediately, if they
+already have a still valid session.</p>
+<p>You can configure quite a lot like session timeouts and so on, but the default are safe. However,
+there is one really important thing:</p>
+<p><strong>You need to make sure that Rauthy can extract the connecting clients IP properly. This is
 very important for failed login counters, login delays, blacklisting, and so on.</strong></p>
-<p>If your instance is exposed directly, in most situations the IP extractions works just fine. This may change though
+<p>If your instance is exposed directly, in most situations the IP extractions works just fine. This
+may change though
 when running behind a reverse proxy or a CDN.</p>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
 <div class="admonition-title">
@@ -186,14 +188,14 @@ when running behind a reverse proxy or a CDN.</p>
 <a class="admonition-anchor-link" href="#admonition-hint"></a>
 </div>
 <div>
-<p>To check which IP Rauthy will extract for your requests, you don't to search through logs. You can use the whoami
-endpoint. This is unauthenticated and will just return your current IP from the request headers. If the returned
-IP is correct, your setup is fine.</p>
+<p>To check which IP Rauthy will extract for your requests, you don't to search through logs. You can
+use the whoami endpoint. This is unauthenticated and will just return your current IP from the
+request headers. If the returned IP is correct, your setup is fine.</p>
 <p>The endpoint is reachable via: <code>/auth/v1/whoami</code></p>
 </div>
 </div>
 <h2 id="running-behind-a-reverse-proxy"><a class="header" href="#running-behind-a-reverse-proxy">Running behind a reverse proxy</a></h2>
-<p>If you are running behind a reverse proxy, you need to set at least 2 config variable properly.<br />
+<p>If you are running behind a reverse proxy, you need to set at least 2 config variables properly.<br />
 First, you need to set</p>
 <pre><code class="language-toml">[server]
 # When rauthy is running behind a reverse proxy, set to true
@@ -202,12 +204,13 @@ First, you need to set</p>
 # overwritten by: PROXY_MODE
 proxy_mode = false
 </code></pre>
-<p>Secondly, you need to tell Rauthy which proxy source IP's it can trust. This is important, because when behind a reverse
-proxy, Rauthy will only see the IP of the proxy itself by default, which would be the same for each client connecting
-though it. However, a reverse proxy adds headers which contain the clients real IP, like e.g. the <code>X-FORWARDED-FOR</code>
-header and maybe others (depending on the proxy).</p>
-<p>These headers can be spoofed from an attacker, if the source IP is not validated. This is what Rauthy needs you to set
-the trusted proxies config for:</p>
+<p>Secondly, you need to tell Rauthy which proxy source IP's it can trust. This is important, because
+when behind a reverse proxy, Rauthy will only see the IP of the proxy itself by default, which would
+be the same for each client connecting through it. However, a reverse proxy adds headers which
+contain the clients real IP, like e.g., the <code>X-FORWARDED-FOR</code> header and maybe others (depending on
+the proxy).</p>
+<p>These headers can be spoofed from an attacker if the source IP is not validated. This is what
+Rauthy needs you to set the trusted proxies config for:</p>
 <pre><code class="language-toml">[server]
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to
@@ -219,10 +222,11 @@ the trusted proxies config for:</p>
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
 trusted_proxies = ['192.168.0.1/32']
 </code></pre>
-<p>The more you can narrow down the CIDR for your reverse proxy, the better. For instance if you know your proxy is your
-firewall at the same time, which always will have the IP <code>192.168.0.1</code>, then add the <code>/32</code> subnet to it. If you are
-running in a more dynamic environment like Docker or Kubernetes, where your proxy could get an IP dynamically from an
-internal pool, you need to add all the possible IPs as trustworthy.</p>
+<p>The more you can narrow down the CIDR for your reverse proxy, the better. For instance if you know
+your proxy is your firewall at the same time, which always will have the IP <code>192.168.0.1</code>, then add
+the <code>/32</code> subnet to it. If you are running in a more dynamic environment like Docker or Kubernetes,
+where your proxy could get an IP dynamically from an internal pool, you need to add all the possible
+IPs as trustworthy.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -232,16 +236,17 @@ internal pool, you need to add all the possible IPs as trustworthy.</p>
 </div>
 <div>
 <p>When Rauthy is running in proxy mode, it will block every incoming request that does not match the
-<code>trusted_proxies</code> IP pool. This means if you have internal tooling set up like health checks, monitoring or
-metrics, which do not connect via the proxy, you need to add these source IPs to the <code>trusted_proxies</code> list.</p>
+<code>trusted_proxies</code> IP pool. This means if you have internal tooling set up like health
+checks, monitoring or metrics, which do not connect via the proxy, you need to add these source IPs
+to the <code>trusted_proxies</code> list.</p>
 </div>
 </div>
 <h3 id="running-behind-a-cdn"><a class="header" href="#running-behind-a-cdn">Running behind a CDN</a></h3>
-<p>If you are running behind a CDN which proxies your requests like for instance cloudflare, you have a reverse proxy
-setup again, just so that cloudflare is (another) reverse proxy for you. This means you need to set up the above
-configuration at least.</p>
-<p>In addition, you would maybe end up seeing the CDN proxy IP when you do a <code>GET /auth/v1/whoami</code>. If this is the case,
-There is an additional variable you can set:</p>
+<p>If you are running behind a CDN which proxies your requests like, for instance, Cloudflare, you have
+a reverse proxy setup again, just so that Cloudflare is (another) reverse proxy for you. This means
+you need to set up the above configuration at least.</p>
+<p>In addition, you would maybe end up seeing the CDN proxy IP when you do a <code>GET /auth/v1/whoami</code>. If
+this is the case, There is an additional variable you can set:</p>
 <pre><code class="language-toml">[server]
 # Can be set to extract the remote client peer IP from a custom
 # header name instead of the default mechanisms. This is needed
@@ -255,19 +260,22 @@ There is an additional variable you can set:</p>
 # overwritten by: PEER_IP_HEADER_NAME
 peer_ip_header_name = 'CF-Connecting-IP'
 </code></pre>
-<p>The CDN usually adds some other headers than the default <code>X-FORWARDED-FOR</code> headers, like in this example
-<code>CF-Connecting-IP</code> to the request. If this is the case, you can tell Rauthy to always check for this header first and
-only use the other methods as fallback, if this does not exist.</p>
+<p>The CDN usually adds some other headers than the default <code>X-FORWARDED-FOR</code> headers, like in this
+example <code>CF-Connecting-IP</code> to the request. If this is the case, you can tell Rauthy to always check
+for this header first and only use the other methods as fallback if this does not exist.</p>
 <h3 id="session-peer-ip-binding"><a class="header" href="#session-peer-ip-binding">Session peer IP binding</a></h3>
-<p>You most probably do not need to care about this configuration, but depending on your application you may want to
-disable it.</p>
-<p>Whenever you get a session from Rauthy and you authenticate successfully, your current IP will be extracted and
-persisted. By default, Rauthy will check your origin IP and compare it to the one you had when creating the session
-with each single request. If your IP does not match the original one, the session will be ignored and the request will
-be treated as being unauthenticated.</p>
-<p>This prevents scenarios where an attacker would be able to steal session data from your machine, copy the information
-and use it on their own. This means even if you would send your session cookie and CSRF token to someone, they would not
-be able to use it, as long as the requests are not coming from the exact same source IP.</p>
+<p>You most probably do not need to care about this configuration, but depending on your application,
+you may want to disable it.</p>
+<p>Whenever you get a session from Rauthy and you authenticate successfully, your current IP will be
+extracted and persisted. By default, Rauthy can check your origin IP and compare it to the one you
+had when creating the session with each single request. If your IP does not match the original one,
+the session will be ignored and the request will be treated as being unauthenticated. By default,
+this is disabled. If you have clients on mobile networks, their IP will change often, which would
+force them to log in again each time. However, you can enable this feature.</p>
+<p>If enabled, this prevents scenarios where an attacker would be able to steal session data from your
+machine, copy the information, and use it on their own. This means even if you would send your
+session cookie and CSRF token to someone, they would not be able to use it, as long as the requests
+are not coming from the exact same source IP.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -276,19 +284,14 @@ be able to use it, as long as the requests are not coming from the exact same so
 <a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
-<p>Rauthy has lots of mechanisms in place to prevent things like cookie stealing, session takeover, and so on , but it
-can't do anything about it, when the client's OS itself is infected. All these mechanisms add up to the defense in
-depth, but at the end of the day, when the clients machine itself is infected, there is not much any application can do
-about it. There just is no silver bullet.</p>
+<p>Rauthy has lots of mechanisms in place to prevent things like cookie stealing, session takeover, and
+so on , but it can't do anything about it, when the client's OS itself is infected. All these
+mechanisms add up to the defense in depth, but at the end of the day, when the clients machine
+itself is infected, there is not much any application can do about it. There just is no silver
+bullet.</p>
 </div>
 </div>
-<p>This defense is a really nice thing, but it may annoy your users, depending on where your deployed Rauthy, because
-this also means that each time when a client's IP changes, like for instance when you are in a mobile network or in
-a WIFI and often reconnect, your session will not be accepted. With as passkey added to your account, the login will
-take only seconds and another touch on the device, but you may still want to disable it. In this case, here is the
-configuration:</p>
-<pre><code class="language-toml">[access]
-# If set to 'true', this will validate the remote peer IP address with
+<pre><code class="language-toml"># If set to 'true', this will validate the remote peer IP address with
 # each request and compare it with the IP which was used during the
 # initial session creation / login. If the IP is different, the session
 # will be rejected.
@@ -315,8 +318,8 @@ configuration:</p>
 session_validate_ip = true
 </code></pre>
 <h3 id="lifetimes-and-timeouts"><a class="header" href="#lifetimes-and-timeouts">Lifetimes and Timeouts</a></h3>
-<p>The default session lifetimes and timeouts are pretty secure, but you may find them to be too strict. You can adjust
-them with the following config variables:</p>
+<p>The default session lifetimes and timeouts are pretty secure, but you may find them to be too
+strict. You can adjust them with the following config variables:</p>
 <pre><code class="language-toml">[lifetimes]
 # Session lifetime in seconds - the session can not be extended
 # beyond this time and a new login will be forced. This is the
@@ -348,18 +351,20 @@ session_renew_mfa = false
 session_timeout = 5400
 </code></pre>
 <h2 id="security"><a class="header" href="#security">Security</a></h2>
-<p>You usually don't need to configure anything about session security or CSRF protection, all of it happens automatically.
-This section is more informational about what Rauthy does in this case.</p>
+<p>You usually don't need to configure anything about session security or CSRF protection, all of it
+happens automatically. This section is more informational about what Rauthy does in this case.</p>
 <h3 id="session-cookies"><a class="header" href="#session-cookies">Session Cookies</a></h3>
-<p>Rauthy stores sessions as encrypted cookies. Depending on the situation, configuration and the users account, it will
-set multiple cookies inside your browser for different purposes like if you are allowed to do a direct session refresh
-with an MFA account for instance.</p>
-<p>Apart from the locale preference for the UI, each cookie is stored encrypted. This makes sure, that you can't tamper
-with the data. The cookies are stored as host only cookies with the most secure settings in today's browsers by default.
-This means they are host only and use the <code>__Host-</code> prefix to tell the browser to do additional checks. The <code>SameSite</code>
-attribute is set to <code>Lax</code> for all of them.</p>
-<p>Apart from local testing, you should never get in the situation where you want to disable the default secure
-cookie settings. But if you really need to (and you know what you are doing), you have the following option:</p>
+<p>Rauthy stores sessions as encrypted cookies. Depending on the situation, configuration, and the
+users' account, it will set multiple cookies inside your browser for different purposes, like if you
+are allowed to do a direct session refresh with an MFA account, for instance.</p>
+<p>Apart from the locale preference for the UI, each cookie is stored encrypted. This makes sure that
+you can't tamper with the data. The cookies are stored as host-only cookies with the most secure
+settings in today's browsers by default. This means they are host only and use the <code>__Host-</code> prefix
+to tell the browser to do additional checks. The <code>SameSite</code> attribute is set to <code>Lax</code> for all of
+them.</p>
+<p>Apart from local testing, you should never get in the situation where you want to disable the
+default secure cookie settings. But if you really need to (and you know what you are doing), you
+have the following option:</p>
 <pre><code class="language-toml">[access]
 # You can set different security levels for Rauthy's cookies. The
 # safest option would be 'host', but may not be desirable when you
@@ -389,27 +394,24 @@ cookie_set_path = true
 <li>classic synchronizer token pattern</li>
 <li><code>Sec-</code> headers checks</li>
 </ul>
-<p>In today's browsers, you could use the <code>Sec-</code> headers only and be safe, or actually even only stick to the secure
-Cookie settings we have, and call it a day. The additional checks Rauthy does in this case are there to catch unusual
-situations, where someone maybe uses an older browser or one which has a security issue. All of these techniques are
-defenses in depth.</p>
-<p>The synchronizer token pattern stores the additional CSRF token in local storage. Yes, this is not "secure" in a way
-that a malicious browser extension can read it, but it could read the DOM as well, which means it could also just
-read a meta tag or extract it from a hidden form field. The backend expects the CSRF token to be added as a header
-with each non-<code>GET</code> request.</p>
-<p>A new token will be created when you get a fresh session. Generating a new token after each request would improve the
-security but badly hurt the UX, because the browsers back button would simply not work anymore in most cases. In a
-perfect world where all users only use modern browsers that fully respect today's cookie settings, we would not even
-need this token, so a new token with each new session is fine.</p>
-<p>The <code>Sec-</code> headers middleware has been added recently to the mix. Desktop browsers do add these headers since ~3 years
-by now, but they only have been added pretty recently to mobile browsers as well. This middleware on its own would be
-a full CSRF protection even without additional cookie settings or a synchronizer token, but these headers are just
-way too fresh on mobile browsers to only rely on them right now.</p>
-<p>The <code>Sec-</code> middleware is pretty new to Rauthy, so it might be too restrictive in some situations where I forgot to add
-an exception for. By default, it blocks any non-user initiated or navigating cross-origin request and I added exceptions
-for routes, which should be available cross-origin. If you experience issues with it, you might want to disable it and
-set it to warn-only mode. Please <a href="https://github.com/sebadob/rauthy/issues">open an issue</a> about this though so it can
-be fixed, if it makes sense, because this option will probably be removed in a future version:</p>
+<p>In today's browsers, you could use the <code>Sec-</code> headers only and be safe, or actually even only stick
+to the secure Cookie settings we have, and call it a day. The additional checks Rauthy does in this
+case are there to catch unusual situations, where someone maybe uses an older browser or one which
+has a security issue. All of these techniques are defenses in depth.</p>
+<p>The synchronizer token pattern stores the additional CSRF token in local storage. Yes, this is not
+"secure" in a way that a malicious browser extension can read it. However, it could read the DOM as
+well, which means it could also just read a meta tag or extract it from a hidden form field. The
+backend expects the CSRF token to be added as a header with each non-<code>GET</code> request.</p>
+<p>A new token will be created when you get a fresh session. Generating a new token after each request
+would improve the security but badly hurt the UX because the browsers' back button would simply not
+work anymore in most cases. In a perfect world where all users only use modern browsers that fully
+respect today's cookie settings, we would not even need this token, so a new token with each new
+session is fine.</p>
+<p>The <code>Sec-</code> headers middleware has been added to the mix. Desktop browsers do add these headers
+since ~4 years by now, but they only have been added pretty recently to mobile browsers as well.
+This middleware on its own would be a full CSRF protection even without additional cookie settings
+or a synchronizer token, but these headers are just way too fresh on mobile browsers to only rely on
+them right now.</p>
 <pre><code class="language-toml">[access]
 # If set to true, a violation inside the CSRF protection middleware
 # based on Sec-* headers will block invalid requests. Usually you
@@ -430,8 +432,8 @@ sec_header_block = true
 <a class="admonition-anchor-link" href="#admonition-danger"></a>
 </div>
 <div>
-<p>Only change any of the above mentioned session security settings if you really know what you are doing and if you have
-a good reason to do so.</p>
+<p>Only change any of the above mentioned session security settings if you really know what you are
+doing and if you have a good reason to do so.</p>
 </div>
 </div>
 

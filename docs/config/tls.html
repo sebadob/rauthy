@@ -170,11 +170,12 @@
                         <h1 id="tls"><a class="header" href="#tls">TLS</a></h1>
 <p>If you do have TLS certificates from another source already, skip directly to <a href="#config">Config</a>.</p>
 <h2 id="generating-certificates"><a class="header" href="#generating-certificates">Generating Certificates</a></h2>
-<p>You can either generate TLS certificates yourself and manage your own CA, or (for testing purposes) let Rauthy generate
-self-signed certificates. Rauthys self-signed ones should only be used for testing, but they are generated somewhat
-securely. Rauthy will create it's own CA and save it do the database, with the private key being encrypted with the
-configured <code>encryption.key_active</code>. The CA will be valid for 10 years and re-used for signing the server certs in all
-instances, even you do an HA deployment.</p>
+<p>You can either generate TLS certificates yourself and manage your own CA, or (for testing purposes)
+let Rauthy generate self-signed certificates. Rauthys self-signed ones should only be used for
+testing, but they are generated somewhat securely. Rauthy will create it's own CA and save it do the
+database, with the private key being encrypted with the configured <code>encryption.key_active</code>. The CA
+will be valid for 10 years and re-used for signing the server certs in all instances, even you do an
+HA deployment.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -183,14 +184,18 @@ instances, even you do an HA deployment.</p>
 <a class="admonition-anchor-link" href="#admonition-caution"></a>
 </div>
 <div>
-<p>Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS certificates. To be able
-to do this during testing, you would need to add the generated CA certificate to your trust store.</p>
-<p>In such a case, you will probably see an error like <code>Invalid Key</code> during registration. This happens in insecure contexts.</p>
+<p>Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS
+certificates. To be able to do this during testing, you would need to add the generated CA
+certificate to your trust store.</p>
+<p>In such a case, you will probably see an error like <code>Invalid Key</code> during registration. This happens
+in insecure contexts.</p>
 </div>
 </div>
 <h3 id="automatic-self-signed-certificates"><a class="header" href="#automatic-self-signed-certificates">Automatic self-signed certificates</a></h3>
-<p>Generating self-signed TLS certificates for the Rauthy HTTPS server is pretty straight forward. Keep in mind, that these
-will only be generated for the HTTPS server and NOT for hiqlite internal cluster traffic, if you have an HA deployment.</p>
+<h4 id="rauthy-server--api"><a class="header" href="#rauthy-server--api">Rauthy Server + API</a></h4>
+<p>Generating self-signed TLS certificates for the Rauthy HTTPS server is pretty straight forward. Keep
+in mind that these will only be generated for the HTTPS server and NOT for Hiqlite internal cluster
+traffic, if you have an HA deployment. The cluster-internal auto-tls has a separate config variable.</p>
 <p>To generate TLS certificates on startup, you only need to set <code>tls.generate_self_signed = true</code>:</p>
 <pre><code class="language-toml">[tls]
 # If set to `true`, Rauthy will generate self-signed TLS certs and copy
@@ -207,8 +212,28 @@ will only be generated for the HTTPS server and NOT for hiqlite internal cluster
 # overwritten by: TLS_GENERATE_SELF_SIGNED
 generate_self_signed = true
 </code></pre>
-<p>If you only care about testing certificates for the HTTPS server, you don't need to configure anything else at this
-point.</p>
+<p>If you only care about testing certificates for the HTTPS server, you don't need to configure
+anything else at this point.</p>
+<h4 id="hiqlite---raft-cluster-traffic"><a class="header" href="#hiqlite---raft-cluster-traffic">Hiqlite - Raft Cluster Traffic</a></h4>
+<p>By default, Raft-internal traffic is NOT encrypted. The reasons is that you may not even want this
+in situations like when you e.g. have a separate physical network for nodes, or you already have a
+service mesh with mTLS in place. However, if you want to follow a zero-trust philosophy, the best
+way to do this is by letting Hiqlite handle everything for you automatically:</p>
+<pre><code class="language-toml">[cluster]
+# The `tls_auto_certificates` will generate self-signed TLS
+# certificates for internal Raft and API traffic. Clients will
+# simply not validate the certificates for ease of use because
+# they don't have to. They do a 3-way handshake anyway, which
+# validates both client and server without the secret ever being
+# sent over the network.
+#
+# If you specify specific certificates with either `tls_raft_*` or
+# `tls_api_*`, they will be used instead.
+#
+# default: false
+# overwritten by: HQL_TLS_AUTO_CERTS
+tls_auto_certificates = true
+</code></pre>
 <h3 id="manually-managed-certificates"><a class="header" href="#manually-managed-certificates">Manually managed certificates</a></h3>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
@@ -218,14 +243,15 @@ point.</p>
 <a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
-<p>We are using another project of mine called <a href="https://github.com/sebadob/nioca">Nioca</a> for an easy creation of a
-fully functioning and production ready private Root Certificate Authority (CA).</p>
+<p>We are using another project of mine called <a href="https://github.com/sebadob/nioca">Nioca</a> for an easy
+creation of a fully functioning and production ready private Root Certificate Authority (CA).</p>
 </div>
 </div>
-<p>I suggest to use <code>docker</code> for this task. Otherwise, you can use the <code>nioca</code> binary directly on any linux machine.
-If you want a permanent way of generating certificates for yourself, take a look at Rauthys <code>justfile</code> and copy
-and adjust the recipes <code>create-root-ca</code> and <code>create-end-entity-tls</code> to your liking.<br />
-If you just want to get everything started quickly, follow these steps:</p>
+<p>I suggest to use <code>docker</code> for this task. Otherwise, you can use the <code>nioca</code> binary directly on any
+linux machine. If you want a permanent way of generating certificates for yourself, take a look at
+Rauthys <code>justfile</code> and copy and adjust the recipes <code>create-root-ca</code> and <code>create-end-entity-tls</code> to
+your liking.</p>
+<p>If you just want to get everything started quickly, follow these steps:</p>
 <h4 id="create-an-alias-for-the-docker-command"><a class="header" href="#create-an-alias-for-the-docker-command">Create an alias for the <code>docker</code> command</a></h4>
 <pre><code>alias nioca='docker run --rm -it -v ./:/ca -u $(id -u ${USER}):$(id -g ${USER}) ghcr.io/sebadob/nioca'
 </code></pre>
@@ -233,7 +259,8 @@ If you just want to get everything started quickly, follow these steps:</p>
 <pre><code>nioca x509 -h
 </code></pre>
 <h4 id="generate-full-certificate-chain"><a class="header" href="#generate-full-certificate-chain">Generate full certificate chain</a></h4>
-<p>To make your browser happy, your need to have at least one <code>--alt-name-dns</code> for the URL of your application.
+<p>To make your browser happy, your need to have at least one <code>--alt-name-dns</code> for the URL of your
+application.
 You can define as many of them as you like.</p>
 <pre><code>nioca x509 \
     --cn 'Rauthy Default' \
@@ -251,8 +278,8 @@ You can define as many of them as you like.</p>
 <li>The first 3 times, you need to provide the encryption password for your Root CA</li>
 <li>The last 3 times, you should provide a different password for your Intermediate CA</li>
 </ul>
-<p>When everything was successful, you will have a new folder named <code>x509</code> with sub folders <code>root</code>, <code>intermediate</code>
-and <code>end_entity</code> in your current one.</p>
+<p>When everything was successful, you will have a new folder named <code>x509</code> with sub folders <code>root</code>,
+<code>intermediate</code> and <code>end_entity</code> in your current one.</p>
 <p>From these, you will need the following files:</p>
 <pre><code>cp x509/intermediate/ca-chain.pem . &amp;&amp; \
 cp x509/end_entity/$(cat x509/end_entity/serial)/cert-chain.pem . &amp;&amp; \
@@ -266,13 +293,14 @@ cert-chain.pem
 key.pem
 </code></pre>
 <h2 id="config"><a class="header" href="#config">Config</a></h2>
-<p>The <a href="../config/config.html">reference config</a> contains a <code>TLS</code> section with all the values you can set.</p>
-<p>For this example, we will be using the same certificates for both the internal cache mTLS connections and the
-public facing HTTPS server.</p>
+<p>The <a href="../config/config.html">reference config</a> contains a <code>TLS</code> section with all the values you can
+set.</p>
+<p>For this example, we will be using the same certificates for both the internal cache mTLS
+connections and the public-facing HTTPS server.</p>
 <h3 id="hiqlite"><a class="header" href="#hiqlite">Hiqlite</a></h3>
-<p>Hiqlite can run the whole database layer, and it will always take care of caching. It can be configured to use TLS
-internally, if you provide certificates. Simply provide the following values from the <code>TLS</code> section in the reference
-config:</p>
+<p>Hiqlite can run the whole database layer, and it will always take care of caching. It can be
+configured to use TLS internally, if you provide certificates. Simply provide the following values
+from the <code>TLS</code> section in the reference config:</p>
 <pre><code class="language-toml">[cluster]
 # If given, these keys / certificates will be used to establish
 # TLS connections between nodes.
@@ -290,8 +318,9 @@ tls_api_key = "tls/tls.key"
 tls_api_cert = "tls/tls.crt"
 #tls_api_danger_tls_no_verify = true
 </code></pre>
-<p>There is no problem using the same certificates for both networks, but you can optionally even separate them if you need
-to. You could even re-use the Server TLS, if your DNS setup allows for this.</p>
+<p>There is no problem using the same certificates for both networks, but you can optionally even
+separate them if you need to. You could even re-use the Server TLS, if your DNS setup allows for
+this.</p>
 <div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
 <div class="admonition-title">
 <div id="admonition-note-1-title">
@@ -304,10 +333,10 @@ to. You could even re-use the Server TLS, if your DNS setup allows for this.</p>
 <code>*_danger_tls_no_verify</code> to <code>true</code></p>
 </div>
 </div>
-<h3 id="rauthy-server--api"><a class="header" href="#rauthy-server--api">Rauthy Server / API</a></h3>
-<p>By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which
-is the default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER
-format too, if you rename the file-ending to <code>*.der</code>.</p>
+<h3 id="rauthy-server--api-1"><a class="header" href="#rauthy-server--api-1">Rauthy Server / API</a></h3>
+<p>By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and
+<code>/app/tls/tls.crt</code>, which is the default naming for a Kubernetes TLS secret. The expected format is
+PEM, but you could provide the key in DER format too, if you rename the file-ending to <code>*.der</code>.</p>
 <pre><code class="language-toml">[tls]
 ## UI + API TLS
 
@@ -327,8 +356,8 @@ cert_path = 'tls/cert-chain.pem'
 key_path = 'tls/key.pem'
 </code></pre>
 <h3 id="kubernetes"><a class="header" href="#kubernetes">Kubernetes</a></h3>
-<p>If you did not follow the above procedure to generate the CA and certificates, you may need to rename the files in the
-following command, to create the Kubernetes secrets.</p>
+<p>If you did not follow the above procedure to generate the CA and certificates, you may need to
+rename the files in the following command, to create the Kubernetes secrets.</p>
 <p><strong>Secrets - Rauthy Server / API</strong></p>
 <pre><code>kubectl -n rauthy create secret tls rauthy-tls --key="key.pem" --cert="cert-chain.pem"
 </code></pre>
@@ -343,9 +372,9 @@ following command, to create the Kubernetes secrets.</p>
 <a class="admonition-anchor-link" href="#admonition-note-2"></a>
 </div>
 <div>
-<p>We create the <code>hiqlite-tls</code> here with the exact same values. You could of course either use different certificates, or
-not create a separate secret at all and just re-use the Rauthy TLS certificates, if you DNS setup allows for proper
-validation in this case.</p>
+<p>We create the <code>hiqlite-tls</code> here with the exact same values. You could of course either use
+different certificates, or not create a separate secret at all and just re-use the Rauthy TLS
+certificates, if you DNS setup allows for proper validation in this case.</p>
 </div>
 </div>
 <h4 id="config-adjustments---rest-api"><a class="header" href="#config-adjustments---rest-api">Config Adjustments - REST API</a></h4>

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>PAM - Rauthy Documentation</title>
+        <title>Rauthy CLI - Rauthy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -167,50 +167,99 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="pam"><a class="header" href="#pam">PAM</a></h1>
-<p>OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes
-with <code>forward_auth</code> support. To not need an additional LDAP / AD / something similar for your
-backend and workstations, Rauthy comes with its own custom PAM module. It does not just use JWT
-Tokens for logging in, but you can actually manage all your Linux hosts, groups, and users in
-different ways. You can secure local logins to workstations via Yubikey (only USB Passkeys
-supported, no QR-code / software keys). All SSH logins can be done with either ephemeral,
-auto-expiring passwords, that you can generate via your Account dashboard, if an Admin has created a
-PAM user for you, or by public key, if the user adds them via the account dashboard. This means you
-have MFA-secured SSH logins without the need for any modifications or additional software on your
-local SSH client, and you can use any SSH client from any machine securely, even if it's not your
-own.</p>
-<p>Pam hosts, groups, and users are managed via Rauthys Admin UI in the <code>PAM</code> section.</p>
-<p>In addition to a PAM module, you get an NSS module and an NSS proxy that runs on each machine. You
-can dynamically log in to any machine an Admin has given you access to. Users and groups are not
-added to local files, but will be resolved via the network.</p>
-<p>This module is published in a separate repo to avoid licensing issues, since it relies on some GPLv3
-dependencies. You can take a look at it
-here: <a href="https://github.com/sebadob/rauthy-pam-nss">rauthy-pam-nss</a>.</p>
-<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+                        <h1 id="rauthy-cli"><a class="header" href="#rauthy-cli">Rauthy CLI</a></h1>
+<p>The Rauthy binary comes with a CLI. You can use it either from inside the default container, or
+directly when you have access to the binary. It does NOT have functionality to control a Rauthy
+instance or anything like that. It does not have it now and never will. It helps you getting started
+with config generation, or it can generate encryption keys, secrets, or hash passwords.</p>
+<p>Let's make sure that you can run it first.</p>
+<h2 id="from-inside-the-container"><a class="header" href="#from-inside-the-container">From inside the Container</a></h2>
+<p>This is by far the easiest and quickest method. We are setting an <code>alias</code> to make it even easier.</p>
+<pre><code class="language-bash">alias rauthy='docker run -it --rm ghcr.io/sebadob/rauthy'
+</code></pre>
+<p>This will be it already for generating secrets or hashing passwords. If you want to use it to
+generate a config as well, we need to make sure to mount a volume, so you can access it later:</p>
+<pre><code class="language-bash">mkdir rauthy_data &amp;&amp; sudo chown -R 10001:$(id -g) rauthy_data
+</code></pre>
+<p>And then update the alias:</p>
+<pre><code class="language-bash">alias rauthy='docker run -it --rm -v $(pwd)/rauthy_data:/app/data ghcr.io/sebadob/rauthy'
+</code></pre>
+<h2 id="direct-access"><a class="header" href="#direct-access">Direct Access</a></h2>
+<p>Usually, this is the easiest and quickest method, because there's nothing to do if you have the
+final binary. The only issue for most people is probably, that they cannot get it easily. There are
+no installers or binary downloads available right now. However, you will get it by either copying
+it out of a container image, or by building from source.</p>
+<h2 id="from-dev-env"><a class="header" href="#from-dev-env">From DEV Env</a></h2>
+<p>When you have set up a development environment, you can access it pretty much directly as well.
+Just make sure you always append the <code>--</code> after <code>cargo run</code>.</p>
+<pre><code class="language-bash">cargo run -- --help
+</code></pre>
+<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
 <div class="admonition-title">
-<div id="admonition-note-title">
-<p>Note</p>
+<div id="admonition-hint-title">
+<p>Hint</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-note"></a>
+<a class="admonition-anchor-link" href="#admonition-hint"></a>
 </div>
 <div>
-<p>You will notice on the following pages and when testing the PAM setup via the Admin UI, that quite
-a few resources and values are immutable after their initial creation. The reason is simply to avoid
-things like accidentally leaking left-over user data, when for instance a user was deleted and a new
-one with the exact same name was created, but maybe some files are left on some hosts, and so on.
-The same is true for instance for group names and types, just to avoid confusion for admins.</p>
+<p>To make sure it's working simply execute <code>rauthy --help</code> or <code>./rauthy --help</code> in case you have the
+binary.</p>
 </div>
 </div>
+<h2 id="what-it-can-do"><a class="header" href="#what-it-can-do">What it can do</a></h2>
+<p>As mentioned already, you will not be able to control a Rauthy instance with this CLI. You can use
+it to generate config files, secrets, encryption keys, or create password hashes for bootstrapping.</p>
+<h2 id="generate-a-config"><a class="header" href="#generate-a-config">Generate a Config</a></h2>
+<p>For generating a config, make sure you created the <code>alias</code> above with the volume mount. You can then
+execute:</p>
+<pre><code class="language-bash">rauthy generate-config -o data/config-generated.toml
+</code></pre>
+<p>It will ask you a bunch of questions and then create a <code>config-generated.toml</code> file in the <code>data</code>
+dir inside the container, which will be in your <code>rauthy_data</code> dir later on, if you use the <code>alias</code>
+above. This config is only there to get you started though. There is a lot more you can configure,
+and it would be absolutely insane to ask for every little thing. The
+full <a href="../config/config.html">Reference Config</a> with comments explaining the values has almost 3000
+lines by now.</p>
+<h2 id="generate-encryption-keys"><a class="header" href="#generate-encryption-keys">Generate Encryption Keys</a></h2>
+<p>Be it either for your very first setup, or when want to rotate your keys, you can generate new ones
+with the CLI pretty easily:</p>
+<pre><code class="language-bash">rauthy generate-enc-key
+</code></pre>
+<p>By default, it will use the current day as date as the ID. This makes it easy to know when a key was
+created. If you like, you can set your own ID with the following flag:</p>
+<pre><code class="language-bash">-k, --with-key-id &lt;WITH_KEY_ID&gt;
+</code></pre>
+<p>The key ID must match this regex: <code>[a-zA-Z0-9:_-]{2,20}</code></p>
+<h2 id="generate-secrets"><a class="header" href="#generate-secrets">Generate Secrets</a></h2>
+<p>This probably the most basic task ever, but it will generate you random alphanumeric,
+cryptographically secure secrets. You can generate them anywhere else as well, but make sure the
+generation is actually cryptographically secure, and not just a JS generator in a random web app,
+where you cannot be sure.</p>
+<pre><code class="language-bash">rauthy generate-secrets
+</code></pre>
+<p>There are no flags for this one. It will simply generate 48 secure random characters. This length
+is very safe while still not being way over the top. If we wanted the same level of security as a
+256-bit random bytes key, in alphanumeric form it would be ~43 characters. We have 48 here, which
+even exceeds it. Anything bigger would be a waste of resources.</p>
+<h2 id="hash-passwords"><a class="header" href="#hash-passwords">Hash Passwords</a></h2>
+<p>If you want to hash a password for bootstrapping, you can do it like so:</p>
+<pre><code class="language-bash">rauthy hash-password
+</code></pre>
+<p>You can configure the parameters for password hashing, but this tool provides safe defaults. If you
+really need to, you could lower the <code>m_cost</code> though, if you have a good reason, or bump it up even
+more if you want to be extra secure.</p>
+<h2 id="serve-rauthy"><a class="header" href="#serve-rauthy">Serve Rauthy</a></h2>
+<p>The last option here is <code>rauthy serve</code>. This will actually launch Rauthy.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../work/forward_auth.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../config/production_config.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../work/pam_groups.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../config/config_minimal.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -220,11 +269,11 @@ The same is true for instance for group names and types, just to avoid confusion
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../work/forward_auth.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../config/production_config.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../work/pam_groups.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../config/config_minimal.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

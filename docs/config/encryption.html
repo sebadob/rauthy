@@ -168,22 +168,32 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="encryption"><a class="header" href="#encryption">Encryption</a></h1>
-<p>Rauthy does additional encryption for values in lots of places, like for instance <code>client_secret</code>s in the database
+<p>Rauthy does additional encryption for values in lots of places, like for instance <code>client_secret</code>s
+in the database
 or session cookies. In the Getting Started for Kubernetes, we have set up the <code>encryption.keys</code> and
 <code>encryption.key_active</code>.</p>
-<p>The <code>encryption.keys</code> defines the static keys used for additional data encryption in a few places. This values may
-contain multiple keys, if you want to rotate them at some point without breaking the decryption of all already existing
+<p>The <code>encryption.keys</code> defines the static keys used for additional data encryption in a few places.
+This values may
+contain multiple keys, if you want to rotate them at some point without breaking the decryption of
+all already existing
 secrets.</p>
-<p><code>encryption.key_active</code> defines the key inside <code>encryption.keys</code> which will be used as the default. This means that all
+<p><code>encryption.key_active</code> defines the key inside <code>encryption.keys</code> which will be used as the default.
+This means that all
 new / current encryption's performed by the backend will use the key with the given ID.</p>
 <h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
-<p>If you followed the Getting Started for Kubernetes, you already completed this step. If not, this is how you can
+<p>If you followed the Getting Started for Kubernetes, you already completed this step. If not, this is
+how you can
 generate an encryption key.</p>
-<pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+<p><strong>Option 1: CLI</strong></p>
+<pre><code class="language-bash">docker run -it --rm ghcr.io/sebadob/rauthy generate-enc-key
 </code></pre>
-<p>The first part until the first <code>/</code> is the key ID. This has to be between 2 and 20 characters and should not contain any
-special ones. The second part after the first <code>/</code> is the key itself. This value <strong>must</strong> be exactly 32 bytes long and
-then be base64 encoded. If it is not, Rauthy will yell at startup and panic early.</p>
+<p><strong>Option 2: <code>openssl</code></strong></p>
+<pre><code class="language-bash">echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+</code></pre>
+<p>The first part until the first <code>/</code> is the key ID. This has to be between 2 and 20 characters and
+should not contain any special ones. The second part after the first <code>/</code> is the key itself. This
+value <strong>must</strong> be exactly 32 bytes long and then be base64 encoded. If it is not, Rauthy will yell
+at startup and panic early.</p>
 <p>If you have generated a key, lets say the output was</p>
 <pre><code>❯ echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI=
@@ -193,8 +203,8 @@ then be base64 encoded. If it is not, Rauthy will yell at startup and panic earl
 keys = ["90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI="]
 key_active = "90eb6d69"
 </code></pre>
-<p>You can add more keys if you like, <strong>separated by new lines</strong>, which is needed for the key rotation described below.
-The <code>encryption.key_active</code> will be the key being used for all new encryption's.</p>
+<p>You can add more keys if you like, <strong>separated by new lines</strong>, which is needed for the key rotation
+described below. The <code>encryption.key_active</code> will be the key being used for all new encryption's.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -203,15 +213,17 @@ The <code>encryption.key_active</code> will be the key being used for all new en
 <a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
-<p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which will make Rauthy
-panic on startup, when it checks the given values. If you run into that situation, you can generate them without
-<code>openssl</code> as well, with e.g:</p>
+<p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which
+will make Rauthy panic on startup, when it checks the given values. If you run into that situation,
+you can generate them without <code>openssl</code> as well, with e.g:</p>
 <pre><code>echo"$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+<p>... or just use the CLI as described above.</p>
 </div>
 </div>
 <h2 id="key-rotation"><a class="header" href="#key-rotation">Key Rotation</a></h2>
-<p>A good practice is to rotate encryption keys from time to time. Rauthy does auto-rotate the keys for signing tokens,
-but the admin is responsible for the encryption keys, since they have a greater impact.</p>
+<p>A good practice is to rotate encryption keys from time to time. Rauthy does auto-rotate the keys for
+signing tokens, but the admin is responsible for the encryption keys, since they have a greater
+impact.</p>
 <p><strong>1. Add a new key to the <code>encryption.keys</code> in you secrets</strong></p>
 <div id="admonition-fail" class="admonition admonish-failure" role="note" aria-labelledby="admonition-fail-title">
 <div class="admonition-title">
@@ -226,17 +238,21 @@ If the old key is gone, the migration will fail.</p>
 </div>
 </div>
 <p><strong>2. Generate a new key + id</strong></p>
-<pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+<p><strong>Option 1: CLI</strong></p>
+<pre><code class="language-bash">docker run -it --rm ghcr.io/sebadob/rauthy generate-enc-key
+</code></pre>
+<p><strong>Option 2: <code>openssl</code></strong></p>
+<pre><code class="language-bash">echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 </code></pre>
 <p>The part before the first <code>/</code> is the <code>key_active</code> and the part afterwards is the key base64 encoded.
 You might set the new <code>encryption.key_active</code> to the newly generated key ID.</p>
-<p>Keep in mind, you need to ADD this to your existing keys and not just replace them! If you just replace them, almost
-all things will break and fall apart.</p>
+<p>Keep in mind, you need to ADD this to your existing keys and not just replace them! If you just
+replace them, almost all things will break and fall apart.</p>
 <p>The final format of the <code>encryption.keys</code> should look something like this, for instance:</p>
 <pre><code class="language-toml">[encryption]
 key = [
-    "Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=",
-    "6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=",
+  "Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=",
+  "6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=",
 ]
 </code></pre>
 <p>In this example, if the first key should be the new active default, set your <code>key_active</code> to</p>
@@ -244,23 +260,25 @@ key = [
 key_active = "Wx1zrbLF"
 </code></pre>
 <p><strong>3. Set the <code>key_active</code> to the ID of your newly generated key</strong></p>
-<p>This will make sure, that all new encryptions will use the new key. If you do not care about removing the old keys,
-because you maybe just want to rotate because its good practice, the secrets will migrate "by themselves" over time.
-If Rauthy finds any secrets during its normal operation, that have been encrypted with an older key than the current
-<code>key_active</code>, it will re-encrypt these secrets and update the values.<br />
-This means, you may just stop at this point, if this is good enough for you.</p>
+<p>This will make sure that all new encryption will use the new key. If you do not care about removing
+the old keys, because you maybe just want to rotate because its good practice, the secrets will
+migrate "by themselves" over time.</p>
+<p>If Rauthy finds any secrets during its normal operation, that have been encrypted with an older key
+than the current <code>key_active</code>, it will re-encrypt these secrets and update the values. This means,
+you may just stop at this point, if this is good enough for you.</p>
 <p><strong>4. Migrate Keys</strong></p>
-<p>If you however want to trigger a re-encryption of all existing secrets on purpose, there is a small tool in the
-Admin UI which helps you with this.</p>
+<p>If you, however, want to trigger a re-encryption of all existing secrets on purpose, there is a
+small tool in the Admin UI which helps you with this.</p>
 <p>Log in to the Admin UI and navigate to <code>Config</code> -&gt; <code>Encryption Keys</code>.<br />
 You will see the currently recognized keys and the currently active ID.</p>
-<p>You can then make sure, that the ID you want to migrate secrets to is selected and execute the migrations.
-Please keep in mind, that if you have a lot of data, it might take a few seconds to perform this operation.
-This will migrate all encrypted data for existing OIDC clients, all JWKs, and so on, with the new key.</p>
+<p>You can then make sure, that the ID you want to migrate secrets to is selected and execute the
+migrations. Please keep in mind, that if you have a lot of data, it might take a few seconds to
+perform this operation. This will migrate all encrypted data for existing OIDC clients, all JWKs,
+and so on, with the new key.</p>
 <p><strong>5. Remove old keys</strong></p>
-<p>After a successful migration via the UI tool, you could remove old keys from the <code>keys</code> value, but it is not
-recommended as long as you did not have a known data breach. Just keep them around for some time because of
-encrypted cookies with older keys.</p>
+<p>After a successful migration via the UI tool, you could remove old keys from the <code>keys</code> value, but
+it is not recommended as long as you did not have a known data breach. Just keep them around for
+some time because of encrypted cookies with older keys.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -269,8 +287,9 @@ encrypted cookies with older keys.</p>
 <a class="admonition-anchor-link" href="#admonition-caution"></a>
 </div>
 <div>
-<p>All cookies are encrypted with the <code>key_active</code>. This means, if you remove something from the <code>keys</code> which has
-been used to encrypt cookies, the user will be prompted to log in again, even if cookies have not expired yet.</p>
+<p>All cookies are encrypted with the <code>key_active</code>. This means, if you remove something from the <code>keys</code>
+which has been used to encrypt cookies, the user will be prompted to log in again, even if cookies
+have not expired yet.</p>
 </div>
 </div>
 <div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
@@ -281,11 +300,12 @@ been used to encrypt cookies, the user will be prompted to log in again, even if
 <a class="admonition-anchor-link" href="#admonition-note-1"></a>
 </div>
 <div>
-<p>Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some attack vectors if
-its used without hardware acceleration.</p>
-<p>Usually, devices these days all come with dedicated AES acceleration, even embedded ones. However, with VM's this is
-often a different story and its not guaranteed, that you will have AES acceleration when you spin up a VM in some cloud.
-Rauthy tries to be as secure as possible by default and therefore ChaCha20Poly1305 has a slight advantage over AES.</p>
+<p>Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some
+attack vectors if its used without hardware acceleration.</p>
+<p>Usually, devices these days all come with AES-NI, even embedded ones. However, with VM's this is
+often a different story and its not guaranteed, that you will have AES acceleration when you spin
+up a VM in some cloud. Rauthy tries to be as secure as possible by default and therefore
+ChaCha20Poly1305 has a slight advantage over AES.</p>
 </div>
 </div>
                     </main>

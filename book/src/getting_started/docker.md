@@ -7,7 +7,7 @@ your localhost. The image contains a basic default config which is sufficient fo
 don't use it in production, it contains hardcoded secrets).
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.0
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.1
 ```
 
 ```admonish caution
@@ -49,7 +49,7 @@ services:
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.35.0
+    image: ghcr.io/sebadob/rauthy:0.35.1
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -204,7 +204,7 @@ docker run -d \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.35.0
+    ghcr.io/sebadob/rauthy:0.35.1
 ```
 
 - `-v $(pwd)/rauthy/config.toml:/app/config.toml` mounts the config in the correct place
