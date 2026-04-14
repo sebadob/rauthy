@@ -38,6 +38,7 @@ fn email_ts_prettify_with(
     let fmt_str = match lang {
         Language::De => config.de.as_ref(),
         Language::En => config.en.as_ref(),
+        Language::Fr => config.fr.as_ref(),
         Language::Ko => config.ko.as_ref(),
         Language::Nb => config.no.as_ref(),
         Language::Ru => config.ru.as_ref(),
@@ -58,6 +59,7 @@ mod tests {
         let config = VarsEmailTzFmt {
             de: "%d.%m.%Y %T (%Z)".into(),
             en: "%m/%d/%Y %T (%Z)".into(),
+            fr: "%d/%m/%Y %T (%Z)".into(),
             ko: "%Y-%m-%d %T (%Z)".into(),
             no: "%d.%m.%Y %T (%Z)".into(),
             ru: "%d.%m.%Y %T (%Z)".into(),

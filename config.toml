@@ -859,7 +859,8 @@ health_check_delay_secs = 30
 # These will be ignored as long as `hiqlite = true`.
 #
 # overwritten by: PG_HOST
-pg_host = 'localhost'
+pg_host = '/var/run/postgresql'
+#pg_host = 'localhost'
 # default: 5432
 # overwritten by: PG_PORT
 pg_port = 5432
@@ -871,12 +872,32 @@ pg_password = '123SuperSafe'
 # overwritten by: PG_DB_NAME
 pg_db_name = 'rauthy'
 
+# You can specifically set the TLS mode for Postgres connections.
+# The default 'prefer' will try TLS first and fall back to plain
+# connections once it fails. However, if you connect via UDS,
+# the fallback will not work, and you max have to disable it all
+# together.
+#
+# possible values: disable, prefer, require
+# default: 'prefer'
+# overwritten by: PG_TLS
+pg_tls = 'disable'
+
 # If your database uses a self-signed certificate, which cannot
 # be verified, you might want to set this to `true`.
 #
 # default: false
 # overwritten by: PG_TLS_NO_VERIFY
 pg_tls_no_verify = true
+
+# Provide a custom root CA for your Postgres connections.
+#
+# overwritten by: PG_TLS_ROOT_CA
+#pg_tls_root_ca = """
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#"""
 
 # Max DB connections for the Postgres pool.
 #
@@ -1913,13 +1934,13 @@ MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de ko nb ru uk zhhans
+# Available Options: en de fr ko nb ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['de', 'en', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['de', 'en', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de ko nb ru uk zhhans
+# Available Options: en de fr ko nb ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
@@ -2031,7 +2052,7 @@ level_database = 'info'
 #
 # default: 'modifying'
 # overwritten by: LOG_LEVEL_ACCESS
-#level_access = 'modifying'
+level_access = 'verbose'
 
 # You can change the log output format to JSON, if you set:
 # `log_fmt=json`.
