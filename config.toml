@@ -277,7 +277,7 @@ admin_button_hide = false
 #
 # default: false
 # overwritten by: REDIRECT_ROOT_TO_ACCOUNT
-redirect_root_to_account = false
+#redirect_root_to_account = false
 
 [atproto]
 # Set to `true` to enable the ATProto provider. If the public URL is
@@ -881,7 +881,7 @@ pg_db_name = 'rauthy'
 # possible values: disable, prefer, require
 # default: 'prefer'
 # overwritten by: PG_TLS
-pg_tls = 'disable'
+#pg_tls = 'prefer'
 
 # If your database uses a self-signed certificate, which cannot
 # be verified, you might want to set this to `true`.
@@ -1296,6 +1296,9 @@ de = '%d.%m.%Y %T (%Z)'
 # default: '%m/%d/%Y %T (%Z)'
 # overwritten by: TZ_FMT_EN
 en = '%m/%d/%Y %T (%Z)'
+# default: '%d/%m/%Y %T (%Z)'
+# overwritten by: TZ_FMT_FR
+fr = '%d/%m/%Y %T (%Z)'
 # default: '%Y-%m-%d %T (%Z)'
 # overwritten by: TZ_FMT_KO
 ko = '%Y-%m-%d %T (%Z)'
