@@ -8,7 +8,7 @@ export USER := `echo "$(id -u):$(id -g)"`
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 is_mac_container := `if test -f /usr/local/bin/container; then echo true; else echo false; fi`
 docker := `which docker || which podman || which container || echo 'no-container-runtime-found'`
-map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
+map_docker_user := if file_name(docker) == "podman" { "" } else { "-u $USER" }
 npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 node_image := "node:22"
@@ -380,7 +380,7 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
     set -euxo pipefail
 
     # make sure base image is up to date
-    docker pull gcr.io/distroless/cc-debian12:nonroot
+    {{ docker }} pull gcr.io/distroless/cc-debian12:nonroot
 
     mkdir -p out/empty
 
@@ -389,8 +389,8 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
     # https://github.com/cross-rs/cross/security/advisories/GHSA-2r9g-5qvw-fgmf
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189
     {{ docker }} run \
-        -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
-        -v {{ invocation_directory() }}/:/work/ \
+        -v {{ cargo_home }}/registry:{{ container_cargo_registry }}:Z \
+        -v {{ invocation_directory() }}/:/work/:Z \
         -w /work \
         {{ map_docker_user }} \
         {{ builder_image }}:{{ builder_tag_date }} \
@@ -402,8 +402,8 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
     # Depending on the target arch, the `--target` would be added dynamically inside
     # the container.
     {{ docker }} run \
-        -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
-        -v {{ invocation_directory() }}/:/work/ \
+        -v {{ cargo_home }}/registry:{{ container_cargo_registry }}:Z \
+        -v {{ invocation_directory() }}/:/work/:Z \
         -w /work \
         -e JEMALLOC_SYS_WITH_LG_PAGE=16 \
         {{ map_docker_user }} \
