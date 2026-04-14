@@ -1,5 +1,116 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Request Duration in Logs
+
+The access logs in the console now contain the total requests duration. This came with a small
+change when you need to debug something. The access log is not the first thing you will see for a
+specific request, but actually the last thing. We can only know the total duration at the end of the
+request, not at the beginning. This is just something to keep in mind.
+
+[#1525](https://github.com/sebadob/rauthy/pull/1525)
+
+#### Connect to Postgres via UDS
+
+You can now connect to Postgres via UDS. You can specify a path to the socket for the `pg_host`
+config var. In addition, you can now also provide a custom root CA for Postgress connections, and
+you can specifically `disable`, `require` or `prefer` TLS.
+
+```toml
+[database]
+# If you set `hiqlite = false` and want to use Postgres as your
+# database, you need to set the following variables.
+# These will be ignored as long as `hiqlite = true`.
+#
+# overwritten by: PG_HOST
+pg_host = '/var/run/postgresql'
+# default: 5432
+# overwritten by: PG_PORT
+#pg_port = 5432
+# overwritten by: PG_USER
+pg_user = 'rauthy'
+# overwritten by: PG_PASSWORD
+pg_password = '123SuperSafe'
+# default: rauthy
+# overwritten by: PG_DB_NAME
+pg_db_name = 'rauthy'
+
+# You can specifically set the TLS mode for Postgres connections.
+# The default 'prefer' will try TLS first and fall back to plain
+# connections once it fails. However, if you connect via UDS,
+# the fallback will not work, and you max have to disable it all
+# together.
+#
+# possible values: disable, prefer, require
+# default: 'prefer'
+# overwritten by: PG_TLS
+pg_tls = 'require'
+
+# Provide a custom root CA for your Postgres connections.
+#
+# overwritten by: PG_TLS_ROOT_CA
+pg_tls_root_ca = """
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+"""
+```
+
+[#1527](https://github.com/sebadob/rauthy/pull/1527)
+
+#### Additional i18n translations
+
+There are 2 additional i18n translations: Russian (ru) and French (fr)
+
+[#1503](https://github.com/sebadob/rauthy/pull/1503)
+[#1523](https://github.com/sebadob/rauthy/pull/1523)
+
+#### Optional Account Redirect
+
+You can not configure an optional redirect from `/auth/v1/` to `/auth/v1/account`.
+
+```toml
+[access]
+# If set to `true`, requests to `/auth/v1/` will be redirected to
+# `/auth/v1/account` (the account dashboard). This is useful if you want
+# users to land directly on their account page when visiting the root URL.
+#
+# default: false
+# overwritten by: REDIRECT_ROOT_TO_ACCOUNT
+redirect_root_to_account = true
+```
+
+[#1509](https://github.com/sebadob/rauthy/pull/1509)
+
+#### Hidden Password Input
+
+When the login form is in the first stage where you only should enter the email, there is not a
+hidden password input in the hope that password managers can detect and auto-fill the login form
+better in some cases.
+
+[#1524](https://github.com/sebadob/rauthy/pull/1524)
+
+#### Book Update
+
+The Rauthy book got ouf of sync in a few sections, and it did not mention some of the latest new
+features. It was updated in lots of places.
+
+[#1529](https://github.com/sebadob/rauthy/pull/1529)
+
+### Bugfix
+
+- The `prompt` param during `/authorize` was not accepting multiple values
+  [#1500](https://github.com/sebadob/rauthy/pull/1500)
+- During an internal code rework, the `ko` and `zh` translations for the password E-Mails got
+  switched around.
+  [#1526](https://github.com/sebadob/rauthy/pull/1526)
+- When deleting the very last Passkey for a user, and when you were using Postgres, there was a
+  foreign key constraint which made it fail and return a DB error.
+  [#1528](https://github.com/sebadob/rauthy/pull/1528)
+
 ## v0.35.0
 
 ### Breaking

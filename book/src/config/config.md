@@ -257,6 +257,14 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: ADMIN_BUTTON_HIDE
 #admin_button_hide = false
 
+# If set to `true`, requests to `/auth/v1/` will be redirected to
+# `/auth/v1/account` (the account dashboard). This is useful if you want
+# users to land directly on their account page when visiting the root URL.
+#
+# default: false
+# overwritten by: REDIRECT_ROOT_TO_ACCOUNT
+#redirect_root_to_account = false
+
 [atproto]
 # Set to `true` to enable the ATProto provider. If the public URL is
 # 'localhost' it should be changed to '127.0.0.1', if `dev_mode = true`
@@ -856,12 +864,32 @@ pg_password = '123SuperSafe'
 # overwritten by: PG_DB_NAME
 #pg_db_name = 'rauthy'
 
+# You can specifically set the TLS mode for Postgres connections.
+# The default 'prefer' will try TLS first and fall back to plain
+# connections once it fails. However, if you connect via UDS,
+# the fallback will not work, and you max have to disable it all
+# together.
+#
+# possible values: disable, prefer, require
+# default: 'prefer'
+# overwritten by: PG_TLS
+#pg_tls = 'prefer'
+
 # If your database uses a self-signed certificate, which cannot
 # be verified, you might want to set this to `true`.
 #
 # default: false
 # overwritten by: PG_TLS_NO_VERIFY
 #pg_tls_no_verify = false
+
+# Provide a custom root CA for your Postgres connections.
+#
+# overwritten by: PG_TLS_ROOT_CA
+#pg_tls_root_ca = """
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#"""
 
 # Max DB connections for the Postgres pool.
 #
