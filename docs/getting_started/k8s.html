@@ -182,19 +182,63 @@ described below.</p>
 </ol>
 <h3 id="create-namespace"><a class="header" href="#create-namespace">Create Namespace</a></h3>
 <p>For the purpose of this documentation, we assume that Rauthy will be deployed in the <code>rauthy</code>
-namespace.<br />
-If this is not the case for you, change the following commands accordingly.</p>
+namespace. If this is not the case for you, change the following commands accordingly.</p>
 <pre><code>kubectl create ns rauthy
 </code></pre>
 <h3 id="create-and-apply-the-config"><a class="header" href="#create-and-apply-the-config">Create and apply the config</a></h3>
 <p>This documentation will manage the Kubernetes files in a folder called <code>rauthy</code>.</p>
 <pre><code>mkdir rauthy &amp;&amp; cd rauthy
 </code></pre>
-<p>Create the config file, paste the <a href="../config/config.html">Reference Config</a> and adjust it to your
-needs. We are putting the complete config in a K8s secret. Rauthy's config contains quite a few
-different secret values and it's just a lot simpler to maintain everything in a single secret, than
-splitting it into a <code>ConfigMap</code> and overwrite each secret manually.</p>
-<pre><code>apiVersion: v1
+<p>For creating the config, you have different options. You can either start from the
+full <a href="../config/config.html">Reference Config</a>, or
+the <a href="../config/config_minimal.html">Minimal Production Config</a>, or you can use the CLI to generate
+one. Both the <a href="../config/config_minimal.html">Minimal Production Config</a> and CLI generator though do
+not provide all possible options. They are recommended for getting started, but once going into
+production, it is a good idea to go over the complete <a href="../config/config.html">Reference Config</a>.</p>
+<h4 id="option-1-from-reference-config"><a class="header" href="#option-1-from-reference-config">Option 1: From reference config</a></h4>
+<p>You can use either the <a href="../config/config.html">Reference Config</a> or
+the <a href="../config/config_minimal.html">Minimal Production Config</a>. Copy the values into <code>config.toml</code>,
+open it in an editor of your choice, and adapt them to your liking.</p>
+<h4 id="option-2-config-generation-via-cli"><a class="header" href="#option-2-config-generation-via-cli">Option 2: Config generation via CLI</a></h4>
+<p>This is a new option since Rauthy v0.35. You can use the CLI to get you started with the config.</p>
+<p>For security reasons, the binray inside the container runs as <code>10001:10001</code>. Lets create a new
+directory with proper access rights, so it can write to it:</p>
+<pre><code class="language-bash">mkdir data &amp;&amp; sudo chown 10001:$(id -g) data
+</code></pre>
+<p>Since we will use the binary from inside the container image, we will create an <code>alias</code> first:</p>
+<pre><code class="language-bash">alias rauthy='docker run -it --rm -v $(pwd)/data:/app/data ghcr.io/sebadob/rauthy'
+</code></pre>
+<p>Make sure it works:</p>
+<pre><code class="language-bash">rauthy --help
+</code></pre>
+<p>We can then use it to generate a config:</p>
+<pre><code class="language-bash">rauthy generate-config -o data/config-generated.toml
+</code></pre>
+<p>Since the CLI will lock down the config in terms of access rights, you will only be able to access
+it with <code>sudo</code>:</p>
+<pre><code class="language-bash">sudo cat data/config-generated.toml
+</code></pre>
+<p>Now move it in place and make sure we can read it:</p>
+<pre><code class="language-bash">sudo mv data/config-generated.toml config.toml &amp;&amp; \
+sudo chown $(id -u):$(id -g) config.toml
+</code></pre>
+<h4 id="create-k8s-config"><a class="header" href="#create-k8s-config">Create K8s Config</a></h4>
+<p>Since the config contains sensitive information, I highly suggest to put the whole config in a
+secret instead of a ConfigMap. You could of course split it and provide all sensitive values via
+a separate secret, and then provide them via ENV vars, but having the full config in a secret is a
+lot more straight forward imo.</p>
+<p>Let's create a new Secret from our <code>config.toml</code> file. You could auto-generate it like shown
+below, but this would have the problem, that the file is already base64 encoded and not easily
+modifyable later on:</p>
+<pre><code class="language-bash">kubectl create secret generic rauthy-config \
+  --from-file=config.toml \
+  --namespace=rauthy \
+  --dry-run=client \
+  -o yaml &gt; rauthy-config.yaml
+</code></pre>
+<p>If you want to have it more convenient, you can create it manually and use <code>stringData</code> to keep it
+readable on disk:</p>
+<pre><code class="language-bash">apiVersion: v1
 kind: Secret
 metadata:
   name: rauthy-config
@@ -202,33 +246,27 @@ metadata:
 type: Opaque
 stringData:
   config.toml: |
-    PASTE CONFIG HERE - WATCH THE INDENTATION'
+    # Paste your whole config file here. whatch the indentation.
 </code></pre>
-<p>Open the config with your favorite editor and paste the <a href="../config/config.html">Reference Config</a> in
-place.<br />
-Make sure to watch the indentation.</p>
-<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
-<div class="admonition-title">
-<div id="admonition-note-title">
-<p>Note</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-note"></a>
-</div>
-<div>
-<p>I recommend to just always set <code>cluster.node_id_from = "k8s"</code> when deploying a StatefulSet. This
-will parse the Raft NodeID automatically from the K8s Pod / Hostname and you don't have to worry
-about the <code>node_id</code>. For instance, a Pod named <code>rauthy-0</code> will be translated to <code>node_id = 1</code>
-automatically.</p>
-</div>
-</div>
-<p>There are some values that you need to generate on your own. These are:</p>
+<p><strong>If you did NOT use the CLI generator</strong></p>
+<p>If you did not use the CLI generator, you need to generate secrets and enc keys manually. You could
+either do it 100% by hand with e.g. <code>openssl</code>, or you can use the CLI.</p>
+<p>You need to generate the following secrets and keys:</p>
 <ul>
 <li><code>cluster.secret_raft</code> + <code>cluster.secret_api</code></li>
 <li><code>encryption.keys</code> + <code>encryption.key_active</code></li>
 </ul>
 <p>The secrets for the <code>cluster</code> can be just some long random alphanumeric values. They are used for
-authentication for the Hiqlite Raft + API layer. The encryption keys must be generated. More
+authentication for the Hiqlite Raft + API layer. The encryption keys must be generated. A more
 detailed explanation is in the <a href="../config/encryption.html">Encryption</a> section. The tl;dr is:</p>
+<p><strong>Option 1: CLI</strong></p>
+<p>If you have not set the <code>alias</code> from above yet:</p>
+<pre><code class="language-bash">alias rauthy='docker run -it --rm ghcr.io/sebadob/rauthy'
+</code></pre>
+<p>Then generate secrets:</p>
+<pre><code class="language-bash">rauthy generate-secrets &amp;&amp; rauthy generate-enc-key
+</code></pre>
+<p><strong>Option 2: <code>openssl</code></strong></p>
 <pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 </code></pre>
 <p>Copy the output and add it to keys. The <code>key_active</code> will be the first part of the output until the
@@ -246,12 +284,12 @@ base64:</p>
 <pre><code>openssl rand -base64 48
 </code></pre>
 <p>If you plan on using S3 for backups, paste the proper values into <code>cluster.s3_*</code> values.</p>
-<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
-<div id="admonition-note-1-title">
+<div id="admonition-note-title">
 <p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-note-1"></a>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
 <p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which
@@ -358,7 +396,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.35.0
+          image: ghcr.io/sebadob/rauthy:0.35.1
           securityContext:
             capabilities:
               drop:
@@ -543,10 +581,13 @@ spec:
           port: 8080
 </code></pre>
 <h4 id="hiqlite-internal-tls"><a class="header" href="#hiqlite-internal-tls">Hiqlite Internal TLS</a></h4>
-<p>You can of course also provide TLS certificates for the Hiqlite internal communication. Two
-independent networks are created: one for the Raft-Internal network traffic like heartbeats and data
-replication, and a second one for the "external" Hiqlite API. This is used by other Hiqlite cluster
-members for management purposes and to execute things like consistent queries on the leader node.</p>
+<p>If you can encrypted in-cluster traffic for a zero-trust architecture, the
+<code>cluster.tls_auto_certificates</code> options is the recommended way to go. It is maintenance-free, and
+just works. However, you can provide your own certificates if you like.</p>
+<p>Two independent networks are created: one for the Raft-Internal network traffic like heartbeats and
+data replication, and a second one for the "external" Hiqlite API. This is used by other Hiqlite
+cluster members for management purposes and to execute things like consistent queries on the leader
+node.</p>
 <p>You can provide TLS certificates for both of them independently via the following config variables:</p>
 <pre><code class="language-toml">[cluster]
 # If given, these keys / certificates will be used to establish

@@ -188,10 +188,10 @@ in <code>v0.32.1</code>. The full report can be found
 </div>
 </div>
 <h2 id="what-it-is"><a class="header" href="#what-it-is">What it is</a></h2>
-<p>Rauthy is a lightweight and easy to use Identity Provider supporting OpenID Connect, OAuth 2.0 and
+<p>Rauthy is a lightweight and easy to use Identity Provider supporting OpenID Connect, OAuth 2, and
 PAM. It aims to be simple to both set up and operate, with very secure defaults and lots of config
 options, if you need the flexibility. It puts heavy emphasis on Passkeys and a very strong security
-in general. The project is written in Rust to be as memory efficient, secure and fast as possible,
+in general. The project is written in Rust to be as memory efficient, secure, and fast as possible,
 and it can run on basically any hardware. If you need Single Sign-On support for IoT or headless CLI
 tools, it's got you covered as well.</p>
 <p>You get High-Availability, client branding, UI translation, a nice Admin UI, Events and Auditing,
@@ -207,15 +207,14 @@ which do not support it, but you can of course deactivate this to your liking.</
 <p><strong>Option 1:</strong><br />
 Password + Security Key (without User Verification):<br />
 Rauthy provides FIDO 2 / Webauthn login flows. If you once logged in on a new client with your
-username + password, you will get an encrypted cookie which will allow you to log in without a
+username and password, you will get an encrypted cookie which will allow you to log in without a
 password from that moment on. You only need to have a FIDO compliant Passkey being registered for
 your account.</p>
 <p><strong>Option 2:</strong><br />
 Passkey-Only Accounts:<br />
-Rauthy supports Passkey-Only-Accounts: you basically just provide your E-Mail address and log in
-with your FIDO 2 Passkey. Your account will not even have / need a password. This login flow is
-restricted though to only those passkeys, that can provide User Verification (UV) to always have at
-least 2FA security.</p>
+Rauthy supports Passkey-Only-Accounts: you provide your E-Mail address and log in with your FIDO 2
+Passkey. Your account will not even have / need a password. This login flow is restricted, though,
+to only those passkeys that can provide User Verification (UV) to always have at least 2FA security.</p>
 <div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
 <div class="admonition-title">
 <div id="admonition-info-title">
@@ -243,40 +242,49 @@ special care has been taken into account in case of cache eviction and invalidat
 anyway.</li>
 </ul>
 <p>The resource usage depends a lot on your setup (Hiqlite, Postgres, HA deployment, amount of
-users, ...), but for a small set of users, it is usually below 100mb of memory even with the very
-aggressive, in-memory caching Rauthy uses, and in some cases even below 50mb.</p>
+users, ...). However, if you apply memory allocator tuning from the book, and you have a small set
+of users, it usually looks like this:</p>
+<ul>
+<li>Hiqlite single instance ~57mb</li>
+<li>Hiqlite HA cluster ~65mb</li>
+<li>Postgres-based ~35 mb</li>
+</ul>
 <h3 id="highly-available"><a class="header" href="#highly-available">Highly Available</a></h3>
 <p>Even though it makes extensive use of caching, you can run it in HA
-mode. <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> creates its own embedded HA cache and
-persistence layer. Such a deployment is possible with
+mode with external dependencies. <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> creates its own
+embedded HA cache and persistence layer. Such a deployment is possible with
 both <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> and Postgres.</p>
 <h3 id="admin-ui--user-account-dashboard"><a class="header" href="#admin-ui--user-account-dashboard">Admin UI + User Account Dashboard</a></h3>
 <p>Rauthy does have an Admin UI which can be used to basically do almost any operation you might need
 to administrate the whole application and its users. There is also an account dashboard for each
-individual user, where users will get a basic overview over their account and can self-manage some
-values, password, passkeys, and so on.</p>
+user, where users will get a basic overview over their account and can self-manage some values,
+password, passkeys, and so on.</p>
 <p><img src="https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/users.png" alt="Admin UI" /></p>
 <p><img src="https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/account.png" alt="Account Dashboard" /></p>
 <h3 id="client-branding"><a class="header" href="#client-branding">Client Branding</a></h3>
 <p>You have a simple way to create a branding or stylized look for the Login page for each client. The
-whole color theme can be changed and each client can have its own custom logo. Additionally, if you
+whole color theme can be changed, and each client can have its own custom logo. Additionally, if you
 modify the branding for the default <code>rauthy</code> client, it will not only change the look for the Login
 page, but also for the Account and Admin page.</p>
 <p><img src="https://github.com/sebadob/rauthy/blob/c10e9421e65f386718528b15e3d0ace37aff1158/frontend/screenshots/branding.png" alt="Client Branding" /></p>
 <h3 id="events-and-auditing"><a class="header" href="#events-and-auditing">Events and Auditing</a></h3>
 <p>Rauthy comes with an Event- and Alerting-System. Events are generated in all kinds of scenarios.
-They can be sent via E-Mail, Matrix or Slack, depending on the severity and the configured level.
+They can be sent via E-Mail, Matrix, or Slack, depending on the severity and the configured level.
 You will see them in the Admin UI in real-time, or you can subscribe to the events stream and
 externally handle them depending on your own business logic.</p>
-<h3 id="brute-force-and-basic-dos-protection"><a class="header" href="#brute-force-and-basic-dos-protection">Brute-Force and basic DoS protection</a></h3>
-<p>Rauthy has brute-force and basic DoS protection for the login endpoint. The timeout will be
-artificially delayed after enough invalid logins. It auto-blacklists IPs that exceeded too many
-invalid logins, with automatic expiry of the blacklisting. You can, if you like, manually blacklist
-certain IPs as well via the Admin UI.</p>
+<h3 id="brute-force-credential-stuffing-basic-dos-protection-geo-blocking"><a class="header" href="#brute-force-credential-stuffing-basic-dos-protection-geo-blocking">Brute-Force, Credential Stuffing, basic DoS protection, Geo-Blocking</a></h3>
+<p>Rauthy has brute-force, credential stuffing, and basic DoS protection for the login endpoint. The
+timeout will be artificially delayed after enough invalid logins. It auto-blacklists IPs that
+exceeded too many invalid logins, with automatic expiry of the blacklisting. You can, if you like,
+manually blacklist certain IPs as well via the Admin UI.</p>
+<p>On top of that, Rauthy can block requests depending on geolocation data. It can either grab that
+information from a custom header, e.g. when your CDN provides it, or you can add
+a <a href="https://www.maxmind.com/en/home">Maxmind</a> account to the config, and Rauthy will download a
+database automatically.</p>
 <h3 id="iot-ready"><a class="header" href="#iot-ready">IoT Ready</a></h3>
 <p>With the possibility to run on devices with very limited resources and having compatibility for the
 OAuth Device Authorization Grant <code>device_code</code> flow, Rauthy would be a very good choice for IoT
-projects. The IdP itself can easily run on a Raspberry Pi and all headless devices can be
+projects. The IdP itself can easily run on a Raspberry Pi, and all headless devices can be
 authenticated via the <code>device_code</code> flow. The <code>rauthy-client</code> has everything built-in and ready, if
 you want to use Rust on the IoT devices as well. It has not been checked in a <code>no_std</code> environment
 yet, but the client implementation is pretty simple.</p>
@@ -284,30 +292,30 @@ yet, but the client implementation is pretty simple.</p>
 <p>OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes
 with <code>forward_auth</code> support. To not need an additional LDAP / AD / something similar for your
 backend and workstations, Rauthy comes with its own custom PAM module. It does not just use JWT
-Tokens for logging in, but you can actually manage all your Linux hosts, groups and users in
+Tokens for logging in, but you can actually manage all your Linux hosts, groups, and users in
 different ways. You have the option to secure local logins to workstations via Yubikey (only USB
-Passkeys supported, no QR-code / software keys), and all SSH logins can be done with ephemeral,
-auto-expiring passwords, that you can generate via your Account dashboard, if an Admin has created a
-PAM user for you. This means you basically have MFA-secured SSH logins without the need for any
-modifications or additional software on your local SSH client, and you can use any SSH client from
-any machine securely, even if it's not your own.</p>
+Passkeys supported, no QR-code / software keys) All SSH logins can be done with ephemeral,
+auto-expiring passwords, that you can generate via your Account dashboard, or via SSH public key.
+The only prerequisite is that an Admin created a PAM user for the account. This means you have
+MFA-secured SSH logins without the need for any modifications or additional software on your local
+SSH client, and you can use any SSH client from any machine securely, even if it's not your own.</p>
 <p>In addition to the PAM module, you get an NSS module and an NSS proxy that runs on each machine. You
 can dynamically log in to any machine an Admin has given you access to. Users and groups are not
-added to local files, but will be resolved via the network.</p>
+added to local files but will be resolved via the network.</p>
 <p>This module is published in a separate repo to avoid licensing issues, since it relies on some GPLv3
 dependencies. You can take a look at it
 here: <a href="https://github.com/sebadob/rauthy-pam-nss">rauthy-pam-nss</a>.</p>
 <h3 id="scales-to-millions-of-users"><a class="header" href="#scales-to-millions-of-users">Scales to millions of users</a></h3>
 <p>Rauthy has no issue handling even millions of users. Everything keeps being fast and responsive,
 apart from the search function for users in the Admin UI when you reach the 10+ million users, where
-searching usually takes ~3 seconds (depending on your server of course).<br />
+searching usually takes ~3 seconds (depending on your server, of course).<br />
 The only limiting factor at that point will be your configuration and needs for password hashing
 security. It really depends on how many resources you want to use for hashing (more resources ==
 more secure) and how many concurrent logins at the exact same time you need to support.</p>
 <h3 id="features-list"><a class="header" href="#features-list">Features List</a></h3>
 <ul>
 <li><input disabled="" type="checkbox" checked=""/>
-Fully working OIDC / OAuth 2.0 provider</li>
+Fully working OIDC / OAuth 2 provider</li>
 <li><input disabled="" type="checkbox" checked=""/>
 PAM logins via custom PAM + NSS modules</li>
 <li><input disabled="" type="checkbox" checked=""/>
@@ -333,7 +341,7 @@ OpenID Connect RP Initiated Logout</li>
 <li><input disabled="" type="checkbox" checked=""/>
 OpenID Connect Backchannel Logout</li>
 <li><input disabled="" type="checkbox" checked=""/>
-OAuth 2.0 Device Authorization Grant flow</li>
+OAuth 2 Device Authorization Grant flow</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Upstream Authentication Providers (Login with ...)</li>
 <li><input disabled="" type="checkbox" checked=""/>
@@ -346,7 +354,7 @@ SCIM v2 for downstream clients</li>
 All End-User facing sites support i18n server-side translation
 with the possibility to add more languages</li>
 <li><input disabled="" type="checkbox" checked=""/>
-Simple per client branding for the login page</li>
+Simple per-client branding for the login page</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Custom roles</li>
 <li><input disabled="" type="checkbox" checked=""/>
@@ -375,7 +383,9 @@ Optional event notifications via: E-Mail, Matrix, Slack</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Optional Force MFA for the Admin UI</li>
 <li><input disabled="" type="checkbox" checked=""/>
-Optional Force MFA for each individual client</li>
+Optional Force MFA for each client</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Restrict logins to clients via group prefix</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Additional encryption inside the database for the most critical entries</li>
 <li><input disabled="" type="checkbox" checked=""/>
@@ -397,6 +407,12 @@ Session client peer IP binding</li>
 IP blacklisting feature</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Auto-IP blacklisting for login endpoints</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Brute-Force and Credential Stuffing detection</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Geolocation-based access restriction</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Namespaced K/V store for arbitrary JSON data</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Argon2ID with config helper UI utility</li>
 <li><input disabled="" type="checkbox" checked=""/>
@@ -452,22 +468,63 @@ Just take a look at the <a href="getting_started/../config/config.html">Referenc
 </div>
 </div>
 <h2 id="container-images"><a class="header" href="#container-images">Container Images</a></h2>
-<p>Rauthy versions before <code>0.27.0</code> had different container images depending on the database you choose.
-However, this is not the case anymore. There is only a single image which works with any
-configuration. It works on <code>x86_64</code> and <code>arm64</code> architectures.</p>
-<p>At the time of writing, you can run Rauthy either with <a href="getting_started/./docker.html">Docker</a> or
-inside <a href="getting_started/./k8s.html">Kubernetes</a>. <br />
-Both <em>Getting Started</em> guides do not cover all set up you might want to do for going into
-production. Especially the <em>Docker</em> guide is more for testing. \<br />
-You should take a look at the <a href="getting_started/../config/config.html">Reference Config</a> to see, what you might want
-to configure additionally. A dedicated <em>Going into production</em> guide will be written in the future.</p>
+<p>Rauthys images are built for <code>x86_64</code> and <code>arm64</code> architectures. There is no native installer (
+yet?), but if you want to run it outside a container, you can either just copy the binary out of if,
+or you can build from source pretty easily. Take a look at
+the <a href="https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> for more
+information.</p>
+<p>At the time of writing, you can run Rauthy either with <a href="getting_started/./docker.html">Docker</a> (or any other
+compatible container runtime) or inside <a href="getting_started/./k8s.html">Kubernetes</a>. Both <em>Getting Started</em> guides do not
+cover all setup you might want to do for going into production. Especially the <em>Docker</em> guide is
+more for testing.</p>
+<p>You should take a look at the <a href="getting_started/../config/config.html">Reference Config</a> to see, what you might want
+to configure additionally, or for a more minimal setup
+the <a href="getting_started/../config/config_minimal.html">Minimal Production Config</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
 <h2 id="testing--local-evaluation"><a class="header" href="#testing--local-evaluation">Testing / Local Evaluation</a></h2>
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
 your localhost. The image contains a basic default config which is sufficient for local testing (
 don't use it in production, it contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.0
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.1
 </code></pre>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-caution"></a>
+</div>
+<div>
+<p>When you add the <code>LOCAL_TEST=true</code> var, it will ONLY work on <code>localhost</code>! Under the hood, Rauthy
+loads a very minimal (and unsafe) demo config. If you want to test anywhere else than <code>localhost</code>,
+you need to set up a proper config.</p>
+</div>
+</div>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-note"></a>
+</div>
+<div>
+<p>Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS
+certificates. To be able to do this during testing, you would need to add the generated CA
+certificate to your trust store.</p>
+</div>
+</div>
+<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+<div class="admonition-title">
+<div id="admonition-hint-title">
+<p>Hint</p>
+</div>
+<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-hint"></a>
+</div>
+<div>
+<p>This command starts an HTTPS server with self-signed certificates.<br />
+Make sure to add the <code>https://</code> scheme if you open the URL manually.</p>
+</div>
+</div>
 <p>To proceed, go to <strong><a href="getting_started/first_start.html">First Start</a></strong>, or do the production setup below to have
 persistence.</p>
 <h2 id="testing--evaluation-with-e-mail"><a class="header" href="#testing--evaluation-with-e-mail">Testing / Evaluation with E-Mail</a></h2>
@@ -485,7 +542,7 @@ a minimal setup that is able to send E-Mails. The easiest way (works on localhos
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.35.0
+    image: ghcr.io/sebadob/rauthy:0.35.1
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -501,12 +558,12 @@ a minimal setup that is able to send E-Mails. The easiest way (works on localhos
 volumes:
   data:
 </code></pre>
-<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+<div id="admonition-hint-1" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-1-title">
 <div class="admonition-title">
-<div id="admonition-hint-title">
+<div id="admonition-hint-1-title">
 <p>Hint</p>
 </div>
-<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-hint"></a>
+<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-hint-1"></a>
 </div>
 <div>
 <p>You can create a <code>.env</code> file with <code>COMPOSE_PROJECT_NAME=myapp</code> for custom container/volume name
@@ -534,12 +591,12 @@ provide a more appropriate config.</p>
 vars. It parses both, the config first and any env var that is set will overwrite a possibly
 existing one from the config. You can add environment variables to the startup command with the <code>-e</code>
 option.</p>
-<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
 <div class="admonition-title">
-<div id="admonition-note-title">
+<div id="admonition-note-1-title">
 <p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-note"></a>
+<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-note-1"></a>
 </div>
 <div>
 <p>The following commands will work on Linux and Mac OS (even though not tested on Mac OS). Since I am
@@ -547,62 +604,80 @@ no Windows user myself, I cannot provide tested commands in this case.</p>
 </div>
 </div>
 <p><strong>1. We want to create a new directory for Rauthy's persistent data</strong></p>
-<pre><code>mkdir -p rauthy/data
+<pre><code class="language-bash">mkdir -p rauthy/data rauthy/tls
 </code></pre>
 <p><strong>2. Add the new config file.</strong></p>
-<p>This documentation is in an early version and remote links are not available yet, they will be added
-at a later point. For now, create a new file and paste the <a href="getting_started/../config/config.html">reference config</a></p>
-<pre><code>vim rauthy/config.toml
+<p>Rauthy (since v0.35) comes with a CLI. You can use it to generate a (basic) config file to get
+you started. We will use it from inside the container. However, since it's rootless and runs with
+user <code>10001:10001</code> inside, we need to modify access rights.</p>
+<pre><code class="language-bash">sudo chown -R 10001:$(id -g) rauthy
 </code></pre>
-<p><strong>3. Access rights for the Database files</strong></p>
-<p>The Rauthy container by default runs everything with user:group <code>10001:10001</code> for security
-reasons. <br />
-To make this work with the default values, you have 2 options:</p>
-<ul>
-<li>Change the access rights:</li>
-</ul>
-<pre><code>sudo chmod 0600 rauthy/config.toml
-sudo chmod 0700 rauthy/data
-sudo chown -R 10001:10001 rauthy
+<p>Next, we set an <code>alias</code> to be able to work with the CLI comfortably.</p>
+<pre><code class="language-bash">alias rauthy='docker run -it --rm -v $(pwd)/rauthy/data:/app/data -p 8080:8080 ghcr.io/sebadob/rauthy'
 </code></pre>
-<ul>
-<li>The other solution, if you do not have sudo rights, would be to change the owner of the whole
-directory.</li>
-</ul>
-<pre><code>chmod a+w rauthy/data
-</code></pre>
-<p>This will make the directory writeable for everyone, so Rauthy can create the database files inside
-the container with <code>10001:10001</code> again.</p>
-<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div id="admonition-note-2" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-2-title">
 <div class="admonition-title">
-<div id="admonition-caution-title">
-<p>Caution</p>
+<div id="admonition-note-2-title">
+<p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-caution"></a>
+<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-note-2"></a>
 </div>
 <div>
-<p>The safest approach would be to change the owner and group for these files on the host system. This
-needs <code>sudo</code> to edit the config, which may be a bit annoying, but at the same time it makes sure,
-that you can only read the secrets inside it with <code>sudo</code> too.</p>
-<p>You should avoid making Rauthy's data world-accessible at all cost.
-<a href="https://github.com/sebadob/hiqlite">Hiqlite</a> will take care of this automatically during
-sub-directory creation, but the config includes sensitive information.</p>
+<p>The alias expects you to expose on port <code>8080</code> afterwards. If you plan on doing something else
+(for testing), adopt the <code>-p</code> option.</p>
 </div>
 </div>
+<p>Make sure it's working:</p>
+<pre><code class="language-bash">rauthy --help
+</code></pre>
+<p>We can then use it to generate a config:</p>
+<pre><code class="language-bash">rauthy generate-config -o data/config-generated.toml
+</code></pre>
+<p>Once finished, you will have a new config file at <code>rauthy/data/config-generated.toml</code>. You can only
+access it as <code>root</code> though, because as mentioned above, the binary inside the container runs as
+<code>10001:10001</code>.</p>
+<pre><code class="language-bash">sudo cat rauthy/data/config-generated.toml
+</code></pre>
+<p>You can either use it directly, or you can evaluate it first. The final config will be expected in
+<code>rauthy/config.toml</code> by default. However, let's start with the generated one and make sure
+everything works as expected:</p>
+<pre><code class="language-bash">rauthy serve -c data/config-generated.toml
+</code></pre>
+<div id="admonition-note-3" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-3-title">
+<div class="admonition-title">
+<div id="admonition-note-3-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-note-3"></a>
+</div>
+<div>
+<p>If you answered during the config generation that you want to run Rauthy with your own TLS
+certificates, make sure to copy them in place. By default in <code>rauthy/tls/*</code>.</p>
+</div>
+</div>
+<p>When everything is working as expected, move the generated config in the final location:</p>
+<pre><code class="language-bash">sudo mv rauthy/data/config-generated.toml rauthy/config.toml
+</code></pre>
+<p><strong>3. Access rights for the Database files</strong></p>
+<p>Finalize / harden access rights:</p>
+<pre><code>sudo chmod 0600 rauthy/config.toml &amp;&amp; \
+sudo chmod 0700 rauthy/data &amp;&amp; \
+sudo chmod 0700 rauthy/tls &amp;&amp; \
+sudo chown -R 10001:10001 rauthy
+</code></pre>
 <p><strong>4. Adopt the config to your liking.</strong></p>
-<p>Take a look at the <a href="getting_started/../config/config.html">reference config</a> and adopt everything to your needs, but
-to not break this example, be sure to not change <code>cluster.data_dir</code>.</p>
+<p>The config-generator only gets you started and asks for the very basic requirements. There is a lot
+more you can configure. Take a look at the <a href="getting_started/../config/config.html">reference config</a> and adopt
+everything to your needs.</p>
 <p>For an in-depth guide on a production ready config, check
 the <a href="getting_started/../config/production_config.html">Production Config</a> section.</p>
-<p>A <strong>mandatory step</strong> will be to generate proper encryption keys. Take a look
-at <a href="getting_started/../config/encryption.html">Encryption</a>.</p>
 <p><strong>5. Start the container with volume mounts</strong></p>
 <pre><code>docker run -d \
     -v $(pwd)/rauthy/config.toml:/app/config.toml \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.35.0
+    ghcr.io/sebadob/rauthy:0.35.1
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
@@ -610,8 +685,20 @@ at <a href="getting_started/../config/encryption.html">Encryption</a>.</p>
 <li><code>-p 8443:8443</code> needs to match your configured <code>server.port_http</code> or <code>server.port_https</code> of course.
 If you use a reverse proxy inside a docker network, you don't need to expose any port, but you
 need to make sure to set <code>server.scheme = "http"</code>, <code>server.proxy_mode = true</code> and the correct
-value for <code>server.trusted_proxies</code>.</li>
+value for <code>server.trusted_proxies</code>.-</li>
 </ul>
+<div id="admonition-note-4" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-4-title">
+<div class="admonition-title">
+<div id="admonition-note-4-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="getting_started/docker.html#admonition-note-4"></a>
+</div>
+<div>
+<p>If you provided your own TLS Certificates, make sure to mount them as well with an additional <br />
+<code>-v $(pwd)/rauthy/tls:/app/tls</code>.</p>
+</div>
+</div>
 <p><strong>6. You can now proceed with the <a href="getting_started/first_start.html">First Start</a> steps.</strong></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="kubernetes"><a class="header" href="#kubernetes">Kubernetes</a></h1>
 <p>At the time of writing, there is no Helm Chart or Kustomize files available yet. The whole setup is
@@ -628,19 +715,63 @@ described below.</p>
 </ol>
 <h3 id="create-namespace"><a class="header" href="#create-namespace">Create Namespace</a></h3>
 <p>For the purpose of this documentation, we assume that Rauthy will be deployed in the <code>rauthy</code>
-namespace.<br />
-If this is not the case for you, change the following commands accordingly.</p>
+namespace. If this is not the case for you, change the following commands accordingly.</p>
 <pre><code>kubectl create ns rauthy
 </code></pre>
 <h3 id="create-and-apply-the-config"><a class="header" href="#create-and-apply-the-config">Create and apply the config</a></h3>
 <p>This documentation will manage the Kubernetes files in a folder called <code>rauthy</code>.</p>
 <pre><code>mkdir rauthy &amp;&amp; cd rauthy
 </code></pre>
-<p>Create the config file, paste the <a href="getting_started/../config/config.html">Reference Config</a> and adjust it to your
-needs. We are putting the complete config in a K8s secret. Rauthy's config contains quite a few
-different secret values and it's just a lot simpler to maintain everything in a single secret, than
-splitting it into a <code>ConfigMap</code> and overwrite each secret manually.</p>
-<pre><code>apiVersion: v1
+<p>For creating the config, you have different options. You can either start from the
+full <a href="getting_started/../config/config.html">Reference Config</a>, or
+the <a href="getting_started/../config/config_minimal.html">Minimal Production Config</a>, or you can use the CLI to generate
+one. Both the <a href="getting_started/../config/config_minimal.html">Minimal Production Config</a> and CLI generator though do
+not provide all possible options. They are recommended for getting started, but once going into
+production, it is a good idea to go over the complete <a href="getting_started/../config/config.html">Reference Config</a>.</p>
+<h4 id="option-1-from-reference-config"><a class="header" href="#option-1-from-reference-config">Option 1: From reference config</a></h4>
+<p>You can use either the <a href="getting_started/../config/config.html">Reference Config</a> or
+the <a href="getting_started/../config/config_minimal.html">Minimal Production Config</a>. Copy the values into <code>config.toml</code>,
+open it in an editor of your choice, and adapt them to your liking.</p>
+<h4 id="option-2-config-generation-via-cli"><a class="header" href="#option-2-config-generation-via-cli">Option 2: Config generation via CLI</a></h4>
+<p>This is a new option since Rauthy v0.35. You can use the CLI to get you started with the config.</p>
+<p>For security reasons, the binray inside the container runs as <code>10001:10001</code>. Lets create a new
+directory with proper access rights, so it can write to it:</p>
+<pre><code class="language-bash">mkdir data &amp;&amp; sudo chown 10001:$(id -g) data
+</code></pre>
+<p>Since we will use the binary from inside the container image, we will create an <code>alias</code> first:</p>
+<pre><code class="language-bash">alias rauthy='docker run -it --rm -v $(pwd)/data:/app/data ghcr.io/sebadob/rauthy'
+</code></pre>
+<p>Make sure it works:</p>
+<pre><code class="language-bash">rauthy --help
+</code></pre>
+<p>We can then use it to generate a config:</p>
+<pre><code class="language-bash">rauthy generate-config -o data/config-generated.toml
+</code></pre>
+<p>Since the CLI will lock down the config in terms of access rights, you will only be able to access
+it with <code>sudo</code>:</p>
+<pre><code class="language-bash">sudo cat data/config-generated.toml
+</code></pre>
+<p>Now move it in place and make sure we can read it:</p>
+<pre><code class="language-bash">sudo mv data/config-generated.toml config.toml &amp;&amp; \
+sudo chown $(id -u):$(id -g) config.toml
+</code></pre>
+<h4 id="create-k8s-config"><a class="header" href="#create-k8s-config">Create K8s Config</a></h4>
+<p>Since the config contains sensitive information, I highly suggest to put the whole config in a
+secret instead of a ConfigMap. You could of course split it and provide all sensitive values via
+a separate secret, and then provide them via ENV vars, but having the full config in a secret is a
+lot more straight forward imo.</p>
+<p>Let's create a new Secret from our <code>config.toml</code> file. You could auto-generate it like shown
+below, but this would have the problem, that the file is already base64 encoded and not easily
+modifyable later on:</p>
+<pre><code class="language-bash">kubectl create secret generic rauthy-config \
+  --from-file=config.toml \
+  --namespace=rauthy \
+  --dry-run=client \
+  -o yaml &gt; rauthy-config.yaml
+</code></pre>
+<p>If you want to have it more convenient, you can create it manually and use <code>stringData</code> to keep it
+readable on disk:</p>
+<pre><code class="language-bash">apiVersion: v1
 kind: Secret
 metadata:
   name: rauthy-config
@@ -648,33 +779,27 @@ metadata:
 type: Opaque
 stringData:
   config.toml: |
-    PASTE CONFIG HERE - WATCH THE INDENTATION'
+    # Paste your whole config file here. whatch the indentation.
 </code></pre>
-<p>Open the config with your favorite editor and paste the <a href="getting_started/../config/config.html">Reference Config</a> in
-place.<br />
-Make sure to watch the indentation.</p>
-<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
-<div class="admonition-title">
-<div id="admonition-note-title">
-<p>Note</p>
-</div>
-<a class="admonition-anchor-link" href="getting_started/k8s.html#admonition-note"></a>
-</div>
-<div>
-<p>I recommend to just always set <code>cluster.node_id_from = "k8s"</code> when deploying a StatefulSet. This
-will parse the Raft NodeID automatically from the K8s Pod / Hostname and you don't have to worry
-about the <code>node_id</code>. For instance, a Pod named <code>rauthy-0</code> will be translated to <code>node_id = 1</code>
-automatically.</p>
-</div>
-</div>
-<p>There are some values that you need to generate on your own. These are:</p>
+<p><strong>If you did NOT use the CLI generator</strong></p>
+<p>If you did not use the CLI generator, you need to generate secrets and enc keys manually. You could
+either do it 100% by hand with e.g. <code>openssl</code>, or you can use the CLI.</p>
+<p>You need to generate the following secrets and keys:</p>
 <ul>
 <li><code>cluster.secret_raft</code> + <code>cluster.secret_api</code></li>
 <li><code>encryption.keys</code> + <code>encryption.key_active</code></li>
 </ul>
 <p>The secrets for the <code>cluster</code> can be just some long random alphanumeric values. They are used for
-authentication for the Hiqlite Raft + API layer. The encryption keys must be generated. More
+authentication for the Hiqlite Raft + API layer. The encryption keys must be generated. A more
 detailed explanation is in the <a href="getting_started/../config/encryption.html">Encryption</a> section. The tl;dr is:</p>
+<p><strong>Option 1: CLI</strong></p>
+<p>If you have not set the <code>alias</code> from above yet:</p>
+<pre><code class="language-bash">alias rauthy='docker run -it --rm ghcr.io/sebadob/rauthy'
+</code></pre>
+<p>Then generate secrets:</p>
+<pre><code class="language-bash">rauthy generate-secrets &amp;&amp; rauthy generate-enc-key
+</code></pre>
+<p><strong>Option 2: <code>openssl</code></strong></p>
 <pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 </code></pre>
 <p>Copy the output and add it to keys. The <code>key_active</code> will be the first part of the output until the
@@ -692,12 +817,12 @@ base64:</p>
 <pre><code>openssl rand -base64 48
 </code></pre>
 <p>If you plan on using S3 for backups, paste the proper values into <code>cluster.s3_*</code> values.</p>
-<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
-<div id="admonition-note-1-title">
+<div id="admonition-note-title">
 <p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="getting_started/k8s.html#admonition-note-1"></a>
+<a class="admonition-anchor-link" href="getting_started/k8s.html#admonition-note"></a>
 </div>
 <div>
 <p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which
@@ -804,7 +929,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.35.0
+          image: ghcr.io/sebadob/rauthy:0.35.1
           securityContext:
             capabilities:
               drop:
@@ -989,10 +1114,13 @@ spec:
           port: 8080
 </code></pre>
 <h4 id="hiqlite-internal-tls"><a class="header" href="#hiqlite-internal-tls">Hiqlite Internal TLS</a></h4>
-<p>You can of course also provide TLS certificates for the Hiqlite internal communication. Two
-independent networks are created: one for the Raft-Internal network traffic like heartbeats and data
-replication, and a second one for the "external" Hiqlite API. This is used by other Hiqlite cluster
-members for management purposes and to execute things like consistent queries on the leader node.</p>
+<p>If you can encrypted in-cluster traffic for a zero-trust architecture, the
+<code>cluster.tls_auto_certificates</code> options is the recommended way to go. It is maintenance-free, and
+just works. However, you can provide your own certificates if you like.</p>
+<p>Two independent networks are created: one for the Raft-Internal network traffic like heartbeats and
+data replication, and a second one for the "external" Hiqlite API. This is used by other Hiqlite
+cluster members for management purposes and to execute things like consistent queries on the leader
+node.</p>
 <p>You can provide TLS certificates for both of them independently via the following config variables:</p>
 <pre><code class="language-toml">[cluster]
 # If given, these keys / certificates will be used to establish
@@ -1017,13 +1145,24 @@ and Docker and will be explained in later chapters.</p>
 <p>You can now proceed with the <a href="getting_started/first_start.html">First Start</a> steps.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="first-start"><a class="header" href="#first-start">First Start</a></h1>
 <h2 id="initial-admin-password-and-login"><a class="header" href="#initial-admin-password-and-login">Initial admin password and login</a></h2>
-<p>With the very first start of rauthy, or better with an empty database, when rauthy is starting, it
+<p>With the very first start of rauthy, or better with an empty database, when Rauthy is starting, it
 does not only create all the necessary schemas and initial data, but also some sensitive information
 will be generated safely. This includes a set of Json Web Keys (JWKS) for the token signing and some
-secrets.</p>
+secrets. This can take a few seconds.</p>
 <p>The most important of these newly generated secrets is the default admin user's password.<br />
 When this is securely generated with the very first start, it will be logged into the console. This
 will only happen once and never again.</p>
+<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+<div class="admonition-title">
+<div id="admonition-hint-title">
+<p>Hint</p>
+</div>
+<a class="admonition-anchor-link" href="getting_started/first_start.html#admonition-hint"></a>
+</div>
+<div>
+<p>You can also <a href="getting_started/../config/bootstrap.html">bootstrap</a> the admin password, if you like.</p>
+</div>
+</div>
 <h3 id="logs-with-docker"><a class="header" href="#logs-with-docker">Logs with docker</a></h3>
 <pre><code>docker logs -f rauthy
 </code></pre>
@@ -1041,12 +1180,12 @@ will only happen once and never again.</p>
 <p>If you do a Kubernetes HA deployment directly, only the Pod <code>rauthy-0</code> will log the initial password.</p>
 </div>
 </div>
-<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
-<div id="admonition-note-1-title">
-<p>Note</p>
+<div id="admonition-caution-title">
+<p>Caution</p>
 </div>
-<a class="admonition-anchor-link" href="getting_started/first_start.html#admonition-note-1"></a>
+<a class="admonition-anchor-link" href="getting_started/first_start.html#admonition-caution"></a>
 </div>
 <div>
 <p>If you missed this log entry, you will not be able to log in.<br />
@@ -1067,12 +1206,12 @@ disable it, after a custom admin has been added.</p>
 <p>When logged in to the admin UI, you can add a new user. When the <code>SMTP</code> settings are correctly
 configured in the config, which we can test right now, you will receive an E-Mail with the very
 first password reset.</p>
-<div id="admonition-note-2" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-2-title">
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
 <div class="admonition-title">
-<div id="admonition-note-2-title">
+<div id="admonition-note-1-title">
 <p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="getting_started/first_start.html#admonition-note-2"></a>
+<a class="admonition-anchor-link" href="getting_started/first_start.html#admonition-note-1"></a>
 </div>
 <div>
 <p>If you do not receive an E-Mail after the first user registration, chances are you may have a
@@ -1080,14 +1219,25 @@ problem with the SMTP setup.</p>
 <p>To debug this, you can set <code>LOG_LEVEL=debug</code> in the config and then watch the logs after a restart.</p>
 </div>
 </div>
+<div id="admonition-hint-1" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-1-title">
+<div class="admonition-title">
+<div id="admonition-hint-1-title">
+<p>Hint</p>
+</div>
+<a class="admonition-anchor-link" href="getting_started/first_start.html#admonition-hint-1"></a>
+</div>
+<div>
+<p>You can also <a href="getting_started/../config/bootstrap.html">bootstrap</a> everything.</p>
+</div>
+</div>
 <h3 id="rauthy_admin-user-role"><a class="header" href="#rauthy_admin-user-role"><code>rauthy_admin</code> user role</a></h3>
-<p>The role, which allows a user to access the admin UI, is the <code>rauthy_admin</code>. <br />
-If the user has this role assigned, he will be seen as an admin.</p>
-<p>Under the hood, rauthy itself uses the OIDC roles and groups in the same way, as all clients would
+<p>The role, which allows a user to access the admin UI, is the <code>rauthy_admin</code>. If the user has this
+role assigned, he will be seen as an admin.</p>
+<p>Under the hood, Rauthy itself uses the OIDC roles and groups in the same way, as all clients would
 do. This means you should not neither delete the <code>rauthy</code> default client, nor the <code>rauthy_admin</code>
 role. There are mechanisms to prevent this from happening by accident via UI, but you could possibly
-do this via a direct API call. \<br />
-There are some anti-lockout mechanisms in place in the backend, which will be executed with every
+do this via a direct API call.</p>
+<p>There are some anti-lockout mechanisms in place in the backend, which will be executed with every
 start, but being careful at this point is a good idea anyway.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="shutdown"><a class="header" href="#shutdown">Shutdown</a></h1>
 <p>The shutdown may confuse some people. For single instance deployments, it will only take a few
@@ -1114,11 +1264,96 @@ for <code>podman</code>, or for <code>docker compose</code>.</p>
 <p>Make sure to adjust your shutdown timeout to at least 30 seconds.</p>
 </div>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="production-config"><a class="header" href="#production-config">Production Config</a></h1>
-<p>If you want to go into production, the configuration from the Getting Started section is most probably not enough.</p>
-<p>The best thing you could do is just taking a look at the <a href="config/../config/config.html">Reference Config</a> and reading through
-all the possible options.</p>
-<p>However, this section will give you a head start with the minimum you should set up. Depending on if you started
-with Docker or Kubernetes so far, some values might have been already set.</p>
+<p>If you want to go into production, the configuration from the Getting Started section is most
+probably not enough.</p>
+<p>The best thing you could do is just taking a look at the <a href="config/../config/config.html">Reference Config</a>
+and reading through all the possible options.</p>
+<p>However, this section will give you a head start with the minimum you should set up. Depending on if
+you started with Docker or Kubernetes so far, some values might have been already set. The CLI
+config generator also sets some values automatically.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rauthy-cli"><a class="header" href="#rauthy-cli">Rauthy CLI</a></h1>
+<p>The Rauthy binary comes with a CLI. You can use it either from inside the default container, or
+directly when you have access to the binary. It does NOT have functionality to control a Rauthy
+instance or anything like that. It does not have it now and never will. It helps you getting started
+with config generation, or it can generate encryption keys, secrets, or hash passwords.</p>
+<p>Let's make sure that you can run it first.</p>
+<h2 id="from-inside-the-container"><a class="header" href="#from-inside-the-container">From inside the Container</a></h2>
+<p>This is by far the easiest and quickest method. We are setting an <code>alias</code> to make it even easier.</p>
+<pre><code class="language-bash">alias rauthy='docker run -it --rm ghcr.io/sebadob/rauthy'
+</code></pre>
+<p>This will be it already for generating secrets or hashing passwords. If you want to use it to
+generate a config as well, we need to make sure to mount a volume, so you can access it later:</p>
+<pre><code class="language-bash">mkdir rauthy_data &amp;&amp; sudo chown -R 10001:$(id -g) rauthy_data
+</code></pre>
+<p>And then update the alias:</p>
+<pre><code class="language-bash">alias rauthy='docker run -it --rm -v $(pwd)/rauthy_data:/app/data ghcr.io/sebadob/rauthy'
+</code></pre>
+<h2 id="direct-access"><a class="header" href="#direct-access">Direct Access</a></h2>
+<p>Usually, this is the easiest and quickest method, because there's nothing to do if you have the
+final binary. The only issue for most people is probably, that they cannot get it easily. There are
+no installers or binary downloads available right now. However, you will get it by either copying
+it out of a container image, or by building from source.</p>
+<h2 id="from-dev-env"><a class="header" href="#from-dev-env">From DEV Env</a></h2>
+<p>When you have set up a development environment, you can access it pretty much directly as well.
+Just make sure you always append the <code>--</code> after <code>cargo run</code>.</p>
+<pre><code class="language-bash">cargo run -- --help
+</code></pre>
+<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+<div class="admonition-title">
+<div id="admonition-hint-title">
+<p>Hint</p>
+</div>
+<a class="admonition-anchor-link" href="config/cli.html#admonition-hint"></a>
+</div>
+<div>
+<p>To make sure it's working simply execute <code>rauthy --help</code> or <code>./rauthy --help</code> in case you have the
+binary.</p>
+</div>
+</div>
+<h2 id="what-it-can-do"><a class="header" href="#what-it-can-do">What it can do</a></h2>
+<p>As mentioned already, you will not be able to control a Rauthy instance with this CLI. You can use
+it to generate config files, secrets, encryption keys, or create password hashes for bootstrapping.</p>
+<h2 id="generate-a-config"><a class="header" href="#generate-a-config">Generate a Config</a></h2>
+<p>For generating a config, make sure you created the <code>alias</code> above with the volume mount. You can then
+execute:</p>
+<pre><code class="language-bash">rauthy generate-config -o data/config-generated.toml
+</code></pre>
+<p>It will ask you a bunch of questions and then create a <code>config-generated.toml</code> file in the <code>data</code>
+dir inside the container, which will be in your <code>rauthy_data</code> dir later on, if you use the <code>alias</code>
+above. This config is only there to get you started though. There is a lot more you can configure,
+and it would be absolutely insane to ask for every little thing. The
+full <a href="config/../config/config.html">Reference Config</a> with comments explaining the values has almost 3000
+lines by now.</p>
+<h2 id="generate-encryption-keys"><a class="header" href="#generate-encryption-keys">Generate Encryption Keys</a></h2>
+<p>Be it either for your very first setup, or when want to rotate your keys, you can generate new ones
+with the CLI pretty easily:</p>
+<pre><code class="language-bash">rauthy generate-enc-key
+</code></pre>
+<p>By default, it will use the current day as date as the ID. This makes it easy to know when a key was
+created. If you like, you can set your own ID with the following flag:</p>
+<pre><code class="language-bash">-k, --with-key-id &lt;WITH_KEY_ID&gt;
+</code></pre>
+<p>The key ID must match this regex: <code>[a-zA-Z0-9:_-]{2,20}</code></p>
+<h2 id="generate-secrets"><a class="header" href="#generate-secrets">Generate Secrets</a></h2>
+<p>This probably the most basic task ever, but it will generate you random alphanumeric,
+cryptographically secure secrets. You can generate them anywhere else as well, but make sure the
+generation is actually cryptographically secure, and not just a JS generator in a random web app,
+where you cannot be sure.</p>
+<pre><code class="language-bash">rauthy generate-secrets
+</code></pre>
+<p>There are no flags for this one. It will simply generate 48 secure random characters. This length
+is very safe while still not being way over the top. If we wanted the same level of security as a
+256-bit random bytes key, in alphanumeric form it would be ~43 characters. We have 48 here, which
+even exceeds it. Anything bigger would be a waste of resources.</p>
+<h2 id="hash-passwords"><a class="header" href="#hash-passwords">Hash Passwords</a></h2>
+<p>If you want to hash a password for bootstrapping, you can do it like so:</p>
+<pre><code class="language-bash">rauthy hash-password
+</code></pre>
+<p>You can configure the parameters for password hashing, but this tool provides safe defaults. If you
+really need to, you could lower the <code>m_cost</code> though, if you have a good reason, or bump it up even
+more if you want to be extra secure.</p>
+<h2 id="serve-rauthy"><a class="header" href="#serve-rauthy">Serve Rauthy</a></h2>
+<p>The last option here is <code>rauthy serve</code>. This will actually launch Rauthy.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="minimal-production-config"><a class="header" href="#minimal-production-config">Minimal Production Config</a></h1>
 <p>This section gives you a template for probably the most minimal config you could do when going into production.</p>
 <p>You can either copy &amp; paste this (with adjustments of course) and expand it when necessary, or take a look at the
@@ -1305,22 +1540,20 @@ argon2id tuning here.</p>
 <p>Rauthy uses the argon2id hashing algorithm for passwords. This is the most expensive and
 compute-heavy operation done by the application, and the variables need to be tuned for every
 deployment to provide the best compromise of security, resource usage and user experience.<br />
-The default values are a good start at the lower end of the "being safe scale" for a production
-deployment. However, you should at least take a look at them and verify that they work for you.</p>
+The default values are a good start for a production deployment. However, you should at least take a
+look at them and verify that they work for you.</p>
 <p>The Admin UI provides a utility which helps you find the best values for your deployment quickly.
 What and how to do is described in the Admin UI itself. I just want to guide you to this utility,
 especially since it is an important step security wise.</p>
-<p>When you are logged in to the Admin UI, please navigate to <code>Config</code> -&gt; <code>Argon2 Parameters</code> to find
-your values. After they have been found, apply them to the Rauthy config and restart the
-deployment. <br />
-Keep in mind that if you run the application in a way, where memory is limited, for instance inside
-Kubernetes with resource limits set too low, that it will crash, if either <code>hashing.argon2_m_cost</code>
+<p>When you are logged in to the Admin UI, navigate to <code>Config</code> -&gt; <code>Argon2 Parameters</code> to find your
+values. After they have been found, apply them to the Rauthy config and restart the deployment.</p>
+<p>Keep in mind that if you run the application in a way where memory is limited, for instance inside
+Kubernetes with resource limits set too low, it will crash if either <code>hashing.argon2_m_cost</code>
 is set too high or the memory limit too low.</p>
 <p>There is one additional, really important config variable need to be taken into account for the
-tuning. <br />
-Since this operation is really resource intense, you can limit the number of threads which can run
-in parallel doing hashing operations. This is really important when we think about constrained
-memory again.</p>
+tuning. Since this operation is really resource intense, you can limit the number of threads which
+can run in parallel doing hashing operations. This is really important when we think about
+constrained memory again.</p>
 <p><code>hashing.max_hash_threads</code> limits the maximum number of parallel password hashes at the exact same
 time to never exceed system memory while still allowing a good amount of memory. The <strong>default value
 is 2</strong>.</p>
@@ -1331,14 +1564,14 @@ login at the exact same time. This value makes an external rate limiting for the
 while you may add some for the others).</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="passkeys--webauthn"><a class="header" href="#passkeys--webauthn">Passkeys / WebAuthn</a></h1>
 <h2 id="passkey-only-accounts"><a class="header" href="#passkey-only-accounts">Passkey Only Accounts</a></h2>
-<p>Rauthy provides the ability to create Passkey only accounts.<br />
-These accounts do not have any password at all. The user can login via E-Mail + providing the Passkey. Only keys
-with additional user verification (UV) will be accepted for these accounts. This makes sure, that they are 2FA / MFA
+<p>Rauthy provides the ability to create Passkey-only accounts. These accounts do not have any password
+at all. The user can login via E-Mail and provide the Passkey. Only keys with additional user
+verification (UV) will be accepted for these accounts. This makes sure that they are 2FA / MFA
 secured (depending on the device) all the time.</p>
-<p>You can choose the account type either during the initial password reset link you get via E-Mail, or you can
-convert a traditional password account to a passkey only account in your account view, if you have at least
-one Passkey with additional UV registered.</p>
-<p>Passkey only accounts provide a few benefits:</p>
+<p>You can choose the account type either during the initial password reset link you get via E-Mail, or
+you can convert a traditional password account to a passkey only account in your account view, if
+you have at least one Passkey with additional UV registered.</p>
+<p>Passkey-only accounts provide a few benefits:</p>
 <ul>
 <li>no need to remember or store any passwords</li>
 <li>way easier and faster logging in</li>
@@ -1357,8 +1590,8 @@ one Passkey with additional UV registered.</p>
 <div>
 <p>Passkey only accounts cannot use the traditional password reset E-Mails.</p>
 <p>This is a drawback and a benefit at the same time:<br />
-No way to take over an account if the E-Mail account has been compromised, but at the same time the user
-relies on an Admin to reset the MFA devices, if no backup exists or all are lost.</p>
+No way to take over an account if the E-Mail account has been compromised, but at the same time the
+user relies on an Admin to reset the MFA devices, if no backup exists or all are lost.</p>
 </div>
 </div>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
@@ -1369,30 +1602,17 @@ relies on an Admin to reset the MFA devices, if no backup exists or all are lost
 <a class="admonition-anchor-link" href="config/passkeys.html#admonition-note"></a>
 </div>
 <div>
-<p>Unfortunately, passkeys have one big drawback when you use the discoverable credentials / resident keys feature.
-This is really cool and the best possible UX at first glance, because the user does not need to provide even a
-username / email manually, but has one very big drawback.</p>
+<p>Unfortunately, passkeys have one big drawback when you use the discoverable credentials / resident
+keys feature. This is really cool and the best possible UX at first glance, because the user does
+not need to provide even a username / email manually, but has one very big drawback.</p>
 <p><strong>The amount of resident keys a passkey can store is always limited.</strong></p>
-<p>There are devices, that can get locked up completely if you try to register resident keys beyond the capacity of
-the device itself. For this reason, Rauthy strictly discourages the use of resident keys and will always request the
-user to provide the email, so you can never end up in such a situation with Rauthy. Non-discoverable credentials are
-not limited per device.</p>
-<p>Rauthy remembers the last email that has been used for a login on each machine. This provides the same best possible
-UX in the end that you would get with discoverable credentials but without the drawbacks of the limited amount.</p>
-</div>
-</div>
-<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
-<div class="admonition-title">
-<div id="admonition-info-title">
-<p>Info</p>
-</div>
-<a class="admonition-anchor-link" href="config/passkeys.html#admonition-info"></a>
-</div>
-<div>
-<p>Android has finally added support for biometric UV in September 2023.<br />
-This has made is possible to implement this feature into Rauthy without sacrificing security.</p>
-<p>However, at the time of writing (2024/06/05), PIN / biometric UV via NFC keys like Yubikeys does still not work.</p>
-<p>Sadly, Google just decided to not implement this feature for other keys than their own implementation of it.</p>
+<p>There are devices, that can get locked up completely if you try to register resident keys beyond
+the capacity of the device itself. For this reason, Rauthy strictly discourages the use of resident
+keys and will always request the user to provide the email, so you can never end up in such a
+situation with Rauthy. Non-discoverable credentials are not limited per device.</p>
+<p>Rauthy remembers the last email that has been used for a login on each machine. This provides the
+same best possible UX in the end that you would get with discoverable credentials but without the
+drawbacks of the limited amount.</p>
 </div>
 </div>
 <div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
@@ -1403,45 +1623,19 @@ This has made is possible to implement this feature into Rauthy without sacrific
 <a class="admonition-anchor-link" href="config/passkeys.html#admonition-note-1"></a>
 </div>
 <div>
-<p>On macOS, when your browser tries to create a passkey, it will default to using the built-in Passwords app. If you wish
-to use a different password manager such as 1Password, Vaultwarden, etc., you'll need to disable the setting "Autofill
-Passwords and Passkeys".</p>
+<p>On macOS, when your browser tries to create a passkey, it will default to using the built-in
+Passwords app. If you wish to use a different password manager such as 1Password, Vaultwarden, etc.,
+you'll need to disable the setting "Autofill Passwords and Passkeys".</p>
 <p><img src="config/img/macos_autofill.png" alt="the setting Autofill Passwords and Passkeys is under a section called AutoFill and Passwords" /></p>
 </div>
 </div>
-<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
-<div class="admonition-title">
-<div id="admonition-hint-title">
-<p>Hint</p>
-</div>
-<a class="admonition-anchor-link" href="config/passkeys.html#admonition-hint"></a>
-</div>
-<div>
-<p>If you want to register an Android device for a Passkey only account, but you are using for instance Yubikeys
-with PIN UV, you can do the following trick to get it done (works only with the latest Play store version):</p>
-<ul>
-<li>Create a password for your account, if it does not exist yet</li>
-<li>Remove all registered passkeys</li>
-<li>Log in to your account view on your Android device and another device that works with your Yubikey</li>
-<li>With both devices logged in at the same time:
-<ul>
-<li>Register a new passkey with Android and choose "this device", which will create a Passkey flow with your fingerprint</li>
-<li>Register the Yubikey on the other device</li>
-</ul>
-</li>
-<li>You should now have 2 Passkeys: Android + Yubikey</li>
-<li>Navigate to the Password page inside your account on any device and convert it to Passkey only</li>
-<li>You should now be able to log in on your Android device with Passkey only and with your Yubikey</li>
-</ul>
-</div>
-</div>
 <h2 id="config-1"><a class="header" href="#config-1">Config</a></h2>
-<p>You should use Passkeys / Webauthn in production for 2FA / MFA.
-To make sure it works, you need to check your the config.</p>
+<p>You should use Passkeys / Webauthn in production for 2FA / MFA. To make sure it works, you need to
+check your the config.</p>
 <p>Adjust the following variables in your config, to make sure it works correctly.</p>
 <h3 id="rp_id"><a class="header" href="#rp_id"><code>RP_ID</code></a></h3>
-<p>This is the <em>Relaying Party (RP) ID</em>, which should be your effective domain name.<br />
-Let's say our application is available at <code>auth.example.com</code>, then this should be:</p>
+<p>This is the <em>Relaying Party (RP) ID</em>, which should be your effective domain name. Let's say our
+application is available at <code>auth.example.com</code>, then this should be:</p>
 <pre><code class="language-toml">[webauthn]
 rp_id = "auth.example.com"
 </code></pre>
@@ -1453,13 +1647,13 @@ rp_id = "auth.example.com"
 <a class="admonition-anchor-link" href="config/passkeys.html#admonition-caution-1"></a>
 </div>
 <div>
-<p>When the <code>RP_ID</code> changes, already registered devices will stop working and users cannot log in anymore!
-Be very careful, if you want / need to do this in production.</p>
+<p>When the <code>RP_ID</code> changes, already registered devices will stop working and users cannot log in
+anymore! Be very careful, if you want / need to do this in production.</p>
 </div>
 </div>
 <h3 id="rp_origin"><a class="header" href="#rp_origin"><code>RP_ORIGIN</code></a></h3>
-<p>The second important variable is the <code>webauthn.rp_origin</code>. This needs to be set to the scheme + URL containing the
-effective domain name + port.</p>
+<p>The second important variable is the <code>webauthn.rp_origin</code>. This needs to be set to the scheme + URL
+containing the effective domain name + port.</p>
 <div id="admonition-caution-2" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-2-title">
 <div class="admonition-title">
 <div id="admonition-caution-2-title">
@@ -1476,38 +1670,50 @@ effective domain name + port.</p>
 rp_origin = https://auth.example.com:443
 </code></pre>
 <h3 id="rp_name"><a class="header" href="#rp_name"><code>RP_NAME</code></a></h3>
-<p>This variable can be set to anything "pretty".<br />
-This may be shown to the user in a way like "<code>rp_name</code> requests your security key ...". If this is shown depends on the
-OS and the browser the client uses. Firefox, for instance, does not show this at the time of writing.</p>
+<p>This variable can be set to anything "pretty".</p>
+<p>This may be shown to the user in a way like "<code>rp_name</code> requests your security key ...". If this is
+shown depends on the OS and the browser the client uses. Firefox, for instance, does not show this
+at the time of writing.</p>
 <p>You can change the <code>rp_name</code> later on without affecting the validation of already registered keys.</p>
 <h3 id="webauthn_renew_exp"><a class="header" href="#webauthn_renew_exp"><code>WEBAUTHN_RENEW_EXP</code></a></h3>
-<p>For all non Passkey only accounts, Rauthy will always prompt a user at least once for the password on a new machine,
-even with active
-passkeys. The keys are used either as a strong second factor, when they do not work with a PIN, or bump up the whole
-login to real MFA, if the OS / Browser / Key does support this.</p>
-<p>When a user has logged in successfully on a new device and active 2FA / MFA, Rauthy will set an encrypted cookie as a
-"remember me". The lifetime of this cookie can be configured with <code>renew_exp</code>. The <strong>default</strong> of this value is <strong>2160
-hours</strong>.</p>
-<p>As long as this cookie is present and can be decrypted by the backend, the user can log in from this very
-device with the registered Passkey key only, which makes a very good user experience for the whole login flow.
-The E-Mail will already be filled automatically and only a single click on the login button is necessary.</p>
+<p>For all non-Passkey only accounts, Rauthy will always prompt a user at least once for the password
+on a new machine, even with active passkeys. The keys are used either as a strong second factor,
+when they do not work with a PIN, or bump up the whole login to real MFA, if the OS / Browser / Key
+does support this.</p>
+<p>When a user has logged in successfully on a new device and active 2FA / MFA, Rauthy will set an
+encrypted cookie as a "remember me". The lifetime of this cookie can be configured with <code>renew_exp</code>.
+The <strong>default</strong> of this value is <strong>2160 hours</strong>.</p>
+<p>As long as this cookie is present and can be decrypted by the backend, the user can log in from this
+very device with the registered Passkey key only, which makes a very good user experience for the
+whole login flow. The E-Mail will already be filled automatically and only a single click on the
+login button is necessary.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="encryption"><a class="header" href="#encryption">Encryption</a></h1>
-<p>Rauthy does additional encryption for values in lots of places, like for instance <code>client_secret</code>s in the database
+<p>Rauthy does additional encryption for values in lots of places, like for instance <code>client_secret</code>s
+in the database
 or session cookies. In the Getting Started for Kubernetes, we have set up the <code>encryption.keys</code> and
 <code>encryption.key_active</code>.</p>
-<p>The <code>encryption.keys</code> defines the static keys used for additional data encryption in a few places. This values may
-contain multiple keys, if you want to rotate them at some point without breaking the decryption of all already existing
+<p>The <code>encryption.keys</code> defines the static keys used for additional data encryption in a few places.
+This values may
+contain multiple keys, if you want to rotate them at some point without breaking the decryption of
+all already existing
 secrets.</p>
-<p><code>encryption.key_active</code> defines the key inside <code>encryption.keys</code> which will be used as the default. This means that all
+<p><code>encryption.key_active</code> defines the key inside <code>encryption.keys</code> which will be used as the default.
+This means that all
 new / current encryption's performed by the backend will use the key with the given ID.</p>
 <h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
-<p>If you followed the Getting Started for Kubernetes, you already completed this step. If not, this is how you can
+<p>If you followed the Getting Started for Kubernetes, you already completed this step. If not, this is
+how you can
 generate an encryption key.</p>
-<pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+<p><strong>Option 1: CLI</strong></p>
+<pre><code class="language-bash">docker run -it --rm ghcr.io/sebadob/rauthy generate-enc-key
 </code></pre>
-<p>The first part until the first <code>/</code> is the key ID. This has to be between 2 and 20 characters and should not contain any
-special ones. The second part after the first <code>/</code> is the key itself. This value <strong>must</strong> be exactly 32 bytes long and
-then be base64 encoded. If it is not, Rauthy will yell at startup and panic early.</p>
+<p><strong>Option 2: <code>openssl</code></strong></p>
+<pre><code class="language-bash">echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+</code></pre>
+<p>The first part until the first <code>/</code> is the key ID. This has to be between 2 and 20 characters and
+should not contain any special ones. The second part after the first <code>/</code> is the key itself. This
+value <strong>must</strong> be exactly 32 bytes long and then be base64 encoded. If it is not, Rauthy will yell
+at startup and panic early.</p>
 <p>If you have generated a key, lets say the output was</p>
 <pre><code>❯ echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI=
@@ -1517,8 +1723,8 @@ then be base64 encoded. If it is not, Rauthy will yell at startup and panic earl
 keys = ["90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI="]
 key_active = "90eb6d69"
 </code></pre>
-<p>You can add more keys if you like, <strong>separated by new lines</strong>, which is needed for the key rotation described below.
-The <code>encryption.key_active</code> will be the key being used for all new encryption's.</p>
+<p>You can add more keys if you like, <strong>separated by new lines</strong>, which is needed for the key rotation
+described below. The <code>encryption.key_active</code> will be the key being used for all new encryption's.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -1527,15 +1733,17 @@ The <code>encryption.key_active</code> will be the key being used for all new en
 <a class="admonition-anchor-link" href="config/encryption.html#admonition-note"></a>
 </div>
 <div>
-<p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which will make Rauthy
-panic on startup, when it checks the given values. If you run into that situation, you can generate them without
-<code>openssl</code> as well, with e.g:</p>
+<p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which
+will make Rauthy panic on startup, when it checks the given values. If you run into that situation,
+you can generate them without <code>openssl</code> as well, with e.g:</p>
 <pre><code>echo"$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+<p>... or just use the CLI as described above.</p>
 </div>
 </div>
 <h2 id="key-rotation"><a class="header" href="#key-rotation">Key Rotation</a></h2>
-<p>A good practice is to rotate encryption keys from time to time. Rauthy does auto-rotate the keys for signing tokens,
-but the admin is responsible for the encryption keys, since they have a greater impact.</p>
+<p>A good practice is to rotate encryption keys from time to time. Rauthy does auto-rotate the keys for
+signing tokens, but the admin is responsible for the encryption keys, since they have a greater
+impact.</p>
 <p><strong>1. Add a new key to the <code>encryption.keys</code> in you secrets</strong></p>
 <div id="admonition-fail" class="admonition admonish-failure" role="note" aria-labelledby="admonition-fail-title">
 <div class="admonition-title">
@@ -1550,17 +1758,21 @@ If the old key is gone, the migration will fail.</p>
 </div>
 </div>
 <p><strong>2. Generate a new key + id</strong></p>
-<pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+<p><strong>Option 1: CLI</strong></p>
+<pre><code class="language-bash">docker run -it --rm ghcr.io/sebadob/rauthy generate-enc-key
+</code></pre>
+<p><strong>Option 2: <code>openssl</code></strong></p>
+<pre><code class="language-bash">echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 </code></pre>
 <p>The part before the first <code>/</code> is the <code>key_active</code> and the part afterwards is the key base64 encoded.
 You might set the new <code>encryption.key_active</code> to the newly generated key ID.</p>
-<p>Keep in mind, you need to ADD this to your existing keys and not just replace them! If you just replace them, almost
-all things will break and fall apart.</p>
+<p>Keep in mind, you need to ADD this to your existing keys and not just replace them! If you just
+replace them, almost all things will break and fall apart.</p>
 <p>The final format of the <code>encryption.keys</code> should look something like this, for instance:</p>
 <pre><code class="language-toml">[encryption]
 key = [
-    "Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=",
-    "6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=",
+  "Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=",
+  "6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=",
 ]
 </code></pre>
 <p>In this example, if the first key should be the new active default, set your <code>key_active</code> to</p>
@@ -1568,23 +1780,25 @@ key = [
 key_active = "Wx1zrbLF"
 </code></pre>
 <p><strong>3. Set the <code>key_active</code> to the ID of your newly generated key</strong></p>
-<p>This will make sure, that all new encryptions will use the new key. If you do not care about removing the old keys,
-because you maybe just want to rotate because its good practice, the secrets will migrate "by themselves" over time.
-If Rauthy finds any secrets during its normal operation, that have been encrypted with an older key than the current
-<code>key_active</code>, it will re-encrypt these secrets and update the values.<br />
-This means, you may just stop at this point, if this is good enough for you.</p>
+<p>This will make sure that all new encryption will use the new key. If you do not care about removing
+the old keys, because you maybe just want to rotate because its good practice, the secrets will
+migrate "by themselves" over time.</p>
+<p>If Rauthy finds any secrets during its normal operation, that have been encrypted with an older key
+than the current <code>key_active</code>, it will re-encrypt these secrets and update the values. This means,
+you may just stop at this point, if this is good enough for you.</p>
 <p><strong>4. Migrate Keys</strong></p>
-<p>If you however want to trigger a re-encryption of all existing secrets on purpose, there is a small tool in the
-Admin UI which helps you with this.</p>
+<p>If you, however, want to trigger a re-encryption of all existing secrets on purpose, there is a
+small tool in the Admin UI which helps you with this.</p>
 <p>Log in to the Admin UI and navigate to <code>Config</code> -&gt; <code>Encryption Keys</code>.<br />
 You will see the currently recognized keys and the currently active ID.</p>
-<p>You can then make sure, that the ID you want to migrate secrets to is selected and execute the migrations.
-Please keep in mind, that if you have a lot of data, it might take a few seconds to perform this operation.
-This will migrate all encrypted data for existing OIDC clients, all JWKs, and so on, with the new key.</p>
+<p>You can then make sure, that the ID you want to migrate secrets to is selected and execute the
+migrations. Please keep in mind, that if you have a lot of data, it might take a few seconds to
+perform this operation. This will migrate all encrypted data for existing OIDC clients, all JWKs,
+and so on, with the new key.</p>
 <p><strong>5. Remove old keys</strong></p>
-<p>After a successful migration via the UI tool, you could remove old keys from the <code>keys</code> value, but it is not
-recommended as long as you did not have a known data breach. Just keep them around for some time because of
-encrypted cookies with older keys.</p>
+<p>After a successful migration via the UI tool, you could remove old keys from the <code>keys</code> value, but
+it is not recommended as long as you did not have a known data breach. Just keep them around for
+some time because of encrypted cookies with older keys.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -1593,8 +1807,9 @@ encrypted cookies with older keys.</p>
 <a class="admonition-anchor-link" href="config/encryption.html#admonition-caution"></a>
 </div>
 <div>
-<p>All cookies are encrypted with the <code>key_active</code>. This means, if you remove something from the <code>keys</code> which has
-been used to encrypt cookies, the user will be prompted to log in again, even if cookies have not expired yet.</p>
+<p>All cookies are encrypted with the <code>key_active</code>. This means, if you remove something from the <code>keys</code>
+which has been used to encrypt cookies, the user will be prompted to log in again, even if cookies
+have not expired yet.</p>
 </div>
 </div>
 <div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
@@ -1605,30 +1820,27 @@ been used to encrypt cookies, the user will be prompted to log in again, even if
 <a class="admonition-anchor-link" href="config/encryption.html#admonition-note-1"></a>
 </div>
 <div>
-<p>Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some attack vectors if
-its used without hardware acceleration.</p>
-<p>Usually, devices these days all come with dedicated AES acceleration, even embedded ones. However, with VM's this is
-often a different story and its not guaranteed, that you will have AES acceleration when you spin up a VM in some cloud.
-Rauthy tries to be as secure as possible by default and therefore ChaCha20Poly1305 has a slight advantage over AES.</p>
+<p>Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some
+attack vectors if its used without hardware acceleration.</p>
+<p>Usually, devices these days all come with AES-NI, even embedded ones. However, with VM's this is
+often a different story and its not guaranteed, that you will have AES acceleration when you spin
+up a VM in some cloud. Rauthy tries to be as secure as possible by default and therefore
+ChaCha20Poly1305 has a slight advantage over AES.</p>
 </div>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="logging-and-auditing"><a class="header" href="#logging-and-auditing">Logging and Auditing</a></h1>
 <p>Rauthy logs most things into the console, depending on the configuration of different log levels. In
-addition, more
-important events can be sent to Matrix, Slack or via E-Mail. All of this is highly configurable and
-you should be able
-to achieve whatever you need. All events are logged into the console as well with their configured
-level. This means,
-if Rauthy fires an event of type <code>NewUser</code> with the level <code>info</code> and you have configured a log level
-of at least the
-same, you will see the event in the console as well. So you could only use log aggregation and use
-existing tools
-without configuring other targets and still catch everything.</p>
+addition, more important events can be sent to Matrix, Slack or via E-Mail. All of this is
+configurable, and you should be able to achieve whatever you need. All events are logged into the
+console as well with their configured level. This means, if Rauthy fires an event of type <code>NewUser</code>
+with the level <code>info</code> and you have configured a log level of at least the same, you will see the
+event in the console as well. So you could only use log aggregation and use existing tools without
+configuring other targets and still catch everything.</p>
 <h2 id="logging"><a class="header" href="#logging">Logging</a></h2>
 <p>You can configure not only different levels for logging, but also different targets / situations.</p>
 <h3 id="log_level"><a class="header" href="#log_level"><code>LOG_LEVEL</code></a></h3>
 <p>The <code>LOG_LEVEL</code> variable configures the default logging in most situations. This defines the logging
-for instance
-for logging information from different function runs or things that have been triggered.</p>
+for instance, for logging information from different function runs or things that have been
+triggered.</p>
 <pre><code class="language-toml">[logging]
 # This is the log level for stdout logs
 # Accepts: error, warn, info, debug, trace
@@ -1639,12 +1851,9 @@ level = 'info'
 </code></pre>
 <h3 id="log_level_database"><a class="header" href="#log_level_database"><code>LOG_LEVEL_DATABASE</code></a></h3>
 <p>The Hiqlite database logging is at the time of writing pretty verbose on purpose. The whole
-persistence layer with the
-Raft cluster setup has been written from the ground up. The amount of logging will be reduced in
-later versions, when
-the whole layer has been proven to be really solid, but for now you get more information just in
-case you need to debug
-something.</p>
+persistence layer with the Raft cluster setup has been written from the ground up. The amount of
+logging will be reduced in later versions, when the whole layer has been proven to be really solid,
+but for now you get more information just in case you need to debug something.</p>
 <p>You can reduce the default logging and for instance set it to <code>warn</code> or <code>error</code> only.</p>
 <pre><code class="language-toml">[logging]
 # The log level for the `Hiqlite` persistence layer.
@@ -1656,10 +1865,8 @@ level_database = 'info'
 </code></pre>
 <h3 id="log_level_access"><a class="header" href="#log_level_access"><code>LOG_LEVEL_ACCESS</code></a></h3>
 <p>For changing the logging behavior for access logs to the API endpoints, you will need to set the
-<code>LOG_LEVEL_ACCESS</code>.
-If you have access logging configured at your firewall or reverse proxy, you can disable the
-<code>LOG_LEVEL_ACCESS</code> fully
-to reduce duplicated log outputs.</p>
+<code>LOG_LEVEL_ACCESS</code>. If you have access logging configured at your firewall or reverse proxy, you can
+disable the <code>LOG_LEVEL_ACCESS</code> fully to reduce duplicated log outputs.</p>
 <pre><code class="language-toml">[logging]
 # This is a special config which allows the configuration of
 # customized access logs. These logs will be logged with each
@@ -1699,11 +1906,9 @@ log_fmt = 'json'
 </code></pre>
 <h2 id="events"><a class="header" href="#events">Events</a></h2>
 <p>Events are used for auditing and never miss anything. If something important happens, you usually
-need to inspect logs
-to catch it, but why should you, if you did not notice any problems? This is where Rauthy Events are
-helping you out.
-You need to set up basic configuration for Event targets and then you could customize the different
-levels.</p>
+need to inspect logs to catch it, but why should you, if you did not notice any problems? This is
+where Rauthy Events are helping you out. You need to set up basic configuration for Event targets
+and then you could customize the different levels.</p>
 <h3 id="basic-setup"><a class="header" href="#basic-setup">Basic Setup</a></h3>
 <p>Rauthy has the following Event targets built-in:</p>
 <ul>
@@ -1714,8 +1919,7 @@ levels.</p>
 <p>You can see the full set of config option in the <code>[events]</code> in the <a href="config/config.html">Reference Config</a>.</p>
 <h4 id="e-mail"><a class="header" href="#e-mail">E-Mail</a></h4>
 <p>To be able to receive Events via E-Mail, you need to have set up an SMTP server and have a working
-connection. With
-a working SMTP, you only need to set <code>events.email</code>, that's it.</p>
+connection. With a working SMTP, you only need to set <code>events.email</code>, that's it.</p>
 <pre><code class="language-toml">[events]
 # The E-Mail address event notifications should be sent to.
 #
@@ -1724,12 +1928,9 @@ email = 'admin@localhost'
 </code></pre>
 <h4 id="matrix"><a class="header" href="#matrix">Matrix</a></h4>
 <p>Matrix is often deployed with home servers that may not even have real TLS certificates or if just
-running behind closed
-doors, may use self-signed certificates. To make it work in all of these situations, you can
-configure quite a lot for
-the connection to Matrix. In the end, you will only need to have some credentials and a room ID, so
-Rauthy knows where
-it should post the events.</p>
+running behind closed doors, may use self-signed certificates. To make it work in all of these
+situations, you can configure quite a lot for the connection to Matrix. In the end, you will only
+need to have some credentials and a room ID, so Rauthy knows where it should post the events.</p>
 <pre><code class="language-toml">[events]
 # Matrix variables for event notifications.
 # `matrix_user_id` and `matrix_room_id` are mandatory.
@@ -1796,15 +1997,15 @@ matrix_error_no_panic = false
 <a class="admonition-anchor-link" href="config/logging.html#admonition-hint"></a>
 </div>
 <div>
-<p>I suggest that you create a separate room for these events. If you experience issues with Matrix encryption, you should
-maybe disable the encryption for the Events room. I came across some weird errors from Matrix in the past when I was
-using a session token which has been created on another machine.</p>
+<p>I suggest that you create a separate room for these events. If you experience issues with Matrix
+encryption, you should maybe disable the encryption for the Events room. I came across some weird
+errors from Matrix in the past when I was using a session token which has been created on another
+machine.</p>
 </div>
 </div>
 <h4 id="slack"><a class="header" href="#slack">Slack</a></h4>
 <p>To receive messages via Slack, you need to create a legacy webhook inside your Slack account. This
-is then the only
-config variable you need to set:</p>
+is then the only config variable you need to set:</p>
 <pre><code class="language-toml">[events]
 # The Webhook for Slack Notifications.
 # If left empty, no messages will be sent to Slack.
@@ -1814,10 +2015,8 @@ slack_webhook = ""
 </code></pre>
 <h4 id="custom-target"><a class="header" href="#custom-target">Custom Target</a></h4>
 <p>If you need your events to be sent somewhere custom, you can always create an API key with <code>read</code>
-access for Events.
-Then write a small app that simply listens to the events stream, which can process or just forwards
-the events to where
-ever you need them.</p>
+access for Events. Then write a small app that simply listens to the events stream, which can
+process or just forwards the events to where ever you need them.</p>
 <ol>
 <li>Log in to the Admin UI and create an API key with <code>read</code> access for events.</li>
 </ol>
@@ -1853,8 +2052,8 @@ like</li>
 <pre><code>Authorization: API-Key events$SUcpBxcPmfwH9z1Kb4ExOUYDSXpxOj9mFLadjuQ1049XaWzdWB328aa97k2nj21E
 </code></pre>
 <p>You can either periodically fetch via the <code>/auth/v1/events</code> endpoint (see Swagger documentation in
-the Admin UI), or
-by listening to the <code>/auth/v1/events/stream</code>, which will be a Server Sent Events stream.</p>
+the Admin UI), or by listening to the <code>/auth/v1/events/stream</code>, which will be a Server Sent Events
+stream.</p>
 <p>The events will be sent in JSON format and have the following content:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1899,6 +2098,7 @@ enum EventType {
   SuspiciousApiScan,
   LoginNewLocation,
   TokenIssued,
+  CredentialStuffing,
 }
 <span class="boring">}</span></code></pre></pre>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
@@ -1909,24 +2109,21 @@ enum EventType {
 <a class="admonition-anchor-link" href="config/logging.html#admonition-note"></a>
 </div>
 <div>
-<p>Keep in mind, that depending on proxies you might have in between, they might kill your connection to the events stream
-after some timeout without messages. Your app should work around this and either re-connect on connection loss, or you
-could fix it with a different proxy config or keep alive messages.</p>
+<p>Keep in mind, that depending on proxies you might have in between, they might kill your connection
+to the events stream after some timeout without messages. Your app should work around this and
+either re-connect on connection loss, or you could fix it with a different proxy config or keep
+alive messages.</p>
 </div>
 </div>
 <h3 id="testing"><a class="header" href="#testing">Testing</a></h3>
 <p>You can test your Event handler / pipeline setup when you log in to the Admin UI and simply press
-the <code>Test</code> button
-in the upper right corner in the Events sidebar. This will send a Test event to all configured
-targets and listeners
-independent of any configured event level restrictions. Test events will always be sent as long as
-everything is working
-properly.</p>
+the <code>Test</code> button in the upper right corner in the Events sidebar. This will send a Test event to
+all configured targets and listeners independent of any configured event level restrictions. Test
+events will always be sent as long as everything is working properly.</p>
 <h3 id="event_notify_level"><a class="header" href="#event_notify_level"><code>EVENT_NOTIFY_LEVEL</code></a></h3>
 <p>You can set different levels for each target. By default, Only events with <code>warning</code> or higher are
-sent via E-Mail
-while Matrix / Slack would receive Events with <code>notice</code> or higher. If you want a different behavior,
-you can get this:</p>
+sent via E-Mail while Matrix / Slack would receive Events with <code>notice</code> or higher. If you want a
+different behavior, you can get this:</p>
 <pre><code class="language-toml">[events]
 # The notification level for events. Works the same way as
 # a logging level. For instance: 'notice' means send out a
@@ -1949,13 +2146,10 @@ notify_level_slack = 'notice'
 </code></pre>
 <h3 id="event-persistence"><a class="header" href="#event-persistence">Event Persistence</a></h3>
 <p>Rauthys Admin UI has a component for inspecting Events from the past for analytical purposes. By
-default, events with
-the level <code>info</code> or higher are persisted for <code>31</code> days. After this period, they will be removed from
-the database to
-keep it clean.</p>
+default, events with the level <code>info</code> or higher are persisted for <code>31</code> days. After this period, they
+will be removed from the database to keep it clean.</p>
 <p>You can configure both the level which should be persisted, for instance set "only persist Events
-with level warning
-or higher" and the days how long they should be kept.</p>
+with level warning or higher" and the days how long they should be kept.</p>
 <pre><code class="language-toml">[events]
 # Define the level from which on events should be persisted
 # inside the database. All events with a lower level will be
@@ -1979,13 +2173,10 @@ cleanup_days = 30
 </code></pre>
 <h3 id="level_-values"><a class="header" href="#level_-values"><code>level_*</code> Values</a></h3>
 <p>There are a lot of values starting with <code>level_*</code>. These can be used to configure the level for
-different kinds
-of event being fired by Rauthy.</p>
+different kinds of event being fired by Rauthy.</p>
 <p>For instance, let's say you only want to receive events with a level of <code>warning</code> or higher, but you
-also want to
-receive a notification when there are more than 7 failed logins from an IP. By default, 7 failed
-logins would trigger an
-event with the level of <code>notice</code>. You can then set</p>
+also want to receive a notification when there are more than 7 failed logins from an IP. By default,
+7 failed logins would trigger an event with the level of <code>notice</code>. You can then set</p>
 <pre><code class="language-toml">[events]
 # default: notice
 # overwritten by: EVENT_LEVEL_FAILED_LOGINS_7
@@ -2157,23 +2348,18 @@ backup_keep_days = 30
 backup_keep_days_local = 3
 </code></pre>
 <p>All these backups are written inside the pod / container into <code>data/state_machine/backups</code>.</p>
-<p>This difference makes it possible, that you could add a second volume mount to the container.<br />
+<p>This difference makes it possible that you could add a second volume mount to the container.<br />
 You then have the database itself on a different disk than the backups, which is the most simple and
-straight forward
-approach to have a basic backup strategy. However, it is recommended to use S3 for backups,
-especially for HA
-deployments.</p>
+straight forward approach to have a basic backup strategy. However, it is recommended to use S3 for
+backups, especially for HA deployments.</p>
 <h2 id="remote-backups-to-s3-storage"><a class="header" href="#remote-backups-to-s3-storage">Remote Backups to S3 Storage</a></h2>
 <p>Hiqlite backups can be pushed to an S3 bucket after creation. This way, you can keep only very low
-amount of local
-backups and older ones on cheaper object storage.</p>
+number of local backups and older ones on cheaper object storage.</p>
 <p>Rauthy has been tested against MinIO and Garage S3 storage and is working fine with both, so I
-expect and standard S3
-API to just work out of the box. You need to provide an Access Key + Secret with write access to an
-existing bucket
-and Rauthy will take care of the rest. All backups pushed to S3 will automatically encrypted with
-the currently active
-<code>encryption.key_active</code> from the Rauthy config.</p>
+expect and standard S3 API to just work out of the box. You need to provide an Access Key + Secret
+with write access to an existing bucket, and Rauthy will take care of the rest. All backups pushed
+to S3 will be automatically encrypted with the currently active <code>encryption.key_active</code> from the
+Rauthy config.</p>
 <p>The configuration is done with the following values:</p>
 <pre><code class="language-toml">[cluster]
 # Access values for the S3 bucket where backups will be pushed to.
@@ -2192,13 +2378,10 @@ s3_secret = "my_secret"
 </code></pre>
 <h2 id="disaster-recovery"><a class="header" href="#disaster-recovery">Disaster Recovery</a></h2>
 <p>If you really lost all your data, you can easily restore automatically from the latest backup. This
-works with either a
-local <code>file</code> backup or with an encrypted remote backup on <code>s3</code> storage (as long as you still have
-the <code>ENC_KEY_ACTIVE</code>
-that has been used for the remote backup).<br />
-This, again, works only for Hiqlite. When you are using Postgres, you should use Postgres native
-tooling like
-<code>pgBackRest</code> which is way better at this.</p>
+works with either a local <code>file</code> backup or with an encrypted remote backup on <code>s3</code> storage (as long
+as you still have the <code>ENC_KEY_ACTIVE</code> that has been used for the remote backup).</p>
+<p>This, again, works only for Hiqlite. When you are using Postgres, you should use Postgres native
+tooling like <code>pgBackRest</code> which is way better at this.</p>
 <p>The process is really simple:</p>
 <ol>
 <li>Have the cluster shut down. This is probably the case anyway, if you need to restore from a
@@ -2219,8 +2402,8 @@ backup.</li>
 <a class="admonition-anchor-link" href="config/backup.html#admonition-danger"></a>
 </div>
 <div>
-<p>After a successful restore, you MUST remove the env var again!<br />
-If you don't do it, Rauthy will re-apply the same backup with each following restart over and over again.</p>
+<p>After a successful restore, you <strong>MUST</strong> remove the env var again! If you don't do it, Rauthy will
+re-apply the same backup with each following restart over and over again.</p>
 </div>
 </div>
 <p>You only need to set this single value:</p>
@@ -2237,11 +2420,12 @@ HQL_BACKUP_RESTORE = ""
 <div style="break-before: page; page-break-before: always;"></div><h1 id="tls"><a class="header" href="#tls">TLS</a></h1>
 <p>If you do have TLS certificates from another source already, skip directly to <a href="config/tls.html#config">Config</a>.</p>
 <h2 id="generating-certificates"><a class="header" href="#generating-certificates">Generating Certificates</a></h2>
-<p>You can either generate TLS certificates yourself and manage your own CA, or (for testing purposes) let Rauthy generate
-self-signed certificates. Rauthys self-signed ones should only be used for testing, but they are generated somewhat
-securely. Rauthy will create it's own CA and save it do the database, with the private key being encrypted with the
-configured <code>encryption.key_active</code>. The CA will be valid for 10 years and re-used for signing the server certs in all
-instances, even you do an HA deployment.</p>
+<p>You can either generate TLS certificates yourself and manage your own CA, or (for testing purposes)
+let Rauthy generate self-signed certificates. Rauthys self-signed ones should only be used for
+testing, but they are generated somewhat securely. Rauthy will create it's own CA and save it do the
+database, with the private key being encrypted with the configured <code>encryption.key_active</code>. The CA
+will be valid for 10 years and re-used for signing the server certs in all instances, even you do an
+HA deployment.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -2250,14 +2434,18 @@ instances, even you do an HA deployment.</p>
 <a class="admonition-anchor-link" href="config/tls.html#admonition-caution"></a>
 </div>
 <div>
-<p>Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS certificates. To be able
-to do this during testing, you would need to add the generated CA certificate to your trust store.</p>
-<p>In such a case, you will probably see an error like <code>Invalid Key</code> during registration. This happens in insecure contexts.</p>
+<p>Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS
+certificates. To be able to do this during testing, you would need to add the generated CA
+certificate to your trust store.</p>
+<p>In such a case, you will probably see an error like <code>Invalid Key</code> during registration. This happens
+in insecure contexts.</p>
 </div>
 </div>
 <h3 id="automatic-self-signed-certificates"><a class="header" href="#automatic-self-signed-certificates">Automatic self-signed certificates</a></h3>
-<p>Generating self-signed TLS certificates for the Rauthy HTTPS server is pretty straight forward. Keep in mind, that these
-will only be generated for the HTTPS server and NOT for hiqlite internal cluster traffic, if you have an HA deployment.</p>
+<h4 id="rauthy-server--api"><a class="header" href="#rauthy-server--api">Rauthy Server + API</a></h4>
+<p>Generating self-signed TLS certificates for the Rauthy HTTPS server is pretty straight forward. Keep
+in mind that these will only be generated for the HTTPS server and NOT for Hiqlite internal cluster
+traffic, if you have an HA deployment. The cluster-internal auto-tls has a separate config variable.</p>
 <p>To generate TLS certificates on startup, you only need to set <code>tls.generate_self_signed = true</code>:</p>
 <pre><code class="language-toml">[tls]
 # If set to `true`, Rauthy will generate self-signed TLS certs and copy
@@ -2274,8 +2462,28 @@ will only be generated for the HTTPS server and NOT for hiqlite internal cluster
 # overwritten by: TLS_GENERATE_SELF_SIGNED
 generate_self_signed = true
 </code></pre>
-<p>If you only care about testing certificates for the HTTPS server, you don't need to configure anything else at this
-point.</p>
+<p>If you only care about testing certificates for the HTTPS server, you don't need to configure
+anything else at this point.</p>
+<h4 id="hiqlite---raft-cluster-traffic"><a class="header" href="#hiqlite---raft-cluster-traffic">Hiqlite - Raft Cluster Traffic</a></h4>
+<p>By default, Raft-internal traffic is NOT encrypted. The reasons is that you may not even want this
+in situations like when you e.g. have a separate physical network for nodes, or you already have a
+service mesh with mTLS in place. However, if you want to follow a zero-trust philosophy, the best
+way to do this is by letting Hiqlite handle everything for you automatically:</p>
+<pre><code class="language-toml">[cluster]
+# The `tls_auto_certificates` will generate self-signed TLS
+# certificates for internal Raft and API traffic. Clients will
+# simply not validate the certificates for ease of use because
+# they don't have to. They do a 3-way handshake anyway, which
+# validates both client and server without the secret ever being
+# sent over the network.
+#
+# If you specify specific certificates with either `tls_raft_*` or
+# `tls_api_*`, they will be used instead.
+#
+# default: false
+# overwritten by: HQL_TLS_AUTO_CERTS
+tls_auto_certificates = true
+</code></pre>
 <h3 id="manually-managed-certificates"><a class="header" href="#manually-managed-certificates">Manually managed certificates</a></h3>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
@@ -2285,14 +2493,15 @@ point.</p>
 <a class="admonition-anchor-link" href="config/tls.html#admonition-note"></a>
 </div>
 <div>
-<p>We are using another project of mine called <a href="https://github.com/sebadob/nioca">Nioca</a> for an easy creation of a
-fully functioning and production ready private Root Certificate Authority (CA).</p>
+<p>We are using another project of mine called <a href="https://github.com/sebadob/nioca">Nioca</a> for an easy
+creation of a fully functioning and production ready private Root Certificate Authority (CA).</p>
 </div>
 </div>
-<p>I suggest to use <code>docker</code> for this task. Otherwise, you can use the <code>nioca</code> binary directly on any linux machine.
-If you want a permanent way of generating certificates for yourself, take a look at Rauthys <code>justfile</code> and copy
-and adjust the recipes <code>create-root-ca</code> and <code>create-end-entity-tls</code> to your liking.<br />
-If you just want to get everything started quickly, follow these steps:</p>
+<p>I suggest to use <code>docker</code> for this task. Otherwise, you can use the <code>nioca</code> binary directly on any
+linux machine. If you want a permanent way of generating certificates for yourself, take a look at
+Rauthys <code>justfile</code> and copy and adjust the recipes <code>create-root-ca</code> and <code>create-end-entity-tls</code> to
+your liking.</p>
+<p>If you just want to get everything started quickly, follow these steps:</p>
 <h4 id="create-an-alias-for-the-docker-command"><a class="header" href="#create-an-alias-for-the-docker-command">Create an alias for the <code>docker</code> command</a></h4>
 <pre><code>alias nioca='docker run --rm -it -v ./:/ca -u $(id -u ${USER}):$(id -g ${USER}) ghcr.io/sebadob/nioca'
 </code></pre>
@@ -2300,7 +2509,8 @@ If you just want to get everything started quickly, follow these steps:</p>
 <pre><code>nioca x509 -h
 </code></pre>
 <h4 id="generate-full-certificate-chain"><a class="header" href="#generate-full-certificate-chain">Generate full certificate chain</a></h4>
-<p>To make your browser happy, your need to have at least one <code>--alt-name-dns</code> for the URL of your application.
+<p>To make your browser happy, your need to have at least one <code>--alt-name-dns</code> for the URL of your
+application.
 You can define as many of them as you like.</p>
 <pre><code>nioca x509 \
     --cn 'Rauthy Default' \
@@ -2318,8 +2528,8 @@ You can define as many of them as you like.</p>
 <li>The first 3 times, you need to provide the encryption password for your Root CA</li>
 <li>The last 3 times, you should provide a different password for your Intermediate CA</li>
 </ul>
-<p>When everything was successful, you will have a new folder named <code>x509</code> with sub folders <code>root</code>, <code>intermediate</code>
-and <code>end_entity</code> in your current one.</p>
+<p>When everything was successful, you will have a new folder named <code>x509</code> with sub folders <code>root</code>,
+<code>intermediate</code> and <code>end_entity</code> in your current one.</p>
 <p>From these, you will need the following files:</p>
 <pre><code>cp x509/intermediate/ca-chain.pem . &amp;&amp; \
 cp x509/end_entity/$(cat x509/end_entity/serial)/cert-chain.pem . &amp;&amp; \
@@ -2333,13 +2543,14 @@ cert-chain.pem
 key.pem
 </code></pre>
 <h2 id="config-2"><a class="header" href="#config-2">Config</a></h2>
-<p>The <a href="config/../config/config.html">reference config</a> contains a <code>TLS</code> section with all the values you can set.</p>
-<p>For this example, we will be using the same certificates for both the internal cache mTLS connections and the
-public facing HTTPS server.</p>
+<p>The <a href="config/../config/config.html">reference config</a> contains a <code>TLS</code> section with all the values you can
+set.</p>
+<p>For this example, we will be using the same certificates for both the internal cache mTLS
+connections and the public-facing HTTPS server.</p>
 <h3 id="hiqlite-1"><a class="header" href="#hiqlite-1">Hiqlite</a></h3>
-<p>Hiqlite can run the whole database layer, and it will always take care of caching. It can be configured to use TLS
-internally, if you provide certificates. Simply provide the following values from the <code>TLS</code> section in the reference
-config:</p>
+<p>Hiqlite can run the whole database layer, and it will always take care of caching. It can be
+configured to use TLS internally, if you provide certificates. Simply provide the following values
+from the <code>TLS</code> section in the reference config:</p>
 <pre><code class="language-toml">[cluster]
 # If given, these keys / certificates will be used to establish
 # TLS connections between nodes.
@@ -2357,8 +2568,9 @@ tls_api_key = "tls/tls.key"
 tls_api_cert = "tls/tls.crt"
 #tls_api_danger_tls_no_verify = true
 </code></pre>
-<p>There is no problem using the same certificates for both networks, but you can optionally even separate them if you need
-to. You could even re-use the Server TLS, if your DNS setup allows for this.</p>
+<p>There is no problem using the same certificates for both networks, but you can optionally even
+separate them if you need to. You could even re-use the Server TLS, if your DNS setup allows for
+this.</p>
 <div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
 <div class="admonition-title">
 <div id="admonition-note-1-title">
@@ -2371,10 +2583,10 @@ to. You could even re-use the Server TLS, if your DNS setup allows for this.</p>
 <code>*_danger_tls_no_verify</code> to <code>true</code></p>
 </div>
 </div>
-<h3 id="rauthy-server--api"><a class="header" href="#rauthy-server--api">Rauthy Server / API</a></h3>
-<p>By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which
-is the default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER
-format too, if you rename the file-ending to <code>*.der</code>.</p>
+<h3 id="rauthy-server--api-1"><a class="header" href="#rauthy-server--api-1">Rauthy Server / API</a></h3>
+<p>By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and
+<code>/app/tls/tls.crt</code>, which is the default naming for a Kubernetes TLS secret. The expected format is
+PEM, but you could provide the key in DER format too, if you rename the file-ending to <code>*.der</code>.</p>
 <pre><code class="language-toml">[tls]
 ## UI + API TLS
 
@@ -2394,8 +2606,8 @@ cert_path = 'tls/cert-chain.pem'
 key_path = 'tls/key.pem'
 </code></pre>
 <h3 id="kubernetes-1"><a class="header" href="#kubernetes-1">Kubernetes</a></h3>
-<p>If you did not follow the above procedure to generate the CA and certificates, you may need to rename the files in the
-following command, to create the Kubernetes secrets.</p>
+<p>If you did not follow the above procedure to generate the CA and certificates, you may need to
+rename the files in the following command, to create the Kubernetes secrets.</p>
 <p><strong>Secrets - Rauthy Server / API</strong></p>
 <pre><code>kubectl -n rauthy create secret tls rauthy-tls --key="key.pem" --cert="cert-chain.pem"
 </code></pre>
@@ -2410,9 +2622,9 @@ following command, to create the Kubernetes secrets.</p>
 <a class="admonition-anchor-link" href="config/tls.html#admonition-note-2"></a>
 </div>
 <div>
-<p>We create the <code>hiqlite-tls</code> here with the exact same values. You could of course either use different certificates, or
-not create a separate secret at all and just re-use the Rauthy TLS certificates, if you DNS setup allows for proper
-validation in this case.</p>
+<p>We create the <code>hiqlite-tls</code> here with the exact same values. You could of course either use
+different certificates, or not create a separate secret at all and just re-use the Rauthy TLS
+certificates, if you DNS setup allows for proper validation in this case.</p>
 </div>
 </div>
 <h4 id="config-adjustments---rest-api"><a class="header" href="#config-adjustments---rest-api">Config Adjustments - REST API</a></h4>
@@ -2450,15 +2662,17 @@ kubectl apply -f sts.yaml
 </code></pre>
 <p>The <code>rauthy</code> pods should restart now and TLS is configured.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="sessions"><a class="header" href="#sessions">Sessions</a></h1>
-<p>When you log in to anything, be it your account dashboard, the admin UI, or a downstream application, you will get a
-Rauthy session. This is independent of any client / application login. These sessions are used to authorize against
-Rauthy only for things like account management. Depending on your configuration, users may be logged in to a downstream
-client immediately, if they already have a still valid session.</p>
-<p>You can configure quite a lot like session timeouts and so on, but the default are safe. However, there is one
-really important thing:</p>
-<p><strong>You need to make sure, that Rauthy can extract the connecting clients IP properly. This is
+<p>When you log in to anything, be it your account dashboard, the admin UI, or a downstream
+application, you will get a Rauthy session. This is independent of any client / application login.
+These sessions are used to authorize against Rauthy only for things like account management.
+Depending on your configuration, users may be logged in to a downstream client immediately, if they
+already have a still valid session.</p>
+<p>You can configure quite a lot like session timeouts and so on, but the default are safe. However,
+there is one really important thing:</p>
+<p><strong>You need to make sure that Rauthy can extract the connecting clients IP properly. This is
 very important for failed login counters, login delays, blacklisting, and so on.</strong></p>
-<p>If your instance is exposed directly, in most situations the IP extractions works just fine. This may change though
+<p>If your instance is exposed directly, in most situations the IP extractions works just fine. This
+may change though
 when running behind a reverse proxy or a CDN.</p>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
 <div class="admonition-title">
@@ -2468,14 +2682,14 @@ when running behind a reverse proxy or a CDN.</p>
 <a class="admonition-anchor-link" href="config/sessions.html#admonition-hint"></a>
 </div>
 <div>
-<p>To check which IP Rauthy will extract for your requests, you don't to search through logs. You can use the whoami
-endpoint. This is unauthenticated and will just return your current IP from the request headers. If the returned
-IP is correct, your setup is fine.</p>
+<p>To check which IP Rauthy will extract for your requests, you don't to search through logs. You can
+use the whoami endpoint. This is unauthenticated and will just return your current IP from the
+request headers. If the returned IP is correct, your setup is fine.</p>
 <p>The endpoint is reachable via: <code>/auth/v1/whoami</code></p>
 </div>
 </div>
 <h2 id="running-behind-a-reverse-proxy"><a class="header" href="#running-behind-a-reverse-proxy">Running behind a reverse proxy</a></h2>
-<p>If you are running behind a reverse proxy, you need to set at least 2 config variable properly.<br />
+<p>If you are running behind a reverse proxy, you need to set at least 2 config variables properly.<br />
 First, you need to set</p>
 <pre><code class="language-toml">[server]
 # When rauthy is running behind a reverse proxy, set to true
@@ -2484,12 +2698,13 @@ First, you need to set</p>
 # overwritten by: PROXY_MODE
 proxy_mode = false
 </code></pre>
-<p>Secondly, you need to tell Rauthy which proxy source IP's it can trust. This is important, because when behind a reverse
-proxy, Rauthy will only see the IP of the proxy itself by default, which would be the same for each client connecting
-though it. However, a reverse proxy adds headers which contain the clients real IP, like e.g. the <code>X-FORWARDED-FOR</code>
-header and maybe others (depending on the proxy).</p>
-<p>These headers can be spoofed from an attacker, if the source IP is not validated. This is what Rauthy needs you to set
-the trusted proxies config for:</p>
+<p>Secondly, you need to tell Rauthy which proxy source IP's it can trust. This is important, because
+when behind a reverse proxy, Rauthy will only see the IP of the proxy itself by default, which would
+be the same for each client connecting through it. However, a reverse proxy adds headers which
+contain the clients real IP, like e.g., the <code>X-FORWARDED-FOR</code> header and maybe others (depending on
+the proxy).</p>
+<p>These headers can be spoofed from an attacker if the source IP is not validated. This is what
+Rauthy needs you to set the trusted proxies config for:</p>
 <pre><code class="language-toml">[server]
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to
@@ -2501,10 +2716,11 @@ the trusted proxies config for:</p>
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
 trusted_proxies = ['192.168.0.1/32']
 </code></pre>
-<p>The more you can narrow down the CIDR for your reverse proxy, the better. For instance if you know your proxy is your
-firewall at the same time, which always will have the IP <code>192.168.0.1</code>, then add the <code>/32</code> subnet to it. If you are
-running in a more dynamic environment like Docker or Kubernetes, where your proxy could get an IP dynamically from an
-internal pool, you need to add all the possible IPs as trustworthy.</p>
+<p>The more you can narrow down the CIDR for your reverse proxy, the better. For instance if you know
+your proxy is your firewall at the same time, which always will have the IP <code>192.168.0.1</code>, then add
+the <code>/32</code> subnet to it. If you are running in a more dynamic environment like Docker or Kubernetes,
+where your proxy could get an IP dynamically from an internal pool, you need to add all the possible
+IPs as trustworthy.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -2514,16 +2730,17 @@ internal pool, you need to add all the possible IPs as trustworthy.</p>
 </div>
 <div>
 <p>When Rauthy is running in proxy mode, it will block every incoming request that does not match the
-<code>trusted_proxies</code> IP pool. This means if you have internal tooling set up like health checks, monitoring or
-metrics, which do not connect via the proxy, you need to add these source IPs to the <code>trusted_proxies</code> list.</p>
+<code>trusted_proxies</code> IP pool. This means if you have internal tooling set up like health
+checks, monitoring or metrics, which do not connect via the proxy, you need to add these source IPs
+to the <code>trusted_proxies</code> list.</p>
 </div>
 </div>
 <h3 id="running-behind-a-cdn"><a class="header" href="#running-behind-a-cdn">Running behind a CDN</a></h3>
-<p>If you are running behind a CDN which proxies your requests like for instance cloudflare, you have a reverse proxy
-setup again, just so that cloudflare is (another) reverse proxy for you. This means you need to set up the above
-configuration at least.</p>
-<p>In addition, you would maybe end up seeing the CDN proxy IP when you do a <code>GET /auth/v1/whoami</code>. If this is the case,
-There is an additional variable you can set:</p>
+<p>If you are running behind a CDN which proxies your requests like, for instance, Cloudflare, you have
+a reverse proxy setup again, just so that Cloudflare is (another) reverse proxy for you. This means
+you need to set up the above configuration at least.</p>
+<p>In addition, you would maybe end up seeing the CDN proxy IP when you do a <code>GET /auth/v1/whoami</code>. If
+this is the case, There is an additional variable you can set:</p>
 <pre><code class="language-toml">[server]
 # Can be set to extract the remote client peer IP from a custom
 # header name instead of the default mechanisms. This is needed
@@ -2537,19 +2754,22 @@ There is an additional variable you can set:</p>
 # overwritten by: PEER_IP_HEADER_NAME
 peer_ip_header_name = 'CF-Connecting-IP'
 </code></pre>
-<p>The CDN usually adds some other headers than the default <code>X-FORWARDED-FOR</code> headers, like in this example
-<code>CF-Connecting-IP</code> to the request. If this is the case, you can tell Rauthy to always check for this header first and
-only use the other methods as fallback, if this does not exist.</p>
+<p>The CDN usually adds some other headers than the default <code>X-FORWARDED-FOR</code> headers, like in this
+example <code>CF-Connecting-IP</code> to the request. If this is the case, you can tell Rauthy to always check
+for this header first and only use the other methods as fallback if this does not exist.</p>
 <h3 id="session-peer-ip-binding"><a class="header" href="#session-peer-ip-binding">Session peer IP binding</a></h3>
-<p>You most probably do not need to care about this configuration, but depending on your application you may want to
-disable it.</p>
-<p>Whenever you get a session from Rauthy and you authenticate successfully, your current IP will be extracted and
-persisted. By default, Rauthy will check your origin IP and compare it to the one you had when creating the session
-with each single request. If your IP does not match the original one, the session will be ignored and the request will
-be treated as being unauthenticated.</p>
-<p>This prevents scenarios where an attacker would be able to steal session data from your machine, copy the information
-and use it on their own. This means even if you would send your session cookie and CSRF token to someone, they would not
-be able to use it, as long as the requests are not coming from the exact same source IP.</p>
+<p>You most probably do not need to care about this configuration, but depending on your application,
+you may want to disable it.</p>
+<p>Whenever you get a session from Rauthy and you authenticate successfully, your current IP will be
+extracted and persisted. By default, Rauthy can check your origin IP and compare it to the one you
+had when creating the session with each single request. If your IP does not match the original one,
+the session will be ignored and the request will be treated as being unauthenticated. By default,
+this is disabled. If you have clients on mobile networks, their IP will change often, which would
+force them to log in again each time. However, you can enable this feature.</p>
+<p>If enabled, this prevents scenarios where an attacker would be able to steal session data from your
+machine, copy the information, and use it on their own. This means even if you would send your
+session cookie and CSRF token to someone, they would not be able to use it, as long as the requests
+are not coming from the exact same source IP.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -2558,19 +2778,14 @@ be able to use it, as long as the requests are not coming from the exact same so
 <a class="admonition-anchor-link" href="config/sessions.html#admonition-note"></a>
 </div>
 <div>
-<p>Rauthy has lots of mechanisms in place to prevent things like cookie stealing, session takeover, and so on , but it
-can't do anything about it, when the client's OS itself is infected. All these mechanisms add up to the defense in
-depth, but at the end of the day, when the clients machine itself is infected, there is not much any application can do
-about it. There just is no silver bullet.</p>
+<p>Rauthy has lots of mechanisms in place to prevent things like cookie stealing, session takeover, and
+so on , but it can't do anything about it, when the client's OS itself is infected. All these
+mechanisms add up to the defense in depth, but at the end of the day, when the clients machine
+itself is infected, there is not much any application can do about it. There just is no silver
+bullet.</p>
 </div>
 </div>
-<p>This defense is a really nice thing, but it may annoy your users, depending on where your deployed Rauthy, because
-this also means that each time when a client's IP changes, like for instance when you are in a mobile network or in
-a WIFI and often reconnect, your session will not be accepted. With as passkey added to your account, the login will
-take only seconds and another touch on the device, but you may still want to disable it. In this case, here is the
-configuration:</p>
-<pre><code class="language-toml">[access]
-# If set to 'true', this will validate the remote peer IP address with
+<pre><code class="language-toml"># If set to 'true', this will validate the remote peer IP address with
 # each request and compare it with the IP which was used during the
 # initial session creation / login. If the IP is different, the session
 # will be rejected.
@@ -2597,8 +2812,8 @@ configuration:</p>
 session_validate_ip = true
 </code></pre>
 <h3 id="lifetimes-and-timeouts"><a class="header" href="#lifetimes-and-timeouts">Lifetimes and Timeouts</a></h3>
-<p>The default session lifetimes and timeouts are pretty secure, but you may find them to be too strict. You can adjust
-them with the following config variables:</p>
+<p>The default session lifetimes and timeouts are pretty secure, but you may find them to be too
+strict. You can adjust them with the following config variables:</p>
 <pre><code class="language-toml">[lifetimes]
 # Session lifetime in seconds - the session can not be extended
 # beyond this time and a new login will be forced. This is the
@@ -2630,18 +2845,20 @@ session_renew_mfa = false
 session_timeout = 5400
 </code></pre>
 <h2 id="security"><a class="header" href="#security">Security</a></h2>
-<p>You usually don't need to configure anything about session security or CSRF protection, all of it happens automatically.
-This section is more informational about what Rauthy does in this case.</p>
+<p>You usually don't need to configure anything about session security or CSRF protection, all of it
+happens automatically. This section is more informational about what Rauthy does in this case.</p>
 <h3 id="session-cookies"><a class="header" href="#session-cookies">Session Cookies</a></h3>
-<p>Rauthy stores sessions as encrypted cookies. Depending on the situation, configuration and the users account, it will
-set multiple cookies inside your browser for different purposes like if you are allowed to do a direct session refresh
-with an MFA account for instance.</p>
-<p>Apart from the locale preference for the UI, each cookie is stored encrypted. This makes sure, that you can't tamper
-with the data. The cookies are stored as host only cookies with the most secure settings in today's browsers by default.
-This means they are host only and use the <code>__Host-</code> prefix to tell the browser to do additional checks. The <code>SameSite</code>
-attribute is set to <code>Lax</code> for all of them.</p>
-<p>Apart from local testing, you should never get in the situation where you want to disable the default secure
-cookie settings. But if you really need to (and you know what you are doing), you have the following option:</p>
+<p>Rauthy stores sessions as encrypted cookies. Depending on the situation, configuration, and the
+users' account, it will set multiple cookies inside your browser for different purposes, like if you
+are allowed to do a direct session refresh with an MFA account, for instance.</p>
+<p>Apart from the locale preference for the UI, each cookie is stored encrypted. This makes sure that
+you can't tamper with the data. The cookies are stored as host-only cookies with the most secure
+settings in today's browsers by default. This means they are host only and use the <code>__Host-</code> prefix
+to tell the browser to do additional checks. The <code>SameSite</code> attribute is set to <code>Lax</code> for all of
+them.</p>
+<p>Apart from local testing, you should never get in the situation where you want to disable the
+default secure cookie settings. But if you really need to (and you know what you are doing), you
+have the following option:</p>
 <pre><code class="language-toml">[access]
 # You can set different security levels for Rauthy's cookies. The
 # safest option would be 'host', but may not be desirable when you
@@ -2671,27 +2888,24 @@ cookie_set_path = true
 <li>classic synchronizer token pattern</li>
 <li><code>Sec-</code> headers checks</li>
 </ul>
-<p>In today's browsers, you could use the <code>Sec-</code> headers only and be safe, or actually even only stick to the secure
-Cookie settings we have, and call it a day. The additional checks Rauthy does in this case are there to catch unusual
-situations, where someone maybe uses an older browser or one which has a security issue. All of these techniques are
-defenses in depth.</p>
-<p>The synchronizer token pattern stores the additional CSRF token in local storage. Yes, this is not "secure" in a way
-that a malicious browser extension can read it, but it could read the DOM as well, which means it could also just
-read a meta tag or extract it from a hidden form field. The backend expects the CSRF token to be added as a header
-with each non-<code>GET</code> request.</p>
-<p>A new token will be created when you get a fresh session. Generating a new token after each request would improve the
-security but badly hurt the UX, because the browsers back button would simply not work anymore in most cases. In a
-perfect world where all users only use modern browsers that fully respect today's cookie settings, we would not even
-need this token, so a new token with each new session is fine.</p>
-<p>The <code>Sec-</code> headers middleware has been added recently to the mix. Desktop browsers do add these headers since ~3 years
-by now, but they only have been added pretty recently to mobile browsers as well. This middleware on its own would be
-a full CSRF protection even without additional cookie settings or a synchronizer token, but these headers are just
-way too fresh on mobile browsers to only rely on them right now.</p>
-<p>The <code>Sec-</code> middleware is pretty new to Rauthy, so it might be too restrictive in some situations where I forgot to add
-an exception for. By default, it blocks any non-user initiated or navigating cross-origin request and I added exceptions
-for routes, which should be available cross-origin. If you experience issues with it, you might want to disable it and
-set it to warn-only mode. Please <a href="https://github.com/sebadob/rauthy/issues">open an issue</a> about this though so it can
-be fixed, if it makes sense, because this option will probably be removed in a future version:</p>
+<p>In today's browsers, you could use the <code>Sec-</code> headers only and be safe, or actually even only stick
+to the secure Cookie settings we have, and call it a day. The additional checks Rauthy does in this
+case are there to catch unusual situations, where someone maybe uses an older browser or one which
+has a security issue. All of these techniques are defenses in depth.</p>
+<p>The synchronizer token pattern stores the additional CSRF token in local storage. Yes, this is not
+"secure" in a way that a malicious browser extension can read it. However, it could read the DOM as
+well, which means it could also just read a meta tag or extract it from a hidden form field. The
+backend expects the CSRF token to be added as a header with each non-<code>GET</code> request.</p>
+<p>A new token will be created when you get a fresh session. Generating a new token after each request
+would improve the security but badly hurt the UX because the browsers' back button would simply not
+work anymore in most cases. In a perfect world where all users only use modern browsers that fully
+respect today's cookie settings, we would not even need this token, so a new token with each new
+session is fine.</p>
+<p>The <code>Sec-</code> headers middleware has been added to the mix. Desktop browsers do add these headers
+since ~4 years by now, but they only have been added pretty recently to mobile browsers as well.
+This middleware on its own would be a full CSRF protection even without additional cookie settings
+or a synchronizer token, but these headers are just way too fresh on mobile browsers to only rely on
+them right now.</p>
 <pre><code class="language-toml">[access]
 # If set to true, a violation inside the CSRF protection middleware
 # based on Sec-* headers will block invalid requests. Usually you
@@ -2712,15 +2926,14 @@ sec_header_block = true
 <a class="admonition-anchor-link" href="config/sessions.html#admonition-danger"></a>
 </div>
 <div>
-<p>Only change any of the above mentioned session security settings if you really know what you are doing and if you have
-a good reason to do so.</p>
+<p>Only change any of the above mentioned session security settings if you really know what you are
+doing and if you have a good reason to do so.</p>
 </div>
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="user-registration"><a class="header" href="#user-registration">User Registration</a></h1>
 <p>By default, new users can only be added by an admin. This is safe and secure, and your database
-cannot ever be spammed.
-However, you might want users to register themselves for whatever reason. In that case, follow the
-next step.</p>
+cannot ever be spammed. However, you might want users to register themselves for whatever reason. In
+that case, follow the next step.</p>
 <h2 id="open-registration"><a class="header" href="#open-registration">Open Registration</a></h2>
 <p>To open the registration to anyone, just set</p>
 <pre><code class="language-toml">[user_registration]
@@ -2732,8 +2945,7 @@ next step.</p>
 enable = true
 </code></pre>
 <p>This will open the registration endpoint and make it accessible without upfront authentication.<br />
-You will now see a new button at the page root which directs you to the very simple registration
-form.</p>
+You will now see a new button at the page root which directs you to the registration form.</p>
 <p>After successful registration, the user will receive an E-Mail with an activation link.
 Clicking on this link will direct the user on a page, where a new password or passkey can be set.
 At the same time, the account will be activated and the E-Mail will be validated as well of course.</p>
@@ -2754,16 +2966,6 @@ You need to configure the following values to be able to send out E-Mails:</p>
 </ul>
 </div>
 </div>
-<h2 id="captcha--proof-of-work"><a class="header" href="#captcha--proof-of-work">Captcha / Proof of Work</a></h2>
-<p>The registration form uses a <em>Proof of Work (PoW)</em> behind the scenes. This is basically an invisible
-captcha
-without the user solving weird image puzzles that sometimes even humans cannot solve. It is done
-with the help of a
-tiny crate I wrote myself as well.</p>
-<p>This will of course not prevent real humans from registering fake accounts, but until now, I never
-had issues with any
-bots, so it does what it should while providing a way better UX than any traditional captcha
-challenge.</p>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
 <div class="admonition-title">
 <div id="admonition-hint-title">
@@ -2772,15 +2974,34 @@ challenge.</p>
 <a class="admonition-anchor-link" href="config/user_reg.html#admonition-hint"></a>
 </div>
 <div>
+<p>When you have another client application that redirects to the registration form, you can provide
+a <code>redirect_uri=https%3A%2F%2Fmy.client.app</code>. If the value you append is registered for any clients as
+contact URI (not allowed redirect URIs), the registration form will redirect back to your
+application after success.</p>
+</div>
+</div>
+<h2 id="captcha--proof-of-work"><a class="header" href="#captcha--proof-of-work">Captcha / Proof of Work</a></h2>
+<p>The registration form uses a <em>Proof of Work (PoW)</em> behind the scenes. This is basically an invisible
+captcha without the user solving weird image puzzles that sometimes even humans cannot solve. It is
+done with the help of a tiny crate I wrote myself as well.</p>
+<p>This will of course not prevent real humans from registering fake accounts, but until now, I never
+had issues with any bots, so it does what it should while providing a way better UX than any
+traditional captcha challenge.</p>
+<div id="admonition-hint-1" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-1-title">
+<div class="admonition-title">
+<div id="admonition-hint-1-title">
+<p>Hint</p>
+</div>
+<a class="admonition-anchor-link" href="config/user_reg.html#admonition-hint-1"></a>
+</div>
+<div>
 <p>If you are interested in how it works, take a look at <a href="https://github.com/sebadob/spow">spow</a>.</p>
 </div>
 </div>
 <h2 id="restricted-registration"><a class="header" href="#restricted-registration">Restricted Registration</a></h2>
 <p>You may want your users to register themselves, but at the same time restrict the E-Mail domains
-they are using.
-For instance, when you deploy Rauthy at your company for all internal applications, you may only
-want users to
-register with their work E-Mail:</p>
+they are using. For instance, when you deploy Rauthy at your company for all internal applications,
+you may only want users to register with their work E-Mail:</p>
 <pre><code class="language-toml">[user_registration]
 # Can be used when 'open_user_reg = true' to restrict the domains for
 # a registration. For instance, set it to
@@ -2792,30 +3013,22 @@ domain_restriction = 'my-domain.com'
 </code></pre>
 <h2 id="domain-blacklisting"><a class="header" href="#domain-blacklisting">Domain Blacklisting</a></h2>
 <p>If you have opened your registration to anyone, you will get into the situation at some point, where
-evil people will
-create accounts only for checking out your security and trying to break in, execute XSS, and so on.
-These are often
-real people, which means any Captcha or PoW will not prevent them from registering of course.</p>
+evil people will create accounts only for checking out your security and trying to break in, execute
+XSS, and so on. These are often real people, which means any Captcha or PoW will not prevent them
+from registering of course.</p>
 <p>The best thing you can do in that case, if your deployment allows this, is Geoblocking certain
-regions at your
-firewall / reverse proxy level. Attackers would then switch to origins in a country you allow, but
-this is usually
-more costly for them and more hassle, so it is a good first line of defense. At the same time, it
-reduces the visibility
-to those regions, and you might not get targeted in the first place because bots cannot scan you
-from there.</p>
+regions at your firewall / reverse proxy level. Attackers would then switch to origins in a country
+you allow, but this is usually more costly for them and more hassle, so it is a good first line of
+defense. At the same time, it reduces the visibility to those regions, and you might not get
+targeted in the first place because bots cannot scan you from there.</p>
 <p>When such attacks happen, there is no magic rule or setting to defend against them. This is really
-individual each time
-and depends on a lot of things out of the scope of this documentation.</p>
+individual each time and depends on a lot of things out of the scope of this documentation.</p>
 <p>Nevertheless, Rauthy provides a small feature that might help you here: **E-Mail Domain Blacklisting
 **</p>
 <p>Let's say you can't Geoblock or you found out, that specific E-Mail providers are being used during
-these attacks.
-If you have such a list of evil providers, you can blacklist and exclude them from the open
-registration. Existing users
-will keep working and an Admin can still create users with these domains. They just cannot be used
-for self-registration
-anymore.</p>
+these attacks. If you have such a list of evil providers, you can blacklist and exclude them from
+the open registration. Existing users will keep working and an Admin can still create users with
+these domains. They just cannot be used for self-registration anymore.</p>
 <p>You have the following config option:</p>
 <pre><code class="language-toml">[user_registration]
 # Can be used when 'open_user_reg = true' to restrict the domains for
@@ -2845,7 +3058,8 @@ domain_blacklist = [
 </div>
 <div>
 <p>If you get targeted by something like fake accounts for testing your security and so on, don't panic.
-These attacks usually stop after 1-2 weeks most often. When attackers did not find a way in, they loose interest.</p>
+These attacks usually stop after 1-2 weeks most often. When attackers did not find a way in, they
+loose interest.</p>
 </div>
 </div>
 <h2 id="downstream-application-integration"><a class="header" href="#downstream-application-integration">Downstream Application Integration</a></h2>
@@ -2854,13 +3068,10 @@ Either use the existing one with redirect hints for improved UX, or fully build 
 registration frontend.</p>
 <h3 id="redirect-hints"><a class="header" href="#redirect-hints">Redirect Hints</a></h3>
 <p>Let's say you have an application that uses Rauthy for user management. You want to improve the
-registration flow
-and your users being redirected back to your downstream app after registration / password set
-instead of them
-"being stuck" on Rauthy's UI, which would be the default flow.</p>
+registration flow and your users being redirected back to your downstream app after registration /
+password set instead of them "being stuck" on Rauthy's UI, which would be the default flow.</p>
 <p>Your app can show a link to the existing registration form with an appended query param to control
-redirects.
-When you append</p>
+redirects. When you append</p>
 <pre><code>?redirect_uri=https%3A%2F%2Fgithub.com
 </code></pre>
 <p>to the link, so you end up with for instance</p>
@@ -2870,17 +3081,14 @@ When you append</p>
 <ol>
 <li>After a successful registration, the user will be redirected back to the given <code>redirect_uri</code>.</li>
 <li>After the password / passkey has been set using the E-Mail link, instead of being redirected to
-the Rauthy
-account dashboard, the user will be redirected to the same URI again.</li>
+the Rauthy account dashboard, the user will be redirected to the same URI again.</li>
 </ol>
 <p>This makes it possible to use Rauthy as your upstream provider without the user really needing to
-interact with or
-know about it in detail, which again leads to less confusion.</p>
+interact with or know about it in detail, which again leads to less confusion.</p>
 <p>By default, the allowed <code>redirect_uri</code>s are restricted to all existing <code>client_uri</code>s in the
-database. They will be
-compared via <code>client_uri.startsWith(redirect_uri)</code>. If you want to opt-out of the additional
-redirect_uri checks and
-configure and open redirect to allow just anything, you can do so:</p>
+database. They will be compared via <code>client_uri.startsWith(redirect_uri)</code>. If you want to opt-out of
+the additional redirect_uri checks and configure and open redirect to allow just anything, you can
+do so:</p>
 <pre><code class="language-toml">[user_registration]
 # If set to `true`, any validation of the `redirect_uri` provided
 # during a user registration will be disabled. Clients can use
@@ -2904,9 +3112,8 @@ allow_open_redirect = false
 </code></pre>
 <h3 id="custom-frontend"><a class="header" href="#custom-frontend">Custom Frontend</a></h3>
 <p>Depending on your application, you may want to create your own frontend for the registration. For
-speed and efficiency
-reasons, Rauthy does not allow you to overwrite the existing templates, but you can host your own UI
-of course.</p>
+speed and efficiency reasons, Rauthy does not allow you to overwrite the existing templates, but you
+can host your own UI of course.</p>
 <p>The registration page is super simple and you can take a look at what it does here:
 <a href="https://github.com/sebadob/rauthy/blob/main/frontend/src/routes/users/register/%2Bpage.svelte">page.svelte</a></p>
 <p>The registration endpoint allows CORS requests. The only thing you need to care about is the PoW
@@ -2945,9 +3152,9 @@ calculation.</p>
 </div>
 <div>
 <p>Do not fetch and solve a PoW when the user has not submitted the form yet!</p>
-<p>The PoWs have a very short lifetime by default to prevent them from being used multiple times. Rauthy has additional
-re-use prevention, but a POST to get a PoW will modify the backend state. This is unnecessary if the user decides to not
-submit the form at all.</p>
+<p>The PoWs have a very short lifetime by default to prevent them from being used multiple times.
+Rauthy has additional re-use prevention, but a POST to get a PoW will modify the backend state. This
+is unnecessary if the user decides to not submit the form at all.</p>
 <p>You can configure PoWs with <code>pow.difficulty</code> and <code>pow.exp</code>.<br />
 Keep in mind, that the <code>pow.exp</code> should be a high as necessary but always as low as possible.</p>
 </div>
@@ -3002,13 +3209,19 @@ instead. You only need to configure a few variables.</p>
 <a class="admonition-anchor-link" href="config/ha.html#admonition-caution-1"></a>
 </div>
 <div>
-<p>Even when using Postgres as your DB of choice, in HA deployments, you should always provide
-persistent volumes to your Rauthy Pods. One reason is that it smoothes out rolling releases, because
-even though you can keep the Cache Raft in-memory only because it can handle these situations, even
-when using Postgres, Rauthy will create at least an empty SQLite cache layer. If this loses state
-between restarts and they happen too fast for instance, this can end up in crashes.</p>
-<p>It is also very recommended to persist the cache on disk anyway (which is the default), to keep
-things like not yet used Auth Codes between restarts.</p>
+<p>Even when using Postgres as your DB of choice, you should provide a persistent volume for your
+Rauthy instances. The reason is that the cache is disk-backed. By default, it will store at least
+WAL logs and snapshots on disk. All working data will be kept in memory for the fastest access.
+Having the WAL logs on disk though is a huge advantage when it comes to restarts or rolling
+releases. The Raft cluster needs a persistent state, which lives inside the WAL logs. If they are
+being wiped with each restart (no persistent volume), the node has to re-join the Raft cluster
+each time, which takes time.</p>
+<p>However, you can choose to run the cache fully in-memory as well. In that scenario, nodes will
+gracefully leave the Raft cluster on shutdown and cleanly re-join with the next start. However, it
+is very important that the data dir exists. You don't need to care about this in a container, but
+when running it natively for instance. Even a fully in-memory cache, Rauthy will use the data dir
+for temporarily storing WAL snapshots. These are necessary when other nodes join the cluster, and
+to clean up WAL logs from memory at some point.</p>
 </div>
 </div>
 <h3 id="node_id"><a class="header" href="#node_id"><code>node_id</code></a></h3>
@@ -3061,7 +3274,7 @@ nodes = [
 <h3 id="secret_raft--secret_api"><a class="header" href="#secret_raft--secret_api"><code>secret_raft</code> + <code>secret_api</code></a></h3>
 <p>Since you need both <code>cluster.secret_raft</code> and <code>cluster.secret_api</code> in any case, there is nothing to
 change here. These define the secrets being used internally to authenticate against the Raft or the
-API server for <code>Hiqlite</code>. You can generate safe values with for instance</p>
+API server for <code>Hiqlite</code>. You can generate safe values with any tool you like, for instance:</p>
 <pre><code>cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
 </code></pre>
 <h3 id="tls-1"><a class="header" href="#tls-1">TLS</a></h3>
@@ -3071,14 +3284,16 @@ connections between all pods by default, you can use the HA cache with just plai
 <p>However, if you do not have encryption between pods by default, I would highly recommend, that you
 use <a href="config/tls.html">TLS</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bootstrapping"><a class="header" href="#bootstrapping">Bootstrapping</a></h1>
-<p>Rauthy supports some basic bootstrapping functionality to make it easier to use in some kind of automated environment.</p>
+<p>Rauthy can bootstrap most values that are nore statically configured. There are only very few
+exceptions, so you should be able to achieve anything you need. The most important things live in
+the config to be able to run everything from a single file. However, when you want to do more
+advanced / custom stuff, you will need to provide additional JSON files.</p>
 <h2 id="admin-user"><a class="header" href="#admin-user">Admin User</a></h2>
-<p>By default, the admin user will always be <code>admin@localhost</code> and the password will be auto-generated and shown
-only once in the logs. This is the easiest way if you want to set up a new instance manually.</p>
-<p>However, you can change the default admin username and also provide a bootstrap password for this user, if Rauthy
-starts with an empty database for the very first time. This makes it possible to either generate a secure password with
-external tooling and have more control over it, or just use the same one all the time, because you may spin up an
-instance in test pipelines.</p>
+<p>By default, the admin user will always be <code>admin@localhost</code> and the password will be auto-generated
+and shown only once in the logs during the very first startup on the first node.</p>
+<p>You can change the default admin email and also provide a bootstrap password for it. This makes it
+possible to either generate a secure password with external tooling and have more control over it,
+or just use the same one all the time, because you may spin up an instance in test pipelines.</p>
 <p>You can change the default admin user E-Mail with:</p>
 <pre><code class="language-toml">[bootstrap]
 # If set, the email of the default admin will be changed during
@@ -3090,7 +3305,7 @@ admin_email = 'admin@localhost'
 </code></pre>
 <p>The password can be bootstrapped in 2 ways:</p>
 <ul>
-<li>Provide a plain test password</li>
+<li>Provide a plain test password (only use for testing)</li>
 <li>Provide the password hashed with argon2id</li>
 </ul>
 <pre><code class="language-toml">[bootstrap]
@@ -3110,14 +3325,17 @@ password_plain = '123SuperSafe'
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
 pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 </code></pre>
+<p>You can use any tool for hashing as long as the output format is a proper argon2id string.
+The <a href="config/cli.html">Rauthy CLI</a> can do it for you as well.</p>
 <h2 id="api-key"><a class="header" href="#api-key">API Key</a></h2>
-<p>In automated environments, you would usually not use a normal user to access the Rauthy API, since it is a bit more
-cumbersome to use from outside the browser because of additional CSRF tokens and security features. If you want to
-automatically set up Rauthy with external tooling after the first startup, you would want to do this with an API key
-most probably.</p>
-<p>If Rauthy starts up with an empty database, you can bootstrap a single API key with providing a base64 encoded json.</p>
-<p>An example json, which would create a key named <code>bootstrap</code> with access to <code>clients, roles, groups</code> with all
-<code>read, write, update, delete</code> could look like this:</p>
+<p>In automated environments, you would usually not use a normal user to access the Rauthy API, since
+it is a bit more cumbersome to use from outside the browser because of additional CSRF tokens and
+security features. If you want to automatically set up Rauthy with external tooling after the first
+startup, you would want to do this with an API key most probably.</p>
+<p>If Rauthy starts up with an empty database, you can bootstrap a single API key with providing a
+base64 encoded json.</p>
+<p>An example json, which would create a key named <code>bootstrap</code> with access to <code>clients, roles, groups</code>
+with all <code>read, write, update, delete</code> could look like this:</p>
 <pre><code class="language-json">{
   "name": "bootstrap",
   "exp": 1735599600,
@@ -3203,7 +3421,8 @@ most probably.</p>
 api_key = 'ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY2VzcyI6IFsKICAgIHsKICAgICAgImdyb3VwIjogIkNsaWVudHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgImdyb3VwIjogIlJvbGVzIiwKICAgICAgImFjY2Vzc19yaWdodHMiOiBbCiAgICAgICAgInJlYWQiLAogICAgICAgICJjcmVhdGUiLAogICAgICAgICJ1cGRhdGUiLAogICAgICAgICJkZWxldGUiCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJncm91cCI6ICJHcm91cHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfQogIF0KfQ=='
 
 </code></pre>
-<p>The secret needs to be set with a second variable. Just make sure it contains at least 64 alphanumeric characters.</p>
+<p>The secret needs to be set with a second variable. Make sure it contains at least 64 alphanumeric
+characters.</p>
 <pre><code class="language-toml">[bootstrap]
 # The secret for the above defined bootstrap API Key.
 # This must be at least 64 alphanumeric characters long.
@@ -3215,12 +3434,55 @@ api_key = 'ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY
 # overwritten by: BOOTSTRAP_API_KEY_SECRET
 api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh'
 </code></pre>
-<p>With the values from this example, you will then be able to use the API key with providing the <code>Authorization</code> header
-with each request in the following format:</p>
+<p>With the values from this example, you will then be able to use the API key with providing the
+<code>Authorization</code> header with each request in the following format:</p>
 <pre><code>Authorization: API-Key &lt;API Key name&gt;$&lt;API Key secret&gt;
 </code></pre>
 <pre><code>Authorization: API-Key bootstrap$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
 </code></pre>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="config/bootstrap.html#admonition-caution"></a>
+</div>
+<div>
+<p>At the time of writing, it is not possible (yet) to provide API key secrets as encrypted values.
+This will probably be added in a future version. If you bootstrap API keys for production setup,
+make sure they always auto-expire.</p>
+</div>
+</div>
+<h2 id="advanced--custom-configuration"><a class="header" href="#advanced--custom-configuration">Advanced / Custom Configuration</a></h2>
+<p>If you want to bootstrap other things like users or clients, you need to do it a bit differently.
+First, make sure to check the <code>bootstrap_dir</code> and configure it if necessary:</p>
+<pre><code class="language-toml">[bootstrap]
+# This is the directory where the bootstrap logic will look for
+# additional bootstrapping data. It will expect JSON files with
+# fixed names inside this folder. If it finds any of them, it will
+# try to parse and apply them during the bootstrapping process.
+#
+# The following files will be parsed in the given directory:
+# - roles.json
+# - groups.json
+# - scopes.json
+# - user_attributes.json
+# - users.json
+# - clients.json
+#
+# For information about the structure and the applied validations,
+# check `src/data/src/migration/bootstrap/types.rs`, and the
+# `bootstrap/*.json` files for examples.
+#
+# default: 'bootstrap'
+# overwritten by: BOOTSTRAP_DIR
+bootstrap_dir = 'bootstrap'
+</code></pre>
+<p>By default, it expects JSON files in <code>./bootstrap/</code>. The reason why these are read as JSON instead
+of from the config, is that you can then rely on your IDEs auto-completion and syntax checking
+features, which do not work in a TOML string. You can check example
+files <a href="https://github.com/sebadob/rauthy/tree/main/bootstrap">here</a>, or take a look at the
+<a href="https://github.com/sebadob/rauthy/blob/main/src/data/src/migration/bootstrap/types.rs">Rust definitions</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="database-migrations"><a class="header" href="#database-migrations">Database Migrations</a></h1>
 <p>You can migrate easily between Hiqlite and Postgres, or just between different instances of the same database.</p>
 <p>Let's say you started out by evaluating Rauthy with the default Hiqlite and a single instance deployment. Later on, you
@@ -3251,8 +3513,8 @@ the next restart of the application. Remove the config variable immediately afte
 </div>
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="unix-domain-sockets"><a class="header" href="#unix-domain-sockets">UNIX Domain Sockets</a></h1>
-<p>Rauthy supports listening on a UNIX domain socket. To enable this feature, you will need to specify the following
-configurations.</p>
+<p>Rauthy supports listening on a UNIX domain socket. To enable this feature, you will need to specify
+the following configurations.</p>
 <pre><code class="language-toml">[server]
 # The server address to listen on. Can bind to a specific IP.
 # When LISTEN_SCHEME is set to use UNIX sockets, this specifies
@@ -3285,20 +3547,36 @@ proxy_mode = true
 <a class="admonition-anchor-link" href="config/unix_socket.html#admonition-caution"></a>
 </div>
 <div>
-<p>Note that <code>unix_https</code> does not make a socket with TLS. When <code>unix_https</code> is used, the socket will still be plain HTTP!</p>
-<p><code>unix_https</code> specifies the scheme to be prepended to <code>pub_url</code>, so whether to use<code>unix_http</code> and <code>unix_https</code> depends on the scheme you are using on the reverse-proxy.</p>
+<p>Note that <code>unix_https</code> does not make a socket with TLS. When <code>unix_https</code> is used, the socket will
+still be plain HTTP!</p>
+<p><code>unix_https</code> specifies the scheme to be prepended to <code>pub_url</code>, so whether to use<code>unix_http</code> and
+<code>unix_https</code> depends on the scheme you are using on the reverse-proxy.</p>
 </div>
 </div>
-<p>UNIX domain sockets should be used with a reverse proxy. Without such a proxy, Rauthy could not know the IP address of
-visitors, and it will see all visitors as <code>192.0.0.8</code>, the IPv4 dummy address. Rate-limits and IP blacklists will apply
-on
-all visitors at the same time.</p>
-<p>After setting up a reverse proxy, please also remember to set your proxy to send peer IP in headers (for example,
-<code>X-Forwarded-For</code>), and set <code>PROXY_MODE</code> to let Rauthy read the IP. Once everything is set, check the <code>/auth/v1/whoami</code>
-endpoint to see if your IP address is shown correctly.</p>
-<p>It is also recommended to use POSIX ACLs to limit access to Rauthy socket to your reverse proxy, so other UNIX users
-won't be able to connect to the socket directly and bypass the reverse proxy.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="tuning"><a class="header" href="#tuning">Tuning</a></h1>
+<p>UNIX domain sockets should be used with a reverse proxy. Without such a proxy, Rauthy could not know
+the IP address of visitors, and it will see all visitors as <code>192.0.0.8</code>, the IPv4 dummy address.
+Rate-limits and IP blacklists will apply on all visitors at the same time.</p>
+<p>After setting up a reverse proxy, please also remember to set your proxy to send peer IP in
+headers (for example, <code>X-Forwarded-For</code>), and set <code>PROXY_MODE</code> to let Rauthy read the IP. Once
+everything is set, check the <code>/auth/v1/whoami</code> endpoint to see if your IP address is shown
+correctly.</p>
+<p>It is also recommended to use POSIX ACLs to limit access to Rauthy socket to your reverse proxy, so
+other UNIX users won't be able to connect to the socket directly and bypass the reverse proxy.</p>
+<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+<div class="admonition-title">
+<div id="admonition-hint-title">
+<p>Hint</p>
+</div>
+<a class="admonition-anchor-link" href="config/unix_socket.html#admonition-hint"></a>
+</div>
+<div>
+<p>If you want to listen on a socket that you mount inside a container, you most probably will have
+issues when you mount a file directly. Like when you <code>touch rauthy.sock</code> and then mount that file,
+Rauthy will most probably not be able to bind to it properly because of the container runtime
+preventing some actions. To fix this, you always want to mount a directory inside the container and
+let Rauthy create the socket inside that directory.</p>
+</div>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="tuning"><a class="header" href="#tuning">Tuning</a></h1>
 <p>Rauthys default tuning is optimized for somewhat low resource usage while still providing good
 performance and low latency up to a couple of thousands of users. If you run a tiny instance with
 less than 100 users, or a very big one with users going into millions, or you need a very high
@@ -4081,10 +4359,11 @@ file on GitHub for instance and receive a valid JSON.</p>
 </div>
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="e-mail-templates"><a class="header" href="#e-mail-templates">E-Mail Templates</a></h1>
-<p>The templates for E-Mails being sent by Rauthy are baked into the binary. This is the most efficient and fastest way
-of handling them. It simplifies the container images and speeds up the internal generation of new ones from templates
-compared to dynamic ones. At the same time, Rauthy checks these templates for correctness at compile time. It makes
-sure, that each templated value exists in the internal application logic and vice versa.</p>
+<p>The templates for E-Mails being sent by Rauthy are baked into the binary. This is the most efficient
+and fastest way of handling them. It simplifies the container images and speeds up the internal
+generation of new ones from templates compared to dynamic ones. At the same time, Rauthy checks
+these templates for correctness at compile time. It makes sure, that each templated value exists in
+the internal application logic and vice versa.</p>
 <p>If you need to modify the content of these E-Mails, you have 2 options:</p>
 <ul>
 <li>Use the pre-defined config variables</li>
@@ -4103,14 +4382,15 @@ others.</p>
 </div>
 </div>
 <h2 id="existing-config-values"><a class="header" href="#existing-config-values">Existing Config Values</a></h2>
-<p>Modifying the E-Mail contents via config variables is very straight forward. You don't need to compile from source,
-therefore can't make any mistakes and for all variables that are not set, Rauthy will simply fall back to the default.</p>
-<p>You can take a look at the raw templates directly in the repo, so you can see which value will be mapped to which
-location in the final message.</p>
+<p>Modifying the E-Mail contents via config variables is very straight forward. You don't need to
+compile from source, therefore can't make any mistakes and for all variables that are not set,
+Rauthy will simply fall back to the default.</p>
+<p>You can take a look at the raw templates directly in the repo, so you can see which value will be
+mapped to which location in the final message.</p>
 <p><a href="https://github.com/sebadob/rauthy/blob/main/templates/email/reset.txt">Text Version</a></p>
 <p><a href="https://github.com/sebadob/rauthy/blob/main/templates/email/reset.html">HTML Version</a></p>
-<p>The values are given as multiplem <code>[[templates]]</code> blocks. Each given block must match a separate <code>lang</code> / <code>typ</code>
-combination to be valid:</p>
+<p>The values are given as multiplem <code>[[templates]]</code> blocks. Each given block must match a separate
+<code>lang</code> / <code>typ</code> combination to be valid:</p>
 <pre><code class="language-toml">[[templates]]
 # You can overwrite some default email templating values.
 # If you want to modify the basic templates themselves, this is
@@ -4121,25 +4401,43 @@ combination to be valid:</p>
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de ko zh_hans
+# one of: en de ko uk zh_hans
 lang = 'en'
-# pme of: password_new, password_reset
+# one of: password_new, password_reset, email_registered_already
 typ = 'password_new'
 
 subject = 'New Password'
 header = 'New password for'
-text = ''
+
+# Note: This value will be empty for `password_new` and `password_reset`.
+# You can set custom content that you wish to add to your emails though.
+# For `email_registered_already`, it will have a default text.
+#text = """Someone tried to register a new account with your E-Mail address
+#while an account exists already. If that was you, and it was a mistake, you
+#can ignore this message. However, if you forgot your password, you can use
+#the link belopw to reset it.
+#If it was not you trying to register the new account - no need to worry.
+#Your account has not been compromised and no data was leaked."""
+
+# Exists only for: password_new, password_reset
 click_link = 'Click the link below to get forwarded to the password form.'
+# Exists only for: password_new, password_reset
 validity = 'This link is only valid for a short period of time for security reasons.'
+# Exists only for: password_new, password_reset
 expires = 'Link expires:'
 footer = ''
+
+# Exists only for password reset E-Mails for initialized accounts or
+# `email_registered_already`
+button_text_request_new = ''
 </code></pre>
 <h2 id="modify-templates-directly"><a class="header" href="#modify-templates-directly">Modify Templates Directly</a></h2>
-<p>Modifying templates directly gives you the most amount of control of course. You can change everything you like about
-them. However, you need to clone the whole repo, modify the templates in
-<a href="https://github.com/sebadob/rauthy/tree/main/templates/email">templates/email/</a>, and then rebuild the whole project
-from source on your own. The existing setup should make it pretty easy to do. To get started, take a look at the
-<a href="https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
+<p>Modifying templates directly gives you the most amount of control of course. You can change
+everything you like about them. However, you need to clone the whole repo, modify the templates in
+<a href="https://github.com/sebadob/rauthy/tree/main/templates/email">templates/email/</a>, and then rebuild
+the whole project from source on your own. The existing setup should make it pretty easy to do. To
+get started, take a look at
+the <a href="https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="ip-blacklisting"><a class="header" href="#ip-blacklisting">IP Blacklisting</a></h1>
 <p>Rauthy can blacklist certain IP that should be prevented from even trying to access it.<br />
 Each blacklisting will always have an expiry. This is important because most client IPs will be
@@ -4307,8 +4605,9 @@ level_jwks_rotate = 'notice'
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="i18n"><a class="header" href="#i18n">I18n</a></h1>
 <p>Rauthy supports translated views for all user-facing UI and E-Mails.</p>
-<p>At the time of writing, there are english (default) and german. If you need another language, it can be implemented
-pretty easily, as the project is prepared for that. You can either open a PR and provide all the necessary translations,
+<p>At the time of writing, the following languages are supported: English (default), German, French, Korean, Norwegian Bokmål,
+Russian, Ukrainian, and Simplified Chinese. If you need another language, it can be implemented pretty easily, as
+the project is prepared for that. You can either open a PR and provide all the necessary translations,
 or if you are a company, you can reach out to me: <code>mail@sebadob.dev</code>.</p>
 <p>What will never happen though is the implementation of an automated approach, because all these generated translations
 are usually very bad. Also, when the migration to Leptos has been done at some point, adding new translations will get
@@ -4957,20 +5256,24 @@ spec:
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="pam"><a class="header" href="#pam">PAM</a></h1>
-<p>OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes with <code>forward_auth</code>
-support. To not need an additional LDAP / AD / something similar for your backend and workstations, Rauthy comes with
-its own custom PAM module. It does not just use JWT Tokens for logging in, but you can actually manage all your Linux
-hosts, groups and users in different ways. You have the option to secure local logins to workstations via Yubikey
-(only USB Passkeys supported, no QR-code / software keys), and all SSH logins can be done with ephemeral, auto-expiring
-passwords, that you can generate via your Account dashboard, if an Admin has created a PAM user for you.
-This means you basically have MFA-secured SSH logins without the need for any modifications or additional software on
-your local SSH client, and you can use any SSH client from any machine securely, even if it's not your own.</p>
-<p>Pam hosts, groups and users are managed via Rauthys Admin UI in the <code>PAM</code> section.</p>
-<p>In addition to a PAM module, you get an NSS module and an NSS proxy that runs on each machine. You can dynamically
-log in to any machine an Admin has given you access to. Users and groups are not added to local files, but will be
-resolved via the network.</p>
-<p>This module is published in a separate repo to avoid licensing issues, since it relies on some GPLv3 dependencies. You
-can take a look at it here: <a href="https://github.com/sebadob/rauthy-pam-nss">rauthy-pam-nss</a>.</p>
+<p>OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes
+with <code>forward_auth</code> support. To not need an additional LDAP / AD / something similar for your
+backend and workstations, Rauthy comes with its own custom PAM module. It does not just use JWT
+Tokens for logging in, but you can actually manage all your Linux hosts, groups, and users in
+different ways. You can secure local logins to workstations via Yubikey (only USB Passkeys
+supported, no QR-code / software keys). All SSH logins can be done with either ephemeral,
+auto-expiring passwords, that you can generate via your Account dashboard, if an Admin has created a
+PAM user for you, or by public key, if the user adds them via the account dashboard. This means you
+have MFA-secured SSH logins without the need for any modifications or additional software on your
+local SSH client, and you can use any SSH client from any machine securely, even if it's not your
+own.</p>
+<p>Pam hosts, groups, and users are managed via Rauthys Admin UI in the <code>PAM</code> section.</p>
+<p>In addition to a PAM module, you get an NSS module and an NSS proxy that runs on each machine. You
+can dynamically log in to any machine an Admin has given you access to. Users and groups are not
+added to local files, but will be resolved via the network.</p>
+<p>This module is published in a separate repo to avoid licensing issues, since it relies on some GPLv3
+dependencies. You can take a look at it
+here: <a href="https://github.com/sebadob/rauthy-pam-nss">rauthy-pam-nss</a>.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -4979,11 +5282,11 @@ can take a look at it here: <a href="https://github.com/sebadob/rauthy-pam-nss">
 <a class="admonition-anchor-link" href="work/pam.html#admonition-note"></a>
 </div>
 <div>
-<p>You will notice on the following pages and when testing the PAM setup via the Admin UI, that quite a few resources and
-values are immutable after their initial creation. The reason is simply to avoid things like accidentally leaking
-left-over user data, when for instance a user was deleted and a new one with the exact same name was created, but maybe
-some files are left on some hosts, and so on. The same is true for instance for group names and types, just to avoid
-confusion for admins.</p>
+<p>You will notice on the following pages and when testing the PAM setup via the Admin UI, that quite
+a few resources and values are immutable after their initial creation. The reason is simply to avoid
+things like accidentally leaking left-over user data, when for instance a user was deleted and a new
+one with the exact same name was created, but maybe some files are left on some hosts, and so on.
+The same is true for instance for group names and types, just to avoid confusion for admins.</p>
 </div>
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="pam-groups"><a class="header" href="#pam-groups">PAM Groups</a></h1>
@@ -5146,63 +5449,51 @@ remote_password_len = 24
 remote_password_ttl = 120
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="pam--nss-modules"><a class="header" href="#pam--nss-modules">PAM + NSS Modules</a></h1>
-<p>This is a documentation for the separately managed project <a href="https://github.com/sebadob/rauthy-pam-nss">rauthy-pam-nss</a>.
-It's a separate project to avoid licensing issues because of some dependencies the PAM and NSS bindings rely on.</p>
-<p>These modules are basically the "client part" for all the PAM configuration you did on Rauthys side. You need to install
-3 things:</p>
+<p>This is a documentation for the separately managed
+project <a href="https://github.com/sebadob/rauthy-pam-nss">rauthy-pam-nss</a>.
+It's a separate project to avoid licensing issues because of some dependencies the PAM and NSS
+bindings rely on.</p>
+<p>These modules are basically the "client part" for all the PAM configuration you did on Rauthys side.
+You need to install 3 things:</p>
 <ul>
 <li>NSS module</li>
 <li>NSS Proxy</li>
 <li>PAM module</li>
 </ul>
-<p>The NSS module + proxy are there to dynamically resolve users, groups and hosts via Rauthy without the need to add them
-to any of the local files like <code>/etc/passwd</code> or <code>/etc/group</code>. The NSS module will be called from all different sorts of
-applications, that need to resolve some names. The NSS module exposes the <code>C</code> bindings and then execute the logic in
-Rust. This module is pretty simple, as it only connects to a local Unix Domain Socket, where the NSS Proxy will be
-listening. This proxy is the one doing the actual requests to Rauthy, as well as cache results for faster subsequent
-lookups.</p>
-<p>The reason why there is a proxy in between is not only to be able to cache results, but also to be more efficient and
-more importantly, to only give the NSS proxy access to the actual host ID and secret, which are needed to do requests
-against Rauthys API. These should have the least possible amount of exposure, because with these credentials, you could
-technically find out which usernames exist on Rauthy and which do not. This is not a security issue right away, but not
-leaking anything is always preferred.</p>
-<p>The main configuration file for NSS lookups is <code>/etc/nsswitch.conf</code>, but no worries, it's not only pretty simple to
-understand, but will also be automatically managed by the install script. The only important part about it is, if you
-want to be able to use the <code>local</code> PAM groups feature, that you add <code>[SUCCESS=merge]</code> in between entries for <code>group</code>
-lookups.</p>
-<p>You can test very easily if NSS lookups are working with e.g. <code>getent groups</code> or <code>getent users</code>, and you should see
-the Rauthy-managed resources included in the output. If at the beginning or at the end depends on your <code>nsswitch.conf</code>,
-and you of course can only see users if there are any configured on Rauthy. Only if NSS lookups are working fine, you
-should install the PAM module.</p>
-<p>The PAM module exposes the <code>C</code> bindings for, surprise, PAM. Configuring PAM is its own, very big topic and I will not
-go into detail here. There is lots of documentation and guides in the internet. For simple setups, like if you did not
-do any customizations to your hosts anyway, the provided default templates should work out of the box (hopefully). If
-you have done customizations, you probably know about how it's done anyway and maybe don't even want to use the provided
-templates. That's up to you of course. The same for NSS, as long as you add Rauthys modules to your setup correctly, it
+<p>The NSS module + proxy are there to dynamically resolve users, groups and hosts via Rauthy without
+the need to add them to any of the local files like <code>/etc/passwd</code> or <code>/etc/group</code>. The NSS module
+will be called from all different sorts of applications, that need to resolve some names. The NSS
+module exposes the <code>C</code> bindings and then execute the logic in Rust. This module is pretty simple, as
+it only connects to a local Unix Domain Socket, where the NSS Proxy will be listening. This proxy is
+the one doing the actual requests to Rauthy, as well as cache results for faster subsequent lookups.</p>
+<p>The reason why there is a proxy in between is not only to be able to cache results, but also to be
+more efficient and more importantly, to only give the NSS proxy access to the actual host ID and
+secret, which are needed to do requests against Rauthys API. These should have the least possible
+amount of exposure, because with these credentials, you could technically find out which usernames
+exist on Rauthy and which do not. This is not a security issue right away, but not leaking anything
+is always preferred.</p>
+<p>The main configuration file for NSS lookups is <code>/etc/nsswitch.conf</code>, but no worries, it's not only
+pretty simple to understand, but will also be automatically managed by the install script. The only
+important part about it is, if you want to be able to use the <code>local</code> PAM groups feature, that you
+add <code>[SUCCESS=merge]</code> in between entries for <code>group</code> lookups.</p>
+<p>You can test very easily if NSS lookups are working with e.g. <code>getent groups</code> or <code>getent passwd</code>,
+and you should see the Rauthy-managed resources included in the output. If at the beginning or at
+the end depends on your <code>nsswitch.conf</code>, and you of course can only see users if there are any
+configured on Rauthy. Only if NSS lookups are working fine, you should install the PAM module.</p>
+<p>The PAM module exposes the <code>C</code> bindings for, surprise, PAM. Configuring PAM is its own, very big
+topic and I will not go into detail here. There is lots of documentation and guides in the internet.
+For simple setups, like if you did not do any customizations to your hosts anyway, the provided
+default templates should work out of the box (hopefully). If you have done customizations, you
+probably know about how it's done anyway and maybe don't even want to use the provided templates.
+That's up to you of course. The same for NSS, as long as you add Rauthys modules to your setup
+correctly, it
 should work.</p>
-<p>For standard scenarios, you will get an install script. It currently should support RHEL and Debian based distros. Other
-ones (suse, arch, gentoo) may need contributions to include them in the script.</p>
-<h2 id="install-tldr"><a class="header" href="#install-tldr">Install TL;DR</a></h2>
-<p>The PAM project is in a very early phase and there are no distro-packaged versions available. Here is the gist how to
-install:</p>
-<pre><code class="language-bash">curl -LO https://raw.githubusercontent.com/sebadob/rauthy-pam-nss/refs/tags/v0.1.0/install/rauthy-pam-nss-install.tar.gz \
-  &amp;&amp; tar -xzf rauthy-pam-nss-install.tar.gz \
-  &amp;&amp; cd rauthy-pam-nss-install
-</code></pre>
-<p>Then, since you should never blindly execute a random bash script from the internet, especially with <code>sudo</code>, inspect
-<code>install.sh</code> and afterward install config files, NSS Proxy and (depending on availability) SELinux policy:</p>
-<pre><code class="language-bash">sudo ./install.sh nss
-</code></pre>
-<p>Then check via e.g. <code>getent hosts</code> or <code>getent groups</code> that you get data from Rauthy. However, the script does it as well
-and you should see an error message about exceeded retries it you e.g. have given invalid credentials. When NSS lookups
-are working fine, proceed with the PAM module installation:</p>
-<pre><code class="language-bash">sudo ./install.sh pam
-</code></pre>
-<p>If your OS is managed by <code>authselect</code>, you need to activate the new custom profile afterward with
-<code>authselect select custom/rauthy</code>, just like mentioned in the output. On other OSes like Debian, the script will create
-backups of config files and then copy the Rauthy configs in place directly.</p>
-<p><strong>CAUTION:</strong> Make sure to test all the logins and things that should work at this point BEFORE logging out. Keep a
-backup session open, just in case something broke. Incorrectly configured PAM modules can lock you out of your machine!</p>
+<p>For standard scenarios, you will get an install script. It currently should support RHEL and Debian
+based distros. Other ones (suse, arch, gentoo) may need contributions to include them in the script.</p>
+<h2 id="installation"><a class="header" href="#installation">Installation</a></h2>
+<p>The PAM project is in a very early phase and there are no distro-packaged versions available. There
+is an install script
+though: <a href="https://github.com/sebadob/rauthy-pam-nss?tab=readme-ov-file#install-tldr">rauthy-pam-nss install</a></p>
 <div id="admonition-danger" class="admonition admonish-danger" role="note" aria-labelledby="admonition-danger-title">
 <div class="admonition-title">
 <div id="admonition-danger-title">
@@ -5211,15 +5502,17 @@ backup session open, just in case something broke. Incorrectly configured PAM mo
 <a class="admonition-anchor-link" href="work/pam_nss_modules.html#admonition-danger"></a>
 </div>
 <div>
-<p>Before you install anything, make sure that you have at least a backup session / terminal somewhere in the background
-that you don't use for installation / testing. If you mess up your PAM setup, you can easily lock yourself out of your
-machine and it could be very hard, or sometimes impossible, to recover it. Keep the backup session open and don't do
-anything with it, until you verified after the installation that everything is working as expected. If this should not
-be the case, you should revert your PAM config. The install script will copy the old files and appends <code>.bak-non-rauthy</code>
-to them.</p>
-<p>If you are not experienced with NSS / PAM yet, you should not try it on any important or production machine. The best
-thing would be to spin up an empty VM for testing, or at least create a new snapshot before you start. The default PAM
-configs are safe, but if you do anything custom, it is very easy to make your whole system insecure if done incorrectly.</p>
+<p>Before you install anything, make sure that you have at least a backup session / terminal somewhere
+in the background that you don't use for installation / testing. If you mess up your PAM setup, you
+can easily lock yourself out of your machine and it could be very hard, or sometimes impossible, to
+recover it. Keep the backup session open and don't do anything with it, until you verified after the
+installation that everything is working as expected. If this should not be the case, you should
+revert your PAM config. The install script will copy the old files and appends <code>.bak-non-rauthy</code> to
+them.</p>
+<p>If you are not experienced with NSS / PAM yet, you should not try it on any important or production
+machine for the first time. The best thing would be to spin up an empty VM for testing, or at least
+create a new snapshot before you start. The default PAM configs are safe, but if you do anything
+custom, it is very easy to make your whole system insecure if done incorrectly.</p>
 </div>
 </div>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
@@ -5230,27 +5523,33 @@ configs are safe, but if you do anything custom, it is very easy to make your wh
 <a class="admonition-anchor-link" href="work/pam_nss_modules.html#admonition-hint"></a>
 </div>
 <div>
-<p>The install script detects <code>authselect</code>-managed environments automatically and creates a <code>custom/rauthy</code> profile in this
-case, which you need to activate manually. However, it does NOT work with other management systems yet and if it does
-not find <code>authselect</code>, it will create backup copies of <code>/etc/nsswitch.conf</code> and the ones in <code>/etc/pam.d/</code> before copying
-its own files in place. If you manage PAM via other systems, feel welcome to provide a PR to include it in the script.</p>
+<p>The install script detects <code>authselect</code>-managed environments automatically and creates a
+<code>custom/rauthy</code> profile in this case, which you need to activate manually. However, it does NOT
+work with other management systems yet and if it does not find <code>authselect</code>, it will create backup
+copies of <code>/etc/nsswitch.conf</code> and the ones in <code>/etc/pam.d/</code> before copying its own files in place.
+If you manage PAM via other systems, feel welcome to provide a PR to include it in the script.</p>
 </div>
 </div>
 <h2 id="where-to-find-everything"><a class="header" href="#where-to-find-everything">Where to find everything</a></h2>
-<p>The install script will take care of everything to get it up and running for standard scenarios. However, if you need to
-debug, do custom configuration, or anything else, here is some more information:</p>
+<p>The install script will take care of everything to get it up and running for standard scenarios.
+However, if you need to debug, do custom configuration, or anything else, here is some more
+information:</p>
 <ul>
 <li>The config file can be found here: <code>/etc/rauthy/rauthy-pam-nss.toml</code></li>
 <li><code>/etc/skel_rauthy</code> contains the template for home dir creation.</li>
 <li>The PAM and NSS modules will go "somewhere" into <code>/lib/</code>, depending on your distro.</li>
-<li>The NSS socket, which should be carefully protected, so a normal user cannot spoof it, can be found under
-<code>/run/rauthy/rauthy_proxy.sock</code>. This is wrapped inside a sub-dir on purpose for 2 reasons: Additional protection via
-access rights, because it needs to be world-accessible for a lot of services, and to be able to mount the dir into
-a container, just in case someone maybe wants to run the NSS proxy as a quadlet. You cannot mount a socket file into
-a container directly (as listener at least) and need to mount the parent directory instead.</li>
-<li><code>/var/lib/pam_rauthy/</code> contains the optional session start and close scripts (enabled via the config above) and all
-the PAM tokens for users that are created during login.</li>
+<li>The NSS socket, which should be carefully protected, so a normal user cannot spoof it, can be
+found under <code>/run/rauthy/rauthy_proxy.sock</code>. This is wrapped inside a sub-dir on purpose for 2
+reasons: Additional protection via access rights, because it needs to be world-accessible for a
+lot of services, and to be able to mount the dir into a container, just in case someone maybe
+wants to run the NSS proxy as a quadlet. You cannot mount a socket file into a container
+directly (as listener at least) and need to mount the parent directory instead.</li>
+<li><code>/var/lib/pam_rauthy/</code> contains the optional session start and close scripts (enabled via the
+config above) and all the PAM tokens for users that are created during login.</li>
 <li>By default, the NSS proxy logs into <code>/var/run/rauthy/</code>.</li>
+<li>When you want to use the ssh <code>AuthorizedKeysCommand</code>, the binary is in
+<code>/usr/sbin/rauthy-authorized-keys</code>. Usage is super simple, as it only expects the username as the
+first and only argument.</li>
 </ul>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
@@ -5260,10 +5559,11 @@ the PAM tokens for users that are created during login.</li>
 <a class="admonition-anchor-link" href="work/pam_nss_modules.html#admonition-caution"></a>
 </div>
 <div>
-<p>It is VERY important that you never mess up the access rights for all of these files and dirs. Most importantly for the
-UDS so it can never be spoofed. Everything should run as <code>root</code> for the highest level of protection. In case of the
-session open and close scripts, their access rights will be checked by the PAM module before each execution and if they
-don't match <code>0700</code> or are not owned by <code>root</code>, they will not be executed.</p>
+<p>It is VERY important that you never mess up the access rights for all of these files and dirs. Most
+importantly for the UDS so it can never be spoofed. Everything should run as <code>root</code> for the highest
+level of protection. In case of the session open and close scripts, their access rights will be
+checked by the PAM module before each execution and if they don't match <code>0700</code> or are not owned by
+<code>root</code>, they will not be executed.</p>
 </div>
 </div>
 <div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">
@@ -5274,8 +5574,8 @@ don't match <code>0700</code> or are not owned by <code>root</code>, they will n
 <a class="admonition-anchor-link" href="work/pam_nss_modules.html#admonition-caution-1"></a>
 </div>
 <div>
-<p>If you change any of the paths like e.g. the <code>data_dir</code> and you have SELinux running, you must make sure that the
-correct types are added via the file context.</p>
+<p>If you change any of the paths like e.g. the <code>data_dir</code> and you have SELinux running, you must make
+sure that the correct types are added via the file context.</p>
 </div>
 </div>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
@@ -5286,23 +5586,26 @@ correct types are added via the file context.</p>
 <a class="admonition-anchor-link" href="work/pam_nss_modules.html#admonition-note"></a>
 </div>
 <div>
-<p>All of these locations and executables have dedicated SELinux types and a policy to provide additional protection. This
-will of course only work on systems where SELinux is available. An AppArmor equivalent does NOT exist yet, but the
-generic Linux access rules provide proper protection, at least as long a not another <code>root</code> application is malicious.</p>
+<p>All of these locations and executables have dedicated SELinux types and a policy to provide
+additional protection. This will of course only work on systems where SELinux is available. An
+AppArmor equivalent does NOT exist yet, but the generic Linux access rules provide proper
+protection, at least as long a not another <code>root</code> application is malicious.</p>
 </div>
 </div>
 <h2 id="selinux"><a class="header" href="#selinux">SELinux</a></h2>
-<p>An SELinux policy with quite a lot of apps and services is already included and will be installed automatically, if
-SELinux exists on your system. However, I am pretty sure that depending on the type of apps you have installed, you
-might get warnings for apps about access the <code>rauthy_var_run_t</code> with <code>write</code> or <code>connectto</code>. This is generally fine to
-allow for anything, as long as you don't allow anything else. <code>write</code> and <code>connectto</code> are necessary to do NSS lookups
-via the NSS module.</p>
-<p>If you stumble about warnings and missing types that should be added to the policy, please open an issue or directly a
-PR about it. I can of course only validate for types that I come across on a daily basis. Apart from writing and
-connecting to the UDS, you should not see any warnings (hopefully), but if you do, again, please open an issue / PR.</p>
+<p>An SELinux policy with quite a lot of apps and services is already included and will be installed
+automatically, if SELinux exists on your system. However, I am pretty sure that depending on the
+type of apps you have installed, you might get warnings for apps about access the <code>rauthy_var_run_t</code>
+with <code>write</code> or <code>connectto</code>. This is generally fine to allow for anything, as long as you don't
+allow anything else. <code>write</code> and <code>connectto</code> are necessary to do NSS lookups via the NSS module.</p>
+<p>If you stumble about warnings and missing types that should be added to the policy, please open an
+issue or directly a PR about it. I can of course only validate for types that I come across on a
+daily basis. Apart from writing and connecting to the UDS, you should not see any warnings (
+hopefully), but if you do, again, please open an issue / PR.</p>
 <h2 id="apparmor"><a class="header" href="#apparmor">AppArmor</a></h2>
-<p>I am working with RHEL based distros and SELinux exclusively and therefore don't use AppArmor and I have no experience
-with it. No rules have been added to the repo or install script. If you use AppArmor, please feel free to provide a PR.</p>
+<p>I am working with RHEL based distros and SELinux exclusively and therefore don't use AppArmor and I
+have no experience with it. No rules have been added to the repo or install script. If you use
+AppArmor, please feel free to provide a PR.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="reference-config"><a class="header" href="#reference-config">Reference Config</a></h1>
 <p>This shows a full example config with (hopefully) every value nicely described.</p>
 <p>You can configure a lot here, but the most important variables you most-likely want to change when
@@ -5565,6 +5868,14 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # default: false
 # overwritten by: ADMIN_BUTTON_HIDE
 #admin_button_hide = false
+
+# If set to `true`, requests to `/auth/v1/` will be redirected to
+# `/auth/v1/account` (the account dashboard). This is useful if you want
+# users to land directly on their account page when visiting the root URL.
+#
+# default: false
+# overwritten by: REDIRECT_ROOT_TO_ACCOUNT
+#redirect_root_to_account = false
 
 [atproto]
 # Set to `true` to enable the ATProto provider. If the public URL is
@@ -6165,12 +6476,32 @@ pg_password = '123SuperSafe'
 # overwritten by: PG_DB_NAME
 #pg_db_name = 'rauthy'
 
+# You can specifically set the TLS mode for Postgres connections.
+# The default 'prefer' will try TLS first and fall back to plain
+# connections once it fails. However, if you connect via UDS,
+# the fallback will not work, and you max have to disable it all
+# together.
+#
+# possible values: disable, prefer, require
+# default: 'prefer'
+# overwritten by: PG_TLS
+#pg_tls = 'prefer'
+
 # If your database uses a self-signed certificate, which cannot
 # be verified, you might want to set this to `true`.
 #
 # default: false
 # overwritten by: PG_TLS_NO_VERIFY
 #pg_tls_no_verify = false
+
+# Provide a custom root CA for your Postgres connections.
+#
+# overwritten by: PG_TLS_ROOT_CA
+#pg_tls_root_ca = """
+#-----BEGIN CERTIFICATE-----
+#...
+#-----END CERTIFICATE-----
+#"""
 
 # Max DB connections for the Postgres pool.
 #
@@ -6562,12 +6893,18 @@ smtp_url = 'localhost'
 # default: '%m/%d/%Y %T (%Z)'
 # overwritten by: TZ_FMT_EN
 #en = '%m/%d/%Y %T (%Z)'
+# default: '%d/%m/%Y %T (%Z)'
+# overwritten by: TZ_FMT_FR
+#fr = '%d/%m/%Y %T (%Z)'
 # default: '%Y-%m-%d %T (%Z)'
 # overwritten by: TZ_FMT_KO
 #ko = '%Y-%m-%d %T (%Z)'
 # default: '%d.%m.%Y %T (%Z)'
 # overwritten by: TZ_FMT_NO
 #no = '%d.%m.%Y %T (%Z)'
+# default: '%d.%m.%Y %T (%Z)'
+# overwritten by: TZ_FMT_RU
+#ru = '%d.%m.%Y %T (%Z)'
 # default: '%d.%m.%Y %T (%Z)'
 # overwritten by: TZ_FMT_UK
 #uk = '%d.%m.%Y %T (%Z)'
@@ -7180,13 +7517,13 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de ko nb uk zhhans
+# Available Options: en de fr ko nb ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'ko', 'nb', 'uk', 'zhhans']
+filter_lang_common = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de ko nb uk zhhans
+# Available Options: en de fr ko nb ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'ko', 'nb', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
