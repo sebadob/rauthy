@@ -611,6 +611,9 @@
                                     </Button>
                                 </div>
                             {/if}
+                        {:else}
+                            <!-- This only exists to help password managers to trigger an auto-fill  -->
+                            <input type="password" hidden aria-hidden="true" style:display="none" />
                         {/if}
 
                         {#if !tooManyRequests && !clientMfaForce}
