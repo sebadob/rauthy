@@ -145,7 +145,7 @@ node_id = 1"#
         }
         writeln!(f, "\nnodes = [")?;
         for node in &self.nodes {
-            writeln!(f, "    '{node},")?;
+            writeln!(f, "    '{node}',")?;
         }
         writeln!(f, "]")?;
 
