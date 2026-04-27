@@ -414,7 +414,7 @@ build image="zotreg.gnezdovi.com/rauthy/myrauthy" push="push": build-wasm build-
             --build-arg CREATED="$NOW" \
             --build-arg VERSION="$TAG" \
             -t {{ image }}:$TAG \
-            --platform linux/amd64 \
+            --platform linux/amd64,linux/arm64 \
             --load \
             .
     fi
