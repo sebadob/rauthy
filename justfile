@@ -374,8 +374,8 @@ build-wasm:
     wasm-pack build -d ../../frontend/src/wasm/spow --no-pack --out-name spow --features spow
     wasm-pack build -d ../../frontend/src/wasm/md --no-pack --out-name md --features md
 
-    # Build the final container image.
-    build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
+# Build the final container image.
+build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
