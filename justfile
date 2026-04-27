@@ -374,8 +374,8 @@ build-wasm:
     wasm-pack build -d ../../frontend/src/wasm/spow --no-pack --out-name spow --features spow
     wasm-pack build -d ../../frontend/src/wasm/md --no-pack --out-name md --features md
 
-# Build the final container image.
-build image="zotreg.gnezdovi.com/rauthy/myrauthy" push="push": build-wasm build-ui
+    # Build the final container image.
+    build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -397,7 +397,19 @@ build image="zotreg.gnezdovi.com/rauthy/myrauthy" push="push": build-wasm build-
         cargo build --release --target x86_64-unknown-linux-gnu
     cp target/x86_64-unknown-linux-gnu/release/rauthy out/rauthy_amd64
 
-    # Removed ARM run
+    # TODO here is potential to unify both images into a `dockerx` build which could
+    # potentially speed up the build process in exchange for more complex images.
+    # Depending on the target arch, the `--target` would be added dynamically inside
+    # the container.
+    {{ docker }} run \
+        -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
+        -v {{ invocation_directory() }}/:/work/ \
+        -w /work \
+        -e JEMALLOC_SYS_WITH_LG_PAGE=16 \
+        {{ map_docker_user }} \
+        {{ builder_image }}:{{ builder_tag_date }} \
+        cargo build --release --target aarch64-unknown-linux-gnu
+    cp target/aarch64-unknown-linux-gnu/release/rauthy out/rauthy_arm64
 
     NOW=$(date --rfc-3339=seconds)
 
