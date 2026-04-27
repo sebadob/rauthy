@@ -418,7 +418,7 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
             --build-arg CREATED="$NOW" \
             --build-arg VERSION="$TAG" \
             -t {{ image }}:$TAG \
-            --platform linux/amd64 \
+            --platform linux/amd64,linux/arm64 \
             --push \
             .
     else
