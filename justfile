@@ -389,8 +389,8 @@ build image="zotreg.gnezdovi.com/rauthy/myrauthy" push="push": build-wasm build-
     # https://github.com/cross-rs/cross/security/advisories/GHSA-2r9g-5qvw-fgmf
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189
     {{ docker }} run \
-        -v {{ cargo_home }}/registry:{{ container_cargo_registry }}:Z \
-        -v {{ invocation_directory() }}/:/work/:Z \
+        -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
+        -v {{ invocation_directory() }}/:/work/ \
         -w /work \
         {{ map_docker_user }} \
         {{ builder_image }}:{{ builder_tag_date }} \
