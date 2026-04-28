@@ -59,6 +59,7 @@ pub enum HtmlTemplate {
     ErrorDetails(Cow<'static, str>),
     ErrorText(Cow<'static, str>),
     DeviceUserCodeLength(u8),
+    IsHotpEnabled(bool),
     IsRegOpen(bool),
     LoginAction(FrontendAction),
     PasswordReset(TplPasswordReset),
@@ -83,6 +84,7 @@ impl HtmlTemplate {
             Self::ErrorDetails(_) => "tpl_error_details",
             Self::ErrorText(_) => "tpl_error_text",
             Self::DeviceUserCodeLength(_) => "tpl_device_user_code_length",
+            Self::IsHotpEnabled(_) => "tpl_is_hotp_enabled",
             Self::IsRegOpen(_) => "tpl_is_reg_open",
             Self::LoginAction(_) => "tpl_login_action",
             Self::PasswordReset(_) => "tpl_password_reset",
@@ -108,6 +110,7 @@ impl HtmlTemplate {
             Self::ErrorDetails(i) => i.to_string(),
             Self::ErrorText(i) => i.to_string(),
             Self::DeviceUserCodeLength(i) => i.to_string(),
+            Self::IsHotpEnabled(i) => i.to_string(),
             Self::IsRegOpen(i) => i.to_string(),
             Self::LoginAction(i) => i.to_string(),
             Self::PasswordReset(i) => serde_json::to_string(i).unwrap(),
@@ -160,7 +163,9 @@ impl AccountHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates,
+            templates: &[HtmlTemplate::IsHotpEnabled(
+                RauthyConfig::get().vars.hmac_otp.enable,
+            )],
         };
         res.render().unwrap()
     }

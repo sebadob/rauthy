@@ -264,6 +264,7 @@ pub struct Vars {
     pub fedcm: ConfigVarsFedCM,
     pub geo: ConfigVarsGeo,
     pub hashing: VarsHashing,
+    pub hmac_otp: VarsHOTP,
     pub http_client: VarsHttpClient,
     pub i18n: VarsI18n,
     pub lifetimes: VarsLifetimes,
@@ -512,6 +513,9 @@ impl Default for Vars {
                 argon2_p_cost: 8,
                 max_hash_threads: 2,
                 hash_await_warn_time: 500,
+            },
+            hmac_otp: VarsHOTP {
+                enable: false,
             },
             http_client: VarsHttpClient {
                 connect_timeout: 10,
@@ -1086,6 +1090,7 @@ impl Vars {
         slf.parse_fedcm(&mut table);
         slf.parse_geo(&mut table);
         slf.parse_hashing(&mut table);
+        slf.parse_hmac_otp(&mut table);
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
         slf.parse_lifetimes(&mut table);
@@ -2364,6 +2369,14 @@ impl Vars {
         }
     }
 
+    fn parse_hmac_otp(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "hmac_otp");
+
+        if let Some(v) = t_bool(&mut table, "hmac_otp", "enable", "HOTP_ENABLE") {
+            self.hmac_otp.enable = v;
+        }
+    }
+
     fn parse_http_client(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "http_client");
 
@@ -3509,6 +3522,11 @@ pub struct VarsHashing {
     pub argon2_p_cost: u32,
     pub max_hash_threads: u32,
     pub hash_await_warn_time: u32,
+}
+
+#[derive(Debug)]
+pub struct VarsHOTP {
+    pub enable: bool,
 }
 
 #[derive(Debug)]

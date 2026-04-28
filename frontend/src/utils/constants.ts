@@ -53,6 +53,7 @@ export const TPL_EMAIL_NEW = 'tpl_email_new';
 // export const TPL_ERROR_DETAILS = 'tpl_error_details';
 export const TPL_ERROR_TEXT = 'tpl_error_text';
 export const TPL_DEVICE_USER_CODE_LENGTH = 'tpl_device_user_code_length';
+export const TPL_IS_HOTP_ENABLED = 'tpl_is_hotp_enabled';
 export const TPL_IS_REG_OPEN = 'tpl_is_reg_open';
 export const TPL_LOGIN_ACTION = 'tpl_login_action';
 export const TPL_PASSWORD_RESET = 'tpl_password_reset';
