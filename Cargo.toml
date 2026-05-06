@@ -121,7 +121,7 @@ maxminddb = "0.27"
 mime = "0.3.17"
 mime_guess = "2"
 num_cpus = "1"
-openssl = { version = "0.10.78", features = ["vendored"] }
+openssl = { version = "0.10.79", features = ["vendored"] }
 openssl-sys = { version = "0.9.105", features = ["vendored"] }
 oxiri = "0.2.2"
 postgres-types = { version = "0.2.6", features = ["derive"] }
