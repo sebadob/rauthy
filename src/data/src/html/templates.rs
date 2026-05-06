@@ -59,6 +59,7 @@ pub enum HtmlTemplate {
     ErrorDetails(Cow<'static, str>),
     ErrorText(Cow<'static, str>),
     DeviceUserCodeLength(u8),
+    HotpLength(u8),
     IsHotpEnabled(bool),
     IsRegOpen(bool),
     LoginAction(FrontendAction),
@@ -83,6 +84,7 @@ impl HtmlTemplate {
             Self::EmailNew(_) => "tpl_email_new",
             Self::ErrorDetails(_) => "tpl_error_details",
             Self::ErrorText(_) => "tpl_error_text",
+            Self::HotpLength(_) => "tpl_hotp_length",
             Self::DeviceUserCodeLength(_) => "tpl_device_user_code_length",
             Self::IsHotpEnabled(_) => "tpl_is_hotp_enabled",
             Self::IsRegOpen(_) => "tpl_is_reg_open",
@@ -109,6 +111,7 @@ impl HtmlTemplate {
             Self::EmailNew(i) => i.to_string(),
             Self::ErrorDetails(i) => i.to_string(),
             Self::ErrorText(i) => i.to_string(),
+            Self::HotpLength(i) => i.to_string(),
             Self::DeviceUserCodeLength(i) => i.to_string(),
             Self::IsHotpEnabled(i) => i.to_string(),
             Self::IsRegOpen(i) => i.to_string(),
@@ -163,9 +166,7 @@ impl AccountHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::IsHotpEnabled(
-                RauthyConfig::get().vars.hmac_otp.enable,
-            )],
+            templates,
         };
         res.render().unwrap()
     }

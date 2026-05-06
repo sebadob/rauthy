@@ -65,6 +65,10 @@ impl HtmlTemplate {
             )),
             "tpl_email_old" => Ok((Self::EmailOld("OLD@EMAIL.LOCAL".to_string()), None)),
             "tpl_email_new" => Ok((Self::EmailOld("NEW@EMAIL.LOCAL".to_string()), None)),
+            "tpl_hotp_length" => Ok((
+                Self::HotpLength(RauthyConfig::get().vars.hmac_otp.length),
+                None,
+            )),
             "tpl_is_hotp_enabled" => Ok((
                 Self::IsHotpEnabled(RauthyConfig::get().vars.hmac_otp.enable),
                 None,

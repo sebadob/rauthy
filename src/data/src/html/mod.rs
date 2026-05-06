@@ -10,6 +10,7 @@ use crate::html::templates::{
     UserPasswordResetHtml, UserRegisterHtml,
 };
 use crate::language::Language;
+use crate::rauthy_config::RauthyConfig;
 use actix_web::http::header::ACCEPT_ENCODING;
 use actix_web::{HttpRequest, HttpResponse};
 use rauthy_common::compression::{compress_br_9, compress_br_dyn, compress_gzip};
@@ -142,6 +143,8 @@ impl HtmlCached {
                     &[
                         HtmlTemplate::AuthProviders(providers),
                         HtmlTemplate::UserValues,
+                        HtmlTemplate::HotpLength(RauthyConfig::get().vars.hmac_otp.length),
+                        HtmlTemplate::IsHotpEnabled(RauthyConfig::get().vars.hmac_otp.enable),
                     ],
                 )
             }

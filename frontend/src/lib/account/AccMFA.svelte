@@ -21,6 +21,8 @@
     import InputPassword from '$lib/form/InputPassword.svelte';
     import Form from '$lib/form/Form.svelte';
     import IconArrowPathSquare from '$icons/IconArrowPathSquare.svelte';
+    import Template from '$lib5/Template.svelte';
+    import { TPL_HOTP_LENGTH, TPL_IS_HOTP_ENABLED } from '$utils/constants';
 
     let { user }: { user: UserResponse } = $props();
 
@@ -51,6 +53,9 @@
     let mfaModToken: undefined | MfaModTokenResponse = $state();
     let mfaModSecs: undefined | number = $state();
     let interval: undefined | number;
+    
+    let isHotpEnabled = $state(false);
+    let hotpSize = $state(6);
 
     onMount(() => {
         fetchPasskeys();
@@ -240,6 +245,9 @@
         mfaPurpose = undefined;
     }
 </script>
+
+<Template id={TPL_IS_HOTP_ENABLED} bind:value={isHotpEnabled} />
+<Template id={TPL_HOTP_LENGTH} bind:value={hotpSize} />
 
 <div class="container">
     {#if !isSupported}

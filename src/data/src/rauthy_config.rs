@@ -516,6 +516,7 @@ impl Default for Vars {
             },
             hmac_otp: VarsHOTP {
                 enable: false,
+                length: 6,
             },
             http_client: VarsHttpClient {
                 connect_timeout: 10,
@@ -2375,6 +2376,9 @@ impl Vars {
         if let Some(v) = t_bool(&mut table, "hmac_otp", "enable", "HOTP_ENABLE") {
             self.hmac_otp.enable = v;
         }
+        if let Some(v) = t_u8(&mut table, "hmac_otp", "length", "HOTP_LENGTH") {
+            self.hmac_otp.length = v;
+        }
     }
 
     fn parse_http_client(&mut self, table: &mut toml::Table) {
@@ -3527,6 +3531,7 @@ pub struct VarsHashing {
 #[derive(Debug)]
 pub struct VarsHOTP {
     pub enable: bool,
+    pub length: u8,
 }
 
 #[derive(Debug)]
