@@ -193,6 +193,9 @@ pub struct DeviceGrantRequest {
     /// Validation: `[a-zA-Z0-9-_/:\s*]{0,512}`
     #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
     pub scope: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub nonce: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
