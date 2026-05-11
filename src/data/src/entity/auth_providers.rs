@@ -797,9 +797,12 @@ impl AuthProviderCallback {
             // the requested claims. If anything fails to extract at least the bare minimum, we want
             // to go on and try fetching userinfo using the access token below.
             match AuthProviderIdClaims::try_from(claims_bytes.as_slice()) {
-                Ok(claims) => {
-                    return claims.validate_update_user(provider, link_cookie).await;
-                }
+                Ok(claims) => match claims.validate_update_user(provider, link_cookie).await {
+                    Ok(res) => return Ok(res),
+                    Err(err) => {
+                        debug!("Error validating the user extracted from the id_claims: {err}");
+                    }
+                },
                 Err(err) => {
                     debug!("Failed to extract claims from id_token: {err}. Trying access token.");
                 }
