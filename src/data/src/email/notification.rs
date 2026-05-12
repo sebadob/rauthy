@@ -1,4 +1,4 @@
-use crate::email::mailer::EMail;
+use crate::email::mailer::{EMail, EmailType};
 use crate::entity::theme::ThemeCssFull;
 use askama::Template;
 use rauthy_notify::Notification;
@@ -48,6 +48,7 @@ pub async fn send_email_notification(
     };
 
     let req = EMail {
+        typ: EmailType::Notification,
         recipient_name,
         address,
         subject: notification.head.to_string(),

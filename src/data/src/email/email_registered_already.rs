@@ -1,5 +1,5 @@
 use crate::email::i18n::email_registered_already::I18nEmailRegisteredAlready;
-use crate::email::mailer::EMail;
+use crate::email::mailer::{EMail, EmailType};
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
@@ -68,6 +68,7 @@ pub async fn send_email_registered_already(user: &User) {
     };
 
     let req = EMail {
+        typ: EmailType::EmailRegisteredAlready,
         recipient_name: user.email_recipient_name(),
         address: user.email.clone(),
         subject: format!("{} - {}", email_sub_prefix, i18n.subject),

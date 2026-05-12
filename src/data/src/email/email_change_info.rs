@@ -1,6 +1,6 @@
 use crate::email::email_ts_prettify;
 use crate::email::i18n::change_info_new::I18nEmailChangeInfoNew;
-use crate::email::mailer::EMail;
+use crate::email::mailer::{EMail, EmailType};
 use crate::entity::magic_links::MagicLink;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
@@ -81,6 +81,7 @@ pub async fn send_email_change_info_new(
     };
 
     let req = EMail {
+        typ: EmailType::EmailChangeInfo,
         recipient_name: user.email_recipient_name(),
         address: new_email.clone(),
         subject: format!("{} - {}", email_sub_prefix, i18n.subject),

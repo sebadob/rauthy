@@ -1,7 +1,7 @@
 use crate::email::email_ts_prettify;
 use crate::email::i18n::password_new::I18nEmailPasswordNew;
 use crate::email::i18n::reset::I18nEmailReset;
-use crate::email::mailer::EMail;
+use crate::email::mailer::{EMail, EmailType};
 use crate::entity::magic_links::MagicLink;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
@@ -138,6 +138,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User, user_tz: Option
     };
 
     let req = EMail {
+        typ: EmailType::PasswordReset,
         recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
         subject: format!("{email_sub_prefix} - {subject}"),
