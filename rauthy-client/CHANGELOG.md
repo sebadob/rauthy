@@ -1,5 +1,21 @@
 # Changelog
 
+## UNRELEASED
+
+### Breaking
+
+While fixing a public key decode error for RSA keys, the JWT token dependency broke a few things
+(again, unfortunately). Because of this, a part of the custom JWT token implementation from Rauthy
+was copied over and adjusted. This was a performance boost, and it's more light-weight, but it came
+with a few breaking changes.
+
+- Quite a few claims like `iat`, `nbf`, `exp`, ..., are not on the base level anymore, but can be
+  found in `.common` for the given claims. This reduces maintenance overhead and error possibilies,
+  since all tokens share these claims anyway. There is not need to define them multiple times
+  anymore.
+- `PrincipalOidc.expires_at_ts` is not an `Option<_>` anymore and was changed to a `i64` to match
+  the behavior of other crates when dealing with Unix timestamps.
+
 ## v0.13.0
 
 This release makes it possible to have a interrupt-free migration to Rauthy v0.35+, which changed

@@ -2,11 +2,11 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-pub static SCIM_SCHEMA_ERROR: &str = "urn:ietf:params:scim:api:messages:2.0:Error";
-pub static SCIM_SCHEMA_GROUP: &str = "urn:ietf:params:scim:schemas:core:2.0:Group";
-pub static SCIM_SCHEMA_LIST_RESPONSE: &str = "urn:ietf:params:scim:api:messages:2.0:ListResponse";
-pub static SCIM_SCHEMA_PATCH_OP: &str = "urn:ietf:params:scim:api:messages:2.0:PatchOp";
-pub static SCIM_SCHEMA_USER: &str = "urn:ietf:params:scim:schemas:core:2.0:User";
+pub const SCIM_SCHEMA_ERROR: &str = "urn:ietf:params:scim:api:messages:2.0:Error";
+pub const SCIM_SCHEMA_GROUP: &str = "urn:ietf:params:scim:schemas:core:2.0:Group";
+pub const SCIM_SCHEMA_LIST_RESPONSE: &str = "urn:ietf:params:scim:api:messages:2.0:ListResponse";
+pub const SCIM_SCHEMA_PATCH_OP: &str = "urn:ietf:params:scim:api:messages:2.0:PatchOp";
+pub const SCIM_SCHEMA_USER: &str = "urn:ietf:params:scim:schemas:core:2.0:User";
 
 /// Empty struct, exists only for ease of use in SCIM endpoints for automatic SCIM token validation,
 /// if no other `Scim*` type is being used.

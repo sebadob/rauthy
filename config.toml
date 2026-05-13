@@ -2303,7 +2303,7 @@ trusted_proxies = ['127.0.0.1/32']
 #
 # default: false
 # overwritten by: METRICS_ENABLE
-metrics_enable = false
+metrics_enable = true
 
 # The IP address to listen on for the /metrics endpoint.
 # You do not want to expose your metrics on a publicly

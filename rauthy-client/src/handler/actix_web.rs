@@ -1,13 +1,14 @@
 use crate::build_lax_cookie_300;
-use crate::cookie_state::{OidcCookieState, OIDC_STATE_COOKIE};
+use crate::cookie_state::{OIDC_STATE_COOKIE, OidcCookieState};
 use crate::handler::{OidcCallbackParams, OidcCookieInsecure, OidcSetRedirectStatus};
 use crate::principal::PrincipalOidc;
 use crate::provider::OidcProvider;
 use crate::rauthy_error::RauthyError;
-use crate::token_set::{JwtIdClaims, OidcTokenSet};
+use crate::token_set::{IdToken, OidcTokenSet};
 use actix_web::{
+    HttpRequest, HttpResponse, Responder,
     http::header::{LOCATION, SET_COOKIE},
-    web, HttpRequest, HttpResponse, Responder,
+    web,
 };
 
 /// Check the authentication
@@ -37,7 +38,7 @@ pub async fn validate_redirect_principal(
                 Ok(c) => &c.auth_url_base,
                 Err(_) => {
                     return HttpResponse::InternalServerError()
-                        .body("OIDC Provider has not been set up")
+                        .body("OIDC Provider has not been set up");
                 }
             };
             format!(
@@ -69,7 +70,7 @@ pub async fn oidc_callback(
     params: web::Query<OidcCallbackParams>,
     enc_key: &[u8],
     insecure: OidcCookieInsecure,
-) -> Result<(String, OidcTokenSet, JwtIdClaims), RauthyError> {
+) -> Result<(String, OidcTokenSet, IdToken), RauthyError> {
     let cookie_state = OidcCookieState::from_req_cookie_value(req, enc_key)?;
     crate::handler::oidc_callback(cookie_state, params.into_inner(), insecure).await
 }

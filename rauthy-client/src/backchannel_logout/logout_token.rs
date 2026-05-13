@@ -1,17 +1,12 @@
-use crate::jwks::{JwkKeyPairAlg, JwkPublicKey};
-use crate::provider::OidcProvider;
+use crate::base64_url_no_pad_decode;
 use crate::rauthy_error::RauthyError;
-use crate::token_set::JwtTokenType;
-use crate::{base64_url_no_pad_decode, validate_jwt};
+use crate::tokens::claims::TokenType;
 use chrono::Utc;
-use jwt_simple::algorithms::{EdDSAPublicKeyLike, RSAPublicKeyLike};
-use jwt_simple::claims;
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 
-static EVENT: &str = "http://schemas.openid.net/event/backchannel-logout";
-static LOGOUT_TOKEN_ALLOWED_LIFETIME: u8 = 120;
-static LOGOUT_TOKEN_ALLOW_CLOCK_SKEW: u8 = 5;
+const EVENT: &str = "http://schemas.openid.net/event/backchannel-logout";
+const LOGOUT_TOKEN_ALLOWED_LIFETIME: u8 = 120;
+const LOGOUT_TOKEN_ALLOW_CLOCK_SKEW: u8 = 5;
 
 /// Logout Token for OIDC backchannel logout specified in
 /// <https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken>
@@ -23,7 +18,7 @@ struct LogoutTokenRaw {
     exp: i64,
 
     // MUST always either not exist or be `logout+jwt`
-    typ: Option<JwtTokenType>,
+    typ: Option<TokenType>,
     // alg: JwkKeyPairAlg,
     iat: i64,
     jti: String,
@@ -36,37 +31,6 @@ struct LogoutTokenRaw {
     // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
     // `.is_none()` validation.
     nonce: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct LogoutToken {
-    pub jti: Option<String>,
-    pub sub: Option<String>,
-    pub sid: Option<String>,
-}
-
-impl LogoutToken {
-    /// Parse and validate the token as specified in
-    /// <https://openid.net/specs/openid-connect-backchannel-1_0.html#Validation>
-    pub async fn from_str_validated(logout_token: &str) -> Result<Self, RauthyError> {
-        let (header, lt_raw) = LogoutTokenRaw::build_from_str(logout_token)?;
-        let kid = lt_raw.validate_claims(header)?;
-
-        let jwk = JwkPublicKey::get_for_kid(&kid).await?;
-        let config = OidcProvider::config()?;
-        let claims: claims::JWTClaims<LogoutToken> = validate_jwt!(
-            LogoutToken,
-            jwk,
-            logout_token,
-            config.verification_options.clone()
-        )?;
-
-        let mut lt = claims.custom;
-        lt.sub = claims.subject;
-        lt.jti = claims.jwt_id;
-
-        Ok(lt)
-    }
 }
 
 impl LogoutTokenRaw {
@@ -116,7 +80,7 @@ impl LogoutTokenRaw {
             return Err(RauthyError::BadRequest("`kid` is missing in token header"));
         }
 
-        if self.typ.is_some() && self.typ != Some(JwtTokenType::Logout) {
+        if self.typ.is_some() && self.typ != Some(TokenType::Logout) {
             return Err(RauthyError::BadRequest("invalid token `typ`"));
         }
 
@@ -148,7 +112,9 @@ impl LogoutTokenRaw {
             }
             Some(value) => {
                 if value != &serde_json::Value::Object(serde_json::Map::new()) {
-                    return Err(RauthyError::BadRequest("invalid value for `events.http://schemas.openid.net/event/backchannel-logout`"));
+                    return Err(RauthyError::BadRequest(
+                        "invalid value for `events.http://schemas.openid.net/event/backchannel-logout`",
+                    ));
                 }
             }
         }

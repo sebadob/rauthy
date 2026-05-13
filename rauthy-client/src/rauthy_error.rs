@@ -3,7 +3,7 @@ use chacha20poly1305::Error;
 use std::borrow::Cow;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, PartialEq, Error)]
 pub enum RauthyError {
     #[error("BadRequest: {0}")]
     BadRequest(&'static str),
@@ -57,15 +57,21 @@ impl From<reqwest::Error> for RauthyError {
     }
 }
 
-impl From<jwt_simple::Error> for RauthyError {
-    fn from(value: jwt_simple::Error) -> Self {
-        Self::Token(Cow::from(value.to_string()))
-    }
-}
-
 impl From<serde_json::Error> for RauthyError {
     fn from(value: serde_json::Error) -> Self {
         Self::Serde(value.to_string())
+    }
+}
+
+impl From<ed25519_compact::Error> for RauthyError {
+    fn from(value: ed25519_compact::Error) -> Self {
+        Self::JWK(value.to_string().into())
+    }
+}
+
+impl From<rsa::Error> for RauthyError {
+    fn from(value: rsa::Error) -> Self {
+        Self::JWK(value.to_string().into())
     }
 }
 

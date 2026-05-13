@@ -8,8 +8,7 @@ use std::borrow::Cow;
 use tracing::error;
 
 /// The name of the encrypted OIDC state cookie during the login flow
-#[allow(dead_code)]
-pub static OIDC_STATE_COOKIE: &str = "OIDC_STATE";
+pub const OIDC_STATE_COOKIE: &str = "OIDC_STATE";
 
 /// The encrypted OIDC state cookie during the login flow
 #[derive(Serialize, Deserialize)]
@@ -21,7 +20,6 @@ pub struct OidcCookieState {
 }
 
 impl OidcCookieState {
-    #[allow(dead_code)]
     pub(crate) fn generate() -> (Self, String) {
         let (pkce_verifier, challenge) = generate_pkce_challenge();
         let slf = Self {
