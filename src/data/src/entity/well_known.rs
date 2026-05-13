@@ -40,6 +40,11 @@ pub struct WellKnown {
     pub service_documentation: &'static str,
     pub ui_locales_supported: Vec<&'static str>,
     pub claims_parameter_supported: bool,
+    /// SEP-991 / draft-jonesmichael-oauth-cimd. Signals that this AS accepts
+    /// clients identified by a Client ID Metadata Document URL (Rauthy already
+    /// implements this via `ephemeral_from_url`). ChatGPT's custom-connector UI
+    /// greys out the CIMD option until the AS discovery doc carries this flag.
+    pub client_id_metadata_document_supported: bool,
 }
 
 static IDX: &str = ".well-known";
@@ -145,6 +150,7 @@ impl WellKnown {
             service_documentation: "https://sebadob.github.io/rauthy/",
             ui_locales_supported: Language::iter().map(|l| l.as_str()).collect(),
             claims_parameter_supported: true,
+            client_id_metadata_document_supported: true,
         }
     }
 }

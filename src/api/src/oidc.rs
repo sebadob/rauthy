@@ -1230,6 +1230,17 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
 ///
 /// Capable OIDC clients can use this endpoint to auto-discover all necessary OIDC information and
 /// endpoints that are provided by rauthy to automatically choose the best / safest options.
+async fn well_known_response() -> Result<HttpResponse, ErrorResponse> {
+    let wk = WellKnown::json().await?;
+    Ok(HttpResponse::Ok()
+        .insert_header((CONTENT_TYPE, APPLICATION_JSON))
+        .insert_header((
+            header::ACCESS_CONTROL_ALLOW_ORIGIN,
+            HeaderValue::from_static("*"),
+        ))
+        .body(wk))
+}
+
 #[utoipa::path(
     get,
     path = "/.well-known/openid-configuration",
@@ -1240,12 +1251,14 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
 )]
 #[get("/.well-known/openid-configuration")]
 pub async fn get_well_known() -> Result<HttpResponse, ErrorResponse> {
-    let wk = WellKnown::json().await?;
-    Ok(HttpResponse::Ok()
-        .insert_header((CONTENT_TYPE, APPLICATION_JSON))
-        .insert_header((
-            header::ACCESS_CONTROL_ALLOW_ORIGIN,
-            HeaderValue::from_static("*"),
-        ))
-        .body(wk))
+    well_known_response().await
+}
+
+// RFC 8414 alias for `/.well-known/openid-configuration`. Some MCP clients
+// (ChatGPT's connector backend) prefer the RFC 8414 endpoint for AS-metadata
+// discovery and won't read `client_id_metadata_document_supported` from the
+// OIDC-only doc. Body is identical; we just expose it under the second path.
+#[get("/.well-known/oauth-authorization-server")]
+pub async fn get_well_known_oauth() -> Result<HttpResponse, ErrorResponse> {
+    well_known_response().await
 }
