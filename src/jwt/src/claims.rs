@@ -124,6 +124,8 @@ pub struct JwtAccessClaims<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub email_verified: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub roles: Option<Vec<&'a str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<Vec<&'a str>>,
