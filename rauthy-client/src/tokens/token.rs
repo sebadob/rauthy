@@ -26,7 +26,7 @@ impl JwtToken {
     pub async fn validate_claims_into(
         token: &str,
         expected_type: Option<TokenType>,
-        buf: &mut [u8],
+        buf: &mut Vec<u8>,
     ) -> Result<(), RauthyError> {
         debug_assert!(buf.is_empty());
 
@@ -51,9 +51,8 @@ impl JwtToken {
             return Err(RauthyError::InvalidJwt("Invalid JWT token format"));
         }
 
-        let mut buf = Vec::with_capacity(1024);
-        base64_url_no_pad_decode_buf(header, &mut buf)?;
-        let header = serde_json::from_slice::<JwtHeader>(&buf)?;
+        base64_url_no_pad_decode_buf(header, buf)?;
+        let header = serde_json::from_slice::<JwtHeader>(buf)?;
         if header.typ != "JWT" {
             return Err(RauthyError::InvalidJwt("Invalid JWT Header `typ`"));
         }
@@ -63,13 +62,14 @@ impl JwtToken {
                 "Invalid JWT Header `alg` does not match `kid`".into(),
             ));
         }
-        jwk.validate_token_signature(token, &mut buf)?;
+        jwk.validate_token_signature(token, buf)?;
 
         buf.clear();
-        base64_url_no_pad_decode_buf(claims, &mut buf)?;
+        base64_url_no_pad_decode_buf(claims, buf)?;
+        let validation_claims = serde_json::from_slice::<ValidationClaims>(buf)?;
 
         let config = OidcProvider::config()?;
-        serde_json::from_slice::<ValidationClaims>(&buf)?.validate(
+        validation_claims.validate(
             &config.allowed_issuers,
             &config.allowed_audiences,
             expected_type,
@@ -161,13 +161,12 @@ mod tests {
     use crate::rauthy_error::RauthyError;
     use crate::tokens::claims::TokenType;
     use crate::tokens::token::ValidationClaims;
-    use axum::response::ErrorResponse;
     use chrono::Utc;
     use serde_json::json;
     use std::collections::HashSet;
 
     #[test]
-    fn test_validation_claims() -> Result<(), ErrorResponse> {
+    fn test_validation_claims() -> Result<(), RauthyError> {
         let now = Utc::now().timestamp();
         let iss = "http://localhost:8080/auth/v1";
         let iss_set = HashSet::from([iss.to_string()]);

@@ -60,7 +60,7 @@ impl AccessToken {
     #[inline(always)]
     pub async fn from_token_validated_buf(
         token: &str,
-        buf: &mut [u8],
+        buf: &mut Vec<u8>,
     ) -> Result<Self, RauthyError> {
         JwtToken::validate_claims_into(token, Some(TokenType::Bearer), buf).await?;
         let slf = serde_json::from_slice::<Self>(buf)?;
@@ -108,7 +108,7 @@ impl IdToken {
     pub async fn from_token_validated_buf(
         token: &str,
         nonce: &str,
-        buf: &mut [u8],
+        buf: &mut Vec<u8>,
     ) -> Result<Self, RauthyError> {
         JwtToken::validate_claims_into(token, Some(TokenType::Id), buf).await?;
         let slf = serde_json::from_slice::<Self>(buf)?;
@@ -120,32 +120,6 @@ impl IdToken {
         if slf.nonce.as_deref() != Some(nonce) {
             return Err(RauthyError::InvalidClaims("'nonce' is not correct"));
         }
-
-        Ok(slf)
-    }
-}
-
-#[cfg(feature = "backchannel-logout")]
-#[derive(Debug, Serialize, Deserialize)]
-pub struct LogoutToken {
-    #[serde(flatten)]
-    pub common: CommonClaims,
-
-    pub events: serde_json::Value,
-    pub sid: Option<String>,
-
-    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
-    // `.is_none()` validation.
-    pub nonce: Option<String>,
-}
-
-#[cfg(feature = "backchannel-logout")]
-impl LogoutToken {
-    #[inline(always)]
-    pub async fn from_token_validated(token: &str) -> Result<Self, RauthyError> {
-        let mut buf = Vec::with_capacity(256);
-        JwtToken::validate_claims_into(token, Some(TokenType::Logout), &mut buf).await?;
-        let slf = serde_json::from_slice::<Self>(&buf)?;
 
         Ok(slf)
     }

@@ -111,7 +111,7 @@ impl JwkPublicKey {
 
     #[inline(always)]
     fn x(&self) -> Result<&[u8], RauthyError> {
-        match &self.e_bytes {
+        match &self.x_bytes {
             None => Err(RauthyError::JWK("Missing 'x' in JWK".into())),
             Some(bytes) => Ok(bytes),
         }

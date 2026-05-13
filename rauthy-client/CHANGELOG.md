@@ -15,6 +15,7 @@ with a few breaking changes.
   anymore.
 - `PrincipalOidc.expires_at_ts` is not an `Option<_>` anymore and was changed to a `i64` to match
   the behavior of other crates when dealing with Unix timestamps.
+- When using `actix-web`, the `enc_key` for some functions now must be `Bytes` instead of `&[u8]`
 
 ## v0.13.0
 

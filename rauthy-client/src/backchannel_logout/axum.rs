@@ -1,6 +1,6 @@
 use crate::backchannel_logout::LogoutRequest;
+use crate::backchannel_logout::logout_token::LogoutToken;
 use crate::rauthy_error::RauthyError;
-use crate::tokens::claims::LogoutToken;
 use axum::extract::{FromRequest, Request};
 use tracing::error;
 

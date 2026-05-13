@@ -1,7 +1,9 @@
+use actix_web::web::Bytes;
+
 /// Application config
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub enc_key: Vec<u8>,
+    pub enc_key: Bytes,
 }
 
 impl Config {
@@ -13,7 +15,7 @@ impl Config {
         // you will most probably do some async stuff here like open a DB pool ...
 
         Ok(Self {
-            enc_key: enc_key.into_bytes(),
+            enc_key: Bytes::from(enc_key),
         })
     }
 }
