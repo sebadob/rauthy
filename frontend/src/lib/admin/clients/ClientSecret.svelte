@@ -47,7 +47,7 @@
     });
 
     async function fetchSecret() {
-        let res = await fetchPost<ClientSecretResponse>(`/auth/v1/clients/${client.id}/secret`);
+        let res = await fetchPost<ClientSecretResponse>(`/auth/v1/clients/${encodeURIComponent(client.id)}/secret`);
         if (res.body) {
             if (res.body.secret) {
                 secret = res.body.secret;
@@ -62,7 +62,7 @@
             cache_current_hours: cacheSecret ? Number.parseInt(cacheCurrentHours) : undefined,
         };
         let res = await fetchPut<ClientSecretResponse>(
-            `/auth/v1/clients/${client.id}/secret`,
+            `/auth/v1/clients/${encodeURIComponent(client.id)}/secret`,
             payload,
         );
         if (res.body) {

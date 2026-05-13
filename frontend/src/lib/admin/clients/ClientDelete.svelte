@@ -23,7 +23,7 @@
         err = '';
         isLoading = true;
 
-        let res = await fetchDelete(`/auth/v1/clients/${client.id}`);
+        let res = await fetchDelete(`/auth/v1/clients/${encodeURIComponent(client.id)}`);
         isLoading = false;
 
         if (res.error) {
