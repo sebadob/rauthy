@@ -244,6 +244,7 @@ async fn server_with_metrics() -> std::io::Result<()> {
             // out the correct type yet.
             .wrap(metrics_collector.clone())
             .service(oidc::get_well_known)
+            .service(oidc::get_well_known_oauth)
             .service(fed_cm::get_fed_cm_well_known)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
@@ -328,6 +329,7 @@ async fn server_without_metrics() -> std::io::Result<()> {
             .wrap(CsrfProtectionMiddleware)
             .wrap(default_headers())
             .service(oidc::get_well_known)
+            .service(oidc::get_well_known_oauth)
             .service(fed_cm::get_fed_cm_well_known)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
@@ -676,6 +678,7 @@ fn api_services() -> actix_web::Scope {
                 .service(themes::put_theme)
                 .service(themes::delete_theme)
                 .service(oidc::get_well_known)
+                .service(oidc::get_well_known_oauth)
                 .service(generic::get_health)
                 .service(generic::get_i18n_config)
                 .service(generic::get_ready)
