@@ -146,6 +146,11 @@ impl TokenSet {
         } else {
             None
         };
+        let email_verified = if scope.contains("email") {
+            user.as_ref().map(|u| u.email_verified)
+        } else {
+            None
+        };
         let roles = user.map(|u| u.roles_iter().collect());
         let groups = if scope.contains("groups") {
             user.map(|u| u.groups_iter().collect())
@@ -187,6 +192,7 @@ impl TokenSet {
             },
             allowed_origins: None,
             email,
+            email_verified,
             roles,
             groups,
             custom: None,
