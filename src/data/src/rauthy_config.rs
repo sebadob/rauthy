@@ -479,6 +479,7 @@ impl Default for Vars {
                 level_force_logout: EventLevel::Notice,
                 level_user_login_revoke: EventLevel::Warning,
                 level_scim_task_failed: EventLevel::Critical,
+                level_email_send_error: EventLevel::Critical,
                 level_suspicious_request: EventLevel::Notice,
                 level_new_login_location: EventLevel::Notice,
                 level_token_issued: EventLevel::Info,
@@ -2132,6 +2133,15 @@ impl Vars {
         if let Some(v) = t_str(
             &mut table,
             "events",
+            "level_email_send_error",
+            "EVENT_LEVEL_EMAIL_SEND_ERROR",
+        ) {
+            self.events.level_email_send_error =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for email_send_error");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
             "level_suspicious_request",
             "EVENT_LEVEL_SUSPICIOUS_REQUEST",
         ) {
@@ -3468,6 +3478,7 @@ pub struct VarsEvents {
     pub level_force_logout: EventLevel,
     pub level_user_login_revoke: EventLevel,
     pub level_scim_task_failed: EventLevel,
+    pub level_email_send_error: EventLevel,
     pub level_suspicious_request: EventLevel,
     pub level_new_login_location: EventLevel,
     pub level_token_issued: EventLevel,

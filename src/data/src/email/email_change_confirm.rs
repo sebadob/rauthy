@@ -1,5 +1,5 @@
 use crate::email::i18n::confirm_change::I18nEmailConfirmChange;
-use crate::email::mailer::EMail;
+use crate::email::mailer::{EMail, EmailType};
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
@@ -63,6 +63,7 @@ pub async fn send_email_confirm_change(
     };
 
     let req = EMail {
+        typ: EmailType::EmailChangeConfirm,
         recipient_name: user.email_recipient_name(),
         address: email_addr.to_string(),
         subject: format!("{email_sub_prefix} - {}", i18n.subject),

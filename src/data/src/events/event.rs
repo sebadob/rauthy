@@ -163,6 +163,7 @@ pub enum EventType {
     LoginNewLocation,
     TokenIssued,
     CredentialStuffing,
+    EmailSendError,
 }
 
 impl Display for EventType {
@@ -191,6 +192,7 @@ impl Display for EventType {
             Self::LoginNewLocation => write!(f, "Login from new location"),
             Self::TokenIssued => write!(f, "JWT Token issued"),
             Self::CredentialStuffing => write!(f, "Possible credential stuffing"),
+            Self::EmailSendError => write!(f, "E-Mail send error"),
         }
     }
 }
@@ -223,6 +225,7 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             rauthy_api_types::events::EventType::LoginNewLocation => Self::LoginNewLocation,
             rauthy_api_types::events::EventType::TokenIssued => Self::TokenIssued,
             rauthy_api_types::events::EventType::CredentialStuffing => Self::CredentialStuffing,
+            rauthy_api_types::events::EventType::EmailSendError => Self::EmailSendError,
         }
     }
 }
@@ -253,6 +256,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::LoginNewLocation => Self::LoginNewLocation,
             EventType::TokenIssued => Self::TokenIssued,
             EventType::CredentialStuffing => Self::CredentialStuffing,
+            EventType::EmailSendError => Self::EmailSendError,
         }
     }
 }
@@ -283,6 +287,7 @@ impl EventType {
             Self::LoginNewLocation => "LoginNewLocation",
             Self::TokenIssued => "TokenIssued",
             Self::CredentialStuffing => "CredentialStuffing",
+            Self::EmailSendError => "EmailSendError",
         }
     }
 
@@ -314,6 +319,7 @@ impl EventType {
             EventType::LoginNewLocation => 20,
             EventType::TokenIssued => 21,
             EventType::CredentialStuffing => 22,
+            EventType::EmailSendError => 23,
         }
     }
 }
@@ -344,6 +350,7 @@ impl From<String> for EventType {
             "LoginNewLocation" => Self::LoginNewLocation,
             "TokenIssued" => Self::TokenIssued,
             "CredentialStuffing" => Self::CredentialStuffing,
+            "EmailSendError" => Self::EmailSendError,
             // just return test to never panic
             s => {
                 error!("EventType::from() for invalid String: {s}");
@@ -385,6 +392,7 @@ impl From<i64> for EventType {
             20 => EventType::LoginNewLocation,
             21 => EventType::TokenIssued,
             22 => EventType::CredentialStuffing,
+            23 => EventType::EmailSendError,
             _ => EventType::Test,
         }
     }
@@ -495,6 +503,7 @@ impl From<&Event> for Notification {
                 "Potential credential stuffing detected from IP: '{}'",
                 value.ip.as_deref().unwrap_or_default()
             )),
+            EventType::EmailSendError => value.text.clone(),
         };
 
         Self {
@@ -870,6 +879,20 @@ impl Event {
         )
     }
 
+    pub fn email_send_error(typ: crate::email::mailer::EmailType, address: &str) -> Self {
+        Self::new(
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_email_send_error
+                .clone(),
+            EventType::EmailSendError,
+            None,
+            None,
+            Some(format!("{typ} -> {address}")),
+        )
+    }
+
     pub fn scim_task_failed(client_id: &str, action: &ScimAction, retries: i32) -> Self {
         Self::new(
             RauthyConfig::get()
@@ -1036,6 +1059,7 @@ impl Event {
             EventType::SuspiciousApiScan => self.text.clone().unwrap_or_default(),
             EventType::LoginNewLocation => self.text.clone().unwrap_or_default(),
             EventType::TokenIssued => self.text.clone().unwrap_or_default(),
+            EventType::EmailSendError => self.text.clone().unwrap_or_default(),
         }
     }
 
