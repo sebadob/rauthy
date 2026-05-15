@@ -47,6 +47,7 @@ impl actix_web::FromRequest for PrincipalOidc {
     type Error = Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
 
+    #[inline(always)]
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
         let header_value = req.headers().get(AUTHORIZATION).cloned();
 

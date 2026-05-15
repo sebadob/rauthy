@@ -2,7 +2,9 @@
 
 ## v0.14.0
 
-This updates comes with a few **breaking changes**.
+This update comes with a few but easy to fix **breaking changes**.
+
+### Breaking
 
 While fixing a public key decode error for RSA keys, the JWT token dependency broke minor versions
 (again, unfortunately). Because of this, a part of the custom JWT token implementation from Rauthy
@@ -30,6 +32,11 @@ The Rust edition was bumped to `2024`, which also came with an MSRV bump to `1.8
 > used for validating tokens. To abuse this vulnerability, you would need to do a TLS handshake over
 > a public network, which we never do here. I could have used non-Rust crates to achieve the same
 > goal, but they come with other issues.
+
+### Bugfix
+
+- When you were using RSA-signed tokens before, the validation would fail because of a missing
+  base64-decode step before building the public key.
 
 ## v0.13.0
 
