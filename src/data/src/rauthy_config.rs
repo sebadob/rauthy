@@ -314,6 +314,7 @@ impl Default for Vars {
             },
             auth_headers: VarsAuthHeaders {
                 enable: false,
+                enable_pref_username: false,
                 user: "x-forwarded-user".into(),
                 roles: "x-forwarded-user-roles".into(),
                 groups: "x-forwarded-user-groups".into(),
@@ -322,6 +323,7 @@ impl Default for Vars {
                 family_name: "x-forwarded-user-family-name".into(),
                 given_name: "x-forwarded-user-given-name".into(),
                 mfa: "x-forwarded-user-mfa".into(),
+                preferred_username: "x-forwarded-user-pref-username".into(),
             },
             backchannel_logout: VarsBackchannelLogout {
                 retry_count: 100,
@@ -1251,6 +1253,14 @@ impl Vars {
         if let Some(v) = t_bool(&mut table, "auth_headers", "enable", "AUTH_HEADERS_ENABLE") {
             self.auth_headers.enable = v;
         }
+        if let Some(v) = t_bool(
+            &mut table,
+            "auth_headers",
+            "enable_pref_username",
+            "AUTH_HEADERS_ENABLE_PREF_USERNAME",
+        ) {
+            self.auth_headers.enable_pref_username = v;
+        }
 
         if let Some(v) = t_str(&mut table, "auth_headers", "user", "AUTH_HEADER_USER") {
             self.auth_headers.user = v.into();
@@ -1290,6 +1300,15 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut table, "auth_headers", "mfa", "AUTH_HEADER_MFA") {
             self.auth_headers.mfa = v.into();
+        }
+
+        if let Some(v) = t_str(
+            &mut table,
+            "auth_headers",
+            "preferred_username",
+            "AUTH_HEADER_PREF_USERNAME",
+        ) {
+            self.auth_headers.preferred_username = v.into();
         }
     }
 
@@ -3288,6 +3307,7 @@ pub struct VarsAccess {
 #[derive(Debug)]
 pub struct VarsAuthHeaders {
     pub enable: bool,
+    pub enable_pref_username: bool,
     pub user: Cow<'static, str>,
     pub roles: Cow<'static, str>,
     pub groups: Cow<'static, str>,
@@ -3296,6 +3316,7 @@ pub struct VarsAuthHeaders {
     pub family_name: Cow<'static, str>,
     pub given_name: Cow<'static, str>,
     pub mfa: Cow<'static, str>,
+    pub preferred_username: Cow<'static, str>,
 }
 
 #[derive(Debug)]

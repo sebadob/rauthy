@@ -1199,7 +1199,8 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
 
     let headers = &RauthyConfig::get().vars.auth_headers;
     if headers.enable {
-        Ok(HttpResponse::Ok()
+        let mut builder = HttpResponse::Ok();
+        builder
             .insert_header((headers.user.as_ref(), info.id))
             .insert_header((headers.roles.as_ref(), info.roles.join(",")))
             .insert_header((
@@ -1219,8 +1220,15 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
                 headers.given_name.as_ref(),
                 info.given_name.unwrap_or_default(),
             ))
-            .insert_header((headers.mfa.as_ref(), info.mfa_enabled.to_string()))
-            .finish())
+            .insert_header((headers.mfa.as_ref(), info.mfa_enabled.to_string()));
+
+        if headers.enable_pref_username
+            && let Some(username) = info.preferred_username
+        {
+            builder.insert_header((headers.preferred_username.as_ref(), username));
+        }
+
+        Ok(builder.finish())
     } else {
         Ok(HttpResponse::Ok().finish())
     }

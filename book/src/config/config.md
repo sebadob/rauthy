@@ -288,6 +288,14 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: AUTH_HEADERS_ENABLE
 #enable = false
 
+# If additionally the preferred username header shuold be enabled.
+# This requires an additiona DB lookup each time and is therefore
+# disabled by defualt.
+#
+# default: false
+# overwritten by: AUTH_HEADERS_ENABLE_PREF_USERNAME
+#enable_pref_username = false
+
 # Configure the header names being used for the different values. You
 # can change them to your needs, if you cannot easily change your
 # downstream apps.
@@ -316,6 +324,10 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # default: x-forwarded-user-mfa
 # overwritten by: AUTH_HEADER_MFA
 #mfa = 'x-forwarded-user-mfa'
+
+# default: x-forwarded-user-pref-username
+# overwritten by: AUTH_HEADER_PREF_USERNAME
+#preferred_username = 'x-forwarded-user-pref-username'
 
 [backchannel_logout]
 # The maximum amount of retries made for a failed backchannel logout.
