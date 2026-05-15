@@ -10,6 +10,7 @@ use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::forward_auth::{ForwardAuthCallbackState, ForwardAuthSession};
 use rauthy_data::entity::sessions::{Session, SessionState};
 use rauthy_data::entity::users::User;
+use rauthy_data::entity::users_values::UserValues;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::net::IpAddr;
@@ -149,7 +150,14 @@ pub async fn get_forward_auth_client(
     let headers = &RauthyConfig::get().vars.auth_headers;
     if headers.enable {
         let mfa_enabled = user.has_webauthn_enabled();
-        Ok(HttpResponse::Ok()
+        let pref_username = if headers.enable_pref_username {
+            UserValues::find_preferred_username(&user.id).await?
+        } else {
+            None
+        };
+
+        let mut builder = HttpResponse::Ok();
+        builder
             .insert_header((headers.user.as_ref(), user.id))
             .insert_header((headers.roles.as_ref(), user.roles))
             .insert_header((headers.groups.as_ref(), user.groups.unwrap_or_default()))
@@ -163,8 +171,13 @@ pub async fn get_forward_auth_client(
                 user.family_name.unwrap_or_default(),
             ))
             .insert_header((headers.given_name.as_ref(), user.given_name))
-            .insert_header((headers.mfa.as_ref(), mfa_enabled.to_string()))
-            .finish())
+            .insert_header((headers.mfa.as_ref(), mfa_enabled.to_string()));
+
+        if let Some(username) = pref_username {
+            builder.insert_header((headers.preferred_username.as_ref(), username));
+        }
+
+        Ok(builder.finish())
     } else {
         Ok(HttpResponse::Ok().finish())
     }
