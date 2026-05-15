@@ -2,7 +2,6 @@ use crate::provider::HTTP_CLIENT;
 use crate::rauthy_error::RauthyError;
 use crate::{base64_url_no_pad_decode, base64_url_no_pad_decode_buf};
 use cached::Cached;
-use rsa::BigUint;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::sync::OnceLock;
@@ -93,19 +92,21 @@ impl JwkPublicKey {
             .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?
     }
 
+    #[cfg(feature = "rsa")]
     #[inline(always)]
-    fn e(&self) -> Result<BigUint, RauthyError> {
+    fn e(&self) -> Result<rsa::BigUint, RauthyError> {
         match &self.e_bytes {
             None => Err(RauthyError::JWK("Missing 'e' in JWK".into())),
-            Some(bytes) => Ok(BigUint::from_bytes_be(bytes)),
+            Some(bytes) => Ok(rsa::BigUint::from_bytes_be(bytes)),
         }
     }
 
+    #[cfg(feature = "rsa")]
     #[inline(always)]
-    fn n(&self) -> Result<BigUint, RauthyError> {
+    fn n(&self) -> Result<rsa::BigUint, RauthyError> {
         match &self.n_bytes {
             None => Err(RauthyError::JWK("Missing 'n' in JWK".into())),
-            Some(bytes) => Ok(BigUint::from_bytes_be(bytes)),
+            Some(bytes) => Ok(rsa::BigUint::from_bytes_be(bytes)),
         }
     }
 
@@ -132,48 +133,63 @@ impl JwkPublicKey {
 
         match self.alg {
             JwkKeyPairAlg::RS256 => {
-                let hash = hmac_sha256::Hash::hash(message.as_bytes());
-                let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
-                if rsa_pk
-                    .verify(
-                        rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
-                        hash.as_slice(),
-                        buf,
-                    )
-                    .is_ok()
+                #[cfg(feature = "rsa")]
                 {
-                    return Ok(());
+                    let hash = hmac_sha256::Hash::hash(message.as_bytes());
+                    let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
+                    if rsa_pk
+                        .verify(
+                            rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
+                            hash.as_slice(),
+                            buf,
+                        )
+                        .is_ok()
+                    {
+                        return Ok(());
+                    }
                 }
+                #[cfg(not(feature = "rsa"))]
+                error!("Cannot validate RSA tokens without the `rsa` feature");
             }
 
             JwkKeyPairAlg::RS384 => {
-                let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
-                let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
-                if rsa_pk
-                    .verify(
-                        rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
-                        hash.as_slice(),
-                        buf,
-                    )
-                    .is_ok()
+                #[cfg(feature = "rsa")]
                 {
-                    return Ok(());
+                    let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
+                    let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
+                    if rsa_pk
+                        .verify(
+                            rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
+                            hash.as_slice(),
+                            buf,
+                        )
+                        .is_ok()
+                    {
+                        return Ok(());
+                    }
                 }
+                #[cfg(not(feature = "rsa"))]
+                error!("Cannot validate RSA tokens without the `rsa` feature");
             }
 
             JwkKeyPairAlg::RS512 => {
-                let hash = hmac_sha512::Hash::hash(message.as_bytes());
-                let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
-                if rsa_pk
-                    .verify(
-                        rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
-                        hash.as_slice(),
-                        buf,
-                    )
-                    .is_ok()
+                #[cfg(feature = "rsa")]
                 {
-                    return Ok(());
+                    let hash = hmac_sha512::Hash::hash(message.as_bytes());
+                    let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
+                    if rsa_pk
+                        .verify(
+                            rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
+                            hash.as_slice(),
+                            buf,
+                        )
+                        .is_ok()
+                    {
+                        return Ok(());
+                    }
                 }
+                #[cfg(not(feature = "rsa"))]
+                error!("Cannot validate RSA tokens without the `rsa` feature");
             }
 
             JwkKeyPairAlg::EdDSA => {

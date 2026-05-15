@@ -69,6 +69,7 @@ impl From<ed25519_compact::Error> for RauthyError {
     }
 }
 
+#[cfg(feature = "rsa")]
 impl From<rsa::Error> for RauthyError {
     fn from(value: rsa::Error) -> Self {
         Self::JWK(value.to_string().into())
