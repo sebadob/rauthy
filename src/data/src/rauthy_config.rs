@@ -3083,7 +3083,7 @@ impl Vars {
             &mut table,
             "user_values.preferred_username",
             "preferred_username",
-            "",
+            "PREFERRED_USERNAME",
         ) {
             self.user_values.preferred_username.preferred_username =
                 UserValueConfigValue::from(v.as_str());
@@ -3092,7 +3092,7 @@ impl Vars {
             &mut table,
             "user_values.preferred_username",
             "immutable",
-            "",
+            "PREFERRED_USERNAME_IMMUTABLE",
         ) {
             self.user_values.preferred_username.immutable = v;
         }
@@ -3130,7 +3130,7 @@ impl Vars {
             &mut table,
             "user_values.preferred_username",
             "email_fallback",
-            "",
+            "PREFERRED_USERNAME_EMAIL_FALLBACK",
         ) {
             self.user_values.preferred_username.email_fallback = v;
         }

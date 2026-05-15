@@ -2658,6 +2658,7 @@ revalidate_during_login = true
 #
 # one of: required, optional, hidden
 # default: 'optional'
+# overwritten_by: PREFERRED_USERNAME
 preferred_username = 'required'
 
 # The `preferred_username` is an unstable claim by the OIDC RFC.
@@ -2671,6 +2672,7 @@ preferred_username = 'required'
 # users can change them freely at any time.
 #
 # default: true
+# overwritten_by: PREFERRED_USERNAME_IMMUTABLE
 immutable = true
 
 # Provide an array of blacklisted names.
@@ -2706,6 +2708,7 @@ pattern_html = '^[a-z][a-z0-9_\-]{1,61}$'
 # can be used as a fallback value for the id token.
 #
 # default: true
+# overwritten_by: PREFERRED_USERNAME_EMAIL_FALLBACK
 email_fallback = true
 
 [webauthn]

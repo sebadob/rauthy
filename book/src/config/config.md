@@ -2613,6 +2613,7 @@ storage_type = 'db'
 #
 # one of: required, optional, hidden
 # default: 'optional'
+# overwritten_by: PREFERRED_USERNAME
 #preferred_username = 'optional'
 
 # The `preferred_username` is an unstable claim by the OIDC RFC.
@@ -2626,6 +2627,7 @@ storage_type = 'db'
 # users can change them freely at any time.
 #
 # default: true
+# overwritten_by: PREFERRED_USERNAME_IMMUTABLE
 #immutable = true
 
 # Provide an array of blacklisted names.
@@ -2661,6 +2663,7 @@ storage_type = 'db'
 # can be used as a fallback value for the id token.
 #
 # default: true
+# overwritten_by: PREFERRED_USERNAME_EMAIL_FALLBACK
 #email_fallback = true
 
 [webauthn]
