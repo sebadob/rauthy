@@ -1,8 +1,9 @@
 use crate::build_lax_cookie_300;
-use crate::cookie_state::{OidcCookieState, OIDC_STATE_COOKIE};
+use crate::cookie_state::{OIDC_STATE_COOKIE, OidcCookieState};
 use crate::provider::OidcProvider;
 use crate::rauthy_error::RauthyError;
-use crate::token_set::{JwtAccessClaims, JwtIdClaims, OidcTokenSet};
+use crate::token_set::OidcTokenSet;
+use crate::tokens::claims::{AccessToken, IdToken};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use tracing::error;
@@ -15,7 +16,6 @@ pub mod actix_web;
 
 /// Query params appended to the callback URL after a successful login from the user
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 pub struct OidcCallbackParams {
     pub code: String,
     pub state: String,
@@ -46,7 +46,6 @@ pub enum OidcSetRedirectStatus {
 }
 
 impl OidcCodeRequestParams {
-    #[allow(dead_code)]
     pub async fn try_new(
         code: String,
         code_verifier: String,
@@ -112,12 +111,11 @@ pub async fn validate_principal_generic(
 ///
 /// # Panics
 /// If the given `enc_key` is not exactly 32 bytes long
-#[allow(dead_code)]
 pub async fn oidc_callback(
     cookie_state: OidcCookieState,
     params: OidcCallbackParams,
     insecure: OidcCookieInsecure,
-) -> Result<(String, OidcTokenSet, JwtIdClaims), RauthyError> {
+) -> Result<(String, OidcTokenSet, IdToken), RauthyError> {
     // validate the state to prevent xsrf attacks
     if params.state != cookie_state.state {
         return Err(RauthyError::BadRequest("Bad state"));
@@ -157,20 +155,22 @@ pub async fn oidc_callback(
         match res.json::<OidcTokenSet>().await {
             Ok(ts) => {
                 // validate access token
-                let access_claims = JwtAccessClaims::from_token_validated(&ts.access_token).await?;
+                let access_claims = AccessToken::from_token_validated(&ts.access_token).await?;
 
                 // validate id token
                 if ts.id_token.is_none() {
                     return Err(RauthyError::Provider(Cow::from("ID token is missing")));
                 }
-                let id_claims = JwtIdClaims::from_token_validated(
+                let id_claims = IdToken::from_token_validated(
                     ts.id_token.as_deref().unwrap(),
                     &cookie_state.nonce,
                 )
                 .await?;
 
                 // make sure the `sub` claims match
-                if access_claims.sub.is_none() || access_claims.sub != id_claims.sub {
+                if access_claims.common.sub.is_none()
+                    || access_claims.common.sub != id_claims.common.sub
+                {
                     return Err(RauthyError::InvalidClaims("Invalid `sub` claims"));
                 }
 

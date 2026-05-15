@@ -1,13 +1,13 @@
-use crate::base64_url_no_pad_decode;
 use crate::provider::HTTP_CLIENT;
 use crate::rauthy_error::RauthyError;
+use crate::{base64_url_no_pad_decode, base64_url_no_pad_decode_buf};
 use cached::Cached;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::sync::OnceLock;
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 static JWKS_TX: OnceLock<mpsc::UnboundedSender<JwksMsg>> = OnceLock::new();
 
@@ -29,11 +29,12 @@ impl JwksMsg {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub(crate) enum JwkKeyPairAlg {
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+pub enum JwkKeyPairAlg {
     RS256,
     RS384,
     RS512,
+    #[default]
     EdDSA,
 }
 
@@ -44,6 +45,8 @@ pub(crate) enum JwkKeyPairType {
     OKP,
 }
 
+// TODO if it would still be `Send`, instead of storing the raw bytes for key parts and so on,
+//  build the full ready-to-use pubkey only once after fetch.
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)] // kty and alg are actually used, but inside a macro -> allow dead code
 pub(crate) struct JwkPublicKey {
@@ -52,7 +55,9 @@ pub(crate) struct JwkPublicKey {
     pub kid: String,
     pub crv: Option<String>,      // Ed25519
     pub n: Option<String>,        // RSA
+    pub n_bytes: Option<Vec<u8>>, // pre-decoded base64 string to speed up checking
     pub e: Option<String>,        // RSA
+    pub e_bytes: Option<Vec<u8>>, // pre-decoded base64 string to speed up checking
     pub x: Option<String>,        // OCT
     pub x_bytes: Option<Vec<u8>>, // pre-decoded base64 string to speed up checking
 }
@@ -60,12 +65,23 @@ pub(crate) struct JwkPublicKey {
 impl JwkPublicKey {
     #[inline]
     pub(crate) async fn get_for_token(token: &str) -> Result<Self, RauthyError> {
-        let metadata = jwt_simple::token::Token::decode_metadata(token)?;
-        let kid = metadata
-            .key_id()
-            .ok_or(RauthyError::InvalidClaims("No 'kid' in JWT token header"))?;
+        let Some((metadata, _)) = token.split_once(".") else {
+            return Err(RauthyError::InvalidJwt(
+                "JWT token does not contain any metadata",
+            ));
+        };
+        let json = base64_url_no_pad_decode(metadata)?;
+        let serde_json::Value::Object(meta) = serde_json::from_slice::<serde_json::Value>(&json)?
+        else {
+            return Err(RauthyError::InvalidClaims(
+                "JWT token metadata is no JSON object",
+            ));
+        };
+        let Some(kid) = meta.get("kid") else {
+            return Err(RauthyError::InvalidClaims("No 'kid' in JWT token header"));
+        };
 
-        Self::get_for_kid(kid).await
+        Self::get_for_kid(kid.as_str().unwrap_or_default()).await
     }
 
     #[inline]
@@ -74,6 +90,119 @@ impl JwkPublicKey {
         JwksMsg::Get((kid.to_string(), tx)).send()?;
         rx.await
             .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?
+    }
+
+    #[cfg(feature = "rsa")]
+    #[inline(always)]
+    fn e(&self) -> Result<rsa::BigUint, RauthyError> {
+        match &self.e_bytes {
+            None => Err(RauthyError::JWK("Missing 'e' in JWK".into())),
+            Some(bytes) => Ok(rsa::BigUint::from_bytes_be(bytes)),
+        }
+    }
+
+    #[cfg(feature = "rsa")]
+    #[inline(always)]
+    fn n(&self) -> Result<rsa::BigUint, RauthyError> {
+        match &self.n_bytes {
+            None => Err(RauthyError::JWK("Missing 'n' in JWK".into())),
+            Some(bytes) => Ok(rsa::BigUint::from_bytes_be(bytes)),
+        }
+    }
+
+    #[inline(always)]
+    fn x(&self) -> Result<&[u8], RauthyError> {
+        match &self.x_bytes {
+            None => Err(RauthyError::JWK("Missing 'x' in JWK".into())),
+            Some(bytes) => Ok(bytes),
+        }
+    }
+
+    #[inline(always)]
+    pub fn validate_token_signature(
+        &self,
+        token: &str,
+        buf: &mut Vec<u8>,
+    ) -> Result<(), RauthyError> {
+        let (message, sig) = token
+            .rsplit_once('.')
+            .ok_or(RauthyError::MalformedJwt("Malformed token"))?;
+
+        buf.clear();
+        base64_url_no_pad_decode_buf(sig, buf)?;
+
+        match self.alg {
+            JwkKeyPairAlg::RS256 => {
+                #[cfg(feature = "rsa")]
+                {
+                    let hash = hmac_sha256::Hash::hash(message.as_bytes());
+                    let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
+                    if rsa_pk
+                        .verify(
+                            rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
+                            hash.as_slice(),
+                            buf,
+                        )
+                        .is_ok()
+                    {
+                        return Ok(());
+                    }
+                }
+                #[cfg(not(feature = "rsa"))]
+                error!("Cannot validate RSA tokens without the `rsa` feature");
+            }
+
+            JwkKeyPairAlg::RS384 => {
+                #[cfg(feature = "rsa")]
+                {
+                    let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
+                    let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
+                    if rsa_pk
+                        .verify(
+                            rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
+                            hash.as_slice(),
+                            buf,
+                        )
+                        .is_ok()
+                    {
+                        return Ok(());
+                    }
+                }
+                #[cfg(not(feature = "rsa"))]
+                error!("Cannot validate RSA tokens without the `rsa` feature");
+            }
+
+            JwkKeyPairAlg::RS512 => {
+                #[cfg(feature = "rsa")]
+                {
+                    let hash = hmac_sha512::Hash::hash(message.as_bytes());
+                    let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
+                    if rsa_pk
+                        .verify(
+                            rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
+                            hash.as_slice(),
+                            buf,
+                        )
+                        .is_ok()
+                    {
+                        return Ok(());
+                    }
+                }
+                #[cfg(not(feature = "rsa"))]
+                error!("Cannot validate RSA tokens without the `rsa` feature");
+            }
+
+            JwkKeyPairAlg::EdDSA => {
+                let pubkey = ed25519_compact::PublicKey::from_slice(self.x()?)?;
+                let signature = ed25519_compact::Signature::from_slice(buf)?;
+                if pubkey.verify(message, &signature).is_ok() {
+                    return Ok(());
+                }
+            }
+        };
+
+        warn!("JWT Token validation error");
+        Err(RauthyError::InvalidJwt("Invalid JWT Token signature"))
     }
 }
 
@@ -146,6 +275,29 @@ pub(crate) async fn jwks_handler() {
                                         }
                                         Err(err) => {
                                             error!("Error pre-decoding given EdDSA 'x' pub key bytes: {}", err);
+                                            return None;
+                                        }
+                                    }
+                                }
+                            } else {
+                                if let Some(e) = &key.e {
+                                    match base64_url_no_pad_decode(e) {
+                                        Ok(bytes) => {
+                                            key.e_bytes = Some(bytes)
+                                        }
+                                        Err(err) => {
+                                            error!("Error pre-decoding given RSA 'e' pub key bytes: {}", err);
+                                            return None;
+                                        }
+                                    }
+                                }
+                                if let Some(n) = &key.n {
+                                    match base64_url_no_pad_decode(n) {
+                                        Ok(bytes) => {
+                                            key.n_bytes = Some(bytes)
+                                        }
+                                        Err(err) => {
+                                            error!("Error pre-decoding given RSA 'e' pub key bytes: {}", err);
                                             return None;
                                         }
                                     }

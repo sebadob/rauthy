@@ -1,8 +1,7 @@
-use crate::jwks::JwksMsg;
 use crate::oidc_config::{ClaimMapping, RauthyConfig};
 use crate::rauthy_error::RauthyError;
+use crate::tokens::jwks::JwksMsg;
 use crate::{DangerAcceptInvalidCerts, RauthyHttpsOnly, VERSION};
-use jwt_simple::common::VerificationOptions;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::OnceLock;
@@ -24,7 +23,8 @@ pub(crate) struct OidcProviderConfig {
     pub secret: Option<String>,
     pub admin_claim: ClaimMapping,
     pub user_claim: ClaimMapping,
-    pub verification_options: VerificationOptions,
+    pub allowed_audiences: HashSet<String>,
+    pub allowed_issuers: HashSet<String>,
 }
 
 impl OidcProviderConfig {
@@ -70,13 +70,6 @@ impl OidcProviderConfig {
         }
         allowed_issuers.insert(iss);
 
-        let verification_options = VerificationOptions {
-            allowed_audiences: Some(allowed_audiences),
-            allowed_issuers: Some(allowed_issuers),
-            time_tolerance: None,
-            ..Default::default()
-        };
-
         Ok(Self {
             auth_url_base,
             client_id,
@@ -86,13 +79,13 @@ impl OidcProviderConfig {
             secret,
             admin_claim,
             user_claim,
-            verification_options,
+            allowed_audiences,
+            allowed_issuers,
         })
     }
 }
 
 /// The configured Rauthy OIDC Provider
-#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OidcProvider {
     pub issuer: String,

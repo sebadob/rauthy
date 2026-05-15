@@ -3,8 +3,8 @@ use axum::extract::OptionalFromRequestParts;
 use axum::response::IntoResponse;
 use axum::{body::Body, extract::FromRequestParts, http::request::Parts, response::Response};
 use axum_extra::{
-    headers::{authorization::Bearer, Authorization},
     TypedHeader,
+    headers::{Authorization, authorization::Bearer},
 };
 
 impl PrincipalOidc {
@@ -69,6 +69,7 @@ where
 {
     type Rejection = Response<Body>;
 
+    #[inline(always)]
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let TypedHeader(Authorization(bearer)) =
             <TypedHeader<Authorization<Bearer>> as FromRequestParts<S>>::from_request_parts(
@@ -93,6 +94,7 @@ where
 {
     type Rejection = Response<Body>;
 
+    #[inline(always)]
     async fn from_request_parts(
         parts: &mut Parts,
         state: &S,
@@ -103,12 +105,10 @@ where
                 parts, state,
             )
             .await
+            && let Ok(p) = PrincipalOidc::from_token_validated(bearer.token()).await
+            && p.is_user().is_ok()
         {
-            if let Ok(p) = PrincipalOidc::from_token_validated(bearer.token()).await {
-                if p.is_user().is_ok() {
-                    return Ok(Some(p));
-                }
-            }
+            return Ok(Some(p));
         }
 
         Ok(None)

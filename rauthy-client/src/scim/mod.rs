@@ -1,14 +1,14 @@
 use crate::provider::SCIM_TOKEN;
 use crate::scim::types::ScimError;
-use http::header::{AUTHORIZATION, CONTENT_TYPE};
 use http::HeaderMap;
+use http::header::{AUTHORIZATION, CONTENT_TYPE};
 use tracing::error;
 
 #[cfg(feature = "axum")]
 pub mod axum;
 pub mod types;
 
-pub static CONTENT_TYPE_SCIM: &str = "application/scim+json";
+pub const CONTENT_TYPE_SCIM: &str = "application/scim+json";
 
 #[allow(unused)]
 #[inline]

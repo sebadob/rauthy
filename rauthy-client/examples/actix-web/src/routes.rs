@@ -1,8 +1,8 @@
 use crate::config::Config;
-use crate::{templates, DEV_MODE};
+use crate::{DEV_MODE, templates};
 use actix_web::http::header::{CONTENT_TYPE, SET_COOKIE};
 use actix_web::web::Query;
-use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{HttpRequest, HttpResponse, Responder, get, web};
 use rauthy_client::handler::{OidcCallbackParams, OidcCookieInsecure, OidcSetRedirectStatus};
 use rauthy_client::principal::PrincipalOidc;
 
@@ -23,7 +23,7 @@ pub async fn get_index() -> impl Responder {
 /// HTTP 202 means logged in Principal
 #[get("/auth_check")]
 pub async fn get_auth_check(config: ConfigExt, principal: Option<PrincipalOidc>) -> impl Responder {
-    let enc_key = config.enc_key.as_slice();
+    let enc_key = config.enc_key.clone();
 
     // if we are in dev mode, we allow insecure cookies
     let insecure = if DEV_MODE {
@@ -51,7 +51,7 @@ pub async fn get_callback(
     config: ConfigExt,
     params: Query<OidcCallbackParams>,
 ) -> HttpResponse {
-    let enc_key = config.enc_key.as_slice();
+    let enc_key = config.enc_key.clone();
 
     // The `DEV_MODE` again here to just have a nicer DX when developing -> we allow insecure cookies
     let insecure = if DEV_MODE {
@@ -64,7 +64,7 @@ pub async fn get_callback(
     let (cookie_str, token_set, _id_claims) = match callback_res {
         Ok(res) => res,
         Err(err) => {
-            return HttpResponse::BadRequest().body(format!("Invalid OIDC Callback: {err}"))
+            return HttpResponse::BadRequest().body(format!("Invalid OIDC Callback: {err}"));
         }
     };
 

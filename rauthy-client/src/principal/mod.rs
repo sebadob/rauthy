@@ -1,6 +1,6 @@
 use crate::provider::OidcProvider;
 use crate::rauthy_error::RauthyError;
-use crate::token_set::JwtAccessClaims;
+use crate::tokens::claims::AccessToken;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::ops::Deref;
@@ -59,7 +59,7 @@ pub struct PrincipalOidc {
     /// Matches the `sub` token claim
     pub id: String,
     /// Matches the `expires_at` token claim -> UNIX timestamp in seconds
-    pub expires_at_ts: Option<u64>,
+    pub expires_at_ts: i64,
     /// Matches the `roles` token claim
     pub roles: Vec<String>,
     /// Matches the `groups` token claim
@@ -81,11 +81,12 @@ impl PrincipalOidc {
     /// Creates a Principal from a raw Base64 encoded JWT token.
     /// This will also validate the token against the JWK fetched from the issuer.
     pub async fn from_token_validated(token: &str) -> Result<Self, RauthyError> {
-        let claims = JwtAccessClaims::from_token_validated(token).await?;
+        let claims = AccessToken::from_token_validated(token).await?;
 
         let config = OidcProvider::config()?;
 
         let id = claims
+            .common
             .sub
             .ok_or(RauthyError::InvalidClaims("'sub' claim is mandatory"))?;
         let roles = claims.roles.unwrap_or_default();
@@ -96,10 +97,10 @@ impl PrincipalOidc {
 
         Ok(Self {
             id,
-            expires_at_ts: claims.expires_at_ts,
+            expires_at_ts: claims.common.exp,
             roles,
             groups,
-            scope: claims.scope,
+            scope: claims.common.scope.unwrap_or_default(),
             is_admin,
             is_user,
             custom_claims: claims.custom,

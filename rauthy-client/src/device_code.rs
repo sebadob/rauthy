@@ -1,5 +1,6 @@
 use crate::rauthy_error::RauthyError;
-use crate::token_set::{JwtRefreshClaims, OidcTokenSet};
+use crate::token_set::OidcTokenSet;
+use crate::tokens::claims::RefreshToken;
 use crate::{DangerAcceptInvalidCerts, RauthyHttpsOnly, RootCertificate, VERSION};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -375,10 +376,10 @@ impl OidcTokenSet {
         // unwrap cannot panic - checked above already
         let refresh_token = self.refresh_token.unwrap();
         let refresh_claims =
-            OidcTokenSet::danger_claims_unvalidated::<JwtRefreshClaims>(&refresh_token)?;
+            OidcTokenSet::danger_claims_unvalidated::<RefreshToken>(&refresh_token)?;
         let now = Utc::now().timestamp();
 
-        if refresh_claims.exp < now {
+        if refresh_claims.common.exp < now {
             return Err(RauthyError::Token(Cow::from(
                 "The refresh_token as already expired",
             )));
@@ -399,7 +400,7 @@ impl OidcTokenSet {
 
     async fn refresh_handler(
         mut refresh_token: String,
-        mut refresh_claims: JwtRefreshClaims,
+        mut refresh_claims: RefreshToken,
         client_id: String,
         client_secret: Option<String>,
         root_certificate: Option<RootCertificate>,
@@ -407,7 +408,7 @@ impl OidcTokenSet {
         danger_insecure: DangerAcceptInvalidCerts,
     ) {
         'main: loop {
-            let sleep_for = refresh_claims.nbf - Utc::now().timestamp() + 1;
+            let sleep_for = refresh_claims.common.nbf - Utc::now().timestamp() + 1;
             if sleep_for >= 10 {
                 time::sleep(Duration::from_secs(sleep_for as u64)).await;
             } else {
@@ -421,7 +422,7 @@ impl OidcTokenSet {
             }
             debug!("Refreshing token now");
 
-            let token_url = format!("{}/oidc/token", refresh_claims.iss);
+            let token_url = format!("{}/oidc/token", refresh_claims.common.iss);
             let payload = TokenRequest {
                 grant_type: "refresh_token",
                 client_id: &client_id,
@@ -464,12 +465,17 @@ impl OidcTokenSet {
                                                 .unwrap();
                                         break;
                                     } else {
-                                        warn!("Did not receive a new refresh_token from refresh - exiting refresh handler");
+                                        warn!(
+                                            "Did not receive a new refresh_token from refresh - exiting refresh handler"
+                                        );
                                         break 'main;
                                     }
                                 }
                                 Err(err) => {
-                                    error!("Error deserializing TokenSet: {:?}\nexiting refresh handler", err);
+                                    error!(
+                                        "Error deserializing TokenSet: {:?}\nexiting refresh handler",
+                                        err
+                                    );
                                     break 'main;
                                 }
                             }

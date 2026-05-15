@@ -34,6 +34,7 @@ check: clippy-examples
     cargo +nightly clippy --features device-code -- -D warnings
     cargo +nightly clippy --features userinfo -- -D warnings
     cargo +nightly clippy --features scim -- -D warnings
+    cargo +nightly clippy --features rsa -- -D warnings
 
     cargo minimal-versions check
     cargo minimal-versions check --features actix-web
@@ -41,6 +42,7 @@ check: clippy-examples
     cargo minimal-versions check --features device-code
     cargo minimal-versions check --features userinfo
     cargo minimal-versions check --features scim,axum
+    cargo minimal-versions check --features rsa
 
 # runs the full set of tests
 test test="":

@@ -1,11 +1,49 @@
 # Changelog
 
+## v0.14.0
+
+This update comes with a few but easy to fix **breaking changes**.
+
+### Breaking
+
+While fixing a public key decode error for RSA keys, the JWT token dependency broke minor versions
+(again, unfortunately). Because of this, a part of the custom JWT token implementation from Rauthy
+was copied over and adjusted. This was a performance boost, and it's more light-weight, but it came
+with breaking changes:
+
+- Quite a few claims like `iat`, `nbf`, `exp`, ..., are not on the base level anymore, but can be
+  found in `.common` for the given claims. This reduces maintenance overhead and error
+  possibilities, since all tokens share these claims anyway. There is no need to define them
+  multiple times anymore.
+- `PrincipalOidc.expires_at_ts` is not an `Option<_>` anymore and was changed to an `i64` to match
+  the behavior of other crates when dealing with Unix timestamps.
+- When using `actix-web`, the `enc_key` for some functions now must be `Bytes` instead of `&[u8]`
+
+The default `EdDSA` algorithm that Rauthy uses is superior to RSA in almost all cases. The new
+implementation only validates these keys by default. If you want (or need) to use RSA, you can
+enable the `rsa` feature.
+
+The Rust edition was bumped to `2024`, which also came with an MSRV bump to `1.88.0`.
+
+> NOTE: This change added the `rsa` dependency for RSA validation (`rsa` feature only). This shows
+> an error on `cargo audit` being vulnerable to the Marvin Attack. This is NOT the case how it's
+> used in this crate. Technically, the latest RC of the crate should not be vulnerable anymore, but
+> it's not listed yet, since it's not stable. However, the Marvin Attack is NOT possible when it's
+> used for validating tokens. To abuse this vulnerability, you would need to do a TLS handshake over
+> a public network, which we never do here. I could have used non-Rust crates to achieve the same
+> goal, but they come with other issues.
+
+### Bugfix
+
+- When you were using RSA-signed tokens before, the validation would fail because of a missing
+  base64-decode step before building the public key.
+
 ## v0.13.0
 
 This release makes it possible to have a interrupt-free migration to Rauthy v0.35+, which changed
 the default Issuer. It now has a trailing `/` to bring more compatibility for some scenarios, where
-a client constructs URLs in a way without checking for trailing `/`. This is e.g. the case when
-a client like the Matrix Javascript SDK constructs the `openid-configuration` lookup URL with the
+a client constructs URLs in a way without checking for trailing `/`. This is e.g. the case when a
+client like the Matrix Javascript SDK constructs the `openid-configuration` lookup URL with the
 default JS URL constructor in combination with a custom path. To make this work, the isser must have
 a trailing `/`.
 
@@ -25,8 +63,8 @@ platform verifier to reduce binary size in most situations.
 
 ## v0.12.0
 
-The `timezone` is now available for `ScimUser`, when used in combination with Rauthy v0.34.4+.
-Apart from that, there was a bump in MSRV to `1.87.0`.
+The `timezone` is now available for `ScimUser`, when used in combination with Rauthy v0.34.4+. Apart
+from that, there was a bump in MSRV to `1.87.0`.
 
 ## v0.11.0
 
@@ -132,9 +170,9 @@ The `rauthy_client::init()` has been renamed to `rauthy_client::init_with()` and
 
 ## v0.3.0
 
-- Changes the `RauthyConfig` to now accept `ClaimMapping` for `admin_claim` and `user_claim`.
-  This provides a lot more flexibility how user roles can be mapped without prior interaction on
-  the server side.
+- Changes the `RauthyConfig` to now accept `ClaimMapping` for `admin_claim` and `user_claim`. This
+  provides a lot more flexibility how user roles can be mapped without prior interaction on the
+  server side.
 
 ## v0.2.0
 

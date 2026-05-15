@@ -1,13 +1,15 @@
 use crate::build_lax_cookie_300;
-use crate::cookie_state::{OidcCookieState, OIDC_STATE_COOKIE};
+use crate::cookie_state::{OIDC_STATE_COOKIE, OidcCookieState};
 use crate::handler::{OidcCallbackParams, OidcCookieInsecure, OidcSetRedirectStatus};
 use crate::principal::PrincipalOidc;
 use crate::provider::OidcProvider;
 use crate::rauthy_error::RauthyError;
-use crate::token_set::{JwtIdClaims, OidcTokenSet};
+use crate::token_set::OidcTokenSet;
+use crate::tokens::claims::IdToken;
 use actix_web::{
+    HttpRequest, HttpResponse, Responder,
     http::header::{LOCATION, SET_COOKIE},
-    web, HttpRequest, HttpResponse, Responder,
+    web,
 };
 
 /// Check the authentication
@@ -24,7 +26,7 @@ use actix_web::{
 /// If the given `enc_key` is not exactly 32 bytes long
 pub async fn validate_redirect_principal(
     principal: Option<PrincipalOidc>,
-    enc_key: &[u8],
+    enc_key: actix_web::web::Bytes,
     insecure: OidcCookieInsecure,
     set_redirect_status: OidcSetRedirectStatus,
 ) -> impl Responder {
@@ -37,7 +39,7 @@ pub async fn validate_redirect_principal(
                 Ok(c) => &c.auth_url_base,
                 Err(_) => {
                     return HttpResponse::InternalServerError()
-                        .body("OIDC Provider has not been set up")
+                        .body("OIDC Provider has not been set up");
                 }
             };
             format!(
@@ -46,7 +48,7 @@ pub async fn validate_redirect_principal(
             )
         };
 
-        let value = cookie_state.to_encrypted_cookie_value(enc_key);
+        let value = cookie_state.to_encrypted_cookie_value(enc_key.as_ref());
         let cookie = build_lax_cookie_300(OIDC_STATE_COOKIE, &value, insecure);
 
         if set_redirect_status == OidcSetRedirectStatus::Yes {
@@ -67,9 +69,9 @@ pub async fn validate_redirect_principal(
 pub async fn oidc_callback(
     req: &HttpRequest,
     params: web::Query<OidcCallbackParams>,
-    enc_key: &[u8],
+    enc_key: actix_web::web::Bytes,
     insecure: OidcCookieInsecure,
-) -> Result<(String, OidcTokenSet, JwtIdClaims), RauthyError> {
-    let cookie_state = OidcCookieState::from_req_cookie_value(req, enc_key)?;
+) -> Result<(String, OidcTokenSet, IdToken), RauthyError> {
+    let cookie_state = OidcCookieState::from_req_cookie_value(req, enc_key.as_ref())?;
     crate::handler::oidc_callback(cookie_state, params.into_inner(), insecure).await
 }
