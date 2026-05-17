@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.14.1
+
+After the new custom JWT validation, the token expiration was not checked in `v0.14.0` when no
+allowed clock skew was specified. This was fixed in this version. If you use `v0.14.0`, update
+immediately. This version also sets a (for now) hardcoded allowed clock skew of 5 seconds for the
+validation.
+
 ## v0.14.0
 
 This update comes with a few but easy to fix **breaking changes**.
