@@ -1750,7 +1750,7 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 
 [[package]]
 name = "rauthy-client"
-version = "0.14.0"
+version = "0.14.1"
 dependencies = [
  "actix-web",
  "base64",
