@@ -73,7 +73,7 @@ impl JwtToken {
             &config.allowed_issuers,
             &config.allowed_audiences,
             expected_type,
-            None,
+            Some(5),
         )?;
 
         Ok(())
@@ -103,19 +103,17 @@ impl ValidationClaims<'_> {
         expected_type: Option<TokenType>,
         allowed_clock_skew_seconds: Option<u16>,
     ) -> Result<(), RauthyError> {
-        if let Some(skew) = allowed_clock_skew_seconds {
-            let now = Utc::now().timestamp();
-            let skew = skew as i64;
+        let now = Utc::now().timestamp();
+        let skew = allowed_clock_skew_seconds.unwrap_or(0) as i64;
 
-            if self.iat - skew > now {
-                return Err(RauthyError::InvalidJwt("Token was issued in the future"));
-            }
-            if self.exp + skew < now {
-                return Err(RauthyError::InvalidJwt("Token has expired"));
-            }
-            if self.nbf - skew > now {
-                return Err(RauthyError::InvalidJwt("Token is not valid yet"));
-            }
+        if self.iat - skew > now {
+            return Err(RauthyError::InvalidJwt("Token was issued in the future"));
+        }
+        if self.exp + skew < now {
+            return Err(RauthyError::InvalidJwt("Token has expired"));
+        }
+        if self.nbf - skew > now {
+            return Err(RauthyError::InvalidJwt("Token is not valid yet"));
         }
         if let Some(typ) = expected_type
             && self.typ != typ
