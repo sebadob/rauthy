@@ -6,7 +6,12 @@ export const PATTERN_ATTR = '^[a-zA-Z0-9\\-_\\/]{2,32}$';
 export const PATTERN_ATTR_DESC = '^[a-zA-Z0-9\\-_\\/\\s]{0,128}$';
 export const PATTERN_API_KEY = '^[a-zA-Z0-9_\\/\\-]{2,24}$';
 export const PATTERN_CITY = '^[a-zA-Z0-9À-ÿ\\-\\s]{0,48}$';
-export const PATTERN_CLIENT_ID = "^[a-zA-Z0-9,.:\\/_\\-&?=~#!$'\\(\\)*+%]{2,256}$";
+// Technically, the API accepts `PATTERN_CLIENT_ID_EPHEMERAL` everywhere to make resolving via URL possible.
+// However, we don't want to allow that in the UI, as it would be very confusing. We also want to reject IDs
+// that could potentially overlap with any `dyn$*` clients created via DCR to avoid conflicts.
+// Via direct API call, it's still possible to create conflicts, but this has to be very intentional.
+export const PATTERN_CLIENT_ID_NEW = '^[a-zA-Z0-9._\\-]{2,256}$';
+export const PATTERN_CLIENT_ID_EPHEMERAL = "^[a-zA-Z0-9,.:\\/_\\-&?=~#!$'\\(\\)*+%]{2,256}$";
 export const PATTERN_CLIENT_NAME =
     '^[a-zA-Z0-9À-ɏ\\-\\s\\u3041-\\u3096\\u30A0-\\u30FF\\u3400-\\u4DB5\\u4E00-\\u9FCB\\uF900-\\uFA6A\\u2E80-\\u2FD5\\uFF66-\\uFF9F\\uFFA1-\\uFFDC\\u31F0-\\u31FF]{2,128}$';
 // export const PATTERN_DATE_STR = '[0-9]{4}\\-[0-9]{2}-[0-9]{2}$';
