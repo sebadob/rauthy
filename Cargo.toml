@@ -103,7 +103,7 @@ futures = "0.3"
 futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
-hickory-resolver = "0.25.2"
+hickory-resolver = "0.26.1"
 hiqlite = { version = "0.13", features = [
     "cache", "cast_ints", "counters", "dashboard", "listen_notify_local", "macros"
 ] }

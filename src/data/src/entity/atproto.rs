@@ -20,10 +20,8 @@ use atrium_oauth::{
         state::{InternalStateData, StateStore},
     },
 };
-use hickory_resolver::{
-    Resolver, TokioResolver, config::ResolverConfig, name_server::TokioConnectionProvider,
-    proto::rr::rdata::TXT,
-};
+use hickory_resolver::proto::rr::RData;
+use hickory_resolver::{Resolver, TokioResolver};
 use rauthy_api_types::auth_providers::ProviderRequest;
 use rauthy_common::constants::{
     CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION, PROVIDER_ATPROTO,
@@ -194,11 +192,10 @@ pub struct DnsTxtResolver {
 impl Default for DnsTxtResolver {
     fn default() -> Self {
         Self {
-            resolver: Resolver::builder_with_config(
-                ResolverConfig::default(),
-                TokioConnectionProvider::default(),
-            )
-            .build(),
+            resolver: Resolver::builder_tokio()
+                .expect("Cannot build resolver for ATProto logins")
+                .build()
+                .unwrap(),
         }
     }
 }
@@ -218,9 +215,16 @@ impl DnsTxtResolverTrait for DnsTxtResolver {
         &self,
         query: &str,
     ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync + 'static>> {
-        let txt_lookup = self.resolver.txt_lookup(query).await?;
+        let lookup = self.resolver.txt_lookup(query).await?;
 
-        Ok(txt_lookup.iter().map(TXT::to_string).collect())
+        Ok(lookup
+            .answers()
+            .iter()
+            .filter_map(|record| match &record.data {
+                RData::TXT(txt) => Some(txt.to_string()),
+                _ => None,
+            })
+            .collect())
     }
 }
 
