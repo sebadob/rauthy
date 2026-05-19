@@ -1,7 +1,7 @@
 <script lang="ts">
     import Button from '$lib5/button/Button.svelte';
     import Input from '$lib5/form/Input.svelte';
-    import { PATTERN_CLIENT_ID, PATTERN_CLIENT_NAME } from '$utils/patterns';
+    import { PATTERN_CLIENT_ID_NEW, PATTERN_CLIENT_NAME } from '$utils/patterns';
     import Form from '$lib5/form/Form.svelte';
     import { fetchPost } from '$api/fetch';
     import { useI18n } from '$state/i18n.svelte';
@@ -69,7 +69,7 @@
             label="Client ID"
             placeholder="Client ID"
             required
-            pattern={PATTERN_CLIENT_ID}
+            pattern={PATTERN_CLIENT_ID_NEW}
         />
         <Input
             bind:value={name}
