@@ -1,3 +1,5 @@
+#![cfg_attr(doc, feature(doc_cfg))]
+
 //! Minimal and safe by default client library for the [Rauthy](https://github.com/sebadob/rauthy)
 //! project.
 //!

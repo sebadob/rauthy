@@ -1,6 +1,6 @@
 [package]
 name = "rauthy-client"
-version = "0.14.1"
+version = "0.14.2"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -12,8 +12,8 @@ readme = "README.md"
 repository = "https://github.com/sebadob/rauthy/tree/main/rauthy-client"
 
 [package.metadata.docs.rs]
-features = ["backchannel-logout", "device-code", "scim"]
-rustdoc-args = ["--features backchannel-logout,device-code,scim"]
+all-features = false
+features = ["backchannel-logout", "device-code", "scim", "userinfo"]
 
 [features]
 default = []
