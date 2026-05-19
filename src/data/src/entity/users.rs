@@ -191,7 +191,7 @@ impl User {
         Ok(())
     }
 
-    async fn count_dec() -> Result<(), ErrorResponse> {
+    pub async fn count_dec() -> Result<(), ErrorResponse> {
         let mut count = Self::count().await?;
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only
