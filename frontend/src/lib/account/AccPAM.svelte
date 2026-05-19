@@ -108,7 +108,7 @@
             if (interval) {
                 clearInterval(interval);
             }
-            interval = setInterval(() => {
+            interval = window.setInterval(() => {
                 calcExpSecs();
             }, 1000);
         } else {

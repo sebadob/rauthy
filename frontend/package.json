@@ -20,6 +20,7 @@
         "@sveltejs/kit": "^2.52.2",
         "@sveltejs/vite-plugin-svelte": "^6.2.1",
         "@swc/core": "^1.11.4",
+        "@types/node": "^25.9.0",
         "base64-arraybuffer": "^1.0.2",
         "eslint": "^10.0.1",
         "eslint-config-prettier": "^10.0.2",
