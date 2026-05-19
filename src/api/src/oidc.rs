@@ -496,7 +496,7 @@ pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, Err
         .json(JWKSPublicKeyCerts::from(pub_key)))
 }
 
-/// POST for starting an OAuth 2.0 Device Authorization Grant flow
+/// POST for starting an OAuth 2 Device Authorization Grant flow
 #[utoipa::path(
     post,
     path = "/oidc/device",
@@ -642,7 +642,7 @@ pub async fn post_device_auth(
     HttpResponse::Ok().json(resp)
 }
 
-/// POST for verifying an OAuth 2.0 Device Authorization Grant flow
+/// POST for verifying an OAuth 2 Device Authorization Grant flow
 #[utoipa::path(
     post,
     path = "/oidc/device/verify",
