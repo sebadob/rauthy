@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::email::mailer;
 use crate::entity::failed_scim_tasks::ScimAction;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::users::User;
@@ -714,6 +715,20 @@ impl Event {
         )
     }
 
+    pub fn email_send_err(typ: mailer::EmailType, address: &str) -> Self {
+        Self::new(
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_email_send_error
+                .clone(),
+            EventType::EmailSendError,
+            None,
+            None,
+            Some(format!("{typ} -> {address}")),
+        )
+    }
+
     pub fn force_logout(user_email: String) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_force_logout.clone(),
@@ -876,20 +891,6 @@ impl Event {
             None,
             None,
             Some("The database connection is unhealthy".to_string()),
-        )
-    }
-
-    pub fn email_send_error(typ: crate::email::mailer::EmailType, address: &str) -> Self {
-        Self::new(
-            RauthyConfig::get()
-                .vars
-                .events
-                .level_email_send_error
-                .clone(),
-            EventType::EmailSendError,
-            None,
-            None,
-            Some(format!("{typ} -> {address}")),
         )
     }
 
