@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.14.2
+
+This release only exists to (hopefully) resolve docs.rs builds.
+
 ## v0.14.1
 
 After the new custom JWT validation, the token expiration was not checked in `v0.14.0` when no
