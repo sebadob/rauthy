@@ -4,16 +4,13 @@
     import { fetchGet, fetchPost } from '$api/fetch';
     import type {
         PamHostAccessResponse,
-        PamHostDetailsResponse,
         PamPasswordResponse,
         PamUserResponse,
     } from '$api/types/pam';
     import LabeledValue from '$lib/LabeledValue.svelte';
     import InputPassword from '$lib/form/InputPassword.svelte';
     import { slide } from 'svelte/transition';
-    import { formatDateFromTs } from '$utils/helpers';
     import { onMount } from 'svelte';
-    import Tooltip from '$lib/Tooltip.svelte';
     import SearchBar from '$lib/search_bar/SearchBar.svelte';
     import PamAuthorizedKeys from '$lib/PamAuthorizedKeys.svelte';
 

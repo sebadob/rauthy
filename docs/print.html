@@ -483,9 +483,9 @@ the <a href="getting_started/../config/config_minimal.html">Minimal Production C
 <div style="break-before: page; page-break-before: always;"></div><h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
 <h2 id="testing--local-evaluation"><a class="header" href="#testing--local-evaluation">Testing / Local Evaluation</a></h2>
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
-your localhost. The image contains a basic default config which is sufficient for local testing (
-don't use it in production, it contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.1
+your localhost. The image contains a basic default config which is sufficient for local testing
+(don't use it in production, it contains hardcoded secrets).</p>
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.2
 </code></pre>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
@@ -542,7 +542,7 @@ a minimal setup that is able to send E-Mails. The easiest way (works on localhos
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.35.1
+    image: ghcr.io/sebadob/rauthy:0.35.2
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -578,8 +578,7 @@ account:</p>
 <pre><code>docker compose logs -f rauthy
 </code></pre>
 <p>Any outgoing E-Mail will be caught by <code>mailcrab</code>, which can be accessed
-via <a href="http://localhost:1080">http://localhost:1080</a> .
-When you are done testing, shut down with</p>
+via <a href="http://localhost:1080">http://localhost:1080</a> . When you are done testing, shut down with</p>
 <pre><code>docker compose down
 </code></pre>
 <h2 id="production-setup"><a class="header" href="#production-setup">Production Setup</a></h2>
@@ -607,9 +606,9 @@ no Windows user myself, I cannot provide tested commands in this case.</p>
 <pre><code class="language-bash">mkdir -p rauthy/data rauthy/tls
 </code></pre>
 <p><strong>2. Add the new config file.</strong></p>
-<p>Rauthy (since v0.35) comes with a CLI. You can use it to generate a (basic) config file to get
-you started. We will use it from inside the container. However, since it's rootless and runs with
-user <code>10001:10001</code> inside, we need to modify access rights.</p>
+<p>Rauthy (since v0.35) comes with a CLI. You can use it to generate a (basic) config file to get you
+started. We will use it from inside the container. However, since it's rootless and runs with user
+<code>10001:10001</code> inside, we need to modify access rights.</p>
 <pre><code class="language-bash">sudo chown -R 10001:$(id -g) rauthy
 </code></pre>
 <p>Next, we set an <code>alias</code> to be able to work with the CLI comfortably.</p>
@@ -677,7 +676,7 @@ the <a href="getting_started/../config/production_config.html">Production Config
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.35.1
+    ghcr.io/sebadob/rauthy:0.35.2
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
@@ -757,12 +756,12 @@ sudo chown $(id -u):$(id -g) config.toml
 </code></pre>
 <h4 id="create-k8s-config"><a class="header" href="#create-k8s-config">Create K8s Config</a></h4>
 <p>Since the config contains sensitive information, I highly suggest to put the whole config in a
-secret instead of a ConfigMap. You could of course split it and provide all sensitive values via
-a separate secret, and then provide them via ENV vars, but having the full config in a secret is a
-lot more straight forward imo.</p>
-<p>Let's create a new Secret from our <code>config.toml</code> file. You could auto-generate it like shown
-below, but this would have the problem, that the file is already base64 encoded and not easily
-modifyable later on:</p>
+secret instead of a ConfigMap. You could of course split it and provide all sensitive values via a
+separate secret, and then provide them via ENV vars, but having the full config in a secret is a lot
+more straight forward imo.</p>
+<p>Let's create a new Secret from our <code>config.toml</code> file. You could auto-generate it like shown below,
+but this would have the problem, that the file is already base64 encoded and not easily modifyable
+later on:</p>
 <pre><code class="language-bash">kubectl create secret generic rauthy-config \
   --from-file=config.toml \
   --namespace=rauthy \
@@ -929,7 +928,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.35.1
+          image: ghcr.io/sebadob/rauthy:0.35.2
           securityContext:
             capabilities:
               drop:
@@ -5900,6 +5899,14 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: AUTH_HEADERS_ENABLE
 #enable = false
 
+# If additionally, the preferred username header shuold be enabled.
+# This requires an additional DB lookup each time and is therefore
+# disabled by defualt.
+#
+# default: false
+# overwritten by: AUTH_HEADERS_ENABLE_PREF_USERNAME
+#enable_pref_username = false
+
 # Configure the header names being used for the different values. You
 # can change them to your needs, if you cannot easily change your
 # downstream apps.
@@ -5928,6 +5935,10 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # default: x-forwarded-user-mfa
 # overwritten by: AUTH_HEADER_MFA
 #mfa = 'x-forwarded-user-mfa'
+
+# default: x-forwarded-user-pref-username
+# overwritten by: AUTH_HEADER_PREF_USERNAME
+#preferred_username = 'x-forwarded-user-pref-username'
 
 [backchannel_logout]
 # The maximum amount of retries made for a failed backchannel logout.
@@ -8225,6 +8236,7 @@ storage_type = 'db'
 #
 # one of: required, optional, hidden
 # default: 'optional'
+# overwritten_by: PREFERRED_USERNAME
 #preferred_username = 'optional'
 
 # The `preferred_username` is an unstable claim by the OIDC RFC.
@@ -8238,6 +8250,7 @@ storage_type = 'db'
 # users can change them freely at any time.
 #
 # default: true
+# overwritten_by: PREFERRED_USERNAME_IMMUTABLE
 #immutable = true
 
 # Provide an array of blacklisted names.
@@ -8273,6 +8286,7 @@ storage_type = 'db'
 # can be used as a fallback value for the id token.
 #
 # default: true
+# overwritten_by: PREFERRED_USERNAME_EMAIL_FALLBACK
 #email_fallback = true
 
 [webauthn]

@@ -170,9 +170,9 @@
                         <h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
 <h2 id="testing--local-evaluation"><a class="header" href="#testing--local-evaluation">Testing / Local Evaluation</a></h2>
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
-your localhost. The image contains a basic default config which is sufficient for local testing (
-don't use it in production, it contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.1
+your localhost. The image contains a basic default config which is sufficient for local testing
+(don't use it in production, it contains hardcoded secrets).</p>
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.2
 </code></pre>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
@@ -229,7 +229,7 @@ a minimal setup that is able to send E-Mails. The easiest way (works on localhos
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.35.1
+    image: ghcr.io/sebadob/rauthy:0.35.2
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -265,8 +265,7 @@ account:</p>
 <pre><code>docker compose logs -f rauthy
 </code></pre>
 <p>Any outgoing E-Mail will be caught by <code>mailcrab</code>, which can be accessed
-via <a href="http://localhost:1080">http://localhost:1080</a> .
-When you are done testing, shut down with</p>
+via <a href="http://localhost:1080">http://localhost:1080</a> . When you are done testing, shut down with</p>
 <pre><code>docker compose down
 </code></pre>
 <h2 id="production-setup"><a class="header" href="#production-setup">Production Setup</a></h2>
@@ -294,9 +293,9 @@ no Windows user myself, I cannot provide tested commands in this case.</p>
 <pre><code class="language-bash">mkdir -p rauthy/data rauthy/tls
 </code></pre>
 <p><strong>2. Add the new config file.</strong></p>
-<p>Rauthy (since v0.35) comes with a CLI. You can use it to generate a (basic) config file to get
-you started. We will use it from inside the container. However, since it's rootless and runs with
-user <code>10001:10001</code> inside, we need to modify access rights.</p>
+<p>Rauthy (since v0.35) comes with a CLI. You can use it to generate a (basic) config file to get you
+started. We will use it from inside the container. However, since it's rootless and runs with user
+<code>10001:10001</code> inside, we need to modify access rights.</p>
 <pre><code class="language-bash">sudo chown -R 10001:$(id -g) rauthy
 </code></pre>
 <p>Next, we set an <code>alias</code> to be able to work with the CLI comfortably.</p>
@@ -364,7 +363,7 @@ the <a href="../config/production_config.html">Production Config</a> section.</p
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.35.1
+    ghcr.io/sebadob/rauthy:0.35.2
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
