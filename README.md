@@ -2,7 +2,7 @@
 
 # Rauthy
 
-Rauthy - Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2.0 and PAM
+Rauthy - Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2, and PAM
 
 > [!NOTE]
 > This application received an independent security audit
@@ -78,9 +78,9 @@ of users, it usually looks like this:
 
 ### Highly Available
 
-Even though it makes extensive use of caching, you can run it in HA
-mode with external dependencies. [Hiqlite](https://github.com/sebadob/hiqlite) creates its own
-embedded HA cache and persistence layer. Such a deployment is possible with
+Even though it makes extensive use of caching, you can run it in HA mode with external
+dependencies. [Hiqlite](https://github.com/sebadob/hiqlite) creates its own embedded HA cache and
+persistence layer. Such a deployment is possible with
 both [Hiqlite](https://github.com/sebadob/hiqlite) and Postgres.
 
 ### Admin UI + User Account Dashboard
@@ -181,8 +181,8 @@ more secure) and how many concurrent logins at the exact same time you need to s
 - [x] DPoP tokens for decentralized login flows
 - [x] Ephemeral, dynamic clients for decentralized login flows
 - [x] SCIM v2 for downstream clients
-- [x] All End-User facing sites support i18n server-side translation
-  with the possibility to add more languages
+- [x] All End-User facing sites support i18n server-side translation with the possibility to add
+  more languages
 - [x] Simple per-client branding for the login page
 - [x] Custom roles
 - [x] Custom groups
@@ -194,15 +194,15 @@ more secure) and how many concurrent logins at the exact same time you need to s
 - [x] Admin API Keys with fine-grained access rights
 - [x] Events and alerting system
 - [x] Optional event persistence
-- [x] Dedicated `forward_auth` endpoint, in addition to the existing userinfo,
-  with support for configurable trusted auth headers
+- [x] Dedicated `forward_auth` endpoint, in addition to the existing userinfo, with support for
+  configurable trusted auth headers
 - [x] Optional event notifications via: E-Mail, Matrix, Slack
 - [x] Optional Force MFA for the Admin UI
 - [x] Optional Force MFA for each client
 - [x] Restrict logins to clients via group prefix
 - [x] Additional encryption inside the database for the most critical entries
-- [x] Automatic database backups with configurable retention and
-  auto-cleanup ([Hiqlite](https://github.com/sebadob/hiqlite) only)
+- [x] Automatic database backups with configurable retention and auto-cleanup
+  ([Hiqlite](https://github.com/sebadob/hiqlite) only)
 - [x] auto-encrypted backups ([Hiqlite](https://github.com/sebadob/hiqlite) only)
 - [x] Ability to push [Hiqlite](https://github.com/sebadob/hiqlite) backups to S3 storage
 - [x] auto-restore [Hiqlite](https://github.com/sebadob/hiqlite) backups from file or s3
@@ -239,7 +239,7 @@ setting for very quick and easy local testing and taking a first look. By settin
 a demo config is being loaded at startup.
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.1
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.2
 ```
 
 > [!CAUTION]
@@ -247,7 +247,7 @@ docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.
 > loads a very minimal (and unsafe) demo config. If you want to test anywhere else than `localhost`,
 > you need to set up a proper config.
 
-> > [!NOTE]
+> [!NOTE]
 > Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS
 > certificates. To be able to do this during testing, you would need to add the generated CA
 > certificate to your trust store.

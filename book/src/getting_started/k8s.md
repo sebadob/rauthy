@@ -91,13 +91,13 @@ sudo chown $(id -u):$(id -g) config.toml
 #### Create K8s Config
 
 Since the config contains sensitive information, I highly suggest to put the whole config in a
-secret instead of a ConfigMap. You could of course split it and provide all sensitive values via
-a separate secret, and then provide them via ENV vars, but having the full config in a secret is a
-lot more straight forward imo.
+secret instead of a ConfigMap. You could of course split it and provide all sensitive values via a
+separate secret, and then provide them via ENV vars, but having the full config in a secret is a lot
+more straight forward imo.
 
-Let's create a new Secret from our `config.toml` file. You could auto-generate it like shown
-below, but this would have the problem, that the file is already base64 encoded and not easily
-modifyable later on:
+Let's create a new Secret from our `config.toml` file. You could auto-generate it like shown below,
+but this would have the problem, that the file is already base64 encoded and not easily modifyable
+later on:
 
 ```bash
 kubectl create secret generic rauthy-config \
@@ -292,7 +292,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.35.1
+          image: ghcr.io/sebadob/rauthy:0.35.2
           securityContext:
             capabilities:
               drop:
