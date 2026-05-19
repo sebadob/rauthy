@@ -6,6 +6,7 @@ exclude = ["rauthy-client"]
 [workspace.package]
 version = "0.35.2-20260519"
 edition = "2024"
+rust-version = "1.95.0"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
 description = "Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2 and PAM"
