@@ -131,7 +131,7 @@ pub async fn sender_microsoft_graph(mut rx: mpsc::Receiver<EMail>) {
                         "Could not send E-Mail to '{}' even after retrying - dropping it",
                         recipient
                     );
-                    if let Err(err) = Event::email_send_error(email_typ, &recipient).send().await {
+                    if let Err(err) = Event::email_send_err(email_typ, &recipient).send().await {
                         error!(?err, "Could not push EmailSendError event");
                     }
                 }

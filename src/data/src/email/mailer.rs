@@ -183,7 +183,7 @@ async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<EMail>) {
                                 req.address
                             );
                             if let Err(err) =
-                                Event::email_send_error(req.typ, &req.address).send().await
+                                Event::email_send_err(req.typ, &req.address).send().await
                             {
                                 error!(?err, "Could not push EmailSendError event");
                             }

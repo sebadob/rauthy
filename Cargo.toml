@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.35.1"
+version = "0.35.2-20260519"
 edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -70,7 +70,7 @@ actix-web-prom = "0.10"
 ammonia = "4.1"
 arc-swap = "1.7"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
-askama = "0.15"
+askama = "0.16"
 async-trait = "0.1.74"
 atrium-api = "0.25.3"
 atrium-common = "0.1.2"
@@ -88,7 +88,7 @@ chrono-tz = "0.10.4"
 cidr = "0.3.0"
 clap = { version = "4.6", features = ["derive", "env"] }
 colored = "3"
-constant_time_eq = "0.4.2"
+constant_time_eq = "0.5"
 cron = "0.16"
 cryptr = { version = "0.10", features = ["s3", "streaming"] }
 css-color = "0.2"
@@ -117,7 +117,7 @@ lettre = { version = "0.11", default-features = false, features = [
     "builder", "smtp-transport", "tokio1-rustls-tls", "tracing"
 ] }
 libflate = "2.1.0"
-maxminddb = "0.27"
+maxminddb = "0.28.1"
 mime = "0.3.17"
 mime_guess = "2"
 num_cpus = "1"
@@ -132,17 +132,16 @@ rand_core = { version = "0.10", features = [] }
 rcgen = "0.14.3"
 refinery = { version = "0.9", features = ["tokio-postgres"] }
 regex = "1"
-# upgrade blocked by ruma-client
-reqwest = { version = "0.12.3", default-features = false, features = [
-    "json", "rustls-tls", "stream"
+reqwest = { version = "0.13.3", default-features = false, features = [
+    "charset", "form", "http2", "json", "stream", "rustls-no-provider"
 ] }
 ring = "0.17.13"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rpassword = "7.5"
 rsa = { version = "0.9.10", features = ["serde", "sha2"] }
-ruma-client = { version = "0.17", features = [
-    "client-api", "reqwest-rustls-webpki-roots"
+ruma-client = { version = "0.18", features = [
+    "client-api", "reqwest-rustls-no-provider"
 ] }
 rusqlite = "0.39"
 rust-embed = "8.5.0"

@@ -521,9 +521,9 @@ checksum = "9dbc3a507a82b17ba0d98f6ce8fd6954ea0c8152e98009d36a40d8dcc8ce078a"
 
 [[package]]
 name = "askama"
-version = "0.15.6"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b8246bcbf8eb97abef10c2d92166449680d41d55c0fc6978a91dec2e3619608"
+checksum = "f1bf825125edd887a019d0a3a837dcc5499a68b0d034cc3eb594070c3e18addc"
 dependencies = [
  "askama_macros",
  "itoa",
@@ -534,12 +534,13 @@ dependencies = [
 
 [[package]]
 name = "askama_derive"
-version = "0.15.6"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f9670bc84a28bb3da91821ef74226949ab63f1265aff7c751634f1dd0e6f97c"
+checksum = "e1c7065972a130eafa84215f21352ae15b4a7393da48c1f5e103904490736738"
 dependencies = [
  "askama_parser",
  "basic-toml",
+ "glob",
  "memchr",
  "proc-macro2",
  "quote",
@@ -551,18 +552,18 @@ dependencies = [
 
 [[package]]
 name = "askama_macros"
-version = "0.15.6"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0756b45480437dded0565dfc568af62ccce146fb6cfe902e808ba86e445f44f"
+checksum = "0e23b1d2c4bd39a41971f6124cef4cc6fd0540913ecb90919b69ab3bbe44ae1a"
 dependencies = [
  "askama_derive",
 ]
 
 [[package]]
 name = "askama_parser"
-version = "0.15.6"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d0af3691ba3af77949c0b5a3925444b85cb58a0184cc7fec16c68ba2e7be868"
+checksum = "7db09fde9143e7ac4513358fb32ee32847125b63b18ea715afd487956da715da"
 dependencies = [
  "rustc-hash",
  "serde",
@@ -1461,9 +1462,9 @@ dependencies = [
 
 [[package]]
 name = "constant_time_eq"
-version = "0.4.2"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
+checksum = "1a1ec0cfec728a79a5109075543131387f911cb4d07716436d7ae20533657a96"
 
 [[package]]
 name = "convert_case"
@@ -3071,7 +3072,6 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tower-service",
- "webpki-roots",
 ]
 
 [[package]]
@@ -3568,21 +3568,11 @@ dependencies = [
 
 [[package]]
 name = "konst"
-version = "0.3.17"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97feab15b395d1860944abe6a8dd8ed9f8eadfae01750fada8427abda531d887"
+checksum = "f660d5f887e3562f9ab6f4a14988795b694099d66b4f5dedc02d197ba9becb1d"
 dependencies = [
  "const_panic",
- "konst_kernel",
- "typewit",
-]
-
-[[package]]
-name = "konst_kernel"
-version = "0.3.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4b1eb7788f3824c629b1116a7a9060d6e898c358ebff59070093d51103dcc3c"
-dependencies = [
  "typewit",
 ]
 
@@ -3851,9 +3841,9 @@ checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
 name = "maxminddb"
-version = "0.27.3"
+version = "0.28.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76371bd37ce742f8954daabd0fde7f1594ee43ac2200e20c003ba5c3d65e2192"
+checksum = "faf6467428ad055b71e588bcedcbaf2ff605b3251deb0c52be4a04b674c546dd"
 dependencies = [
  "ipnetwork",
  "log",
@@ -5043,7 +5033,7 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 
 [[package]]
 name = "rauthy"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -5072,7 +5062,7 @@ dependencies = [
  "rauthy-schedulers",
  "rauthy-service",
  "regex",
- "reqwest 0.12.28",
+ "reqwest 0.13.3",
  "ring",
  "rpassword",
  "rustls",
@@ -5093,7 +5083,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "actix-web",
  "hiqlite",
@@ -5113,7 +5103,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "actix-web",
  "ammonia",
@@ -5134,7 +5124,7 @@ dependencies = [
  "rand_core 0.10.1",
  "rauthy-error",
  "regex",
- "reqwest 0.12.28",
+ "reqwest 0.13.3",
  "ring",
  "serde",
  "tokio",
@@ -5144,7 +5134,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-data"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -5195,7 +5185,7 @@ dependencies = [
  "rcgen",
  "refinery",
  "regex",
- "reqwest 0.12.28",
+ "reqwest 0.13.3",
  "ring",
  "rio_api",
  "rio_turtle",
@@ -5230,7 +5220,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-derive"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5239,7 +5229,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5255,7 +5245,7 @@ dependencies = [
  "openssl",
  "openssl-sys",
  "oxiri",
- "reqwest 0.12.28",
+ "reqwest 0.13.3",
  "ring",
  "rio_turtle",
  "rsa",
@@ -5276,7 +5266,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5313,7 +5303,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "chrono",
  "openssl",
@@ -5330,7 +5320,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5346,14 +5336,14 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "async-trait",
  "openssl",
  "openssl-sys",
  "rauthy-common",
  "rauthy-error",
- "reqwest 0.12.28",
+ "reqwest 0.13.3",
  "ruma-client",
  "serde",
  "tokio",
@@ -5362,7 +5352,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5381,7 +5371,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "actix-web",
  "atrium-api",
@@ -5397,7 +5387,7 @@ dependencies = [
  "rauthy-data",
  "rauthy-error",
  "rauthy-jwt",
- "reqwest 0.12.28",
+ "reqwest 0.13.3",
  "ring",
  "serde",
  "serde_json",
@@ -5409,7 +5399,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-wasm-modules"
-version = "0.35.1"
+version = "0.35.2-20260519"
 dependencies = [
  "ammonia",
  "console_error_panic_hook",
@@ -5568,22 +5558,17 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "futures-core",
- "futures-util",
  "http 1.4.0",
  "http-body",
  "http-body-util",
  "hyper",
- "hyper-rustls",
  "hyper-tls",
  "hyper-util",
  "js-sys",
  "log",
- "mime_guess",
  "native-tls",
  "percent-encoding",
  "pin-project-lite",
- "quinn",
- "rustls",
  "rustls-pki-types",
  "serde",
  "serde_json",
@@ -5591,17 +5576,13 @@ dependencies = [
  "sync_wrapper",
  "tokio",
  "tokio-native-tls",
- "tokio-rustls",
- "tokio-util",
  "tower",
  "tower-http",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "wasm-streams 0.4.2",
  "web-sys",
- "webpki-roots",
 ]
 
 [[package]]
@@ -5625,6 +5606,7 @@ dependencies = [
  "js-sys",
  "log",
  "mime",
+ "mime_guess",
  "percent-encoding",
  "pin-project-lite",
  "quinn",
@@ -5633,6 +5615,7 @@ dependencies = [
  "rustls-platform-verifier 0.7.0",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "sync_wrapper",
  "tokio",
  "tokio-rustls",
@@ -5643,7 +5626,7 @@ dependencies = [
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "wasm-streams 0.5.0",
+ "wasm-streams",
  "web-sys",
 ]
 
@@ -5813,9 +5796,9 @@ dependencies = [
 
 [[package]]
 name = "ruma"
-version = "0.14.1"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9f620a2116d0d3082f9256e61dcdf67f2ec266d3f6bb9d2f9c8a20ec5a1fabb"
+checksum = "e420da038fd6529af5abffe21df50ba122e1b4a84db05c02ec05b5ab0a21a320"
 dependencies = [
  "assign",
  "js_int",
@@ -5828,9 +5811,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-client"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c75ae9a103f82e583b5809711dadf0f2142d2430fe8ff7e8abeb346e166ca38c"
+checksum = "5d1c5dcde23f6d677fbbc86128f83499bcd2a3982daa64ce5f82d87de37466b9"
 dependencies = [
  "as_variant",
  "assign",
@@ -5838,22 +5821,20 @@ dependencies = [
  "bytes",
  "futures-core",
  "http 1.4.0",
- "reqwest 0.12.28",
+ "reqwest 0.13.3",
  "ruma",
- "serde_html_form 0.2.8",
  "tracing",
 ]
 
 [[package]]
 name = "ruma-client-api"
-version = "0.22.1"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbc977d1a91ea15dcf896cbd7005ed4a253784468833638998109ffceaee53e7"
+checksum = "3a793e13cc9c354385e4f635b5eca581abe76169a9fafd8c530918f9b19f8d63"
 dependencies = [
  "as_variant",
  "assign",
  "bytes",
- "date_header",
  "http 1.4.0",
  "js_int",
  "js_option",
@@ -5861,7 +5842,7 @@ dependencies = [
  "ruma-common",
  "ruma-events",
  "serde",
- "serde_html_form 0.2.8",
+ "serde_html_form 0.4.0",
  "serde_json",
  "thiserror 2.0.18",
  "url",
@@ -5870,13 +5851,14 @@ dependencies = [
 
 [[package]]
 name = "ruma-common"
-version = "0.17.1"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "597a01993f22d291320b7c9267675e7395775e95269ff526e2c8c3ed5e13175b"
+checksum = "b69b11cb6ccf0e27c3c44c50e2e4799337921c66d4e6a490c084f18c5b4481ec"
 dependencies = [
  "as_variant",
  "base64 0.22.1",
  "bytes",
+ "date_header",
  "form_urlencoded",
  "http 1.4.0",
  "indexmap",
@@ -5887,7 +5869,7 @@ dependencies = [
  "ruma-identifiers-validation",
  "ruma-macros",
  "serde",
- "serde_html_form 0.2.8",
+ "serde_html_form 0.4.0",
  "serde_json",
  "thiserror 2.0.18",
  "time",
@@ -5900,24 +5882,20 @@ dependencies = [
 
 [[package]]
 name = "ruma-events"
-version = "0.32.1"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dbdeccb62cb4ffe3282325de8ba28cbc0fdce7c78a3f11b7241fbfdb9cb9907"
+checksum = "c96e3c39ab1b692086d02513fe0c24400d864060880bbd2716cb5544f5923131"
 dependencies = [
  "as_variant",
  "indexmap",
  "js_int",
  "js_option",
- "percent-encoding",
- "regex",
  "ruma-common",
- "ruma-identifiers-validation",
  "ruma-macros",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
  "tracing",
- "url",
  "web-time",
  "wildmatch",
  "zeroize",
@@ -5935,9 +5913,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-macros"
-version = "0.17.1"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a0753312ad577ac462de1742bf2e326b6ba9856ff6f13343aeb17d423fd5426"
+checksum = "6ac022103cd7829721476d3df79d16125be159e99527c8ddb27f125e7b674e5c"
 dependencies = [
  "as_variant",
  "cfg-if",
@@ -5947,7 +5925,7 @@ dependencies = [
  "ruma-identifiers-validation",
  "serde",
  "syn 2.0.117",
- "toml 0.9.12+spec-1.1.0",
+ "toml 1.1.2+spec-1.1.0",
 ]
 
 [[package]]
@@ -7208,19 +7186,6 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.9.12+spec-1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf92845e79fc2e2def6a5d828f0801e29a2f8acc037becc5ab08595c7d5e9863"
-dependencies = [
- "serde_core",
- "serde_spanned 1.1.1",
- "toml_datetime 0.7.5+spec-1.1.0",
- "toml_parser",
- "winnow 0.7.15",
-]
-
-[[package]]
-name = "toml"
 version = "1.1.2+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81f3d15e84cbcd896376e6730314d59fb5a87f31e4b038454184435cd57defee"
@@ -7241,15 +7206,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22cddaf88f4fbc13c51aebbf5f8eceb5c7c5a9da2ac40a13519eb5b0a0e8f11c"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "toml_datetime"
-version = "0.7.5+spec-1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92e1cfed4a3038bc5a127e35a2d360f145e1f4b971b551a2ba5fd7aedf7e1347"
-dependencies = [
- "serde_core",
 ]
 
 [[package]]
@@ -7472,15 +7428,6 @@ name = "typewit"
 version = "1.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "214ca0b2191785cbc06209b9ca1861e048e39b5ba33574b3cedd58363d5bb5f6"
-dependencies = [
- "typewit_proc_macros",
-]
-
-[[package]]
-name = "typewit_proc_macros"
-version = "1.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e36a83ea2b3c704935a01b4642946aadd445cea40b10935e3f8bd8052b8193d6"
 
 [[package]]
 name = "unicase"
@@ -7904,19 +7851,6 @@ dependencies = [
  "indexmap",
  "wasm-encoder",
  "wasmparser",
-]
-
-[[package]]
-name = "wasm-streams"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15053d8d85c7eccdbefef60f06769760a563c7f0a9d6902a13d35c7800b0ad65"
-dependencies = [
- "futures-util",
- "js-sys",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]
