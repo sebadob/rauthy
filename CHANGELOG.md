@@ -55,7 +55,7 @@ It is now also possible to include the `preferred_username` in forward auth head
 
 # If additionally, the preferred username header shuold be enabled.
 # This requires an additional DB lookup each time and is therefore
-# disabled by defualt.
+# disabled by default.
 #
 # default: false
 # overwritten by: AUTH_HEADERS_ENABLE_PREF_USERNAME
