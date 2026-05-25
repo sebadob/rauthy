@@ -304,7 +304,7 @@ enable = true
 
 # If additionally the preferred username header shuold be enabled.
 # This requires an additiona DB lookup each time and is therefore
-# disabled by defualt.
+# disabled by default.
 #
 # default: false
 # overwritten by: AUTH_HEADERS_ENABLE_PREF_USERNAME
