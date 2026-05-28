@@ -53,7 +53,7 @@ It is now also possible to include the `preferred_username` in forward auth head
 ```toml
 [auth_headers]
 
-# If additionally, the preferred username header shuold be enabled.
+# If additionally, the preferred username header should be enabled.
 # This requires an additional DB lookup each time and is therefore
 # disabled by default.
 #
