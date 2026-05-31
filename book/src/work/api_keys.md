@@ -39,7 +39,9 @@ logins to limit the likelihood of privilege escalation in case of leaked credent
 ## Creating a new API Key
 
 Apart from the initial [bootstrap](../config/bootstrap.md#api-key), the creation and modification of API Keys is only
-allowed via the Admin UI.
+allowed via the Admin UI. API keys declared in `api_keys.json` should have a short expiry for production bootstrap,
+for example around 10 minutes, so first-start automation can finish and the credential then becomes useless
+automatically. Bootstrap JSON is not live reconciliation; later file changes do not update existing API keys.
 
 Navigate to the `API Keys` section, click `New Key`, fill out the inputs and `Save`. You can set an optional key expiry.
 By default, API Keys never expire.
