@@ -19,10 +19,10 @@ use rauthy_api_types::oidc::JwkKeyPairAlg;
 use rauthy_api_types::users::{UserAttrValueRequest, UserValuesRequest};
 use rauthy_common::regex::*;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::fmt::{Debug, Formatter};
 use std::sync::LazyLock;
-use validator::Validate;
+use validator::{Validate, ValidationError, ValidationErrors};
 
 pub static RE_DB_ID: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{24}$").unwrap());
 
@@ -74,17 +74,49 @@ pub struct Scope {
     pub attr_include_id: Option<Vec<String>>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize)]
 pub struct ApiKey {
     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
-    #[validate(regex(path = "*RE_API_KEY", code = "^[a-zA-Z0-9_-/]{2,24}$"))]
     pub name: String,
     /// Unix timestamp in seconds.
-    #[validate(range(min = 1719784800))]
     pub exp: Option<i64>,
     pub secret: ApiKeySecret,
-    #[validate(length(min = 1), nested)]
     pub access: Vec<ApiKeyAccess>,
+}
+
+impl Validate for ApiKey {
+    fn validate(&self) -> Result<(), ValidationErrors> {
+        let mut errors = ValidationErrors::new();
+
+        if !RE_API_KEY.is_match(&self.name) {
+            let mut err = ValidationError::new("^[a-zA-Z0-9_-/]{2,24}$");
+            err.add_param(std::borrow::Cow::from("value"), &self.name);
+            errors.add("name", err);
+        }
+
+        if let Some(exp) = self.exp
+            && exp < 1719784800
+        {
+            let mut err = ValidationError::new("range");
+            err.add_param(std::borrow::Cow::from("min"), &1719784800);
+            err.add_param(std::borrow::Cow::from("value"), &exp);
+            errors.add("exp", err);
+        }
+
+        if self.access.is_empty() {
+            let mut err = ValidationError::new("length");
+            err.add_param(std::borrow::Cow::from("min"), &1);
+            errors.add("access", err);
+        } else {
+            errors.merge_self("access", self.access.validate());
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -102,7 +134,7 @@ impl Debug for ApiKeySecret {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Validate)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct ApiKeyAccess {
     pub group: AccessGroup,
     #[validate(length(min = 1))]
