@@ -1,5 +1,38 @@
 # Changelog
 
+## UNRELEASED
+
+### Breaking
+
+Technically, this is not a breaking change, but it might be for you. The config parser now has an
+additional validation for left-over, unknown keys after parsing has finished. If any data is left,
+Rauthy will `panic`. This makes sure you cannot have typos or data in your config that does nothing
+at all. This means this might be a somewhat "breaking" change if you have invalid or additional data
+in your config. Just be prepared to adjust your config when you update.
+
+[#1587](https://github.com/sebadob/rauthy/pull/1587)
+
+### Changes
+
+#### Validate Config
+
+The CLI now has an option to validate an existing Rauthy Config:
+
+```bash
+./rauthy validate-config -p config.toml
+```
+
+[#1588](https://github.com/sebadob/rauthy/pull/1588)
+
+### Bugfix
+
+- After the Issue change with `V0.35.0` the URL to the dashboard that's built for a fresh instance
+  was wrong. It contained an additional `/` and was therefore invalid.
+  [#1578](https://github.com/sebadob/rauthy/pull/1578)
+- When then config expected an `Integer` value that could not be parsed successfully, you might have
+  seen a misleading error message in some cases.
+  [#1586](https://github.com/sebadob/rauthy/pull/1586)
+
 ## v0.35.2
 
 ### Security
@@ -1948,12 +1981,9 @@ set and the user is not linked to any other provider yet, it will auto-link this
 upstream provider on login.
 
 > **CAUTION:** This option will show you a warning in the Admin UI as well. If you set
-`auto-link user` and your
-> upstream provider does NOT VALIDATE E-Mail addresses 100% correctly, and allows a user to set an
-> address that belongs
-> to someone else, this option can lead to account takeover! Do NOT use it if you cannot fully trust
-> the validation
-> process of the upstream provider!
+> `auto-link user` and your upstream provider does NOT VALIDATE E-Mail addresses 100% correctly, and
+> allows a user to set an address that belongs to someone else, this option can lead to account
+> takeover! Do NOT use it if you cannot fully trust the validation process of the upstream provider!
 
 [#1153](https://github.com/sebadob/rauthy/pull/1153)
 

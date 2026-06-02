@@ -9,6 +9,9 @@ pub enum Args {
     /// Generate a config file to get you started.
     GenerateConfig(ArgsGenConfig),
 
+    /// Validate a Rauthy config file.
+    ValidateConfig(ArgsValidateConfig),
+
     /// Generate a new secure, random encryption key
     GenerateEncKey(ArgsGenKey),
 
@@ -39,6 +42,13 @@ pub struct ArgsGenConfig {
     /// If set, the `output_file` will be overwritten, if it exists.
     #[clap(long, default_value_t = false)]
     pub overwrite: bool,
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct ArgsValidateConfig {
+    /// The path to the config file.
+    #[clap(short, long)]
+    pub path: String,
 }
 
 #[derive(Debug, Clone, Parser)]

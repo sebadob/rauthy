@@ -2289,7 +2289,7 @@ http_workers = 1
 #
 # default: false
 # overwritten by: PROXY_MODE
-proxy_modeproxy_mode = false
+proxy_mode = false
 
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to
