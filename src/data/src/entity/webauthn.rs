@@ -941,18 +941,42 @@ pub async fn reg_start(
             let cfg = &RauthyConfig::get().vars.webauthn;
             ccr.public_key.timeout = Some(cfg.req_exp as u32 * 1000);
 
+            let resident_key = match cfg.resident_key.as_str() {
+                "preferred" => ResidentKeyRequirement::Preferred,
+                "required" => ResidentKeyRequirement::Required,
+                _ => ResidentKeyRequirement::Discouraged,
+            };
+            let require_resident_key = matches!(resident_key, ResidentKeyRequirement::Required);
+
             if cfg.force_uv || user.account_type() == AccountType::Passkey {
                 // in this case we need to force UV no matter what is set in the config
                 ccr.public_key.authenticator_selection =
                     if let Some(mut auth_sel) = ccr.public_key.authenticator_selection {
                         auth_sel.user_verification = UserVerificationPolicy::Required;
+                        auth_sel.resident_key = Some(resident_key);
+                        auth_sel.require_resident_key = require_resident_key;
                         Some(auth_sel)
                     } else {
                         Some(AuthenticatorSelectionCriteria {
                             authenticator_attachment: None,
-                            resident_key: Some(ResidentKeyRequirement::Discouraged),
-                            require_resident_key: false,
+                            resident_key: Some(resident_key),
+                            require_resident_key,
                             user_verification: UserVerificationPolicy::Required,
+                        })
+                    };
+            } else if !matches!(resident_key, ResidentKeyRequirement::Discouraged) {
+                // apply non-default resident_key even when UV is not forced
+                ccr.public_key.authenticator_selection =
+                    if let Some(mut auth_sel) = ccr.public_key.authenticator_selection {
+                        auth_sel.resident_key = Some(resident_key);
+                        auth_sel.require_resident_key = require_resident_key;
+                        Some(auth_sel)
+                    } else {
+                        Some(AuthenticatorSelectionCriteria {
+                            authenticator_attachment: None,
+                            resident_key: Some(resident_key),
+                            require_resident_key,
+                            user_verification: UserVerificationPolicy::Preferred,
                         })
                     };
             };

@@ -1028,6 +1028,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 renew_exp: 2160,
                 force_uv: false,
                 no_password_exp: true,
+                resident_key: "discouraged".into(),
             },
             atproto: VarsAtproto { enable: false },
         }
@@ -3281,6 +3282,20 @@ impl Vars {
         ) {
             self.webauthn.no_password_exp = v;
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "webauthn",
+            "resident_key",
+            "WEBAUTHN_RESIDENT_KEY",
+        ) {
+            match v.as_str() {
+                "discouraged" | "preferred" | "required" => self.webauthn.resident_key = v,
+                other => panic!(
+                    "Invalid value for `webauthn.resident_key` / WEBAUTHN_RESIDENT_KEY: \
+                     '{other}'. Must be one of: discouraged, preferred, required"
+                ),
+            }
+        }
 
         check_empty(table, "webauthn");
     }
@@ -3867,6 +3882,9 @@ pub struct VarsWebauthn {
     pub renew_exp: u16,
     pub force_uv: bool,
     pub no_password_exp: bool,
+    /// Controls the `residentKey` authenticator selection criterion during registration.
+    /// "discouraged" (default) | "preferred" | "required"
+    pub resident_key: String,
 }
 
 #[derive(Debug)]
