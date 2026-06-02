@@ -1981,12 +1981,9 @@ set and the user is not linked to any other provider yet, it will auto-link this
 upstream provider on login.
 
 > **CAUTION:** This option will show you a warning in the Admin UI as well. If you set
-> `auto-link user` and your
-> upstream provider does NOT VALIDATE E-Mail addresses 100% correctly, and allows a user to set an
-> address that belongs
-> to someone else, this option can lead to account takeover! Do NOT use it if you cannot fully trust
-> the validation
-> process of the upstream provider!
+> `auto-link user` and your upstream provider does NOT VALIDATE E-Mail addresses 100% correctly, and
+> allows a user to set an address that belongs to someone else, this option can lead to account
+> takeover! Do NOT use it if you cannot fully trust the validation process of the upstream provider!
 
 [#1153](https://github.com/sebadob/rauthy/pull/1153)
 
