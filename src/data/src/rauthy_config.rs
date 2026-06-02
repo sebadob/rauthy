@@ -1111,6 +1111,8 @@ impl Vars {
 
         let node_config = slf.parse_hiqlite_config(&mut table).await;
 
+        check_empty(table, "<root>");
+
         (slf, node_config)
     }
 
@@ -1134,6 +1136,8 @@ impl Vars {
         ) {
             self.dev.provider_callback_url = Some(v);
         }
+
+        check_empty(table, "dev");
     }
 
     fn parse_atproto(&mut self, table: &mut toml::Table) {
@@ -1142,6 +1146,8 @@ impl Vars {
         if let Some(v) = t_bool(&mut table, "atproto", "enable", "ATPROTO_ENABLE") {
             self.atproto.enable = v;
         }
+
+        check_empty(table, "atproto");
     }
 
     fn parse_access(&mut self, table: &mut toml::Table) {
@@ -1245,6 +1251,8 @@ impl Vars {
         ) {
             self.access.redirect_root_to_account = v;
         }
+
+        check_empty(table, "access");
     }
 
     fn parse_auth_headers(&mut self, table: &mut toml::Table) {
@@ -1310,6 +1318,8 @@ impl Vars {
         ) {
             self.auth_headers.preferred_username = v.into();
         }
+
+        check_empty(table, "auth_headers");
     }
 
     fn parse_backchannel_logout(&mut self, table: &mut toml::Table) {
@@ -1363,6 +1373,8 @@ impl Vars {
         ) {
             self.backchannel_logout.allowed_token_lifetime = v;
         }
+
+        check_empty(table, "backchannel_logout");
     }
 
     fn parse_bootstrap(&mut self, table: &mut toml::Table) {
@@ -1406,6 +1418,8 @@ impl Vars {
         if let Some(v) = t_str(&mut table, "bootstrap", "bootstrap_dir", "BOOTSTRAP_DIR") {
             self.bootstrap.bootstrap_dir = v.into();
         }
+
+        check_empty(table, "bootstrap");
     }
 
     fn parse_cred_stuff(&mut self, table: &mut toml::Table) {
@@ -1435,6 +1449,8 @@ impl Vars {
         ) {
             self.cred_stuff_detect.scan_window = v;
         }
+
+        check_empty(table, "cred_stuff_detection");
     }
 
     fn parse_database(&mut self, table: &mut toml::Table) {
@@ -1532,6 +1548,8 @@ impl Vars {
         ) {
             self.database.sched_user_exp_delete_mins = Some(v);
         }
+
+        check_empty(table, "database");
     }
 
     fn parse_device_grant(&mut self, table: &mut toml::Table) {
@@ -1577,6 +1595,8 @@ impl Vars {
         ) {
             self.device_grant.refresh_token_lifetime = v;
         }
+
+        check_empty(table, "device_grant");
     }
 
     fn parse_dpop(&mut self, table: &mut toml::Table) {
@@ -1588,6 +1608,8 @@ impl Vars {
         if let Some(v) = t_u32(&mut table, "dpop", "nonce_exp", "DPOP_NONCE_EXP") {
             self.dpop.nonce_exp = v;
         }
+
+        check_empty(table, "dpop");
     }
 
     fn parse_dynamic_clients(&mut self, table: &mut toml::Table) {
@@ -1673,6 +1695,8 @@ impl Vars {
         ) {
             self.dynamic_clients.rate_limit_sec = v;
         }
+
+        check_empty(table, "dynamic_clients");
     }
 
     fn parse_email(&mut self, table: &mut toml::Table) {
@@ -1779,6 +1803,7 @@ impl Vars {
         ) {
             self.email.jobs.batch_delay_ms = v;
         }
+        check_empty(jobs, "email.jobs");
 
         // [email.tz_fmt]
         let mut tz_fmt = t_table(&mut table, "tz_fmt");
@@ -1798,6 +1823,9 @@ impl Vars {
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "no", "TZ_FMT_NO") {
             self.email.tz_fmt.no = v.into();
         }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "uk", "TZ_FMT_UK") {
+            self.email.tz_fmt.uk = v.into();
+        }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ru", "TZ_FMT_RU") {
             self.email.tz_fmt.ru = v.into();
         }
@@ -1808,6 +1836,9 @@ impl Vars {
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "tz_fallback", "TZ_FALLBACK") {
             self.email.tz_fmt.tz_fallback = v.into();
         }
+        check_empty(tz_fmt, "email.tz_fmt");
+
+        check_empty(table, "email");
     }
 
     fn parse_encryption(&mut self, table: &mut toml::Table) {
@@ -1819,6 +1850,8 @@ impl Vars {
         if let Some(v) = t_str_vec(&mut table, "encryption", "keys", "ENC_KEYS") {
             self.encryption.keys = v;
         }
+
+        check_empty(table, "encryption");
     }
 
     fn parse_ephemeral_clients(&mut self, table: &mut toml::Table) {
@@ -1883,6 +1916,8 @@ impl Vars {
         ) {
             self.ephemeral_clients.cache_lifetime = v;
         }
+
+        check_empty(table, "ephemeral_clients");
     }
 
     fn parse_events(&mut self, table: &mut toml::Table) {
@@ -2116,6 +2151,15 @@ impl Vars {
         if let Some(v) = t_str(
             &mut table,
             "events",
+            "level_cred_stuff",
+            "EVENT_LEVEL_CRED_STUFF",
+        ) {
+            self.events.level_cred_stuff =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_cred_stuff");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
             "level_backchannel_logout_failed",
             "EVENT_LEVEL_BACKCHANNEL_LOGOUT_FAILED",
         ) {
@@ -2240,6 +2284,8 @@ impl Vars {
         ) {
             self.events.disable_app_version_check = v;
         }
+
+        check_empty(table, "events");
     }
 
     fn parse_fedcm(&mut self, table: &mut toml::Table) {
@@ -2269,6 +2315,8 @@ impl Vars {
         ) {
             self.fedcm.session_timeout = v;
         }
+
+        check_empty(table, "fedcm");
     }
 
     fn parse_geo(&mut self, table: &mut toml::Table) {
@@ -2339,6 +2387,8 @@ impl Vars {
         ) {
             self.geo.maxmind_update_cron = v.into();
         }
+
+        check_empty(table, "geolocation");
     }
 
     fn parse_hashing(&mut self, table: &mut toml::Table) {
@@ -2370,6 +2420,8 @@ impl Vars {
         ) {
             self.hashing.hash_await_warn_time = v;
         }
+
+        check_empty(table, "hashing");
     }
 
     async fn parse_hiqlite_config(&mut self, table: &mut toml::Table) -> hiqlite::NodeConfig {
@@ -2385,6 +2437,7 @@ impl Vars {
             panic!("Invalid ENC_KEYS / ENC_KEY_ACTIVE");
         };
 
+        // TODO add the check_empty check to hiqlite as well
         match NodeConfig::from_toml_table(table, "cluster", Some(enc_keys)).await {
             Ok(config) => config,
             Err(err) => {
@@ -2447,6 +2500,8 @@ impl Vars {
         ) {
             self.http_client.root_ca_bundle = Some(v);
         }
+
+        check_empty(table, "http_client");
     }
 
     fn parse_i18n(&mut self, table: &mut toml::Table) {
@@ -2463,6 +2518,8 @@ impl Vars {
         if let Some(v) = t_str_vec(&mut table, "i18n", "filter_lang_admin", "FILTER_LANG_ADMIN") {
             self.i18n.filter_lang_admin = v.into_iter().map(Cow::from).collect::<Vec<_>>();
         }
+
+        check_empty(table, "i18n");
     }
 
     fn parse_lifetimes(&mut self, table: &mut toml::Table) {
@@ -2532,6 +2589,8 @@ impl Vars {
         ) {
             self.lifetimes.jwk_autorotate_cron = v.into();
         }
+
+        check_empty(table, "lifetimes");
     }
 
     fn parse_logging(&mut self, table: &mut toml::Table) {
@@ -2554,6 +2613,8 @@ impl Vars {
         if let Some(v) = t_str(&mut table, "logging", "log_fmt", "LOG_FMT") {
             self.logging.log_fmt = v.into();
         }
+
+        check_empty(table, "logging");
     }
 
     fn parse_matrix(&mut self, table: &mut toml::Table) {
@@ -2567,6 +2628,8 @@ impl Vars {
         ) {
             self.matrix.msc3861_enable = v;
         }
+
+        check_empty(table, "matrix");
     }
 
     fn parse_mfa(&mut self, table: &mut toml::Table) {
@@ -2575,6 +2638,8 @@ impl Vars {
         if let Some(v) = t_bool(&mut table, "mfa", "admin_force_mfa", "ADMIN_FORCE_MFA") {
             self.mfa.admin_force_mfa = v;
         }
+
+        check_empty(table, "mfa");
     }
 
     fn parse_pam(&mut self, table: &mut toml::Table) {
@@ -2648,6 +2713,9 @@ impl Vars {
         ) {
             self.pam.authorized_keys.forced_key_expiry_days = v;
         }
+        check_empty(auth_keys, "pam.authorized_keys");
+
+        check_empty(table, "pam");
     }
 
     fn parse_pow(&mut self, table: &mut toml::Table) {
@@ -2659,6 +2727,8 @@ impl Vars {
         if let Some(v) = t_u16(&mut table, "pow", "exp", "POW_EXP") {
             self.pow.exp = v;
         }
+
+        check_empty(table, "pow");
     }
 
     fn parse_scim(&mut self, table: &mut toml::Table) {
@@ -2683,6 +2753,8 @@ impl Vars {
         if let Some(v) = t_u16(&mut table, "scim", "retry_count", "SCIM_RETRY_COUNT") {
             self.scim.retry_count = v;
         }
+
+        check_empty(table, "scim");
     }
 
     fn parse_server(&mut self, table: &mut toml::Table) {
@@ -2755,6 +2827,8 @@ impl Vars {
         if let Some(v) = t_u16(&mut table, "server", "ssp_threshold", "SSP_THRESHOLD") {
             self.server.ssp_threshold = v;
         }
+
+        check_empty(table, "server");
     }
 
     fn parse_suspicious_requests(&mut self, table: &mut toml::Table) {
@@ -2776,6 +2850,8 @@ impl Vars {
         ) {
             self.suspicious_requests.log = v;
         }
+
+        check_empty(table, "suspicious_requests");
     }
 
     fn parse_templates(&mut self, table: &mut toml::Table) {
@@ -2933,6 +3009,8 @@ impl Vars {
                     )
                 }
             }
+
+            check_empty(table, "[[templates]]");
         }
     }
 
@@ -2954,6 +3032,8 @@ impl Vars {
         ) {
             self.tls.generate_self_signed = v;
         }
+
+        check_empty(table, "tls");
     }
 
     fn parse_tos(&mut self, table: &mut toml::Table) {
@@ -2962,6 +3042,8 @@ impl Vars {
         if let Some(v) = t_u16(&mut table, "tos", "accept_timeout", "TOS_ACCEPT_TIMEOUT") {
             self.tos.accept_timeout = v;
         }
+
+        check_empty(table, "tos");
     }
 
     fn parse_user_delete(&mut self, table: &mut toml::Table) {
@@ -2975,6 +3057,8 @@ impl Vars {
         ) {
             self.user_delete.enable_self_delete = v;
         }
+
+        check_empty(table, "user_delete");
     }
 
     fn parse_user_pictures(&mut self, table: &mut toml::Table) {
@@ -3030,6 +3114,8 @@ impl Vars {
         if let Some(v) = t_bool(&mut table, "user_pictures", "public", "PICTURE_PUBLIC") {
             self.user_pictures.public = v;
         }
+
+        check_empty(table, "user_pictures");
     }
 
     fn parse_user_registration(&mut self, table: &mut toml::Table) {
@@ -3054,6 +3140,8 @@ impl Vars {
         ) {
             self.user_registration.domain_blacklist = v;
         }
+
+        check_empty(table, "user_registration");
     }
 
     fn parse_user_values(&mut self, table: &mut toml::Table) {
@@ -3096,10 +3184,10 @@ impl Vars {
             self.user_values.revalidate_during_login = v;
         }
 
-        let mut table = t_table(&mut table, "preferred_username");
+        let mut pref_username = t_table(&mut table, "preferred_username");
 
         if let Some(v) = t_str(
-            &mut table,
+            &mut pref_username,
             "user_values.preferred_username",
             "preferred_username",
             "PREFERRED_USERNAME",
@@ -3108,7 +3196,7 @@ impl Vars {
                 UserValueConfigValue::from(v.as_str());
         }
         if let Some(v) = t_bool(
-            &mut table,
+            &mut pref_username,
             "user_values.preferred_username",
             "immutable",
             "PREFERRED_USERNAME_IMMUTABLE",
@@ -3116,7 +3204,7 @@ impl Vars {
             self.user_values.preferred_username.immutable = v;
         }
         if let Some(v) = t_str_vec(
-            &mut table,
+            &mut pref_username,
             "user_values.preferred_username",
             "blacklist",
             "",
@@ -3125,7 +3213,7 @@ impl Vars {
                 v.into_iter().map(Cow::from).collect::<Vec<_>>();
         }
         if let Some(v) = t_str(
-            &mut table,
+            &mut pref_username,
             "user_values.preferred_username",
             "regex_rust",
             "",
@@ -3138,7 +3226,7 @@ impl Vars {
                 .unwrap();
         }
         if let Some(v) = t_str(
-            &mut table,
+            &mut pref_username,
             "user_values.preferred_username",
             "pattern_html",
             "",
@@ -3146,7 +3234,7 @@ impl Vars {
             self.user_values.preferred_username.pattern_html = v.into();
         }
         if let Some(v) = t_bool(
-            &mut table,
+            &mut pref_username,
             "user_values.preferred_username",
             "email_fallback",
             "PREFERRED_USERNAME_EMAIL_FALLBACK",
@@ -3156,6 +3244,9 @@ impl Vars {
 
         // linux username regex as fallback
         let _ = RE_PREFERRED_USERNAME.set(RE_LINUX_USERNAME.clone());
+
+        check_empty(pref_username, "user_values.preferred_username");
+        check_empty(table, "user_values");
     }
 
     fn parse_webauthn(&mut self, table: &mut toml::Table) {
@@ -3190,6 +3281,8 @@ impl Vars {
         ) {
             self.webauthn.no_password_exp = v;
         }
+
+        check_empty(table, "webauthn");
     }
 
     pub fn validate(&self) {
@@ -3781,7 +3874,15 @@ pub struct VarsAtproto {
     pub enable: bool,
 }
 
+fn check_empty(table: toml::Table, tbl_name: &str) {
+    if !table.is_empty() {
+        panic!("Unknown Config data in section: '{tbl_name}': {table:#?}");
+    }
+}
+
 fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<bool> {
+    let value = map.remove(key);
+
     if !env_var.is_empty()
         && let Ok(v) = env::var(env_var)
             .as_deref()
@@ -3795,13 +3896,15 @@ fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Opti
         return Some(v);
     }
 
-    let Value::Boolean(b) = map.remove(key)? else {
+    let Value::Boolean(b) = value? else {
         panic!("{}", err_t(key, parent, "bool"));
     };
     Some(b)
 }
 
 fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<i64> {
+    let value = map.remove(key);
+
     if !env_var.is_empty()
         && let Ok(v) = env::var(env_var)
             .as_deref()
@@ -3815,7 +3918,7 @@ fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Optio
         return Some(v);
     }
 
-    let Value::Integer(i) = map.remove(key)? else {
+    let Value::Integer(i) = value? else {
         panic!("{}", err_t(key, parent, "Integer"));
     };
     Some(i)
@@ -3853,18 +3956,24 @@ fn t_u8(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> 
 }
 
 pub fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<String> {
+    // Always remove the key from the map so that is_empty check's don't fail when an env
+    // var overwrites.
+    let value = map.remove(key);
+
     if !env_var.is_empty()
         && let Ok(v) = env::var(env_var)
     {
         return Some(v);
     }
-    let Value::String(s) = map.remove(key)? else {
+    let Value::String(s) = value? else {
         panic!("{}", err_t(key, parent, "String"));
     };
     Some(s)
 }
 
 fn t_str_vec(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<Vec<String>> {
+    let value = map.remove(key);
+
     if !env_var.is_empty()
         && let Ok(arr) = env::var(env_var)
     {
@@ -3882,7 +3991,7 @@ fn t_str_vec(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> O
         );
     }
 
-    let Value::Array(arr) = map.remove(key)? else {
+    let Value::Array(arr) = value? else {
         return None;
     };
     let mut res = Vec::with_capacity(arr.len());
