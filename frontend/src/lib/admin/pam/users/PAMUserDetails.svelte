@@ -18,7 +18,7 @@
     import PamAuthorizedKeys from '$lib/PamAuthorizedKeys.svelte';
 
     let {
-        user,
+        user = $bindable(),
         groupsSorted,
         onDelete,
     }: {
@@ -159,6 +159,7 @@
 
         let payload: PamUserUpdateRequest = {
             shell: user.shell,
+            home_dir: user.home_dir,
             groups: links,
         };
         let res = await fetchPut(url, payload);
@@ -198,7 +199,8 @@
         {user.email}
     </LabeledValue>
 
-    <Input label="Shell" placeholder="Shell" required bind:value={user.shell} width="10rem" />
+    <Input label="Shell" placeholder="Shell" required bind:value={user.shell} width="15rem" />
+    <Input label="Home" placeholder="Home" required bind:value={user.home_dir} width="15rem" />
 
     <h2>{ta.pam.groups}</h2>
 

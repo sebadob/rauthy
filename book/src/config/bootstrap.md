@@ -65,7 +65,7 @@ If Rauthy starts up with an empty database, you can bootstrap API keys via
 config value shown below is still supported for a single key.
 
 An example `api_keys.json`, which would create a key named `bootstrap` with access to
-`clients`, `roles`, and `groups` with all `read`, `create`, `update`, `delete`
+`clients`, `roles`, and `groups` with all `read`, `create`, `update_shell_home_dir`, `delete`
 rights could look like this:
 
 ```json
@@ -109,10 +109,10 @@ rights could look like this:
 ]
 ```
 
-The `secret` can be either `{"Plain": "..."}` or `{"Encrypted": "..."}`. Plain secrets must
-be at least 64 characters long. Encrypted secrets are encrypted with
-[`cryptr`](https://github.com/sebadob/cryptr) and base64-encoded, just like encrypted
-client secrets.
+The `secret` can be either `{"Plain": "..."}` or `{"Encrypted": "..."}`. Plain secrets must be at
+least 64 characters long. Encrypted secrets are encrypted with
+[`cryptr`](https://github.com/sebadob/cryptr) and base64-encoded, just like encrypted client
+secrets.
 
 ```admonish caution
 Only bootstrap short-lived API keys for production automation. Set `exp` to a timestamp
@@ -122,8 +122,8 @@ deployment secrets are leaked. The example timestamp above is intentionally fini
 with a short-lived value for your deployment.
 ```
 
-The legacy config documentation for bootstrapping a single API key should explain all
-further questions:
+The legacy config documentation for bootstrapping a single API key should explain all further
+questions:
 
 ```toml
 [bootstrap]

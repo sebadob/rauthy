@@ -1001,8 +1001,8 @@ VALUES ($1, $2)"#;
 
 pub async fn pam_users(data_before: Vec<PamUser>) -> Result<(), ErrorResponse> {
     let sql_1 = r#"
-INSERT INTO pam_users (id, name, gid, email, shell)
-VALUES ($1, $2, $3, $4, $5)"#;
+INSERT INTO pam_users (id, name, gid, email, shell, home_dir)
+VALUES ($1, $2, $3, $4, $5, $6)"#;
 
     let mut highest_id = 0;
     for user in &data_before {
@@ -1019,7 +1019,10 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
         for b in data_before {
             DB::hql()
-                .execute(sql_1, params!(b.id, b.name, b.gid, b.email, b.shell))
+                .execute(
+                    sql_1,
+                    params!(b.id, b.name, b.gid, b.email, b.shell, b.home_dir),
+                )
                 .await?;
         }
 
@@ -1040,7 +1043,14 @@ VALUES ($1, $2, $3, $4, $5)"#;
         for b in data_before {
             DB::pg_execute(
                 sql_1,
-                &[&(b.id as i64), &b.name, &(b.gid as i64), &b.email, &b.shell],
+                &[
+                    &(b.id as i64),
+                    &b.name,
+                    &(b.gid as i64),
+                    &b.email,
+                    &b.shell,
+                    &b.home_dir,
+                ],
             )
             .await?;
         }
