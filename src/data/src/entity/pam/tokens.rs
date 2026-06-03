@@ -20,6 +20,7 @@ pub struct PamToken {
     pub uid: u32,
     pub gid: u32,
     pub username: String,
+    pub home_dir: String,
     pub roles: Vec<String>,
     pub groups: Vec<String>,
 }
@@ -29,12 +30,13 @@ impl Debug for PamToken {
         write!(
             f,
             "PamAuthToken {{ id: {}(...), exp: {}, user_id: {}, user_email: {}, \
-            uid: {}, gid: {} username: {}, roles: {:?}, groups: {:?} }}",
+            uid: {}, gid: {} username: {}, home_dir: {}, roles: {:?}, groups: {:?} }}",
             &self.id[..5],
             self.exp,
             self.user_id,
             self.user_email,
             self.username,
+            self.home_dir,
             self.uid,
             self.gid,
             self.roles,
@@ -52,6 +54,7 @@ impl PamToken {
         let lifetime_secs = 300;
         // let lifetime_secs = 16 * 3600;
 
+        let home_dir = pam_user.home_dir();
         let roles = user.get_roles();
         let groups = user.get_groups();
 
@@ -65,6 +68,7 @@ impl PamToken {
             uid: pam_user.id,
             gid: pam_user.gid,
             username: pam_user.name,
+            home_dir,
             roles,
             groups,
         };

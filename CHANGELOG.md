@@ -16,13 +16,26 @@ in your config. Just be prepared to adjust your config when you update.
 
 #### Validate Config
 
-The CLI now has an option to validate an existing Rauthy Config:
+The CLI can now validate an existing Rauthy Config:
 
 ```bash
 ./rauthy validate-config -p config.toml
 ```
 
 [#1588](https://github.com/sebadob/rauthy/pull/1588)
+
+#### PAM User custom home
+
+You can now set a custom home directory for PAM users. To make this work end-to-end, an update of
+the `rauthy-pam-nss` service is necessary as well.
+
+[#1592](https://github.com/sebadob/rauthy/pull/1592)
+
+#### API Keys Advanced Bootstrap
+
+API Keys can now be bootstrapped during advanced bootstrapping from JSON files.
+
+[#1585](https://github.com/sebadob/rauthy/pull/1585)
 
 ### Bugfix
 
@@ -32,6 +45,8 @@ The CLI now has an option to validate an existing Rauthy Config:
 - When then config expected an `Integer` value that could not be parsed successfully, you might have
   seen a misleading error message in some cases.
   [#1586](https://github.com/sebadob/rauthy/pull/1586)
+- PAM user-groups were not deleted when their user was deleted.
+  [#1591](https://github.com/sebadob/rauthy/pull/1591)
 
 ## v0.35.2
 
