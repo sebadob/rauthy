@@ -347,6 +347,7 @@ export let I18nAdminUk: I18nAdmin = {
         addHost: 'Новий PAM хост',
         addUser: 'Новий PAM користувач',
         deleteHost: 'Ви справді хочете видалити цей хост?',
+        deleteUser: 'Do you really want to delete this user?',
         groupDescGeneric: `Загальні групи є аналогом записів, що зазвичай знаходяться в /etc/group.
             Користувачів можна до них призначати, і вони повертаються системою через NSS Lookups.`,
         groupDescHost: `Групи хостів використовуються для групування хостів. NSS-запити хоста в межах групи

@@ -20,7 +20,6 @@
     import PAMUserDetails from '$lib/admin/pam/users/PAMUserDetails.svelte';
     import type { PamGroupsSorted } from '$lib/admin/pam/types';
 
-    let t = useI18n();
     let ta = useI18nAdmin();
 
     let refAddNew: undefined | HTMLButtonElement = $state();
@@ -243,7 +242,14 @@
 <ContentAdmin>
     <div id="pam">
         {#if isUser && selectedUser}
-            <PAMUserDetails user={selectedUser} {groupsSorted} />
+            <PAMUserDetails
+                user={selectedUser}
+                {groupsSorted}
+                onDelete={() => {
+                    fetchUsers();
+                    selectedUser = undefined;
+                }}
+            />
         {:else if isGroup && selectedGroup}
             <PAMGroupDetails
                 group={selectedGroup}

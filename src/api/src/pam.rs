@@ -1125,6 +1125,35 @@ pub async fn put_pam_user(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// Delete a PAM user
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    delete,
+    path = "/pam/users/{uid}",
+    tag = "pam",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
+#[delete("/pam/users/{uid}")]
+pub async fn delete_pam_user(
+    uid: Path<u32>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Pam, AccessRights::Delete)?;
+
+    PamUser::find_by_id(uid.into_inner())
+        .await?
+        .delete()
+        .await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
 /// Update a PAM user
 ///
 /// **Permissions**

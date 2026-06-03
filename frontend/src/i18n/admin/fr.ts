@@ -358,6 +358,7 @@ export let I18nAdminFr: I18nAdmin = {
         addHost: 'Nouvel hôte PAM',
         addUser: 'Nouvel utilisateur PAM',
         deleteHost: 'Voulez-vous vraiment supprimer cet hôte ?',
+        deleteUser: 'Voulez-vous vraiment supprimer cet utilisateur ?',
         groupDescGeneric: `Les groupes génériques sont l'équivalent des entrées que l'on trouve généralement dans
             /etc/group. Des utilisateurs peuvent y être affectés et ces groupes sont renvoyés au système par
             les requêtes NSS.`,
