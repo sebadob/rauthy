@@ -296,6 +296,7 @@ export interface I18nAdmin {
         addHost: string;
         addUser: string;
         deleteHost: string;
+        deleteUser: string;
         groupDescGeneric: string;
         groupDescHost: string;
         groupDescLocal: string;

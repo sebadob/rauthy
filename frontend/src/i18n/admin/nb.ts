@@ -335,6 +335,7 @@ export let I18nAdminNb: I18nAdmin = {
         addHost: 'Ny PAM-vert',
         addUser: 'Ny PAM-bruker',
         deleteHost: 'Skal denne verten slettes?',
+        deleteUser: 'Do you really want to delete this user?',
         groupDescGeneric: `Generiske grupper tilsvarer oppføringer man vanligvis finner i /etc/group. Brukere kan tilordnes disse og de returneres til systemet via NSS-oppslag.`,
         groupDescHost: `Vertgrupper brukes til å gruppere verter. NSS-oppslag av en vert i gruppen returnerer alle andre verter i gruppen. Brukere får tilgang til verter ved å tilordnes en vertgruppe.`,
         groupDescLocal: `Lokale grupper oppfører seg nesten identisk med generiske grupper, med den forskjellen at de har en ID i Rauthy-databasen, men NSS-proxyen på den aktuelle verten kobler dem til en ID fra /etc/group. Slik kan Rauthy-brukere tilordnes grupper som allerede finnes lokalt.`,

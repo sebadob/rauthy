@@ -327,6 +327,7 @@ export let I18nAdminZh: I18nAdmin = {
         addHost: '新建PAM主机',
         addUser: '新建PAM用户',
         deleteHost: '您真的要删除此主机吗？',
+        deleteUser: 'Do you really want to delete this user?',
         groupDescGeneric: `通用组是通常在/etc/group中找到的条目的对应物。
             用户可以分配到这些组，并通过NSS查找返回给系统。`,
         groupDescHost: `主机组用于对主机进行分组。对组内主机的NSS查找会返回组内的所有其他主机作为结果。

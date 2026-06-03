@@ -355,6 +355,7 @@ export let I18nAdminDe: I18nAdmin = {
         addHost: 'Neuer PAM Host',
         addUser: 'Neuer PAM Benutzer',
         deleteHost: 'Soll dieser Host wirklich gelöscht werden?',
+        deleteUser: 'Soll dieser User wirklich gelöscht werden?',
         groupDescGeneric: `Generic Gruppen sind das Pendant zu Einträgen, die man überlicherweise in /etc/group finden
             würde. Benutzer können diesen zugewiesen werden und sie werden durch NSS Lookups ans System zurückgeliefert.`,
         groupDescHost: `Host-Gruppen dienen der Gruppierung von Hosts. NSS lookups eines Hosts innerhalb der Gruppe

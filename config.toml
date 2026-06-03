@@ -871,8 +871,8 @@ health_check_delay_secs = 30
 # These will be ignored as long as `hiqlite = true`.
 #
 # overwritten by: PG_HOST
-pg_host = '/var/run/postgresql'
-#pg_host = 'localhost'
+#pg_host = '/var/run/postgresql'
+pg_host = 'localhost'
 # default: 5432
 # overwritten by: PG_PORT
 pg_port = 5432

@@ -204,6 +204,31 @@ VALUES ($1, $2, $3)
 
         Ok(())
     }
+
+    /// Deletes this user and the linked user group.
+    pub async fn delete(self) -> Result<(), ErrorResponse> {
+        let sql_user = "DELETE FROM pam_users WHERE id = $1";
+        let sql_group = "DELETE FROM pam_groups WHERE name = $1 AND typ = $2";
+
+        if is_hiqlite() {
+            DB::hql()
+                .txn([
+                    (sql_user, params!(self.id)),
+                    (sql_group, params!(self.name, PamGroupType::User.as_str())),
+                ])
+                .await?;
+        } else {
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
+
+            DB::pg_txn_append(&txn, sql_user, &[&(self.id as i64)]).await?;
+            DB::pg_txn_append(&txn, sql_group, &[&self.name, &PamGroupType::User.as_str()]).await?;
+
+            txn.commit().await?;
+        }
+
+        Ok(())
+    }
 }
 
 impl PamUser {
