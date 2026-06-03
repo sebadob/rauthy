@@ -16,7 +16,7 @@ Most access rights requests mimic their HTTP methods:
 
 - `GET` -> `read`
 - `POST` -> `create`
-- `PUT` -> `update_shell_home_dir`
+- `PUT` -> `update`
 - `DELETE` -> `delete`
 
 To use an API Key, you need to provide it with the HTTP `Authorization` header, but instead of

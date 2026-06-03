@@ -65,7 +65,7 @@ If Rauthy starts up with an empty database, you can bootstrap API keys via
 config value shown below is still supported for a single key.
 
 An example `api_keys.json`, which would create a key named `bootstrap` with access to
-`clients`, `roles`, and `groups` with all `read`, `create`, `update_shell_home_dir`, `delete`
+`clients`, `roles`, and `groups` with all `read`, `create`, `update`, `delete`
 rights could look like this:
 
 ```json
