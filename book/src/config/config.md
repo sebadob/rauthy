@@ -399,15 +399,16 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
 #pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 
-# You can provide an API Key during the initial prod database
-# bootstrap. This key must match the format and pass validation.
+# You can provide a single API Key during the initial prod database
+# bootstrap. This legacy config value must match the format and pass validation.
+# Prefer `api_keys.json` in `bootstrap_dir` for new deployments.
 # You need to provide it as a base64 encoded JSON in the format:
 #
 # ```
 # struct ApiKeyRequest {
 #     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
 #     name: String,
-#     /// Unix timestamp in seconds in the future (max year 2099)
+#     /// Unix timestamp in seconds
 #     exp: Option<i64>,
 #     access: Vec<ApiKeyAccess>,
 # }
@@ -429,6 +430,7 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 #     Scopes,
 #     UserAttributes,
 #     Users,
+#     Pam,
 # }
 #
 # #[serde(rename_all="lowercase")]
@@ -463,6 +465,7 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # try to parse and apply them during the bootstrapping process.
 #
 # The following files will be parsed in the given directory:
+# - api_keys.json
 # - roles.json
 # - groups.json
 # - scopes.json

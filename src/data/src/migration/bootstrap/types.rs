@@ -12,6 +12,7 @@
 //! used. If it is not given, a random ID will be generated.
 
 use crate::language::Language;
+use rauthy_api_types::api_keys::{AccessGroup, AccessRights};
 use rauthy_api_types::clients::ScimClientRequestResponse;
 use rauthy_api_types::cust_validation::*;
 use rauthy_api_types::oidc::JwkKeyPairAlg;
@@ -19,8 +20,9 @@ use rauthy_api_types::users::{UserAttrValueRequest, UserValuesRequest};
 use rauthy_common::regex::*;
 use regex::Regex;
 use serde::Deserialize;
+use std::fmt::{Debug, Formatter};
 use std::sync::LazyLock;
-use validator::Validate;
+use validator::{Validate, ValidationError, ValidationErrors};
 
 pub static RE_DB_ID: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{24}$").unwrap());
 
@@ -70,6 +72,73 @@ pub struct Scope {
     /// `[UserAttribute.name]`s that should be included in the `id_token` if this scope is
     /// requested.
     pub attr_include_id: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ApiKey {
+    /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
+    pub name: String,
+    /// Unix timestamp in seconds.
+    pub exp: Option<i64>,
+    pub secret: ApiKeySecret,
+    pub access: Vec<ApiKeyAccess>,
+}
+
+impl Validate for ApiKey {
+    fn validate(&self) -> Result<(), ValidationErrors> {
+        let mut errors = ValidationErrors::new();
+
+        if !RE_API_KEY.is_match(&self.name) {
+            let mut err = ValidationError::new("^[a-zA-Z0-9_-/]{2,24}$");
+            err.add_param(std::borrow::Cow::from("value"), &self.name);
+            errors.add("name", err);
+        }
+
+        if let Some(exp) = self.exp
+            && exp < 1719784800
+        {
+            let mut err = ValidationError::new("range");
+            err.add_param(std::borrow::Cow::from("min"), &1719784800);
+            err.add_param(std::borrow::Cow::from("value"), &exp);
+            errors.add("exp", err);
+        }
+
+        if self.access.is_empty() {
+            let mut err = ValidationError::new("length");
+            err.add_param(std::borrow::Cow::from("min"), &1);
+            errors.add("access", err);
+        } else {
+            errors.merge_self("access", self.access.validate());
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub enum ApiKeySecret {
+    // Plain text secret
+    Plain(String),
+    // Must be encrypted using [cryptr](https://github.com/sebadob/cryptr) with an `ENC_KEY` that
+    // the Rauthy instance must have available. The encrypted data is expected as **base64**.
+    Encrypted(String),
+}
+
+impl Debug for ApiKeySecret {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("<hidden>")
+    }
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct ApiKeyAccess {
+    pub group: AccessGroup,
+    #[validate(length(min = 1))]
+    pub access_rights: Vec<AccessRights>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -210,4 +279,26 @@ pub struct User {
 pub enum UserPassword {
     Plain(String),
     Argon2ID(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use validator::Validate;
+
+    #[test]
+    fn parses_api_keys_bootstrap_example() {
+        let api_keys = serde_json::from_str::<Vec<ApiKey>>(include_str!(
+            "../../../../../bootstrap/api_keys.json"
+        ))
+        .expect("api_keys bootstrap example should parse");
+
+        assert_eq!(api_keys.len(), 1);
+        assert_eq!(api_keys[0].name, "bootstrap");
+        for api_key in &api_keys {
+            api_key
+                .validate()
+                .expect("api_keys bootstrap example should validate");
+        }
+    }
 }
