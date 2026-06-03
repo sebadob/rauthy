@@ -47,6 +47,8 @@ export interface PamUserCreateRequest {
 export interface PamUserUpdateRequest {
     /// Validation: max length 24
     shell: string;
+    /// Validation: max length 128
+    home_dir?: string;
     groups: PamGroupUserLink[];
 }
 
@@ -119,6 +121,7 @@ export interface PamUserResponse {
     gid: number;
     email: string;
     shell: string;
+    home_dir?: string;
     authorized_keys?: PamSshAuthKeyResponse[];
 }
 
@@ -128,6 +131,7 @@ export interface PamUserDetailsResponse {
     gid: number;
     email: string;
     shell: string;
+    home_dir?: string;
     groups: PamGroupUserLink[];
     authorized_keys?: PamSshAuthKeyResponse[];
 }

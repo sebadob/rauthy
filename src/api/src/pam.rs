@@ -1060,6 +1060,7 @@ pub async fn get_pam_user(
 
     let pam_user = PamUser::find_by_id(uid.into_inner()).await?;
 
+    let home_dir = pam_user.home_dir();
     let groups = PamGroupUserLink::find_for_user(pam_user.id)
         .await?
         .into_iter()
@@ -1084,6 +1085,7 @@ pub async fn get_pam_user(
         gid: pam_user.gid,
         email: pam_user.email,
         shell: pam_user.shell,
+        home_dir,
         groups,
         authorized_keys,
     };
@@ -1117,8 +1119,8 @@ pub async fn put_pam_user(
 
     let uid = uid.into_inner();
     let pam_user = PamUser::find_by_id(uid).await?;
-    if pam_user.shell != payload.shell {
-        PamUser::update_shell(pam_user.id, payload.shell).await?;
+    if pam_user.shell != payload.shell || pam_user.home_dir != payload.home_dir {
+        PamUser::update_shell_home_dir(pam_user.id, payload.shell, payload.home_dir).await?;
     }
     PamUser::update_groups(pam_user.id, payload.groups).await?;
 

@@ -186,6 +186,8 @@ pub struct PamUserCreateRequest {
 pub struct PamUserUpdateRequest {
     #[validate(length(max = 24))]
     pub shell: String,
+    #[validate(length(max = 128))]
+    pub home_dir: Option<String>,
     pub groups: Vec<PamGroupUserLink>,
 }
 
@@ -294,6 +296,7 @@ pub struct PamUserResponse {
     pub gid: u32,
     pub email: String,
     pub shell: String,
+    pub home_dir: String,
     pub authorized_keys: Option<Vec<PamSshAuthKeyResponse>>,
 }
 
@@ -304,6 +307,7 @@ pub struct PamUserDetailsResponse {
     pub gid: u32,
     pub email: String,
     pub shell: String,
+    pub home_dir: String,
     pub groups: Vec<PamGroupUserLink>,
     pub authorized_keys: Option<Vec<PamSshAuthKeyResponse>>,
 }

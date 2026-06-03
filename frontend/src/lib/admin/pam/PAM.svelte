@@ -243,7 +243,7 @@
     <div id="pam">
         {#if isUser && selectedUser}
             <PAMUserDetails
-                user={selectedUser}
+                bind:user={selectedUser}
                 {groupsSorted}
                 onDelete={() => {
                     fetchUsers();
