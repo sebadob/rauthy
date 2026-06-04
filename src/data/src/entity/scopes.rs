@@ -24,6 +24,8 @@ pub struct Scope {
     pub attr_include_access: Option<String>,
     // Custom user attributes as CSV to include in the id token
     pub attr_include_id: Option<String>,
+    // TODO this could be used to try(!) to insert claims at the token root instead of at `custom`.
+    // pub claims_at_root: bool,
 }
 
 // CRUD
