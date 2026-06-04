@@ -419,6 +419,11 @@ export let I18nAdminZh: I18nAdmin = {
         name: '角色名称',
     },
     scopes: {
+        claimsAtRoot: 'Emit claims at token root',
+        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a mapped
+            attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
         defaultNoMod: '这是默认OIDC作用域。这些是不可变的。',
         delete1: '您确定要删除此作用域吗？',
         deleteDefault: '默认OIDC作用域无法删除。',

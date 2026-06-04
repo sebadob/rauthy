@@ -425,6 +425,11 @@ export let I18nAdminKo: I18nAdmin = {
         name: '역할 이름',
     },
     scopes: {
+        claimsAtRoot: 'Emit claims at token root',
+        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a mapped
+            attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
         defaultNoMod: '이것은 OIDC 기본 범위 중 하나입니다. 변경할 수 없습니다.',
         delete1: '이 범위를 삭제하시겠습니까?',
         deleteDefault: 'OIDC 기본 범위는 삭제할 수 없습니다.',

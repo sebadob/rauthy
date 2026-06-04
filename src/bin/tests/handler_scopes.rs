@@ -28,6 +28,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         scope: "scope123".to_string(),
         attr_include_access: None,
         attr_include_id: None,
+        claims_at_root: false,
     };
     let res = client
         .post(&url)
@@ -96,6 +97,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         scope: "scope456".to_string(),
         attr_include_access: None,
         attr_include_id: None,
+        claims_at_root: false,
     };
     let url_name = format!("{}/{}", url, scope.id);
     let res = client

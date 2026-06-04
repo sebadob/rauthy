@@ -455,6 +455,11 @@ export let I18nAdminDe: I18nAdmin = {
         name: 'Rollenname',
     },
     scopes: {
+        claimsAtRoot: 'Emit claims at token root',
+        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a mapped
+            attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
         defaultNoMod: 'Dies ist ein Default OIDC Scope. Diese sind unveränderbar.',
         delete1: 'Soll dieser Scope wirklich gelöscht werden?',
         deleteDefault: 'OIDC default scopes cannot be deleted',
