@@ -14,6 +14,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tracing::debug;
+use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, FromPgRow)]
 pub struct Scope {
@@ -26,8 +27,6 @@ pub struct Scope {
     // TODO this could be used to try(!) to insert claims at the token root instead of at `custom`.
     // pub claims_at_root: bool,
 }
-
-use utoipa::ToSchema;
 
 // CRUD
 impl Scope {
