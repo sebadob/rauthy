@@ -131,6 +131,8 @@ pub struct JwtAccessClaims<'a> {
     pub groups: Option<Vec<&'a str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
+    // #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    // pub custom_flattened: Option<HashMap<String, serde_json::Value>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
