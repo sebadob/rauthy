@@ -32,6 +32,7 @@
         ['Scopes', false, false, false, false],
         ['UserAttributes', false, false, false, false],
         ['Users', false, false, false, false],
+        ['AuthProviders', false, false, false, false],
     ]);
 
     $effect(() => {
@@ -76,6 +77,9 @@
                         break;
                     case 'Users':
                         idx = 11;
+                        break;
+                    case 'AuthProviders':
+                        idx = 12;
                         break;
                 }
                 if (idx === undefined) {

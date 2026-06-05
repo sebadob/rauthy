@@ -316,6 +316,7 @@ pub enum AccessGroup {
     UserAttributes,
     Users,
     Pam,
+    AuthProviders,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -430,6 +431,7 @@ impl From<AccessGroup> for rauthy_api_types::api_keys::AccessGroup {
             AccessGroup::UserAttributes => Self::UserAttributes,
             AccessGroup::Users => Self::Users,
             AccessGroup::Pam => Self::Pam,
+            AccessGroup::AuthProviders => Self::AuthProviders,
         }
     }
 }
@@ -473,6 +475,7 @@ impl From<rauthy_api_types::api_keys::AccessGroup> for AccessGroup {
             rauthy_api_types::api_keys::AccessGroup::UserAttributes => Self::UserAttributes,
             rauthy_api_types::api_keys::AccessGroup::Users => Self::Users,
             rauthy_api_types::api_keys::AccessGroup::Pam => Self::Pam,
+            rauthy_api_types::api_keys::AccessGroup::AuthProviders => Self::AuthProviders,
         }
     }
 }
@@ -498,5 +501,53 @@ impl From<rauthy_api_types::api_keys::ApiKeyAccess> for ApiKeyAccess {
                 .map(|ar| ar.into())
                 .collect(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AccessGroup, AccessRights, ApiKey, ApiKeyAccess};
+
+    // `AccessGroup` is bincode-serialized by variant index for storage, so new
+    // variants must be appended (see the note above the enum). These tests guard the
+    // `AuthProviders` variant added for issue #1554.
+    #[test]
+    fn auth_providers_round_trips_between_layers() {
+        let api: rauthy_api_types::api_keys::AccessGroup = AccessGroup::AuthProviders.into();
+        assert_eq!(api, rauthy_api_types::api_keys::AccessGroup::AuthProviders);
+        let back: AccessGroup = api.into();
+        assert_eq!(back, AccessGroup::AuthProviders);
+    }
+
+    #[test]
+    fn validate_access_honors_auth_providers() {
+        let key = ApiKey {
+            name: "k".to_string(),
+            secret: vec![],
+            created: 0,
+            expires: None,
+            access: vec![ApiKeyAccess {
+                group: AccessGroup::AuthProviders,
+                access_rights: vec![AccessRights::Read, AccessRights::Create],
+            }],
+        };
+        assert!(
+            key.validate_access(&AccessGroup::AuthProviders, &AccessRights::Read)
+                .is_ok()
+        );
+        assert!(
+            key.validate_access(&AccessGroup::AuthProviders, &AccessRights::Create)
+                .is_ok()
+        );
+        // a right that was not granted
+        assert!(
+            key.validate_access(&AccessGroup::AuthProviders, &AccessRights::Delete)
+                .is_err()
+        );
+        // a different group entirely
+        assert!(
+            key.validate_access(&AccessGroup::Clients, &AccessRights::Read)
+                .is_err()
+        );
     }
 }

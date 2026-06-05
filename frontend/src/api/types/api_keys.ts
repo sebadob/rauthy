@@ -10,7 +10,8 @@ export type AccessGroup =
     | 'Sessions'
     | 'Scopes'
     | 'UserAttributes'
-    | 'Users';
+    | 'Users'
+    | 'AuthProviders';
 export type AccessRight = 'read' | 'create' | 'update' | 'delete';
 
 export interface ApiKeyAccess {

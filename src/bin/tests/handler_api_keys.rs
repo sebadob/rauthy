@@ -98,6 +98,48 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), StatusCode::OK);
 
+    // issue #1554: an API key with `AuthProviders` access can reach the upstream
+    // provider endpoints, which used to be admin-session-only.
+    payload.access = vec![ApiKeyAccess {
+        group: AccessGroup::AuthProviders,
+        access_rights: vec![AccessRights::Read],
+    }];
+    let res = client
+        .put(&url_put)
+        .headers(auth_headers.clone())
+        .json(&payload)
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+
+    // listing providers is `POST /providers` (an admin route, now API-key accessible)
+    let url_providers = format!("{}/providers", get_backend_url());
+    let res = client
+        .post(&url_providers)
+        .header(AUTHORIZATION, &key_header)
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+
+    // without `AuthProviders` access, the same call is forbidden
+    payload.access = vec![ApiKeyAccess {
+        group: AccessGroup::Groups,
+        access_rights: vec![AccessRights::Read],
+    }];
+    let res = client
+        .put(&url_put)
+        .headers(auth_headers.clone())
+        .json(&payload)
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+    let res = client
+        .post(&url_providers)
+        .header(AUTHORIZATION, &key_header)
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
     // let our key expire
     let exp_ts = Utc::now().sub(chrono::Duration::seconds(1)).timestamp();
     payload.exp = Some(exp_ts);
