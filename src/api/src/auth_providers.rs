@@ -491,8 +491,11 @@ pub async fn delete_provider_img(
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
+    // Clearing the logo only mutates the provider's image, it does not remove the
+    // provider, so it maps to `Update` (mirroring `put_provider_img`). `Delete` is
+    // reserved for removing the provider entity itself.
     principal
-        .validate_api_key_or_admin_session(AccessGroup::AuthProviders, AccessRights::Delete)?;
+        .validate_api_key_or_admin_session(AccessGroup::AuthProviders, AccessRights::Update)?;
 
     Logo::delete(&id.into_inner(), &LogoType::AuthProvider).await?;
     Ok(HttpResponse::Ok().finish())
