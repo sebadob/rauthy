@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::entity::scopes::Scope as ScopeEntity;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::migration::bootstrap::bootstrap_data;
 use crate::migration::bootstrap::types::Scope;
@@ -38,8 +39,8 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
         // `claims_at_root` is only meaningful for custom scopes; normalize it so a
         // default OIDC scope can never be stored as requesting root emission.
-        let claims_at_root = scope.claims_at_root.unwrap_or(false)
-            && crate::entity::scopes::Scope::is_custom(&scope.name);
+        let claims_at_root =
+            scope.claims_at_root.unwrap_or(false) && ScopeEntity::is_custom(&scope.name);
 
         let id = scope.id.unwrap_or_else(new_store_id);
 
