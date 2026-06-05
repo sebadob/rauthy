@@ -254,17 +254,23 @@ pub const RESERVED_ROOT_CLAIMS: &[&str] = &[
 pub fn validate_no_reserved_collision(
     flattened: &HashMap<String, serde_json::Value>,
 ) -> Result<(), ErrorResponse> {
+    // Hot path: this runs on every token issuance, so avoid any allocation in the
+    // overwhelmingly common no-collision case. `.any()` short-circuits and collects
+    // nothing.
+    if !flattened
+        .keys()
+        .any(|k| RESERVED_ROOT_CLAIMS.contains(&k.as_str()))
+    {
+        return Ok(());
+    }
+
+    // Cold path: a scope is misconfigured. Only now do we allocate to collect the
+    // full set of offenders, sorted for a stable, debuggable error message.
     let mut collisions = flattened
         .keys()
         .filter(|k| RESERVED_ROOT_CLAIMS.contains(&k.as_str()))
         .map(|k| k.as_str())
         .collect::<Vec<_>>();
-
-    if collisions.is_empty() {
-        return Ok(());
-    }
-
-    // sort for a stable, debuggable error message
     collisions.sort_unstable();
     Err(ErrorResponse::new(
         ErrorResponseType::Internal,
