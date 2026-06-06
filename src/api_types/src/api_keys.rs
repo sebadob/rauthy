@@ -5,6 +5,7 @@ use validator::Validate;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum AccessGroup {
+    ApiKeys,
     Blacklist,
     Clients,
     Events,
