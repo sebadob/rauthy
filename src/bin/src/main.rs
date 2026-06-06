@@ -43,6 +43,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 server::run(args.config_file, test_mode).await?
             }
         }
+        Args::Bootstrap(args) => utils::bootstrap::run(args).await?,
         Args::GenerateConfig(args) => utils::gen_config::generate(args).await?,
         Args::ValidateConfig(args) => utils::validate_config::validate(args).await?,
         Args::GenerateEncKey(args) => utils::gen_enc_keys::generate(args).await?,

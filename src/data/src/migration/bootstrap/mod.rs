@@ -7,6 +7,7 @@ use tracing::{debug, info};
 
 mod api_key;
 mod clients;
+pub mod generated_secrets;
 mod groups;
 mod jwks;
 mod rauthy_admin;
@@ -56,6 +57,15 @@ macro_rules! bootstrap_data {
 }
 
 pub(crate) use bootstrap_data;
+
+pub async fn purge_expired_generated_secrets() -> Result<(), ErrorResponse> {
+    let path = &crate::rauthy_config::RauthyConfig::get()
+        .vars
+        .bootstrap
+        .generated_secrets_file;
+    generated_secrets::purge_if_expired(path.as_ref()).await?;
+    Ok(())
+}
 
 /// Initializes an empty production database for a new deployment
 pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {

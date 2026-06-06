@@ -104,6 +104,77 @@ is very safe while still not being way over the top. If we wanted the same level
 256-bit random bytes key, in alphanumeric form it would be ~43 characters. We have 48 here, which
 even exceeds it. Anything bigger would be a waste of resources.
 
+## Bootstrap Generated Secrets
+
+When `clients.json` or `users.json` uses `"generate"`, Rauthy writes the plaintext values into an
+encrypted local container before inserting the matching database rows. The CLI can read this
+container without starting or contacting the Rauthy server.
+
+The CLI must have the same encryption keys that were active during bootstrap:
+
+```bash
+export ENC_KEY_ACTIVE='2026-06-06'
+export ENC_KEYS='2026-06-06/<base64-key>'
+```
+
+You can also pass them explicitly:
+
+```bash
+rauthy bootstrap get \
+  --file data/bootstrap.secrets.enc \
+  --enc-key-active '2026-06-06' \
+  --enc-keys '2026-06-06/<base64-key>' \
+  --format env
+```
+
+If your deployment uses `USE_VAULT_CONFIG=true`, provide `ENC_KEY_ACTIVE` and `ENC_KEYS` explicitly
+or via the local environment. `rauthy bootstrap get` is an offline decrypt command and intentionally
+does not fetch config from Vault.
+
+To print only one value, use `raw` with an exact selector:
+
+```bash
+rauthy bootstrap get \
+  --file data/bootstrap.secrets.enc \
+  --kind client \
+  --id my-service \
+  --field secret \
+  --format raw
+```
+
+`json` preserves every field:
+
+```bash
+rauthy bootstrap get \
+  --file data/bootstrap.secrets.enc \
+  --kind user \
+  --id admin@example.com \
+  --field password \
+  --format json
+```
+
+`env` emits collision-safe names containing the kind, sanitized id, and field:
+
+```bash
+rauthy bootstrap get --file data/bootstrap.secrets.enc --format env
+```
+
+Example output:
+
+```bash
+RAUTHY_BOOTSTRAP_CLIENT_MY_SERVICE_SECRET=...
+RAUTHY_BOOTSTRAP_USER_ADMIN_EXAMPLE_COM_PASSWORD=...
+```
+
+After you have stored the values somewhere safe, purge the container:
+
+```bash
+rauthy bootstrap purge --file data/bootstrap.secrets.enc
+```
+
+Purging is idempotent: if the file is already absent, the command reports that and exits
+successfully.
+
 ## Hash Passwords
 
 If you want to hash a password for bootstrapping, you can do it like so:
@@ -118,4 +189,4 @@ more if you want to be extra secure.
 
 ## Serve Rauthy
 
-The last option here is `rauthy serve`. This will actually launch Rauthy. 
+The last option here is `rauthy serve`. This will actually launch Rauthy.

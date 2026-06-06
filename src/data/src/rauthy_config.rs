@@ -2,6 +2,7 @@ use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
+use crate::migration::bootstrap::generated_secrets;
 use crate::vault_config::VaultConfig;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
@@ -340,6 +341,8 @@ impl Default for Vars {
                 api_key: None,
                 api_key_secret: None,
                 bootstrap_dir: "bootstrap".into(),
+                generated_secrets_file: String::new().into(),
+                generated_secrets_ttl: 600,
             },
             cred_stuff_detect: VarsCredStuff {
                 blacklist_duration: 86400,
@@ -1110,6 +1113,7 @@ impl Vars {
         slf.parse_webauthn(&mut table);
 
         let node_config = slf.parse_hiqlite_config(&mut table).await;
+        slf.resolve_bootstrap_generated_secrets_file(&node_config);
 
         check_empty(table, "<root>");
 
@@ -1418,8 +1422,31 @@ impl Vars {
         if let Some(v) = t_str(&mut table, "bootstrap", "bootstrap_dir", "BOOTSTRAP_DIR") {
             self.bootstrap.bootstrap_dir = v.into();
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "bootstrap",
+            "generated_secrets_file",
+            "BOOTSTRAP_GENERATED_SECRETS_FILE",
+        ) {
+            self.bootstrap.generated_secrets_file = v.into();
+        }
+        if let Some(v) = t_u64(
+            &mut table,
+            "bootstrap",
+            "generated_secrets_ttl",
+            "BOOTSTRAP_GENERATED_SECRETS_TTL",
+        ) {
+            self.bootstrap.generated_secrets_ttl = v;
+        }
 
         check_empty(table, "bootstrap");
+    }
+
+    fn resolve_bootstrap_generated_secrets_file(&mut self, node_config: &NodeConfig) {
+        if self.bootstrap.generated_secrets_file.is_empty() {
+            self.bootstrap.generated_secrets_file =
+                generated_secrets::default_file_path(&node_config.data_dir).into();
+        }
     }
 
     fn parse_cred_stuff(&mut self, table: &mut toml::Table) {
@@ -3430,6 +3457,8 @@ pub struct VarsBootstrap {
     pub api_key: Option<String>,
     pub api_key_secret: Option<String>,
     pub bootstrap_dir: Cow<'static, str>,
+    pub generated_secrets_file: Cow<'static, str>,
+    pub generated_secrets_ttl: u64,
 }
 
 #[derive(Debug)]
@@ -3930,6 +3959,16 @@ fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) ->
             panic!("{}", err_t(key, parent, "u32"));
         }
         Some(v as u32)
+    } else {
+        None
+    }
+}
+fn t_u64(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u64> {
+    if let Some(v) = t_i64(map, parent, key, env_overwrite) {
+        if v < 0 {
+            panic!("{}", err_t(key, parent, "u64"));
+        }
+        Some(v as u64)
     } else {
         None
     }
