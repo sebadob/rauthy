@@ -1,4 +1,4 @@
-use crate::database::DB;
+use crate::database::{Cache, DB};
 use crate::entity::api_keys::ApiKeyEntity;
 use crate::migration::bootstrap::bootstrap_data;
 use crate::migration::bootstrap::generated_secrets::{GeneratedSecretEntry, GeneratedSecretKey};
@@ -38,13 +38,12 @@ async fn bootstrap_legacy_config_api_key() -> Result<(), ErrorResponse> {
 
     debug!("Bootstrapping API Key:\n{req:?}");
     let key_name = req.name.clone();
-    let mut generated_secret = ApiKeyEntity::create(
+    create_or_update_api_key_access(
         req.name,
         req.exp,
         req.access.into_iter().map(|a| a.into()).collect(),
     )
     .await?;
-    generated_secret.zeroize();
 
     if let Some(secret_plain) = RauthyConfig::get().vars.bootstrap.api_key_secret.as_ref() {
         set_api_key_secret(&key_name, secret_plain).await?;
@@ -64,23 +63,25 @@ async fn bootstrap_api_keys_json() -> Result<(), ErrorResponse> {
 
         match api_key.secret {
             ApiKeySecret::Generate => {
-                let prepared = ApiKeyEntity::prepare(api_key.name, api_key.exp, access)?;
-                let bootstrap = &RauthyConfig::get().vars.bootstrap;
-                let mut token = prepared.token.clone();
-                upsert_generated_api_key_token(
-                    bootstrap.generated_secrets_file.as_ref(),
-                    bootstrap.generated_secrets_ttl,
-                    &key_name,
-                    &token,
-                )
-                .await?;
-                token.zeroize();
-                ApiKeyEntity::insert_prepared(prepared).await?;
+                if api_key_exists(&key_name).await? {
+                    ApiKeyEntity::update(&key_name, api_key.exp, access).await?;
+                } else {
+                    let prepared = ApiKeyEntity::prepare(api_key.name, api_key.exp, access)?;
+                    let bootstrap = &RauthyConfig::get().vars.bootstrap;
+                    let mut token = prepared.token.clone();
+                    upsert_generated_api_key_token(
+                        bootstrap.generated_secrets_file.as_ref(),
+                        bootstrap.generated_secrets_ttl,
+                        &key_name,
+                        &token,
+                    )
+                    .await?;
+                    token.zeroize();
+                    ApiKeyEntity::insert_prepared(prepared).await?;
+                }
             }
             secret => {
-                let mut generated_secret =
-                    ApiKeyEntity::create(api_key.name, api_key.exp, access).await?;
-                generated_secret.zeroize();
+                create_or_update_api_key_access(api_key.name, api_key.exp, access).await?;
 
                 let mut secret_plain = api_key_secret_plain(secret);
                 set_api_key_secret(&key_name, &secret_plain).await?;
@@ -92,6 +93,28 @@ async fn bootstrap_api_keys_json() -> Result<(), ErrorResponse> {
     info!("Migrated {len} API keys.");
 
     Ok(())
+}
+
+async fn create_or_update_api_key_access(
+    name: String,
+    expires: Option<i64>,
+    access: Vec<crate::entity::api_keys::ApiKeyAccess>,
+) -> Result<(), ErrorResponse> {
+    if api_key_exists(&name).await? {
+        ApiKeyEntity::update(&name, expires, access).await?;
+    } else {
+        let mut generated_secret = ApiKeyEntity::create(name, expires, access).await?;
+        generated_secret.zeroize();
+    }
+
+    Ok(())
+}
+
+async fn api_key_exists(name: &str) -> Result<bool, ErrorResponse> {
+    Ok(ApiKeyEntity::find_all()
+        .await?
+        .into_iter()
+        .any(|api_key| api_key.name == name))
 }
 
 async fn upsert_generated_api_key_token(
@@ -126,6 +149,10 @@ async fn set_api_key_secret(name: &str, secret_plain: &str) -> Result<(), ErrorR
     } else {
         DB::pg_execute(sql, &[&secret_enc, &name]).await?;
     }
+
+    DB::hql()
+        .delete(Cache::App, format!("api_key_{name}"))
+        .await?;
 
     Ok(())
 }

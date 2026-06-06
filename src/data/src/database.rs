@@ -244,6 +244,7 @@ impl DB {
         let config = RauthyConfig::get();
         if !config.vars.dev.dev_mode && config.is_primary_node {
             bootstrap::migrate_init_prod().await?;
+            bootstrap::reconcile_declared_api_keys().await?;
         }
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {
