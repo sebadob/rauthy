@@ -5,6 +5,7 @@ export interface ScopeRequest {
     attr_include_access?: string[];
     /// Validation: PATTERN_ATTR
     attr_include_id?: string[];
+    claims_at_root?: boolean;
 }
 
 export interface ScopeResponse {
@@ -12,4 +13,5 @@ export interface ScopeResponse {
     name: string;
     attr_include_access?: string[];
     attr_include_id?: string[];
+    claims_at_root: boolean;
 }

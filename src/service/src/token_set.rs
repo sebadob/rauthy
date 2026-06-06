@@ -16,6 +16,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{
     JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
+    validate_no_reserved_collision,
 };
 use rauthy_jwt::token::JwtToken;
 use ring::digest;
@@ -196,25 +197,39 @@ impl TokenSet {
             roles,
             groups,
             custom: None,
+            custom_flattened: None,
         };
 
         if let Some((cust, user_attrs)) = scope_customs {
             let user_attrs = user_attrs.as_ref().unwrap();
-            let mut attr = HashMap::with_capacity(cust.len());
+            // Attributes of scopes flagged `claims_at_root` go to the token root
+            // (flattened); all others stay nested under `custom`. Routing is
+            // per-scope, so a single token can mix nested and root-level claims.
+            let mut nested = HashMap::new();
+            let mut flattened = HashMap::new();
             for c in cust {
                 if let Some(csv) = &c.attr_include_access {
-                    let scopes = csv.split(',');
-                    for cust_name in scopes {
+                    let target = if c.claims_at_root {
+                        &mut flattened
+                    } else {
+                        &mut nested
+                    };
+                    for cust_name in csv.split(',') {
                         if let Some(value) = user_attrs.get(cust_name) {
                             let json = serde_json::from_slice(value.as_slice())
                                 .expect("Converting cust user id attr to json");
-                            attr.insert(cust_name.to_string(), json);
-                        };
+                            target.insert(cust_name.to_string(), json);
+                        }
                     }
                 }
             }
-            if !attr.is_empty() {
-                claims_new_impl.custom = Some(attr.clone());
+            if !nested.is_empty() {
+                claims_new_impl.custom = Some(nested);
+            }
+            if !flattened.is_empty() {
+                // Fail issuance rather than emit a token that shadows a reserved claim.
+                validate_no_reserved_collision(&flattened)?;
+                claims_new_impl.custom_flattened = Some(flattened);
             }
         }
 
@@ -295,6 +310,7 @@ impl TokenSet {
             roles: user.get_roles(),
             groups: None,
             custom: None,
+            custom_flattened: None,
             webid,
             zoneinfo: None,
         };
@@ -349,21 +365,32 @@ impl TokenSet {
 
         if let Some((cust, user_attrs)) = scope_customs {
             let user_attrs = user_attrs.as_ref().unwrap();
-            let mut attr = HashMap::with_capacity(cust.len());
+            // See `build_access_token`: per-scope routing to root vs nested `custom`.
+            let mut nested = HashMap::new();
+            let mut flattened = HashMap::new();
             for c in cust {
                 if let Some(csv) = &c.attr_include_id {
-                    let scopes = csv.split(',');
-                    for cust_name in scopes {
+                    let target = if c.claims_at_root {
+                        &mut flattened
+                    } else {
+                        &mut nested
+                    };
+                    for cust_name in csv.split(',') {
                         if let Some(value) = user_attrs.get(cust_name) {
                             let json = serde_json::from_slice(value.as_slice())
                                 .expect("Converting cust user id attr to json");
-                            attr.insert(cust_name.to_string(), json);
-                        };
+                            target.insert(cust_name.to_string(), json);
+                        }
                     }
                 }
             }
-            if !attr.is_empty() {
-                claims.custom = Some(attr);
+            if !nested.is_empty() {
+                claims.custom = Some(nested);
+            }
+            if !flattened.is_empty() {
+                // Fail issuance rather than emit a token that shadows a reserved claim.
+                validate_no_reserved_collision(&flattened)?;
+                claims.custom_flattened = Some(flattened);
             }
         }
 

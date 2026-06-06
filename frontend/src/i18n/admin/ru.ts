@@ -443,6 +443,11 @@ export let I18nAdminRu: I18nAdmin = {
         name: 'Имя роли',
     },
     scopes: {
+        claimsAtRoot: 'Emit claims at token root',
+        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a mapped
+            attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
         defaultNoMod: 'Это стандартная область OIDC. Стандартные области неизменяемы.',
         delete1: 'Вы уверены, что хотите удалить эту область?',
         deleteDefault: 'Стандартные области OIDC нельзя удалить.',

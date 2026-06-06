@@ -5,6 +5,7 @@
     import type { UserAttrConfigValueResponse } from '$api/types/user_attrs.ts';
     import type { ScopeRequest, ScopeResponse } from '$api/types/scopes.ts';
     import IconCheck from '$icons/IconCheck.svelte';
+    import Switch from '$lib5/Switch.svelte';
     import { useI18n } from '$state/i18n.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import { fetchPut } from '$api/fetch';
@@ -37,10 +38,12 @@
     let name = $state(untrack(() => scope.name));
     let itemsAccess: undefined | SelectItem[] = $state();
     let itemsId: undefined | SelectItem[] = $state();
+    let claimsAtRoot = $state(untrack(() => scope.claims_at_root));
 
     $effect(() => {
         if (scope.id) {
             name = scope.name;
+            claimsAtRoot = scope.claims_at_root;
         }
     });
 
@@ -93,6 +96,7 @@
                 payload.attr_include_id = filtered;
             }
         }
+        payload.claims_at_root = claimsAtRoot;
 
         let res = await fetchPut(form.action, payload);
         if (res.error) {
@@ -136,6 +140,22 @@
         {#if itemsId}
             <SelectList bind:items={itemsId}>Id Token Mappings</SelectList>
         {/if}
+
+        <div class="rootClaims">
+            <Switch bind:checked={claimsAtRoot} ariaLabel={ta.scopes.claimsAtRoot}>
+                {ta.scopes.claimsAtRoot}
+            </Switch>
+        </div>
+        <p class="warn">
+            {ta.scopes.claimsAtRootWarning}
+            <a
+                href="https://www.iana.org/assignments/jwt/jwt.xhtml"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                IANA JWT Claims Registry
+            </a>
+        </p>
     {/if}
 
     {#if !isDefault}
@@ -158,4 +178,13 @@
 </Form>
 
 <style>
+    .rootClaims {
+        margin: 1rem 0 0.25rem 0;
+    }
+
+    .warn {
+        max-width: 30rem;
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
 </style>

@@ -16,6 +16,13 @@ pub struct ScopeRequest {
     /// Validation: `^[a-zA-Z0-9-_/]{2,128}$`
     #[validate(custom(function = "validate_vec_attr"))]
     pub attr_include_id: Option<Vec<String>>,
+    /// If `true`, the custom attributes mapped by this scope are emitted at the
+    /// token root instead of nested under `custom`. The admin owns collision
+    /// correctness: issuance fails if a mapped attribute name collides with a
+    /// reserved JWT claim. Defaults to `false` and is only meaningful for custom
+    /// scopes.
+    #[serde(default)]
+    pub claims_at_root: bool,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -27,4 +34,5 @@ pub struct ScopeResponse {
     pub attr_include_access: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attr_include_id: Option<Vec<String>>,
+    pub claims_at_root: bool,
 }

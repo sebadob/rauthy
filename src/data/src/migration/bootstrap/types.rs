@@ -72,6 +72,10 @@ pub struct Scope {
     /// `[UserAttribute.name]`s that should be included in the `id_token` if this scope is
     /// requested.
     pub attr_include_id: Option<Vec<String>>,
+    /// If `true`, this scope's mapped custom attributes are emitted at the token root
+    /// (flattened) instead of nested under `custom`. Only honored for custom scopes.
+    /// Defaults to `false`.
+    pub claims_at_root: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]

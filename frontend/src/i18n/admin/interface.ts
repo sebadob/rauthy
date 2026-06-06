@@ -377,6 +377,8 @@ export interface I18nAdmin {
         name: string;
     };
     scopes: {
+        claimsAtRoot: string;
+        claimsAtRootWarning: string;
         defaultNoMod: string;
         delete1: string;
         deleteDefault: string;

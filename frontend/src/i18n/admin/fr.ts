@@ -465,6 +465,11 @@ export let I18nAdminFr: I18nAdmin = {
         name: 'Nom du rôle',
     },
     scopes: {
+        claimsAtRoot: 'Emit claims at token root',
+        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a mapped
+            attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
         defaultNoMod: `Il s'agit d'une étendue OIDC par défaut. Ces étendues sont immuables.`,
         delete1: 'Êtes-vous sûr de vouloir supprimer cette étendue ?',
         deleteDefault: 'Les étendues OIDC par défaut ne peuvent pas être supprimées.',
