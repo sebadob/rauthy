@@ -8,7 +8,6 @@ import type {
     WebauthnAuthStartResponse,
 } from './types.ts';
 import { base64UrlSafeToArrBuf } from './utils';
-import { untrack } from 'svelte';
 
 export interface WebauthnAuthResult {
     error?: string;
@@ -16,7 +15,6 @@ export interface WebauthnAuthResult {
 }
 
 export async function webauthnAuth(
-    userId: string,
     purpose: MfaPurpose,
     errorI18nInvalidKey: string,
     errorI18nTimeout: string,
@@ -25,7 +23,7 @@ export async function webauthnAuth(
         purpose,
     };
     let res = await fetchPost<WebauthnAuthStartResponse>(
-        `/auth/v1/users/${userId}/webauthn/auth/start`,
+        `/auth/v1/users/webauthn_start`,
         payloadStart,
     );
     if (res.error) {
@@ -105,7 +103,7 @@ export async function webauthnAuth(
 
     // finish the ceremony
     let resFinish = await fetchPost<WebauthnAdditionalData>(
-        `/auth/v1/users/${userId}/webauthn/auth/finish`,
+        `/auth/v1/users/webauthn_finish`,
         payloadFinish,
     );
     // 202 -> normal success

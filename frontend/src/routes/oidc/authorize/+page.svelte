@@ -324,8 +324,7 @@
             // -> all good, but needs additional passkey validation
             err = '';
             let body = res.body;
-            if (body && 'user_id' in body && 'code' in body) {
-                userId = body.user_id as string;
+            if (body && 'code' in body) {
                 mfaPurpose = { Login: body.code as string };
             } else {
                 console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
@@ -539,7 +538,7 @@
                     <h2>{clientName || clientId}</h2>
                 </div>
 
-                {#if mfaPurpose && userId}
+                {#if mfaPurpose}
                     <!--
                     TODO we could pass in an optional loginCodeExp and make sure
                     it fits inside the exp returned inside the WebauthnRequest later on
@@ -547,7 +546,6 @@
                     Another approach would be to check this in the backend and emit warning logs.
                     -->
                     <WebauthnRequest
-                        {userId}
                         purpose={mfaPurpose}
                         onSuccess={onWebauthnSuccess}
                         onError={onWebauthnError}

@@ -557,7 +557,7 @@ impl WebauthnData {
 pub enum WebauthnAdditionalData {
     Login(WebauthnLoginReq),
     Service(WebauthnServiceReq),
-    Test,
+    Test(String), // saves the User ID
     LoginToSAwait(WebauthnLoginToSAwaitCode),
 }
 
@@ -568,7 +568,7 @@ impl WebauthnAdditionalData {
             // The service req data is not deleted here, but actually further down the road
             // after the service req has been made.
             Self::Service(_) => Ok(()),
-            Self::Test => Ok(()),
+            Self::Test(_) => Ok(()),
             Self::LoginToSAwait(_) => Ok(()),
         }
     }
@@ -607,7 +607,7 @@ impl WebauthnAdditionalData {
 
             Self::Service(svc_req) => HttpResponse::Accepted().json(svc_req),
 
-            Self::Test => HttpResponse::Accepted().finish(),
+            Self::Test(_) => HttpResponse::Accepted().finish(),
 
             Self::LoginToSAwait(tos_req) => {
                 let mut resp = HttpResponseBuilder::new(StatusCode::from_u16(206).unwrap()).json(
@@ -726,24 +726,32 @@ pub struct WebauthnLoginToSAwaitCode {
 }
 
 pub async fn auth_start(
-    user_id: String,
+    user_id: Option<String>,
     purpose: MfaPurpose,
 ) -> Result<WebauthnAuthStartResponse, ErrorResponse> {
     // This app_data will be returned to the client upon successful webauthn authentication
-    let add_data = match purpose {
+    let (add_data, user_id) = match purpose {
         MfaPurpose::Login(code) => {
+            debug_assert!(user_id.is_none());
             let d = WebauthnLoginReq::find(code).await?;
-            WebauthnAdditionalData::Login(d)
+            let user_id = d.user_id.clone();
+            (WebauthnAdditionalData::Login(d), user_id)
         }
         MfaPurpose::MfaModToken
         | MfaPurpose::PamLogin
         | MfaPurpose::PasswordNew
         | MfaPurpose::PasswordReset => {
+            let user_id =
+                user_id.expect("user_id should always exist for non-login webauthn starts");
             let svc_req = WebauthnServiceReq::new(user_id.clone());
             svc_req.save().await?;
-            WebauthnAdditionalData::Service(svc_req)
+            (WebauthnAdditionalData::Service(svc_req), user_id)
         }
-        MfaPurpose::Test => WebauthnAdditionalData::Test,
+        MfaPurpose::Test => {
+            let user_id =
+                user_id.expect("user_id should always exist for non-login webauthn starts");
+            (WebauthnAdditionalData::Test(user_id.clone()), user_id)
+        }
     };
 
     let user = User::find(user_id).await?;
@@ -798,7 +806,6 @@ pub async fn auth_start(
             Ok(WebauthnAuthStartResponse {
                 code: auth_data.code,
                 rcr,
-                user_id: user.id,
                 exp: req_exp as u64,
             })
         }
@@ -814,7 +821,6 @@ pub async fn auth_start(
 }
 
 pub async fn auth_finish(
-    user_id: String,
     req: &HttpRequest,
     browser_id: BrowserId,
     session: Option<Session>,
@@ -824,7 +830,14 @@ pub async fn auth_finish(
     auth_data.delete().await?;
     let auth_state = serde_json::from_str(&auth_data.auth_state_json)?;
 
-    let mut user = User::find(user_id).await?;
+    let (user_id, is_login) = match &auth_data.data {
+        WebauthnAdditionalData::Login(d) => (&d.user_id, true),
+        WebauthnAdditionalData::Service(d) => (&d.user_id, false),
+        WebauthnAdditionalData::Test(user_id) => (user_id, false),
+        WebauthnAdditionalData::LoginToSAwait(d) => (&d.user_id, false),
+    };
+
+    let mut user = User::find(user_id.clone()).await?;
     let force_uv =
         user.account_type() == AccountType::Passkey || RauthyConfig::get().vars.webauthn.force_uv;
 
@@ -847,17 +860,33 @@ pub async fn auth_finish(
             }
             let uid = user.id.clone();
 
-            LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
+            if is_login && let Some(mut session) = session {
+                if let Some(suid) = &session.user_id
+                    && suid != &user.id
+                {
+                    // TODO If this happens, this can only be a try to attack and get into another
+                    //  user account. We should probably blacklist the source IP after enough
+                    //  testing. We must be sure that this can never happen by accident.
 
-            if matches!(auth_data.data, WebauthnAdditionalData::Login(_))
-                && let Some(mut session) = session
-            {
+                    let WebauthnAdditionalData::Login(data) = auth_data.data else {
+                        unreachable!()
+                    };
+                    data.delete().await?;
+
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Forbidden,
+                        "User ID mismatch for session",
+                    ));
+                }
+
                 session.set_authenticated(&user).await?;
                 user.last_login = Some(Utc::now().timestamp());
                 user.last_failed_login = None;
                 user.failed_login_attempts = None;
                 user.save(None).await?;
             }
+
+            LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
 
             if auth_result.needs_update() {
                 let now = Utc::now().timestamp();

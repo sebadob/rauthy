@@ -850,7 +850,7 @@ pub async fn get_user_picture(
 
     {
         let user = User::find(user_id).await?;
-        if user.picture_id.as_deref() != Some(&picture_id) {
+        if user.picture_id.as_deref() != Some(picture_id.as_str()) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "invalid picture_id for user",
@@ -1029,7 +1029,7 @@ pub async fn delete_user_device(
     payload.validate()?;
 
     let device = DeviceEntity::find(&payload.device_id).await?;
-    if device.user_id.as_deref() != Some(&user_id) {
+    if device.user_id.as_deref() != Some(user_id.as_str()) {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "You don't have access to this device".to_string(),
@@ -1335,6 +1335,7 @@ pub async fn post_webauthn_auth_start(
     let id = match payload.purpose {
         // only for a Login purpose, this can be accessed without authentication (yet)
         MfaPurpose::Login(_) => {
+            // TODO this can be rejected in versions >= 0.37
             // During Login, the session is allowed to be in init only state
             principal.validate_session_auth_or_init()?;
             id.into_inner()
@@ -1376,7 +1377,7 @@ pub async fn post_webauthn_auth_start(
         }
     };
 
-    webauthn::auth_start(id, payload.purpose)
+    webauthn::auth_start(Some(id), payload.purpose)
         .await
         .map(|res| HttpResponse::Ok().json(res))
 }
@@ -1398,7 +1399,7 @@ pub async fn post_webauthn_auth_start(
 )]
 #[post("/users/{id}/webauthn/auth/finish")]
 pub async fn post_webauthn_auth_finish(
-    id: web::Path<String>,
+    _id: web::Path<String>,
     req: HttpRequest,
     browser_id: BrowserId,
     principal: ReqPrincipal,
@@ -1406,7 +1407,89 @@ pub async fn post_webauthn_auth_finish(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let id = id.into_inner();
+    // We do not need to further validate the principal here.
+    // All of this is done at the /start endpoint.
+    // This here will simply fail if the secret code from the /start does not exist
+    // -> indirect validation through existing code.
+
+    let principal = principal.into_inner();
+    let res = webauthn::auth_finish(&req, browser_id, principal.session, payload).await?;
+    Ok(res.into_response())
+}
+
+/// Starts the authentication process for a WebAuthn Device for this user. This only works during
+/// the login. Service requests need to use the user-specific endpoint.
+#[utoipa::path(
+    post,
+    path = "/users/webauthn_start",
+    tag = "mfa",
+    request_body = WebauthnAuthStartRequest,
+    responses(
+        (status = 200, description = "Ok", body = WebauthnAuthStartResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/users/webauthn_start")]
+pub async fn post_webauthn_auth_start_login(
+    principal: ReqPrincipal,
+    Json(payload): Json<WebauthnAuthStartRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
+    let id = match payload.purpose {
+        MfaPurpose::Login(_) => {
+            // During Login, the session is allowed to be in init-only state. Realistically, the
+            // session middleware will not accept an init-session on this path, only authenticated
+            // ones, but we keep the logic here correct.
+            principal.validate_session_auth_or_init()?;
+            // The user.id might not exist in the session yet at this point. However, it's stored
+            // inside the webauthn login data. The `start_start()` will take care of it.
+            None
+        }
+
+        MfaPurpose::PasswordReset => {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Password requests must use the user-specific webauthn start endpoint",
+            ));
+        }
+
+        _ => {
+            // for all other purposes, we need an authenticated session
+            principal.validate_session_auth()?;
+            Some(principal.user_id()?.to_string())
+        }
+    };
+
+    webauthn::auth_start(id, payload.purpose)
+        .await
+        .map(|res| HttpResponse::Ok().json(res))
+}
+
+/// Finishes the authentication process for a WebAuthn Device for this user
+///
+/// **Permissions**
+/// - authenticated and logged in user for this very {id}
+#[utoipa::path(
+    post,
+    path = "/users/webauthn_finish",
+    tag = "mfa",
+    request_body = WebauthnAuthFinishRequest,
+    responses(
+        (status = 200, description = "Ok", body = WebauthnAdditionalData),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/users/webauthn_finish")]
+pub async fn post_webauthn_auth_finish_login(
+    req: HttpRequest,
+    browser_id: BrowserId,
+    principal: ReqPrincipal,
+    Json(payload): Json<WebauthnAuthFinishRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
 
     // We do not need to further validate the principal here.
     // All of this is done at the /start endpoint.
@@ -1414,7 +1497,7 @@ pub async fn post_webauthn_auth_finish(
     // -> indirect validation through existing code.
 
     let principal = principal.into_inner();
-    let res = webauthn::auth_finish(id, &req, browser_id, principal.session, payload).await?;
+    let res = webauthn::auth_finish(&req, browser_id, principal.session, payload).await?;
     Ok(res.into_response())
 }
 

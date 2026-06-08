@@ -87,6 +87,7 @@ pub struct PamMfaStartRequest {
 
 #[derive(Deserialize, Validate, ToSchema)]
 pub struct PamMfaFinishRequest {
+    // TODO can be removed with >= 0.37.0
     #[validate(length(max = 32))]
     pub user_id: String,
     #[validate(nested)]

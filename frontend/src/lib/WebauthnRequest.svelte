@@ -6,12 +6,10 @@
     import { onMount } from 'svelte';
 
     let {
-        userId,
         purpose,
         onError,
         onSuccess,
     }: {
-        userId: string;
         purpose: MfaPurpose;
         onError: (error: string) => void;
         onSuccess: (res?: WebauthnAdditionalData) => void;
@@ -23,7 +21,6 @@
 
     onMount(async () => {
         webauthnRes = await webauthnAuth(
-            userId,
             purpose,
             t.authorize.invalidKeyUsed,
             t.authorize.requestExpired,

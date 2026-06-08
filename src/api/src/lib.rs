@@ -189,7 +189,6 @@ pub async fn map_auth_step(
 
             Ok(builder.json(&WebauthnLoginResponse {
                 code: res.code,
-                user_id: res.user_id,
                 exp: res.exp,
             }))
         }

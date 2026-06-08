@@ -652,6 +652,8 @@ impl Session {
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
                     "/auth/v1/dev/providers_callback",
+                    "/auth/v1/users/webauthn_start",
+                    "/auth/v1/users/webauthn_finish",
                     "/auth/v1/tos/accept",
                     "/auth/v1/tos/deny",
                 ];
@@ -663,10 +665,12 @@ impl Session {
                     "/auth/v1/oidc/token",
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
+                    "/auth/v1/users/webauthn_start",
+                    "/auth/v1/users/webauthn_finish",
                     "/auth/v1/tos/accept",
                     "/auth/v1/tos/deny",
                 ];
-                if exceptions.contains(&req_path) || req_path.contains("/webauthn/auth/") {
+                if exceptions.contains(&req_path) {
                     return true;
                 }
 

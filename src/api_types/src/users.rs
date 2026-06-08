@@ -618,7 +618,6 @@ pub struct WebauthnAuthStartResponse {
     pub code: String,
     #[schema(value_type = str)]
     pub rcr: webauthn_rs::prelude::RequestChallengeResponse,
-    pub user_id: String,
     pub exp: u64,
 }
 
@@ -630,6 +629,5 @@ pub struct WebauthnLoginFinishResponse {
 #[derive(Serialize, ToSchema)]
 pub struct WebauthnLoginResponse {
     pub code: String,
-    pub user_id: String,
     pub exp: u64,
 }

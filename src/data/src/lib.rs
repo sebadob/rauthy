@@ -44,7 +44,6 @@ pub struct AuthStepAwaitWebauthn {
     pub code: String,
     pub header_csrf: (HeaderName, HeaderValue),
     pub header_origin: Option<(HeaderName, HeaderValue)>,
-    pub user_id: String,
     pub email: String,
     pub exp: u64,
     pub session: Session,
