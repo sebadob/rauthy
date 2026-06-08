@@ -39,7 +39,11 @@ use tokio::sync::mpsc;
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
-pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Error>> {
+pub async fn run(
+    config_file: String,
+    secrets_file: String,
+    test_mode: bool,
+) -> Result<(), Box<dyn Error>> {
     let (tx_email, rx_email) = mpsc::channel::<mailer::EMail>(16);
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
@@ -47,6 +51,7 @@ pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Err
     info!("Initializing Config");
     let (rauthy_config, node_config) = RauthyConfig::build(
         config_file,
+        secrets_file,
         tx_email.clone(),
         tx_events.clone(),
         tx_events_router.clone(),

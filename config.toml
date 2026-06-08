@@ -1,3 +1,10 @@
+# If this value it set a the root level, it will overwrite a
+# secrety file location given via CLI args.
+#
+# default: not set
+# overwritten by: SECRETS_FILE
+secrets_file = 'secrets.toml'
+
 # Values in the `dev` category will not work in release builds.
 [dev]
 # If 'true', the data store will be initialized with DEV values.
@@ -880,9 +887,9 @@ pg_host = 'localhost'
 # overwritten by: PG_PORT
 pg_port = 5432
 # overwritten by: PG_USER
-pg_user = 'rauthy'
+pg_user = '$SECRETS'
 # overwritten by: PG_PASSWORD
-pg_password = '123SuperSafe'
+pg_password = '$SECRETS'
 # default: rauthy
 # overwritten by: PG_DB_NAME
 pg_db_name = 'rauthy'
@@ -1059,7 +1066,7 @@ default_scopes = ['openid']
 #
 # default: <empty>
 # overwritten by: DYN_CLIENT_REG_TOKEN
-reg_token = '123SuperSafeToken'
+reg_token = '$SECRETS'
 
 # The default token lifetime in seconds for a dynamic client,
 # that will be set during the registration.
@@ -1358,16 +1365,13 @@ tz_fallback = 'UTC'
 # You can find a utility in the Admin UI to do this for you.
 #
 # overwritten by: ENC_KEYS - single String, \n separated values
-keys = [
-    'q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=',
-    'bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=',
-]
+keys = ['$SECRETS']
 
 # This identifies the key ID from the `ENC_KEYS` list, that
 # should actively be used for new encryptions.
 #
 # overwritten by: ENC_KEY_ACTIVE
-key_active = 'bVCyTsGaggVy5yqQ'
+key_active = '$SECRETS'
 
 [ephemeral_clients]
 # Can be set to 'true' to allow the dynamic client lookup via

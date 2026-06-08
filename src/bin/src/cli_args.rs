@@ -27,6 +27,10 @@ pub struct ArgsServer {
     #[clap(short, long, default_value = "./config.toml")]
     pub config_file: String,
 
+    /// Provide a custom path to the secrets file
+    #[clap(short, long, default_value = "./secrets.toml")]
+    pub secrets_file: String,
+
     /// Integration Test Mode
     #[cfg(debug_assertions)]
     #[clap(short, long, default_value_t = false)]
