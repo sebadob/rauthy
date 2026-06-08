@@ -2719,6 +2719,12 @@ regex_rust = '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
 # default: '^[a-z][a-z0-9_\-]{1,61}$'
 pattern_html = '^[a-z][a-z0-9_\-]{1,61}$'
 
+# Configure a hint that will be shown to the user on pattern
+# mismatch.
+#
+# default: not set
+pattern_hint = 'Linux-compatible Username'
+
 # If a user does not have a `preferred_username`, the `email`
 # can be used as a fallback value for the id token.
 #

@@ -1016,6 +1016,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                     immutable: true,
                     blacklist: vec!["admin".into(), "administrator".into(), "root".into()],
                     pattern_html: "^[a-z][a-z0-9_\\-]{1,61}$".into(),
+                    pattern_hint: None,
                     email_fallback: true,
                 },
             },
@@ -3233,6 +3234,12 @@ impl Vars {
         ) {
             self.user_values.preferred_username.pattern_html = v.into();
         }
+        self.user_values.preferred_username.pattern_hint = t_str(
+            &mut pref_username,
+            "user_values.preferred_username",
+            "pattern_hint",
+            "",
+        );
         if let Some(v) = t_bool(
             &mut pref_username,
             "user_values.preferred_username",
@@ -3835,6 +3842,7 @@ pub struct VarsUserPreferredUsername {
     // in macros.
     // pub regex_rust: String,
     pub pattern_html: Cow<'static, str>,
+    pub pattern_hint: Option<String>,
     pub email_fallback: bool,
 }
 
