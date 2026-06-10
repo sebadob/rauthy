@@ -1,20 +1,16 @@
 use cryptr::EncValue;
-use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
-use std::fs::OpenOptions;
-use std::io::Write;
-#[cfg(unix)]
-use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncWriteExt;
 use tokio::time::sleep;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 use zeroize::Zeroize;
 
-const MAGIC: &str = "RAUTHY_BOOTSTRAP_GENERATED_SECRETS";
 const VERSION: u16 = 1;
-const HEADER_LINES: usize = 3;
 const DEFAULT_FILE_NAME: &str = "bootstrap.secrets.enc";
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -93,17 +89,26 @@ impl GeneratedSecrets {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ContainerHeader {
-    pub version: u16,
-    /// Unix timestamp in seconds. `0` means the container does not expire.
-    pub deadline: u64,
+/// On-disk container payload. The whole struct is encrypted as a single
+/// `cryptr` AEAD value, so its integrity is guaranteed by decryption itself —
+/// no separate magic/version header on disk is needed. The expiry `deadline`
+/// lives inside the encrypted payload; the server (and the CLI) hold `ENC_KEYS`,
+/// so reading it back to check expiry is a cheap decrypt.
+#[derive(Serialize)]
+struct ContainerPayloadRef<'a> {
+    version: u16,
+    /// UTC unix timestamp in seconds. `0` means the container does not expire.
+    deadline: i64,
+    entries: &'a [GeneratedSecretEntry],
 }
 
-impl ContainerHeader {
-    pub fn is_expired_at(self, now: SystemTime) -> bool {
-        self.deadline > 0 && unix_seconds(now) >= self.deadline
-    }
+#[derive(Deserialize)]
+struct ContainerPayload {
+    #[serde(default)]
+    version: u16,
+    #[serde(default)]
+    deadline: i64,
+    entries: Vec<GeneratedSecretEntry>,
 }
 
 pub fn default_file_path(data_dir: &str) -> String {
@@ -113,11 +118,22 @@ pub fn default_file_path(data_dir: &str) -> String {
         .into_owned()
 }
 
-pub fn deadline_from_ttl(ttl_seconds: u64, now: SystemTime) -> u64 {
+/// Current UTC unix timestamp in seconds. Always work in UTC for stored
+/// timestamps so a shared volume mounted on multiple hosts compares the same
+/// instant regardless of local time zone.
+fn now_utc() -> i64 {
+    chrono::Utc::now().timestamp()
+}
+
+fn is_expired(deadline: i64, now: i64) -> bool {
+    deadline > 0 && now >= deadline
+}
+
+pub fn deadline_from_ttl(ttl_seconds: u64, now: i64) -> i64 {
     if ttl_seconds == 0 {
         0
     } else {
-        unix_seconds(now) + ttl_seconds
+        now.saturating_add(ttl_seconds as i64)
     }
 }
 
@@ -127,60 +143,61 @@ pub async fn upsert_secret(
     entry: GeneratedSecretEntry,
 ) -> Result<(), ErrorResponse> {
     let path = path.as_ref();
-    let mut container = if path.exists() {
+    let mut container = if tokio::fs::try_exists(path).await.unwrap_or(false) {
         read_container(path).await?
     } else {
         GeneratedSecrets::default()
     };
     container.upsert(entry);
-    let deadline = deadline_from_ttl(ttl_seconds, SystemTime::now());
+    let deadline = deadline_from_ttl(ttl_seconds, now_utc());
     write_container(path, deadline, &container).await?;
     schedule_purge(path.to_path_buf(), ttl_seconds);
     Ok(())
 }
 
 pub async fn read_container(path: impl AsRef<Path>) -> Result<GeneratedSecrets, ErrorResponse> {
-    let bytes = tokio::fs::read(path.as_ref()).await?;
-    let (header, encrypted) = parse_header(&bytes)?;
-    if header.is_expired_at(SystemTime::now()) {
-        return Err(internal(format!(
+    let path = path.as_ref();
+    let bytes = tokio::fs::read(path).await?;
+    let payload = decrypt_container(bytes, path)?;
+    if is_expired(payload.deadline, now_utc()) {
+        return Err(ErrorResponse::internal(format!(
             "bootstrap generated-secret container {} expired at {}",
-            path.as_ref().display(),
-            header.deadline
+            path.display(),
+            payload.deadline
         )));
     }
-
-    let mut decrypted = EncValue::try_from(encrypted.to_vec())?.decrypt()?.to_vec();
-    let container = serde_json::from_slice(&decrypted);
-    decrypted.zeroize();
-    Ok(container?)
+    Ok(GeneratedSecrets {
+        entries: payload.entries,
+    })
 }
 
 pub async fn write_container(
     path: impl AsRef<Path>,
-    deadline: u64,
+    deadline: i64,
     container: &GeneratedSecrets,
 ) -> Result<(), ErrorResponse> {
     let path = path.as_ref();
     let parent = path.parent().ok_or_else(|| {
-        internal(format!(
+        ErrorResponse::internal(format!(
             "bootstrap generated-secret path '{}' has no parent directory",
             path.display()
         ))
     })?;
     tokio::fs::create_dir_all(parent).await?;
 
-    let mut payload = serde_json::to_vec(container)?;
+    let mut payload = serde_json::to_vec(&ContainerPayloadRef {
+        version: VERSION,
+        deadline,
+        entries: &container.entries,
+    })?;
     let encrypted = match EncValue::encrypt(&payload) {
-        Ok(value) => value.into_bytes().to_vec(),
+        Ok(value) => value.into_bytes(),
         Err(err) => {
             payload.zeroize();
             return Err(err.into());
         }
     };
     payload.zeroize();
-    let mut bytes = render_header(deadline);
-    bytes.extend_from_slice(&encrypted);
 
     let tmp = tmp_path(path)?;
     {
@@ -188,21 +205,11 @@ pub async fn write_container(
         options.write(true).create_new(true);
         #[cfg(unix)]
         options.mode(0o600);
-        let mut file = options.open(&tmp)?;
-        file.write_all(&bytes)?;
-        file.sync_all()?;
+        let mut file = options.open(&tmp).await?;
+        file.write_all(&encrypted).await?;
+        file.sync_all().await?;
     }
-    bytes.zeroize();
-    std::fs::rename(&tmp, path)?;
-
-    if let Ok(dir) = std::fs::File::open(parent)
-        && let Err(err) = dir.sync_all()
-    {
-        debug!(
-            "Could not fsync bootstrap generated-secret directory '{}': {err}",
-            parent.display()
-        );
-    }
+    tokio::fs::rename(&tmp, path).await?;
 
     Ok(())
 }
@@ -214,8 +221,8 @@ pub async fn purge_if_expired(path: impl AsRef<Path>) -> Result<bool, ErrorRespo
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(false),
         Err(err) => return Err(err.into()),
     };
-    let (header, _) = parse_header(&bytes)?;
-    if header.is_expired_at(SystemTime::now()) {
+    let payload = decrypt_container(bytes, path)?;
+    if is_expired(payload.deadline, now_utc()) {
         tokio::fs::remove_file(path).await?;
         info!(
             "Purged expired bootstrap generated-secret container '{}'",
@@ -243,27 +250,25 @@ pub fn schedule_purge(path: PathBuf, ttl_seconds: u64) {
     });
 }
 
-pub fn parse_header(bytes: &[u8]) -> Result<(ContainerHeader, &[u8]), ErrorResponse> {
-    let mut lines = bytes.splitn(HEADER_LINES + 1, |b| *b == b'\n');
-    let magic = lines
-        .next()
-        .ok_or_else(|| internal("missing bootstrap generated-secret magic"))?;
-    if magic != MAGIC.as_bytes() {
-        return Err(internal("invalid bootstrap generated-secret magic"));
-    }
-
-    let version = parse_header_u16(lines.next(), "version")?;
-    if version != VERSION {
-        return Err(internal(format!(
-            "unsupported bootstrap generated-secret version {version}"
+fn decrypt_container(bytes: Vec<u8>, path: &Path) -> Result<ContainerPayload, ErrorResponse> {
+    if bytes.is_empty() {
+        return Err(ErrorResponse::internal(format!(
+            "bootstrap generated-secret container {} is empty",
+            path.display()
         )));
     }
-
-    let deadline = parse_header_u64(lines.next(), "deadline")?;
-    let encrypted = lines
-        .next()
-        .ok_or_else(|| internal("missing bootstrap generated-secret payload"))?;
-    Ok((ContainerHeader { version, deadline }, encrypted))
+    // cryptr uses AEAD (ChaCha20Poly1305): a malformed or tampered file fails to
+    // decrypt, which is the integrity check. No manual magic/version on disk.
+    let decrypted = EncValue::try_from(bytes)?.decrypt()?;
+    let payload: ContainerPayload = serde_json::from_slice(&decrypted)?;
+    if payload.version > VERSION {
+        return Err(ErrorResponse::internal(format!(
+            "unsupported bootstrap generated-secret container version {} in {}",
+            payload.version,
+            path.display()
+        )));
+    }
+    Ok(payload)
 }
 
 pub fn sanitize_env_name(input: impl AsRef<str>) -> String {
@@ -296,52 +301,16 @@ pub fn sanitize_env_name(input: impl AsRef<str>) -> String {
     }
 }
 
-fn render_header(deadline: u64) -> Vec<u8> {
-    format!("{MAGIC}\n{VERSION}\n{deadline}\n").into_bytes()
-}
-
-fn parse_header_u16(line: Option<&[u8]>, name: &str) -> Result<u16, ErrorResponse> {
-    let raw = parse_header_line(line, name)?;
-    raw.parse::<u16>()
-        .map_err(|_| internal(format!("invalid bootstrap generated-secret {name}")))
-}
-
-fn parse_header_u64(line: Option<&[u8]>, name: &str) -> Result<u64, ErrorResponse> {
-    let raw = parse_header_line(line, name)?;
-    raw.parse::<u64>()
-        .map_err(|_| internal(format!("invalid bootstrap generated-secret {name}")))
-}
-
-fn parse_header_line<'a>(line: Option<&'a [u8]>, name: &str) -> Result<&'a str, ErrorResponse> {
-    let line =
-        line.ok_or_else(|| internal(format!("missing bootstrap generated-secret {name}")))?;
-    std::str::from_utf8(line).map_err(|_| {
-        internal(format!(
-            "invalid utf-8 in bootstrap generated-secret {name}"
-        ))
-    })
-}
-
 fn tmp_path(path: &Path) -> Result<PathBuf, ErrorResponse> {
     let file_name = path.file_name().and_then(OsStr::to_str).ok_or_else(|| {
-        internal(format!(
+        ErrorResponse::internal(format!(
             "invalid generated-secret path '{}'",
             path.display()
         ))
     })?;
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-    Ok(path.with_file_name(format!(".{file_name}.{}.{nanos}.tmp", std::process::id())))
-}
-
-fn unix_seconds(now: SystemTime) -> u64 {
-    now.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
-}
-
-fn internal(msg: impl Into<String>) -> ErrorResponse {
-    ErrorResponse::new(ErrorResponseType::Internal, msg.into())
+    // Editor-style sibling temp file. Only one Rauthy process runs and
+    // bootstrapping is single-threaded, so no pid/timestamp uniqueness is needed.
+    Ok(path.with_file_name(format!("{file_name}~")))
 }
 
 #[cfg(test)]
@@ -395,38 +364,33 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn bad_magic_fails_before_decrypt() {
+    async fn garbage_file_fails_to_decrypt() {
         init_keys();
-        let path = test_path("bad-magic");
-        tokio::fs::write(&path, b"wrong\n1\n0\npayload")
+        let path = test_path("garbage");
+        tokio::fs::write(&path, b"not-a-valid-enc-container")
             .await
             .unwrap();
 
         let err = read_container(&path).await.unwrap_err();
-        assert!(err.message.contains("magic"));
+        assert!(!err.message.is_empty());
 
         let _ = tokio::fs::remove_file(&path).await;
     }
 
-    #[test]
-    fn bad_version_fails_before_decrypt() {
-        let mut bytes = b"RAUTHY_BOOTSTRAP_GENERATED_SECRETS\n2\n0\n".to_vec();
-        bytes.extend_from_slice(b"payload");
-
-        let err = parse_header(&bytes).unwrap_err();
-        assert!(err.message.contains("version"));
-    }
-
     #[tokio::test]
-    async fn expired_header_fails_without_decrypting_payload() {
+    async fn expired_container_is_rejected() {
         init_keys();
         let path = test_path("expired");
-        tokio::fs::write(
-            &path,
-            b"RAUTHY_BOOTSTRAP_GENERATED_SECRETS\n1\n1\nnot-encrypted",
-        )
-        .await
-        .unwrap();
+        let _ = tokio::fs::remove_file(&path).await;
+
+        let mut container = GeneratedSecrets::default();
+        container.upsert(GeneratedSecretEntry::new(
+            GeneratedSecretKey::new("client", "demo", "secret"),
+            "s",
+        ));
+        write_container(&path, now_utc() - 10, &container)
+            .await
+            .unwrap();
 
         let err = read_container(&path).await.unwrap_err();
         assert!(err.message.contains("expired"));
@@ -435,14 +399,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn purge_removes_expired_file_without_decrypting_payload() {
+    async fn purge_removes_expired_file() {
+        init_keys();
         let path = test_path("purge");
-        tokio::fs::write(
-            &path,
-            b"RAUTHY_BOOTSTRAP_GENERATED_SECRETS\n1\n1\nnot-encrypted",
-        )
-        .await
-        .unwrap();
+        let _ = tokio::fs::remove_file(&path).await;
+
+        let mut container = GeneratedSecrets::default();
+        container.upsert(GeneratedSecretEntry::new(
+            GeneratedSecretKey::new("user", "can", "password"),
+            "pw",
+        ));
+        write_container(&path, now_utc() - 10, &container)
+            .await
+            .unwrap();
 
         assert!(purge_if_expired(&path).await.unwrap());
         assert!(!path.exists());
@@ -461,11 +430,10 @@ mod tests {
         )
         .await
         .unwrap();
-        let bytes = tokio::fs::read(&path).await.unwrap();
-        let (header, _) = parse_header(&bytes).unwrap();
 
-        assert_eq!(header.deadline, 0);
-        assert!(!header.is_expired_at(SystemTime::now() + Duration::from_secs(3600)));
+        let container = read_container(&path).await.unwrap();
+        assert_eq!(container.entries.len(), 1);
+        assert!(!purge_if_expired(&path).await.unwrap());
 
         let _ = tokio::fs::remove_file(&path).await;
     }

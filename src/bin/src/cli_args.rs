@@ -41,9 +41,10 @@ pub enum ArgsBootstrapCommand {
 
 #[derive(Debug, Clone, Parser)]
 pub struct ArgsBootstrapGet {
-    /// Path to the encrypted generated-secret container.
-    #[clap(short, long, default_value = "data/bootstrap.secrets.enc")]
-    pub file: String,
+    /// Path to the Rauthy config file. The encryption keys and the container
+    /// location are read from it, so no keys or file path are passed directly.
+    #[clap(short = 'c', long, default_value = "./config.toml")]
+    pub config_file: String,
 
     /// Output format.
     #[clap(long, value_enum, default_value_t = BootstrapOutputFormat::Env)]
@@ -60,21 +61,13 @@ pub struct ArgsBootstrapGet {
     /// Filter by field, for example `secret` or `password`.
     #[clap(long)]
     pub field: Option<String>,
-
-    /// Active encryption key id. Falls back to ENC_KEY_ACTIVE.
-    #[clap(long, env = "ENC_KEY_ACTIVE")]
-    pub enc_key_active: Option<String>,
-
-    /// Newline-separated encryption keys. Falls back to ENC_KEYS.
-    #[clap(long, env = "ENC_KEYS")]
-    pub enc_keys: Option<String>,
 }
 
 #[derive(Debug, Clone, Parser)]
 pub struct ArgsBootstrapPurge {
-    /// Path to the encrypted generated-secret container.
-    #[clap(short, long, default_value = "data/bootstrap.secrets.enc")]
-    pub file: String,
+    /// Path to the Rauthy config file. The container location is read from it.
+    #[clap(short = 'c', long, default_value = "./config.toml")]
+    pub config_file: String,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]

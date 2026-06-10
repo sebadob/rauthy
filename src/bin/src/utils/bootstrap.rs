@@ -3,12 +3,14 @@ use crate::cli_args::{
     BootstrapOutputFormat,
 };
 use crate::utils::StdError;
-use cryptr::EncKeys;
+use rauthy_data::email::mailer;
 use rauthy_data::migration::bootstrap::generated_secrets::{
     GeneratedSecretEntry, GeneratedSecrets, read_container,
 };
-use std::env;
+use rauthy_data::rauthy_config::RauthyConfig;
+use std::fmt::Write as _;
 use std::path::Path;
+use tokio::sync::mpsc;
 
 pub async fn run(args: ArgsBootstrap) -> Result<(), StdError> {
     match args.command {
@@ -17,10 +19,23 @@ pub async fn run(args: ArgsBootstrap) -> Result<(), StdError> {
     }
 }
 
-async fn get(args: ArgsBootstrapGet) -> Result<(), StdError> {
-    init_enc_keys(args.enc_key_active.as_deref(), args.enc_keys.as_deref())?;
+/// Load the existing Rauthy config. This initializes `ENC_KEYS` (so the local
+/// container can be decrypted) and resolves the configured container path,
+/// exactly like the server does — no keys or file path are passed to the CLI.
+async fn load_config(config_file: String) -> Result<RauthyConfig, StdError> {
+    let (tx_email, _) = mpsc::channel::<mailer::EMail>(16);
+    let (tx_events, _) = flume::unbounded();
+    let (tx_events_router, _) = flume::unbounded();
+    let (config, _node) =
+        RauthyConfig::build(config_file, tx_email, tx_events, tx_events_router).await?;
+    Ok(config)
+}
 
-    let container = read_container(&args.file)
+async fn get(args: ArgsBootstrapGet) -> Result<(), StdError> {
+    let config = load_config(args.config_file.clone()).await?;
+    let path = config.vars.bootstrap.generated_secrets_file.clone();
+
+    let container = read_container(path.as_ref())
         .await
         .map_err(|err| err.message)?;
     let entries = filter_entries(container, &args);
@@ -49,7 +64,9 @@ async fn get(args: ArgsBootstrapGet) -> Result<(), StdError> {
 }
 
 async fn purge(args: ArgsBootstrapPurge) -> Result<(), StdError> {
-    purge_path(Path::new(&args.file)).await
+    let config = load_config(args.config_file).await?;
+    let path = config.vars.bootstrap.generated_secrets_file.clone();
+    purge_path(Path::new(path.as_ref())).await
 }
 
 async fn purge_path(path: &Path) -> Result<(), StdError> {
@@ -70,44 +87,6 @@ async fn purge_path(path: &Path) -> Result<(), StdError> {
         }
         Err(err) => Err(err.into()),
     }
-}
-
-fn init_enc_keys(enc_key_active: Option<&str>, enc_keys: Option<&str>) -> Result<(), StdError> {
-    let Some(enc_key_active) = enc_key_active else {
-        return Err(missing_keys_error("ENC_KEY_ACTIVE"));
-    };
-    let Some(enc_keys) = enc_keys else {
-        return Err(missing_keys_error("ENC_KEYS"));
-    };
-    let enc_keys = enc_keys
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(ToString::to_string)
-        .collect::<Vec<_>>();
-    if enc_keys.is_empty() {
-        return Err("ENC_KEYS did not contain any encryption keys".into());
-    }
-
-    EncKeys::try_parse(enc_key_active.to_string(), enc_keys)?.init()?;
-    Ok(())
-}
-
-fn missing_keys_error(name: &str) -> StdError {
-    let vault = env::var("USE_VAULT_CONFIG")
-        .unwrap_or_else(|_| "false".to_string())
-        .parse::<bool>()
-        .unwrap_or(false);
-    let prefix = if vault {
-        "USE_VAULT_CONFIG=true, but this offline command does not contact Vault. "
-    } else {
-        ""
-    };
-    format!(
-        "{prefix}missing {name}; pass --enc-key-active / --enc-keys or set \
-         ENC_KEY_ACTIVE / ENC_KEYS so the local bootstrap container can be decrypted"
-    )
-    .into()
 }
 
 fn filter_entries(
@@ -150,7 +129,8 @@ fn render_json(entries: &[GeneratedSecretEntry]) -> Result<String, StdError> {
 fn render_env(entries: &[GeneratedSecretEntry]) -> String {
     let mut out = String::new();
     for entry in entries {
-        out.push_str(&format!("{}={}\n", entry.env_name(), entry.value));
+        // write! into the buffer avoids the extra String allocation format! does.
+        let _ = writeln!(out, "{}={}", entry.env_name(), entry.value);
     }
     out
 }
@@ -177,13 +157,11 @@ mod tests {
             ],
         };
         let args = ArgsBootstrapGet {
-            file: "unused".to_string(),
+            config_file: "unused".to_string(),
             format: BootstrapOutputFormat::Env,
             kind: Some("client".to_string()),
             id: Some("demo".to_string()),
             field: Some("secret".to_string()),
-            enc_key_active: None,
-            enc_keys: None,
         };
 
         let filtered = filter_entries(container, &args);

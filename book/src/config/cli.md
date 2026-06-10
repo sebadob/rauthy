@@ -110,32 +110,23 @@ When `clients.json` or `users.json` uses `"generate"`, Rauthy writes the plainte
 encrypted local container before inserting the matching database rows. The CLI can read this
 container without starting or contacting the Rauthy server.
 
-The CLI must have the same encryption keys that were active during bootstrap:
+The CLI reads everything it needs from your existing Rauthy config file: it loads the same
+`ENC_KEYS` that were active during bootstrap and resolves the configured container location. You
+never pass encryption keys on the command line (which would leak them into your shell history and
+process list) or a separate file path. Just point it at the config:
 
 ```bash
-export ENC_KEY_ACTIVE='2026-06-06'
-export ENC_KEYS='2026-06-06/<base64-key>'
+rauthy bootstrap get --config-file ./config.toml --format env
 ```
 
-You can also pass them explicitly:
-
-```bash
-rauthy bootstrap get \
-  --file data/bootstrap.secrets.enc \
-  --enc-key-active '2026-06-06' \
-  --enc-keys '2026-06-06/<base64-key>' \
-  --format env
-```
-
-If your deployment uses `USE_VAULT_CONFIG=true`, provide `ENC_KEY_ACTIVE` and `ENC_KEYS` explicitly
-or via the local environment. `rauthy bootstrap get` is an offline decrypt command and intentionally
-does not fetch config from Vault.
+`--config-file` defaults to `./config.toml`, so inside the container or next to the config you can
+usually omit it. If your deployment uses `USE_VAULT_CONFIG=true`, the CLI loads the config the same
+way the server does.
 
 To print only one value, use `raw` with an exact selector:
 
 ```bash
 rauthy bootstrap get \
-  --file data/bootstrap.secrets.enc \
   --kind client \
   --id my-service \
   --field secret \
@@ -146,7 +137,6 @@ rauthy bootstrap get \
 
 ```bash
 rauthy bootstrap get \
-  --file data/bootstrap.secrets.enc \
   --kind user \
   --id admin@example.com \
   --field password \
@@ -156,7 +146,7 @@ rauthy bootstrap get \
 `env` emits collision-safe names containing the kind, sanitized id, and field:
 
 ```bash
-rauthy bootstrap get --file data/bootstrap.secrets.enc --format env
+rauthy bootstrap get --format env
 ```
 
 Example output:
@@ -169,7 +159,7 @@ RAUTHY_BOOTSTRAP_USER_ADMIN_EXAMPLE_COM_PASSWORD=...
 After you have stored the values somewhere safe, purge the container:
 
 ```bash
-rauthy bootstrap purge --file data/bootstrap.secrets.enc
+rauthy bootstrap purge
 ```
 
 Purging is idempotent: if the file is already absent, the command reports that and exits

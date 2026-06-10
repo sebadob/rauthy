@@ -43,6 +43,11 @@ impl ErrorResponse {
         }
     }
 
+    /// Convenience constructor for an internal error.
+    pub fn internal(message: impl Into<Cow<'static, str>>) -> Self {
+        Self::new(ErrorResponseType::Internal, message)
+    }
+
     pub fn error_response_html(&self, body: String) -> HttpResponse {
         HttpResponseBuilder::new(self.status_code())
             .append_header(HEADER_HTML)
