@@ -18,6 +18,7 @@ impl I18nEmailLoginLocation<'_> {
             Language::Fr => Self::build_fr(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
+            Language::Nl => Self::build_nl(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
@@ -78,6 +79,17 @@ impl I18nEmailLoginLocation<'_> {
                 oppdatere dine påloggingsopplysninger!",
             revoke_link: "Tilbakekall tilgang",
             account_link: "Kontodashboard",
+        }
+    }
+
+    fn build_nl() -> Self {
+        Self {
+            subject: "Beveiligingswaarschuwing",
+            unknown_location: "Inloggen vanaf onbekende locatie",
+            if_invalid: "Als dit een ongeldige login is, moet u deze onmiddellijk intrekken en \
+                uw inloggegevens bijwerken!",
+            revoke_link: "Toegang intrekken",
+            account_link: "Account Dashboard",
         }
     }
 
