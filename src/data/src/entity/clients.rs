@@ -42,8 +42,9 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
     id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
-    backchannel_logout_uri = $20, restrict_group_prefix = $21
-WHERE id = $22"#;
+    backchannel_logout_uri = $20, restrict_group_prefix = $21, claims = $22,
+    claims_at_root = $23
+WHERE id = $24"#;
 
 /**
 # OIDC Client
@@ -81,6 +82,14 @@ pub struct Client {
     pub contacts: Option<String>,
     pub backchannel_logout_uri: Option<String>,
     pub restrict_group_prefix: Option<String>,
+    // Admin-defined custom claims, serialized JSON object. We don't store
+    // `serde_json::Value` directly, because it might produce a
+    // `Bincode: Serde(AnyNotSupported)`. Emitted into `client_credentials`
+    // tokens; see `TokenSet::build_access_token`.
+    pub claims: Option<Vec<u8>>,
+    // When `true`, `claims` are emitted at the token root (flattened) instead of
+    // nested under `custom`, guarded by `validate_no_reserved_collision()`.
+    pub claims_at_root: bool,
 }
 
 impl Debug for Client {
@@ -91,7 +100,8 @@ impl Debug for Client {
         redirect_uris: {}, post_logout_redirect_uris: {:?}, allowed_origins: {:?}, \
         flows_enabled: {}, access_token_alg: {}, id_token_alg: {}, auth_code_lifetime: {}, \
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
-        client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?} \
+        client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?}, \
+        claims: {:?}, claims_at_root: {} \
         }}",
             self.id,
             self.name,
@@ -113,6 +123,8 @@ impl Debug for Client {
             self.contacts,
             self.backchannel_logout_uri,
             self.restrict_group_prefix,
+            self.claims.as_deref().map(String::from_utf8_lossy),
+            self.claims_at_root,
         )
     }
 }
@@ -519,6 +531,8 @@ VALUES ($1, $2, $3, $4)"#;
                 contacts,
                 backchannel_logout_uri,
                 &self.restrict_group_prefix,
+                &self.claims,
+                self.claims_at_root,
                 &self.id
             ),
         ));
@@ -564,6 +578,8 @@ VALUES ($1, $2, $3, $4)"#;
                 &contacts,
                 &backchannel_logout_uri,
                 &self.restrict_group_prefix,
+                &self.claims,
+                &self.claims_at_root,
                 &self.id,
             ],
         )
@@ -617,6 +633,8 @@ VALUES ($1, $2, $3, $4)"#;
                         contacts,
                         backchannel_logout_uri,
                         &self.restrict_group_prefix,
+                        &self.claims,
+                        self.claims_at_root,
                         self.id.clone()
                     ),
                 )
@@ -646,6 +664,8 @@ VALUES ($1, $2, $3, $4)"#;
                     &contacts,
                     &backchannel_logout_uri,
                     &self.restrict_group_prefix,
+                    &self.claims,
+                    &self.claims_at_root,
                     &self.id,
                 ],
             )
@@ -1427,6 +1447,10 @@ impl Client {
         let default_scopes = self.get_default_scopes();
         let challenges = self.get_challenges();
         let contacts = self.get_contacts();
+        let claims = self
+            .claims
+            .as_deref()
+            .and_then(|bytes| serde_json::from_slice(bytes).ok());
 
         let access_token_alg = JwkKeyPairAlg::from_str(&self.access_token_alg)
             .expect("internal JwkKeyPairAlg conversion to always succeed")
@@ -1456,6 +1480,8 @@ impl Client {
             contacts,
             backchannel_logout_uri: self.backchannel_logout_uri,
             restrict_group_prefix: self.restrict_group_prefix,
+            claims,
+            claims_at_root: self.claims_at_root,
             scim: scim.map(|scim| ScimClientRequestResponse {
                 bearer_token: scim.bearer_token,
                 base_uri: scim.base_uri,
@@ -1507,6 +1533,8 @@ impl From<EphemeralClientRequest> for Client {
             contacts: value.contacts.map(|c| c.join(",")),
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
         }
     }
 }
@@ -1546,6 +1574,8 @@ impl Default for Client {
             contacts: None,
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
         }
     }
 }
@@ -1791,6 +1821,8 @@ mod tests {
             contacts: Some("batman@localhost.de,@alfred:matrix.org".to_string()),
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);

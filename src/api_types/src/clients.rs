@@ -196,6 +196,15 @@ pub struct UpdateClientRequest {
     /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
     #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub restrict_group_prefix: Option<String>,
+    /// Admin-defined custom claims emitted into `client_credentials` tokens.
+    /// Validation: JSON object, max 1024 serialized characters
+    #[serde(default)]
+    #[validate(custom(function = "validate_claims"))]
+    pub claims: Option<serde_json::Value>,
+    /// When `true`, `claims` are emitted at the token root instead of nested
+    /// under `custom`. Collisions with reserved claims fail token issuance.
+    #[serde(default)]
+    pub claims_at_root: bool,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
 }
@@ -253,6 +262,9 @@ pub struct ClientResponse {
     pub backchannel_logout_uri: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub restrict_group_prefix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub claims: Option<serde_json::Value>,
+    pub claims_at_root: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scim: Option<ScimClientRequestResponse>,
 }

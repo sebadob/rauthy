@@ -297,6 +297,8 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         contacts: None,
         backchannel_logout_uri: Some(init_client_bcl_uri()),
         restrict_group_prefix: None,
+        claims: None,
+        claims_at_root: false,
         scim: None,
     };
     let url_client = format!("{}/clients/{}", backend_url, CLIENT_ID);

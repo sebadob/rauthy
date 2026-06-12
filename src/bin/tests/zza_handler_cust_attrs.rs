@@ -132,6 +132,8 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         contacts: None,
         backchannel_logout_uri: None,
         restrict_group_prefix: None,
+        claims: None,
+        claims_at_root: false,
         scim: None,
     };
     let res = client

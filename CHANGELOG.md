@@ -37,8 +37,25 @@ API Keys can now be bootstrapped during advanced bootstrapping from JSON files.
 
 [#1585](https://github.com/sebadob/rauthy/pull/1585)
 
+#### Custom Claims on `client_credentials` Tokens
+
+A client can now carry admin-defined custom claims. You can set a JSON object on a `Client` in the
+Admin UI (or via the management API), which is emitted into the access token of the
+`client_credentials` flow. This lets machine clients carry self-describing claims (workload
+identity, tenant id, deployment profile, ...) without the resource server having to look anything up
+by `client_id`. By default the claims are nested under the `custom` claim; an opt-in `claims_at_root`
+flag emits them at the token root instead (a collision with a reserved claim fails token issuance).
+The value must be a JSON object and is capped at 1024 serialized characters. Dynamic and ephemeral
+clients cannot set their own claims.
+
+[#1604](https://github.com/sebadob/rauthy/pull/1604)
+
 ### Bugfix
 
+- The Postgres migration `v24__cust_attrs_token_root.sql` was named with a lowercase `v` and was
+  therefore silently skipped by `refinery` (which only matches an uppercase `V`/`U` prefix). On
+  Postgres, the `scopes.claims_at_root` column was never created and a fresh bootstrap failed. The
+  migration is renamed to `V24__cust_attrs_token_root.sql`.
 - After the Issue change with `V0.35.0` the URL to the dashboard that's built for a fresh instance
   was wrong. It contained an additional `/` and was therefore invalid.
   [#1578](https://github.com/sebadob/rauthy/pull/1578)

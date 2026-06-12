@@ -60,6 +60,8 @@ pub async fn anti_lockout() -> Result<(), ErrorResponse> {
         contacts: vars.email.rauthy_admin_email.clone(),
         backchannel_logout_uri: None,
         restrict_group_prefix: None,
+        claims: None,
+        claims_at_root: false,
     };
     debug!(client = ?rauthy, "Rauthy client anti-lockout");
 

@@ -46,6 +46,11 @@ export let I18nAdminZh: I18nAdmin = {
             descVariables: `每个标签同时也是CSS变量名。这意味着，
                 您可以在自由输入框中引用它们，例如<code>hsla(var(--action) / .7)</code>。`,
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `When enabled, this client's claims are written at the token root instead of being nested under 'custom'. You own collision-correctness: if a claim name collides with a reserved JWT claim, token issuance fails. Root-level custom claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc:
+            'A JSON object emitted into client_credentials tokens, nested under the custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max 1024 serialized characters.',
         confidential: '机密',
         confidentialNoSecret: '这是一个非机密客户端，因此没有密钥。',
         config: '客户端配置',

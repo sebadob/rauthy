@@ -28,6 +28,8 @@
     import { slide } from 'svelte/transition';
     import Options from '$lib5/Options.svelte';
     import InputPassword from '$lib/form/InputPassword.svelte';
+    import InputArea from '$lib/form/InputArea.svelte';
+    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
     import { untrack } from 'svelte';
 
     let {
@@ -116,6 +118,9 @@
 
     let forceMfa = $state(client.force_mfa);
 
+    let jsonClaims = $state(untrack(() => stringifyJsonValue(client.claims) || ''));
+    let claimsAtRoot = $state(untrack(() => client.claims_at_root));
+
     $effect(() => {
         if (client.id) {
             id = client.id;
@@ -160,6 +165,9 @@
             });
             challenges.plain = client.challenges?.includes('plain') || false;
             challenges.s256 = client.challenges?.includes('S256') || false;
+
+            jsonClaims = stringifyJsonValue(client.claims) || '';
+            claimsAtRoot = client.claims_at_root;
 
             scim = {
                 base_uri: client.scim?.base_uri || '',
@@ -220,6 +228,8 @@
             contacts: contacts.length > 0 ? contacts : undefined,
             backchannel_logout_uri: backchannel_logout_uri || undefined,
             restrict_group_prefix: restrict_group_prefix || undefined,
+            claims: parseJsonValue(jsonClaims),
+            claims_at_root: claimsAtRoot,
         };
 
         if (flows.authorizationCode) {
@@ -442,6 +452,31 @@
             errMsg="10 <= Auth Code Lifetime <= 300"
         />
 
+        <div style:height=".5rem"></div>
+        <p class="mb-0"><b>Custom Claims</b></p>
+        <p class="desc">{ta.clients.claimsDesc}</p>
+        <div class="claims">
+            <InputArea
+                label={ta.clients.claims}
+                placeholder={ta.clients.claims}
+                rows={10}
+                bind:value={jsonClaims}
+            />
+        </div>
+        <InputCheckbox ariaLabel={ta.clients.claimsAtRoot} bind:checked={claimsAtRoot}>
+            {ta.clients.claimsAtRoot}
+        </InputCheckbox>
+        <p class="warn">
+            {ta.clients.claimsAtRootWarning}
+            <a
+                href="https://www.iana.org/assignments/jwt/jwt.xhtml"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                IANA JWT Claims Registry
+            </a>
+        </p>
+
         <p class="mb-0"><b>Backchannel Logout</b></p>
         <p class="desc">
             {@html ta.clients.backchannelLogout.replace(
@@ -567,5 +602,15 @@
 
     .mb-0 {
         margin-bottom: 0;
+    }
+
+    .claims {
+        max-width: 40rem;
+    }
+
+    .warn {
+        max-width: 40rem;
+        font-size: 0.9rem;
+        opacity: 0.8;
     }
 </style>

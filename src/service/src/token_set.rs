@@ -233,6 +233,34 @@ impl TokenSet {
             }
         }
 
+        // `client_credentials` tokens have no user (`user.is_none()`), so they
+        // carry the client's admin-defined custom claims. Routed to the token root
+        // (flattened) or nested under `custom` by the client's `claims_at_root`
+        // flag, mirroring the per-scope routing above without the scope checks.
+        // Only the admin API / UI can set these; the dynamic client registration
+        // path never populates `client.claims`.
+        if user.is_none()
+            && let Some(claims) = &client.claims
+        {
+            let value: serde_json::Value = serde_json::from_slice(claims)?;
+            if let serde_json::Value::Object(map) = value {
+                if client.claims_at_root {
+                    let flattened = map.into_iter().collect::<HashMap<_, _>>();
+                    // Fail issuance rather than emit a token that shadows a reserved claim.
+                    validate_no_reserved_collision(&flattened)?;
+                    claims_new_impl
+                        .custom_flattened
+                        .get_or_insert_with(HashMap::new)
+                        .extend(flattened);
+                } else {
+                    claims_new_impl
+                        .custom
+                        .get_or_insert_with(HashMap::new)
+                        .extend(map);
+                }
+            }
+        }
+
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.access_token_alg)?;
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
         let token = JwtToken::build(&kp, &claims_new_impl)?;
