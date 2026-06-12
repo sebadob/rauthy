@@ -30,8 +30,8 @@
     let theme: ThemeRequestResponse | undefined = $state();
 
     let logoKey = $state(genKey());
-    let logoUrl = $derived(`/auth/v1/clients/${client.id}/logo?${logoKey}`);
-    let url = $derived(`/auth/v1/theme/${client.id}`);
+    let logoUrl = $derived(`/auth/v1/clients/${encodeURIComponent(client.id)}/logo?${logoKey}`);
+    let url = $derived(`/auth/v1/theme/${encodeURIComponent(client.id)}`);
 
     $effect(() => {
         fetchTheme();
@@ -72,7 +72,7 @@
         if (res.error) {
             err = res.error.message;
         } else {
-            await fetchDelete(`/auth/v1/clients/${client.id}/logo`);
+            await fetchDelete(`/auth/v1/clients/${encodeURIComponent(client.id)}/logo`);
 
             await fetchTheme();
             logoKey = genKey();
@@ -121,7 +121,7 @@
                 <p>Logo Upload</p>
                 <InputFile
                     method="PUT"
-                    url={`/auth/v1/clients/${client.id}/logo`}
+                    url={`/auth/v1/clients/${encodeURIComponent(client.id)}/logo`}
                     fileName="logo"
                     onSuccess={onUploadSuccess}
                 />
