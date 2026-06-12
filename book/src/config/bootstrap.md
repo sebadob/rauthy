@@ -109,10 +109,11 @@ rights could look like this:
 ]
 ```
 
-The `secret` can be either `{"Plain": "..."}` or `{"Encrypted": "..."}`. Plain secrets must be at
+The `secret` can be `{"Plain": "..."}`, `{"Encrypted": "..."}`, or `"generate"`. Plain secrets must be at
 least 64 characters long. Encrypted secrets are encrypted with
 [`cryptr`](https://github.com/sebadob/cryptr) and base64-encoded, just like encrypted client
-secrets.
+secrets. Generated API-key secrets are written to the generated-secret container and can be
+extracted with `rauthy bootstrap get --kind api-key --id <name> --field secret`.
 
 ```admonish caution
 Only bootstrap short-lived API keys for production automation. Set `exp` to a timestamp
@@ -211,6 +212,111 @@ If you bootstrap API keys for production setup, make sure they always auto-expir
 JSON is only read while initializing an empty production database; changing `api_keys.json`
 later does not reconcile live API keys.
 ```
+
+## Generated Bootstrap Secrets
+
+Generated bootstrap credentials are stored in an encrypted local container before their matching
+database rows are inserted. This keeps later phases from creating live client, user, or API-key
+rows whose generated plaintext cannot be recovered.
+
+The container is a single AEAD-encrypted JSON payload. The expiry deadline lives inside that
+encrypted payload, so startup and runtime expiry checks decrypt the container first. A positive TTL
+also schedules a runtime purge after each write. Set the TTL to `0` only if you intentionally want
+to keep the encrypted container for manual extraction and purge it yourself.
+
+Generated values are a first-boot mechanism only. The JSON bootstrap files are read while Rauthy
+initializes an empty production database. If you add `"generate"` to `clients.json`, `users.json`,
+or `api_keys.json` after the database has already been initialized, that day-2 change is ignored by
+the first-boot bootstrap gate and no new generated secret is written.
+
+```toml
+[bootstrap]
+# Path to the encrypted generated-secret container. If unset, Rauthy stores it
+# below Hiqlite's configured data directory as:
+#
+# `${cluster.data_dir}/bootstrap.secrets.enc`
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
+#generated_secrets_file = 'data/bootstrap.secrets.enc'
+
+# Time in seconds before generated bootstrap secrets expire. A value of `0`
+# disables expiry and runtime auto-purge.
+#
+# default: 600
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
+generated_secrets_ttl = 600
+```
+
+Use the local CLI to retrieve or purge the encrypted container after first start. The command does
+not talk to the Rauthy server.
+
+```bash
+rauthy bootstrap get \
+  -c config.toml \
+  --kind client \
+  --id my-service \
+  --field secret \
+  --format raw
+
+rauthy bootstrap get -c config.toml --format env
+rauthy bootstrap purge -c config.toml
+```
+
+`get --format env` emits names that include the entity kind, sanitized id, and field, for example
+`RAUTHY_BOOTSTRAP_CLIENT_MY_SERVICE_SECRET=...` and
+`RAUTHY_BOOTSTRAP_USER_ADMIN_EXAMPLE_COM_PASSWORD=...`.
+
+The CLI loads the existing Rauthy config and initializes the configured encryption keys before it
+decrypts the container. It does not accept encryption keys or the container path as command-line
+arguments.
+
+Clients can request a generated confidential-client secret with `"secret": "generate"`:
+
+```json
+[
+  {
+    "id": "my-service",
+    "name": "My Service",
+    "secret": "generate",
+    "redirect_uris": ["https://my-service.example.com/callback"],
+    "enabled": true,
+    "flows_enabled": ["authorization_code", "refresh_token"],
+    "access_token_alg": "EdDSA",
+    "id_token_alg": "EdDSA",
+    "auth_code_lifetime": 60,
+    "access_token_lifetime": 3600,
+    "scopes": ["openid", "profile", "email"],
+    "default_scopes": ["openid", "profile", "email"],
+    "force_mfa": false
+  }
+]
+```
+
+If the `secret` field is absent or `null`, the client remains public and Rauthy forces `S256` PKCE.
+Use `"secret": "generate"` only when you want a confidential client and plan to extract the
+generated secret from the encrypted container.
+
+Users can request a generated password with `"password": "generate"`:
+
+```json
+[
+  {
+    "email": "admin@example.com",
+    "password": "generate",
+    "roles": ["admin"],
+    "enabled": true,
+    "email_verified": true
+  }
+]
+```
+
+Rauthy writes the plaintext password to the encrypted container before hashing it and inserting the
+user row. The database stores only the password hash.
+
+API keys in `api_keys.json` can request a generated secret with `"secret": "generate"`. Rauthy
+writes the plaintext API-key secret to the encrypted container before hashing and storing it in the
+database. Extract it with `--kind api-key --id <key-name> --field secret`; combine it with the key
+name as `API-Key <key-name>$<secret>` for the `Authorization` header.
 
 ## Advanced / Custom Configuration
 
