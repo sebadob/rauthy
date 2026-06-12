@@ -131,17 +131,17 @@ fn is_expired(deadline: i64, now: i64) -> bool {
     deadline > 0 && now >= deadline
 }
 
-pub fn deadline_from_ttl(ttl_seconds: u64, now: i64) -> i64 {
+pub fn deadline_from_ttl(ttl_seconds: u32, now: i64) -> i64 {
     if ttl_seconds == 0 {
         0
     } else {
-        now.saturating_add(ttl_seconds as i64)
+        now.saturating_add(i64::from(ttl_seconds))
     }
 }
 
 pub async fn upsert_secret(
     path: impl AsRef<Path>,
-    ttl_seconds: u64,
+    ttl_seconds: u32,
     entry: GeneratedSecretEntry,
 ) -> Result<(), ErrorResponse> {
     let path = path.as_ref();
@@ -256,13 +256,13 @@ pub async fn purge_if_expired(path: impl AsRef<Path>) -> Result<bool, ErrorRespo
     }
 }
 
-pub fn schedule_purge(path: PathBuf, ttl_seconds: u64) {
+pub fn schedule_purge(path: PathBuf, ttl_seconds: u32) {
     if ttl_seconds == 0 {
         return;
     }
 
     tokio::spawn(async move {
-        sleep(Duration::from_secs(ttl_seconds)).await;
+        sleep(Duration::from_secs(u64::from(ttl_seconds))).await;
         if let Err(err) = purge_if_expired(&path).await {
             error!(
                 "Could not purge bootstrap generated-secret container '{}': {err}",

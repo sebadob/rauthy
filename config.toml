@@ -475,7 +475,7 @@ api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQyn
 
 # Generated bootstrap secrets are written to this encrypted local container
 # before their matching database rows are inserted. Later bootstrap phases use
-# it for generated client secrets and user passwords that cannot be
+# it for generated client secrets, user passwords, and API-key secrets that cannot be
 # reconstructed from the database after insertion.
 #
 # The file is a single AEAD-encrypted JSON payload. The expiry deadline lives

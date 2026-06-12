@@ -123,18 +123,36 @@ impl Validate for ApiKey {
     }
 }
 
-#[derive(Deserialize)]
 pub enum ApiKeySecret {
     // Plain text secret
     Plain(String),
     // Must be encrypted using [cryptr](https://github.com/sebadob/cryptr) with an `ENC_KEY` that
     // the Rauthy instance must have available. The encrypted data is expected as **base64**.
     Encrypted(String),
+    // Generate a new API-key secret on first bootstrap and store the cleartext
+    // in the encrypted generated-secret container before the DB row is updated.
+    Generate,
 }
 
 impl Debug for ApiKeySecret {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("<hidden>")
+    }
+}
+
+impl<'de> Deserialize<'de> for ApiKeySecret {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_secret(
+            deserializer,
+            "API-key secret",
+            "Encrypted",
+            |s| Ok(Self::Plain(s)),
+            |s| Ok(Self::Encrypted(s)),
+            || Ok(Self::Generate),
+        )
     }
 }
 
@@ -381,6 +399,30 @@ mod tests {
                 .validate()
                 .expect("api_keys bootstrap example should validate");
         }
+    }
+
+    #[test]
+    fn parses_generated_api_key_secret_string() {
+        let api_keys = serde_json::from_str::<Vec<ApiKey>>(
+            r#"[
+                {
+                    "name": "bootstrap",
+                    "exp": 1735599600,
+                    "secret": "generate",
+                    "access": [
+                        {
+                            "group": "Clients",
+                            "access_rights": ["read", "create"]
+                        }
+                    ]
+                }
+            ]"#,
+        )
+        .unwrap();
+
+        assert_eq!(api_keys.len(), 1);
+        assert!(matches!(&api_keys[0].secret, ApiKeySecret::Generate));
+        api_keys[0].validate().unwrap();
     }
 
     #[test]

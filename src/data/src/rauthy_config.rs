@@ -1430,7 +1430,7 @@ impl Vars {
         ) {
             self.bootstrap.generated_secrets_file = v.into();
         }
-        if let Some(v) = t_u64(
+        if let Some(v) = t_u32(
             &mut table,
             "bootstrap",
             "generated_secrets_ttl",
@@ -3458,7 +3458,7 @@ pub struct VarsBootstrap {
     pub api_key_secret: Option<String>,
     pub bootstrap_dir: Cow<'static, str>,
     pub generated_secrets_file: Cow<'static, str>,
-    pub generated_secrets_ttl: u64,
+    pub generated_secrets_ttl: u32,
 }
 
 #[derive(Debug)]
@@ -3959,16 +3959,6 @@ fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) ->
             panic!("{}", err_t(key, parent, "u32"));
         }
         Some(v as u32)
-    } else {
-        None
-    }
-}
-fn t_u64(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u64> {
-    if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 {
-            panic!("{}", err_t(key, parent, "u64"));
-        }
-        Some(v as u64)
     } else {
         None
     }

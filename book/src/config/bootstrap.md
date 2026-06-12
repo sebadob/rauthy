@@ -109,10 +109,11 @@ rights could look like this:
 ]
 ```
 
-The `secret` can be either `{"Plain": "..."}` or `{"Encrypted": "..."}`. Plain secrets must be at
+The `secret` can be `{"Plain": "..."}`, `{"Encrypted": "..."}`, or `"generate"`. Plain secrets must be at
 least 64 characters long. Encrypted secrets are encrypted with
 [`cryptr`](https://github.com/sebadob/cryptr) and base64-encoded, just like encrypted client
-secrets.
+secrets. Generated API-key secrets are written to the generated-secret container and can be
+extracted with `rauthy bootstrap get --kind api-key --id <name> --field secret`.
 
 ```admonish caution
 Only bootstrap short-lived API keys for production automation. Set `exp` to a timestamp
@@ -215,8 +216,8 @@ later does not reconcile live API keys.
 ## Generated Bootstrap Secrets
 
 Generated bootstrap credentials are stored in an encrypted local container before their matching
-database rows are inserted. This keeps later phases from creating live client or user rows whose
-generated plaintext cannot be recovered.
+database rows are inserted. This keeps later phases from creating live client, user, or API-key
+rows whose generated plaintext cannot be recovered.
 
 The container is a single AEAD-encrypted JSON payload. The expiry deadline lives inside that
 encrypted payload, so startup and runtime expiry checks decrypt the container first. A positive TTL
@@ -224,9 +225,9 @@ also schedules a runtime purge after each write. Set the TTL to `0` only if you 
 to keep the encrypted container for manual extraction and purge it yourself.
 
 Generated values are a first-boot mechanism only. The JSON bootstrap files are read while Rauthy
-initializes an empty production database. If you add `"generate"` to `clients.json` or `users.json`
-after the database has already been initialized, that day-2 change is ignored by the first-boot
-bootstrap gate and no new generated secret is written.
+initializes an empty production database. If you add `"generate"` to `clients.json`, `users.json`,
+or `api_keys.json` after the database has already been initialized, that day-2 change is ignored by
+the first-boot bootstrap gate and no new generated secret is written.
 
 ```toml
 [bootstrap]
@@ -311,6 +312,11 @@ Users can request a generated password with `"password": "generate"`:
 
 Rauthy writes the plaintext password to the encrypted container before hashing it and inserting the
 user row. The database stores only the password hash.
+
+API keys in `api_keys.json` can request a generated secret with `"secret": "generate"`. Rauthy
+writes the plaintext API-key secret to the encrypted container before hashing and storing it in the
+database. Extract it with `--kind api-key --id <key-name> --field secret`; combine it with the key
+name as `API-Key <key-name>$<secret>` for the `Authorization` header.
 
 ## Advanced / Custom Configuration
 
