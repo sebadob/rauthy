@@ -475,11 +475,11 @@ api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQyn
 
 # Generated bootstrap secrets are written to this encrypted local container
 # before their matching database rows are inserted. Later bootstrap phases use
-# it for generated client secrets, user passwords, and API-key tokens that
-# cannot be reconstructed from the database after insertion.
+# it for generated client secrets and user passwords that cannot be
+# reconstructed from the database after insertion.
 #
-# The file has a cleartext magic/version/deadline header and an encrypted JSON
-# payload. An expired file can therefore be purged without decrypting it.
+# The file is a single AEAD-encrypted JSON payload. The expiry deadline lives
+# inside that encrypted payload, so expiry checks decrypt the container first.
 #
 # If unset, the default is `${cluster.data_dir}/bootstrap.secrets.enc`.
 #

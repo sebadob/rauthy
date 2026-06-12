@@ -2,12 +2,14 @@ use cryptr::EncValue;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 use tokio::time::sleep;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use zeroize::Zeroize;
 
 const VERSION: u16 = 1;
@@ -144,7 +146,16 @@ pub async fn upsert_secret(
 ) -> Result<(), ErrorResponse> {
     let path = path.as_ref();
     let mut container = if tokio::fs::try_exists(path).await.unwrap_or(false) {
-        read_container(path).await?
+        match read_container(path).await {
+            Ok(container) => container,
+            Err(err) => {
+                warn!(
+                    "Could not read existing bootstrap generated-secret container '{}': {err}; starting with a fresh container",
+                    path.display()
+                );
+                GeneratedSecrets::default()
+            }
+        }
     } else {
         GeneratedSecrets::default()
     };
@@ -157,7 +168,16 @@ pub async fn upsert_secret(
 
 pub async fn read_container(path: impl AsRef<Path>) -> Result<GeneratedSecrets, ErrorResponse> {
     let path = path.as_ref();
-    let bytes = tokio::fs::read(path).await?;
+    let bytes = match tokio::fs::read(path).await {
+        Ok(bytes) => bytes,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            return Err(ErrorResponse::internal(format!(
+                "no generated bootstrap secrets stored at {}",
+                path.display()
+            )));
+        }
+        Err(err) => return Err(err.into()),
+    };
     let payload = decrypt_container(bytes, path)?;
     if is_expired(payload.deadline, now_utc()) {
         return Err(ErrorResponse::internal(format!(
@@ -202,13 +222,15 @@ pub async fn write_container(
     let tmp = tmp_path(path)?;
     {
         let mut options = OpenOptions::new();
-        options.write(true).create_new(true);
+        options.write(true).create(true).truncate(true);
         #[cfg(unix)]
         options.mode(0o600);
         let mut file = options.open(&tmp).await?;
         file.write_all(&encrypted).await?;
         file.sync_all().await?;
     }
+    #[cfg(unix)]
+    tokio::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o600)).await?;
     tokio::fs::rename(&tmp, path).await?;
 
     Ok(())
@@ -260,7 +282,18 @@ fn decrypt_container(bytes: Vec<u8>, path: &Path) -> Result<ContainerPayload, Er
     // cryptr uses AEAD (ChaCha20Poly1305): a malformed or tampered file fails to
     // decrypt, which is the integrity check. No manual magic/version on disk.
     let decrypted = EncValue::try_from(bytes)?.decrypt()?;
-    let payload: ContainerPayload = serde_json::from_slice(&decrypted)?;
+    let payload: ContainerPayload = match serde_json::from_slice(&decrypted) {
+        Ok(payload) => payload,
+        Err(err) => {
+            if let Ok(mut decrypted) = decrypted.try_into_mut() {
+                decrypted.as_mut().zeroize();
+            }
+            return Err(err.into());
+        }
+    };
+    if let Ok(mut decrypted) = decrypted.try_into_mut() {
+        decrypted.as_mut().zeroize();
+    }
     if payload.version > VERSION {
         return Err(ErrorResponse::internal(format!(
             "unsupported bootstrap generated-secret container version {} in {}",
@@ -373,6 +406,72 @@ mod tests {
 
         let err = read_container(&path).await.unwrap_err();
         assert!(!err.message.is_empty());
+
+        let _ = tokio::fs::remove_file(&path).await;
+    }
+
+    #[tokio::test]
+    async fn missing_container_error_names_path() {
+        init_keys();
+        let path = test_path("missing");
+        let _ = tokio::fs::remove_file(&path).await;
+
+        let err = read_container(&path).await.unwrap_err();
+
+        assert!(
+            err.message
+                .contains("no generated bootstrap secrets stored at")
+        );
+        assert!(err.message.contains(path.to_str().unwrap()));
+    }
+
+    #[tokio::test]
+    async fn upsert_recovers_from_unreadable_existing_container() {
+        init_keys();
+        let path = test_path("recover-garbage");
+        tokio::fs::write(&path, b"not-a-valid-enc-container")
+            .await
+            .unwrap();
+
+        upsert_secret(
+            &path,
+            0,
+            GeneratedSecretEntry::new(
+                GeneratedSecretKey::new("client", "demo-app", "secret"),
+                "generated-secret",
+            ),
+        )
+        .await
+        .unwrap();
+
+        let container = read_container(&path).await.unwrap();
+        assert_eq!(container.entries.len(), 1);
+        assert_eq!(container.entries[0].value, "generated-secret");
+
+        let _ = tokio::fs::remove_file(&path).await;
+    }
+
+    #[tokio::test]
+    async fn write_container_overwrites_stale_temp_file() {
+        init_keys();
+        let path = test_path("stale-temp");
+        let tmp = tmp_path(&path).unwrap();
+        let _ = tokio::fs::remove_file(&path).await;
+        tokio::fs::write(&tmp, b"stale partial write")
+            .await
+            .unwrap();
+
+        let mut container = GeneratedSecrets::default();
+        container.upsert(GeneratedSecretEntry::new(
+            GeneratedSecretKey::new("user", "can", "password"),
+            "pw",
+        ));
+        write_container(&path, 0, &container).await.unwrap();
+
+        let container = read_container(&path).await.unwrap();
+        assert_eq!(container.entries.len(), 1);
+        assert_eq!(container.entries[0].value, "pw");
+        assert!(!tmp.exists());
 
         let _ = tokio::fs::remove_file(&path).await;
     }

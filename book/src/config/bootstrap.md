@@ -215,13 +215,13 @@ later does not reconcile live API keys.
 ## Generated Bootstrap Secrets
 
 Generated bootstrap credentials are stored in an encrypted local container before their matching
-database rows are inserted. This keeps later phases from creating live client, user, or API-key rows
-whose generated plaintext cannot be recovered.
+database rows are inserted. This keeps later phases from creating live client or user rows whose
+generated plaintext cannot be recovered.
 
-The container has a cleartext magic/version/deadline header followed by an encrypted JSON payload.
-Rauthy can therefore purge an expired file during startup without decrypting the payload. A positive
-TTL also schedules a runtime purge after each write. Set the TTL to `0` only if you intentionally
-want to keep the encrypted container for manual extraction and purge it yourself.
+The container is a single AEAD-encrypted JSON payload. The expiry deadline lives inside that
+encrypted payload, so startup and runtime expiry checks decrypt the container first. A positive TTL
+also schedules a runtime purge after each write. Set the TTL to `0` only if you intentionally want
+to keep the encrypted container for manual extraction and purge it yourself.
 
 Generated values are a first-boot mechanism only. The JSON bootstrap files are read while Rauthy
 initializes an empty production database. If you add `"generate"` to `clients.json` or `users.json`
@@ -251,24 +251,23 @@ not talk to the Rauthy server.
 
 ```bash
 rauthy bootstrap get \
-  --file data/bootstrap.secrets.enc \
+  -c config.toml \
   --kind client \
   --id my-service \
   --field secret \
   --format raw
 
-rauthy bootstrap get --file data/bootstrap.secrets.enc --format env
-rauthy bootstrap purge --file data/bootstrap.secrets.enc
+rauthy bootstrap get -c config.toml --format env
+rauthy bootstrap purge -c config.toml
 ```
 
 `get --format env` emits names that include the entity kind, sanitized id, and field, for example
 `RAUTHY_BOOTSTRAP_CLIENT_MY_SERVICE_SECRET=...` and
 `RAUTHY_BOOTSTRAP_USER_ADMIN_EXAMPLE_COM_PASSWORD=...`.
 
-The CLI decrypts the container locally and therefore needs `ENC_KEY_ACTIVE` and `ENC_KEYS` either
-as environment variables or as `--enc-key-active` / `--enc-keys`. If you run Rauthy with
-`USE_VAULT_CONFIG=true`, pass these key values explicitly to the CLI; it intentionally does not
-contact Vault for an offline bootstrap-secret read.
+The CLI loads the existing Rauthy config and initializes the configured encryption keys before it
+decrypts the container. It does not accept encryption keys or the container path as command-line
+arguments.
 
 Clients can request a generated confidential-client secret with `"secret": "generate"`:
 

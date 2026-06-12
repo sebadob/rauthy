@@ -22,13 +22,14 @@ pub async fn run(args: ArgsBootstrap) -> Result<(), StdError> {
 /// Load the existing Rauthy config. This initializes `ENC_KEYS` (so the local
 /// container can be decrypted) and resolves the configured container path,
 /// exactly like the server does — no keys or file path are passed to the CLI.
-async fn load_config(config_file: String) -> Result<RauthyConfig, StdError> {
+async fn load_config(config_file: String) -> Result<&'static RauthyConfig, StdError> {
     let (tx_email, _) = mpsc::channel::<mailer::EMail>(16);
     let (tx_events, _) = flume::unbounded();
     let (tx_events_router, _) = flume::unbounded();
     let (config, _node) =
         RauthyConfig::build(config_file, tx_email, tx_events, tx_events_router).await?;
-    Ok(config)
+    config.init_static();
+    Ok(RauthyConfig::get())
 }
 
 async fn get(args: ArgsBootstrapGet) -> Result<(), StdError> {
