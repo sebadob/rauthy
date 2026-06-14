@@ -1,0 +1,149 @@
+# Rauthy Helm chart values.
+#
+# Design note: this chart does NOT re-template Rauthy's configuration. You
+# provide the complete `config.toml` (the documented Reference Config, or the
+# Minimal Production Config) in a Secret, and the chart mounts it verbatim at
+# /app/config.toml. The ONLY values the chart injects over your config are the
+# Raft cluster topology (HQL_NODES + HQL_NODE_ID_FROM), because those are
+# inherently tied to the StatefulSet and cannot be known until install/upgrade
+# time. Everything else - password hashing, sessions, SMTP, TLS, etc. - lives
+# in your config file, where every value is already documented.
+
+# Number of Rauthy replicas, i.e. Hiqlite Raft cluster members.
+#
+# SCALE-UP ONLY. Raft membership is derived from this number. You may raise
+# `replicas` and run `helm upgrade` to add nodes (use an odd count: 1, 3 or 5
+# is recommended; more works but write throughput degrades). You must NEVER
+# lower it again: a removed member stays in every other node's Raft config and
+# the cluster keeps trying to reach it. This is also why the chart ships no
+# HorizontalPodAutoscaler - autoscaling a Raft cluster down would break it.
+#
+# A fresh cluster only prints the auto-generated admin password on node 0. If
+# you rely on that log line, start at 1 for the first boot; otherwise set
+# `bootstrap.admin_email` and a password in your config and start at any size.
+replicas: 1
+
+image:
+  # Rauthy container image repository.
+  repository: ghcr.io/sebadob/rauthy
+  # Image tag. Empty string uses the chart's appVersion, so the chart and the
+  # app version it was tested with never drift. Override only to pin a
+  # different Rauthy release.
+  tag: ""
+  # imagePullPolicy for the Rauthy container.
+  pullPolicy: IfNotPresent
+
+# Image pull secrets for pulling from a private registry.
+imagePullSecrets: []
+
+config:
+  # Name of an existing Secret that holds the full Rauthy config under
+  # `existingSecretKey`. RECOMMENDED for production: you own the complete
+  # config and its secrets (cluster.secret_raft/secret_api, encryption.keys)
+  # and rotate them out of band. Takes precedence over `content` below.
+  existingSecret: ""
+  # Key inside `existingSecret` (and the mount source) that contains the file.
+  existingSecretKey: config.toml
+  # Inline config.toml. Used ONLY when `existingSecret` is empty; the chart
+  # then creates the Secret for you from this string. Paste a COMPLETE config
+  # here (see files/config.toml.example, the Minimal Production Config, or the
+  # Reference Config in the Rauthy book) - it must include valid
+  # cluster.secret_raft, cluster.secret_api and encryption.keys/key_active.
+  # The chart never generates secrets for you.
+  #
+  # Either `existingSecret` or `content` MUST be set; rendering fails otherwise.
+  content: ""
+
+service:
+  # Service type for the user-facing Rauthy HTTP port.
+  type: ClusterIP
+  # Service port and pod target port. Must match the HTTP port Rauthy listens
+  # on in your config (`server.port_http`, default 8080). If you run Rauthy in
+  # https-only mode, terminate TLS at your ingress and keep this on the HTTP
+  # port, or adjust the probes accordingly.
+  port: 8080
+
+ingress:
+  # Create an Ingress for the Rauthy HTTP service.
+  enabled: false
+  # ingressClassName, e.g. "nginx" or "traefik".
+  className: ""
+  # Extra annotations, e.g. cert-manager.io/cluster-issuer.
+  annotations: {}
+  # Hostname Rauthy is served on. Should equal `server.pub_url` in your config.
+  host: ""
+  # Name of a TLS Secret for `host`. Leave empty to omit the tls block (e.g.
+  # when an upstream LB terminates TLS).
+  tlsSecret: ""
+
+persistence:
+  # Size of the per-pod PersistentVolumeClaim backing the Hiqlite data dir
+  # (/app/data). Hiqlite is disk-backed (WAL logs + snapshots); a persistent
+  # volume lets a restarted node re-join the Raft cluster without a full
+  # re-sync. Required even with an external Postgres.
+  size: 128Mi
+  # StorageClass for the PVC. Empty uses the cluster default.
+  storageClass: ""
+
+resources:
+  requests:
+    # Tune memory carefully: a node needs at least
+    # `ARGON2_M_COST` / 1024 * `MAX_HASH_THREADS` Mi plus idle memory. A HA
+    # instance on Hiqlite idles around 100Mi; with an external Postgres as low
+    # as ~30Mi. See the Tuning chapter of the Rauthy book.
+    memory: 64Mi
+    cpu: 100m
+  # No memory limit by default: Argon2 hashing is memory-hungry and an OOM kill
+  # mid-hash crashes the pod. Rust is not garbage-collected, so a hard cap buys
+  # little. Set a limit only after observing real usage. `MAX_HASH_THREADS` is
+  # the proper knob for bounding CPU.
+  limits: {}
+
+# Pod-level securityContext. The Rauthy image runs as uid/gid 10001; fsGroup
+# lets the non-root process write to the mounted PVC.
+podSecurityContext:
+  fsGroup: 10001
+
+# Container-level securityContext. Matches the hardened defaults from the
+# Rauthy book's Kubernetes guide: non-root, no privilege escalation, all
+# capabilities dropped.
+securityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# Spread replicas across nodes for HA. When true and `affinity` is empty, the
+# chart adds a PREFERRED podAntiAffinity on kubernetes.io/hostname. Preferred
+# (not required) so the chart still installs on single-node clusters; set a
+# required rule via `affinity` below for strict prod spreading.
+spreadAcrossNodes: true
+
+# Full affinity override. When set, it replaces `spreadAcrossNodes` entirely.
+affinity: {}
+
+# Node selector for pod placement.
+nodeSelector: {}
+
+# Tolerations for pod placement.
+tolerations: []
+
+# Graceful shutdown budget. A HA node needs time to hand off Raft leadership;
+# the Rauthy book notes this can take 25-30s. Do not set this too low or
+# container runtimes will force-kill mid-handoff.
+terminationGracePeriodSeconds: 30
+
+# Extra environment variables for the Rauthy container. Prefer your config file
+# for configuration; use this only for env-only knobs.
+extraEnv: []
+
+# Extra annotations/labels for the pods.
+podAnnotations: {}
+podLabels: {}
+
+# Override the chart name / fully-qualified release name.
+nameOverride: ""
+fullnameOverride: ""

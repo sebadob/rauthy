@@ -1,0 +1,53 @@
+# Example Rauthy config for the Helm chart.
+#
+# This is a MINIMAL config to get you started. For production, work through the
+# full Reference Config in the Rauthy book - every value is documented there:
+#   https://sebadob.github.io/rauthy/config/config.html
+#
+# Provide this file to the chart either as `config.content` (inline in your
+# values) or, recommended, as a Secret referenced by `config.existingSecret`.
+#
+# NOTE: the chart manages the Raft topology for you. You do NOT need to set
+# `cluster.node_id_from` or `cluster.nodes` here - the chart injects
+# HQL_NODE_ID_FROM=k8s and HQL_NODES from the `replicas` value, overriding
+# whatever is in this file. You DO need to provide the secrets below.
+
+[bootstrap]
+# Email of the default admin, set when initializing an empty database.
+# overwritten by: BOOTSTRAP_ADMIN_EMAIL
+admin_email = "admin@localhost"
+# Optional: set a known initial admin password instead of the auto-generated
+# one printed in the logs. overwritten by: BOOTSTRAP_ADMIN_PASSWORD_PLAIN
+#admin_password_plain = "123SuperSafe"
+
+[cluster]
+# Raft + Hiqlite-API authentication secrets. REQUIRED, at least 16 chars each,
+# and they should differ. Generate with e.g.:
+#   cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
+# overwritten by: HQL_SECRET_RAFT / HQL_SECRET_API
+secret_raft = "CHANGE_ME_raft_secret_at_least_16_chars"
+secret_api = "CHANGE_ME_api_secret_at_least_16_chars"
+
+[encryption]
+# At least one encryption key (used for DB-stored secrets, cookies, ...).
+# Format: <key_id>/<base64 of exactly 32 random bytes>. Generate with:
+#   echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+# overwritten by: ENC_KEYS (newline-separated)
+keys = ["CHANGEME/CHANGE_ME_base64_of_32_random_bytes_here_=="]
+# The key_id from `keys` that should be used for new encryptions.
+# overwritten by: ENC_KEY_ACTIVE
+key_active = "CHANGEME"
+
+[server]
+# Public URL Rauthy is reachable at. REQUIRED. Should match your ingress host.
+# overwritten by: PUB_URL
+pub_url = "auth.example.com"
+
+[webauthn]
+# Relying-Party ID for Passkeys/WebAuthn. REQUIRED. Usually your bare domain.
+# overwritten by: RP_ID
+rp_id = "auth.example.com"
+# Full origin (scheme + host [+ port]). REQUIRED. overwritten by: RP_ORIGIN
+rp_origin = "https://auth.example.com:443"
+# Display name shown during Passkey registration. overwritten by: RP_NAME
+rp_name = "Rauthy"
