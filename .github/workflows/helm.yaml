@@ -1,0 +1,91 @@
+name: Helm Chart
+
+# Lints and renders the chart on every change, and smoke-tests a real install
+# on a kind cluster (fresh install + 1 -> 3 scale-up + restart re-join). This
+# workflow is self-contained; drop the file if you do not want chart CI.
+
+on:
+  pull_request:
+    paths:
+      - "charts/**"
+      - ".github/workflows/helm.yaml"
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+
+jobs:
+  lint-template:
+    if: github.event.pull_request.draft == false
+    name: Lint & template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: helm lint
+        run: helm lint ./charts/rauthy --set-file config.content=./charts/rauthy/files/config.toml.example
+      - name: helm template (1 and 3 replicas)
+        run: |
+          helm template r ./charts/rauthy \
+            --set-file config.content=./charts/rauthy/files/config.toml.example >/dev/null
+          helm template r ./charts/rauthy --set replicas=3 \
+            --set-file config.content=./charts/rauthy/files/config.toml.example >/dev/null
+
+  install:
+    if: github.event.pull_request.draft == false
+    name: kind install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - uses: helm/kind-action@v1
+      - name: Generate a test config
+        run: |
+          RAFT=$(tr -dc 'a-zA-Z0-9' </dev/urandom | head -c48)
+          API=$(tr -dc 'a-zA-Z0-9' </dev/urandom | head -c48)
+          ENC_KEY=$(openssl rand -base64 32)
+          ENC_ID=$(openssl rand -hex 4)
+          cat > /tmp/config.toml <<EOF
+          [bootstrap]
+          admin_email = "admin@localhost"
+          admin_password_plain = "123SuperSafeTestPassword"
+
+          [cluster]
+          secret_raft = "$RAFT"
+          secret_api = "$API"
+
+          [encryption]
+          keys = ["$ENC_ID/$ENC_KEY"]
+          key_active = "$ENC_ID"
+
+          [server]
+          pub_url = "localhost:8080"
+
+          [webauthn]
+          rp_id = "localhost"
+          rp_origin = "http://localhost:8080"
+          rp_name = "Rauthy"
+          EOF
+          kubectl create namespace rauthy
+          kubectl -n rauthy create secret generic rauthy-config --from-file=config.toml=/tmp/config.toml
+      - name: Fresh install (1 replica)
+        run: |
+          helm install rauthy ./charts/rauthy -n rauthy --set config.existingSecret=rauthy-config
+          kubectl -n rauthy rollout status statefulset/rauthy --timeout=240s
+          helm test rauthy -n rauthy
+      - name: Scale up 1 -> 3
+        run: |
+          helm upgrade rauthy ./charts/rauthy -n rauthy --reuse-values --set replicas=3
+          kubectl -n rauthy rollout status statefulset/rauthy --timeout=240s
+          test "$(kubectl -n rauthy get pods -l app.kubernetes.io/name=rauthy --field-selector=status.phase=Running -o name | wc -l)" -eq 3
+      - name: Restart survival (Raft re-join)
+        run: |
+          kubectl -n rauthy delete pod rauthy-1
+          kubectl -n rauthy rollout status statefulset/rauthy --timeout=240s
+          helm test rauthy -n rauthy
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n rauthy get pods -o wide || true
+          kubectl -n rauthy logs rauthy-0 --tail=80 || true
