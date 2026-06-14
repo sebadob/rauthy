@@ -26,8 +26,16 @@
     import Tooltip from '$lib5/Tooltip.svelte';
     import IconCommandLine from '$icons/IconCommandLine.svelte';
     import IconCircleStack from '$icons/IconCircleStack.svelte';
+    import { useSession } from '$state/session.svelte';
+    import { isFullAdmin } from '$utils/adminScope';
 
     let ta = useI18nAdmin();
+
+    let session = useSession('admin');
+    // Delegated group admins (#1538) only get the user-centric, read-only sections.
+    // Everything that manages clients, roles, groups, scopes, system config, etc. stays
+    // full-admin only. The backend enforces this regardless; here we just hide it.
+    let fullAdmin = $derived(isFullAdmin(session.get()?.roles));
 
     let timeout: undefined | number;
 
@@ -140,47 +148,49 @@
                         {ta.nav.users}
                     </NavLink>
 
-                    <NavLink {compact} {params} route="/clients">
-                        {#snippet icon(width: string)}
-                            <IconOffice {width} />
-                        {/snippet}
-                        {ta.nav.clients}
-                    </NavLink>
+                    {#if fullAdmin}
+                        <NavLink {compact} {params} route="/clients">
+                            {#snippet icon(width: string)}
+                                <IconOffice {width} />
+                            {/snippet}
+                            {ta.nav.clients}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/roles">
-                        {#snippet icon(width: string)}
-                            <IconCheckBadge {width} />
-                        {/snippet}
-                        {ta.nav.roles}
-                    </NavLink>
+                        <NavLink {compact} {params} route="/roles">
+                            {#snippet icon(width: string)}
+                                <IconCheckBadge {width} />
+                            {/snippet}
+                            {ta.nav.roles}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/groups">
-                        {#snippet icon(width: string)}
-                            <IconUserGroup {width} />
-                        {/snippet}
-                        {ta.nav.groups}
-                    </NavLink>
+                        <NavLink {compact} {params} route="/groups">
+                            {#snippet icon(width: string)}
+                                <IconUserGroup {width} />
+                            {/snippet}
+                            {ta.nav.groups}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/attributes">
-                        {#snippet icon(width: string)}
-                            <IconDocText {width} />
-                        {/snippet}
-                        {ta.nav.attributes}
-                    </NavLink>
+                        <NavLink {compact} {params} route="/attributes">
+                            {#snippet icon(width: string)}
+                                <IconDocText {width} />
+                            {/snippet}
+                            {ta.nav.attributes}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/scopes">
-                        {#snippet icon(width: string)}
-                            <IconId {width} />
-                        {/snippet}
-                        {ta.nav.scopes}
-                    </NavLink>
+                        <NavLink {compact} {params} route="/scopes">
+                            {#snippet icon(width: string)}
+                                <IconId {width} />
+                            {/snippet}
+                            {ta.nav.scopes}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/pam">
-                        {#snippet icon(width: string)}
-                            <IconCommandLine {width} />
-                        {/snippet}
-                        PAM
-                    </NavLink>
+                        <NavLink {compact} {params} route="/pam">
+                            {#snippet icon(width: string)}
+                                <IconCommandLine {width} />
+                            {/snippet}
+                            PAM
+                        </NavLink>
+                    {/if}
 
                     <NavLink {compact} {params} route="/sessions">
                         {#snippet icon(width: string)}
@@ -203,33 +213,40 @@
                         {ta.nav.blacklist}
                     </NavLink>
 
-                    <NavLink {compact} {params} route="/api_keys">
-                        {#snippet icon(width: string)}
-                            <IconKey {width} />
-                        {/snippet}
-                        {ta.nav.apiKeys}
-                    </NavLink>
+                    {#if fullAdmin}
+                        <NavLink {compact} {params} route="/api_keys">
+                            {#snippet icon(width: string)}
+                                <IconKey {width} />
+                            {/snippet}
+                            {ta.nav.apiKeys}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/providers">
-                        {#snippet icon(width: string)}
-                            <IconCloud {width} />
-                        {/snippet}
-                        {ta.nav.providers}
-                    </NavLink>
+                        <NavLink {compact} {params} route="/providers">
+                            {#snippet icon(width: string)}
+                                <IconCloud {width} />
+                            {/snippet}
+                            {ta.nav.providers}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/kv">
-                        {#snippet icon(width: string)}
-                            <IconCircleStack {width} />
-                        {/snippet}
-                        KV Store
-                    </NavLink>
+                        <NavLink {compact} {params} route="/kv">
+                            {#snippet icon(width: string)}
+                                <IconCircleStack {width} />
+                            {/snippet}
+                            KV Store
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/config/policy" highlightIncludes="/config/">
-                        {#snippet icon(width: string)}
-                            <IconWrenchScrew {width} />
-                        {/snippet}
-                        {ta.nav.config}
-                    </NavLink>
+                        <NavLink
+                            {compact}
+                            {params}
+                            route="/config/policy"
+                            highlightIncludes="/config/"
+                        >
+                            {#snippet icon(width: string)}
+                                <IconWrenchScrew {width} />
+                            {/snippet}
+                            {ta.nav.config}
+                        </NavLink>
+                    {/if}
 
                     <NavLink {compact} {params} route="/docs">
                         {#snippet icon(width: string)}

@@ -37,6 +37,7 @@
     import TZSelect from '$lib/TZSelect.svelte';
     import PreferredUsername from '$lib/PreferredUsername.svelte';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
+    import { managesGroup } from '$utils/adminScope';
 
     let {
         user = $bindable(),
@@ -44,6 +45,7 @@
         roles,
         groups,
         providers,
+        fullAdmin = true,
         onSave,
     }: {
         user: UserResponse;
@@ -51,6 +53,9 @@
         roles: RoleResponse[];
         groups: GroupResponse[];
         providers: AuthProviderTemplate[];
+        // `false` when the logged-in principal is only a delegated group admin (#1538):
+        // roles become read-only and groups outside the admin's prefix cannot be toggled.
+        fullAdmin?: boolean;
         onSave: () => void;
     } = $props();
 
@@ -63,6 +68,15 @@
 
     let userOrig: undefined | UserResponse = $state(untrack(() => user));
     let isSelf = $derived(session.get()?.user_id === user.id);
+
+    // A group admin may never change roles, and may only toggle groups it manages.
+    // Everything else stays read-only here; the backend enforces the same rules.
+    let rolesDisabled = $derived(fullAdmin ? [] : roles.map(r => r.name));
+    let groupsDisabled = $derived(
+        fullAdmin
+            ? []
+            : groups.filter(g => !managesGroup(session.get()?.roles, g.name)).map(g => g.name),
+    );
 
     let email = $state('');
     let givenName = $state('');
@@ -567,10 +581,10 @@
                 </div>
             </div>
 
-            <SelectList bind:items={rolesItems}>
+            <SelectList bind:items={rolesItems} disabledNames={rolesDisabled}>
                 {t.account.roles.replaceAll(',', ' ')}
             </SelectList>
-            <SelectList bind:items={groupsItems}>
+            <SelectList bind:items={groupsItems} disabledNames={groupsDisabled}>
                 {t.account.groups.replaceAll(',', ' ')}
             </SelectList>
 

@@ -16,6 +16,8 @@
     import type { AuthProviderTemplate } from '$api/templates/AuthProvider';
     import { useTrigger } from '$state/callback.svelte';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
+    import { useSession } from '$state/session.svelte';
+    import { isFullAdmin } from '$utils/adminScope';
 
     let {
         userValuesConfig,
@@ -36,16 +38,26 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    const tabs = [
-        t.account.navInfo,
-        ta.users.attributes,
-        t.common.password,
-        t.account.navMfa,
-        t.account.devices,
-        t.account.navLogout,
-        t.common.delete,
-    ];
-    let selected = $state(tabs[0]);
+    let session = useSession('admin');
+    // Group admins (#1538) get a reduced tab set: profile (restricted), MFA reset and
+    // force-logout only. Attributes, password, devices and delete stay full-admin only,
+    // matching the backend, which rejects those actions for a group admin anyway.
+    let fullAdmin = $derived(isFullAdmin(session.get()?.roles));
+
+    const TAB_INFO = t.account.navInfo;
+    const TAB_ATTR = ta.users.attributes;
+    const TAB_PASSWORD = t.common.password;
+    const TAB_MFA = t.account.navMfa;
+    const TAB_DEVICES = t.account.devices;
+    const TAB_LOGOUT = t.account.navLogout;
+    const TAB_DELETE = t.common.delete;
+
+    let tabs = $derived(
+        fullAdmin
+            ? [TAB_INFO, TAB_ATTR, TAB_PASSWORD, TAB_MFA, TAB_DEVICES, TAB_LOGOUT, TAB_DELETE]
+            : [TAB_INFO, TAB_MFA, TAB_LOGOUT],
+    );
+    let selected = $state(TAB_INFO);
 
     let focusFirst: undefined | (() => void) = $state();
     useTrigger().set('navSubSub', () => {
@@ -91,26 +103,27 @@
 </div>
 
 {#if user}
-    {#if selected === tabs[0]}
+    {#if selected === TAB_INFO}
         <UserInfo
             bind:user
             config={userValuesConfig}
             {providers}
             {roles}
             {groups}
+            {fullAdmin}
             onSave={onSaveLocal}
         />
-    {:else if selected === tabs[1]}
+    {:else if selected === TAB_ATTR}
         <UserAttr {user} {onSave} />
-    {:else if selected === tabs[2]}
+    {:else if selected === TAB_PASSWORD}
         <UserPassword {user} {onSave} />
-    {:else if selected === tabs[3]}
+    {:else if selected === TAB_MFA}
         <UserMfa {user} {onSave} />
-    {:else if selected === tabs[4]}
+    {:else if selected === TAB_DEVICES}
         <Devices {userId} />
-    {:else if selected === tabs[5]}
+    {:else if selected === TAB_LOGOUT}
         <UserForceLogout {userId} />
-    {:else if selected === tabs[6]}
+    {:else if selected === TAB_DELETE}
         <UserDelete {userId} {onSave} />
     {/if}
 {/if}

@@ -87,6 +87,20 @@ ephemeral clients, which previously emitted a string that merely looked like an 
 
 [#1562](https://github.com/sebadob/rauthy/issues/1562)
 
+#### Delegated Group Admins
+
+You can now delegate user management to non-admins via group-scoped roles. A role named
+`rauthy_admin:<group>` makes its holders a group admin for the matching group(s): an exact match by
+default, a trailing `*` for a prefix glob, and `rauthy_admin:*` for all groups. A group admin can
+manage users that are members of a group it manages (create, edit profile, toggle `enabled`, manage
+in-scope group memberships, set a password for a managed user, reset MFA, view / invalidate
+sessions) and gets a read-only view of Sessions, Events and the Blacklist for debugging. It can never
+modify roles, delete users, manage other admins, or touch any non-user administration. This is
+non-breaking unless you already use a custom role starting with `rauthy_admin:`; such roles are
+logged on startup.
+
+[#1538](https://github.com/sebadob/rauthy/issues/1538)
+
 ### Bugfix
 
 - The Postgres migration `v24__cust_attrs_token_root.sql` was named with a lowercase `v` and was

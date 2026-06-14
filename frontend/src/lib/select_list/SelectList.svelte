@@ -11,10 +11,14 @@
     let {
         items = $bindable(),
         maxWidth = '467pt', // matches <p> max width
+        disabledNames = [],
         children,
     }: {
         items: SelectItem[];
         maxWidth?: string;
+        // names that cannot be toggled (rendered read-only). Used by the delegated
+        // group-admin UI (#1538) to lock roles and out-of-scope groups.
+        disabledNames?: string[];
         children: Snippet;
     } = $props();
 
@@ -58,7 +62,11 @@
             {#if compact}
                 <div class="compact">
                     {#each items as item (item.name)}
-                        <InputCheckbox ariaLabel={item.name} bind:checked={item.selected}>
+                        <InputCheckbox
+                            ariaLabel={item.name}
+                            bind:checked={item.selected}
+                            disabled={disabledNames.includes(item.name)}
+                        >
                             {item.name}
                         </InputCheckbox>
                     {/each}
@@ -68,7 +76,11 @@
                     <div>
                         {#each items as item (item.name)}
                             {#if !item.selected}
-                                <InputCheckbox ariaLabel={item.name} bind:checked={item.selected}>
+                                <InputCheckbox
+                                    ariaLabel={item.name}
+                                    bind:checked={item.selected}
+                                    disabled={disabledNames.includes(item.name)}
+                                >
                                     {item.name}
                                 </InputCheckbox>
                             {/if}
@@ -77,7 +89,11 @@
                     <div>
                         {#each items as item (item.name)}
                             {#if item.selected}
-                                <InputCheckbox ariaLabel={item.name} bind:checked={item.selected}>
+                                <InputCheckbox
+                                    ariaLabel={item.name}
+                                    bind:checked={item.selected}
+                                    disabled={disabledNames.includes(item.name)}
+                                >
                                     {item.name}
                                 </InputCheckbox>
                             {/if}

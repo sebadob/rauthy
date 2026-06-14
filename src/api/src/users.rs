@@ -89,7 +89,10 @@ pub async fn get_users(
     principal: ReqPrincipal,
     Query(params): Query<PaginationParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+    // Group admins see the full (minified) user list as well (see #1538). The
+    // per-user write scoping is enforced on the individual modify endpoints, never
+    // here, so list visibility intentionally does not imply mutate permission.
+    principal.validate_api_key_or_admin_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
     params.validate()?;
 
     let user_count = User::count().await?;
@@ -151,8 +154,11 @@ pub async fn post_users(
     principal: ReqPrincipal,
     Json(payload): Json<NewUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Create)?;
+    principal.validate_api_key_or_admin_or_group_admin(AccessGroup::Users, AccessRights::Create)?;
     payload.validate()?;
+    // A group admin may create users too, but only without any role and into at least
+    // one group it manages, so the new account stays within its scope (see #1538).
+    principal.validate_group_admin_user_create(&payload.roles, payload.groups.as_ref())?;
     // We are not using the UserValuesValidator on purpose here.
     // When an admin registers a new user, the user details view will be shown immediately anyway,
     // and an admin may have good reason to not set some values, like e.g. the preferred username.
@@ -535,9 +541,9 @@ pub async fn get_user_by_id(
 ) -> Result<HttpResponse, ErrorResponse> {
     let id = path.into_inner();
 
-    // principal must either be an admin or have the same user id
+    // principal must be an admin, a group admin (see-all, see #1538), or the user itself
     let api_key_or_admin = principal
-        .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)
+        .validate_api_key_or_admin_or_group_admin(AccessGroup::Users, AccessRights::Read)
         .is_ok();
     if !api_key_or_admin {
         principal.validate_session_auth()?;
@@ -1443,34 +1449,47 @@ pub async fn delete_webauthn(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    // Note: Currently, this is not allowed with an ApiKey on purpose
-    let is_admin = match principal.validate_admin_session() {
-        Ok(()) => true,
-        Err(_) => {
-            principal.validate_session_auth()?;
-            false
-        }
-    };
-
     let (id, name) = path.into_inner();
 
-    // validate that Principal matches the user or is an admin
-    if !is_admin {
-        principal.is_user(&id)?;
+    // Note: Currently, this is not allowed with an ApiKey on purpose.
+    // Access tiers:
+    // - full Rauthy admin: may reset MFA for any user,
+    // - group admin: may reset MFA for a user it manages (see #1538),
+    // - the user itself: only with a valid `mfa_mod_token`.
+    if principal.validate_admin_session().is_ok() {
+        if principal.is_user(&id).is_err() {
+            warn!("Passkey delete from admin for user {} for key {}", id, name);
+        }
+    } else {
+        principal.validate_session_auth()?;
 
-        let Some(token_id) = payload.mfa_mod_token_id else {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "missing `mfa_mod_token_id`",
-            ));
-        };
-        let token = MfaModToken::find(&token_id).await?;
-        let ip = real_ip_from_req(&req)?;
-        token.validate(principal.user_id()?, ip)?;
+        if principal.is_user(&id).is_ok() {
+            // a user deleting its own passkey always needs a valid `mfa_mod_token`
+            let Some(token_id) = payload.mfa_mod_token_id else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "missing `mfa_mod_token_id`",
+                ));
+            };
+            let token = MfaModToken::find(&token_id).await?;
+            let ip = real_ip_from_req(&req)?;
+            token.validate(principal.user_id()?, ip)?;
 
-        warn!("Passkey delete for user {} for key {}", id, name);
-    } else if principal.is_user(&id).is_err() {
-        warn!("Passkey delete from admin for user {} for key {}", id, name);
+            warn!("Passkey delete for user {} for key {}", id, name);
+        } else {
+            // a group admin resetting MFA for a user it manages
+            let target = User::find(id.clone()).await?;
+            principal.validate_user_admin_access(
+                AccessGroup::Users,
+                AccessRights::Update,
+                target.roles_iter(),
+                target.groups_iter(),
+            )?;
+            warn!(
+                "Passkey delete from group admin for user {} for key {}",
+                id, name
+            );
+        }
     }
 
     PasskeyEntity::delete(id, name).await?;
@@ -1768,7 +1787,7 @@ pub async fn get_user_by_email(
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+    principal.validate_api_key_or_admin_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
 
     let user = User::find_by_email(path.into_inner()).await?;
     let values = UserValues::find(&user.id).await?;
@@ -1798,7 +1817,6 @@ pub async fn put_user_by_id(
     principal: ReqPrincipal,
     Json(payload): Json<UpdateUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
     payload.validate()?;
 
     UserValuesValidator {
@@ -1810,8 +1828,32 @@ pub async fn put_user_by_id(
     }
     .validate()?;
 
+    let id = id.into_inner();
+    let target = User::find(id.clone()).await?;
+    // full admin / ApiKey -> unchanged; a group admin may only modify a managed,
+    // non-admin user, and within that may not touch roles, passwords, or group
+    // memberships outside its prefix (see #1538).
+    principal.validate_user_admin_access(
+        AccessGroup::Users,
+        AccessRights::Update,
+        target.roles_iter(),
+        target.groups_iter(),
+    )?;
+    if payload.password.is_some() && principal.is_session_group_admin() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Group admins cannot set user passwords",
+        ));
+    }
+    principal.validate_group_admin_user_change(
+        target.roles_iter(),
+        target.groups_iter(),
+        &payload.roles,
+        payload.groups.as_deref().unwrap_or_default(),
+    )?;
+
     let preferred_username = UserValues::find_preferred_username(&id).await?;
-    handle_put_user_by_id(id.into_inner(), req, payload, preferred_username).await
+    handle_put_user_by_id(id, req, payload, preferred_username).await
 }
 
 /// Modifies a user via a patch operation
@@ -1836,11 +1878,30 @@ pub async fn patch_user(
     principal: ReqPrincipal,
     Json(payload): Json<PatchOp>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
-
     let user_id = id.into_inner();
+    let target = User::find(user_id.clone()).await?;
+    principal.validate_user_admin_access(
+        AccessGroup::Users,
+        AccessRights::Update,
+        target.roles_iter(),
+        target.groups_iter(),
+    )?;
+
     let (upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
     upd_req.validate()?;
+
+    if upd_req.password.is_some() && principal.is_session_group_admin() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Group admins cannot set user passwords",
+        ));
+    }
+    principal.validate_group_admin_user_change(
+        target.roles_iter(),
+        target.groups_iter(),
+        &upd_req.roles,
+        upd_req.groups.as_deref().unwrap_or_default(),
+    )?;
 
     handle_put_user_by_id(user_id, req, upd_req, has_preferred_username).await
 }

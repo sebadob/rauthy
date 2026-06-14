@@ -22,6 +22,8 @@
     import { useI18nConfig } from '$state/i18n_config.svelte';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
     import TZSelect from '$lib/TZSelect.svelte';
+    import { useSession } from '$state/session.svelte';
+    import { isFullAdmin, managesGroup } from '$utils/adminScope';
 
     let {
         config,
@@ -37,6 +39,17 @@
 
     let t = useI18n();
     let ta = useI18nAdmin();
+    let session = useSession('admin');
+
+    // A group admin (#1538) creates users without roles and only into groups it
+    // manages; the backend rejects anything else.
+    let fullAdmin = $derived(isFullAdmin(session.get()?.roles));
+    let rolesDisabled = $derived(fullAdmin ? [] : roles.map(r => r.name));
+    let groupsDisabled = $derived(
+        fullAdmin
+            ? []
+            : groups.filter(g => !managesGroup(session.get()?.roles, g.name)).map(g => g.name),
+    );
 
     let ref: undefined | HTMLInputElement = $state();
 
@@ -152,10 +165,10 @@
             </div>
         {/if}
 
-        <SelectList bind:items={rolesItems}>
+        <SelectList bind:items={rolesItems} disabledNames={rolesDisabled}>
             {t.account.roles}
         </SelectList>
-        <SelectList bind:items={groupsItems}>
+        <SelectList bind:items={groupsItems} disabledNames={groupsDisabled}>
             {t.account.groups}
         </SelectList>
 

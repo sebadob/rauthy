@@ -24,7 +24,10 @@ use validator::Validate;
 )]
 #[get("/blacklist")]
 pub async fn get_blacklist(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Blacklist, AccessRights::Read)?;
+    // group admins get a read-only view of the blacklist for user debugging; adding /
+    // removing entries stays full-admin only (see #1538)
+    principal
+        .validate_api_key_or_admin_or_group_admin(AccessGroup::Blacklist, AccessRights::Read)?;
 
     let ips = IpBlacklist::get_all()
         .await?
