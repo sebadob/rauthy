@@ -148,6 +148,24 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     // S256 code challenge by default for better security
     assert_eq!(client.challenges.as_ref().unwrap().get(0).unwrap(), "S256");
 
+    // a URL-shaped id must be rejected for manually managed (non-ephemeral) clients:
+    // these are restricted to `RE_CLIENT_ID_STRICT`, only ephemeral clients may use a URI id.
+    let url_id_client = NewClientRequest {
+        id: "https://connector.example.com/oauth/client.json".to_string(),
+        secret: None,
+        name: Some("URL Id Client".to_string()),
+        confidential: true,
+        redirect_uris: vec!["http://test.client.io/callback".to_string()],
+        post_logout_redirect_uris: None,
+    };
+    let res = reqwest::Client::new()
+        .post(&url)
+        .headers(auth_headers.clone())
+        .json(&url_id_client)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 400);
+
     // modify the client
     let mut redirect_uris = client.redirect_uris;
     redirect_uris.push("http://test.client.io/callback123".to_string());
@@ -158,7 +176,6 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     flows_enabled.push("password".to_string());
 
     let update_client = UpdateClientRequest {
-        id: client.id.clone(),
         name: None,
         confidential: false,
         redirect_uris: redirect_uris.clone(),

@@ -165,11 +165,8 @@ pub struct ApiKeyAccess {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct Client {
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(
-        path = "*RE_CLIENT_ID",
-        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
-    ))]
+    /// Validation: `^[a-zA-Z0-9._\-]{2,256}$`
+    #[validate(regex(path = "*RE_CLIENT_ID_STRICT", code = "^[a-zA-Z0-9._\\-]{2,256}$"))]
     pub id: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]

@@ -10,12 +10,6 @@ pub async fn update_client(
     client_req: UpdateClientRequest,
 ) -> Result<(Client, Option<(ClientScim, bool)>), ErrorResponse> {
     let mut client = Client::find(id).await?;
-    if client.id != client_req.id {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "The 'id' cannot be changed",
-        ));
-    }
 
     client.name = client_req.name;
     if client_req.confidential {

@@ -263,7 +263,6 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     // disable pkce for the init client
     let mut update_client = UpdateClientRequest {
-        id: CLIENT_ID.to_string(),
         name: Some("Init Client".to_string()),
         confidential: true,
         redirect_uris: vec!["http://localhost:3000/oidc/callback".to_string()],

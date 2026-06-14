@@ -11,6 +11,13 @@ Just to make clear what I am talking about, a high level comparison of these dif
 **Static clients** are the ones that you register and configure via the Admin UI. These are the most efficient and
 secure ones. They require less work in the backend and exist inside the Rauthy database.
 
+```admonish note
+Static client IDs (via the Admin UI, the API, or bootstrapping) are restricted to
+`^[a-zA-Z0-9._\-]{2,256}$`. Only ephemeral clients use a full URI as their ID, since that URI is the
+location their client document is fetched from. A static client therefore never needs a URI-shaped
+ID.
+```
+
 Then there is OIDC **Dynamic Client Registration** (DCR), which is an OIDC extension that Rauthy supports as well. If a
 downstream application has support for this feature, it can self-register a client, which then can be used for the
 login afterward. This sound very nice in the beginning, but brings quite a few problems:
