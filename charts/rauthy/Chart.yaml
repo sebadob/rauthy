@@ -1,0 +1,19 @@
+apiVersion: v2
+name: rauthy
+description: Rauthy - a memory-safe OpenID Connect provider and SSO solution, run as a Hiqlite-backed Raft StatefulSet.
+type: application
+# version is the chart's own SemVer; bump it on every change to the chart.
+version: 0.1.0
+# appVersion is the Rauthy release this chart is tested against. It is also the
+# default image tag (see `image.tag` in values.yaml), so the two never drift.
+appVersion: "0.35.2"
+home: https://github.com/sebadob/rauthy
+sources:
+  - https://github.com/sebadob/rauthy
+keywords:
+  - oidc
+  - openid-connect
+  - oauth2
+  - sso
+  - identity-provider
+  - authentication
