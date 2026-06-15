@@ -1,7 +1,9 @@
+use rauthy_common::constants::CLIENT_CLAIMS_MAX_LEN;
 use rauthy_common::regex::{
     RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GRANT_TYPES, RE_GROUPS, RE_LINUX_HOSTNAME,
     RE_ORIGIN, RE_ROLES_SCOPES, RE_URI,
 };
+use std::borrow::Cow;
 use validator::ValidationError;
 
 #[inline]
@@ -30,8 +32,6 @@ pub fn validate_vec_attr(value: &[String]) -> Result<(), ValidationError> {
 /// cookies. The cap applies to the client's custom JSON only, not the full token.
 #[inline]
 pub fn validate_claims(value: &serde_json::Value) -> Result<(), ValidationError> {
-    const MAX_LEN: usize = 1024;
-
     if !value.is_object() {
         return Err(ValidationError::new("`claims` must be a JSON object"));
     }
@@ -39,10 +39,12 @@ pub fn validate_claims(value: &serde_json::Value) -> Result<(), ValidationError>
     let len = serde_json::to_vec(value)
         .map(|v| v.len())
         .unwrap_or(usize::MAX);
-    if len > MAX_LEN {
-        return Err(ValidationError::new(
-            "`claims` must not exceed 1024 serialized characters",
-        ));
+    if len > CLIENT_CLAIMS_MAX_LEN {
+        return Err(
+            ValidationError::new("claims_max_len").with_message(Cow::Owned(format!(
+                "`claims` must not exceed {CLIENT_CLAIMS_MAX_LEN} serialized characters"
+            ))),
+        );
     }
 
     Ok(())

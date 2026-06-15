@@ -46,10 +46,14 @@ export let I18nAdminKo: I18nAdmin = {
                 있습니다. (예: <code>hsla(var(--action) / .7)</code>)`,
         },
         claimsAtRoot: 'Emit claims at the token root',
-        claimsAtRootWarning: `When enabled, this client's claims are written at the token root instead of being nested under 'custom'. You own collision-correctness: if a claim name collides with a reserved JWT claim, token issuance fails. Root-level custom claims may also break with future protocol or feature changes. Reference:`,
+        claimsAtRootWarning: `When enabled, this client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
         claims: 'Custom claims (client_credentials)',
-        claimsDesc:
-            'A JSON object emitted into client_credentials tokens, nested under the custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max 1024 serialized characters.',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max
+            1024 serialized characters.`,
         confidential: '기밀',
         confidentialNoSecret: '이 클라이언트는 기밀이 아닌 클라이언트이므로 Secret이 없습니다.',
         config: '클라이언트 설정',
