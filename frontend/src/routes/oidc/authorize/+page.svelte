@@ -72,6 +72,8 @@
     let challengeMethod: CodeChallengeMethod = useParam(
         'code_challenge_method',
     ).get() as CodeChallengeMethod;
+    // RFC 8707 resource indicator forwarded into the login request
+    let resource = useParam('resource').get();
     let existingMfaUser: undefined | string = $state();
     let providers: AuthProviderTemplate[] = $state([]);
     let mfaPurpose: undefined | MfaPurpose = $state();
@@ -271,6 +273,9 @@
         ) {
             payload.code_challenge = challenge;
             payload.code_challenge_method = challengeMethod;
+        }
+        if (resource) {
+            payload.resource = resource;
         }
 
         if (needsPassword && email !== existingMfaUser) {

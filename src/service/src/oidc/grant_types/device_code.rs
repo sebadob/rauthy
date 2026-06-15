@@ -163,6 +163,8 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             code.nonce.map(TokenNonce),
             code.scopes.map(TokenScopes),
             None,
+            // device flow does not support resource indicators in v1
+            None,
             AuthCodeFlow::No,
             DeviceCodeFlow::Yes(id),
         )

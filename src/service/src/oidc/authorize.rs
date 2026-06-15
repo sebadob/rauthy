@@ -144,6 +144,7 @@ pub async fn post_authorize(
             nonce: req_data.nonce,
             code_challenge: req_data.code_challenge,
             code_challenge_method: req_data.code_challenge_method,
+            resource: req_data.resource,
             header_origin,
             require_webauthn,
         },
@@ -183,6 +184,8 @@ pub async fn post_authorize_refresh(
             nonce: req_data.nonce,
             code_challenge: req_data.code_challenge,
             code_challenge_method: req_data.code_challenge_method,
+            // resource indicators are not re-sent on a session refresh
+            resource: None,
             header_origin,
             require_webauthn,
         },
@@ -199,6 +202,7 @@ pub(crate) struct AuthorizeData {
     pub nonce: Option<String>,
     pub code_challenge: Option<String>,
     pub code_challenge_method: Option<String>,
+    pub resource: Option<String>,
     pub header_origin: Option<(HeaderName, HeaderValue)>,
     pub require_webauthn: bool,
 }
@@ -228,6 +232,12 @@ pub(crate) async fn finish_authorize(
     client.validate_redirect_uri(&data.redirect_uri)?;
     client.validate_code_challenge(&data.code_challenge, &data.code_challenge_method)?;
 
+    // RFC 8707: validate the requested resource against the client's allow-list before
+    // it is carried into the auth code.
+    if let Some(resource) = data.resource.as_deref() {
+        client.validate_resource_request(resource)?;
+    }
+
     let scopes = client.sanitize_login_scopes(&data.scopes)?;
 
     let config = RauthyConfig::get();
@@ -249,6 +259,7 @@ pub(crate) async fn finish_authorize(
         data.code_challenge_method,
         data.nonce,
         scopes,
+        data.resource,
         code_lifetime,
     );
     code.save(code_lifetime).await?;

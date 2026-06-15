@@ -32,6 +32,7 @@
   - [API Keys](work/api_keys.md)
   - [Custom Scopes and Attributes](work/custom_scopes_attributes.md)
   - [Ephemeral Clients](work/ephemeral_clients.md)
+  - [Resource Indicators (RFC 8707)](work/resource_indicators.md)
   - [E-Mail Templates](work/email_templates.md)
   - [IP Blacklisting](work/ip_blacklist.md)
   - [JSON Web Keys](work/jwks.md)

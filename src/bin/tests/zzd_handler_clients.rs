@@ -208,6 +208,8 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         restrict_group_prefix: None,
         claims: None,
         claims_at_root: false,
+        allowed_resources: None,
+        default_aud: None,
         scim: None,
     };
 
@@ -317,6 +319,7 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
         username: None,
         password: None,
         refresh_token: None,
+        resource: None,
     };
     let url_token = format!("{}/oidc/token", backend_url);
     let res = client.post(&url_token).form(&token_req).send().await?;

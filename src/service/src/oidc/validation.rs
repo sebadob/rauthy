@@ -164,6 +164,9 @@ pub async fn validate_and_refresh_token(
         None,
         rt_scope.map(TokenScopes),
         None,
+        // carry the granted resource forward so the refreshed access token keeps its
+        // audience binding; a refresh can never widen it
+        claims.resource.map(String::from),
         AuthCodeFlow::No,
         DeviceCodeFlow::No,
     )

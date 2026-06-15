@@ -39,6 +39,10 @@ export let I18nAdminNb: I18nAdmin = {
         size: 'Størrelse',
     },
     clients: {
+        allowedResources: 'Tillatte ressurser',
+        defaultAud: 'Standard-mottakere (aud)',
+        descAllowedResources: `Valgfrie RFC 8707 ressursindikatorer denne klienten kan be om. En tom liste avviser enhver 'resource'-parameter med 'invalid_target'.`,
+        descDefaultAud: `Mottakere (aud) som alltid legges til i denne klientens tokens, uavhengig av en 'resource'-parameter.`,
         backchannelLogout: 'Hvis denne klienten støtter {{ OIDC_BCL }}, kan URIen angis her.',
         branding: {
             descHsl: `Fargene må angis som HSL. Her defineres kun basisfargen.

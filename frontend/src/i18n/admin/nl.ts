@@ -40,6 +40,10 @@ export let I18nAdminNl: I18nAdmin = {
         size: 'Grootte',
     },
     clients: {
+        allowedResources: 'Toegestane resources',
+        defaultAud: 'Standaard audiences',
+        descAllowedResources: `Optionele RFC 8707 resource-indicatoren die deze client mag opvragen. Een lege lijst weigert elke 'resource'-parameter met 'invalid_target'.`,
+        descDefaultAud: `Audiences die altijd aan de tokens van deze client worden toegevoegd, onafhankelijk van een 'resource'-parameter.`,
         backchannelLogout:
             'Als deze client {{ OIDC_BCL }} ondersteunt, kunt u de URI hier opgeven.',
         branding: {

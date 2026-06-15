@@ -65,6 +65,10 @@
     );
     let backchannel_logout_uri: string = $state(client.backchannel_logout_uri || '');
     let restrict_group_prefix: string = $state(client.restrict_group_prefix || '');
+    let allowedResources: string[] = $state(
+        client.allowed_resources ? Array.from(client.allowed_resources) : [],
+    );
+    let defaultAud: string[] = $state(client.default_aud ? Array.from(client.default_aud) : []);
 
     let scimEnabled = $state(client.scim !== undefined);
     let scim: ScimClientRequestResponse = $state({
@@ -131,6 +135,8 @@
             restrict_group_prefix = client.restrict_group_prefix || '';
             contacts = client.contacts ? Array.from(client.contacts) : [];
             origins = client.allowed_origins ? Array.from(client.allowed_origins) : [];
+            allowedResources = client.allowed_resources ? Array.from(client.allowed_resources) : [];
+            defaultAud = client.default_aud ? Array.from(client.default_aud) : [];
             redirectURIs = Array.from(client.redirect_uris);
             postLogoutRedirectURIs = client.post_logout_redirect_uris
                 ? Array.from(client.post_logout_redirect_uris)
@@ -227,6 +233,8 @@
             restrict_group_prefix: restrict_group_prefix || undefined,
             claims: parseJsonValue(jsonClaims),
             claims_at_root: claimsAtRoot,
+            allowed_resources: allowedResources.length > 0 ? allowedResources : undefined,
+            default_aud: defaultAud.length > 0 ? defaultAud : undefined,
         };
 
         if (flows.authorizationCode) {
@@ -386,6 +394,23 @@
         <InputTags
             bind:values={postLogoutRedirectURIs}
             label="Post Logout Redirect URIs"
+            errMsg={ta.validation.uri}
+            pattern={PATTERN_URI}
+        />
+
+        <div style:height=".5rem"></div>
+        <p class="mb-0"><b>Resource Indicators</b></p>
+        <p class="desc">{ta.clients.descAllowedResources}</p>
+        <InputTags
+            bind:values={allowedResources}
+            label={ta.clients.allowedResources}
+            errMsg={ta.validation.uri}
+            pattern={PATTERN_URI}
+        />
+        <p class="desc">{ta.clients.descDefaultAud}</p>
+        <InputTags
+            bind:values={defaultAud}
+            label={ta.clients.defaultAud}
             errMsg={ta.validation.uri}
             pattern={PATTERN_URI}
         />

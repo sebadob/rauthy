@@ -1440,6 +1440,14 @@ allowed_scopes = ['openid', 'profile', 'email', 'webid']
 # overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
 cache_lifetime = 3600
 
+# RFC 8707: when an ephemeral client document declares no `allowed_resources`,
+# a requested `resource` is rejected by default. Set this to `true` to instead
+# allow such clients to request any (well-formed) resource indicator.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_ALLOW_UNVALIDATED_RESOURCE
+#allow_unvalidated_resource = false
+
 [events]
 # The E-Mail address event notifications should be sent to.
 #

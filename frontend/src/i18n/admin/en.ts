@@ -37,6 +37,10 @@ export let I18nAdminEn: I18nAdmin = {
         size: 'Size',
     },
     clients: {
+        allowedResources: 'Allowed Resources',
+        defaultAud: 'Default Audiences',
+        descAllowedResources: `Optional RFC 8707 resource indicators this client may request. An empty list rejects any 'resource' request parameter with 'invalid_target'.`,
+        descDefaultAud: `Audiences that are always added to this client's tokens, independent of any 'resource' request parameter.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
             descHsl: `The following values must be given as HSL values. You only provide the base colors.

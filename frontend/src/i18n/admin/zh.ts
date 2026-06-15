@@ -37,6 +37,10 @@ export let I18nAdminZh: I18nAdmin = {
         size: '大小',
     },
     clients: {
+        allowedResources: '允许的资源',
+        defaultAud: '默认受众 (aud)',
+        descAllowedResources: `此客户端可以请求的可选 RFC 8707 资源指示符。空列表将以 'invalid_target' 拒绝任何 'resource' 请求参数。`,
+        descDefaultAud: `无论是否提供 'resource' 请求参数，始终添加到此客户端令牌中的受众 (aud)。`,
         backchannelLogout: '如果此客户端支持{{ OIDC_BCL }}，您可以在此处提供URI。',
         branding: {
             descHsl: `以下值必须以HSL值形式给出。您只需提供基本颜色。

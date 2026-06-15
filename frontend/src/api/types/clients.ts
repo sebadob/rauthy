@@ -68,6 +68,12 @@ export interface UpdateClientRequest {
     /// Validation: JSON object, max 1024 serialized characters
     claims?: JsonValue;
     claims_at_root?: boolean;
+    /// RFC 8707 allow-list of resource indicators this client may request.
+    /// Validation: PATTERN_URI
+    allowed_resources?: string[];
+    /// Audiences always added to this client's tokens, independent of any request.
+    /// Validation: PATTERN_URI
+    default_aud?: string[];
     scim?: ScimClientRequestResponse;
 }
 
@@ -99,6 +105,8 @@ export interface ClientResponse {
     restrict_group_prefix?: string;
     claims?: JsonValue;
     claims_at_root: boolean;
+    allowed_resources?: string[];
+    default_aud?: string[];
     scim?: ScimClientRequestResponse;
 }
 
