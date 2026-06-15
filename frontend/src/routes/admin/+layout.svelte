@@ -7,7 +7,6 @@
     import { fetchGet } from '$api/fetch';
     import Events from '$lib5/admin/events/Events.svelte';
     import { initI18nAdmin, useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { isAnyAdmin } from '$utils/adminScope';
 
     let {
         children,
@@ -32,7 +31,7 @@
             // full Rauthy admins and delegated group admins (#1538) both reach the admin UI;
             // the backend still scopes every action, and the nav below hides what group
             // admins cannot do
-            if (isAnyAdmin(s.roles)) {
+            if (session.isAnyAdmin()) {
                 isAdmin = true;
                 // async check for admin access speeds up FCP and is still fast enough for a good UX
                 checkAdminAccess();

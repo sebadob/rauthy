@@ -37,7 +37,6 @@
     import TZSelect from '$lib/TZSelect.svelte';
     import PreferredUsername from '$lib/PreferredUsername.svelte';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
-    import { managesGroup } from '$utils/adminScope';
 
     let {
         user = $bindable(),
@@ -73,9 +72,7 @@
     // Everything else stays read-only here; the backend enforces the same rules.
     let rolesDisabled = $derived(fullAdmin ? [] : roles.map(r => r.name));
     let groupsDisabled = $derived(
-        fullAdmin
-            ? []
-            : groups.filter(g => !managesGroup(session.get()?.roles, g.name)).map(g => g.name),
+        fullAdmin ? [] : groups.filter(g => !session.managesGroup(g.name)).map(g => g.name),
     );
 
     let email = $state('');

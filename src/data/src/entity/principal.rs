@@ -103,7 +103,7 @@ impl Principal {
     ///
     /// This does **not** verify that `self` has a valid session or is a group admin at
     /// all; callers gate on session/MFA and [`Self::is_group_admin`] first (see
-    /// [`Self::validate_user_admin_access`]).
+    /// [`Self::validate_group_admin_can_manage`]).
     pub fn group_admin_can_manage<'a, R, G>(&self, target_roles: R, target_groups: G) -> bool
     where
         R: IntoIterator<Item = &'a str>,
@@ -118,22 +118,66 @@ impl Principal {
         self.group_admin_manages_any(target_groups)
     }
 
-    /// Validates user-management access for a specific target user, extending
-    /// [`Self::validate_api_key_or_admin_session`] with delegated group admins.
+    /// Validates that the principal is an authenticated, delegated group admin.
     ///
-    /// Order of precedence:
-    /// 1. a valid `ApiKey` with the required `access_group` / `access_rights`
-    ///    (unchanged: full power, never group-scoped),
-    /// 2. a full `rauthy_admin` session (unchanged: full power, admin-MFA enforced),
-    /// 3. a group-admin session, allowed only when [`Self::group_admin_can_manage`]
-    ///    returns `true` for the target user.
+    /// This mirrors [`Self::validate_admin_session`] for group admins: a valid session,
+    /// the same admin-MFA enforcement, and at least one `rauthy_admin:<prefix>` role. It
+    /// looks at no target user, so it is a cheap gate to run before fetching anything from
+    /// the database.
+    #[inline]
+    pub fn validate_group_admin_session(&self) -> Result<(), ErrorResponse> {
+        self.validate_session_auth()?;
+
+        if !self.is_group_admin() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Group admin access only",
+            ));
+        }
+
+        if RauthyConfig::get().vars.mfa.admin_force_mfa && !self.has_mfa_active() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::MfaRequired,
+                "Admin access only allowed with MFA active",
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Cheap authorization gate for endpoints a full admin or a delegated group admin may
+    /// reach. Run before any database lookup, so an unauthenticated or otherwise
+    /// unauthorized caller cannot trigger extra queries.
     ///
-    /// `target_roles` / `target_groups` are the comma-split roles and groups of the
-    /// user being administered (e.g. `user.roles_iter()` / `user.groups_iter()`).
-    pub fn validate_user_admin_access<'a, R, G>(
+    /// A full `rauthy_admin` session or a matching `ApiKey` grants full, un-scoped access;
+    /// a group-admin session is additionally allowed, in which case the caller must run the
+    /// per-target [`Self::validate_group_admin_can_manage`] check once the target is loaded.
+    pub fn validate_api_key_or_group_admin(
         &self,
         access_group: AccessGroup,
         access_rights: AccessRights,
+    ) -> Result<(), ErrorResponse> {
+        // most Admin UI requests are a full admin session, so check that first
+        if self.is_admin() {
+            return self.validate_admin_session();
+        }
+        // a logged-in delegated group admin
+        if self.is_group_admin() {
+            return self.validate_group_admin_session();
+        }
+        // otherwise it must be an ApiKey, the least likely case with this feature
+        self.validate_api_key(access_group, access_rights)
+    }
+
+    /// Per-target check for the group-admin path: errors unless this group admin may manage
+    /// a user with the given `target_roles` / `target_groups` (see
+    /// [`Self::group_admin_can_manage`]). A no-op for full admins and ApiKeys, so it is safe
+    /// to call unconditionally after [`Self::validate_api_key_or_group_admin`].
+    ///
+    /// `target_roles` / `target_groups` are the comma-split roles and groups of the user
+    /// being administered (e.g. `user.roles_iter()` / `user.groups_iter()`).
+    pub fn validate_group_admin_can_manage<'a, R, G>(
+        &self,
         target_roles: R,
         target_groups: G,
     ) -> Result<(), ErrorResponse>
@@ -141,34 +185,8 @@ impl Principal {
         R: IntoIterator<Item = &'a str>,
         G: IntoIterator<Item = &'a str>,
     {
-        // 1. ApiKey path - unchanged behavior, never group-scoped
-        match self.validate_api_key(access_group, access_rights) {
-            Ok(()) => return Ok(()),
-            // an ApiKey is present but lacks the rights -> return as-is (better DX),
-            // exactly like `validate_api_key_or_admin_session`
-            Err(err) if err.error == ErrorResponseType::Forbidden => return Err(err),
-            // no ApiKey at all -> fall through to the session paths
-            Err(_) => {}
-        }
-
-        // 2. full Rauthy admin - byte-identical to the previous behavior
-        if self.is_admin() {
-            return self.validate_admin_session();
-        }
-
-        // 3. delegated group admin (session only)
-        self.validate_session_auth()?;
-        if RauthyConfig::get().vars.mfa.admin_force_mfa && !self.has_mfa_active() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::MfaRequired,
-                "Admin access only allowed with MFA active",
-            ));
-        }
-        if !self.is_group_admin() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Forbidden,
-                "Rauthy admin or matching group admin access only",
-            ));
+        if self.api_key.is_some() || self.is_admin() {
+            return Ok(());
         }
         if !self.group_admin_can_manage(target_roles, target_groups) {
             return Err(ErrorResponse::new(
@@ -179,45 +197,12 @@ impl Principal {
         Ok(())
     }
 
-    /// Like [`Self::validate_api_key_or_admin_session`], but also lets a delegated
-    /// group admin through. Used for endpoints without a single target user, where
-    /// per-user scoping is enforced separately on the individual write actions: the
-    /// user list (group admins see all users, see #1538) and the read-only
-    /// Sessions / Events / Blacklist views.
-    pub fn validate_api_key_or_admin_or_group_admin(
-        &self,
-        access_group: AccessGroup,
-        access_rights: AccessRights,
-    ) -> Result<(), ErrorResponse> {
-        match self.validate_api_key(access_group, access_rights) {
-            Ok(()) => return Ok(()),
-            Err(err) if err.error == ErrorResponseType::Forbidden => return Err(err),
-            Err(_) => {}
-        }
-        if self.is_admin() {
-            return self.validate_admin_session();
-        }
-        self.validate_session_auth()?;
-        if RauthyConfig::get().vars.mfa.admin_force_mfa && !self.has_mfa_active() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::MfaRequired,
-                "Admin access only allowed with MFA active",
-            ));
-        }
-        if !self.is_group_admin() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Forbidden,
-                "Rauthy admin or matching group admin access only",
-            ));
-        }
-        Ok(())
-    }
-
     /// Validates that an update of an existing user is allowed for a group admin.
     ///
     /// No-op for full `rauthy_admin`s and ApiKeys. For a group admin it enforces the
     /// v1 field-level guards:
-    /// - roles must be left unchanged (a group admin can never modify any role), and
+    /// - the roles must match the target's current roles (a group admin can never modify
+    ///   any role), and
     /// - group memberships may only be added or removed for groups this admin manages;
     ///   any membership in an unmanaged group must stay exactly as it was.
     pub fn validate_group_admin_user_change<'a, CR, CG>(
@@ -293,18 +278,22 @@ impl Principal {
             ));
         }
 
-        let groups = new_groups.map(|g| g.as_slice()).unwrap_or_default();
-        let managed = groups
-            .iter()
-            .filter(|g| !g.is_empty())
-            .any(|g| self.group_admin_matches(g));
-        if !managed {
+        // the new user must be placed into at least one group, so it stays in scope
+        let groups: Vec<&str> = new_groups
+            .map(|g| {
+                g.iter()
+                    .map(|s| s.as_str())
+                    .filter(|s| !s.is_empty())
+                    .collect()
+            })
+            .unwrap_or_default();
+        if groups.is_empty() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "Group admins must assign the new user to a group they manage",
             ));
         }
-        for g in groups.iter().filter(|g| !g.is_empty()) {
+        for g in groups {
             if !self.group_admin_matches(g) {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,

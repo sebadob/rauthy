@@ -33,7 +33,7 @@ pub async fn post_events(
     Json(payload): Json<EventsRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     // group admins get a read-only view of events for user debugging (see #1538)
-    principal.validate_api_key_or_admin_or_group_admin(AccessGroup::Events, AccessRights::Read)?;
+    principal.validate_api_key_or_group_admin(AccessGroup::Events, AccessRights::Read)?;
     payload.validate()?;
 
     let events = Event::find_all(
@@ -71,7 +71,7 @@ pub async fn sse_events(
     req: HttpRequest,
 ) -> Result<impl Responder, ErrorResponse> {
     // group admins get a read-only event stream for user debugging (see #1538)
-    principal.validate_api_key_or_admin_or_group_admin(AccessGroup::Events, AccessRights::Read)?;
+    principal.validate_api_key_or_group_admin(AccessGroup::Events, AccessRights::Read)?;
     params.validate()?;
 
     let ip = real_ip_from_req(&req)?.to_string();

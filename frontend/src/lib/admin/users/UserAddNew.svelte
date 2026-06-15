@@ -23,7 +23,6 @@
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
     import TZSelect from '$lib/TZSelect.svelte';
     import { useSession } from '$state/session.svelte';
-    import { isFullAdmin, managesGroup } from '$utils/adminScope';
 
     let {
         config,
@@ -43,12 +42,10 @@
 
     // A group admin (#1538) creates users without roles and only into groups it
     // manages; the backend rejects anything else.
-    let fullAdmin = $derived(isFullAdmin(session.get()?.roles));
+    let fullAdmin = $derived(session.isAdmin());
     let rolesDisabled = $derived(fullAdmin ? [] : roles.map(r => r.name));
     let groupsDisabled = $derived(
-        fullAdmin
-            ? []
-            : groups.filter(g => !managesGroup(session.get()?.roles, g.name)).map(g => g.name),
+        fullAdmin ? [] : groups.filter(g => !session.managesGroup(g.name)).map(g => g.name),
     );
 
     let ref: undefined | HTMLInputElement = $state();

@@ -146,9 +146,31 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
-    // 2. it can read a managed user
+    // 2. it can read the full details of a managed user
     let res = client
         .get(format!("{backend}/users/{}", member.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // 2b. but NOT the full details of an unmanaged user
+    let res = client
+        .get(format!("{backend}/users/{}", outsider.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+
+    // 2c. it can read the roles + groups lists (needed for the management UI to work)
+    let res = client
+        .get(format!("{backend}/roles"))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let res = client
+        .get(format!("{backend}/groups"))
         .headers(ga_headers.clone())
         .send()
         .await?;
@@ -198,7 +220,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 403);
 
-    // 7. it cannot set a password
+    // 7. it CAN set a password for a managed user (they cannot priv-esc anyway, #1538)
     let mut pwd = upd(&member);
     pwd.password = Some("SomeOtherPwd123".to_string());
     let res = client
@@ -207,7 +229,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&pwd)
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    assert_eq!(res.status(), 200);
 
     // 8. it cannot delete users
     let res = client

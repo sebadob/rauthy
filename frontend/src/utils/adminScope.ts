@@ -24,7 +24,7 @@ export function parseRoles(roles: string | undefined): string[] {
         .filter(r => r.length > 0);
 }
 
-export function isFullAdmin(roles: string | undefined): boolean {
+export function isAdmin(roles: string | undefined): boolean {
     return parseRoles(roles).includes(FULL_ADMIN);
 }
 
@@ -34,7 +34,7 @@ export function isGroupAdmin(roles: string | undefined): boolean {
 
 /// True if the principal may access the admin UI at all: a full admin or a group admin.
 export function isAnyAdmin(roles: string | undefined): boolean {
-    return isFullAdmin(roles) || isGroupAdmin(roles);
+    return isAdmin(roles) || isGroupAdmin(roles);
 }
 
 function groupMatchers(roles: string | undefined): GroupMatcher[] {

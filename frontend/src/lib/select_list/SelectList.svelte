@@ -38,6 +38,9 @@
             .join(', '),
     );
     let anySelected = $derived(items.find(i => i.selected));
+    // when every entry is locked (e.g. roles for a group admin), the list is read-only:
+    // there is nothing to edit, so don't show the edit button at all (#1538)
+    let readonly = $derived(items.length > 0 && items.every(i => disabledNames.includes(i.name)));
 </script>
 
 <svelte:window bind:innerWidth />
@@ -50,13 +53,15 @@
             </div>
         {/if}
 
-        <div class="edit">
-            <Button invisible onclick={() => (showModal = true)}>
-                <div title={ta.common.edit}>
-                    <IconEdit width="1.2rem" />
-                </div>
-            </Button>
-        </div>
+        {#if !readonly}
+            <div class="edit">
+                <Button invisible onclick={() => (showModal = true)}>
+                    <div title={ta.common.edit}>
+                        <IconEdit width="1.2rem" />
+                    </div>
+                </Button>
+            </div>
+        {/if}
         <Modal bind:showModal bind:closeModal>
             <h3>{@render children()}</h3>
             {#if compact}

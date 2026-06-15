@@ -24,7 +24,8 @@ use validator::Validate;
 )]
 #[get("/groups")]
 pub async fn get_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Read)?;
+    // group admins need to read the group list so the user management UI works (see #1538)
+    principal.validate_api_key_or_group_admin(AccessGroup::Groups, AccessRights::Read)?;
 
     let groups = Group::find_all()
         .await?

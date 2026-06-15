@@ -27,7 +27,6 @@
     import IconCommandLine from '$icons/IconCommandLine.svelte';
     import IconCircleStack from '$icons/IconCircleStack.svelte';
     import { useSession } from '$state/session.svelte';
-    import { isFullAdmin } from '$utils/adminScope';
 
     let ta = useI18nAdmin();
 
@@ -35,7 +34,7 @@
     // Delegated group admins (#1538) only get the user-centric, read-only sections.
     // Everything that manages clients, roles, groups, scopes, system config, etc. stays
     // full-admin only. The backend enforces this regardless; here we just hide it.
-    let fullAdmin = $derived(isFullAdmin(session.get()?.roles));
+    let fullAdmin = $derived(session.isAdmin());
 
     let timeout: undefined | number;
 

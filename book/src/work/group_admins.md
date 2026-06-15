@@ -40,7 +40,9 @@ not themselves any kind of `rauthy_admin`. For those users it can:
 - create new users and place them into a group it manages,
 - edit profile data and toggle `enabled` / `email_verified`,
 - add or remove memberships, but only for groups it manages,
-- reset MFA (delete passkeys),
+- reset MFA (delete passkeys) and reset or set a password,
+- set a `preferred_username` while it is still empty (overwriting an existing one stays a
+  full-admin action),
 - view and invalidate (force-logout) sessions.
 
 In addition, a group admin gets a read-only view of the Sessions, Events, and Blacklist pages to
@@ -53,7 +55,6 @@ The backend enforces all of the following, regardless of what the UI shows:
 - it cannot manage any user that holds a `rauthy_admin` or `rauthy_admin:<...>` role (no
   privilege escalation, and group admins cannot manage each other),
 - it cannot modify a user's roles, or change group memberships outside of its managed groups,
-- it cannot set a user's password,
 - it cannot delete users,
 - it cannot manage clients, scopes, roles, groups, providers, API keys, or system config,
 - it cannot add or remove blacklist entries (read-only),

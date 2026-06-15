@@ -17,7 +17,6 @@
     import { useTrigger } from '$state/callback.svelte';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
     import { useSession } from '$state/session.svelte';
-    import { isFullAdmin } from '$utils/adminScope';
 
     let {
         userValuesConfig,
@@ -42,7 +41,7 @@
     // Group admins (#1538) get a reduced tab set: profile (restricted), MFA reset and
     // force-logout only. Attributes, password, devices and delete stay full-admin only,
     // matching the backend, which rejects those actions for a group admin anyway.
-    let fullAdmin = $derived(isFullAdmin(session.get()?.roles));
+    let fullAdmin = $derived(session.isAdmin());
 
     const TAB_INFO = t.account.navInfo;
     const TAB_ATTR = ta.users.attributes;
@@ -74,6 +73,7 @@
     });
 
     async function fetchUser() {
+        err = '';
         let res = await fetchGet<UserResponse>(`/auth/v1/users/${userId}`);
         if (res.body) {
             user = undefined;
@@ -82,6 +82,7 @@
             });
             focusFirst?.();
         } else {
+            user = undefined;
             err = res.error?.message || 'Error fetching user';
         }
     }
@@ -93,16 +94,18 @@
 </script>
 
 {#if err}
-    <div class="err">
+    <!-- a group admin reaching a user it cannot manage gets a clean notice instead of a
+         raw API error and an empty tab bar (#1538) -->
+    <div class="notice">
         {err}
+    </div>
+{:else}
+    <div class="flex">
+        <Tabs {tabs} bind:selected bind:focusFirst />
     </div>
 {/if}
 
-<div class="flex">
-    <Tabs {tabs} bind:selected bind:focusFirst />
-</div>
-
-{#if user}
+{#if user && !err}
     {#if selected === TAB_INFO}
         <UserInfo
             bind:user
@@ -127,3 +130,13 @@
         <UserDelete {userId} {onSave} />
     {/if}
 {/if}
+
+<style>
+    .notice {
+        margin: 1rem 0.5rem;
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        background: hsla(var(--bg-high) / 0.25);
+        color: hsla(var(--text) / 0.9);
+    }
+</style>
