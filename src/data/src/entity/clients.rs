@@ -957,16 +957,17 @@ impl Client {
         Some(self.default_aud_iter().map(String::from).collect())
     }
 
-    /// Validates an RFC 8707 `resource` request value against this client's policy: the
-    /// value must be an absolute URI without a fragment and must be covered by the
-    /// client's `allowed_resources`. Ephemeral clients without their own allow-list are
-    /// only permitted when `ephemeral_clients.allow_unvalidated_resource` is enabled.
-    /// On any failure an `invalid_target` error (RFC 8707 §2) is returned.
+    /// Validates an RFC 8707 `resource` request value against this client's policy: it
+    /// must match one of the client's configured `allowed_resources`. The entries are
+    /// matched verbatim, so an operator decides what a valid value looks like. Ephemeral
+    /// clients without their own allow-list are only permitted when
+    /// `ephemeral_clients.danger_allow_unvalidated_resource` is enabled. On any failure
+    /// an `invalid_target` error (RFC 8707 §2) is returned.
     pub fn validate_resource_request(&self, resource: &str) -> Result<(), ErrorResponse> {
-        if resource.is_empty() || !resource.contains("://") || resource.contains('#') {
+        if resource.is_empty() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::InvalidTarget,
-                "`resource` must be an absolute URI without a fragment",
+                "`resource` must not be empty",
             ));
         }
 
@@ -984,9 +985,8 @@ impl Client {
             && RauthyConfig::get()
                 .vars
                 .ephemeral_clients
-                .allow_unvalidated_resource
+                .danger_allow_unvalidated_resource
         {
-            // ephemeral client without its own allow-list; operator opted into pass-through
             Ok(())
         } else {
             Err(ErrorResponse::new(

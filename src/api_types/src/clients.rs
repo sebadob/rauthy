@@ -115,7 +115,7 @@ pub struct EphemeralClientRequest {
     pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
     /// RFC 8707 resource indicators this ephemeral client may request. When present, a
     /// requested `resource` is validated against this list; when absent, `resource` is
-    /// only honored if `ephemeral_clients.allow_unvalidated_resource` is enabled.
+    /// only honored if `ephemeral_clients.danger_allow_unvalidated_resource` is enabled.
     ///
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+$>`
     #[validate(custom(function = "validate_vec_uri"))]

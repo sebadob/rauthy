@@ -116,7 +116,7 @@ pub async fn grant_type_password(
                 None,
                 None,
                 None,
-                // password grant does not support resource indicators in v1
+                // resource indicators are not supported for the password grant yet
                 None,
                 AuthCodeFlow::No,
                 DeviceCodeFlow::No,

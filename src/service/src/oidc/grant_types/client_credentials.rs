@@ -60,7 +60,6 @@ pub async fn grant_type_credentials(
         ClientDyn::update_used(&client.id).await?;
     }
 
-    // RFC 8707: validate the requested resource against the client's allow-list
     if let Some(resource) = req_data.resource.as_deref() {
         client.validate_resource_request(resource)?;
     }

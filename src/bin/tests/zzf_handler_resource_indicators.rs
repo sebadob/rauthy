@@ -29,7 +29,6 @@ fn decode_aud(access_token: &str) -> serde_json::Value {
 
 fn base_update() -> UpdateClientRequest {
     UpdateClientRequest {
-        id: ID.to_string(),
         name: Some("Resource Test".to_string()),
         confidential: true,
         redirect_uris: vec!["http://localhost/callback".to_string()],
@@ -49,6 +48,8 @@ fn base_update() -> UpdateClientRequest {
         contacts: None,
         backchannel_logout_uri: None,
         restrict_group_prefix: None,
+        claims: None,
+        claims_at_root: false,
         allowed_resources: None,
         default_aud: None,
         scim: None,

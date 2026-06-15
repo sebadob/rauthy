@@ -78,7 +78,7 @@ requested resource is validated against a new per-client `allowed_resources` all
 deny, returning `invalid_target`), and a second new per-client field `default_aud` lets you always
 add fixed audiences to a client's tokens without a request parameter, e.g. for clients that cannot
 send a `resource`. Ephemeral clients deny resource requests by default unless
-`ephemeral_clients.allow_unvalidated_resource` is enabled or the client document declares its own
+`ephemeral_clients.danger_allow_unvalidated_resource` is enabled or the client document declares its own
 `allowed_resources`.
 
 As part of this, the `aud` claim is now emitted as a JSON array when a token carries two or more

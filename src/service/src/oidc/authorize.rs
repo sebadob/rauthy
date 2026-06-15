@@ -184,7 +184,7 @@ pub async fn post_authorize_refresh(
             nonce: req_data.nonce,
             code_challenge: req_data.code_challenge,
             code_challenge_method: req_data.code_challenge_method,
-            // resource indicators are not re-sent on a session refresh
+            // a session refresh has no new authorization request to carry a `resource`
             resource: None,
             header_origin,
             require_webauthn,
@@ -232,8 +232,6 @@ pub(crate) async fn finish_authorize(
     client.validate_redirect_uri(&data.redirect_uri)?;
     client.validate_code_challenge(&data.code_challenge, &data.code_challenge_method)?;
 
-    // RFC 8707: validate the requested resource against the client's allow-list before
-    // it is carried into the auth code.
     if let Some(resource) = data.resource.as_deref() {
         client.validate_resource_request(resource)?;
     }

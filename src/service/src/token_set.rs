@@ -176,8 +176,7 @@ impl TokenSet {
         };
 
         // RFC 8707: the access token audience is the client itself, plus any always-on
-        // `default_aud` entries, plus the granted `resource` (de-duplicated). A single
-        // value is emitted as a string; two or more become a JSON array.
+        // `default_aud` entries, plus the granted `resource` (de-duplicated).
         let mut auds: Vec<Cow<'_, str>> = Vec::with_capacity(1);
         auds.push(Cow::Borrowed(client.id.as_str()));
         for a in client.default_aud_iter() {
@@ -308,9 +307,7 @@ impl TokenSet {
         } else {
             JwtAmrValue::Pwd.as_str()
         };
-        // Solid-OIDC ephemeral clients additionally carry the `solid` audience. With the
-        // typed `aud` this is now emitted as a real JSON array instead of a string that
-        // merely looks like one.
+        // Solid-OIDC ephemeral clients additionally carry the `solid` audience.
         let aud = if client.is_ephemeral() && config.vars.ephemeral_clients.enable_solid_aud {
             Audience::Multiple(vec![
                 Cow::Borrowed(client.id.as_str()),

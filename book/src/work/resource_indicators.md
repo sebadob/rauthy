@@ -17,17 +17,18 @@ The `resource` parameter is accepted on:
 - the **token request** (`POST /oidc/token`) for the `authorization_code`, `client_credentials`,
   and `refresh_token` grants.
 
-Its value MUST be an absolute URI without a fragment (for example
-`https://api.example.com/mcp`). A malformed, unknown, or disallowed value is rejected with the
-RFC error code `invalid_target`.
+The requested value is matched verbatim against the client's allow-list (see below). The RFC
+recommends an absolute URI such as `https://api.example.com/mcp`, but Rauthy treats the value as
+opaque, so an operator decides what a valid value looks like. A missing, unknown, or disallowed
+value is rejected with the RFC error code `invalid_target`.
 
-Rauthy v1 accepts a single `resource` value per request. On a `refresh_token` grant the granted
-resource is carried inside the refresh token and reused, so a refreshed access token keeps its
-audience binding; a refresh can never widen the resource set.
+Rauthy currently accepts a single `resource` value per request. On a `refresh_token` grant the
+granted resource is carried inside the refresh token and reused, so a refreshed access token keeps
+its audience binding; a refresh can never widen the resource set.
 
 ```admonish note
 The `password` and device-code grants, and logins brokered through an upstream identity provider,
-do not process the `resource` parameter in this version.
+do not process the `resource` parameter yet.
 ```
 
 ## Per-client configuration
@@ -37,7 +38,7 @@ config or via the clients API:
 
 - **`allowed_resources`** is the allow-list against which a requested `resource` is validated. If it
   is empty, any `resource` request is rejected with `invalid_target` (deny by default). To let a
-  client request a resource, add the exact resource URI here.
+  client request a resource, add the exact value here.
 - **`default_aud`** is a list of audiences that are **always** added to this client's access tokens,
   independent of any `resource` parameter. This is handy for less capable clients or IoT devices
   that cannot send a `resource` parameter but still need a fixed audience.
@@ -64,11 +65,17 @@ operator opts in with:
 
 ```toml
 [ephemeral_clients]
-allow_unvalidated_resource = true
+danger_allow_unvalidated_resource = true
 ```
 
 This defaults to `false` (deny) so that a client without a declared allow-list cannot silently
 obtain a token for an arbitrary audience.
+
+```admonish danger
+Only enable `danger_allow_unvalidated_resource` if you know exactly what you are doing and have a
+good reason. It can lead to an easy privilege escalation, because an ephemeral client could then
+mint tokens for an arbitrary audience.
+```
 
 ## Introspection
 
