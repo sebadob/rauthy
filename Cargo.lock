@@ -5127,6 +5127,8 @@ dependencies = [
  "reqwest 0.13.3",
  "ring",
  "serde",
+ "serde_json",
+ "serde_json_path",
  "tokio",
  "tracing",
  "zeroize",
@@ -5140,6 +5142,7 @@ dependencies = [
  "actix-multipart",
  "actix-web",
  "actix-web-lab",
+ "ahash 0.8.12",
  "arc-swap",
  "argon2",
  "askama",
@@ -5374,6 +5377,7 @@ name = "rauthy-service"
 version = "0.36.0-20260603"
 dependencies = [
  "actix-web",
+ "ahash 0.8.12",
  "atrium-api",
  "atrium-common",
  "atrium-oauth",

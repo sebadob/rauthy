@@ -20,6 +20,7 @@ accept-language = { workspace = true }
 actix-multipart = { workspace = true }
 actix-web = { workspace = true }
 actix-web-lab = { workspace = true }
+ahash = { workspace = true }
 arc-swap = { workspace = true }
 argon2 = { workspace = true }
 askama = { workspace = true }

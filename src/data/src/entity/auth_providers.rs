@@ -7,6 +7,7 @@ use crate::entity::{atproto, auth_provider_cust_impls};
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::Cookie;
+use ahash::HashSet;
 use atrium_api::xrpc::http::header::{ACCEPT, AUTHORIZATION};
 use atrium_common::store::Store;
 use chrono::Utc;
@@ -25,13 +26,16 @@ use rauthy_common::constants::{
 use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_no_pad_decode, deserialize, new_store_id, serialize,
 };
-use rauthy_common::{http_client, is_hiqlite};
+use rauthy_common::{http_client, is_hiqlite, json_path};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rustls::crypto::hash::HashAlgorithm::NONE;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, value};
 use serde_json_path::JsonPath;
 use std::borrow::Cow;
+use std::collections::BTreeSet;
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use tracing::{debug, error};
 use utoipa::ToSchema;
@@ -150,6 +154,57 @@ impl AuthProviderLinkCookie {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct JsonPathMappings {
+    mappings: Vec<JsonPathMapping>,
+}
+
+#[derive(Debug, Clone)]
+pub struct JsonPathMapping {
+    name: String,
+    path: String,
+    value_expected: String,
+}
+
+impl Display for JsonPathMappings {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // This is used for custom roles / groups mappings.
+        // None of these values are allowed to container `;` and `\n`,
+        // so we can safely use these as our separators.
+        for mapping in &self.mappings {
+            writeln!(
+                f,
+                "{};{};{}",
+                mapping.name, mapping.path, mapping.value_expected
+            )?;
+        }
+        Ok(())
+    }
+}
+
+impl FromStr for JsonPathMappings {
+    type Err = ErrorResponse;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut mappings = Vec::new();
+
+        for line in s.lines() {
+            if line.is_empty() {
+                break;
+            }
+            let mut iter = line.split(";");
+            mappings.push(JsonPathMapping {
+                name: iter.next().unwrap().to_string(),
+                path: iter.next().unwrap().to_string(),
+                value_expected: iter.next().unwrap().to_string(),
+            });
+            assert!(iter.next().is_none());
+        }
+
+        Ok(Self { mappings })
+    }
+}
+
 /// Upstream Auth Provider for upstream logins without a local Rauthy account
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, FromPgRow)]
 pub struct AuthProvider {
@@ -173,6 +228,10 @@ pub struct AuthProvider {
     pub admin_claim_value: Option<String>,
     pub mfa_claim_path: Option<String>,
     pub mfa_claim_value: Option<String>,
+    #[column(parse)]
+    pub custom_role_mappings: JsonPathMappings,
+    #[column(parse)]
+    pub custom_group_mappings: JsonPathMappings,
 
     pub use_pkce: bool,
     pub client_secret_basic: bool,
@@ -449,6 +508,13 @@ impl AuthProvider {
     }
 
     fn try_from_id_req(id: String, req: ProviderRequest) -> Result<Self, ErrorResponse> {
+        if let Some(path) = &req.admin_claim_path {
+            json_path::parse_path(path)?;
+        }
+        if let Some(path) = &req.mfa_claim_path {
+            json_path::parse_path(path)?;
+        }
+
         let scope = Self::cleanup_scope(&req.scope);
         let secret = Self::secret_encrypted(&req.client_secret)?;
 
@@ -1200,87 +1266,72 @@ impl AuthProviderIdClaims<'_> {
         };
         debug!("user_opt:\n{:?}", user_opt);
 
-        // `rauthy_admin` role mapping by upstream claim
-        let mut should_be_rauthy_admin = None;
-        if let Some(path) = &provider.admin_claim_path {
-            if provider.admin_claim_value.is_none() {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "Misconfigured Auth Provider - admin claim path without value",
-                ));
-            }
+        // in almost all cases, we need the final JSON here for claim mapping
+        debug_assert!(self.json_bytes.is_some());
+        let json_str = String::from_utf8_lossy(self.json_bytes.unwrap());
+        let claims = serde_json::Value::from_str(json_str.as_ref()).map_err(|err| {
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!("Cannot parse JSON response from upstream: {err}"),
+            )
+        })?;
 
-            debug!("try validating admin_claim_path: {:?}", path);
-            match JsonPath::parse(path) {
-                Ok(path) => {
-                    let json_str = String::from_utf8_lossy(self.json_bytes.unwrap());
-                    let json =
-                        value::Value::from_str(json_str.as_ref()).expect("json to build fine");
-                    let admin_value =
-                        value::Value::from(provider.admin_claim_value.as_deref().unwrap())
-                            .to_string();
-                    should_be_rauthy_admin = Some(false);
-                    for value in path.query(&json).all() {
-                        // We actually need this allocation to String to get bigger compatibility.
-                        // This way, we can accept not only string, but we would for instance
-                        // also interpret a given bool as string.
-                        let value = if !value.is_string() {
-                            format!("\"{value}\"")
-                        } else {
-                            value.to_string()
-                        };
-                        if value == admin_value {
-                            should_be_rauthy_admin = Some(true);
-                            break;
-                        }
-                    }
-                }
-                Err(err) => {
-                    error!("Error parsing JsonPath from: '{path}', Error: {err}");
-                }
+        let mut roles_add = Vec::new();
+        let mut roles_remove = Vec::new();
+        let mut groups_add = Vec::new();
+        let mut groups_remove = Vec::new();
+        let mut claims_buf = String::with_capacity(16);
+
+        // `rauthy_admin` role mapping by upstream claim
+        if let Some(path) = &provider.admin_claim_path
+            && let Some(value) = &provider.admin_claim_value
+        {
+            if json_path::has_match(&claims, &mut claims_buf, path, value) {
+                roles_add.push("rauthy_admin");
+            } else {
+                roles_remove.push("rauthy_admin");
+            }
+        }
+
+        // TODO we should probably sanitize them?
+        //  If so, it makes sense during update, but we also need to have hooks when Roles
+        //  or Groups are either updates or deleted. This becomes pretty messy quickly.
+        //  The slow but safe way of doing it would be here.
+        // custom mappings
+        for mapping in &provider.custom_role_mappings.mappings {
+            if json_path::has_match(
+                &claims,
+                &mut claims_buf,
+                &mapping.path,
+                &mapping.value_expected,
+            ) {
+                roles_add.push(mapping.name.into());
+            } else {
+                roles_remove.push(mapping.name.into());
+            }
+        }
+        for mapping in &provider.custom_group_mappings.mappings {
+            if json_path::has_match(
+                &claims,
+                &mut claims_buf,
+                &mapping.path,
+                &mapping.value_expected,
+            ) {
+                groups_add.push(mapping.name.into());
+            } else {
+                groups_remove.push(mapping.name.into());
             }
         }
 
         // check if mfa has been used by upstream claim
-        let mut provider_mfa_login = ProviderMfaLogin::No;
-        if let Some(path) = &provider.mfa_claim_path {
-            if provider.mfa_claim_value.is_none() {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "Misconfigured Auth Provider - mfa claim path without value",
-                ));
-            }
-
-            debug!("try validating mfa_claim_path: {:?}", path);
-            match JsonPath::parse(path) {
-                Ok(path) => {
-                    let json_str = String::from_utf8_lossy(self.json_bytes.unwrap());
-                    let json =
-                        value::Value::from_str(json_str.as_ref()).expect("json to build fine");
-                    let mfa_value =
-                        value::Value::from(provider.mfa_claim_value.as_deref().unwrap())
-                            .to_string();
-
-                    for value in path.query(&json).all() {
-                        // We actually need this allocation to String to get bigger compatibility.
-                        // This way, we can accept not only string, but we would for instance
-                        // also interpret a given bool as string.
-                        let value = if !value.is_string() {
-                            format!("\"{value}\"")
-                        } else {
-                            value.to_string()
-                        };
-                        if value == mfa_value {
-                            provider_mfa_login = ProviderMfaLogin::Yes;
-                            break;
-                        }
-                    }
-                }
-                Err(err) => {
-                    error!("Error parsing JsonPath from: '{path}', Error: {err}");
-                }
-            }
-        }
+        let provider_mfa_login = if let Some(path) = &provider.mfa_claim_path
+            && let Some(value) = &provider.mfa_claim_value
+            && json_path::has_match(&claims, &mut claims_buf, path, value)?
+        {
+            ProviderMfaLogin::Yes
+        } else {
+            ProviderMfaLogin::No
+        };
 
         let now = Utc::now().timestamp();
         let user = if let Some(mut user) = user_opt {
@@ -1330,30 +1381,34 @@ impl AuthProviderIdClaims<'_> {
             }
 
             // should this user be a rauthy admin?
-            let roles = user.roles_iter().collect::<Vec<_>>();
+            let mut roles = user
+                .roles_iter()
+                .map(|v| Cow::from(v))
+                .collect::<HashSet<_>>();
+            let mut groups = user
+                .groups_iter()
+                .map(|v| Cow::from(v))
+                .collect::<HashSet<_>>();
 
-            // We will only re-map the rauthy_admin role if the claim mapping is configured.
-            // Otherwise, we would remove an admin role from a user it has been manually added for,
-            // which would not be the expected outcome.
-            if let Some(should_be_admin) = should_be_rauthy_admin {
-                if should_be_admin {
-                    if !roles.contains(&"rauthy_admin") {
-                        let is_empty = roles.is_empty();
-                        drop(roles);
-                        if is_empty {
-                            user.roles.push_str("rauthy_admin");
-                        } else {
-                            user.roles.push_str(",rauthy_admin");
-                        }
-                    }
-                } else if roles.contains(&"rauthy_admin") {
-                    if roles.len() == 1 {
-                        user.roles = "".to_string();
-                    } else {
-                        user.roles = roles.into_iter().filter(|r| r != &"rauthy_admin").join(",");
-                    }
-                }
+            for role in roles_remove {
+                roles.remove(role.into());
             }
+            for role in roles_add {
+                roles.insert(role.into());
+            }
+            for group in groups_remove {
+                groups.remove(group.into());
+            }
+            for group in groups_add {
+                groups.insert(group.into());
+            }
+
+            user.roles = roles.join(",");
+            user.groups = if groups.is_empty() {
+                None
+            } else {
+                Some(groups.join(","))
+            };
 
             // update the user on our side
             user.last_login = Some(now);
@@ -1368,15 +1423,12 @@ impl AuthProviderIdClaims<'_> {
                 email: self.email.as_ref().unwrap().to_string(),
                 given_name: self.given_name().to_string(),
                 family_name: self.family_name().map(String::from),
-                roles: should_be_rauthy_admin
-                    .map(|should_be_admin| {
-                        if should_be_admin {
-                            "rauthy_admin".to_string()
-                        } else {
-                            String::default()
-                        }
-                    })
-                    .unwrap_or_default(),
+                roles: roles_add.join(","),
+                groups: if groups_add.is_empty() {
+                    None
+                } else {
+                    groups_add.join(",")
+                },
                 enabled: true,
                 email_verified: self.email_verified.unwrap_or(false),
                 last_login: Some(now),
