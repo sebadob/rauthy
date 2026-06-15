@@ -1,9 +1,11 @@
 use crate::database::DB;
 use crate::entity::api_keys::ApiKeyEntity;
 use crate::migration::bootstrap::bootstrap_data;
+use crate::migration::bootstrap::generated_secrets::{GeneratedSecretEntry, GeneratedSecretKey};
 use crate::migration::bootstrap::types::{ApiKey as BootstrapApiKey, ApiKeySecret};
 use crate::rauthy_config::RauthyConfig;
 use cryptr::EncValue;
+use cryptr::utils::secure_random_alnum;
 use hiqlite::macros::params;
 use rauthy_api_types::api_keys::ApiKeyRequest;
 use rauthy_common::constants::API_KEY_LENGTH;
@@ -67,7 +69,7 @@ async fn bootstrap_api_keys_json() -> Result<(), ErrorResponse> {
         .await?;
         generated_secret.zeroize();
 
-        let mut secret_plain = api_key_secret_plain(api_key.secret);
+        let mut secret_plain = api_key_secret_plain(api_key.secret, &key_name).await?;
         set_api_key_secret(&key_name, &secret_plain).await?;
         secret_plain.zeroize();
     }
@@ -99,9 +101,12 @@ async fn set_api_key_secret(name: &str, secret_plain: &str) -> Result<(), ErrorR
     Ok(())
 }
 
-fn api_key_secret_plain(secret: ApiKeySecret) -> String {
+async fn api_key_secret_plain(
+    secret: ApiKeySecret,
+    key_name: &str,
+) -> Result<String, ErrorResponse> {
     match secret {
-        ApiKeySecret::Plain(s) => s,
+        ApiKeySecret::Plain(s) => Ok(s),
         ApiKeySecret::Encrypted(enc) => {
             let bytes = base64_decode(&enc)
                 .expect("Cannot decode base64 encoded, encrypted API Key secret");
@@ -109,8 +114,26 @@ fn api_key_secret_plain(secret: ApiKeySecret) -> String {
                 .expect("Invalid format for encrypted API Key secret")
                 .decrypt()
                 .expect("Failed to decrypt encrypted API Key secret. Make sure Rauthy has access to the used ENC_KEY");
-            String::from_utf8(dec.to_vec())
-                .expect("Invalid characters in API Key secret. Cannot convert to lossless String.")
+            Ok(String::from_utf8(dec.to_vec())
+                .expect("Invalid characters in API Key secret. Cannot convert to lossless String."))
+        }
+        ApiKeySecret::Generate => {
+            let mut plain = secure_random_alnum(API_KEY_LENGTH);
+            let bootstrap = &RauthyConfig::get().vars.bootstrap;
+            if let Err(err) = crate::migration::bootstrap::generated_secrets::upsert_secret(
+                bootstrap.generated_secrets_file.as_ref(),
+                bootstrap.generated_secrets_ttl,
+                GeneratedSecretEntry::new(
+                    GeneratedSecretKey::new("api-key", key_name, "secret"),
+                    plain.clone(),
+                ),
+            )
+            .await
+            {
+                plain.zeroize();
+                return Err(err);
+            }
+            Ok(plain)
         }
     }
 }

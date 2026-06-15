@@ -104,6 +104,67 @@ is very safe while still not being way over the top. If we wanted the same level
 256-bit random bytes key, in alphanumeric form it would be ~43 characters. We have 48 here, which
 even exceeds it. Anything bigger would be a waste of resources.
 
+## Bootstrap Generated Secrets
+
+When `clients.json` or `users.json` uses `"generate"`, Rauthy writes the plaintext values into an
+encrypted local container before inserting the matching database rows. The CLI can read this
+container without starting or contacting the Rauthy server.
+
+The CLI reads everything it needs from your existing Rauthy config file: it loads the same
+`ENC_KEYS` that were active during bootstrap and resolves the configured container location. You
+never pass encryption keys on the command line (which would leak them into your shell history and
+process list) or a separate file path. Just point it at the config:
+
+```bash
+rauthy bootstrap get --config-file ./config.toml --format env
+```
+
+`--config-file` defaults to `./config.toml`, so inside the container or next to the config you can
+usually omit it. If your deployment uses `USE_VAULT_CONFIG=true`, the CLI loads the config the same
+way the server does.
+
+To print only one value, use `raw` with an exact selector:
+
+```bash
+rauthy bootstrap get \
+  --kind client \
+  --id my-service \
+  --field secret \
+  --format raw
+```
+
+`json` preserves every field:
+
+```bash
+rauthy bootstrap get \
+  --kind user \
+  --id admin@example.com \
+  --field password \
+  --format json
+```
+
+`env` emits collision-safe names containing the kind, sanitized id, and field:
+
+```bash
+rauthy bootstrap get --format env
+```
+
+Example output:
+
+```bash
+RAUTHY_BOOTSTRAP_CLIENT_MY_SERVICE_SECRET=...
+RAUTHY_BOOTSTRAP_USER_ADMIN_EXAMPLE_COM_PASSWORD=...
+```
+
+After you have stored the values somewhere safe, purge the container:
+
+```bash
+rauthy bootstrap purge
+```
+
+Purging is idempotent: if the file is already absent, the command reports that and exits
+successfully.
+
 ## Hash Passwords
 
 If you want to hash a password for bootstrapping, you can do it like so:
@@ -118,4 +179,4 @@ more if you want to be extra secure.
 
 ## Serve Rauthy
 
-The last option here is `rauthy serve`. This will actually launch Rauthy. 
+The last option here is `rauthy serve`. This will actually launch Rauthy.

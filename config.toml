@@ -473,6 +473,26 @@ api_key = 'ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY
 # overwritten by: BOOTSTRAP_API_KEY_SECRET
 api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh'
 
+# Generated bootstrap secrets are written to this encrypted local container
+# before their matching database rows are inserted. Later bootstrap phases use
+# it for generated client secrets, user passwords, and API-key secrets that cannot be
+# reconstructed from the database after insertion.
+#
+# The file is a single AEAD-encrypted JSON payload. The expiry deadline lives
+# inside that encrypted payload, so expiry checks decrypt the container first.
+#
+# If unset, the default is `${cluster.data_dir}/bootstrap.secrets.enc`.
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
+#generated_secrets_file = 'data/bootstrap.secrets.enc'
+
+# Time in seconds before generated bootstrap secrets are purged. The default
+# keeps first-start credentials available briefly for local extraction. Set to
+# `0` to disable expiry and runtime auto-purge.
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
+#generated_secrets_ttl = 600
+
 # This is the directory where the bootstrap logic will look for
 # additional bootstrapping data. It will expect JSON files with
 # fixed names inside this folder. If it finds any of them, it will

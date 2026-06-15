@@ -19,7 +19,7 @@ use rauthy_api_types::oidc::JwkKeyPairAlg;
 use rauthy_api_types::users::{UserAttrValueRequest, UserValuesRequest};
 use rauthy_common::regex::*;
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use std::fmt::{Debug, Formatter};
 use std::sync::LazyLock;
 use validator::{Validate, ValidationError, ValidationErrors};
@@ -123,18 +123,36 @@ impl Validate for ApiKey {
     }
 }
 
-#[derive(Deserialize)]
 pub enum ApiKeySecret {
     // Plain text secret
     Plain(String),
     // Must be encrypted using [cryptr](https://github.com/sebadob/cryptr) with an `ENC_KEY` that
     // the Rauthy instance must have available. The encrypted data is expected as **base64**.
     Encrypted(String),
+    // Generate a new API-key secret on first bootstrap and store the cleartext
+    // in the encrypted generated-secret container before the DB row is updated.
+    Generate,
 }
 
 impl Debug for ApiKeySecret {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("<hidden>")
+    }
+}
+
+impl<'de> Deserialize<'de> for ApiKeySecret {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_secret(
+            deserializer,
+            "API-key secret",
+            "Encrypted",
+            |s| Ok(Self::Plain(s)),
+            |s| Ok(Self::Encrypted(s)),
+            || Ok(Self::Generate),
+        )
     }
 }
 
@@ -219,7 +237,7 @@ pub struct Client {
     pub scim: Option<ScimClientRequestResponse>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 pub enum ClientSecret {
     // Plain text secret
     Plain(String),
@@ -233,6 +251,26 @@ pub enum ClientSecret {
     // For future versions, the idea is to add CLI capabilities to the `rauthy` binary and provide
     // a much easier way to achieve this.
     Encrypted(String),
+    // Generate a new confidential-client secret on first bootstrap and store
+    // the cleartext in the encrypted generated-secret container before the DB
+    // row is inserted.
+    Generate,
+}
+
+impl<'de> Deserialize<'de> for ClientSecret {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_secret(
+            deserializer,
+            "client secret",
+            "Encrypted",
+            |s| Ok(Self::Plain(s)),
+            |s| Ok(Self::Encrypted(s)),
+            || Ok(Self::Generate),
+        )
+    }
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -279,10 +317,67 @@ pub struct User {
     pub attributes: Option<Vec<UserAttrValueRequest>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 pub enum UserPassword {
     Plain(String),
     Argon2ID(String),
+    Generate,
+}
+
+impl<'de> Deserialize<'de> for UserPassword {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_secret(
+            deserializer,
+            "user password",
+            "Argon2ID",
+            |s| Ok(Self::Plain(s)),
+            |s| Ok(Self::Argon2ID(s)),
+            || Ok(Self::Generate),
+        )
+    }
+}
+
+fn deserialize_secret<'de, D, T, Plain, Encrypted, Generate>(
+    deserializer: D,
+    name: &str,
+    encrypted_variant: &str,
+    plain: Plain,
+    encrypted: Encrypted,
+    generate: Generate,
+) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    Plain: FnOnce(String) -> Result<T, D::Error>,
+    Encrypted: FnOnce(String) -> Result<T, D::Error>,
+    Generate: FnOnce() -> Result<T, D::Error>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match value {
+        serde_json::Value::String(s) if s == "generate" => generate(),
+        serde_json::Value::String(s) => Err(serde::de::Error::custom(format!(
+            "invalid {name} string '{s}', expected 'generate'"
+        ))),
+        serde_json::Value::Object(mut obj) if obj.len() == 1 => {
+            if let Some(v) = obj.remove("Plain") {
+                let s = serde_json::from_value(v).map_err(serde::de::Error::custom)?;
+                plain(s)
+            } else if let Some(v) = obj.remove(encrypted_variant) {
+                let s = serde_json::from_value(v).map_err(serde::de::Error::custom)?;
+                encrypted(s)
+            } else {
+                Err(serde::de::Error::custom(format!(
+                    "invalid {name} object variant"
+                )))
+            }
+        }
+        _ => Err(serde::de::Error::custom(format!(
+            "invalid {name}, expected {{\"Plain\": ...}}, {{\"{encrypted_variant}\": ...}}, \
+             or \"generate\""
+        ))),
+    }
 }
 
 #[cfg(test)]
@@ -304,5 +399,108 @@ mod tests {
                 .validate()
                 .expect("api_keys bootstrap example should validate");
         }
+    }
+
+    #[test]
+    fn parses_generated_api_key_secret_string() {
+        let api_keys = serde_json::from_str::<Vec<ApiKey>>(
+            r#"[
+                {
+                    "name": "bootstrap",
+                    "exp": 1735599600,
+                    "secret": "generate",
+                    "access": [
+                        {
+                            "group": "Clients",
+                            "access_rights": ["read", "create"]
+                        }
+                    ]
+                }
+            ]"#,
+        )
+        .unwrap();
+
+        assert_eq!(api_keys.len(), 1);
+        assert!(matches!(&api_keys[0].secret, ApiKeySecret::Generate));
+        api_keys[0].validate().unwrap();
+    }
+
+    #[test]
+    fn parses_generated_client_secret_string() {
+        let client = serde_json::from_str::<Client>(
+            r#"{
+                "id": "generated-client",
+                "secret": "generate",
+                "redirect_uris": ["https://localhost/callback"],
+                "enabled": true,
+                "flows_enabled": ["authorization_code"],
+                "access_token_alg": "EdDSA",
+                "id_token_alg": "EdDSA",
+                "auth_code_lifetime": 10,
+                "access_token_lifetime": 900,
+                "scopes": ["openid", "profile"],
+                "default_scopes": ["openid"],
+                "force_mfa": false
+            }"#,
+        )
+        .unwrap();
+
+        assert!(matches!(client.secret, Some(ClientSecret::Generate)));
+    }
+
+    #[test]
+    fn absent_or_null_client_secret_stays_public() {
+        let without_secret = serde_json::from_str::<Client>(
+            r#"{
+                "id": "public-client",
+                "redirect_uris": ["https://localhost/callback"],
+                "enabled": true,
+                "flows_enabled": ["authorization_code"],
+                "access_token_alg": "EdDSA",
+                "id_token_alg": "EdDSA",
+                "auth_code_lifetime": 10,
+                "access_token_lifetime": 900,
+                "scopes": ["openid", "profile"],
+                "default_scopes": ["openid"],
+                "force_mfa": false
+            }"#,
+        )
+        .unwrap();
+        let null_secret = serde_json::from_str::<Client>(
+            r#"{
+                "id": "public-client-null",
+                "secret": null,
+                "redirect_uris": ["https://localhost/callback"],
+                "enabled": true,
+                "flows_enabled": ["authorization_code"],
+                "access_token_alg": "EdDSA",
+                "id_token_alg": "EdDSA",
+                "auth_code_lifetime": 10,
+                "access_token_lifetime": 900,
+                "scopes": ["openid", "profile"],
+                "default_scopes": ["openid"],
+                "force_mfa": false
+            }"#,
+        )
+        .unwrap();
+
+        assert!(without_secret.secret.is_none());
+        assert!(null_secret.secret.is_none());
+    }
+
+    #[test]
+    fn parses_generated_user_password_string() {
+        let user = serde_json::from_str::<User>(
+            r#"{
+                "email": "generated@example.com",
+                "password": "generate",
+                "roles": ["user"],
+                "enabled": true,
+                "email_verified": true
+            }"#,
+        )
+        .unwrap();
+
+        assert!(matches!(user.password, UserPassword::Generate));
     }
 }
