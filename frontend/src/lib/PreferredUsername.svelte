@@ -17,11 +17,15 @@
         preferred_username = $bindable(),
         config,
         isAdmin,
+        groupAdmin,
     }: {
         userId: string;
         preferred_username: string | undefined;
         config: UserValuesPreferredUsername;
         isAdmin?: boolean;
+        // a delegated group admin (#1538) may only set the username while it is still
+        // empty; overwriting an existing one is reserved for full admins
+        groupAdmin?: boolean;
     } = $props();
 
     let t = useI18n();
@@ -35,6 +39,11 @@
     let forceOverwrite = $state(false);
     let nameExists = $state(false);
     let required = $derived(config.preferred_username === 'required');
+
+    let isEmpty = $derived(!preferred_username || preferred_username.length === 0);
+    // who may open the editor: a full admin always; a group admin only while empty; the
+    // user itself while empty or when the value is not immutable
+    let canEdit = $derived(isAdmin || (groupAdmin ? isEmpty : isEmpty || !config.immutable));
 
     $effect(() => {
         username = preferred_username || '';
@@ -88,7 +97,7 @@
             </div>
 
             <div class="btn">
-                {#if isAdmin || preferred_username?.length === 0 || !config.immutable}
+                {#if canEdit}
                     <Button
                         ariaLabel={t.common.edit}
                         level={required && !preferred_username ? -1 : 3}

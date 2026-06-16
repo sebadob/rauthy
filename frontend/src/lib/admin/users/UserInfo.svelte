@@ -515,7 +515,8 @@
                         userId={user.id}
                         bind:preferred_username={user.user_values.preferred_username}
                         config={config.preferred_username}
-                        isAdmin
+                        isAdmin={fullAdmin}
+                        groupAdmin={!fullAdmin}
                     />
 
                     {#if languages}
