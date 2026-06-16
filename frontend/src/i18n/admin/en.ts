@@ -502,6 +502,11 @@ export let I18nAdminEn: I18nAdmin = {
         descAttr: `Set custom user attributes. All key / value pairs will be handles as String / JSON Value.`,
         forceLogout: `Are you sure you want to invalidate all existing sessions and delete all refresh tokens
             for this user?`,
+        groupAdmin: {
+            notManagedTitle: 'User outside your groups',
+            notManagedDesc: `This user is not a member of any group you manage, so the details stay hidden. Add the user to one or more of your groups to manage it. Memberships outside your groups are kept.`,
+            addToGroups: 'Add to my groups',
+        },
         lastLogin: 'Last Login',
         manualInitDesc: `The user can also be initialized here, In this case though, you need to communicate the 
             password directly.`,

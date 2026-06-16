@@ -534,6 +534,11 @@ export let I18nAdminFr: I18nAdmin = {
             comme des chaînes de caractères ou des valeurs JSON.`,
         forceLogout: `Êtes-vous sûr de vouloir invalider toutes les sessions existantes et supprimer tous les jetons
             d'actualisation de cet utilisateur ?`,
+        groupAdmin: {
+            notManagedTitle: 'Utilisateur hors de vos groupes',
+            notManagedDesc: `Cet utilisateur n'appartient à aucun groupe que vous gérez, ses détails restent donc masqués. Ajoutez-le à un ou plusieurs de vos groupes pour le gérer. Les appartenances hors de vos groupes sont conservées.`,
+            addToGroups: 'Ajouter à mes groupes',
+        },
         lastLogin: 'Dernière connexion',
         manualInitDesc: `L’utilisateur peut également être initialisé ici. Dans ce cas, vous devez communiquer le
             mot de passe directement.`,

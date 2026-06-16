@@ -8,6 +8,7 @@
     import { fetchGet } from '$api/fetch';
     import type { UserResponse } from '$api/types/user.ts';
     import UserAttr from '$lib5/admin/users/UserAttr.svelte';
+    import UserAddToGroups from './UserAddToGroups.svelte';
     import UserPassword from './UserPassword.svelte';
     import UserMfa from './UserMfa.svelte';
     import Devices from '$lib5/devices/Devices.svelte';
@@ -38,9 +39,9 @@
     let ta = useI18nAdmin();
 
     let session = useSession('admin');
-    // Group admins (#1538) get a reduced tab set: profile (restricted), MFA reset and
-    // force-logout only. Attributes, password, devices and delete stay full-admin only,
-    // matching the backend, which rejects those actions for a group admin anyway.
+    // Group admins (#1538) get a reduced tab set: profile (restricted), password, MFA reset
+    // and force-logout. Attributes, devices and delete stay full-admin only, matching the
+    // backend, which rejects those actions for a group admin anyway.
     let fullAdmin = $derived(session.isAdmin());
 
     const TAB_INFO = t.account.navInfo;
@@ -54,7 +55,7 @@
     let tabs = $derived(
         fullAdmin
             ? [TAB_INFO, TAB_ATTR, TAB_PASSWORD, TAB_MFA, TAB_DEVICES, TAB_LOGOUT, TAB_DELETE]
-            : [TAB_INFO, TAB_MFA, TAB_LOGOUT],
+            : [TAB_INFO, TAB_PASSWORD, TAB_MFA, TAB_LOGOUT],
     );
     let selected = $state(TAB_INFO);
 
@@ -66,6 +67,9 @@
     });
 
     let err = $state('');
+    // a group admin opened an ordinary user that is not in any of its groups yet (HTTP 428):
+    // instead of an error, we offer to add the user to a managed group (#1538)
+    let notManaged = $state(false);
     let user: undefined | UserResponse = $state();
 
     $effect(() => {
@@ -74,6 +78,7 @@
 
     async function fetchUser() {
         err = '';
+        notManaged = false;
         let res = await fetchGet<UserResponse>(`/auth/v1/users/${userId}`);
         if (res.body) {
             user = undefined;
@@ -81,6 +86,9 @@
                 user = res.body;
             });
             focusFirst?.();
+        } else if (res.status === 428) {
+            user = undefined;
+            notManaged = true;
         } else {
             user = undefined;
             err = res.error?.message || 'Error fetching user';
@@ -94,11 +102,13 @@
 </script>
 
 {#if err}
-    <!-- a group admin reaching a user it cannot manage gets a clean notice instead of a
-         raw API error and an empty tab bar (#1538) -->
+    <!-- a group admin reaching a user it cannot manage (e.g. another admin) gets a clean
+         notice instead of a raw API error and an empty tab bar (#1538) -->
     <div class="notice">
         {err}
     </div>
+{:else if notManaged}
+    <UserAddToGroups {userId} {groups} onAdded={onSaveLocal} />
 {:else}
     <div class="flex">
         <Tabs {tabs} bind:selected bind:focusFirst />

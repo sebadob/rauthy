@@ -17,7 +17,10 @@
     import Devices from '$lib5/devices/Devices.svelte';
     import type { WebIdResponse } from '$api/types/web_id.ts';
     import IconLogout from '$icons/IconLogout.svelte';
+    import IconUserGroup from '$icons/IconUserGroup.svelte';
     import Button from '$lib/button/Button.svelte';
+    import A from '$lib5/A.svelte';
+    import { isAnyAdmin } from '$utils/adminScope';
     import AccOther from '$lib/account/AccOther.svelte';
     import AccPAM from '$lib/account/AccPAM.svelte';
     import type { PamUserResponse } from '$api/types/pam';
@@ -45,6 +48,11 @@
 
     let viewModePhone = $derived(innerWidth && innerWidth < 560);
     let viewModeWideCompact = $derived(innerWidth && innerWidth < 1000);
+
+    // a user holding any `rauthy_admin*` role (full or delegated group admin, #1538) gets a
+    // link to the Admin UI from here. This is how a group admin self-manages: it cannot manage
+    // itself inside the Admin UI (it's an admin there), so it uses this dashboard instead.
+    let showAdminLink = $derived(isAnyAdmin((user.roles ?? []).join(',')));
 
     let pamUser: undefined | PamUserResponse = $state();
 
@@ -128,10 +136,24 @@
     <h3>{`${user.given_name || ''} ${user.family_name || ''}`}</h3>
 {/snippet}
 
+{#snippet adminLink()}
+    {#if showAdminLink}
+        <div class="adminLink">
+            <A href="/auth/v1/admin/users" hideUnderline>
+                <div title={t.account.navBackToAdmin} class="flex gap-05">
+                    <IconUserGroup />
+                    {t.account.navBackToAdmin}
+                </div>
+            </A>
+        </div>
+    {/if}
+{/snippet}
+
 <div class="wrapper">
     {#if viewModePhone}
         <div class="headerPhone">
             {@render header()}
+            {@render adminLink()}
         </div>
 
         <div class="container">
@@ -208,6 +230,8 @@
                     </div>
                 </Button>
             </div>
+
+            {@render adminLink()}
         </div>
     {/if}
 </div>
@@ -250,6 +274,19 @@
         position: absolute;
         top: 0.25rem;
         right: 0.5rem;
+    }
+
+    .adminLink {
+        position: absolute;
+        bottom: 0.5rem;
+        right: 0.75rem;
+        font-size: 0.9rem;
+        color: hsla(var(--text) / 0.8);
+    }
+
+    .headerPhone .adminLink {
+        position: static;
+        margin-top: 0.25rem;
     }
 
     .wide {

@@ -15,6 +15,22 @@ pub struct Principal {
     pub roles: Vec<String>,
 }
 
+/// Outcome of classifying whether a delegated group admin may manage a given target user.
+/// Kept separate from the error mapping so the same decision can yield a `403` (manage /
+/// update endpoints) or a `428` (the "view details" endpoint, where the UI offers to add the
+/// user to a managed group) depending on the caller.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GroupAdminAccess {
+    /// The group admin manages at least one of the target's groups and the target is not an
+    /// admin: full access.
+    Allowed,
+    /// The target is itself a full or delegated `rauthy_admin`: never manageable by a group
+    /// admin, regardless of group membership.
+    TargetIsAdmin,
+    /// The target is an ordinary user, but not (yet) a member of any group this admin manages.
+    NotInManagedGroup,
+}
+
 impl Principal {
     #[inline(always)]
     pub fn from_req(
@@ -95,16 +111,17 @@ impl Principal {
         groups.into_iter().any(|g| self.group_admin_matches(g))
     }
 
-    /// Pure decision for the group-admin path: may a group admin manage a user with
-    /// the given `target_roles` and `target_groups`? Encodes the v1 escalation guards:
-    /// - the target must not itself be any kind of `rauthy_admin` (neither a full admin
-    ///   nor a group admin), and
+    /// Classifies whether a group admin may manage a user with the given `target_roles` and
+    /// `target_groups`, distinguishing the two failure modes so callers can map them to
+    /// different responses. Encodes the v1 escalation guards:
+    /// - the target must not itself be any kind of `rauthy_admin` (neither a full admin nor a
+    ///   group admin), and
     /// - the target must be a member of at least one group this admin manages.
     ///
-    /// This does **not** verify that `self` has a valid session or is a group admin at
-    /// all; callers gate on session/MFA and [`Self::is_group_admin`] first (see
+    /// This does **not** verify that `self` has a valid session or is a group admin at all;
+    /// callers gate on session/MFA and [`Self::is_group_admin`] first (see
     /// [`Self::validate_group_admin_can_manage`]).
-    pub fn group_admin_can_manage<'a, R, G>(&self, target_roles: R, target_groups: G) -> bool
+    fn group_admin_access<'a, R, G>(&self, target_roles: R, target_groups: G) -> GroupAdminAccess
     where
         R: IntoIterator<Item = &'a str>,
         G: IntoIterator<Item = &'a str>,
@@ -113,9 +130,26 @@ impl Principal {
             .into_iter()
             .any(|r| r == RAUTHY_ADMIN_ROLE || r.starts_with(RAUTHY_ADMIN_GROUP_PREFIX));
         if target_is_admin {
-            return false;
+            return GroupAdminAccess::TargetIsAdmin;
         }
-        self.group_admin_manages_any(target_groups)
+        if self.group_admin_manages_any(target_groups) {
+            GroupAdminAccess::Allowed
+        } else {
+            GroupAdminAccess::NotInManagedGroup
+        }
+    }
+
+    /// Pure boolean decision for the group-admin path: may a group admin manage a user with
+    /// the given `target_roles` and `target_groups`? See [`Self::group_admin_access`].
+    pub fn group_admin_can_manage<'a, R, G>(&self, target_roles: R, target_groups: G) -> bool
+    where
+        R: IntoIterator<Item = &'a str>,
+        G: IntoIterator<Item = &'a str>,
+    {
+        matches!(
+            self.group_admin_access(target_roles, target_groups),
+            GroupAdminAccess::Allowed
+        )
     }
 
     /// Validates that the principal is an authenticated, delegated group admin.
@@ -188,13 +222,131 @@ impl Principal {
         if self.api_key.is_some() || self.is_admin() {
             return Ok(());
         }
-        if !self.group_admin_can_manage(target_roles, target_groups) {
-            return Err(ErrorResponse::new(
+        match self.group_admin_access(target_roles, target_groups) {
+            GroupAdminAccess::Allowed => Ok(()),
+            GroupAdminAccess::TargetIsAdmin => Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "You cannot manage another Admin user",
+            )),
+            GroupAdminAccess::NotInManagedGroup => Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "You are not allowed to manage this user",
-            ));
+            )),
         }
-        Ok(())
+    }
+
+    /// Per-target gate for *viewing the full details* of a user as a group admin. Like
+    /// [`Self::validate_group_admin_can_manage`], but returns a `428 Precondition Required`
+    /// instead of a `403` when the only thing missing is the group membership: the target is
+    /// an ordinary user that is simply not a member of any group this admin manages yet. The
+    /// Admin UI uses this distinct status to offer adding the user to a managed group, after
+    /// which the details become visible. A target that is itself any kind of admin still
+    /// yields a `403`. No-op for full admins and ApiKeys.
+    pub fn validate_group_admin_can_view<'a, R, G>(
+        &self,
+        target_roles: R,
+        target_groups: G,
+    ) -> Result<(), ErrorResponse>
+    where
+        R: IntoIterator<Item = &'a str>,
+        G: IntoIterator<Item = &'a str>,
+    {
+        if self.api_key.is_some() || self.is_admin() {
+            return Ok(());
+        }
+        match self.group_admin_access(target_roles, target_groups) {
+            GroupAdminAccess::Allowed => Ok(()),
+            GroupAdminAccess::TargetIsAdmin => Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "You cannot manage another Admin user",
+            )),
+            GroupAdminAccess::NotInManagedGroup => Err(ErrorResponse::new(
+                ErrorResponseType::PreconditionRequired,
+                "You can manage this user once it is a member of one of your groups",
+            )),
+        }
+    }
+
+    /// Per-target gate for a *change* (PATCH / PUT) by a group admin: the change is allowed if
+    /// the admin may manage the target either before **or** after it. This is what makes the
+    /// "add an as-yet-unmanaged user to one of my groups" flow work, where the user only
+    /// becomes manageable because of the membership the change itself adds. The companion
+    /// [`Self::validate_group_admin_user_change`] still guarantees that only managed groups and
+    /// no roles were touched, so this cannot be used to escalate. No-op for full admins and
+    /// ApiKeys.
+    pub fn validate_group_admin_can_manage_change<'a, CR, CG>(
+        &self,
+        current_roles: CR,
+        current_groups: CG,
+        new_roles: &[String],
+        new_groups: &[String],
+    ) -> Result<(), ErrorResponse>
+    where
+        CR: IntoIterator<Item = &'a str>,
+        CG: IntoIterator<Item = &'a str>,
+    {
+        if self.api_key.is_some() || self.is_admin() {
+            return Ok(());
+        }
+        if self.group_admin_can_manage(current_roles, current_groups)
+            || self.group_admin_can_manage(
+                new_roles.iter().map(|r| r.as_str()),
+                new_groups.iter().map(|g| g.as_str()),
+            )
+        {
+            return Ok(());
+        }
+        // Manageable neither before nor after. The change guard keeps roles unchanged for a
+        // group admin, so the resulting roles classify the failure the same as the current
+        // ones would: an admin target yields the clearer message.
+        match self.group_admin_access(
+            new_roles.iter().map(|r| r.as_str()),
+            new_groups.iter().map(|g| g.as_str()),
+        ) {
+            GroupAdminAccess::TargetIsAdmin => Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "You cannot manage another Admin user",
+            )),
+            _ => Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "You are not allowed to manage this user",
+            )),
+        }
+    }
+
+    /// Builds the effective group set for the "add an as-yet-unmanaged user to my groups"
+    /// flow (see #1538). A group admin that cannot see a user's details also cannot see its
+    /// current group memberships, so the Admin UI can only submit the in-scope groups it
+    /// wants the user to have. To avoid clobbering memberships the admin is not allowed to
+    /// touch, every current membership *outside* this admin's scope is preserved, and only
+    /// the submitted groups *inside* the scope are applied on top. Submitted groups outside
+    /// the admin's scope are ignored (the admin can never add a group it does not manage).
+    ///
+    /// Returns `submitted` unchanged for full admins and ApiKeys.
+    pub fn group_admin_scoped_groups<'a, CG>(
+        &self,
+        current_groups: CG,
+        submitted: &[String],
+    ) -> Vec<String>
+    where
+        CG: IntoIterator<Item = &'a str>,
+    {
+        if self.api_key.is_some() || self.is_admin() {
+            return submitted.to_vec();
+        }
+        // keep every current membership the admin does not manage ...
+        let mut out: Vec<String> = current_groups
+            .into_iter()
+            .filter(|g| !g.is_empty() && !self.group_admin_matches(g))
+            .map(String::from)
+            .collect();
+        // ... and add the submitted groups that are within the admin's scope
+        for g in submitted {
+            if self.group_admin_matches(g) && !out.iter().any(|x| x == g) {
+                out.push(g.clone());
+            }
+        }
+        out
     }
 
     /// Validates that an update of an existing user is allowed for a group admin.
@@ -758,5 +910,134 @@ mod tests {
             p.validate_group_admin_user_create(&s(&["rauthy_admin"]), None)
                 .is_ok()
         );
+    }
+
+    #[test]
+    fn test_view_gate_distinguishes_403_and_428() {
+        let p = principal(&["rauthy_admin:dev"]);
+
+        // managed ordinary user -> allowed
+        assert!(p.validate_group_admin_can_view(["user"], ["dev"]).is_ok());
+
+        // target is itself an admin -> 403 with the clearer message
+        let err = p
+            .validate_group_admin_can_view(["rauthy_admin"], ["dev"])
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Forbidden);
+        assert!(err.message.contains("another Admin"));
+        let err = p
+            .validate_group_admin_can_view(["rauthy_admin:sales"], ["dev"])
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Forbidden);
+
+        // ordinary user, but not in any managed group -> 428 so the UI can offer add-to-groups
+        let err = p
+            .validate_group_admin_can_view(["user"], ["ops"])
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::PreconditionRequired);
+        // group-less user -> 428 as well
+        let err = p
+            .validate_group_admin_can_view(["user"], std::iter::empty::<&str>())
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::PreconditionRequired);
+    }
+
+    #[test]
+    fn test_view_gate_noop_for_full_admin() {
+        let p = principal(&["rauthy_admin"]);
+        // a full admin sees everything, even another admin
+        assert!(
+            p.validate_group_admin_can_view(["rauthy_admin"], ["whatever"])
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn test_manage_gate_admin_target_message() {
+        let p = principal(&["rauthy_admin:dev"]);
+        let err = p
+            .validate_group_admin_can_manage(["rauthy_admin"], ["dev"])
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Forbidden);
+        assert!(err.message.contains("another Admin"));
+        // not in a managed group -> 403 (manage path never yields 428)
+        let err = p
+            .validate_group_admin_can_manage(["user"], ["ops"])
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Forbidden);
+    }
+
+    #[test]
+    fn test_can_manage_change_allows_bringing_into_scope() {
+        let p = principal(&["rauthy_admin:dev"]);
+        // currently unmanaged (in "ops"), the change adds the managed "dev" -> allowed
+        assert!(
+            p.validate_group_admin_can_manage_change(
+                ["user"],
+                ["ops"],
+                &s(&["user"]),
+                &s(&["ops", "dev"])
+            )
+            .is_ok()
+        );
+        // currently managed, change keeps it managed -> allowed
+        assert!(
+            p.validate_group_admin_can_manage_change(
+                ["user"],
+                ["dev"],
+                &s(&["user"]),
+                &s(&["dev"])
+            )
+            .is_ok()
+        );
+        // neither before nor after in any managed group -> rejected
+        assert!(
+            p.validate_group_admin_can_manage_change(
+                ["user"],
+                ["ops"],
+                &s(&["user"]),
+                &s(&["ops"])
+            )
+            .is_err()
+        );
+        // an admin target can never be managed, even with a managed group present
+        let err = p
+            .validate_group_admin_can_manage_change(
+                ["rauthy_admin"],
+                ["dev"],
+                &s(&["rauthy_admin"]),
+                &s(&["dev"]),
+            )
+            .unwrap_err();
+        assert!(err.message.contains("another Admin"));
+    }
+
+    #[test]
+    fn test_scoped_groups_preserves_out_of_scope_and_adds_in_scope() {
+        let p = principal(&["rauthy_admin:dev"]);
+        // user is in the unmanaged "ops"; admin submits only the managed "dev"
+        // -> "ops" is preserved, "dev" added
+        let out = p.group_admin_scoped_groups(["ops"], &s(&["dev"]));
+        assert!(out.contains(&"ops".to_string()));
+        assert!(out.contains(&"dev".to_string()));
+        assert_eq!(out.len(), 2);
+
+        // a submitted group outside the admin's scope is ignored
+        let out = p.group_admin_scoped_groups(["ops"], &s(&["dev", "sales"]));
+        assert!(out.contains(&"ops".to_string()));
+        assert!(out.contains(&"dev".to_string()));
+        assert!(!out.contains(&"sales".to_string()));
+
+        // group-less user, single managed group submitted
+        let out = p.group_admin_scoped_groups(std::iter::empty::<&str>(), &s(&["dev"]));
+        assert_eq!(out, vec!["dev".to_string()]);
+    }
+
+    #[test]
+    fn test_scoped_groups_noop_for_full_admin() {
+        let p = principal(&["rauthy_admin"]);
+        // full admin: submitted set is taken verbatim
+        let out = p.group_admin_scoped_groups(["ops"], &s(&["dev", "sales"]));
+        assert_eq!(out, s(&["dev", "sales"]));
     }
 }

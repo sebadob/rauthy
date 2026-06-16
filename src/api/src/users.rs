@@ -552,9 +552,13 @@ pub async fn get_user_by_id(
 
     let user = User::find(id).await?;
     // a group admin only gets the full details of a user it manages; for anyone else it
-    // only sees the minified entry from the user list (see #1538)
-    if principal.is_session_group_admin() {
-        principal.validate_group_admin_can_manage(user.roles_iter(), user.groups_iter())?;
+    // only sees the minified entry from the user list (see #1538). The view gate returns a
+    // `428` (instead of a `403`) for an ordinary, not-yet-managed user, so the Admin UI can
+    // offer to add the user to one of the admin's groups; an admin target stays a `403`.
+    // A group admin may always view its own account though (it is an admin, so the gate would
+    // otherwise reject it), which the account dashboard relies on for self-management.
+    if principal.is_session_group_admin() && principal.user_id() != Ok(user.id.as_str()) {
+        principal.validate_group_admin_can_view(user.roles_iter(), user.groups_iter())?;
     }
     let values = UserValues::find(&user.id).await?;
 
@@ -1305,7 +1309,14 @@ pub async fn get_user_webauthn_passkeys(
     {
         // make sure a non-admin can only access its own information
         principal.validate_session_auth()?;
-        principal.is_user(&id)?;
+        if principal.is_user(&id).is_err() {
+            // a group admin may view the MFA devices of a user it manages (the MFA tab in
+            // the Admin UI, mirroring `delete_webauthn`); the cheap group-admin check runs
+            // before the DB lookup
+            principal.validate_group_admin_session()?;
+            let target = User::find(id.clone()).await?;
+            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+        }
     }
 
     let pks = PasskeyEntity::find_for_user(&id)
@@ -1876,16 +1887,40 @@ pub async fn patch_user(
 
     let user_id = id.into_inner();
     let target = User::find(user_id.clone()).await?;
-    principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
 
-    let (upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
+    let (mut upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
+
+    // A group admin may also patch an as-yet-unmanaged ordinary user to add it to one of its
+    // groups (the "add to my groups" flow, see #1538). In that case the admin never saw the
+    // user's existing memberships, so the submitted groups are scoped: out-of-scope
+    // memberships are preserved and only in-scope additions are applied, instead of replacing
+    // the whole set. This is a no-op for users the admin already manages (the UI submits the
+    // full set there) and for full admins / ApiKeys.
+    if principal.is_session_group_admin()
+        && !principal.group_admin_can_manage(target.roles_iter(), target.groups_iter())
+    {
+        let submitted = upd_req.groups.take().unwrap_or_default();
+        upd_req.groups =
+            Some(principal.group_admin_scoped_groups(target.groups_iter(), &submitted));
+    }
+
     upd_req.validate()?;
 
+    let new_groups = upd_req.groups.as_deref().unwrap_or_default();
+    // only managed groups may be changed and roles may never be touched ...
     principal.validate_group_admin_user_change(
         target.roles_iter(),
         target.groups_iter(),
         &upd_req.roles,
-        upd_req.groups.as_deref().unwrap_or_default(),
+        new_groups,
+    )?;
+    // ... and the admin must be able to manage the user either before or after the change, so
+    // a patch that brings a previously unmanaged user into scope is allowed
+    principal.validate_group_admin_can_manage_change(
+        target.roles_iter(),
+        target.groups_iter(),
+        &upd_req.roles,
+        new_groups,
     )?;
 
     handle_put_user_by_id(user_id, req, upd_req, has_preferred_username).await
@@ -2135,7 +2170,9 @@ pub async fn get_user_values_config(
     // There is no need to validate session or API key if the registration is open anyway.
     // In this case, anyone can pull out the same information from the HTML.
     if !RauthyConfig::get().vars.user_registration.enable {
-        principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+        // a delegated group admin needs this read-only config too: the Admin UI cannot render
+        // the user details view without it (see #1538)
+        principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
     }
     Ok(HttpResponse::Ok().json(&RauthyConfig::get().vars.user_values))
 }

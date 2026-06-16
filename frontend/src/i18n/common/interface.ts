@@ -81,6 +81,7 @@ export interface I18n {
         navEdit: string;
         navMfa: string;
         navLogout: string;
+        navBackToAdmin: string;
         other: string;
         pam: {
             addSshKey: string;

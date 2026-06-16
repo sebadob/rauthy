@@ -432,6 +432,11 @@ export interface I18nAdmin {
         deleteUser: string;
         descAttr: string;
         forceLogout: string;
+        groupAdmin: {
+            notManagedTitle: string;
+            notManagedDesc: string;
+            addToGroups: string;
+        };
         lastLogin: string;
         manualInitDesc: string;
         manualInit: string;

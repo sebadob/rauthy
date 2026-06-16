@@ -121,6 +121,16 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         vec!["gatest".to_string()],
     )
     .await?;
+    // a second admin in the same managed group, to test the "cannot manage another admin" path
+    let coadmin = create_user(
+        &client,
+        &backend,
+        &admin,
+        "ga-coadmin@gatest.io",
+        vec!["rauthy_admin:gatest".to_string()],
+        vec!["gatest".to_string()],
+    )
+    .await?;
 
     // give the group admin a usable password + verified email so it can log in
     let mut set_pwd = upd(&ga);
@@ -154,13 +164,31 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
-    // 2b. but NOT the full details of an unmanaged user
+    // 2b. for an unmanaged but ordinary user it gets a `428`, not the details: the Admin UI
+    // uses this to offer adding the user to a managed group (see #1538)
     let res = client
         .get(format!("{backend}/users/{}", outsider.id))
         .headers(ga_headers.clone())
         .send()
         .await?;
+    assert_eq!(res.status(), 428);
+
+    // 2b-2. trying to view another admin is a plain `403`, never a `428`
+    let res = client
+        .get(format!("{backend}/users/{}", coadmin.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
     assert_eq!(res.status(), 403);
+
+    // 2b-3. but a group admin may always view its OWN account (it is an admin, so the gate
+    // would otherwise reject it). The account dashboard relies on this for self-management.
+    let res = client
+        .get(format!("{backend}/users/{}", ga.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
 
     // 2c. it can read the roles + groups lists (needed for the management UI to work)
     let res = client
@@ -175,6 +203,21 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     assert_eq!(res.status(), 200);
+
+    // 2d. it can read the MFA devices (webauthn) of a managed user (the MFA tab)
+    let res = client
+        .get(format!("{backend}/users/{}/webauthn", member.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    // ... but not of an unmanaged user
+    let res = client
+        .get(format!("{backend}/users/{}/webauthn", outsider.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
 
     // 3. it can edit profile data of a managed user
     let mut change = upd(&member);
@@ -255,8 +298,58 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 403);
 
+    // 11. the "add an unmanaged user to my groups" flow: a groups-only PATCH that brings the
+    // outsider into a managed group is allowed, even though the admin could not see it before.
+    // The PATCH only sends the in-scope group; the unmanaged `gaother` membership the admin
+    // cannot see must be preserved (see #1538).
+    let patch = serde_json::json!({
+        "put": [{ "key": "groups", "value": ["gatest"] }],
+        "del": [],
+    });
+    let res = client
+        .patch(format!("{backend}/users/{}", outsider.id))
+        .headers(ga_headers.clone())
+        .json(&patch)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // now the outsider is managed: full details are visible, and it kept `gaother`
+    let res = client
+        .get(format!("{backend}/users/{}", outsider.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let managed = res.json::<UserResponse>().await?;
+    let groups = managed.groups.unwrap_or_default();
+    assert!(groups.contains(&"gatest".to_string()));
+    assert!(groups.contains(&"gaother".to_string()));
+
+    // a groups-only PATCH that does NOT bring the user into scope is still rejected
+    let outsider2 = create_user(
+        &client,
+        &backend,
+        &admin,
+        "ga-outsider2@gatest.io",
+        vec!["user".to_string()],
+        vec!["gaother".to_string()],
+    )
+    .await?;
+    let patch = serde_json::json!({
+        "put": [{ "key": "given_name", "value": "Nope" }],
+        "del": [],
+    });
+    let res = client
+        .patch(format!("{backend}/users/{}", outsider2.id))
+        .headers(ga_headers.clone())
+        .json(&patch)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+
     // --- cleanup (full admin can still do everything: non-breaking)
-    for id in [&member.id, &outsider.id, &ga.id] {
+    for id in [&member.id, &outsider.id, &outsider2.id, &coadmin.id, &ga.id] {
         let res = client
             .delete(format!("{backend}/users/{id}"))
             .headers(admin.clone())

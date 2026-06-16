@@ -22,7 +22,9 @@
     import IconCheckBadge from '$icons/IconCheckBadge.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import IconLogout from '$icons/IconLogout.svelte';
+    import IconUserCircle from '$icons/IconUserCircle.svelte';
     import { redirectToLogout } from '$utils/helpers';
+    import A from '$lib5/A.svelte';
     import Tooltip from '$lib5/Tooltip.svelte';
     import IconCommandLine from '$icons/IconCommandLine.svelte';
     import IconCircleStack from '$icons/IconCircleStack.svelte';
@@ -269,7 +271,21 @@
                     </div>
                 {/snippet}
 
+                <!-- a quick link to the own account dashboard. A delegated group admin (#1538)
+                     cannot manage itself in here (it's an admin), so it self-manages from the
+                     account dashboard, which links back to the Admin UI. -->
+                {#snippet toAccount()}
+                    <div class="account">
+                        <A href="/auth/v1/account" hideUnderline>
+                            <Tooltip text="Account" yOffset={-40}>
+                                <IconUserCircle />
+                            </Tooltip>
+                        </A>
+                    </div>
+                {/snippet}
+
                 {#if compact}
+                    {@render toAccount()}
                     {@render toLogout()}
                     <div class="theme">
                         <ThemeSwitch />
@@ -279,6 +295,7 @@
                     <div class="flex gap-05">
                         <ThemeSwitch />
                         <LangSelector openTop borderless />
+                        {@render toAccount()}
                         {@render toLogout()}
                     </div>
                     <div class="version">
@@ -371,6 +388,7 @@
         overflow: clip;
     }
 
+    .account,
     .logout {
         margin-bottom: -0.25rem;
     }

@@ -519,6 +519,11 @@ export let I18nAdminNl: I18nAdmin = {
         descAttr: `Stel aangepaste gebruikersattributen in. Alle sleutel/waarde-paren worden verwerkt als tekenreeks/JSON-waarde.`,
         forceLogout: `Weet u zeker dat u alle bestaande sessies wilt ongeldig maken en alle vernieuwingstokens
             voor deze gebruiker wilt verwijderen?`,
+        groupAdmin: {
+            notManagedTitle: 'Gebruiker buiten uw groepen',
+            notManagedDesc: `Deze gebruiker is geen lid van een groep die u beheert, dus de details blijven verborgen. Voeg de gebruiker toe aan een of meer van uw groepen om deze te beheren. Lidmaatschappen buiten uw groepen blijven behouden.`,
+            addToGroups: 'Aan mijn groepen toevoegen',
+        },
         lastLogin: 'Laatste login',
         manualInitDesc: `De gebruiker kan ook hier worden geïnitialiseerd. In dit geval moet u het wachtwoord
             echter direct communiceren.`,
