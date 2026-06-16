@@ -112,7 +112,6 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
     let mut default_scopes = c.default_scopes;
     default_scopes.push("cust_scope".to_string());
     let client_req = UpdateClientRequest {
-        id: c.id,
         name: c.name,
         confidential: c.confidential,
         redirect_uris: c.redirect_uris,

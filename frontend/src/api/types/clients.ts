@@ -33,8 +33,6 @@ export interface ScimClientRequestResponse {
 }
 
 export interface UpdateClientRequest {
-    /// Validation: PATTERN_CLIENT_ID
-    id: string;
     /// Validation: PATTERN_CLIENT_NAME
     name?: string;
     confidential: boolean;

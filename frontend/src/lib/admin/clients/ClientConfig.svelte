@@ -51,7 +51,6 @@
     let err = $state('');
     let success = $state(false);
 
-    let id = $state(client.id);
     let name: string = $state(client.name || '');
     let enabled = $state(client.enabled);
     let confidential = $state(client.confidential);
@@ -123,7 +122,6 @@
 
     $effect(() => {
         if (client.id) {
-            id = client.id;
             name = client.name || '';
             enabled = client.enabled;
             forceMfa = client.force_mfa;
@@ -204,7 +202,6 @@
         err = '';
 
         let payload: UpdateClientRequest = {
-            id,
             name: name || undefined,
             enabled,
             confidential,

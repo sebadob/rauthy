@@ -50,6 +50,25 @@ clients cannot set their own claims.
 
 [#1604](https://github.com/sebadob/rauthy/pull/1604)
 
+#### Stricter Client ID validation
+
+Client IDs for manually managed clients are now validated against the stricter pattern
+`^[a-zA-Z0-9._\-]{2,256}$`, which matches the existing Admin UI restriction. This applies when
+creating a client via the API and when bootstrapping clients from JSON files. Ephemeral clients are
+unaffected and may still use a full URI as their ID.
+
+Previously, the backend accepted URI-shaped IDs on these paths, even though such a client cannot be
+managed in the Admin UI and behaves completely differently depending on whether ephemeral clients
+are enabled. Existing clients with such an ID keep working and can still be updated, since the ID for
+an update is taken from the URL path; only creating or bootstrapping a new client with such an ID is
+now rejected.
+
+As part of this, the redundant `id` field was removed from the client update request body. It was a
+leftover from an older API version: on update the ID is always taken from the URL path and could
+never be changed, so the field had no effect, and any `id` still sent in the body is now ignored.
+
+[#1605](https://github.com/sebadob/rauthy/pull/1605)
+
 ### Bugfix
 
 - The Postgres migration `v24__cust_attrs_token_root.sql` was named with a lowercase `v` and was

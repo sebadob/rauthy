@@ -59,7 +59,6 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
     default_scopes.push(new_scope.scope.clone());
 
     let update_client = UpdateClientRequest {
-        id: init_client.id,
         name: init_client.name,
         confidential: init_client.confidential,
         redirect_uris: init_client.redirect_uris,
