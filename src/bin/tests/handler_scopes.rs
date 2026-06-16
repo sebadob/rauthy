@@ -79,6 +79,8 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         contacts: init_client.contacts,
         backchannel_logout_uri: Some(init_client_bcl_uri()),
         restrict_group_prefix: None,
+        claims: None,
+        claims_at_root: false,
         scim: None,
     };
     let res = client

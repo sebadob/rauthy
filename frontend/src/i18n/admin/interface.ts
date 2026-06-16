@@ -46,6 +46,10 @@ export interface I18nAdmin {
             descFullCss: string;
             descVariables: string;
         };
+        claims: string;
+        claimsAtRoot: string;
+        claimsAtRootWarning: string;
+        claimsDesc: string;
         confidential: string;
         confidentialNoSecret: string;
         config: string;

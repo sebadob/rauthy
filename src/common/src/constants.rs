@@ -73,6 +73,8 @@ pub static ARGON2ID_M_COST_MIN: u32 = 32768;
 pub static ARGON2ID_T_COST_MIN: u32 = 1;
 pub static API_KEY_LENGTH: usize = 64;
 pub static DEVICE_KEY_LENGTH: u8 = 64;
+/// Max serialized length of a client's custom `claims` JSON object.
+pub const CLIENT_CLAIMS_MAX_LEN: usize = 1024;
 pub static EVENTS_LATEST_LIMIT: u16 = 100;
 pub static GRANT_TYPE_DEVICE_CODE: &str = "urn:ietf:params:oauth:grant-type:device_code";
 pub const UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS: u16 = 300;
