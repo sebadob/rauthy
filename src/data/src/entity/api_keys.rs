@@ -317,6 +317,7 @@ pub enum AccessGroup {
     Users,
     Pam,
     AuthProviders,
+    ApiKeys,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -432,6 +433,7 @@ impl From<AccessGroup> for rauthy_api_types::api_keys::AccessGroup {
             AccessGroup::Users => Self::Users,
             AccessGroup::Pam => Self::Pam,
             AccessGroup::AuthProviders => Self::AuthProviders,
+            AccessGroup::ApiKeys => Self::ApiKeys,
         }
     }
 }
@@ -476,6 +478,7 @@ impl From<rauthy_api_types::api_keys::AccessGroup> for AccessGroup {
             rauthy_api_types::api_keys::AccessGroup::Users => Self::Users,
             rauthy_api_types::api_keys::AccessGroup::Pam => Self::Pam,
             rauthy_api_types::api_keys::AccessGroup::AuthProviders => Self::AuthProviders,
+            rauthy_api_types::api_keys::AccessGroup::ApiKeys => Self::ApiKeys,
         }
     }
 }
