@@ -44,7 +44,7 @@
         roles,
         groups,
         providers,
-        fullAdmin = true,
+        isGroupAdmin = false,
         onSave,
     }: {
         user: UserResponse;
@@ -52,9 +52,9 @@
         roles: RoleResponse[];
         groups: GroupResponse[];
         providers: AuthProviderTemplate[];
-        // `false` when the logged-in principal is only a delegated group admin (#1538):
+        // `true` when the logged-in principal is only a delegated group admin (#1538):
         // roles become read-only and groups outside the admin's prefix cannot be toggled.
-        fullAdmin?: boolean;
+        isGroupAdmin?: boolean;
         onSave: () => void;
     } = $props();
 
@@ -70,9 +70,9 @@
 
     // A group admin may never change roles, and may only toggle groups it manages.
     // Everything else stays read-only here; the backend enforces the same rules.
-    let rolesDisabled = $derived(fullAdmin ? [] : roles.map(r => r.name));
+    let rolesDisabled = $derived(isGroupAdmin ? roles.map(r => r.name) : []);
     let groupsDisabled = $derived(
-        fullAdmin ? [] : groups.filter(g => !session.managesGroup(g.name)).map(g => g.name),
+        isGroupAdmin ? groups.filter(g => !session.managesGroup(g.name)).map(g => g.name) : [],
     );
 
     let email = $state('');
@@ -515,8 +515,8 @@
                         userId={user.id}
                         bind:preferred_username={user.user_values.preferred_username}
                         config={config.preferred_username}
-                        isAdmin={fullAdmin}
-                        groupAdmin={!fullAdmin}
+                        isAdmin={!isGroupAdmin}
+                        {isGroupAdmin}
                     />
 
                     {#if languages}

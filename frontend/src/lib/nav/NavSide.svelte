@@ -35,8 +35,9 @@
     let session = useSession('admin');
     // Delegated group admins (#1538) only get the user-centric, read-only sections.
     // Everything that manages clients, roles, groups, scopes, system config, etc. stays
-    // full-admin only. The backend enforces this regardless; here we just hide it.
-    let fullAdmin = $derived(session.isAdmin());
+    // full-admin only. The backend enforces this regardless; here we just hide it. The
+    // principal acts as a group admin when it reached the admin UI without the full role.
+    let isGroupAdmin = $derived(!session.isAdmin());
 
     let timeout: undefined | number;
 
@@ -149,7 +150,7 @@
                         {ta.nav.users}
                     </NavLink>
 
-                    {#if fullAdmin}
+                    {#if !isGroupAdmin}
                         <NavLink {compact} {params} route="/clients">
                             {#snippet icon(width: string)}
                                 <IconOffice {width} />
@@ -214,7 +215,7 @@
                         {ta.nav.blacklist}
                     </NavLink>
 
-                    {#if fullAdmin}
+                    {#if !isGroupAdmin}
                         <NavLink {compact} {params} route="/api_keys">
                             {#snippet icon(width: string)}
                                 <IconKey {width} />

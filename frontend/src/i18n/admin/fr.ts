@@ -536,7 +536,9 @@ export let I18nAdminFr: I18nAdmin = {
             d'actualisation de cet utilisateur ?`,
         groupAdmin: {
             notManagedTitle: 'Utilisateur hors de vos groupes',
-            notManagedDesc: `Cet utilisateur n'appartient à aucun groupe que vous gérez, ses détails restent donc masqués. Ajoutez-le à un ou plusieurs de vos groupes pour le gérer. Les appartenances hors de vos groupes sont conservées.`,
+            notManagedDesc: `Cet utilisateur n'appartient à aucun groupe que vous gérez, ses détails restent donc masqués.
+                Ajoutez-le à un ou plusieurs de vos groupes pour le gérer.
+                Les appartenances hors de vos groupes sont conservées.`,
             addToGroups: 'Ajouter à mes groupes',
         },
         lastLogin: 'Dernière connexion',

@@ -525,7 +525,9 @@ export let I18nAdminDe: I18nAdmin = {
             Refresh Tokens gelöscht werden?`,
         groupAdmin: {
             notManagedTitle: 'Nutzer außerhalb Ihrer Gruppen',
-            notManagedDesc: `Dieser Nutzer ist in keiner von Ihnen verwalteten Gruppe, daher bleiben die Details verborgen. Fügen Sie den Nutzer zu einer oder mehreren Ihrer Gruppen hinzu, um ihn zu verwalten. Mitgliedschaften außerhalb Ihrer Gruppen bleiben erhalten.`,
+            notManagedDesc: `Dieser Nutzer ist in keiner von Ihnen verwalteten Gruppe, daher bleiben die Details verborgen.
+                Fügen Sie den Nutzer zu einer oder mehreren Ihrer Gruppen hinzu, um ihn zu verwalten.
+                Mitgliedschaften außerhalb Ihrer Gruppen bleiben erhalten.`,
             addToGroups: 'Zu meinen Gruppen hinzufügen',
         },
         lastLogin: 'Letzter Login',

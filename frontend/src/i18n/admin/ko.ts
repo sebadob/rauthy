@@ -493,7 +493,9 @@ export let I18nAdminKo: I18nAdmin = {
         forceLogout: `기존 세션을 모두 삭제하고, 이 사용자의 모든 Refresh 토큰을 삭제하시겠습니까?`,
         groupAdmin: {
             notManagedTitle: '내 그룹 밖의 사용자',
-            notManagedDesc: `이 사용자는 회원님이 관리하는 그룹에 속해 있지 않아 세부 정보가 표시되지 않습니다. 사용자를 관리하려면 내 그룹 중 하나 이상에 추가하세요. 내 그룹 밖의 멤버십은 그대로 유지됩니다.`,
+            notManagedDesc: `이 사용자는 회원님이 관리하는 그룹에 속해 있지 않아 세부 정보가 표시되지 않습니다.
+                사용자를 관리하려면 내 그룹 중 하나 이상에 추가하세요.
+                내 그룹 밖의 멤버십은 그대로 유지됩니다.`,
             addToGroups: '내 그룹에 추가',
         },
         lastLogin: '마지막 로그인',

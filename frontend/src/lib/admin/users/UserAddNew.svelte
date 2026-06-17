@@ -41,11 +41,12 @@
     let session = useSession('admin');
 
     // A group admin (#1538) creates users without roles and only into groups it
-    // manages; the backend rejects anything else.
-    let fullAdmin = $derived(session.isAdmin());
-    let rolesDisabled = $derived(fullAdmin ? [] : roles.map(r => r.name));
+    // manages; the backend rejects anything else. The principal acts as a delegated group
+    // admin when it reached the admin UI without the full `rauthy_admin` role.
+    let isGroupAdmin = $derived(!session.isAdmin());
+    let rolesDisabled = $derived(isGroupAdmin ? roles.map(r => r.name) : []);
     let groupsDisabled = $derived(
-        fullAdmin ? [] : groups.filter(g => !session.managesGroup(g.name)).map(g => g.name),
+        isGroupAdmin ? groups.filter(g => !session.managesGroup(g.name)).map(g => g.name) : [],
     );
 
     let ref: undefined | HTMLInputElement = $state();

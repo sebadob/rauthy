@@ -20,7 +20,7 @@
     import IconUserGroup from '$icons/IconUserGroup.svelte';
     import Button from '$lib/button/Button.svelte';
     import A from '$lib5/A.svelte';
-    import { isAnyAdmin } from '$utils/adminScope';
+    import { useSession } from '$state/session.svelte';
     import AccOther from '$lib/account/AccOther.svelte';
     import AccPAM from '$lib/account/AccPAM.svelte';
     import type { PamUserResponse } from '$api/types/pam';
@@ -36,6 +36,7 @@
     } = $props();
 
     let t = useI18n();
+    let session = useSession('account');
 
     let innerWidth: undefined | number = $state();
     let config: undefined | UserValuesConfig = $state();
@@ -52,7 +53,7 @@
     // a user holding any `rauthy_admin*` role (full or delegated group admin, #1538) gets a
     // link to the Admin UI from here. This is how a group admin self-manages: it cannot manage
     // itself inside the Admin UI (it's an admin there), so it uses this dashboard instead.
-    let showAdminLink = $derived(isAnyAdmin((user.roles ?? []).join(',')));
+    let showAdminLink = $derived(session.isAnyAdmin());
 
     let pamUser: undefined | PamUserResponse = $state();
 

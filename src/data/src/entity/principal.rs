@@ -334,7 +334,10 @@ impl Principal {
         if self.api_key.is_some() || self.is_admin() {
             return submitted.to_vec();
         }
-        // keep every current membership the admin does not manage ...
+        // keep every current membership the admin does not manage. `groups_iter()` yields a
+        // single "" for a user with no groups, and `group_admin_matches()` is false for both
+        // empty and unmanaged names, so the explicit `is_empty()` guard is required here (this
+        // is the inverse of the match) to avoid preserving a phantom empty group.
         let mut out: Vec<String> = current_groups
             .into_iter()
             .filter(|g| !g.is_empty() && !self.group_admin_matches(g))
@@ -378,8 +381,8 @@ impl Principal {
             .collect();
         let new_roles: BTreeSet<&str> = new_roles
             .iter()
-            .map(|r| r.as_str())
             .filter(|r| !r.is_empty())
+            .map(|r| r.as_str())
             .collect();
         if current_roles != new_roles {
             return Err(ErrorResponse::new(
@@ -394,8 +397,8 @@ impl Principal {
             .collect();
         let new_groups: BTreeSet<&str> = new_groups
             .iter()
-            .map(|g| g.as_str())
             .filter(|g| !g.is_empty())
+            .map(|g| g.as_str())
             .collect();
         for changed in current_groups.symmetric_difference(&new_groups) {
             if !self.group_admin_matches(changed) {
@@ -434,8 +437,8 @@ impl Principal {
         let groups: Vec<&str> = new_groups
             .map(|g| {
                 g.iter()
-                    .map(|s| s.as_str())
                     .filter(|s| !s.is_empty())
+                    .map(|s| s.as_str())
                     .collect()
             })
             .unwrap_or_default();
@@ -1030,6 +1033,12 @@ mod tests {
 
         // group-less user, single managed group submitted
         let out = p.group_admin_scoped_groups(std::iter::empty::<&str>(), &s(&["dev"]));
+        assert_eq!(out, vec!["dev".to_string()]);
+
+        // `User::groups_iter()` yields a single "" for a user with no groups; that phantom
+        // empty membership must not be preserved (it is the inverse of the match, and
+        // `group_admin_matches("")` is false), only the submitted in-scope group remains
+        let out = p.group_admin_scoped_groups([""], &s(&["dev"]));
         assert_eq!(out, vec!["dev".to_string()]);
     }
 

@@ -17,7 +17,7 @@
         preferred_username = $bindable(),
         config,
         isAdmin,
-        groupAdmin,
+        isGroupAdmin,
     }: {
         userId: string;
         preferred_username: string | undefined;
@@ -25,7 +25,7 @@
         isAdmin?: boolean;
         // a delegated group admin (#1538) may only set the username while it is still
         // empty; overwriting an existing one is reserved for full admins
-        groupAdmin?: boolean;
+        isGroupAdmin?: boolean;
     } = $props();
 
     let t = useI18n();
@@ -43,7 +43,7 @@
     let isEmpty = $derived(!preferred_username || preferred_username.length === 0);
     // who may open the editor: a full admin always; a group admin only while empty; the
     // user itself while empty or when the value is not immutable
-    let canEdit = $derived(isAdmin || (groupAdmin ? isEmpty : isEmpty || !config.immutable));
+    let canEdit = $derived(isAdmin || (isGroupAdmin ? isEmpty : isEmpty || !config.immutable));
 
     $effect(() => {
         username = preferred_username || '';

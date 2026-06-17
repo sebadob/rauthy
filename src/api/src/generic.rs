@@ -114,19 +114,7 @@ pub async fn get_auth_check_admin(principal: ReqPrincipal) -> Result<HttpRespons
     } else {
         // delegated group admin (#1538): a valid session and the same admin-MFA
         // enforcement, but without requiring the full `rauthy_admin` role
-        principal.validate_session_auth()?;
-        if RauthyConfig::get().vars.mfa.admin_force_mfa && !principal.has_mfa_active() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::MfaRequired,
-                "Admin access only allowed with MFA active",
-            ));
-        }
-        if !principal.is_group_admin() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Forbidden,
-                "Rauthy admin or group admin access only",
-            ));
-        }
+        principal.validate_group_admin_session()?;
     }
     Ok(HttpResponse::Ok().finish())
 }

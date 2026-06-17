@@ -521,7 +521,9 @@ export let I18nAdminNl: I18nAdmin = {
             voor deze gebruiker wilt verwijderen?`,
         groupAdmin: {
             notManagedTitle: 'Gebruiker buiten uw groepen',
-            notManagedDesc: `Deze gebruiker is geen lid van een groep die u beheert, dus de details blijven verborgen. Voeg de gebruiker toe aan een of meer van uw groepen om deze te beheren. Lidmaatschappen buiten uw groepen blijven behouden.`,
+            notManagedDesc: `Deze gebruiker is geen lid van een groep die u beheert, dus de details blijven verborgen.
+                Voeg de gebruiker toe aan een of meer van uw groepen om deze te beheren.
+                Lidmaatschappen buiten uw groepen blijven behouden.`,
             addToGroups: 'Aan mijn groepen toevoegen',
         },
         lastLogin: 'Laatste login',

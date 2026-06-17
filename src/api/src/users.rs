@@ -2210,26 +2210,20 @@ pub async fn put_user_self_preferred_username(
         .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)
         .is_err()
     {
-        if principal.validate_user_session(&id).is_ok() {
-            // the logged-in user updating its own username cannot force-overwrite
-            if force_overwrite {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "Only an admin can 'force_overwrite' the 'preferred_username'",
-                ));
-            }
-        } else {
-            // a group admin may set a managed user's username, but only while it is still
-            // empty, and may never force-overwrite (reserved for full admins) (see #1538)
+        // neither an ApiKey nor a full admin: force-overwrite is reserved for full admins,
+        // whether the caller is the user itself or a delegated group admin (see #1538)
+        if force_overwrite {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Only a full admin can 'force_overwrite' the 'preferred_username'",
+            ));
+        }
+        // not the logged-in user updating its own username: then it must be a group admin
+        // that manages the target, and it may only set the name while it is still empty
+        if principal.validate_user_session(&id).is_err() {
             principal.validate_group_admin_session()?;
             let target = User::find(id.clone()).await?;
             principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
-            if force_overwrite {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Forbidden,
-                    "Only a full admin can 'force_overwrite' the 'preferred_username'",
-                ));
-            }
             if UserValues::find(&id)
                 .await?
                 .and_then(|v| v.preferred_username)

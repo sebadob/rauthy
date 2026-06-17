@@ -41,8 +41,9 @@
     let session = useSession('admin');
     // Group admins (#1538) get a reduced tab set: profile (restricted), password, MFA reset
     // and force-logout. Attributes, devices and delete stay full-admin only, matching the
-    // backend, which rejects those actions for a group admin anyway.
-    let fullAdmin = $derived(session.isAdmin());
+    // backend, which rejects those actions for a group admin anyway. The principal acts as a
+    // delegated group admin when it reached the admin UI without the full `rauthy_admin` role.
+    let isGroupAdmin = $derived(!session.isAdmin());
 
     const TAB_INFO = t.account.navInfo;
     const TAB_ATTR = ta.users.attributes;
@@ -53,9 +54,9 @@
     const TAB_DELETE = t.common.delete;
 
     let tabs = $derived(
-        fullAdmin
-            ? [TAB_INFO, TAB_ATTR, TAB_PASSWORD, TAB_MFA, TAB_DEVICES, TAB_LOGOUT, TAB_DELETE]
-            : [TAB_INFO, TAB_PASSWORD, TAB_MFA, TAB_LOGOUT],
+        isGroupAdmin
+            ? [TAB_INFO, TAB_PASSWORD, TAB_MFA, TAB_LOGOUT]
+            : [TAB_INFO, TAB_ATTR, TAB_PASSWORD, TAB_MFA, TAB_DEVICES, TAB_LOGOUT, TAB_DELETE],
     );
     let selected = $state(TAB_INFO);
 
@@ -123,7 +124,7 @@
             {providers}
             {roles}
             {groups}
-            {fullAdmin}
+            {isGroupAdmin}
             onSave={onSaveLocal}
         />
     {:else if selected === TAB_ATTR}

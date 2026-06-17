@@ -199,6 +199,7 @@ pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
         nonce: Some("MySuperNonce".to_string()),
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
+        resource: None,
     };
 
     let res = client

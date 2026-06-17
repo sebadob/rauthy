@@ -485,7 +485,9 @@ export let I18nAdminZh: I18nAdmin = {
         forceLogout: `您确定要使此用户的所有现有会话无效并删除所有刷新令牌吗？`,
         groupAdmin: {
             notManagedTitle: '不在您群组中的用户',
-            notManagedDesc: `该用户不属于任何您管理的群组，因此其详细信息处于隐藏状态。将该用户添加到您的一个或多个群组即可进行管理。您管理范围之外的成员关系将被保留。`,
+            notManagedDesc: `该用户不属于任何您管理的群组，因此其详细信息处于隐藏状态。
+                将该用户添加到您的一个或多个群组即可进行管理。
+                您管理范围之外的成员关系将被保留。`,
             addToGroups: '添加到我的群组',
         },
         lastLogin: '最后登录',

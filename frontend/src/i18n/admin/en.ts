@@ -504,7 +504,9 @@ export let I18nAdminEn: I18nAdmin = {
             for this user?`,
         groupAdmin: {
             notManagedTitle: 'User outside your groups',
-            notManagedDesc: `This user is not a member of any group you manage, so the details stay hidden. Add the user to one or more of your groups to manage it. Memberships outside your groups are kept.`,
+            notManagedDesc: `This user is not a member of any group you manage, so the details stay hidden.
+                Add the user to one or more of your groups to manage it.
+                Memberships outside your groups are kept.`,
             addToGroups: 'Add to my groups',
         },
         lastLogin: 'Last Login',
