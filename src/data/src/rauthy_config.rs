@@ -451,6 +451,7 @@ impl Default for Vars {
                     "webid".into(),
                 ],
                 cache_lifetime: 3600,
+                danger_allow_unvalidated_resource: false,
             },
             events: VarsEvents {
                 email: None,
@@ -1988,6 +1989,15 @@ impl Vars {
             "EPHEMERAL_CLIENTS_CACHE_LIFETIME",
         ) {
             self.ephemeral_clients.cache_lifetime = v;
+        }
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "ephemeral_clients",
+            "danger_allow_unvalidated_resource",
+            "EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE",
+        ) {
+            self.ephemeral_clients.danger_allow_unvalidated_resource = v;
         }
 
         check_empty(table, "ephemeral_clients");
@@ -3663,6 +3673,12 @@ pub struct VarsEphemeralClients {
     pub allowed_flows: Vec<Cow<'static, str>>,
     pub allowed_scopes: Vec<Cow<'static, str>>,
     pub cache_lifetime: u32,
+    /// RFC 8707: when an ephemeral client document declares no `allowed_resources`,
+    /// a requested `resource` is rejected by default. Setting this to `true` lets such
+    /// clients request any resource, which can be an easy privilege-escalation vector;
+    /// only enable it if you fully understand the implications and have a good reason.
+    /// Default deny.
+    pub danger_allow_unvalidated_resource: bool,
 }
 
 #[derive(Debug)]

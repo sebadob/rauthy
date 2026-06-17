@@ -40,6 +40,10 @@ export let I18nAdminRu: I18nAdmin = {
         size: 'Размер',
     },
     clients: {
+        allowedResources: 'Разрешённые ресурсы',
+        defaultAud: 'Аудитории по умолчанию',
+        descAllowedResources: `Необязательные индикаторы ресурсов RFC 8707, которые может запрашивать этот клиент. Пустой список отклоняет любой параметр 'resource' с ошибкой 'invalid_target'.`,
+        descDefaultAud: `Аудитории, которые всегда добавляются в токены этого клиента, независимо от параметра 'resource'.`,
         backchannelLogout:
             'Если этот клиент поддерживает {{ OIDC_BCL }}, вы можете указать URI здесь.',
         branding: {

@@ -57,6 +57,14 @@ pub async fn update_client(
         None => None,
     };
     client.claims_at_root = client_req.claims_at_root;
+    client.allowed_resources = client_req
+        .allowed_resources
+        .map(|r| r.join(","))
+        .filter(|r| !r.is_empty());
+    client.default_aud = client_req
+        .default_aud
+        .map(|a| a.join(","))
+        .filter(|a| !a.is_empty());
 
     client.save().await?;
 

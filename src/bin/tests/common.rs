@@ -74,6 +74,7 @@ pub async fn get_token_set_init_client() -> TokenSet {
         username: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
         refresh_token: None,
+        resource: None,
     };
 
     let res = reqwest::Client::new()
@@ -124,6 +125,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         nonce: Some("MySuperNonce".to_string()),
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
+        resource: None,
     };
 
     let res = client
@@ -147,6 +149,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         username: None,
         password: None,
         refresh_token: None,
+        resource: None,
     };
 
     let url_token = format!("{}/oidc/token", backend_url);

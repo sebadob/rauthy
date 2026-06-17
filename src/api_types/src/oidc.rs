@@ -62,6 +62,13 @@ pub struct AuthRequest {
     /// Validation: `[a-zA-Z0-9_\s]{0,128}`
     #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9_\\s]{0,128}"))]
     pub prompt: Option<String>,
+    /// RFC 8707 resource indicator. Must be an absolute URI without a fragment. The
+    /// requested resource is validated against the client's `allowed_resources` and,
+    /// on success, added to the issued access token's `aud`.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub resource: Option<String>,
 }
 
 #[inline]
@@ -128,6 +135,12 @@ pub struct LoginRequest {
     /// Validation: `plain|S256`
     #[validate(regex(path = "*RE_CODE_CHALLENGE_METHOD", code = "plain|S256"))]
     pub code_challenge_method: Option<String>,
+    /// RFC 8707 resource indicator forwarded from the authorization request, carried
+    /// into the auth code so the issued access token can be audience-restricted.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub resource: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -252,6 +265,13 @@ pub struct TokenRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub refresh_token: Option<String>,
+    /// RFC 8707 resource indicator. Must be an absolute URI without a fragment. On a
+    /// `refresh_token` grant it may only narrow (be a subset of) the resources granted
+    /// to the original token, never widen them.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub resource: Option<String>,
 }
 
 impl TokenRequest {
@@ -432,6 +452,52 @@ pub struct SessionInfoResponse<'a> {
     pub state: SessionState,
 }
 
+/// RFC 7519 `aud` (audience) claim value: a single audience string, or an array of
+/// them. Rauthy serializes a single audience as a plain string (so there is no change
+/// for existing consumers) and only emits a JSON array when two or more audiences are
+/// present (RFC 8707 `resource` indicators, the per-client `default_aud`, or the
+/// `solid` audience for Solid-OIDC ephemeral clients). Both forms are valid per the RFC.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(untagged)]
+pub enum Audience<'a> {
+    Single(Cow<'a, str>),
+    Multiple(Vec<Cow<'a, str>>),
+}
+
+impl<'a> Audience<'a> {
+    /// A single-valued audience.
+    pub fn single(value: impl Into<Cow<'a, str>>) -> Self {
+        Self::Single(value.into())
+    }
+
+    /// Builds the most specific representation for the given audiences: a `Single` for
+    /// exactly one value, otherwise a `Multiple`. The input is expected to be
+    /// de-duplicated already by the caller.
+    pub fn from_values(mut values: Vec<Cow<'a, str>>) -> Self {
+        if values.len() == 1 {
+            Self::Single(values.swap_remove(0))
+        } else {
+            Self::Multiple(values)
+        }
+    }
+
+    /// `true` if there is no audience value at all, or all values are empty.
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Single(s) => s.is_empty(),
+            Self::Multiple(v) => v.is_empty() || v.iter().all(|s| s.is_empty()),
+        }
+    }
+
+    /// `true` if `needle` is one of the contained audiences.
+    pub fn contains(&self, needle: &str) -> bool {
+        match self {
+            Self::Single(s) => s == needle,
+            Self::Multiple(v) => v.iter().any(|s| s == needle),
+        }
+    }
+}
+
 #[derive(Default, Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct TokenInfo<'a> {
@@ -442,8 +508,8 @@ pub struct TokenInfo<'a> {
     pub scope: Option<Cow<'a, str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_id: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub aud: Option<&'a str>,
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub aud: Option<Audience<'a>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub iat: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -80,6 +80,8 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         restrict_group_prefix: None,
         claims: None,
         claims_at_root: false,
+        allowed_resources: None,
+        default_aud: None,
         scim: None,
     };
     let res = client

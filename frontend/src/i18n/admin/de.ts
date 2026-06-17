@@ -40,6 +40,10 @@ export let I18nAdminDe: I18nAdmin = {
         size: 'Größe',
     },
     clients: {
+        allowedResources: 'Erlaubte Ressourcen',
+        defaultAud: 'Standard-Audiences',
+        descAllowedResources: `Optionale RFC 8707 Resource Indicators, die dieser Client anfordern darf. Eine leere Liste lehnt jeden 'resource'-Parameter mit 'invalid_target' ab.`,
+        descDefaultAud: `Audiences, die immer zu den Tokens dieses Clients hinzugefügt werden, unabhängig von einem 'resource'-Parameter.`,
         backchannelLogout:
             'Sollte dieser client {{ OIDC_BCL }} unterstützen, kann die URI hier angegeben werden.',
         branding: {

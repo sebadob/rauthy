@@ -56,6 +56,10 @@ export interface I18nAdmin {
         delete1: string;
         descAuthCode: string;
         descClientUri: string;
+        allowedResources: string;
+        defaultAud: string;
+        descAllowedResources: string;
+        descDefaultAud: string;
         descGroupPrefix: string;
         descName: string;
         descOrigin: string;

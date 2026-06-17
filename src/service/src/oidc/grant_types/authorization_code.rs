@@ -154,6 +154,20 @@ pub async fn grant_type_authorization_code(
         }
     }
 
+    // RFC 8707: a `resource` on the token request may only narrow (here: match) the
+    // resource granted at the authorization request, never widen or introduce a new one.
+    let resource = match (req_data.resource.as_deref(), code.resource.as_deref()) {
+        (Some(requested), Some(granted)) if requested == granted => Some(granted.to_string()),
+        (Some(_), _) => {
+            warn!("token request `resource` was not granted at the authorization request");
+            return Err(ErrorResponse::new(
+                ErrorResponseType::InvalidTarget,
+                "the requested `resource` was not granted at the authorization request",
+            ));
+        }
+        (None, granted) => granted.map(String::from),
+    };
+
     let user = User::find(code.user_id.clone()).await?;
     let token_set = TokenSet::from_user(
         &user,
@@ -163,6 +177,7 @@ pub async fn grant_type_authorization_code(
         code.nonce.clone().map(TokenNonce),
         Some(TokenScopes(code.scopes.join(" "))),
         code.session_id.clone().map(SessionId),
+        resource,
         AuthCodeFlow::Yes,
         DeviceCodeFlow::No,
     )

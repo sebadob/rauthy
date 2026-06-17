@@ -58,9 +58,9 @@ impl ErrorResponse {
 impl ResponseError for ErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self.error {
-            ErrorResponseType::BadRequest | ErrorResponseType::UseDpopNonce(_) => {
-                StatusCode::BAD_REQUEST
-            }
+            ErrorResponseType::BadRequest
+            | ErrorResponseType::InvalidTarget
+            | ErrorResponseType::UseDpopNonce(_) => StatusCode::BAD_REQUEST,
             ErrorResponseType::Blocked
             | ErrorResponseType::Forbidden
             | ErrorResponseType::PasswordRefresh => StatusCode::FORBIDDEN,

@@ -69,6 +69,24 @@ never be changed, so the field had no effect, and any `id` still sent in the bod
 
 [#1605](https://github.com/sebadob/rauthy/pull/1605)
 
+#### Resource Indicators (RFC 8707)
+
+Rauthy now supports [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707) resource indicators. Clients
+may send a `resource` parameter on the authorization and token requests (for the `authorization_code`,
+`client_credentials` and `refresh_token` grants) to request an audience-restricted access token. The
+requested resource is validated against a new per-client `allowed_resources` allow-list (empty means
+deny, returning `invalid_target`), and a second new per-client field `default_aud` lets you always
+add fixed audiences to a client's tokens without a request parameter, e.g. for clients that cannot
+send a `resource`. Ephemeral clients deny resource requests by default unless
+`ephemeral_clients.danger_allow_unvalidated_resource` is enabled or the client document declares its own
+`allowed_resources`.
+
+As part of this, the `aud` claim is now emitted as a JSON array when a token carries two or more
+audiences, and stays a single string otherwise. This also fixes the `solid_aud` case for Solid-OIDC
+ephemeral clients, which previously emitted a string that merely looked like an array.
+
+[#1562](https://github.com/sebadob/rauthy/issues/1562)
+
 ### Bugfix
 
 - The Postgres migration `v24__cust_attrs_token_root.sql` was named with a lowercase `v` and was

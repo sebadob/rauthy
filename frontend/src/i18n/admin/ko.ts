@@ -36,6 +36,10 @@ export let I18nAdminKo: I18nAdmin = {
         size: 'Size',
     },
     clients: {
+        allowedResources: '허용된 리소스',
+        defaultAud: '기본 대상(Audience)',
+        descAllowedResources: `이 클라이언트가 요청할 수 있는 선택적 RFC 8707 리소스 인디케이터입니다. 목록이 비어 있으면 모든 'resource' 요청 파라미터를 'invalid_target'으로 거부합니다.`,
+        descDefaultAud: `'resource' 요청 파라미터와 무관하게 이 클라이언트의 토큰에 항상 추가되는 대상(audience)입니다.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
             descHsl: `HSL 값으로 입력해야 합니다. 기본 색상만 제공하면 알파 채널 및 기타 값은

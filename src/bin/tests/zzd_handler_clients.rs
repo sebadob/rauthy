@@ -45,7 +45,6 @@ async fn put_client_claims(
         .await?;
 
     let req = UpdateClientRequest {
-        id: c.id,
         name: c.name,
         confidential: c.confidential,
         redirect_uris: c.redirect_uris,
@@ -67,6 +66,8 @@ async fn put_client_claims(
         restrict_group_prefix: c.restrict_group_prefix,
         claims,
         claims_at_root,
+        allowed_resources: None,
+        default_aud: None,
         scim: None,
     };
 
@@ -208,6 +209,8 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         restrict_group_prefix: None,
         claims: None,
         claims_at_root: false,
+        allowed_resources: None,
+        default_aud: None,
         scim: None,
     };
 
@@ -317,6 +320,7 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
         username: None,
         password: None,
         refresh_token: None,
+        resource: None,
     };
     let url_token = format!("{}/oidc/token", backend_url);
     let res = client.post(&url_token).form(&token_req).send().await?;
@@ -462,6 +466,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
         username: None,
         password: None,
         refresh_token: None,
+        resource: None,
     };
     let res = client.post(&url_token).form(&token_req).send().await?;
     assert_eq!(res.status(), 200);
