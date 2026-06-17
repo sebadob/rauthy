@@ -11,7 +11,8 @@ export type AccessGroup =
     | 'Scopes'
     | 'UserAttributes'
     | 'Users'
-    | 'AuthProviders';
+    | 'AuthProviders'
+    | 'ApiKeys';
 export type AccessRight = 'read' | 'create' | 'update' | 'delete';
 
 export interface ApiKeyAccess {
