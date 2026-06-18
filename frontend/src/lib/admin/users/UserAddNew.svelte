@@ -42,10 +42,11 @@
 
     // A group admin (#1538) creates users without roles and only into groups it
     // manages; the backend rejects anything else. The principal acts as a delegated group
-    // admin when it reached the admin UI without the full `rauthy_admin` role.
+    // admin when it reached the admin UI without the full `rauthy_admin` role. On this create
+    // form we hide what it cannot use entirely (no role editor, and only the groups it
+    // manages); editing an existing user still shows everything (see UserInfo).
     let isGroupAdmin = $derived(!session.isAdmin());
-    let rolesDisabled = $derived(isGroupAdmin ? roles.map(r => r.name) : []);
-    let groupsDisabled = $derived(
+    let groupsHidden = $derived(
         isGroupAdmin ? groups.filter(g => !session.managesGroup(g.name)).map(g => g.name) : [],
     );
 
@@ -163,10 +164,12 @@
             </div>
         {/if}
 
-        <SelectList bind:items={rolesItems} disabledNames={rolesDisabled}>
-            {t.account.roles}
-        </SelectList>
-        <SelectList bind:items={groupsItems} disabledNames={groupsDisabled}>
+        {#if !isGroupAdmin}
+            <SelectList bind:items={rolesItems}>
+                {t.account.roles}
+            </SelectList>
+        {/if}
+        <SelectList bind:items={groupsItems} hiddenNames={groupsHidden}>
             {t.account.groups}
         </SelectList>
 

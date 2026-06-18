@@ -394,6 +394,13 @@
         margin-bottom: -0.25rem;
     }
 
+    /* now that the nav has multiple bottom buttons, color the logout icon the same red as
+       the one on the account dashboard to set it apart (#1538) */
+    .logout :global(button > div),
+    .logout :global(button:hover > div) {
+        color: hsl(var(--error));
+    }
+
     .menu {
         max-height: 85dvh;
         display: flex;

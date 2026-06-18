@@ -20,6 +20,8 @@
     import IconUserGroup from '$icons/IconUserGroup.svelte';
     import Button from '$lib/button/Button.svelte';
     import A from '$lib5/A.svelte';
+    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
+    import LangSelector from '$lib5/LangSelector.svelte';
     import { useSession } from '$state/session.svelte';
     import AccOther from '$lib/account/AccOther.svelte';
     import AccPAM from '$lib/account/AccPAM.svelte';
@@ -189,6 +191,10 @@
                 {/if}
             </div>
         </div>
+
+        <!-- on phone the theme + language selectors stay anchored in the bottom-left corner -->
+        <ThemeSwitch absolute />
+        <LangSelector absolute />
     {:else}
         <div class="wide">
             {#if !viewModeWideCompact}
@@ -223,7 +229,14 @@
                 </div>
             </div>
 
-            <div class="logout">
+            <!-- theme, language, the switch-to-Admin-UI link and the logout sit together in one
+                 row in the bottom-left corner, matching the order and position of the same
+                 controls in the Admin UI nav so an admin switching back and forth does not see
+                 them jump around (#1538) -->
+            <div class="bottomLeft">
+                <ThemeSwitch />
+                <LangSelector openTop borderless />
+                {@render adminLink()}
                 <Button level={-3} onclick={redirectToLogout}>
                     <div title={t.account.navLogout} class="flex gap-05">
                         <IconLogout />
@@ -231,8 +244,6 @@
                     </div>
                 </Button>
             </div>
-
-            {@render adminLink()}
         </div>
     {/if}
 </div>
@@ -271,22 +282,21 @@
         overflow-y: auto;
     }
 
-    .logout {
+    .bottomLeft {
         position: absolute;
-        top: 0.25rem;
-        right: 0.5rem;
+        bottom: 0.5rem;
+        left: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
     }
 
     .adminLink {
-        position: absolute;
-        bottom: 0.5rem;
-        right: 0.75rem;
         font-size: 0.9rem;
         color: hsla(var(--text) / 0.8);
     }
 
     .headerPhone .adminLink {
-        position: static;
         margin-top: 0.25rem;
     }
 

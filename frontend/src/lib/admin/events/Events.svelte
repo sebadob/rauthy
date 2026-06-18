@@ -10,10 +10,18 @@
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import { fetchPost } from '$api/fetch';
     import { useTrigger } from '$state/callback.svelte';
+    import { useSession } from '$state/session.svelte';
 
     const latest = 50;
 
     let ta = useI18nAdmin();
+    let session = useSession('admin');
+
+    // The "Test" event verifies the notification pipeline, which is a full-admin concern
+    // (fixing it needs config changes a group admin has no access to), so hide it for them
+    // (#1538). The principal acts as a group admin when it reached the admin UI without the
+    // full `rauthy_admin` role.
+    let isGroupAdmin = $derived(!session.isAdmin());
 
     let innerWidth: undefined | number = $state();
     let wide = $state(false);
@@ -124,7 +132,9 @@
                 />
             </div>
 
-            <Button ariaLabel="Test Event" level={3} onclick={sendTestEvent}>Test</Button>
+            {#if !isGroupAdmin}
+                <Button ariaLabel="Test Event" level={3} onclick={sendTestEvent}>Test</Button>
+            {/if}
         </div>
 
         <div aria-live="polite" aria-relevant="additions" class="data">

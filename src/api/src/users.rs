@@ -816,7 +816,10 @@ pub async fn put_user_picture(
             .validate_api_key(AccessGroup::Users, AccessRights::Update)
             .is_err()
     {
-        return Err(err);
+        // the only remaining allowed caller is a delegated group admin managing this user (#1538)
+        principal.validate_group_admin_session().map_err(|_| err)?;
+        let target = User::find(user_id.clone()).await?;
+        principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
     }
 
     content_len_limit(&req, RauthyConfig::get().vars.user_pictures.upload_limit_mb)?;
@@ -892,6 +895,16 @@ async fn validate_user_picture_access(
         {
             return Ok(None);
         }
+        // a delegated group admin may view the picture of a user it manages (#1538)
+        if principal.validate_group_admin_session().is_ok() {
+            let user = User::find(user_id.to_string()).await?;
+            if principal
+                .validate_group_admin_can_manage(user.roles_iter(), user.groups_iter())
+                .is_ok()
+            {
+                return Ok(None);
+            }
+        }
     }
 
     if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
@@ -943,7 +956,10 @@ pub async fn delete_user_picture(
             .validate_api_key(AccessGroup::Users, AccessRights::Delete)
             .is_err()
     {
-        return Err(err);
+        // the only remaining allowed caller is a delegated group admin managing this user (#1538)
+        principal.validate_group_admin_session().map_err(|_| err)?;
+        let target = User::find(user_id.clone()).await?;
+        principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
     }
 
     UserPicture::remove(picture_id, user_id.clone()).await?;
@@ -1847,8 +1863,12 @@ pub async fn put_user_by_id(
     let id = id.into_inner();
     let target = User::find(id.clone()).await?;
     // a group admin may only modify a managed, non-admin user, and within that may not
-    // change roles or group memberships outside its prefix (see #1538)
-    principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+    // change roles or group memberships outside its prefix (see #1538). It may always manage
+    // itself though (the admin-target guard would otherwise reject the self-edit), so the
+    // per-target manage check is skipped for self; the role / group guards still apply.
+    if principal.user_id() != Ok(target.id.as_str()) {
+        principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+    }
     principal.validate_group_admin_user_change(
         target.roles_iter(),
         target.groups_iter(),
@@ -1887,6 +1907,10 @@ pub async fn patch_user(
 
     let user_id = id.into_inner();
     let target = User::find(user_id.clone()).await?;
+    // a group admin may always manage itself: it reaches its own detail view from the account
+    // dashboard, and the admin-target guards below would otherwise reject the self-edit (it is
+    // a `rauthy_admin:*` itself). The role / group guards still apply, so it cannot escalate.
+    let is_self = principal.user_id() == Ok(target.id.as_str());
 
     let (mut upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
 
@@ -1895,8 +1919,9 @@ pub async fn patch_user(
     // user's existing memberships, so the submitted groups are scoped: out-of-scope
     // memberships are preserved and only in-scope additions are applied, instead of replacing
     // the whole set. This is a no-op for users the admin already manages (the UI submits the
-    // full set there) and for full admins / ApiKeys.
+    // full set there) and for full admins / ApiKeys / self-edits.
     if principal.is_session_group_admin()
+        && !is_self
         && !principal.group_admin_can_manage(target.roles_iter(), target.groups_iter())
     {
         let submitted = upd_req.groups.take().unwrap_or_default();
@@ -1907,7 +1932,7 @@ pub async fn patch_user(
     upd_req.validate()?;
 
     let new_groups = upd_req.groups.as_deref().unwrap_or_default();
-    // only managed groups may be changed and roles may never be touched ...
+    // only managed groups may be changed and roles may never be touched (applies to self too) ...
     principal.validate_group_admin_user_change(
         target.roles_iter(),
         target.groups_iter(),
@@ -1915,13 +1940,16 @@ pub async fn patch_user(
         new_groups,
     )?;
     // ... and the admin must be able to manage the user either before or after the change, so
-    // a patch that brings a previously unmanaged user into scope is allowed
-    principal.validate_group_admin_can_manage_change(
-        target.roles_iter(),
-        target.groups_iter(),
-        &upd_req.roles,
-        new_groups,
-    )?;
+    // a patch that brings a previously unmanaged user into scope is allowed. A group admin may
+    // always manage itself, so this gate is skipped for the self-edit.
+    if !is_self {
+        principal.validate_group_admin_can_manage_change(
+            target.roles_iter(),
+            target.groups_iter(),
+            &upd_req.roles,
+            new_groups,
+        )?;
+    }
 
     handle_put_user_by_id(user_id, req, upd_req, has_preferred_username).await
 }

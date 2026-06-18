@@ -348,6 +348,187 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 403);
 
+    // 12. self-management (#1538): the group admin may edit its OWN profile, even though it is
+    // an admin (the account dashboard links here for self-service). PATCH is the real Admin UI
+    // path; PUT is allowed too. Roles stay locked, so this cannot escalate.
+    let patch = serde_json::json!({
+        "put": [{ "key": "given_name", "value": "SelfEdit" }],
+        "del": [],
+    });
+    let res = client
+        .patch(format!("{backend}/users/{}", ga.id))
+        .headers(ga_headers.clone())
+        .json(&patch)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // the same via PUT, keeping the (group-admin) role unchanged
+    let res = client
+        .get(format!("{backend}/users/{}", ga.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let ga_now = res.json::<UserResponse>().await?;
+    let mut self_upd = upd(&ga_now);
+    self_upd.given_name = Some("SelfEditPut".to_string());
+    let res = client
+        .put(format!("{backend}/users/{}", ga.id))
+        .headers(ga_headers.clone())
+        .json(&self_upd)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // 13. bulk email (#1538): a group admin may only send to a single group it manages, with an
+    // `in_group` filter; everything else is rejected. Jobs are scheduled far in the future so
+    // nothing is actually sent during the test.
+    let future_ts = 4102444800i64; // 2100-01-01, safely in the future
+
+    // a full admin can target any group, incl. one the group admin does not manage; this job
+    // must stay invisible to the group admin
+    let res = client
+        .post(format!("{backend}/email"))
+        .headers(admin.clone())
+        .json(&serde_json::json!({
+            "scheduled": future_ts,
+            "filter_type": "in_group",
+            "filter_value": "gaother",
+            "content_type": "text",
+            "subject": "admin gaother",
+            "body": "x",
+        }))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // `EmailJob`s use the creation second as their primary key, so two jobs created within the
+    // same second collide; wait one second before the next successful insert
+    tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
+
+    // the group admin may send to a group it manages
+    let res = client
+        .post(format!("{backend}/email"))
+        .headers(ga_headers.clone())
+        .json(&serde_json::json!({
+            "scheduled": future_ts,
+            "filter_type": "in_group",
+            "filter_value": "gatest",
+            "content_type": "text",
+            "subject": "ga gatest",
+            "body": "x",
+        }))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // ... but not to all users (no filter)
+    let res = client
+        .post(format!("{backend}/email"))
+        .headers(ga_headers.clone())
+        .json(&serde_json::json!({
+            "scheduled": future_ts,
+            "filter_type": "none",
+            "content_type": "text",
+            "subject": "ga none",
+            "body": "x",
+        }))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+
+    // ... nor to a group it does not manage
+    let res = client
+        .post(format!("{backend}/email"))
+        .headers(ga_headers.clone())
+        .json(&serde_json::json!({
+            "scheduled": future_ts,
+            "filter_type": "in_group",
+            "filter_value": "gaother",
+            "content_type": "text",
+            "subject": "ga gaother",
+            "body": "x",
+        }))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+
+    // ... nor with a role filter
+    let res = client
+        .post(format!("{backend}/email"))
+        .headers(ga_headers.clone())
+        .json(&serde_json::json!({
+            "scheduled": future_ts,
+            "filter_type": "has_role",
+            "filter_value": "user",
+            "content_type": "text",
+            "subject": "ga role",
+            "body": "x",
+        }))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+
+    // the group admin may list email jobs, but only sees jobs scoped to a group it manages
+    let res = client
+        .get(format!("{backend}/email"))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let ga_jobs = res
+        .json::<serde_json::Value>()
+        .await?
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let mut ga_gatest_job_id = None;
+    for job in &ga_jobs {
+        assert_eq!(job["filter_type"], "in_group");
+        assert_ne!(job["filter_value"], "gaother");
+        if job["status"] == "Open" && ga_gatest_job_id.is_none() {
+            ga_gatest_job_id = job["id"].as_i64();
+        }
+    }
+
+    // a full admin sees everything, including the gaother job; grab its id
+    let res = client
+        .get(format!("{backend}/email"))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let all_jobs = res
+        .json::<serde_json::Value>()
+        .await?
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let gaother_job_id = all_jobs
+        .iter()
+        .find(|j| j["filter_value"] == "gaother" && j["status"] == "Open")
+        .and_then(|j| j["id"].as_i64());
+
+    // the group admin may cancel a job in its scope ...
+    if let Some(id) = ga_gatest_job_id {
+        let res = client
+            .post(format!("{backend}/email/cancel/{id}"))
+            .headers(ga_headers.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 200);
+    }
+    // ... but not one outside it
+    if let Some(id) = gaother_job_id {
+        let res = client
+            .post(format!("{backend}/email/cancel/{id}"))
+            .headers(ga_headers.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 403);
+    }
+
     // --- cleanup (full admin can still do everything: non-breaking)
     for id in [&member.id, &outsider.id, &outsider2.id, &coadmin.id, &ga.id] {
         let res = client

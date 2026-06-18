@@ -43,7 +43,14 @@ not themselves any kind of `rauthy_admin`. For those users it can:
 - reset MFA (delete passkeys) and reset or set a password,
 - set a `preferred_username` while it is still empty (overwriting an existing one stays a
   full-admin action),
-- view and invalidate (force-logout) sessions.
+- upload or remove the profile picture of a managed user,
+- view and invalidate (force-logout) sessions,
+- send a custom E-Mail to the users of a group it manages, and view the resulting E-Mail jobs.
+  The recipient filter is locked to a single one of its managed groups (a full admin may also
+  send to all users or filter by role).
+
+A group admin can also manage its own account: it can open its own user in the Admin UI, and the
+nav links to the account dashboard for self-service (which in turn links back to the Admin UI).
 
 In addition, a group admin gets a read-only view of the Sessions, Events, and Blacklist pages to
 help with debugging user issues.
@@ -56,6 +63,7 @@ The backend enforces all of the following, regardless of what the UI shows:
   privilege escalation, and group admins cannot manage each other),
 - it cannot modify a user's roles, or change group memberships outside of its managed groups,
 - it cannot delete users,
+- it cannot send a bulk E-Mail to all users, to a group it does not manage, or filtered by role,
 - it cannot manage clients, scopes, roles, groups, providers, API keys, or system config,
 - it cannot add or remove blacklist entries (read-only),
 - API keys are never group-scoped; delegation applies to logged-in sessions only.

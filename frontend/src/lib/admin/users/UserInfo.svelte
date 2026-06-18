@@ -298,8 +298,14 @@
                 payload.del.push('roles');
             }
         }
-        // anti-lockout check for self
-        if (isSelf && !roles.includes('rauthy_admin')) {
+        // anti-lockout check for self: a full admin must not strip its own `rauthy_admin`
+        // role. A delegated group admin (#1538) never holds that exact role and cannot edit
+        // roles anyway, so this only fires when the user currently is a full admin.
+        if (
+            isSelf &&
+            userOrig?.roles?.includes('rauthy_admin') &&
+            !roles.includes('rauthy_admin')
+        ) {
             err = `${ta.users.antiLockout.rule}: ${ta.users.antiLockout.rauthyAdmin}`;
             return;
         }
