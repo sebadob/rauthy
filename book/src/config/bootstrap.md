@@ -337,7 +337,7 @@ Rauthy writes the plaintext password to the encrypted container before hashing i
 user row. The database stores only the password hash.
 
 API keys in `api_keys.json` can request a generated token with `"secret": "generate"`. The full
-usable `name$secret` token is written to the encrypted container before the DB row is inserted.
+usable `name$secret` token is written to the encrypted container.
 Extract it with `--kind api-key --id <key-name> --field token` and use it directly as the
 `Authorization` header value: `Authorization: API-Key <token>`.
 

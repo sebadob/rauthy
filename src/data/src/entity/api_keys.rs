@@ -22,11 +22,6 @@ pub struct ApiKeyEntity {
     pub access: Vec<u8>,
 }
 
-pub struct PreparedApiKey {
-    pub token: String,
-    entity: ApiKeyEntity,
-}
-
 impl Debug for ApiKeyEntity {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -38,49 +33,7 @@ impl Debug for ApiKeyEntity {
 }
 
 impl ApiKeyEntity {
-    pub fn prepare(
-        name: String,
-        expires: Option<i64>,
-        access: Vec<ApiKeyAccess>,
-    ) -> Result<PreparedApiKey, ErrorResponse> {
-        let secret_plain = get_rand(API_KEY_LENGTH);
-        Self::prepare_with_secret(name, expires, access, secret_plain)
-    }
-
-    fn prepare_with_secret(
-        name: String,
-        expires: Option<i64>,
-        access: Vec<ApiKeyAccess>,
-        mut secret_plain: String,
-    ) -> Result<PreparedApiKey, ErrorResponse> {
-        let created = Utc::now().timestamp();
-        let secret_enc = EncValue::encrypt(sha256!(secret_plain.as_bytes()))?
-            .into_bytes()
-            .to_vec();
-
-        let access_bytes = serialize(&access)?;
-        let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
-
-        let enc_key_active = EncKeys::get_static().enc_key_active.clone();
-        let token = format!("{name}${secret_plain}");
-        secret_plain.zeroize();
-
-        Ok(PreparedApiKey {
-            token,
-            entity: ApiKeyEntity {
-                name,
-                secret: secret_enc,
-                created,
-                expires,
-                enc_key_id: enc_key_active,
-                access: access_enc,
-            },
-        })
-    }
-
-    pub async fn insert_prepared(mut prepared: PreparedApiKey) -> Result<(), ErrorResponse> {
-        prepared.token.zeroize();
-        let entity = prepared.entity;
+    pub async fn insert(entity: ApiKeyEntity) -> Result<(), ErrorResponse> {
         let sql = r#"
 INSERT INTO
 api_keys (name, secret, created, expires, enc_key_id, access)
@@ -123,9 +76,30 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         expires: Option<i64>,
         access: Vec<ApiKeyAccess>,
     ) -> Result<String, ErrorResponse> {
-        let prepared = Self::prepare(name, expires, access)?;
-        let token = prepared.token.clone();
-        Self::insert_prepared(prepared).await?;
+        let mut secret_plain = get_rand(API_KEY_LENGTH);
+        let token = format!("{name}${secret_plain}");
+
+        let created = Utc::now().timestamp();
+        let secret_enc = EncValue::encrypt(sha256!(secret_plain.as_bytes()))?
+            .into_bytes()
+            .to_vec();
+        secret_plain.zeroize();
+
+        let access_bytes = serialize(&access)?;
+        let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
+
+        let enc_key_active = EncKeys::get_static().enc_key_active.clone();
+
+        Self::insert(ApiKeyEntity {
+            name,
+            secret: secret_enc,
+            created,
+            expires,
+            enc_key_id: enc_key_active,
+            access: access_enc,
+        })
+        .await?;
+
         Ok(token)
     }
 
@@ -616,15 +590,32 @@ mod tests {
     }
 
     #[test]
-    fn prepared_generated_api_key_token_validates() {
+    fn generated_api_key_token_validates() {
         init_keys();
-        let prepared = ApiKeyEntity::prepare("provision".to_string(), None, access()).unwrap();
-        let token = prepared.token.clone();
+        let mut secret_plain = get_rand(API_KEY_LENGTH);
+        let token = format!("provision${secret_plain}");
         let (name, secret) = token.split_once('$').unwrap();
-
         assert_eq!(name, "provision");
 
-        let api_key = prepared.entity.into_api_key().unwrap();
+        let secret_enc = EncValue::encrypt(sha256!(secret_plain.as_bytes()))
+            .unwrap()
+            .into_bytes()
+            .to_vec();
+        secret_plain.zeroize();
+
+        let access_bytes = serialize(&access()).unwrap();
+        let access_enc = EncValue::encrypt(&access_bytes).unwrap().into_bytes().to_vec();
+
+        let entity = ApiKeyEntity {
+            name: "provision".to_string(),
+            secret: secret_enc,
+            created: Utc::now().timestamp(),
+            expires: None,
+            enc_key_id: EncKeys::get_static().enc_key_active.clone(),
+            access: access_enc,
+        };
+
+        let api_key = entity.into_api_key().unwrap();
         api_key.validate_secret(secret).unwrap();
         assert!(api_key.validate_secret("wrong").is_err());
     }

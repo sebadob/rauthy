@@ -130,8 +130,7 @@ pub enum ApiKeySecret {
     // the Rauthy instance must have available. The encrypted data is expected as **base64**.
     Encrypted(String),
     // Generate a new API-key token on first bootstrap and store the full
-    // `name$secret` token in the encrypted generated-secret container before
-    // the DB row is inserted.
+    // `name$secret` token in the encrypted generated-secret container.
     Generate,
 }
 
@@ -250,8 +249,7 @@ pub enum ClientSecret {
     // a much easier way to achieve this.
     Encrypted(String),
     // Generate a new confidential-client secret on first bootstrap and store
-    // the cleartext in the encrypted generated-secret container before the DB
-    // row is inserted.
+    // the cleartext in the encrypted generated-secret container.
     Generate,
 }
 

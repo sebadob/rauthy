@@ -4,11 +4,12 @@ use crate::migration::bootstrap::bootstrap_data;
 use crate::migration::bootstrap::generated_secrets::{GeneratedSecretEntry, GeneratedSecretKey};
 use crate::migration::bootstrap::types::{ApiKey as BootstrapApiKey, ApiKeySecret};
 use crate::rauthy_config::RauthyConfig;
-use cryptr::EncValue;
+use chrono::Utc;
+use cryptr::{EncKeys, EncValue};
 use hiqlite::macros::params;
 use rauthy_api_types::api_keys::ApiKeyRequest;
 use rauthy_common::constants::API_KEY_LENGTH;
-use rauthy_common::utils::base64_decode;
+use rauthy_common::utils::{base64_decode, get_rand, serialize};
 use rauthy_common::{is_hiqlite, sha256};
 use rauthy_error::ErrorResponse;
 use std::path::Path;
@@ -63,12 +64,12 @@ async fn bootstrap_api_keys_json() -> Result<(), ErrorResponse> {
 
         match api_key.secret {
             ApiKeySecret::Generate => {
-                if api_key_exists(&key_name).await? {
+                if api_key_exists(&key_name).await {
                     ApiKeyEntity::update(&key_name, api_key.exp, access).await?;
                 } else {
-                    let prepared = ApiKeyEntity::prepare(api_key.name, api_key.exp, access)?;
                     let bootstrap = &RauthyConfig::get().vars.bootstrap;
-                    let mut token = prepared.token.clone();
+                    let mut secret_plain = get_rand(API_KEY_LENGTH);
+                    let token = format!("{key_name}${secret_plain}");
                     upsert_generated_api_key_token(
                         bootstrap.generated_secrets_file.as_ref(),
                         bootstrap.generated_secrets_ttl,
@@ -76,8 +77,26 @@ async fn bootstrap_api_keys_json() -> Result<(), ErrorResponse> {
                         &token,
                     )
                     .await?;
-                    token.zeroize();
-                    ApiKeyEntity::insert_prepared(prepared).await?;
+
+                    let created = Utc::now().timestamp();
+                    let enc_key_active = EncKeys::get_static().enc_key_active.clone();
+                    let secret_enc = EncValue::encrypt(sha256!(secret_plain.as_bytes()))?
+                        .into_bytes()
+                        .to_vec();
+                    secret_plain.zeroize();
+
+                    let access_bytes = serialize(&access)?;
+                    let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
+
+                    ApiKeyEntity::insert(ApiKeyEntity {
+                        name: api_key.name,
+                        secret: secret_enc,
+                        created,
+                        expires: api_key.exp,
+                        enc_key_id: enc_key_active,
+                        access: access_enc,
+                    })
+                    .await?;
                 }
             }
             secret => {
@@ -100,7 +119,7 @@ async fn create_or_update_api_key_access(
     expires: Option<i64>,
     access: Vec<crate::entity::api_keys::ApiKeyAccess>,
 ) -> Result<(), ErrorResponse> {
-    if api_key_exists(&name).await? {
+    if api_key_exists(&name).await {
         ApiKeyEntity::update(&name, expires, access).await?;
     } else {
         let mut generated_secret = ApiKeyEntity::create(name, expires, access).await?;
@@ -110,11 +129,8 @@ async fn create_or_update_api_key_access(
     Ok(())
 }
 
-async fn api_key_exists(name: &str) -> Result<bool, ErrorResponse> {
-    Ok(ApiKeyEntity::find_all()
-        .await?
-        .into_iter()
-        .any(|api_key| api_key.name == name))
+async fn api_key_exists(name: &str) -> bool {
+    ApiKeyEntity::find(name).await.is_ok()
 }
 
 async fn upsert_generated_api_key_token(
@@ -170,7 +186,7 @@ fn api_key_secret_plain(secret: ApiKeySecret) -> String {
             String::from_utf8(dec.to_vec())
                 .expect("Invalid characters in API Key secret. Cannot convert to lossless String.")
         }
-        ApiKeySecret::Generate => unreachable!("generated API-key secrets use the prepared path"),
+        ApiKeySecret::Generate => unreachable!("generated API-key secrets are handled separately"),
     }
 }
 

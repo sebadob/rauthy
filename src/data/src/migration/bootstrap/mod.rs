@@ -67,13 +67,6 @@ pub async fn purge_expired_generated_secrets() -> Result<(), ErrorResponse> {
     Ok(())
 }
 
-/// Reconcile idempotent bootstrap data that is safe to re-apply to an existing
-/// production database.
-pub async fn reconcile_declared_api_keys() -> Result<(), ErrorResponse> {
-    debug!("Reconciling declared bootstrap API keys");
-    api_key::bootstrap().await
-}
-
 /// Initializes an empty production database for a new deployment
 pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
     // check if the database is un-initialized by looking at the jwks table, which should be empty
