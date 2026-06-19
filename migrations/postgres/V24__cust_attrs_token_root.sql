@@ -1,2 +1,2 @@
 ALTER TABLE scopes
-    ADD claims_at_root bool DEFAULT false NOT NULL;
+    ADD COLUMN IF NOT EXISTS claims_at_root bool DEFAULT false NOT NULL;

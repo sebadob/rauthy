@@ -119,7 +119,7 @@ async fn api_key_exists(name: &str) -> Result<bool, ErrorResponse> {
 
 async fn upsert_generated_api_key_token(
     path: impl AsRef<Path>,
-    ttl_seconds: u64,
+    ttl_seconds: u32,
     key_name: &str,
     token: &str,
 ) -> Result<(), ErrorResponse> {
