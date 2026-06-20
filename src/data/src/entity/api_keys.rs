@@ -604,7 +604,10 @@ mod tests {
         secret_plain.zeroize();
 
         let access_bytes = serialize(&access()).unwrap();
-        let access_enc = EncValue::encrypt(&access_bytes).unwrap().into_bytes().to_vec();
+        let access_enc = EncValue::encrypt(&access_bytes)
+            .unwrap()
+            .into_bytes()
+            .to_vec();
 
         let entity = ApiKeyEntity {
             name: "provision".to_string(),
