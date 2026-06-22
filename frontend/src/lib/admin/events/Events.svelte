@@ -18,8 +18,8 @@
     let session = useSession('admin');
 
     // The "Test" event verifies the notification pipeline, which is a full-admin concern
-    // (fixing it needs config changes a group admin has no access to), so hide it for them
-    // (#1538). The principal acts as a group admin when it reached the admin UI without the
+    // (fixing it needs config changes a group admin has no access to), so hide it for them.
+    // The principal acts as a group admin when it reached the admin UI without the
     // full `rauthy_admin` role.
     let isGroupAdmin = $derived(!session.isAdmin());
 

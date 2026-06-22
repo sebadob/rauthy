@@ -39,7 +39,7 @@
     let ta = useI18nAdmin();
 
     let session = useSession('admin');
-    // Group admins (#1538) get a reduced tab set: profile (restricted), password, MFA reset
+    // Group admins get a reduced tab set: profile (restricted), password, MFA reset
     // and force-logout. Attributes, devices and delete stay full-admin only, matching the
     // backend, which rejects those actions for a group admin anyway. The principal acts as a
     // delegated group admin when it reached the admin UI without the full `rauthy_admin` role.
@@ -69,7 +69,7 @@
 
     let err = $state('');
     // a group admin opened an ordinary user that is not in any of its groups yet (HTTP 428):
-    // instead of an error, we offer to add the user to a managed group (#1538)
+    // instead of an error, we offer to add the user to a managed group
     let notManaged = $state(false);
     let user: undefined | UserResponse = $state();
 
@@ -104,7 +104,7 @@
 
 {#if err}
     <!-- a group admin reaching a user it cannot manage (e.g. another admin) gets a clean
-         notice instead of a raw API error and an empty tab bar (#1538) -->
+         notice instead of a raw API error and an empty tab bar -->
     <div class="notice">
         {err}
     </div>

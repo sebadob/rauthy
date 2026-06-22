@@ -315,7 +315,7 @@ impl Principal {
     }
 
     /// Builds the effective group set for the "add an as-yet-unmanaged user to my groups"
-    /// flow (see #1538). A group admin that cannot see a user's details also cannot see its
+    /// flow. A group admin that cannot see a user's details also cannot see its
     /// current group memberships, so the Admin UI can only submit the in-scope groups it
     /// wants the user to have. To avoid clobbering memberships the admin is not allowed to
     /// touch, every current membership *outside* this admin's scope is preserved, and only
@@ -714,7 +714,7 @@ mod tests {
     #[test]
     fn test_group_admin_empty_prefix_matches_nothing() {
         // `rauthy_admin:` (no glob) is an exact match against the empty string and
-        // therefore matches no real group - harmless, as discussed in #1538.
+        // therefore matches no real group - harmless.
         let p = principal(&["rauthy_admin:"]);
         assert!(!p.group_admin_matches("dev"));
         assert!(!p.group_admin_matches(""));

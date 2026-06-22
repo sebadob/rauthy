@@ -23,7 +23,7 @@
         preferred_username: string | undefined;
         config: UserValuesPreferredUsername;
         isAdmin?: boolean;
-        // a delegated group admin (#1538) may only set the username while it is still
+        // a delegated group admin may only set the username while it is still
         // empty; overwriting an existing one is reserved for full admins
         isGroupAdmin?: boolean;
     } = $props();

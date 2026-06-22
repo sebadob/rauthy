@@ -39,7 +39,7 @@ pub async fn get_sessions(
     principal: ReqPrincipal,
     Query(params): Query<PaginationParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // group admins get a read-only view of all sessions for user debugging (see #1538)
+    // group admins get a read-only view of all sessions for user debugging
     principal.validate_api_key_or_group_admin(AccessGroup::Sessions, AccessRights::Read)?;
     params.validate()?;
 
@@ -169,7 +169,7 @@ pub async fn delete_sessions_for_user(
 
     let uid = path.into_inner();
     let user = User::find(uid).await?;
-    // a group admin may force-logout a user it manages (see #1538)
+    // a group admin may force-logout a user it manages
     principal.validate_group_admin_can_manage(user.roles_iter(), user.groups_iter())?;
 
     Session::invalidate_for_user(&user.id).await?;

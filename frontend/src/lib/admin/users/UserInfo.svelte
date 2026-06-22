@@ -52,7 +52,7 @@
         roles: RoleResponse[];
         groups: GroupResponse[];
         providers: AuthProviderTemplate[];
-        // `true` when the logged-in principal is only a delegated group admin (#1538):
+        // `true` when the logged-in principal is only a delegated group admin:
         // roles become read-only and groups outside the admin's prefix cannot be toggled.
         isGroupAdmin?: boolean;
         onSave: () => void;
@@ -299,7 +299,7 @@
             }
         }
         // anti-lockout check for self: a full admin must not strip its own `rauthy_admin`
-        // role. A delegated group admin (#1538) never holds that exact role and cannot edit
+        // role. A delegated group admin never holds that exact role and cannot edit
         // roles anyway, so this only fires when the user currently is a full admin.
         if (
             isSelf &&
@@ -585,10 +585,10 @@
                 </div>
             </div>
 
-            <SelectList bind:items={rolesItems} disabledNames={rolesDisabled}>
+            <SelectList bind:items={rolesItems} disabledItems={rolesDisabled}>
                 {t.account.roles.replaceAll(',', ' ')}
             </SelectList>
-            <SelectList bind:items={groupsItems} disabledNames={groupsDisabled}>
+            <SelectList bind:items={groupsItems} disabledItems={groupsDisabled}>
                 {t.account.groups.replaceAll(',', ' ')}
             </SelectList>
 

@@ -28,7 +28,7 @@ WHERE typ = 'user' AND NOT EXISTS (
     Ok(())
 }
 
-/// #1538: the delegated group-admin feature reads roles named `rauthy_admin:<prefix>`
+/// The delegated group-admin feature reads roles named `rauthy_admin:<prefix>`
 /// as group admins. This is non-breaking unless such a role already existed before the
 /// upgrade, in which case its holders silently gain group-admin rights. We warn about
 /// any matching role on each startup for the whole `v0.36` cycle so operators can spot
@@ -44,7 +44,7 @@ async fn warn_existing_group_admin_roles() -> Result<(), ErrorResponse> {
         warn!(
             "Found custom roles matching the delegated group-admin scheme \
             `rauthy_admin:<prefix>`: {found:?}. Their holders are now group admins for \
-            the matching groups (see #1538). If you created these intentionally, you \
+            the matching groups. If you created these intentionally, you \
             can safely ignore this warning."
         );
     }

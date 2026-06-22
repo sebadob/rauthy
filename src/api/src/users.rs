@@ -89,7 +89,7 @@ pub async fn get_users(
     principal: ReqPrincipal,
     Query(params): Query<PaginationParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // Group admins see the full (minified) user list as well (see #1538). The
+    // Group admins see the full (minified) user list as well. The
     // per-user write scoping is enforced on the individual modify endpoints, never
     // here, so list visibility intentionally does not imply mutate permission.
     principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
@@ -157,7 +157,7 @@ pub async fn post_users(
     principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Create)?;
     payload.validate()?;
     // A group admin may create users too, but only without any role and into at least
-    // one group it manages, so the new account stays within its scope (see #1538).
+    // one group it manages, so the new account stays within its scope.
     principal.validate_group_admin_user_create(&payload.roles, payload.groups.as_ref())?;
     // We are not using the UserValuesValidator on purpose here.
     // When an admin registers a new user, the user details view will be shown immediately anyway,
@@ -552,7 +552,7 @@ pub async fn get_user_by_id(
 
     let user = User::find(id).await?;
     // a group admin only gets the full details of a user it manages; for anyone else it
-    // only sees the minified entry from the user list (see #1538). The view gate returns a
+    // only sees the minified entry from the user list. The view gate returns a
     // `428` (instead of a `403`) for an ordinary, not-yet-managed user, so the Admin UI can
     // offer to add the user to one of the admin's groups; an admin target stays a `403`.
     // A group admin may always view its own account though (it is an admin, so the gate would
@@ -816,7 +816,7 @@ pub async fn put_user_picture(
             .validate_api_key(AccessGroup::Users, AccessRights::Update)
             .is_err()
     {
-        // the only remaining allowed caller is a delegated group admin managing this user (#1538)
+        // the only remaining allowed caller is a delegated group admin managing this user
         principal.validate_group_admin_session().map_err(|_| err)?;
         let target = User::find(user_id.clone()).await?;
         principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
@@ -895,7 +895,7 @@ async fn validate_user_picture_access(
         {
             return Ok(None);
         }
-        // a delegated group admin may view the picture of a user it manages (#1538)
+        // a delegated group admin may view the picture of a user it manages
         if principal.validate_group_admin_session().is_ok() {
             let user = User::find(user_id.to_string()).await?;
             if principal
@@ -956,7 +956,7 @@ pub async fn delete_user_picture(
             .validate_api_key(AccessGroup::Users, AccessRights::Delete)
             .is_err()
     {
-        // the only remaining allowed caller is a delegated group admin managing this user (#1538)
+        // the only remaining allowed caller is a delegated group admin managing this user
         principal.validate_group_admin_session().map_err(|_| err)?;
         let target = User::find(user_id.clone()).await?;
         principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
@@ -1486,7 +1486,7 @@ pub async fn delete_webauthn(
     // Note: Currently, this is not allowed with an ApiKey on purpose.
     // Access tiers:
     // - full Rauthy admin: may reset MFA for any user,
-    // - group admin: may reset MFA for a user it manages (see #1538),
+    // - group admin: may reset MFA for a user it manages,
     // - the user itself: only with a valid `mfa_mod_token`.
     if principal.validate_admin_session().is_ok() {
         if principal.is_user(&id).is_err() {
@@ -1863,7 +1863,7 @@ pub async fn put_user_by_id(
     let id = id.into_inner();
     let target = User::find(id.clone()).await?;
     // a group admin may only modify a managed, non-admin user, and within that may not
-    // change roles or group memberships outside its prefix (see #1538). It may always manage
+    // change roles or group memberships outside its prefix. It may always manage
     // itself though (the admin-target guard would otherwise reject the self-edit), so the
     // per-target manage check is skipped for self; the role / group guards still apply.
     if principal.user_id() != Ok(target.id.as_str()) {
@@ -1915,7 +1915,7 @@ pub async fn patch_user(
     let (mut upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
 
     // A group admin may also patch an as-yet-unmanaged ordinary user to add it to one of its
-    // groups (the "add to my groups" flow, see #1538). In that case the admin never saw the
+    // groups (the "add to my groups" flow). In that case the admin never saw the
     // user's existing memberships, so the submitted groups are scoped: out-of-scope
     // memberships are preserved and only in-scope additions are applied, instead of replacing
     // the whole set. This is a no-op for users the admin already manages (the UI submits the
@@ -2199,7 +2199,7 @@ pub async fn get_user_values_config(
     // In this case, anyone can pull out the same information from the HTML.
     if !RauthyConfig::get().vars.user_registration.enable {
         // a delegated group admin needs this read-only config too: the Admin UI cannot render
-        // the user details view without it (see #1538)
+        // the user details view without it
         principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
     }
     Ok(HttpResponse::Ok().json(&RauthyConfig::get().vars.user_values))
@@ -2239,7 +2239,7 @@ pub async fn put_user_self_preferred_username(
         .is_err()
     {
         // neither an ApiKey nor a full admin: force-overwrite is reserved for full admins,
-        // whether the caller is the user itself or a delegated group admin (see #1538)
+        // whether the caller is the user itself or a delegated group admin
         if force_overwrite {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,

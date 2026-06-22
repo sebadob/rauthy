@@ -19,7 +19,7 @@
 
     let session = useSession('admin');
     // session deletion is a full-admin action; group admins log a user out from the user
-    // details tab instead, so these buttons are hidden for them (#1538)
+    // details tab instead, so these buttons are hidden for them
     let isAdmin = $derived(session.isAdmin());
 
     let refOpts: undefined | HTMLButtonElement = $state();

@@ -112,7 +112,7 @@ pub async fn get_auth_check_admin(principal: ReqPrincipal) -> Result<HttpRespons
         // full admin: validate the session and enforce admin-MFA (-> 406)
         principal.validate_admin_session()?;
     } else {
-        // delegated group admin (#1538): a valid session and the same admin-MFA
+        // delegated group admin: a valid session and the same admin-MFA
         // enforcement, but without requiring the full `rauthy_admin` role
         principal.validate_group_admin_session()?;
     }

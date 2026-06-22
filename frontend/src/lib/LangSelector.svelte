@@ -30,15 +30,6 @@
         page.route.id?.includes('/admin') ? useI18nConfig().admin() : useI18nConfig().common(),
     );
 
-    // when opening upwards, shift the popup up by (its own height + the selector height) so its
-    // bottom sits just above the selector with a small constant gap. Each option row is ~2.1rem,
-    // so the per-item factor must match it for the gap to stay constant regardless of how many
-    // languages are configured; the constant covers the selector height plus the small gap. The
-    // previous `* 2 + 2` used a too-small per-item factor, so the popup crept over the selector
-    // as the language count grew (#1538).
-    let offsetTop = $derived(openTop ? `-${(languages?.length || 0) * 2.1 + 2.3}rem` : undefined);
-    let offsetLeft = $derived(openTop ? '.2rem' : undefined);
-
     $effect(() => {
         let cookie = getCookie('locale');
         let current = untrack(() => selected);
@@ -77,8 +68,7 @@
             options={languages}
             {borderless}
             bind:value={selected}
-            {offsetTop}
-            {offsetLeft}
+            anchored={openTop}
         />
     </div>
 {/if}

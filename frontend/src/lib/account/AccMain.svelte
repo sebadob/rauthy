@@ -52,7 +52,7 @@
     let viewModePhone = $derived(innerWidth && innerWidth < 560);
     let viewModeWideCompact = $derived(innerWidth && innerWidth < 1000);
 
-    // a user holding any `rauthy_admin*` role (full or delegated group admin, #1538) gets a
+    // a user holding any `rauthy_admin*` role (full or delegated group admin) gets a
     // link to the Admin UI from here. This is how a group admin self-manages: it cannot manage
     // itself inside the Admin UI (it's an admin there), so it uses this dashboard instead.
     let showAdminLink = $derived(session.isAnyAdmin());
@@ -232,7 +232,7 @@
             <!-- theme, language, the switch-to-Admin-UI link and the logout sit together in one
                  row in the bottom-left corner, matching the order and position of the same
                  controls in the Admin UI nav so an admin switching back and forth does not see
-                 them jump around (#1538) -->
+                 them jump around -->
             <div class="bottomLeft">
                 <ThemeSwitch />
                 <LangSelector openTop borderless />

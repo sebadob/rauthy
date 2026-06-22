@@ -11,19 +11,13 @@
     let {
         items = $bindable(),
         maxWidth = '467pt', // matches <p> max width
-        disabledNames = [],
-        hiddenNames = [],
+        disabledItems = [],
         children,
     }: {
         items: SelectItem[];
         maxWidth?: string;
-        // names that cannot be toggled (rendered read-only). Used by the delegated
-        // group-admin UI (#1538) to lock roles and out-of-scope groups.
-        disabledNames?: string[];
-        // names that are not rendered at all (and never counted as selected). Used by the
-        // "Add New User" form (#1538) so a group admin does not even see groups it cannot
-        // manage, while editing an existing user still shows all of them.
-        hiddenNames?: string[];
+        // names of items that are rendered read-only and cannot be toggled
+        disabledItems?: string[];
         children: Snippet;
     } = $props();
 
@@ -36,20 +30,15 @@
     let closeModal: undefined | (() => void) = $state();
 
     let compact = $derived(innerWidth && innerWidth < 800);
-    // hidden entries are not rendered and never count as selected (#1538)
-    let visibleItems = $derived(items.filter(i => !hiddenNames.includes(i.name)));
     let joined = $derived(
-        visibleItems
+        items
             .filter(i => i.selected)
             .map(i => i.name)
             .join(', '),
     );
-    let anySelected = $derived(visibleItems.find(i => i.selected));
-    // when every visible entry is locked (e.g. roles for a group admin), the list is
-    // read-only: there is nothing to edit, so don't show the edit button at all (#1538)
-    let readonly = $derived(
-        visibleItems.length > 0 && visibleItems.every(i => disabledNames.includes(i.name)),
-    );
+    let anySelected = $derived(items.find(i => i.selected));
+    // when every entry is locked there is nothing to edit, so hide the edit button
+    let readonly = $derived(items.length > 0 && items.every(i => disabledItems.includes(i.name)));
 </script>
 
 <svelte:window bind:innerWidth />
@@ -75,11 +64,11 @@
             <h3>{@render children()}</h3>
             {#if compact}
                 <div class="compact">
-                    {#each visibleItems as item (item.name)}
+                    {#each items as item (item.name)}
                         <InputCheckbox
                             ariaLabel={item.name}
                             bind:checked={item.selected}
-                            disabled={disabledNames.includes(item.name)}
+                            disabled={disabledItems.includes(item.name)}
                         >
                             {item.name}
                         </InputCheckbox>
@@ -88,12 +77,12 @@
             {:else}
                 <div class="boxes">
                     <div>
-                        {#each visibleItems as item (item.name)}
+                        {#each items as item (item.name)}
                             {#if !item.selected}
                                 <InputCheckbox
                                     ariaLabel={item.name}
                                     bind:checked={item.selected}
-                                    disabled={disabledNames.includes(item.name)}
+                                    disabled={disabledItems.includes(item.name)}
                                 >
                                     {item.name}
                                 </InputCheckbox>
@@ -101,12 +90,12 @@
                         {/each}
                     </div>
                     <div>
-                        {#each visibleItems as item (item.name)}
+                        {#each items as item (item.name)}
                             {#if item.selected}
                                 <InputCheckbox
                                     ariaLabel={item.name}
                                     bind:checked={item.selected}
-                                    disabled={disabledNames.includes(item.name)}
+                                    disabled={disabledItems.includes(item.name)}
                                 >
                                     {item.name}
                                 </InputCheckbox>

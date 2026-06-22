@@ -27,7 +27,7 @@
     let ta = useI18nAdmin();
     let session = useSession('admin');
 
-    // A delegated group admin (#1538) may only email users of a single group it manages, so
+    // A delegated group admin may only email users of a single group it manages, so
     // the filter is locked to "In Group" and the group dropdown is limited to managed groups.
     // The backend enforces the same. The principal acts as a group admin when it reached the
     // admin UI without the full `rauthy_admin` role.
@@ -91,7 +91,7 @@
             payload.scheduled = unixTsFromLocalDateTime(schedDate, schedTime);
         }
         if (isGroupAdmin) {
-            // group admins are locked to an "In Group" filter for a group they manage (#1538)
+            // group admins are locked to an "In Group" filter for a group they manage
             payload.filter_type = 'in_group';
             payload.filter_value = group;
         } else if (isFilterGroup) {
@@ -162,7 +162,7 @@
             </div>
 
             {#if isGroupAdmin}
-                <!-- a group admin is locked to "In Group" for a group it manages (#1538) -->
+                <!-- a group admin is locked to "In Group" for a group it manages -->
                 <div class="ms-05">{ta.email.filterType[1]}:</div>
                 <Options
                     ariaLabel={ta.email.userFilter}

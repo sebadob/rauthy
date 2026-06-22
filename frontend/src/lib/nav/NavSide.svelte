@@ -33,7 +33,7 @@
     let ta = useI18nAdmin();
 
     let session = useSession('admin');
-    // Delegated group admins (#1538) only get the user-centric, read-only sections.
+    // Delegated group admins only get the user-centric, read-only sections.
     // Everything that manages clients, roles, groups, scopes, system config, etc. stays
     // full-admin only. The backend enforces this regardless; here we just hide it. The
     // principal acts as a group admin when it reached the admin UI without the full role.
@@ -272,7 +272,7 @@
                     </div>
                 {/snippet}
 
-                <!-- a quick link to the own account dashboard. A delegated group admin (#1538)
+                <!-- a quick link to the own account dashboard. A delegated group admin
                      cannot manage itself in here (it's an admin), so it self-manages from the
                      account dashboard, which links back to the Admin UI. -->
                 {#snippet toAccount()}
@@ -395,7 +395,7 @@
     }
 
     /* now that the nav has multiple bottom buttons, color the logout icon the same red as
-       the one on the account dashboard to set it apart (#1538) */
+       the one on the account dashboard to set it apart */
     .logout :global(button > div),
     .logout :global(button:hover > div) {
         color: hsl(var(--error));

@@ -30,7 +30,7 @@
     let success = $state(false);
 
     // Only the groups this admin manages can be added. The user may be a member of other
-    // groups, but those stay hidden here and are preserved by the backend on the PATCH (#1538).
+    // groups, but those stay hidden here and are preserved by the backend on the PATCH.
     let managed = $derived(session.managedGroups(groups.map(g => g.name)));
     let items: SelectItem[] = $state([]);
     $effect(() => {

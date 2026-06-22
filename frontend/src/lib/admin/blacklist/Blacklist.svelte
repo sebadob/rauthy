@@ -27,7 +27,7 @@
     let ta = useI18nAdmin();
 
     // group admins get a read-only blacklist view for debugging; adding / removing entries
-    // is full-admin only (#1538)
+    // is full-admin only
     let session = useSession('admin');
     let isAdmin = $derived(session.isAdmin());
 

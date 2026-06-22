@@ -10,7 +10,7 @@ use rauthy_data::entity::email_jobs::{EmailJob, EmailJobFilter, EmailJobStatus};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use validator::Validate;
 
-/// A delegated group admin (#1538) may only see / cancel / send email jobs that target a
+/// A delegated group admin may only see / cancel / send email jobs that target a
 /// single group it manages. Any other filter (no filter, `not_in_group`, role filters, or a
 /// group it does not manage) stays full-admin only.
 fn group_admin_email_scope(principal: &ReqPrincipal, filter: &EmailJobFilter) -> bool {
@@ -24,7 +24,7 @@ fn group_admin_email_scope(principal: &ReqPrincipal, filter: &EmailJobFilter) ->
 ///
 /// **Permissions**
 /// - rauthy_admin
-/// - group admin (only jobs scoped to a group it manages, #1538)
+/// - group admin (only jobs scoped to a group it manages)
 #[utoipa::path(
     get,
     path = "/email",
@@ -63,7 +63,7 @@ pub async fn get_email_jobs(principal: ReqPrincipal) -> Result<HttpResponse, Err
 ///
 /// **Permissions**
 /// - rauthy_admin
-/// - group admin (only an `in_group` filter for a group it manages, #1538)
+/// - group admin (only an `in_group` filter for a group it manages)
 #[utoipa::path(
     post,
     path = "/email",
@@ -80,8 +80,7 @@ pub async fn post_send_email(
     principal: ReqPrincipal,
     Json(mut payload): Json<EmailJobRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // a delegated group admin may only send to a single group it manages; full admins keep
-    // the unrestricted filter set (#1538)
+    // a delegated group admin may only send to a single group it manages
     if principal.is_admin() {
         principal.validate_admin_session()?;
     } else {
@@ -117,7 +116,7 @@ pub async fn post_send_email(
 ///
 /// **Permissions**
 /// - rauthy_admin
-/// - group admin (only jobs scoped to a group it manages, #1538)
+/// - group admin (only jobs scoped to a group it manages)
 #[utoipa::path(
     post,
     path = "/email/cancel/{id}",
@@ -142,7 +141,7 @@ pub async fn post_email_job_cancel(
     }
 
     let mut job = EmailJob::find(id.into_inner()).await?;
-    // a group admin may only cancel a job scoped to a group it manages (#1538)
+    // a group admin may only cancel a job scoped to a group it manages
     if !full_admin && !group_admin_email_scope(&principal, &job.filter) {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,

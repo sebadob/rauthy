@@ -165,7 +165,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     // 2b. for an unmanaged but ordinary user it gets a `428`, not the details: the Admin UI
-    // uses this to offer adding the user to a managed group (see #1538)
+    // uses this to offer adding the user to a managed group
     let res = client
         .get(format!("{backend}/users/{}", outsider.id))
         .headers(ga_headers.clone())
@@ -263,7 +263,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 403);
 
-    // 7. it CAN set a password for a managed user (they cannot priv-esc anyway, #1538)
+    // 7. it CAN set a password for a managed user (they cannot priv-esc anyway)
     let mut pwd = upd(&member);
     pwd.password = Some("SomeOtherPwd123".to_string());
     let res = client
@@ -301,7 +301,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
     // 11. the "add an unmanaged user to my groups" flow: a groups-only PATCH that brings the
     // outsider into a managed group is allowed, even though the admin could not see it before.
     // The PATCH only sends the in-scope group; the unmanaged `gaother` membership the admin
-    // cannot see must be preserved (see #1538).
+    // cannot see must be preserved.
     let patch = serde_json::json!({
         "put": [{ "key": "groups", "value": ["gatest"] }],
         "del": [],
@@ -348,7 +348,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 403);
 
-    // 12. self-management (#1538): the group admin may edit its OWN profile, even though it is
+    // 12. self-management: the group admin may edit its OWN profile, even though it is
     // an admin (the account dashboard links here for self-service). PATCH is the real Admin UI
     // path; PUT is allowed too. Roles stay locked, so this cannot escalate.
     let patch = serde_json::json!({
@@ -381,7 +381,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
-    // 13. bulk email (#1538): a group admin may only send to a single group it manages, with an
+    // 13. bulk email: a group admin may only send to a single group it manages, with an
     // `in_group` filter; everything else is rejected. Jobs are scheduled far in the future so
     // nothing is actually sent during the test.
     let future_ts = 4102444800i64; // 2100-01-01, safely in the future

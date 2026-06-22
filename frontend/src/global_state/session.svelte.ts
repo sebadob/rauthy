@@ -2,7 +2,7 @@ import { fetchGet } from '$api/fetch';
 import type { SessionInfoResponse } from '$api/types/session';
 import { isBrowser, redirectToLogin } from '$utils/helpers';
 
-// Delegated group-admin role grammar (see issue #1538). A role named exactly `rauthy_admin`
+// Delegated group-admin role grammar. A role named exactly `rauthy_admin`
 // is a full Rauthy admin. A role `rauthy_admin:<prefix>` makes the holder a group admin:
 // `<prefix>` is an exact group-name match by default, a trailing `*` turns it into a prefix
 // glob, and `rauthy_admin:*` therefore matches every group (the user-super-admin).
@@ -87,7 +87,7 @@ export function useSession(redirectState: 'admin' | 'account') {
         set(session: SessionInfoResponse) {
             _session = session;
         },
-        // delegated group-admin helpers (#1538), derived from the session roles so callers
+        // delegated group-admin helpers, derived from the session roles so callers
         // don't need to import the role grammar or pass roles around
         isAdmin(): boolean {
             return rolesAreAdmin(_session?.roles);

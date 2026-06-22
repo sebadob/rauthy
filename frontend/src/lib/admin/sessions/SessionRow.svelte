@@ -25,7 +25,7 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    // deleting a single session is a full-admin action (#1538)
+    // deleting a single session is a full-admin action
     let admin = useSession('admin');
     let isAdmin = $derived(admin.isAdmin());
 

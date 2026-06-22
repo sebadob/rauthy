@@ -32,7 +32,7 @@ pub async fn post_events(
     principal: ReqPrincipal,
     Json(payload): Json<EventsRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // group admins get a read-only view of events for user debugging (see #1538)
+    // group admins get a read-only view of events for user debugging
     principal.validate_api_key_or_group_admin(AccessGroup::Events, AccessRights::Read)?;
     payload.validate()?;
 
@@ -70,7 +70,7 @@ pub async fn sse_events(
     params: Query<EventsListenParams>,
     req: HttpRequest,
 ) -> Result<impl Responder, ErrorResponse> {
-    // group admins get a read-only event stream for user debugging (see #1538)
+    // group admins get a read-only event stream for user debugging
     principal.validate_api_key_or_group_admin(AccessGroup::Events, AccessRights::Read)?;
     params.validate()?;
 

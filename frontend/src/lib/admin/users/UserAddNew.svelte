@@ -40,15 +40,12 @@
     let ta = useI18nAdmin();
     let session = useSession('admin');
 
-    // A group admin (#1538) creates users without roles and only into groups it
-    // manages; the backend rejects anything else. The principal acts as a delegated group
-    // admin when it reached the admin UI without the full `rauthy_admin` role. On this create
-    // form we hide what it cannot use entirely (no role editor, and only the groups it
-    // manages); editing an existing user still shows everything (see UserInfo).
+    // A group admin creates users without roles and only into groups it manages; the backend
+    // rejects anything else. The principal acts as a delegated group admin when it reached the
+    // admin UI without the full `rauthy_admin` role. On this create form we hide what it cannot
+    // use entirely: no role editor, and `groupsItems` below is filtered to the groups it manages.
+    // Editing an existing user still shows everything (see UserInfo).
     let isGroupAdmin = $derived(!session.isAdmin());
-    let groupsHidden = $derived(
-        isGroupAdmin ? groups.filter(g => !session.managesGroup(g.name)).map(g => g.name) : [],
-    );
 
     let ref: undefined | HTMLInputElement = $state();
 
@@ -77,13 +74,15 @@
     );
     let groupsItems: SelectItem[] = $state(
         untrack(() =>
-            groups.map(g => {
-                let i: SelectItem = {
-                    name: g.name,
-                    selected: false,
-                };
-                return i;
-            }),
+            groups
+                .filter(g => session.isAdmin() || session.managesGroup(g.name))
+                .map(g => {
+                    let i: SelectItem = {
+                        name: g.name,
+                        selected: false,
+                    };
+                    return i;
+                }),
         ),
     );
 
@@ -169,7 +168,7 @@
                 {t.account.roles}
             </SelectList>
         {/if}
-        <SelectList bind:items={groupsItems} hiddenNames={groupsHidden}>
+        <SelectList bind:items={groupsItems}>
             {t.account.groups}
         </SelectList>
 

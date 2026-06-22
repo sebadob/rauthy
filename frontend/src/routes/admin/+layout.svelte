@@ -28,7 +28,7 @@
     $effect(() => {
         let s = session.get();
         if (s) {
-            // full Rauthy admins and delegated group admins (#1538) both reach the admin UI;
+            // full Rauthy admins and delegated group admins both reach the admin UI;
             // the backend still scopes every action, and the nav below hides what group
             // admins cannot do
             if (session.isAnyAdmin()) {
