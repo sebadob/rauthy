@@ -33,7 +33,7 @@ impl Debug for ApiKeyEntity {
 }
 
 impl ApiKeyEntity {
-    pub async fn insert(entity: ApiKeyEntity) -> Result<(), ErrorResponse> {
+    pub async fn insert(self) -> Result<(), ErrorResponse> {
         let sql = r#"
 INSERT INTO
 api_keys (name, secret, created, expires, enc_key_id, access)
@@ -44,12 +44,12 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
                 .execute(
                     sql,
                     params!(
-                        entity.name,
-                        entity.secret,
-                        entity.created,
-                        entity.expires,
-                        entity.enc_key_id,
-                        entity.access
+                        self.name,
+                        self.secret,
+                        self.created,
+                        self.expires,
+                        self.enc_key_id,
+                        self.access
                     ),
                 )
                 .await?;
@@ -57,12 +57,12 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::pg_execute(
                 sql,
                 &[
-                    &entity.name,
-                    &entity.secret,
-                    &entity.created,
-                    &entity.expires,
-                    &entity.enc_key_id,
-                    &entity.access,
+                    &self.name,
+                    &self.secret,
+                    &self.created,
+                    &self.expires,
+                    &self.enc_key_id,
+                    &self.access,
                 ],
             )
             .await?;
@@ -90,14 +90,15 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
         let enc_key_active = EncKeys::get_static().enc_key_active.clone();
 
-        Self::insert(ApiKeyEntity {
+        ApiKeyEntity {
             name,
             secret: secret_enc,
             created,
             expires,
             enc_key_id: enc_key_active,
             access: access_enc,
-        })
+        }
+        .insert()
         .await?;
 
         Ok(token)
@@ -269,7 +270,7 @@ WHERE name = $5"#;
 
 impl ApiKeyEntity {
     #[inline]
-    fn cache_idx(name: &str) -> String {
+    pub fn cache_idx(name: &str) -> String {
         format!("api_key_{name}")
     }
 

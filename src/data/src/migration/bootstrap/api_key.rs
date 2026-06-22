@@ -88,14 +88,15 @@ async fn bootstrap_api_keys_json() -> Result<(), ErrorResponse> {
                     let access_bytes = serialize(&access)?;
                     let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
 
-                    ApiKeyEntity::insert(ApiKeyEntity {
+                    ApiKeyEntity {
                         name: api_key.name,
                         secret: secret_enc,
                         created,
                         expires: api_key.exp,
                         enc_key_id: enc_key_active,
                         access: access_enc,
-                    })
+                    }
+                    .insert()
                     .await?;
                 }
             }
@@ -167,7 +168,7 @@ async fn set_api_key_secret(name: &str, secret_plain: &str) -> Result<(), ErrorR
     }
 
     DB::hql()
-        .delete(Cache::App, format!("api_key_{name}"))
+        .delete(Cache::App, ApiKeyEntity::cache_idx(name))
         .await?;
 
     Ok(())
