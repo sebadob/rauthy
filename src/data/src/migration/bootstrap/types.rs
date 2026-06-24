@@ -129,8 +129,8 @@ pub enum ApiKeySecret {
     // Must be encrypted using [cryptr](https://github.com/sebadob/cryptr) with an `ENC_KEY` that
     // the Rauthy instance must have available. The encrypted data is expected as **base64**.
     Encrypted(String),
-    // Generate a new API-key secret on first bootstrap and store the cleartext
-    // in the encrypted generated-secret container before the DB row is updated.
+    // Generate a new API-key token on first bootstrap and store the full
+    // `name$secret` token in the encrypted generated-secret container.
     Generate,
 }
 
@@ -249,8 +249,7 @@ pub enum ClientSecret {
     // a much easier way to achieve this.
     Encrypted(String),
     // Generate a new confidential-client secret on first bootstrap and store
-    // the cleartext in the encrypted generated-secret container before the DB
-    // row is inserted.
+    // the cleartext in the encrypted generated-secret container.
     Generate,
 }
 
@@ -400,26 +399,22 @@ mod tests {
 
     #[test]
     fn parses_generated_api_key_secret_string() {
-        let api_keys = serde_json::from_str::<Vec<ApiKey>>(
-            r#"[
-                {
-                    "name": "bootstrap",
-                    "exp": 1735599600,
-                    "secret": "generate",
-                    "access": [
-                        {
-                            "group": "Clients",
-                            "access_rights": ["read", "create"]
-                        }
-                    ]
-                }
-            ]"#,
+        let api_key = serde_json::from_str::<ApiKey>(
+            r#"{
+                "name": "provision",
+                "secret": "generate",
+                "access": [
+                    {
+                        "group": "Clients",
+                        "access_rights": ["read"]
+                    }
+                ]
+            }"#,
         )
         .unwrap();
 
-        assert_eq!(api_keys.len(), 1);
-        assert!(matches!(&api_keys[0].secret, ApiKeySecret::Generate));
-        api_keys[0].validate().unwrap();
+        assert!(matches!(api_key.secret, ApiKeySecret::Generate));
+        api_key.validate().unwrap();
     }
 
     #[test]

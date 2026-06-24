@@ -33,23 +33,7 @@ impl Debug for ApiKeyEntity {
 }
 
 impl ApiKeyEntity {
-    pub async fn create(
-        name: String,
-        expires: Option<i64>,
-        access: Vec<ApiKeyAccess>,
-    ) -> Result<String, ErrorResponse> {
-        let created = Utc::now().timestamp();
-        let secret_plain = get_rand(API_KEY_LENGTH);
-        let secret_enc = EncValue::encrypt(sha256!(secret_plain.as_bytes()))?
-            .into_bytes()
-            .to_vec();
-
-        let access_bytes = serialize(&access)?;
-        let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
-
-        let enc_key_active = &EncKeys::get_static().enc_key_active;
-        let secret_fmt = format!("{name}${secret_plain}");
-
+    pub async fn insert(self) -> Result<(), ErrorResponse> {
         let sql = r#"
 INSERT INTO
 api_keys (name, secret, created, expires, enc_key_id, access)
@@ -60,12 +44,12 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
                 .execute(
                     sql,
                     params!(
-                        name,
-                        secret_enc,
-                        created,
-                        expires,
-                        enc_key_active.clone(),
-                        access_enc
+                        self.name,
+                        self.secret,
+                        self.created,
+                        self.expires,
+                        self.enc_key_id,
+                        self.access
                     ),
                 )
                 .await?;
@@ -73,18 +57,51 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::pg_execute(
                 sql,
                 &[
-                    &name,
-                    &secret_enc,
-                    &created,
-                    &expires,
-                    enc_key_active,
-                    &access_enc,
+                    &self.name,
+                    &self.secret,
+                    &self.created,
+                    &self.expires,
+                    &self.enc_key_id,
+                    &self.access,
                 ],
             )
             .await?;
         }
 
-        Ok(secret_fmt)
+        Ok(())
+    }
+
+    pub async fn create(
+        name: String,
+        expires: Option<i64>,
+        access: Vec<ApiKeyAccess>,
+    ) -> Result<String, ErrorResponse> {
+        let mut secret_plain = get_rand(API_KEY_LENGTH);
+        let token = format!("{name}${secret_plain}");
+
+        let created = Utc::now().timestamp();
+        let secret_enc = EncValue::encrypt(sha256!(secret_plain.as_bytes()))?
+            .into_bytes()
+            .to_vec();
+        secret_plain.zeroize();
+
+        let access_bytes = serialize(&access)?;
+        let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
+
+        let enc_key_active = EncKeys::get_static().enc_key_active.clone();
+
+        ApiKeyEntity {
+            name,
+            secret: secret_enc,
+            created,
+            expires,
+            enc_key_id: enc_key_active,
+            access: access_enc,
+        }
+        .insert()
+        .await?;
+
+        Ok(token)
     }
 
     pub async fn delete(name: &str) -> Result<(), ErrorResponse> {
@@ -253,7 +270,7 @@ WHERE name = $5"#;
 
 impl ApiKeyEntity {
     #[inline]
-    fn cache_idx(name: &str) -> String {
+    pub fn cache_idx(name: &str) -> String {
         format!("api_key_{name}")
     }
 
@@ -509,7 +526,26 @@ impl From<rauthy_api_types::api_keys::ApiKeyAccess> for ApiKeyAccess {
 
 #[cfg(test)]
 mod tests {
-    use super::{AccessGroup, AccessRights, ApiKey, ApiKeyAccess};
+    use super::*;
+    use cryptr::EncKeys;
+    use std::sync::Once;
+
+    static INIT_KEYS: Once = Once::new();
+
+    fn init_keys() {
+        INIT_KEYS.call_once(|| {
+            let _ = EncKeys::generate_with_id("test".to_string())
+                .unwrap()
+                .init();
+        });
+    }
+
+    fn access() -> Vec<ApiKeyAccess> {
+        vec![ApiKeyAccess {
+            group: AccessGroup::Clients,
+            access_rights: vec![AccessRights::Read],
+        }]
+    }
 
     // `AccessGroup` is bincode-serialized by variant index for storage, so new
     // variants must be appended (see the note above the enum). These tests guard the
@@ -552,5 +588,39 @@ mod tests {
             key.validate_access(&AccessGroup::Clients, &AccessRights::Read)
                 .is_err()
         );
+    }
+
+    #[test]
+    fn generated_api_key_token_validates() {
+        init_keys();
+        let mut secret_plain = get_rand(API_KEY_LENGTH);
+        let token = format!("provision${secret_plain}");
+        let (name, secret) = token.split_once('$').unwrap();
+        assert_eq!(name, "provision");
+
+        let secret_enc = EncValue::encrypt(sha256!(secret_plain.as_bytes()))
+            .unwrap()
+            .into_bytes()
+            .to_vec();
+        secret_plain.zeroize();
+
+        let access_bytes = serialize(&access()).unwrap();
+        let access_enc = EncValue::encrypt(&access_bytes)
+            .unwrap()
+            .into_bytes()
+            .to_vec();
+
+        let entity = ApiKeyEntity {
+            name: "provision".to_string(),
+            secret: secret_enc,
+            created: Utc::now().timestamp(),
+            expires: None,
+            enc_key_id: EncKeys::get_static().enc_key_active.clone(),
+            access: access_enc,
+        };
+
+        let api_key = entity.into_api_key().unwrap();
+        api_key.validate_secret(secret).unwrap();
+        assert!(api_key.validate_secret("wrong").is_err());
     }
 }

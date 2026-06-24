@@ -112,8 +112,28 @@ rights could look like this:
 The `secret` can be `{"Plain": "..."}`, `{"Encrypted": "..."}`, or `"generate"`. Plain secrets must be at
 least 64 characters long. Encrypted secrets are encrypted with
 [`cryptr`](https://github.com/sebadob/cryptr) and base64-encoded, just like encrypted client
-secrets. Generated API-key secrets are written to the generated-secret container and can be
-extracted with `rauthy bootstrap get --kind api-key --id <name> --field secret`.
+secrets. Generated API-key secrets store the full usable `name$secret` token in the generated
+bootstrap secret container under `api-key/<name>/token`.
+
+```json
+[
+  {
+    "name": "provision",
+    "exp": 1735599600,
+    "secret": "generate",
+    "access": [
+      {
+        "group": "Clients",
+        "access_rights": ["read", "create", "update", "delete"]
+      },
+      {
+        "group": "Secrets",
+        "access_rights": ["read", "update"]
+      }
+    ]
+  }
+]
+```
 
 ```admonish caution
 Only bootstrap short-lived API keys for production automation. Set `exp` to a timestamp
@@ -270,6 +290,9 @@ The CLI loads the existing Rauthy config and initializes the configured encrypti
 decrypts the container. It does not accept encryption keys or the container path as command-line
 arguments.
 
+API keys can request a generated token with `"secret": "generate"`. `get --format env` emits it as
+`RAUTHY_BOOTSTRAP_API_KEY_<SANITIZED_NAME>_TOKEN=...`.
+
 Clients can request a generated confidential-client secret with `"secret": "generate"`:
 
 ```json
@@ -313,10 +336,10 @@ Users can request a generated password with `"password": "generate"`:
 Rauthy writes the plaintext password to the encrypted container before hashing it and inserting the
 user row. The database stores only the password hash.
 
-API keys in `api_keys.json` can request a generated secret with `"secret": "generate"`. Rauthy
-writes the plaintext API-key secret to the encrypted container before hashing and storing it in the
-database. Extract it with `--kind api-key --id <key-name> --field secret`; combine it with the key
-name as `API-Key <key-name>$<secret>` for the `Authorization` header.
+API keys in `api_keys.json` can request a generated token with `"secret": "generate"`. The full
+usable `name$secret` token is written to the encrypted container.
+Extract it with `--kind api-key --id <key-name> --field token` and use it directly as the
+`Authorization` header value: `Authorization: API-Key <token>`.
 
 ## Advanced / Custom Configuration
 
