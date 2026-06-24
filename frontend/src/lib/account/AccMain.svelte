@@ -74,7 +74,9 @@
 
         return tabs;
     });
-    let tabsCompact = $derived([t.account.navInfo, ...tabsWide, t.account.navLogout]);
+    // Logout is not a tab anymore: on the compact / phone layouts it lives in the bottom
+    // control bar next to the theme, language and Admin UI controls (see `bottomControls`).
+    let tabsCompact = $derived([t.account.navInfo, ...tabsWide]);
 
     onMount(() => {
         fetchPamUser();
@@ -91,12 +93,6 @@
             selected = 'PAM';
         } else {
             selected = t.account.navMfa;
-        }
-    });
-
-    $effect(() => {
-        if (selected === t.account.navLogout) {
-            redirectToLogout();
         }
     });
 
@@ -152,14 +148,28 @@
     {/if}
 {/snippet}
 
+<!-- theme, language, the switch-to-Admin-UI link and the logout sit together in one
+     row, matching the order and position of the same controls in the Admin UI nav so an
+     admin switching back and forth does not see them jump around -->
+{#snippet bottomControls()}
+    <ThemeSwitch />
+    <LangSelector openTop borderless />
+    {@render adminLink()}
+    <Button level={-3} onclick={redirectToLogout}>
+        <div title={t.account.navLogout} class="flex gap-05">
+            <IconLogout />
+            {t.account.navLogout}
+        </div>
+    </Button>
+{/snippet}
+
 <div class="wrapper">
     {#if viewModePhone}
         <div class="headerPhone">
             {@render header()}
-            {@render adminLink()}
         </div>
 
-        <div class="container">
+        <div class="container containerPhone">
             <Tabs tabs={tabsCompact} bind:selected />
 
             <div class="innerPhone">
@@ -192,9 +202,11 @@
             </div>
         </div>
 
-        <!-- on phone the theme + language selectors stay anchored in the bottom-left corner -->
-        <ThemeSwitch absolute />
-        <LangSelector absolute />
+        <!-- on phone the controls flow as the last row of the column so they never overlap
+             the scrollable content above them -->
+        <div class="bottomBarPhone">
+            {@render bottomControls()}
+        </div>
     {:else}
         <div class="wide">
             {#if !viewModeWideCompact}
@@ -229,20 +241,8 @@
                 </div>
             </div>
 
-            <!-- theme, language, the switch-to-Admin-UI link and the logout sit together in one
-                 row in the bottom-left corner, matching the order and position of the same
-                 controls in the Admin UI nav so an admin switching back and forth does not see
-                 them jump around -->
             <div class="bottomLeft">
-                <ThemeSwitch />
-                <LangSelector openTop borderless />
-                {@render adminLink()}
-                <Button level={-3} onclick={redirectToLogout}>
-                    <div title={t.account.navLogout} class="flex gap-05">
-                        <IconLogout />
-                        {t.account.navLogout}
-                    </div>
-                </Button>
+                {@render bottomControls()}
             </div>
         </div>
     {/if}
@@ -276,9 +276,18 @@
         overflow-y: auto;
     }
 
+    /* on phone the container grows to fill the space between the header and the bottom bar,
+       and the inner content scrolls inside it */
+    .containerPhone {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+    }
+
     .innerPhone {
         width: 100vw;
-        max-height: calc(100dvh - 10rem);
+        flex: 1 1 auto;
+        min-height: 0;
         overflow-y: auto;
     }
 
@@ -291,13 +300,18 @@
         gap: 0.75rem;
     }
 
+    .bottomBarPhone {
+        flex: 0 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0.75rem;
+    }
+
     .adminLink {
         font-size: 0.9rem;
         color: hsla(var(--text) / 0.8);
-    }
-
-    .headerPhone .adminLink {
-        margin-top: 0.25rem;
     }
 
     .wide {
