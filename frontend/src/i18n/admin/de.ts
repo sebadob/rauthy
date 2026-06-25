@@ -523,6 +523,13 @@ export let I18nAdminDe: I18nAdmin = {
             werden als String / JSON Wert gehandhabt.`,
         forceLogout: `Sollen sämtliche, für diesen Benutzer existierenden Sessions invalidiert und 
             Refresh Tokens gelöscht werden?`,
+        groupAdmin: {
+            notManagedTitle: 'Nutzer außerhalb Ihrer Gruppen',
+            notManagedDesc: `Dieser Nutzer ist in keiner von Ihnen verwalteten Gruppe, daher bleiben die Details verborgen.
+                Fügen Sie den Nutzer zu einer oder mehreren Ihrer Gruppen hinzu, um ihn zu verwalten.
+                Mitgliedschaften außerhalb Ihrer Gruppen bleiben erhalten.`,
+            addToGroups: 'Zu meinen Gruppen hinzufügen',
+        },
         lastLogin: 'Letzter Login',
         manualInitDesc: `Der Benutzer kann jedoch ebenfalls hier initialisiert werden. In diesem Fall muss das
             Passwort allerdings direkt kommuniziert werden.`,

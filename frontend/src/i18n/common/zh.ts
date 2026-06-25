@@ -98,6 +98,7 @@ export const I18nZh: I18n = {
         navEdit: '编辑',
         navMfa: '多因子认证',
         navLogout: '退出登录',
+        navBackToAdmin: '管理界面',
         other: '其他',
         pam: {
             addSshKey: '添加新密钥',

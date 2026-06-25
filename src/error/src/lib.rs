@@ -34,6 +34,7 @@ pub enum ErrorResponseType {
     NotFound,
     PasswordExpired,
     PasswordRefresh,
+    PreconditionRequired,
     Scim,
     SessionExpired,
     SessionTimeout,

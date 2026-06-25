@@ -483,6 +483,13 @@ export let I18nAdminZh: I18nAdmin = {
         deleteUser: '您确定要删除此用户吗？',
         descAttr: `设置自定义用户属性。所有键/值对将作为字符串/JSON值处理。`,
         forceLogout: `您确定要使此用户的所有现有会话无效并删除所有刷新令牌吗？`,
+        groupAdmin: {
+            notManagedTitle: '不在您群组中的用户',
+            notManagedDesc: `该用户不属于任何您管理的群组，因此其详细信息处于隐藏状态。
+                将该用户添加到您的一个或多个群组即可进行管理。
+                您管理范围之外的成员关系将被保留。`,
+            addToGroups: '添加到我的群组',
+        },
         lastLogin: '最后登录',
         manualInitDesc: `也可以在此处初始化用户。在这种情况下，您需要直接传达密码。`,
         manualInit: '手动初始化',

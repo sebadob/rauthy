@@ -108,7 +108,14 @@ pub async fn get_auth_check(principal: ReqPrincipal) -> Result<HttpResponse, Err
 )]
 #[get("/auth_check_admin")]
 pub async fn get_auth_check_admin(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    if principal.is_admin() {
+        // full admin: validate the session and enforce admin-MFA (-> 406)
+        principal.validate_admin_session()?;
+    } else {
+        // delegated group admin: a valid session and the same admin-MFA
+        // enforcement, but without requiring the full `rauthy_admin` role
+        principal.validate_group_admin_session()?;
+    }
     Ok(HttpResponse::Ok().finish())
 }
 

@@ -109,6 +109,12 @@ pub static IDX_WEBAUTHN: &str = "webauthn_";
 
 pub static APP_START: LazyLock<DateTime<Utc>> = LazyLock::new(Utc::now);
 pub static RAUTHY_ADMIN_ROLE: &str = "rauthy_admin";
+/// Prefix for delegated group-admin roles, e.g. `rauthy_admin:my_group`.
+/// A role with this prefix grants group-scoped user administration.
+/// `rauthy_admin:<group>` is an exact group-name match, a trailing `*`
+/// (`rauthy_admin:<prefix>*`) is a prefix glob, and `rauthy_admin:*` matches every
+/// group (the user-super-admin). An exact `rauthy_admin` (no colon) remains the full admin.
+pub static RAUTHY_ADMIN_GROUP_PREFIX: &str = "rauthy_admin:";
 
 pub static DEV_MODE: OnceLock<bool> = OnceLock::new();
 

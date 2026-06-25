@@ -10,6 +10,7 @@
     import LabeledValue from '$lib5/LabeledValue.svelte';
     import IconTrash from '$icons/IconTrash.svelte';
     import { fetchDelete } from '$api/fetch';
+    import { useSession } from '$state/session.svelte';
 
     let {
         session,
@@ -23,6 +24,10 @@
 
     let t = useI18n();
     let ta = useI18nAdmin();
+
+    // deleting a single session is a full-admin action
+    let admin = useSession('admin');
+    let isAdmin = $derived(admin.isAdmin());
 
     let copyText = $state(t.common.copyToClip);
 
@@ -71,13 +76,15 @@
                         </Tooltip>
                     </Button>
 
-                    <Button invisible onclick={deleteSession}>
-                        <Tooltip text={t.common.delete}>
-                            <div class="trash">
-                                <IconTrash width="1.2rem" />
-                            </div>
-                        </Tooltip>
-                    </Button>
+                    {#if isAdmin}
+                        <Button invisible onclick={deleteSession}>
+                            <Tooltip text={t.common.delete}>
+                                <div class="trash">
+                                    <IconTrash width="1.2rem" />
+                                </div>
+                            </Tooltip>
+                        </Button>
+                    {/if}
                 </div>
             </div>
         {/snippet}
@@ -111,9 +118,11 @@
                 <CheckIcon checked={session.is_mfa} />
             </LabeledValue>
 
-            <Button level={-1} onclick={deleteSession}>
-                {t.common.delete}
-            </Button>
+            {#if isAdmin}
+                <Button level={-1} onclick={deleteSession}>
+                    {t.common.delete}
+                </Button>
+            {/if}
         {/snippet}
     </Expandable>
 </div>

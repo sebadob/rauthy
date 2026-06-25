@@ -31,6 +31,7 @@
 - [Working with Rauthy](work/index.md)
   - [API Keys](work/api_keys.md)
   - [Custom Scopes and Attributes](work/custom_scopes_attributes.md)
+  - [Delegated Group Admins](work/group_admins.md)
   - [Ephemeral Clients](work/ephemeral_clients.md)
   - [Resource Indicators (RFC 8707)](work/resource_indicators.md)
   - [E-Mail Templates](work/email_templates.md)

@@ -22,6 +22,7 @@
     import { useI18nConfig } from '$state/i18n_config.svelte';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
     import TZSelect from '$lib/TZSelect.svelte';
+    import { useSession } from '$state/session.svelte';
 
     let {
         config,
@@ -37,6 +38,14 @@
 
     let t = useI18n();
     let ta = useI18nAdmin();
+    let session = useSession('admin');
+
+    // A group admin creates users without roles and only into groups it manages; the backend
+    // rejects anything else. The principal acts as a delegated group admin when it reached the
+    // admin UI without the full `rauthy_admin` role. On this create form we hide what it cannot
+    // use entirely: no role editor, and `groupsItems` below is filtered to the groups it manages.
+    // Editing an existing user still shows everything (see UserInfo).
+    let isGroupAdmin = $derived(!session.isAdmin());
 
     let ref: undefined | HTMLInputElement = $state();
 
@@ -65,13 +74,15 @@
     );
     let groupsItems: SelectItem[] = $state(
         untrack(() =>
-            groups.map(g => {
-                let i: SelectItem = {
-                    name: g.name,
-                    selected: false,
-                };
-                return i;
-            }),
+            groups
+                .filter(g => session.isAdmin() || session.managesGroup(g.name))
+                .map(g => {
+                    let i: SelectItem = {
+                        name: g.name,
+                        selected: false,
+                    };
+                    return i;
+                }),
         ),
     );
 
@@ -152,9 +163,11 @@
             </div>
         {/if}
 
-        <SelectList bind:items={rolesItems}>
-            {t.account.roles}
-        </SelectList>
+        {#if !isGroupAdmin}
+            <SelectList bind:items={rolesItems}>
+                {t.account.roles}
+            </SelectList>
+        {/if}
         <SelectList bind:items={groupsItems}>
             {t.account.groups}
         </SelectList>

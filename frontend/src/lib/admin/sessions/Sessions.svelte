@@ -17,6 +17,11 @@
 
     let ta = useI18nAdmin();
 
+    let session = useSession('admin');
+    // session deletion is a full-admin action; group admins log a user out from the user
+    // details tab instead, so these buttons are hidden for them
+    let isAdmin = $derived(session.isAdmin());
+
     let refOpts: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
     tr.set('navMain', () => refOpts?.focus());
@@ -198,11 +203,13 @@
             searchWidth="min(25rem, calc(100dvw - 1rem))"
             firstDirReverse
         />
-        <div class="btn">
-            <Button level={-1} onclick={invalidateSessions}>
-                {ta.sessions.invalidateAll}
-            </Button>
-        </div>
+        {#if isAdmin}
+            <div class="btn">
+                <Button level={-1} onclick={invalidateSessions}>
+                    {ta.sessions.invalidateAll}
+                </Button>
+            </div>
+        {/if}
     </div>
 
     {#if err}

@@ -475,6 +475,13 @@ export let I18nAdminNb: I18nAdmin = {
         deleteUser: 'Skal denne brukeren slettes?',
         descAttr: `Sett individuelle bruker-attributter. Alle nøkkel/verdi-par håndteres som String/JSON-verdi.`,
         forceLogout: `Skal alle økter for denne brukeren invalidiseres og alle refresh tokens slettes?`,
+        groupAdmin: {
+            notManagedTitle: 'Bruker utenfor gruppene dine',
+            notManagedDesc: `Denne brukeren er ikke medlem av noen gruppe du administrerer, så detaljene er skjult.
+                Legg brukeren til i en eller flere av gruppene dine for å administrere den.
+                Medlemskap utenfor gruppene dine beholdes.`,
+            addToGroups: 'Legg til i mine grupper',
+        },
         lastLogin: 'Siste innlogging',
         manualInitDesc: `Brukeren kan også initialiseres her. I så fall må passordet kommuniseres direkte.`,
         manualInit: 'Manuell initialisering',
