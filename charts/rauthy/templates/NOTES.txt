@@ -1,0 +1,32 @@
+Rauthy has been deployed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Replicas (Raft members): {{ .Values.replicas }}
+Image:                    {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+Config source:            {{ if .Values.config.existingSecret }}existing Secret "{{ .Values.config.existingSecret }}"{{ else }}Secret "{{ include "rauthy.configSecretName" . }}" (created from config.content){{ end }}
+
+1. Watch the pods come up and form the Raft cluster:
+
+   kubectl -n {{ .Release.Namespace }} rollout status statefulset/{{ include "rauthy.fullname" . }}
+
+{{- if eq (int .Values.replicas) 1 }}
+
+   On a brand-new database, the initial admin password is printed ONCE in the
+   logs of pod {{ include "rauthy.fullname" . }}-0 (unless you set it in your config):
+
+   kubectl -n {{ .Release.Namespace }} logs {{ include "rauthy.fullname" . }}-0 | grep -i password
+{{- end }}
+
+2. Reach the service:
+{{- if .Values.ingress.enabled }}
+
+   https://{{ .Values.ingress.host }}/auth/v1/
+{{- else }}
+
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "rauthy.fullname" . }} 8080:{{ .Values.service.port }}
+   # then open http://localhost:8080/auth/v1/
+{{- end }}
+
+SCALING: this is a Raft cluster. You may scale UP (raise `replicas`, then
+`helm upgrade`; use an odd count like 3 or 5) but you must NEVER scale back
+down - removed members stay in the Raft config and the cluster keeps trying to
+reach them. There is intentionally no HorizontalPodAutoscaler.

@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "rauthy.fullname" . }}
+  labels:
+    {{- include "rauthy.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  serviceName: {{ include "rauthy.headlessName" . }}
+  # StatefulSet update strategy is RollingUpdate by default, which Rauthy
+  # supports: nodes drain Raft leadership on graceful shutdown and re-join from
+  # their persistent WAL on restart.
+  selector:
+    matchLabels:
+      {{- include "rauthy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rauthy.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- if .Values.affinity }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else if .Values.spreadAcrossNodes }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "rauthy.selectorLabels" . | nindent 20 }}
+                topologyKey: kubernetes.io/hostname
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: rauthy
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            # Rauthy HTTP API. This chart assumes the default server.port_http
+            # (8080); if you change it in your config, update service.port too.
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+            # Hiqlite Raft + API ports - internal to the cluster only.
+            - name: hiqlite-raft
+              containerPort: 8100
+              protocol: TCP
+            - name: hiqlite-api
+              containerPort: 8200
+              protocol: TCP
+          env:
+            # The only two config values the chart owns, because they are tied
+            # to the StatefulSet topology and override whatever is in the file:
+            #   - HQL_NODE_ID_FROM=k8s derives each node's Raft id from its pod
+            #     ordinal, so you never assign node ids by hand.
+            #   - HQL_NODES is the membership list, regenerated from `replicas`.
+            - name: HQL_NODE_ID_FROM
+              value: "k8s"
+            - name: HQL_NODES
+              value: {{ include "rauthy.hqlNodes" . | quote }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              # Hiqlite API port: reports ready only once this node has joined
+              # the Raft cluster and can serve consistent reads.
+              port: hiqlite-api
+              path: /ready
+            initialDelaySeconds: 5
+            # Keep this short so K8s stops routing to a shutting-down pod
+            # quickly; do not increase it.
+            periodSeconds: 3
+            # Tolerate a single miss during leader elections.
+            failureThreshold: 2
+          livenessProbe:
+            httpGet:
+              scheme: HTTP
+              port: http
+              path: /auth/v1/health
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 2
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: config
+              mountPath: /app/config.toml
+              subPath: config.toml
+              readOnly: true
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ include "rauthy.configSecretName" . }}
+            items:
+              - key: {{ .Values.config.existingSecretKey }}
+                path: config.toml
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- with .Values.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
