@@ -185,7 +185,7 @@
     });
 
     async function fetchClientDetails() {
-        let res = await fetchGet<ClientResponse>(`/auth/v1/clients/${client.id}`);
+        let res = await fetchGet<ClientResponse>(`/auth/v1/clients/${encodeURIComponent(client.id)}`);
         if (res.body) {
             let resp = res.body;
             // The only real difference here can be the `client.scim`, as all the rest is already included in the
@@ -290,7 +290,7 @@
 </script>
 
 <div class="container">
-    <Form action={`/auth/v1/clients/${client.id}`} {onSubmit}>
+    <Form action={`/auth/v1/clients/${encodeURIComponent(client.id)}`} {onSubmit}>
         <h5>{ta.common.information}</h5>
 
         <LabeledValue label="ID" mono copyToClip={client.id}>
