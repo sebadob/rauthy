@@ -1080,14 +1080,14 @@ impl Client {
     /// possible without MFA. The force MFA for the Rauthy admin UI is done in
     /// Principal::validate_admin_session() depending on the `ADMIN_FORCE_MFA` config variable.
     #[inline]
-    pub fn validate_mfa(
+    pub async fn validate_mfa(
         &self,
         user: &User,
         provider_mfa_login: Option<ProviderMfaLogin>,
     ) -> Result<(), ErrorResponse> {
         let force_mfa = self.id != "rauthy" && self.force_mfa;
         let has_mfa =
-            user.has_webauthn_enabled() || provider_mfa_login == Some(ProviderMfaLogin::Yes);
+            user.has_webauthn_enabled() || provider_mfa_login == Some(ProviderMfaLogin::Yes) || user.has_otp_enabled().await.unwrap_or_default();
 
         if force_mfa && !has_mfa {
             trace!("MFA required for this client but the user has none");

@@ -143,8 +143,8 @@ impl HtmlCached {
                     &[
                         HtmlTemplate::AuthProviders(providers),
                         HtmlTemplate::UserValues,
-                        HtmlTemplate::HotpLength(RauthyConfig::get().vars.hmac_otp.length),
-                        HtmlTemplate::IsHotpEnabled(RauthyConfig::get().vars.hmac_otp.enable),
+                        HtmlTemplate::OtpLength(RauthyConfig::get().vars.otp.length),
+                        HtmlTemplate::IsOtpEnabled(RauthyConfig::get().vars.otp.enable),
                     ],
                 )
             }

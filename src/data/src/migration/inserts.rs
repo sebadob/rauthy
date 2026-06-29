@@ -16,6 +16,7 @@ use crate::entity::kv::{KVAccess, KVNamespace, KVValue};
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
+use crate::entity::one_time_password::OneTimePassword;
 use crate::entity::pam::authorized_keys::AuthorizedKey;
 use crate::entity::pam::groups::PamGroup;
 use crate::entity::pam::hosts::PamHost;
@@ -842,6 +843,50 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
                     &b.exp,
                     &b.used,
                     &b.usage,
+                ],
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn one_time_password(data_before: Vec<OneTimePassword>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM one_time_password";
+    let sql_2 = r#"
+INSERT INTO one_time_password
+(id, user_id, name, secret, last_use, kind, is_active)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(
+                        b.id,
+                        b.user_id,
+                        b.name,
+                        b.secret,
+                        b.last_used,
+                        b.kind.as_str(),
+                        b.is_active
+                    ),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[
+                    &b.id,
+                    &b.user_id,
+                    &b.name,
+                    &b.secret,
+                    &b.last_used,
+                    &b.kind.as_str(),
+                    &b.is_active
                 ],
             )
             .await?;

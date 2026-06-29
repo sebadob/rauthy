@@ -99,8 +99,9 @@ pub async fn login_finish<'a>(
     // From here on, we deal with a normal login instead of just an account federation.
 
     let require_webauthn = user.has_webauthn_enabled();
+    let require_otp = user.has_otp_enabled().await?;
     session
-        .set_mfa(provider_mfa_login == ProviderMfaLogin::Yes || require_webauthn)
+        .set_mfa(provider_mfa_login == ProviderMfaLogin::Yes || require_webauthn || require_otp)
         .await?;
 
     let client = Client::find_maybe_ephemeral(slf.req_client_id).await?;
@@ -119,6 +120,7 @@ pub async fn login_finish<'a>(
             code_challenge_method: slf.req_code_challenge_method,
             header_origin,
             require_webauthn,
+            require_otp,
         },
         None,
         Some(provider_mfa_login),

@@ -394,6 +394,81 @@ pub struct MfaModTokenResponse {
 
 #[derive(Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct OtpGetResponse {
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub last_used: i64,
+    pub kind: String,
+    pub is_active: bool,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpCreateRequest {
+    pub otp_name: Option<String>,
+    pub otp_kind: String,
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpActivateRequest {
+    pub otp_id: String,
+    pub otp_code: String,
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpDeleteRequest {
+    pub otp_id: String,
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: Option<String>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct ActiveOtp {
+    pub otp_id: String,
+    pub otp_kind: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct OtpLoginResponse {
+    pub code: String,
+    pub active_otps: Vec<ActiveOtp>,
+    pub user_id: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpAuthStartRequest {
+    pub otp_id: String,
+    pub purpose: MfaPurpose,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct OtpAuthStartResponse {
+    pub code: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpAuthFinishRequest {
+    #[validate(regex(path = "*RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
+    pub code: String,
+    pub otp_code: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct OtpLoginFinishResponse {
+    pub loc: String,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct PasskeyResponse {
     pub name: String,
     /// Unix timestamp in seconds

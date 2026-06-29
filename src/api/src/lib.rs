@@ -8,19 +8,20 @@ use actix_web::http::header::{
 };
 use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, web};
 use rauthy_api_types::tos::ToSAwaitLoginResponse;
-use rauthy_api_types::users::WebauthnLoginResponse;
+use rauthy_api_types::users::{OtpLoginResponse, WebauthnLoginResponse};
 use rauthy_common::constants::COOKIE_MFA;
 use rauthy_data::AuthStep;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::api_keys::ApiKey;
 use rauthy_data::entity::auth_providers::NewFederatedUserCreated;
 use rauthy_data::entity::fed_cm::FedCMLoginStatus;
+use rauthy_data::entity::one_time_password::OtpCookie;
 use rauthy_data::entity::principal::Principal;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::webauthn::WebauthnCookie;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rust_embed::Embed;
-use tracing::error;
+use tracing::{error};
 
 pub mod api_keys;
 pub mod atproto;
@@ -191,6 +192,33 @@ pub async fn map_auth_step(
                 code: res.code,
                 user_id: res.user_id,
                 exp: res.exp,
+            }))
+        }
+
+        AuthStep::AwaitOtpCode(res) => {
+            let mut builder = HttpResponse::Ok();
+            builder
+                .insert_header(fed_cm_header)
+                .insert_header(res.header_csrf);
+
+            if let Some(origin) = res.header_origin {
+                builder.insert_header(origin);
+            }
+
+            // if there is no mfa_cookie present, set a new one
+            if let Ok(mfa_cookie) = OtpCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
+            {
+                if mfa_cookie.email != res.email {
+                    builder.cookie(OtpCookie::new(res.email.clone()).build()?);
+                }
+            } else {
+                builder.cookie(OtpCookie::new(res.email.clone()).build()?);
+            }
+
+            Ok(builder.json(&OtpLoginResponse {
+                code: res.code,
+                active_otps: res.active_otps,
+                user_id: res.user_id,
             }))
         }
 
