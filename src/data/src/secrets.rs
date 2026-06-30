@@ -4,6 +4,7 @@ use std::path::Path;
 
 #[derive(Default)]
 pub struct RauthySecrets {
+    pub cluster: toml::Table,
     pub database: VarsDatabase,
     pub dynamic_clients: VarsDynamicClients,
     pub email: VarsEmail,
@@ -80,6 +81,8 @@ impl RauthySecrets {
         slf.parse_events(&mut table);
         slf.parse_geo(&mut table);
         slf.parse_user_pictures(&mut table);
+
+        slf.cluster = t_table(&mut table, "cluster");
 
         slf
     }

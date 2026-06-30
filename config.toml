@@ -707,10 +707,10 @@ tls_auto_certificates = false
 #
 # default: not set - required
 # overwritten by: HQL_SECRET_RAFT
-secret_raft = "SuperSecureSecret1337"
+secret_raft = "$SECRETS"
 # default: not set - required
 # overwritten by: HQL_SECRET_API
-secret_api = "SuperSecureSecret1337"
+secret_api = "$SECRETS"
 
 # Configures the initial delay in seconds that should be applied
 # to `<API>/health` checks. During the first X seconds after node
@@ -784,7 +784,7 @@ secret_api = "SuperSecureSecret1337"
 #
 # '123SuperMegaSafe' in this example
 # overwritten by: HQL_PASSWORD_DASHBOARD
-password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
+password_dashboard = "$SECRETS"
 
 # Can be set to `true` during local dev and testing to issue
 # insecure cookies

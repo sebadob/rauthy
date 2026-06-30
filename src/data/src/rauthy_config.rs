@@ -1166,7 +1166,7 @@ impl Vars {
         slf.parse_user_values(&mut table);
         slf.parse_webauthn(&mut table);
 
-        let node_config = slf.parse_hiqlite_config(&mut table).await;
+        let node_config = slf.parse_hiqlite_config(&mut table, secrets).await;
         slf.resolve_bootstrap_generated_secrets_file(&node_config);
 
         check_table_empty(table, "<root>");
@@ -2626,7 +2626,11 @@ impl Vars {
         check_table_empty(table, "hashing");
     }
 
-    async fn parse_hiqlite_config(&mut self, table: &mut toml::Table) -> hiqlite::NodeConfig {
+    async fn parse_hiqlite_config(
+        &mut self,
+        table: &mut toml::Table,
+        secrets: RauthySecrets,
+    ) -> hiqlite::NodeConfig {
         let table = t_table(table, "cluster");
 
         if self.encryption.key_active.is_empty() || self.encryption.keys.is_empty() {
@@ -2639,8 +2643,9 @@ impl Vars {
             panic!("Invalid ENC_KEYS / ENC_KEY_ACTIVE");
         };
 
-        // TODO add the check_empty check to hiqlite as well
-        match NodeConfig::from_toml_table(table, "cluster", Some(enc_keys)).await {
+        match NodeConfig::from_toml_table(table, "cluster", Some(secrets.cluster), Some(enc_keys))
+            .await
+        {
             Ok(config) => config,
             Err(err) => {
                 panic!("Error parsing `[cluster]` section: {err:?}");

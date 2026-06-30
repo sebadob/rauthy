@@ -2407,12 +2407,12 @@ dependencies = [
 
 [[package]]
 name = "fs4"
-version = "0.13.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8640e34b88f7652208ce9e88b1a37a2ae95227d84abec377ccd3c5cfeb141ed4"
+checksum = "7e72ed92b67c146290f88e9c89d60ca163ea417a446f61ffd7b72df3e7f1dfd5"
 dependencies = [
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2708,14 +2708,17 @@ name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+dependencies = [
+ "foldhash 0.2.0",
+]
 
 [[package]]
 name = "hashlink"
-version = "0.11.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "824e001ac4f3012dd16a264bec811403a67ca9deb6c102fc5049b32c4574b35f"
+checksum = "a5081f264ed7adee96ea4b4778b6bb9da0a7228b084587aa3bd3ff05da7c5a3b"
 dependencies = [
- "hashbrown 0.16.1",
+ "hashbrown 0.17.1",
 ]
 
 [[package]]
@@ -2811,9 +2814,8 @@ dependencies = [
 
 [[package]]
 name = "hiqlite"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "790b408523c8f9f6e732a41449bae4e6d2051672448c4f4b851703742cb9047d"
+version = "0.14.0-202606024"
+source = "git+https://github.com/sebadob/hiqlite.git#0e0ab8d30542c964f36eb4250e1eccfbaf78d42c"
 dependencies = [
  "argon2",
  "axum",
@@ -2870,9 +2872,8 @@ dependencies = [
 
 [[package]]
 name = "hiqlite-derive"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4edb6e4dbbb5f8e407335b3a55ea5ab79bd7c647ccffb09617d2b606d7f517b6"
+version = "0.14.0-202606024"
+source = "git+https://github.com/sebadob/hiqlite.git#0e0ab8d30542c964f36eb4250e1eccfbaf78d42c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2881,9 +2882,8 @@ dependencies = [
 
 [[package]]
 name = "hiqlite-wal"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05d53e55d82308a8433aab0cbbd8ba981e8e4fbecfa62b407ef26e92a671a65e"
+version = "0.14.0-202606024"
+source = "git+https://github.com/sebadob/hiqlite.git#0e0ab8d30542c964f36eb4250e1eccfbaf78d42c"
 dependencies = [
  "bincode",
  "byteorder",
@@ -2892,7 +2892,6 @@ dependencies = [
  "fs4",
  "memmap2",
  "openraft",
- "rkyv",
  "serde",
  "thiserror 2.0.18",
  "thread-priority",
@@ -3674,9 +3673,9 @@ dependencies = [
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.37.0"
+version = "0.38.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1f111c8c41e7c61a49cd34e44c7619462967221a6443b0ec299e0ac30cfb9b1"
+checksum = "f6c19a05435c21ac299d71b6a9c13db3e3f47c520517d58990a462a1397a61db"
 dependencies = [
  "cc",
  "pkg-config",
@@ -5879,9 +5878,9 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.39.0"
+version = "0.40.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0d2b0146dd9661bf67bb107c0bb2a55064d556eeb3fc314151b957f313bcd4e"
+checksum = "11438310b19e3109b6446c33d1ed5e889428cf2e278407bc7896bc4aaea43323"
 dependencies = [
  "bitflags",
  "chrono",
@@ -6377,9 +6376,9 @@ dependencies = [
 
 [[package]]
 name = "serde_rusqlite"
-version = "0.42.0"
+version = "0.43.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee252eeacd2dc6d0dcbc7b3e5a17f4c1bae19e811e843a9c7698f849b1611d67"
+checksum = "44f51ff08953caf83bbd0d9be7ee58d41f1d1adc19a2e84c43f83ca50258571e"
 dependencies = [
  "rusqlite",
  "serde_core",
