@@ -511,8 +511,19 @@ pre-pr-checks: build-ui fmt is-clean test-hiqlite test-postgres
     set -euxo pipefail
 
 # does a `cargo update` + `npm update` for the UI
-update-deps:
+update:
     #!/usr/bin/env bash
-    cargo update
+
+    # We need at least nightly-2026-06-21 for the min release age feature
+    # from .cargo/config.toml
+    MIN_DATE="2026-06-21"
+    NIGHTLY_DATE=$(rustc +nightly --version | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n 1)
+    if [[ -z "$NIGHTLY_DATE" || "$NIGHTLY_DATE" < "$MIN_DATE" ]]; then
+        echo "Error: The nightly toolchain must be at least $MIN_DATE. (Found: ${NIGHTLY_DATE:-unknown})"
+        exit 1
+    fi
+    cargo +nightly update
+
     cd frontend
+    # min release is set via `frontend/.npmrc`
     {{ npm }} update
